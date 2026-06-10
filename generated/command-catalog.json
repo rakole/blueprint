@@ -1,0 +1,3785 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/generate-command-registry.ts",
+  "source": {
+    "metadata": "src/mcp/command-runtime-metadata.ts",
+    "liveCatalogBuilder": "src/mcp/tools/project.ts#blueprintCommandCatalog"
+  },
+  "rootRouter": {
+    "command": "/blu",
+    "manifestPath": "commands/blu.toml",
+    "primarySkill": "blueprint-router",
+    "requiredTools": [
+      "blueprint_command_catalog",
+      "blueprint_project_status",
+      "blueprint_config_get"
+    ],
+    "contractNotes": "Host-native root router. Read project status and the live command catalog first, then keep every recommendation inside implemented commands only; explain blocked or waiting states instead of routing to planned, blocked, or repairing commands."
+  },
+  "counts": {
+    "total": 55,
+    "implemented": 54,
+    "nonRunnable": 1
+  },
+  "intentChooser": [
+    {
+      "intent": "Start fresh",
+      "routes": [
+        "/blu-new-project"
+      ]
+    },
+    {
+      "intent": "Understand an existing repo",
+      "routes": [
+        "/blu-map-codebase"
+      ]
+    },
+    {
+      "intent": "Decide next safe action",
+      "routes": [
+        "/blu-next"
+      ]
+    },
+    {
+      "intent": "Plan implementation",
+      "routes": [
+        "/blu-plan-phase <phase>"
+      ]
+    },
+    {
+      "intent": "Execute safely",
+      "routes": [
+        "/blu-execute-phase <phase>"
+      ]
+    },
+    {
+      "intent": "Review/fix code",
+      "routes": [
+        "/blu-code-review <phase>",
+        "/blu-code-review-fix <phase>"
+      ]
+    },
+    {
+      "intent": "Ship",
+      "routes": [
+        "/blu-ship"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "name": "health",
+      "command": "/blu-health",
+      "route": "/blu health",
+      "wave": 0,
+      "family": "Foundation",
+      "primarySkill": "blueprint-governance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-health.toml",
+      "skillPath": "skills/blueprint-governance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#health",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#health",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`health` checks Blueprint project health and can run explicit repair-mode normalization through MCP-owned tools.",
+      "reads": [
+        "Project status, config, state, artifact inventory, and validation results through MCP."
+      ],
+      "writes": [
+        ".blueprint/config.json and malformed planning artifacts only in explicit repair mode"
+      ],
+      "risk": "Medium: repair mode can normalize config and rewrite malformed planning artifacts.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_config_set",
+        "blueprint_state_load",
+        "blueprint_artifact_list",
+        "blueprint_artifact_validate",
+        "blueprint_state_sync"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#health",
+        "waveTitle": "Foundation",
+        "command": "health",
+        "primarySkill": "blueprint-governance",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_config_set",
+          "blueprint_state_load",
+          "blueprint_artifact_list",
+          "blueprint_artifact_validate",
+          "blueprint_state_sync"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for health inspection and explicit repair: load skills/blueprint-governance/references/health-runtime-contract.md, gather project/config/state/artifact evidence through MCP, validate artifacts before reporting, run blueprint_config_set and blueprint_state_sync only for requested repair mode, and route follow-ups only to implemented commands.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "help",
+      "command": "/blu-help",
+      "route": "/blu help",
+      "wave": 0,
+      "family": "Foundation",
+      "primarySkill": "blueprint-router",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-help.toml",
+      "skillPath": "skills/blueprint-router/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#help",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#help",
+      "executionProfile": "router",
+      "rootRoutable": true,
+      "purpose": "`help` shows safe Blueprint router guidance from project readiness and the implemented command catalog.",
+      "reads": [
+        "Project status and command availability through Blueprint MCP tools."
+      ],
+      "writes": [],
+      "risk": "Low: read-only router guidance from project status and the live command catalog.",
+      "requiredTools": [
+        "blueprint_command_catalog",
+        "blueprint_project_status"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#help",
+        "waveTitle": "Foundation",
+        "command": "help",
+        "primarySkill": "blueprint-router",
+        "exactMcpDestination": [
+          "blueprint_command_catalog",
+          "blueprint_project_status"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [],
+        "contractNotes": "Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable. This includes map-first waiting states: brownfield uninitialized and mapping-incomplete route to /blu-map-codebase, while mapped-only routes to /blu-new-project. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "map-codebase",
+      "command": "/blu-map-codebase",
+      "route": "/blu map-codebase",
+      "wave": 0,
+      "family": "Foundation",
+      "primarySkill": "blueprint-map",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-map-codebase.toml",
+      "skillPath": "skills/blueprint-map/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#map-codebase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#map-codebase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`map-codebase` analyzes a brownfield codebase with mapper-style passes and produces the stable seven-document Blueprint codebase bundle. Focus areas deepen the same bundle instead of creating a separate suffix-only mode.",
+      "reads": [],
+      "writes": [
+        ".blueprint/codebase/STACK.md",
+        ".blueprint/codebase/ARCHITECTURE.md",
+        ".blueprint/codebase/STRUCTURE.md",
+        ".blueprint/codebase/CONVENTIONS.md",
+        ".blueprint/codebase/TESTING.md",
+        ".blueprint/codebase/INTEGRATIONS.md",
+        ".blueprint/codebase/CONCERNS.md"
+      ],
+      "risk": "Medium: refresh mode can replace existing codebase-mapping artifacts.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_scaffold",
+        "blueprint_artifact_list",
+        "blueprint_artifact_summary_digest",
+        "blueprint_codebase_artifact_write",
+        "blueprint_artifact_validate"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-mapper"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-mapper"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#map-codebase",
+        "waveTitle": "Foundation",
+        "command": "map-codebase",
+        "primarySkill": "blueprint-map",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_scaffold",
+          "blueprint_artifact_list",
+          "blueprint_artifact_summary_digest",
+          "blueprint_codebase_artifact_write",
+          "blueprint_artifact_validate"
+        ],
+        "optionalAgents": [
+          "blueprint-mapper"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile for read-heavy brownfield mapping: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md, keep reuse as the default posture, treat supplied focus areas as targeted deepening across the same seven-document bundle, require ask_user confirmation for refresh or replace paths before any overwrite, read the canonical codebase contract before scaffold or refresh decisions, use contract.authoringTemplate as the heading authority, pass digest inputs as repo-relative paths and treat returned inputsUsed as authoritative, persist substantive mapping content through blueprint_codebase_artifact_write, repair invalid write results from returned issues before moving on, validate the resulting bundle, and route a successful map-first brownfield repo to /blu-new-project.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "new-project",
+      "command": "/blu-new-project",
+      "route": "/blu new-project",
+      "wave": 0,
+      "family": "Foundation",
+      "primarySkill": "blueprint-bootstrap",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-new-project.toml",
+      "skillPath": "skills/blueprint-bootstrap/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#new-project",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#new-project",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "new-project initializes a Blueprint project with deep context gathering and PROJECT.md. It stays host-native and delegates durable persistence to Blueprint MCP tools while preserving the richer bootstrap flow.",
+      "reads": [
+        "~/.<host>/blueprint/defaults.json when present"
+      ],
+      "writes": [
+        ".blueprint/PROJECT.md",
+        ".blueprint/REQUIREMENTS.md",
+        ".blueprint/ROADMAP.md",
+        ".blueprint/STATE.md",
+        ".blueprint/config.json",
+        ".blueprint/phases/"
+      ],
+      "risk": "Medium: deep-questioning bootstrap that creates the initial planning tree, seeds normalized repo config, and leaves a traceable first roadmap.",
+      "requiredTools": [
+        "blueprint_project_init",
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_config_set",
+        "blueprint_state_update",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_validate"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-project-researcher",
+        "blueprint-roadmapper"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-project-researcher",
+        "blueprint-roadmapper"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#new-project",
+        "waveTitle": "Foundation",
+        "command": "new-project",
+        "primarySkill": "blueprint-bootstrap",
+        "exactMcpDestination": [
+          "blueprint_project_init",
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_config_set",
+          "blueprint_state_update",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_validate"
+        ],
+        "optionalAgents": [
+          "blueprint-project-researcher",
+          "blueprint-roadmapper"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "progress",
+      "command": "/blu-progress",
+      "route": "/blu progress",
+      "wave": 0,
+      "family": "Foundation",
+      "primarySkill": "blueprint-router",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-progress.toml",
+      "skillPath": "skills/blueprint-router/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#progress",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#progress",
+      "executionProfile": "router",
+      "rootRoutable": true,
+      "purpose": "`progress` summarizes Blueprint repo status, blockers, warnings, and next safe implemented guidance from MCP-owned state.",
+      "reads": [
+        ".blueprint/ state, config, artifacts, project status, and command catalog through MCP tools."
+      ],
+      "writes": [],
+      "risk": "Low: read-only status inspection.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_state_load",
+        "blueprint_artifact_list",
+        "blueprint_command_catalog"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#progress",
+        "waveTitle": "Foundation",
+        "command": "progress",
+        "primarySkill": "blueprint-router",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_state_load",
+          "blueprint_artifact_list",
+          "blueprint_command_catalog"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [],
+        "contractNotes": "Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface. Brownfield uninitialized and mapping-incomplete states point to /blu-map-codebase; mapped-only points to /blu-new-project. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "set-profile",
+      "command": "/blu-set-profile",
+      "route": "/blu set-profile",
+      "wave": 0,
+      "family": "Foundation",
+      "primarySkill": "blueprint-governance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-set-profile.toml",
+      "skillPath": "skills/blueprint-governance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#set-profile",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#set-profile",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`set-profile` changes the current project model_profile through the governance MCP config substrate.",
+      "reads": [
+        "Current Blueprint configuration through MCP."
+      ],
+      "writes": [
+        ".blueprint/config.json model_profile"
+      ],
+      "risk": "Low: single-setting mutation for project model profile selection.",
+      "requiredTools": [
+        "blueprint_config_get",
+        "blueprint_config_set_profile"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#set-profile",
+        "waveTitle": "Foundation",
+        "command": "set-profile",
+        "primarySkill": "blueprint-governance",
+        "exactMcpDestination": [
+          "blueprint_config_get",
+          "blueprint_config_set_profile"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for one-field project profile mutation: load skills/blueprint-governance/references/set-profile-runtime-contract.md, inspect current config first, update only model_profile through blueprint_config_set_profile, and route follow-ups only to implemented commands.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "settings",
+      "command": "/blu-settings",
+      "route": "/blu settings",
+      "wave": 0,
+      "family": "Foundation",
+      "primarySkill": "blueprint-governance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-settings.toml",
+      "skillPath": "skills/blueprint-governance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#settings",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#settings",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`settings` inspects and updates Blueprint repo or default configuration through governance MCP tools.",
+      "reads": [
+        "Project status and current Blueprint configuration through MCP."
+      ],
+      "writes": [
+        ".blueprint/config.json or host defaults when explicitly requested"
+      ],
+      "risk": "Low: config-only mutation inside repo config plus optional user defaults.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_config_set"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#settings",
+        "waveTitle": "Foundation",
+        "command": "settings",
+        "primarySkill": "blueprint-governance",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_config_set"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for bounded configuration inspection and mutation: load skills/blueprint-governance/references/settings-runtime-contract.md, read status and config through MCP first, mutate only explicit repo/defaults settings through blueprint_config_set, and route follow-ups only to implemented commands.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "discuss-phase",
+      "command": "/blu-discuss-phase",
+      "route": "/blu discuss-phase",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-phase-discovery",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-discuss-phase.toml",
+      "skillPath": "skills/blueprint-phase-discovery/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#discuss-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#discuss-phase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.",
+      "reads": [
+        "Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts including phase-local spec when phase.artifacts.spec exists, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."
+      ],
+      "writes": [
+        "starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases",
+        "phase XX-CONTEXT.md",
+        "optional phase XX-DISCUSSION-LOG.md",
+        "optional shared phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: can replace or extend phase context artifacts.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_context",
+        "blueprint_roadmap_read",
+        "blueprint_phase_plan_index",
+        "blueprint_artifact_list",
+        "blueprint_config_get",
+        "blueprint_artifact_contract_read",
+        "blueprint_phase_artifact_read",
+        "blueprint_phase_artifact_write",
+        "blueprint_phase_checkpoint_get",
+        "blueprint_phase_checkpoint_put",
+        "blueprint_phase_checkpoint_delete",
+        "blueprint_phase_artifact_scaffold",
+        "blueprint_state_update",
+        "blueprint_state_load"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-researcher"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-researcher"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#discuss-phase",
+        "waveTitle": "Core Lifecycle",
+        "command": "discuss-phase",
+        "primarySkill": "blueprint-phase-discovery",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_context",
+          "blueprint_roadmap_read",
+          "blueprint_phase_plan_index",
+          "blueprint_artifact_list",
+          "blueprint_config_get",
+          "blueprint_artifact_contract_read",
+          "blueprint_phase_artifact_read",
+          "blueprint_phase_artifact_write",
+          "blueprint_phase_checkpoint_get",
+          "blueprint_phase_checkpoint_put",
+          "blueprint_phase_checkpoint_delete",
+          "blueprint_phase_artifact_scaffold",
+          "blueprint_state_update",
+          "blueprint_state_load"
+        ],
+        "optionalAgents": [
+          "blueprint-researcher"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, treats a planned ROADMAP phase with no matching directory as seedable by blueprint_phase_artifact_scaffold artifact=context before regular selected-phase reads, reports other phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, reads phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists, treats saved Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, counts locked numbered requirements, keeps missing spec nonblocking, avoids generic deliverable questions when the spec already answers them, routes spec contradictions back through ask_user to /blu-spec-phase <phase> instead of silently overriding spec intent in context, does a prior-context sweep before asking implementation questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, maps spec basis into existing context fields only, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "execute-phase",
+      "command": "/blu-execute-phase",
+      "route": "/blu execute-phase",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-phase-execution",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-execute-phase.toml",
+      "skillPath": "skills/blueprint-phase-execution/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#execute-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#execute-phase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.",
+      "reads": [
+        ".blueprint/config.json",
+        ".blueprint/STATE.md",
+        "selected plan and summary files through MCP",
+        "phase.summary contract"
+      ],
+      "writes": [
+        "one or more XX-YY-SUMMARY.md files",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "High: drives real repo mutation during implementation and records execution summaries.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_plan_index",
+        "blueprint_phase_execution_targets",
+        "blueprint_phase_plan_read",
+        "blueprint_phase_summary_index",
+        "blueprint_phase_summary_read",
+        "blueprint_phase_summary_authoring_context",
+        "blueprint_phase_summary_validate_model",
+        "blueprint_phase_summary_write",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_artifact_validate",
+        "blueprint_state_load",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-executor"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-executor"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#execute-phase",
+        "waveTitle": "Core Lifecycle",
+        "command": "execute-phase",
+        "primarySkill": "blueprint-phase-execution",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_plan_index",
+          "blueprint_phase_execution_targets",
+          "blueprint_phase_plan_read",
+          "blueprint_phase_summary_index",
+          "blueprint_phase_summary_read",
+          "blueprint_phase_summary_authoring_context",
+          "blueprint_phase_summary_validate_model",
+          "blueprint_phase_summary_write",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_artifact_validate",
+          "blueprint_state_load",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-executor"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        "contractNotes": "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, use blueprint_phase_execution_targets as the common read authority for deterministic target selection plus overwrite and overlap warnings with selectedPlans, existingSummaries, blockers, and conflicts as the default public metadata source, keep blueprint_config_get with scope: \"effective\" on the common path for execution mode and safety explanation, read plan bodies through blueprint_phase_plan_read only for the selected plans, read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text, keep blueprint_artifact_contract_read with artifactId: \"phase.summary\" plus the Markdown-first summary authoring context before any summary write or replacement, do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path, refuse stale or invalid saved plans, preserve wave order, lower-wave blockers, gap-only routing, overlap detection, and external-service confirmation through execution_targets, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, keep the post-write sequence as blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: \"synced\", never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "next",
+      "command": "/blu-next",
+      "route": "/blu next",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-router",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-next.toml",
+      "skillPath": "skills/blueprint-router/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#next",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#next",
+      "executionProfile": "router",
+      "rootRoutable": true,
+      "purpose": "`next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.",
+      "reads": [
+        ".blueprint/ effective config, state, artifact inventory, project status, and command catalog through MCP tools."
+      ],
+      "writes": [],
+      "risk": "Low: read-only next-step routing from project status, effective config, state, artifacts, and the live command catalog.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_state_load",
+        "blueprint_artifact_list",
+        "blueprint_command_catalog"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#next",
+        "waveTitle": "Core Lifecycle",
+        "command": "next",
+        "primarySkill": "blueprint-router",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_state_load",
+          "blueprint_artifact_list",
+          "blueprint_command_catalog"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [],
+        "contractNotes": "Host-native router flow; read effective config so post-UAT routing stays aligned with review and secure-phase gates, report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. When workflow.code_review=false, never make /blu-secure-phase <phase> mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, route to mandatory code review when review evidence is missing but do not require secure-phase; when workflow.code_review=true and workflow.secure_phase=true, route /blu-code-review <phase> before /blu-secure-phase <phase>. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "pause-work",
+      "command": "/blu-pause-work",
+      "route": "/blu pause-work",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-governance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-pause-work.toml",
+      "skillPath": "skills/blueprint-governance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#pause-work",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#pause-work",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`pause-work` records a canonical handoff from current Blueprint state and artifact inventory.",
+      "reads": [
+        "Current state, artifact inventory, and existing pause handoff state through MCP."
+      ],
+      "writes": [
+        ".blueprint/reports/pause-work-latest.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Low: writes handoff and state artifacts only.",
+      "requiredTools": [
+        "blueprint_state_load",
+        "blueprint_artifact_list",
+        "blueprint_pause_handoff_get",
+        "blueprint_pause_handoff_write",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#pause-work",
+        "waveTitle": "Core Lifecycle",
+        "command": "pause-work",
+        "primarySkill": "blueprint-governance",
+        "exactMcpDestination": [
+          "blueprint_state_load",
+          "blueprint_artifact_list",
+          "blueprint_pause_handoff_get",
+          "blueprint_pause_handoff_write",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for canonical handoff capture: load skills/blueprint-governance/references/pause-work-runtime-contract.md, read state and artifact inventory through MCP, compare existing handoff state before overwrite where relevant, persist only through blueprint_pause_handoff_write and blueprint_state_update, and route follow-ups only to implemented commands.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "plan-phase",
+      "command": "/blu-plan-phase",
+      "route": "/blu plan-phase",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-phase-planning",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-plan-phase.toml",
+      "skillPath": "skills/blueprint-phase-planning/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#plan-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#plan-phase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.",
+      "reads": [
+        "Phase resolution, context, planning readiness, saved discovery artifacts including optional phase-local XX-SPEC.md when present, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."
+      ],
+      "writes": [
+        "structured phase.plan JSON through blueprint_phase_plan_write",
+        ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_phase_plan_write",
+        ".blueprint/STATE.md through synced state update"
+      ],
+      "risk": "Medium: can replace plans and change downstream execution order.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_artifact_contract_read",
+        "blueprint_phase_context",
+        "blueprint_phase_research_status",
+        "blueprint_phase_artifact_read",
+        "blueprint_phase_validation_read",
+        "blueprint_review_load_findings",
+        "blueprint_phase_plan_index",
+        "blueprint_phase_plan_read",
+        "blueprint_phase_plan_readiness",
+        "blueprint_phase_plan_authoring_context",
+        "blueprint_phase_plan_validate_model",
+        "blueprint_phase_plan_write",
+        "blueprint_phase_plan_validate",
+        "blueprint_config_get",
+        "blueprint_state_load",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-planner",
+        "blueprint-checker"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-planner",
+        "blueprint-checker"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#plan-phase",
+        "waveTitle": "Core Lifecycle",
+        "command": "plan-phase",
+        "primarySkill": "blueprint-phase-planning",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_artifact_contract_read",
+          "blueprint_phase_context",
+          "blueprint_phase_research_status",
+          "blueprint_phase_artifact_read",
+          "blueprint_phase_validation_read",
+          "blueprint_review_load_findings",
+          "blueprint_phase_plan_index",
+          "blueprint_phase_plan_read",
+          "blueprint_phase_plan_readiness",
+          "blueprint_phase_plan_authoring_context",
+          "blueprint_phase_plan_validate_model",
+          "blueprint_phase_plan_write",
+          "blueprint_phase_plan_validate",
+          "blueprint_config_get",
+          "blueprint_state_load",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-planner",
+          "blueprint-checker"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals including optional XX-SPEC.md when present, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Treat missing XX-SPEC.md as nonblocking by default, but when phase.artifacts.spec exists include it in the Planning Investigation Trace, the readiness read set, and runtime-narrowed evidenceCoverage, and repair or warn on draft contradictions against explicit spec out-of-scope boundaries. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: \"strict\", authoringMode: \"model-only\", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: \"synced\" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "research-phase",
+      "command": "/blu-research-phase",
+      "route": "/blu research-phase",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-phase-discovery",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-research-phase.toml",
+      "skillPath": "skills/blueprint-phase-discovery/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#research-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#research-phase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
+      "reads": [
+        "Phase selection starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate stays fallback-only recovery; research status, saved phase artifacts including optional spec when phase.artifacts.spec exists, checkpoints, artifact contracts, effective config, command catalog, and refreshed state stay MCP-owned."
+      ],
+      "writes": [
+        "phase XX-RESEARCH.md",
+        "optional shared phase checkpoint JSON owned by research-phase",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Low: writes research artifacts only.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_context",
+        "blueprint_phase_research_status",
+        "blueprint_phase_artifact_read",
+        "blueprint_phase_artifact_scaffold",
+        "blueprint_phase_artifact_write",
+        "blueprint_phase_checkpoint_get",
+        "blueprint_phase_checkpoint_put",
+        "blueprint_phase_checkpoint_delete",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_state_load",
+        "blueprint_command_catalog",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-researcher"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-researcher"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#research-phase",
+        "waveTitle": "Core Lifecycle",
+        "command": "research-phase",
+        "primarySkill": "blueprint-phase-discovery",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_context",
+          "blueprint_phase_research_status",
+          "blueprint_phase_artifact_read",
+          "blueprint_phase_artifact_scaffold",
+          "blueprint_phase_artifact_write",
+          "blueprint_phase_checkpoint_get",
+          "blueprint_phase_checkpoint_put",
+          "blueprint_phase_checkpoint_delete",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_state_load",
+          "blueprint_command_catalog",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-researcher"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md. Selected-phase resolution starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate is fallback-only recovery. After usable context is confirmed, read phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists and treat missing spec as nonblocking. It ties research strands and dependency/tool choices to spec requirements or constraints, includes spec path and requirement labels in Recommendation Handoff, routes stale context to /blu-discuss-phase <phase>, and routes stale or wrong spec to /blu-spec-phase <phase>. Independent read-only calls with known args may share one tool-call turn; writes/repair/state/routing/checkpoint deletion stay sequenced. phase.research contract.authoringTemplate is schema authority.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "resume-work",
+      "command": "/blu-resume-work",
+      "route": "/blu resume-work",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-governance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-resume-work.toml",
+      "skillPath": "skills/blueprint-governance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#resume-work",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#resume-work",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`resume-work` restores working context from the canonical pause handoff and records the next safe action.",
+      "reads": [
+        "Project status, current state, artifact inventory, and canonical pause handoff through MCP."
+      ],
+      "writes": [
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Low: restores state from the canonical pause handoff and updates the next safe action.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_state_load",
+        "blueprint_artifact_list",
+        "blueprint_pause_handoff_get",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#resume-work",
+        "waveTitle": "Core Lifecycle",
+        "command": "resume-work",
+        "primarySkill": "blueprint-governance",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_state_load",
+          "blueprint_artifact_list",
+          "blueprint_pause_handoff_get",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for handoff restoration: load skills/blueprint-governance/references/resume-work-runtime-contract.md, read project status, state, artifacts, and canonical pause handoff through MCP, restore only from the canonical handoff, persist next safe action through blueprint_state_update, and route follow-ups only to implemented commands.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "spec-phase",
+      "command": "/blu-spec-phase",
+      "route": "/blu spec-phase",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-phase-discovery",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-spec-phase.toml",
+      "skillPath": "skills/blueprint-phase-discovery/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#spec-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#spec-phase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`spec-phase` clarifies what a Blueprint phase should deliver and writes the optional phase-scoped spec artifact before later discovery and planning flows.",
+      "reads": [
+        "Phase resolution, roadmap requirements, state, codebase summaries, artifact inventory, effective config, any existing spec, phase.spec contract inputs, refreshed command catalog state, and synced state through MCP."
+      ],
+      "writes": [
+        "canonical phase XX-SPEC.md artifact through blueprint_phase_artifact_write with artifact spec",
+        ".blueprint/STATE.md through synced state update after a valid write or no-write route"
+      ],
+      "risk": "Low: optional pre-discussion requirements clarification writes one phase-scoped spec artifact and synced state only.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_context",
+        "blueprint_roadmap_read",
+        "blueprint_artifact_list",
+        "blueprint_config_get",
+        "blueprint_phase_artifact_read",
+        "blueprint_phase_artifact_write",
+        "blueprint_artifact_contract_read",
+        "blueprint_state_load",
+        "blueprint_state_update",
+        "blueprint_command_catalog"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#spec-phase",
+        "waveTitle": "Core Lifecycle",
+        "command": "spec-phase",
+        "primarySkill": "blueprint-phase-discovery",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_context",
+          "blueprint_roadmap_read",
+          "blueprint_artifact_list",
+          "blueprint_config_get",
+          "blueprint_phase_artifact_read",
+          "blueprint_phase_artifact_write",
+          "blueprint_artifact_contract_read",
+          "blueprint_state_load",
+          "blueprint_state_update",
+          "blueprint_command_catalog"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Implemented runtime-owned behavior: load skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md as the active behavior contract, resolve through blueprint_phase_context before fallback locate, read existing spec and the live phase.spec contract before drafting, run the existing-spec update/view/skip gate, use the quantitative ambiguity formula and six-round Socratic loop, persist only through blueprint_phase_artifact_write with artifact spec, then sync state and prove the next safe implemented action through blueprint_command_catalog. Treat missing spec as nonblocking for normal discuss/research/plan lifecycle; recommend /blu-spec-phase only when the catalog proves it implemented for spec-first planning, ambiguous roadmap or context gaps, or stale/contradictory saved spec evidence.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "ui-phase",
+      "command": "/blu-ui-phase",
+      "route": "/blu ui-phase",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-phase-discovery",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-ui-phase.toml",
+      "skillPath": "skills/blueprint-phase-discovery/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#ui-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#ui-phase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`ui-phase` creates or reuses the single phase-scoped UI artifact, writing either a UI design contract or an explicit skip rationale through MCP-owned phase artifact persistence.",
+      "reads": [
+        "Phase resolution, research status, effective config, canonical UI-spec contract, saved context/research/UI artifacts, and state through MCP."
+      ],
+      "writes": [
+        "phase XX-UI-SPEC.md for either a UI contract or an explicit UI-skip rationale",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Low: writes a UI contract or documented skip rationale only.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_research_status",
+        "blueprint_config_get",
+        "blueprint_phase_artifact_read",
+        "blueprint_phase_ui_skip_write",
+        "blueprint_artifact_contract_read",
+        "blueprint_phase_artifact_write",
+        "blueprint_artifact_scaffold",
+        "blueprint_state_load",
+        "blueprint_command_catalog",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-ui-designer",
+        "blueprint-checker"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-ui-designer",
+        "blueprint-checker"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#ui-phase",
+        "waveTitle": "Core Lifecycle",
+        "command": "ui-phase",
+        "primarySkill": "blueprint-phase-discovery",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_research_status",
+          "blueprint_config_get",
+          "blueprint_phase_artifact_read",
+          "blueprint_phase_ui_skip_write",
+          "blueprint_artifact_contract_read",
+          "blueprint_phase_artifact_write",
+          "blueprint_artifact_scaffold",
+          "blueprint_state_load",
+          "blueprint_command_catalog",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-ui-designer",
+          "blueprint-checker"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, branch early with progressive disclosure so explicit skip mode reads the existing UI artifact and writes through blueprint_phase_ui_skip_write without loading the full phase.ui-spec contract or scaffold, read the canonical phase.ui-spec contract only for real UI-contract drafting, read actual saved context and research bodies when contract-mode status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority only for full UI-contract mode, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, call blueprint_state_update with base: \"synced\" while preserving patch.currentPhase and patch.activeCommand, then re-load blueprint_state_load.derivedStatus.nextAction and keep final routing constrained by blueprint_command_catalog, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "validate-phase",
+      "command": "/blu-validate-phase",
+      "route": "/blu validate-phase",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-phase-validation",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-validate-phase.toml",
+      "skillPath": "skills/blueprint-phase-validation/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#validate-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#validate-phase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`validate-phase` audits saved execution summaries and persists phase verification evidence through the validation MCP substrate.",
+      "reads": [
+        "Saved phase summaries, validation baselines, config, artifact health, and state through MCP tools."
+      ],
+      "writes": [
+        "phase XX-VERIFICATION.md",
+        ".blueprint/ROADMAP.md when workflow.no_uat completion evidence closes",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Low: writes summary-aware verification evidence and updates follow-up state.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_summary_index",
+        "blueprint_phase_summary_read",
+        "blueprint_phase_validation_read",
+        "blueprint_phase_validation_authoring_context",
+        "blueprint_phase_validation_validate_model",
+        "blueprint_phase_validation_write",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_artifact_validate",
+        "blueprint_state_load",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-verifier"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-verifier"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#validate-phase",
+        "waveTitle": "Core Lifecycle",
+        "command": "validate-phase",
+        "primarySkill": "blueprint-phase-validation",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_summary_index",
+          "blueprint_phase_summary_read",
+          "blueprint_phase_validation_read",
+          "blueprint_phase_validation_authoring_context",
+          "blueprint_phase_validation_validate_model",
+          "blueprint_phase_validation_write",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_artifact_validate",
+          "blueprint_state_load",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-verifier"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use MCP content.text as compact mirrored structured result JSON when host structured content is hidden, author against the contract plus taskSchema returned by blueprint_phase_validation_authoring_context, keep blueprint_artifact_contract_read available only as a fallback sanity read when that embedded contract payload is missing, treat blueprint_phase_validation_validate_model diagnostics as schema authority, and route only to implemented follow-up commands.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "verify-work",
+      "command": "/blu-verify-work",
+      "route": "/blu verify-work",
+      "wave": 1,
+      "family": "Core Lifecycle",
+      "primarySkill": "blueprint-phase-validation",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-verify-work.toml",
+      "skillPath": "skills/blueprint-phase-validation/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#verify-work",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#verify-work",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`verify-work` runs summary-backed UAT and persists resumable phase UAT evidence through the validation MCP substrate.",
+      "reads": [
+        "Saved phase summaries, verification and UAT state, config, artifact health, and state through MCP tools."
+      ],
+      "writes": [
+        "phase XX-UAT.md",
+        ".blueprint/ROADMAP.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: writes resumable UAT artifacts, can close or reopen roadmap completion, and records follow-up state.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_summary_index",
+        "blueprint_phase_summary_read",
+        "blueprint_phase_validation_read",
+        "blueprint_phase_validation_authoring_context",
+        "blueprint_phase_validation_validate_model",
+        "blueprint_phase_validation_render",
+        "blueprint_phase_validation_write",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_artifact_validate",
+        "blueprint_state_load",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-verifier"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-verifier"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#verify-work",
+        "waveTitle": "Core Lifecycle",
+        "command": "verify-work",
+        "primarySkill": "blueprint-phase-validation",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_summary_index",
+          "blueprint_phase_summary_read",
+          "blueprint_phase_validation_read",
+          "blueprint_phase_validation_authoring_context",
+          "blueprint_phase_validation_validate_model",
+          "blueprint_phase_validation_render",
+          "blueprint_phase_validation_write",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_artifact_validate",
+          "blueprint_state_load",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-verifier"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile; keep conversational UAT phase-scoped, summary-aware, and persisted through the validation MCP substrate. Post-UAT routing is config-gated: workflow.code_review=false means secure-phase is never mandatory regardless of workflow.secure_phase; workflow.code_review=true with workflow.secure_phase=false can make mandatory code review the next gate but not secure-phase; workflow.code_review=true with workflow.secure_phase=true routes code-review first and only routes secure-phase after review exists. /blu-secure-phase remains manually runnable and implemented; this setting controls mandatory post-UAT routing only.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "add-phase",
+      "command": "/blu-add-phase",
+      "route": "/blu add-phase",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-roadmap-admin",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-add-phase.toml",
+      "skillPath": "skills/blueprint-roadmap-admin/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#add-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#add-phase",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "Append a new whole-number phase to an initialized Blueprint roadmap through MCP-owned roadmap and scaffold writes.",
+      "reads": [
+        ".blueprint/ROADMAP.md"
+      ],
+      "writes": [
+        ".blueprint/ROADMAP.md",
+        ".blueprint/phases/<phase-slug>/<phase-prefix>-CONTEXT.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: appends the next whole-number phase, scaffolds the matching phase directory, and updates the next-step signal.",
+      "requiredTools": [
+        "blueprint_roadmap_read",
+        "blueprint_roadmap_add_phase",
+        "blueprint_artifact_scaffold",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#add-phase",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "add-phase",
+        "primarySkill": "blueprint-roadmap-admin",
+        "exactMcpDestination": [
+          "blueprint_roadmap_read",
+          "blueprint_roadmap_add_phase",
+          "blueprint_artifact_scaffold",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, choose and confirm durable requirementIds plus a concrete goal plus 2-5 successCriteria, prefer ask_user for the exact phase-number and roadmap-metadata confirmation gate, pass the confirmed number as expectedPhaseNumber, confirmed IDs as requirementIds, objective as goal, and criteria as successCriteria, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "audit-milestone",
+      "command": "/blu-audit-milestone",
+      "route": "/blu audit-milestone",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-roadmap-admin",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-audit-milestone.toml",
+      "skillPath": "skills/blueprint-roadmap-admin/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#audit-milestone",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#audit-milestone",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`audit-milestone` compares original milestone intent against saved phase evidence and writes a durable milestone audit report with grouped gaps and traceability notes.",
+      "reads": [
+        "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+        "blueprint_phase_summary_index -> phase summary evidence",
+        "blueprint_artifact_list -> {artifacts, reports, missing}",
+        "blueprint_artifact_contract_read -> report.milestone-audit contract",
+        "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+      ],
+      "writes": [
+        "milestone audit report in .blueprint/reports/"
+      ],
+      "risk": "Low: report generation only.",
+      "requiredTools": [
+        "blueprint_roadmap_read",
+        "blueprint_phase_summary_index",
+        "blueprint_artifact_list",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_summary_digest",
+        "blueprint_config_get",
+        "blueprint_artifact_report_write"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-verifier"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-verifier"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#audit-milestone",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "audit-milestone",
+        "primarySkill": "blueprint-roadmap-admin",
+        "exactMcpDestination": [
+          "blueprint_roadmap_read",
+          "blueprint_phase_summary_index",
+          "blueprint_artifact_list",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_summary_digest",
+          "blueprint_config_get",
+          "blueprint_artifact_report_write"
+        ],
+        "optionalAgents": [
+          "blueprint-verifier"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Interactive-read profile for bounded milestone auditing: compare original milestone intent against completed phase evidence, read report.milestone-audit before drafting, keep grouped gap sections plus traceability notes for downstream repair, prefer ask_user for overwrite confirmation, keep the waiting state explicit as milestone-audit-overwrite-confirmation, and stay report-local in .blueprint/reports/ without adopting long-running progress tools.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "complete-milestone",
+      "command": "/blu-complete-milestone",
+      "route": "/blu complete-milestone",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-roadmap-admin",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-complete-milestone.toml",
+      "skillPath": "skills/blueprint-roadmap-admin/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#complete-milestone",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#complete-milestone",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`complete-milestone` performs a report-driven closeout gated by saved milestone audit readiness, writes a durable completion report, and routes to milestone summary.",
+      "reads": [
+        "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+        "blueprint_artifact_list -> {artifacts, reports, missing}",
+        "blueprint_state_load -> derivedStatus.milestoneAudit readiness",
+        "blueprint_artifact_contract_read -> report.milestone-complete contract",
+        "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+      ],
+      "writes": [
+        ".blueprint/reports/milestone-complete-<milestone>.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: writes milestone closeout evidence and advances archival routing.",
+      "requiredTools": [
+        "blueprint_roadmap_read",
+        "blueprint_artifact_list",
+        "blueprint_state_load",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_summary_digest",
+        "blueprint_artifact_report_write",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#complete-milestone",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "complete-milestone",
+        "primarySkill": "blueprint-roadmap-admin",
+        "exactMcpDestination": [
+          "blueprint_roadmap_read",
+          "blueprint_artifact_list",
+          "blueprint_state_load",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_summary_digest",
+          "blueprint_artifact_report_write",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<milestone>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "insert-phase",
+      "command": "/blu-insert-phase",
+      "route": "/blu insert-phase",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-roadmap-admin",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-insert-phase.toml",
+      "skillPath": "skills/blueprint-roadmap-admin/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#insert-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#insert-phase",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`insert-phase` inserts urgent work as a decimal phase between existing phases, scaffolds the matching phase context starter, records roadmap evolution state, and routes back to discovery without renumbering later phases.",
+      "reads": [
+        "The current roadmap and milestone inventory through blueprint_roadmap_read.",
+        ".blueprint/REQUIREMENTS.md durable requirement ID declarations enforced by blueprint_roadmap_insert_phase."
+      ],
+      "writes": [
+        ".blueprint/ROADMAP.md",
+        ".blueprint/REQUIREMENTS.md",
+        ".blueprint/phases/<phasePrefix>-<phaseSlug>/",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: inserts the next decimal phase after an integer phase without renumbering later roadmap entries.",
+      "requiredTools": [
+        "blueprint_roadmap_read",
+        "blueprint_roadmap_insert_phase",
+        "blueprint_artifact_scaffold",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#insert-phase",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "insert-phase",
+        "primarySkill": "blueprint-roadmap-admin",
+        "exactMcpDestination": [
+          "blueprint_roadmap_read",
+          "blueprint_roadmap_insert_phase",
+          "blueprint_artifact_scaffold",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "list-phase-assumptions",
+      "command": "/blu-list-phase-assumptions",
+      "route": "/blu list-phase-assumptions",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-phase-discovery",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-list-phase-assumptions.toml",
+      "skillPath": "skills/blueprint-phase-discovery/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#list-phase-assumptions",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#list-phase-assumptions",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`list-phase-assumptions` surfaces read-only pre-planning assumptions about a phase so users can correct misunderstandings before discovery or planning.",
+      "reads": [
+        "Phase resolution, phase context, roadmap state, project status, and effective config through MCP."
+      ],
+      "writes": [],
+      "risk": "Low: read-only analysis.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_context",
+        "blueprint_roadmap_read",
+        "blueprint_project_status",
+        "blueprint_config_get"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-researcher"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-researcher"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#list-phase-assumptions",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "list-phase-assumptions",
+        "primarySkill": "blueprint-phase-discovery",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_context",
+          "blueprint_roadmap_read",
+          "blueprint_project_status",
+          "blueprint_config_get"
+        ],
+        "optionalAgents": [
+          "blueprint-researcher"
+        ],
+        "hookInvolvement": [],
+        "contractNotes": "Interactive-read profile for read-only pre-planning synthesis: load skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md, keep the response grounded in saved phase and roadmap state, read blueprint_config_get with scope: \"effective\" before optional researcher decisions, preserve the five explicit assumption areas plus uncertainty language, surface missing or blocked phase resolution as a waiting state with valid roadmap phases and the next safe implemented follow-up, and do not widen into writes, hidden planning, or tracker-backed progress behavior.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "milestone-summary",
+      "command": "/blu-milestone-summary",
+      "route": "/blu milestone-summary",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-roadmap-admin",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-milestone-summary.toml",
+      "skillPath": "skills/blueprint-roadmap-admin/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#milestone-summary",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#milestone-summary",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`milestone-summary` builds a durable consolidated milestone spec from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.",
+      "reads": [
+        "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+        "blueprint_artifact_list -> {artifacts, reports, missing}",
+        "blueprint_artifact_contract_read -> report.milestone-summary contract",
+        "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+      ],
+      "writes": [
+        ".blueprint/reports/milestone-summary-<milestone>.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Low: report generation and routing only.",
+      "requiredTools": [
+        "blueprint_roadmap_read",
+        "blueprint_artifact_list",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_summary_digest",
+        "blueprint_artifact_report_write",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#milestone-summary",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "milestone-summary",
+        "primarySkill": "blueprint-roadmap-admin",
+        "exactMcpDestination": [
+          "blueprint_roadmap_read",
+          "blueprint_artifact_list",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_summary_digest",
+          "blueprint_artifact_report_write",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Interactive-read profile for bounded milestone summarization: use saved audit, completion, and milestone-level evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<milestone>.md as the canonical consolidated milestone spec, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "new-milestone",
+      "command": "/blu-new-milestone",
+      "route": "/blu new-milestone",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-roadmap-admin",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-new-milestone.toml",
+      "skillPath": "skills/blueprint-roadmap-admin/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#new-milestone",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#new-milestone",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved consolidated milestone spec, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.",
+      "reads": [
+        "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+        "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts",
+        "blueprint_artifact_summary_digest -> {digest, inputsUsed}",
+        "blueprint_config_get -> effective config before any optional blueprint-roadmapper pass",
+        "typed Roadmapper Packet built by the parent from digestScope, carryForwardFacts, requirementTransitionHints, and a relative firstPhasePreview only"
+      ],
+      "writes": [
+        ".blueprint/PROJECT.md",
+        ".blueprint/REQUIREMENTS.md",
+        ".blueprint/ROADMAP.md",
+        ".blueprint/phases/<next-phase-slug>/<NN>-CONTEXT.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: rewrites milestone starter docs through carry-forward scaffolding and advances state without deleting historical phase artifacts.",
+      "requiredTools": [
+        "blueprint_roadmap_read",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_summary_digest",
+        "blueprint_config_get",
+        "blueprint_artifact_scaffold",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-roadmapper"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-roadmapper"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#new-milestone",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "new-milestone",
+        "primarySkill": "blueprint-roadmap-admin",
+        "exactMcpDestination": [
+          "blueprint_roadmap_read",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_summary_digest",
+          "blueprint_config_get",
+          "blueprint_artifact_scaffold",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-roadmapper"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Interactive-read profile for bounded milestone restart: use the saved consolidated milestone spec as durable carry-forward input, read blueprint_config_get with scope: effective before any optional blueprint-roadmapper decision, read report.milestone-summary before seeding, preview the exact carry-forward source scope plus first-phase target plus starter-doc overwrite set before mutation, build a typed Roadmapper Packet from digestScope plus carryForwardFacts plus requirementTransitionHints plus a relative firstPhasePreview only, keep parentOwnedResponsibilities with the parent for digest reads, evidence-scope construction, final milestone naming, final phase numbering and paths, confirmation gates, MCP writes, final response, and routing, forbid MCP writes, hand-editing .blueprint/, final phase.context authoring, confirmation-gate overrides, and any web, browser, or shell access not granted in the roadmapper frontmatter, pass only that packet to blueprint-roadmapper instead of raw reports, chat history, unrestricted files, web search results, browser-only findings, or shell-only substitutes, require the same typed result shape in every mode with roadmapperMode plus provisionalOrderedProposals plus coverageNotes plus blockers plus warnings plus assumptions plus confidence plus relativeFirstPhaseRecommendation, use roadmapperMode values used, skipped-disabled, skipped-unnecessary, or unavailable-fallback, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, treat blueprint_artifact_scaffold receipt fields highestBasePhaseNumber, firstPhaseNumber, firstPhasePrefix, firstPhaseDir, firstContextPath, deletedPhaseDirectories, and renamedPhaseDirectories as authoritative, update state only after scaffold succeeds and the first context path exists, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "plan-milestone-gaps",
+      "command": "/blu-plan-milestone-gaps",
+      "route": "/blu plan-milestone-gaps",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-roadmap-admin",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-plan-milestone-gaps.toml",
+      "skillPath": "skills/blueprint-roadmap-admin/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#plan-milestone-gaps",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#plan-milestone-gaps",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`plan-milestone-gaps` creates grouped roadmap phases to close actionable gaps identified by the saved milestone audit, keeping persistence on roadmap and state MCP tools.",
+      "reads": [
+        "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+        "blueprint_artifact_list -> {artifacts, reports, missing}",
+        "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+      ],
+      "writes": [
+        ".blueprint/ROADMAP.md",
+        "new phase directories for approved gaps",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: can add multiple phases in one pass.",
+      "requiredTools": [
+        "blueprint_roadmap_read",
+        "blueprint_artifact_list",
+        "blueprint_artifact_summary_digest",
+        "blueprint_config_get",
+        "blueprint_roadmap_add_phase",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-roadmapper"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-roadmapper"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#plan-milestone-gaps",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "plan-milestone-gaps",
+        "primarySkill": "blueprint-roadmap-admin",
+        "exactMcpDestination": [
+          "blueprint_roadmap_read",
+          "blueprint_artifact_list",
+          "blueprint_artifact_summary_digest",
+          "blueprint_config_get",
+          "blueprint_roadmap_add_phase",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-roadmapper"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "remove-phase",
+      "command": "/blu-remove-phase",
+      "route": "/blu remove-phase",
+      "wave": 2,
+      "family": "Roadmap And Milestone",
+      "primarySkill": "blueprint-roadmap-admin",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-remove-phase.toml",
+      "skillPath": "skills/blueprint-roadmap-admin/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#remove-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#remove-phase",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`remove-phase` removes a future roadmap phase, deletes its phase directory, renumbers subsequent roadmap and phase artifacts, and re-anchors state on the safest implemented follow-up.",
+      "reads": [
+        "The current roadmap and milestone inventory through blueprint_roadmap_read.",
+        "Existing target-phase artifacts and drift through blueprint_phase_locate."
+      ],
+      "writes": [
+        ".blueprint/ROADMAP.md",
+        "renamed phase directories and phase-scoped artifact filenames under .blueprint/phases/",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "High: deletes a future phase and renumbers later roadmap references plus phase artifacts.",
+      "requiredTools": [
+        "blueprint_roadmap_read",
+        "blueprint_phase_locate",
+        "blueprint_roadmap_remove_phase",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#remove-phase",
+        "waveTitle": "Roadmap And Milestone",
+        "command": "remove-phase",
+        "primarySkill": "blueprint-roadmap-admin",
+        "exactMcpDestination": [
+          "blueprint_roadmap_read",
+          "blueprint_phase_locate",
+          "blueprint_roadmap_remove_phase",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "add-backlog",
+      "command": "/blu-add-backlog",
+      "route": "/blu add-backlog",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-capture",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-add-backlog.toml",
+      "skillPath": "skills/blueprint-capture/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#add-backlog",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#add-backlog",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`add-backlog` appends explicit parking-lot ideas and can reserve a confirmed 999.x phase stub through MCP-owned capture and scaffold writes.",
+      "reads": [
+        "User-provided backlog text and duplicate state through MCP."
+      ],
+      "writes": [
+        ".blueprint/backlog/BACKLOG.md",
+        "optional .blueprint/phases/999.x-*/ context stub"
+      ],
+      "risk": "Low: backlog append plus optional stub scaffold.",
+      "requiredTools": [
+        "blueprint_artifact_mutate_index",
+        "blueprint_artifact_scaffold"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#add-backlog",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "add-backlog",
+        "primarySkill": "blueprint-capture",
+        "exactMcpDestination": [
+          "blueprint_artifact_mutate_index",
+          "blueprint_artifact_scaffold"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for parking-lot capture: require explicit backlog text, persist append-only entries through blueprint_artifact_mutate_index, reserve a 999.x phase stub only behind an explicit confirmation gate, scaffold only returned reserved paths through blueprint_artifact_scaffold, report duplicate backlog ids instead of creating a second copy, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "add-todo",
+      "command": "/blu-add-todo",
+      "route": "/blu add-todo",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-capture",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-add-todo.toml",
+      "skillPath": "skills/blueprint-capture/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#add-todo",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#add-todo",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`add-todo` appends explicit project-local todo items through the capture index MCP tool.",
+      "reads": [
+        "User-provided todo text and duplicate state through MCP."
+      ],
+      "writes": [
+        ".blueprint/todos/TODO.md"
+      ],
+      "risk": "Low: todo index update only.",
+      "requiredTools": [
+        "blueprint_artifact_mutate_index"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#add-todo",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "add-todo",
+        "primarySkill": "blueprint-capture",
+        "exactMcpDestination": [
+          "blueprint_artifact_mutate_index"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for short project-local todo capture: require an explicit description, persist append-only todo entries through blueprint_artifact_mutate_index, report duplicates using returned matching ids instead of creating a second copy, route missing projects and follow-ups only through implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "check-todos",
+      "command": "/blu-check-todos",
+      "route": "/blu check-todos",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-capture",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-check-todos.toml",
+      "skillPath": "skills/blueprint-capture/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#check-todos",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#check-todos",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`check-todos` inspects pending project-local todos and can mark one active or completed through bounded MCP updates.",
+      "reads": [
+        "Project readiness and todo queue state through Blueprint MCP tools."
+      ],
+      "writes": [
+        ".blueprint/todos/TODO.md when status changes are confirmed"
+      ],
+      "risk": "Low: todo selection and status update only.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_artifact_mutate_index"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#check-todos",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "check-todos",
+        "primarySkill": "blueprint-capture",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_artifact_mutate_index"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for deterministic todo inspection and bounded status changes: read blueprint_project_status first, list or update todos only through blueprint_artifact_mutate_index, require explicit confirmation before marking active or completed unless intent is unmistakable, prefer exact ids for updates, report duplicate or reopened-active behavior from MCP results, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "debug",
+      "command": "/blu-debug",
+      "route": "/blu debug",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-debug",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-debug.toml",
+      "skillPath": "skills/blueprint-debug/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#debug",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#debug",
+      "executionProfile": "interactive-read -> long-running-mutation when non-trivial",
+      "rootRoutable": true,
+      "purpose": "`debug` investigates a concrete issue, persists a durable debug-latest report, and stops at an explicit follow-up gate before todo capture or fix attempts.",
+      "reads": [
+        "project status, user-provided issue evidence, relevant local files, command outputs, and prior debug-latest report content when continuing"
+      ],
+      "writes": [
+        ".blueprint/reports/debug-latest.md",
+        "optional explicit follow-up todo through .blueprint/todos/TODO.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: exploratory shell commands and test runs are likely.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_artifact_report_write",
+        "blueprint_artifact_mutate_index",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-debugger"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-debugger"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#debug",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "debug",
+        "primarySkill": "blueprint-debug",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_artifact_report_write",
+          "blueprint_artifact_mutate_index",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-debugger"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        "contractNotes": "Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations. Load commands/blu-debug.toml plus skills/blueprint-debug/references/debug-runtime-contract.md, require a concrete issue statement and initialized Blueprint state before durable persistence, keep --diagnose honest as diagnose-only until the user confirms a fix attempt, use update_topic and write_todos only as session-local visibility for non-trivial investigations, persist the durable report through blueprint_artifact_report_write with the bare debug-latest name and treat returned paths and ids as authoritative, require overwrite confirmation before replacing an existing report, capture persisted todos only after an explicit user ask or confirmation through blueprint_artifact_mutate_index, update state through blueprint_state_update, route implemented follow-ups only to /blu-quick, /blu-plan-phase, /blu-validate-phase, or /blu-progress, and do not hide state or perform broad direct fixes inside debug.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "do",
+      "command": "/blu-do",
+      "route": "/blu do",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-router",
+      "declaredStatus": "planned",
+      "status": "repairing",
+      "implemented": false,
+      "runnable": false,
+      "blockedBy": [
+        "Missing command manifest: commands/blu-do.toml"
+      ],
+      "manifestPath": null,
+      "skillPath": "skills/blueprint-router/SKILL.md",
+      "specPath": null,
+      "sourceId": null,
+      "executionProfile": null,
+      "rootRoutable": null,
+      "purpose": null,
+      "reads": [],
+      "writes": [],
+      "risk": "Low: routing only.",
+      "requiredTools": [],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": null
+    },
+    {
+      "name": "explore",
+      "command": "/blu-explore",
+      "route": "/blu explore",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-capture",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-explore.toml",
+      "skillPath": "skills/blueprint-capture/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#explore",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#explore",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`explore` briefly classifies an idea into note, todo, backlog, roadmap, or no-write and persists only the explicitly confirmed target through MCP tools.",
+      "reads": [
+        "Project readiness, user-provided idea text, and optional bounded researcher context."
+      ],
+      "writes": [
+        "confirmed target only: .blueprint/notes/NOTES.md, .blueprint/todos/TODO.md, .blueprint/backlog/BACKLOG.md, or .blueprint/ROADMAP.md plus scaffolded phase context"
+      ],
+      "risk": "Medium: ideation-first, but confirmed roadmap promotion can append a new active phase.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_artifact_mutate_index",
+        "blueprint_roadmap_add_phase",
+        "blueprint_artifact_scaffold"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-researcher"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-researcher"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#explore",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "explore",
+        "primarySkill": "blueprint-capture",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_artifact_mutate_index",
+          "blueprint_roadmap_add_phase",
+          "blueprint_artifact_scaffold"
+        ],
+        "optionalAgents": [
+          "blueprint-researcher"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "fast",
+      "command": "/blu-fast",
+      "route": "/blu fast",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-phase-execution",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-fast.toml",
+      "skillPath": "skills/blueprint-phase-execution/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#fast",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#fast",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.",
+      "reads": [
+        "project status through MCP when useful"
+      ],
+      "writes": [
+        "optional .blueprint/STATE.md"
+      ],
+      "risk": "Medium: minimal-planning repo mutation path.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#fast",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "fast",
+        "primarySkill": "blueprint-phase-execution",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        "contractNotes": "Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "note",
+      "command": "/blu-note",
+      "route": "/blu note",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-capture",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-note.toml",
+      "skillPath": "skills/blueprint-capture/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#note",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#note",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`note` appends explicit project-local notes through the capture index MCP tool while keeping unsupported list, promote, and global-note asks in safe suggestion mode.",
+      "reads": [
+        "User-provided note text and duplicate state through MCP."
+      ],
+      "writes": [
+        ".blueprint/notes/NOTES.md"
+      ],
+      "risk": "Low: note capture only.",
+      "requiredTools": [
+        "blueprint_artifact_mutate_index"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#note",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "note",
+        "primarySkill": "blueprint-capture",
+        "exactMcpDestination": [
+          "blueprint_artifact_mutate_index"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for deterministic project-local note capture: require explicit note text, persist only through blueprint_artifact_mutate_index, treat duplicate results and returned ids as authoritative, keep unsupported list, promote, and global-note behavior in safe suggestion mode, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "quick",
+      "command": "/blu-quick",
+      "route": "/blu quick",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-phase-execution",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-quick.toml",
+      "skillPath": "skills/blueprint-phase-execution/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#quick",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#quick",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.",
+      "reads": [
+        "project status, command availability, and current next-step posture through MCP"
+      ],
+      "writes": [
+        "quick-run report in .blueprint/reports/",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "High: can execute repo changes with reduced ceremony.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_command_catalog",
+        "blueprint_artifact_report_write",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-researcher",
+        "blueprint-planner",
+        "blueprint-executor",
+        "blueprint-verifier"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-researcher",
+        "blueprint-planner",
+        "blueprint-executor",
+        "blueprint-verifier"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#quick",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "quick",
+        "primarySkill": "blueprint-phase-execution",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_command_catalog",
+          "blueprint_artifact_report_write",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-researcher",
+          "blueprint-planner",
+          "blueprint-executor",
+          "blueprint-verifier"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        "contractNotes": "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "review-backlog",
+      "command": "/blu-review-backlog",
+      "route": "/blu review-backlog",
+      "wave": 3,
+      "family": "Capture And Lightweight Execution",
+      "primarySkill": "blueprint-capture",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-review-backlog.toml",
+      "skillPath": "skills/blueprint-capture/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#review-backlog",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#review-backlog",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`review-backlog` previews canonical backlog entries, promotes or archives confirmed items, and records the next safe state through MCP-owned transitions.",
+      "reads": [
+        "Canonical backlog preview through Blueprint MCP tools."
+      ],
+      "writes": [
+        ".blueprint/backlog/BACKLOG.md",
+        ".blueprint/ROADMAP.md",
+        ".blueprint/phases/<phase>/",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "Medium: can promote backlog items into active roadmap scope.",
+      "requiredTools": [
+        "blueprint_roadmap_promote_backlog",
+        "blueprint_artifact_mutate_index",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#review-backlog",
+        "waveTitle": "Capture And Lightweight Execution",
+        "command": "review-backlog",
+        "primarySkill": "blueprint-capture",
+        "exactMcpDestination": [
+          "blueprint_roadmap_promote_backlog",
+          "blueprint_artifact_mutate_index",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime for deterministic backlog review: preview through blueprint_roadmap_promote_backlog before decisions, require explicit promote or archive confirmation while keep remains the safe default, promote only confirmed ids through roadmap MCP, persist promoted or archived status transitions through blueprint_artifact_mutate_index instead of deleting history, update state with implemented-only follow-ups, preserve reserved-stub reuse from MCP results, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "add-tests",
+      "command": "/blu-add-tests",
+      "route": "/blu add-tests",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-phase-validation",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-add-tests.toml",
+      "skillPath": "skills/blueprint-phase-validation/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#add-tests",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#add-tests",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`add-tests` generates focused repo tests from saved phase evidence and persists validation plus report artifacts through MCP tools.",
+      "reads": [
+        "Saved summaries, validation or UAT evidence, artifact inventory, report authoring context, and state through MCP tools."
+      ],
+      "writes": [
+        "repo test files",
+        "phase XX-VERIFICATION.md",
+        ".blueprint/reports/add-tests-<phase>.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "High: repo test mutation plus verification/report updates.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_phase_summary_index",
+        "blueprint_phase_summary_read",
+        "blueprint_phase_validation_read",
+        "blueprint_phase_validation_authoring_context",
+        "blueprint_phase_validation_render",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_phase_validation_write",
+        "blueprint_artifact_list",
+        "blueprint_artifact_validate",
+        "blueprint_artifact_report_authoring_context",
+        "blueprint_artifact_report_validate_model",
+        "blueprint_artifact_report_write",
+        "blueprint_state_load",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-executor",
+        "blueprint-verifier"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-executor",
+        "blueprint-verifier"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#add-tests",
+        "waveTitle": "Quality, Shipping, Docs, And Maintenance",
+        "command": "add-tests",
+        "primarySkill": "blueprint-phase-validation",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_phase_summary_index",
+          "blueprint_phase_summary_read",
+          "blueprint_phase_validation_read",
+          "blueprint_phase_validation_authoring_context",
+          "blueprint_phase_validation_render",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_phase_validation_write",
+          "blueprint_artifact_list",
+          "blueprint_artifact_validate",
+          "blueprint_artifact_report_authoring_context",
+          "blueprint_artifact_report_validate_model",
+          "blueprint_artifact_report_write",
+          "blueprint_state_load",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-executor",
+          "blueprint-verifier"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        "contractNotes": "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "audit-fix",
+      "command": "/blu-audit-fix",
+      "route": "/blu audit-fix",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-review",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-audit-fix.toml",
+      "skillPath": "skills/blueprint-review/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#audit-fix",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#audit-fix",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`audit-fix` classifies saved review, security, verification, and UAT evidence, applies bounded remediation when not dry-running, persists a durable audit-fix report, and updates state through MCP tools.",
+      "reads": [
+        "Saved phase evidence, artifact inventory, deterministic review scope, audit-fix report authoring context, and state through MCP tools plus bounded repo inspection."
+      ],
+      "writes": [
+        ".blueprint/reports/audit-fix-<phase>.md",
+        "optional .blueprint/todos/TODO.md",
+        "repo code changes when not dry-running",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "High: bounded remediation plus report/state updates.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_artifact_list",
+        "blueprint_review_scope",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_artifact_report_authoring_context",
+        "blueprint_artifact_report_validate_model",
+        "blueprint_artifact_report_write",
+        "blueprint_artifact_mutate_index",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-reviewer",
+        "blueprint-verifier"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-reviewer",
+        "blueprint-verifier"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#audit-fix",
+        "waveTitle": "Quality, Shipping, Docs, And Maintenance",
+        "command": "audit-fix",
+        "primarySkill": "blueprint-review",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_artifact_list",
+          "blueprint_review_scope",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_artifact_report_authoring_context",
+          "blueprint_artifact_report_validate_model",
+          "blueprint_artifact_report_write",
+          "blueprint_artifact_mutate_index",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-reviewer",
+          "blueprint-verifier"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        "contractNotes": "Long-running-mutation profile for bounded saved-evidence remediation: load skills/blueprint-review/references/audit-fix-runtime-contract.md, resolve the phase and artifact inventory, let blueprint_review_scope own the repo-file scope, classify only selected saved evidence, keep --source, --severity, --max, --dry-run, mutation confirmation, report overwrite, optional todo capture, active stage, and early-stop state explicit, use blueprint-reviewer only for bounded read-only classification and blueprint-verifier only for bounded post-fix verification, validate the structured report.audit-fix model through blueprint_artifact_report_validate_model, repair invalid diagnostics by exact path, code, repair, allowedValues, missing, argsPatch, and repairSummary guidance, reread authoring context when runtime context is stale or incomplete, persist it through blueprint_artifact_report_write, append confirmed todo follow-ups through blueprint_artifact_mutate_index, update state through blueprint_state_update, and stop with top diagnostics plus suggestedRepairs rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "code-review",
+      "command": "/blu-code-review",
+      "route": "/blu code-review",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-review",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-code-review.toml",
+      "skillPath": "skills/blueprint-review/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#code-review",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#code-review",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`code-review` reviews source files changed during a Blueprint phase, resolves deterministic scope from executed plan metadata or explicit file paths, honors review settings, audits saved phase evidence, and persists the result through review MCP tools instead of prompt-only file writes.",
+      "reads": [
+        ".blueprint/config.json",
+        "Phase resolution, artifact inventory, review scoping, saved execution summaries, matching plans, validation or UAT evidence, and any existing review findings through MCP tools and read-only repo access."
+      ],
+      "writes": [
+        "phase XX-REVIEW.md"
+      ],
+      "risk": "Low: review artifact generation only.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_config_get",
+        "blueprint_artifact_contract_read",
+        "blueprint_review_scope",
+        "blueprint_review_load_findings",
+        "blueprint_review_validate_model",
+        "blueprint_review_record"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-reviewer"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-reviewer"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#code-review",
+        "waveTitle": "Quality, Shipping, Docs, And Maintenance",
+        "command": "code-review",
+        "primarySkill": "blueprint-review",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_config_get",
+          "blueprint_artifact_contract_read",
+          "blueprint_review_scope",
+          "blueprint_review_load_findings",
+          "blueprint_review_validate_model",
+          "blueprint_review_record"
+        ],
+        "optionalAgents": [
+          "blueprint-reviewer"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, config-gated secure-phase routing posture, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, repair invalid models against modelContract.jsonSchema, the narrowed task schema, and returned diagnostics instead of rendered Markdown shape, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback. When workflow.code_review=false, code-review routing must never make /blu-secure-phase <phase> mandatory even if workflow.secure_phase=true; when workflow.code_review=true and workflow.secure_phase=true and security is still missing, /blu-secure-phase <phase> is the primary routed next action, with code-review-fix visible as the secondary queued follow-up when concrete follow-up fixes remain; when workflow.code_review=true and workflow.secure_phase=false, route concrete findings to code-review-fix and otherwise prefer progress-safe implemented next actions. /blu-secure-phase remains manually runnable even when config-gated routing prefers another implemented next step.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "code-review-fix",
+      "command": "/blu-code-review-fix",
+      "route": "/blu code-review-fix",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-review",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-code-review-fix.toml",
+      "skillPath": "skills/blueprint-review/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#code-review-fix",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#code-review-fix",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`code-review-fix` applies bounded fixes from saved code-review findings and persists review-fix evidence plus state through MCP tools.",
+      "reads": [
+        "Saved code-review findings, phase evidence, and review-fix authoring context through MCP tools."
+      ],
+      "writes": [
+        "phase XX-REVIEW-FIX.md",
+        ".blueprint/STATE.md"
+      ],
+      "risk": "High: selected findings can trigger bounded repo remediation plus review-fix/state updates.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_config_get",
+        "blueprint_review_load_findings",
+        "blueprint_review_authoring_context",
+        "blueprint_review_validate_model",
+        "blueprint_review_record",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-reviewer"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-reviewer"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#code-review-fix",
+        "waveTitle": "Quality, Shipping, Docs, And Maintenance",
+        "command": "code-review-fix",
+        "primarySkill": "blueprint-review",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_config_get",
+          "blueprint_review_load_findings",
+          "blueprint_review_authoring_context",
+          "blueprint_review_validate_model",
+          "blueprint_review_record",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [
+          "blueprint-reviewer"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        "contractNotes": "Long-running-mutation profile for bounded saved-finding remediation: default unscoped remediation to saved follow-up findings, keep repo mutation scoped to selected findings, use blueprint-reviewer only for read-only selected-target fix/defer/skip reclassification plus stale-evidence notes, keep the inline fallback on the same one-target-at-a-time decision contract, author only the review.review-fix schema's camelCase JSON fields while forbidding rendered-heading or locked-marker keys, validate through blueprint_review_validate_model, persist through review MCP tools, and update STATE.md through blueprint_state_update with base synced plus explicit activeCommand/currentPhase/nextAction patch fields before routing follow-up through implemented validation or progress commands only.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "docs-update",
+      "command": "/blu-docs-update",
+      "route": "/blu docs-update",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-docs",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-docs-update.toml",
+      "skillPath": "skills/blueprint-docs/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#docs-update",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#docs-update",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`docs-update` refreshes or verifies selected repo documentation against saved Blueprint and repo evidence, optionally checks current external truth, and persists the durable docs-update report through MCP.",
+      "reads": [
+        "Project health, artifact inventory, selected repo documentation, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth."
+      ],
+      "writes": [
+        "selected repo documentation files when not verify-only",
+        ".blueprint/reports/docs-update-latest.md"
+      ],
+      "risk": "Medium: writes selected repo documentation files and a durable docs-update report.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_artifact_list",
+        "blueprint_artifact_summary_digest",
+        "blueprint_artifact_report_write"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-doc-writer",
+        "blueprint-doc-verifier"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-doc-writer",
+        "blueprint-doc-verifier"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#docs-update",
+        "waveTitle": "Quality And Shipping",
+        "command": "docs-update",
+        "primarySkill": "blueprint-docs",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_artifact_list",
+          "blueprint_artifact_summary_digest",
+          "blueprint_artifact_report_write"
+        ],
+        "optionalAgents": [
+          "blueprint-doc-writer",
+          "blueprint-doc-verifier"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.toml and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "impact",
+      "command": "/blu-impact",
+      "route": "/blu impact",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-impact",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-impact.toml",
+      "skillPath": "skills/blueprint-impact/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#impact",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#impact",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`impact` performs advisory blast-radius analysis for a resolved change scope, persists an impact report bundle when writing is enabled, and renders the requested output format through the impact MCP substrate.",
+      "reads": [
+        "impact config, resolved scope, source files, runtime metadata, Blueprint artifacts, ownership or dependency metadata, PR or deployment context, and command catalog state as read-only evidence"
+      ],
+      "writes": [
+        ".blueprint/impact/<impact-id>/ only through blueprint_impact_report_write when writing is enabled"
+      ],
+      "risk": "Low: advisory blast-radius report writes only under .blueprint/impact/.",
+      "requiredTools": [
+        "blueprint_impact_config_get",
+        "blueprint_impact_scope_resolve",
+        "blueprint_impact_context_load",
+        "blueprint_impact_analyze",
+        "blueprint_impact_report_write",
+        "blueprint_impact_output_render"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#impact",
+        "waveTitle": "Quality And Shipping",
+        "command": "impact",
+        "primarySkill": "blueprint-impact",
+        "exactMcpDestination": [
+          "blueprint_impact_config_get",
+          "blueprint_impact_scope_resolve",
+          "blueprint_impact_context_load",
+          "blueprint_impact_analyze",
+          "blueprint_impact_report_write",
+          "blueprint_impact_output_render"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile for advisory blast-radius analysis with no subagents. Load skills/blueprint-impact/references/impact-runtime-contract.md, resolve scope through the impact MCP tools, keep source files, runtime files, PR metadata, deployment state, and command-catalog state read-only, persist impact bundles only through blueprint_impact_report_write under .blueprint/impact/<impact-id>/, render final human, JSON, Markdown, PR-comment, or summary output only through blueprint_impact_output_render, treat BLOCK as advisory rather than permission to mutate non-impact state, and route follow-up guidance only to implemented commands.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "behavior-audited"
+        ]
+      }
+    },
+    {
+      "name": "pr-branch",
+      "command": "/blu-pr-branch",
+      "route": "/blu pr-branch",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-pr-branch.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#pr-branch",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#pr-branch",
+      "executionProfile": "high-risk-maintenance",
+      "rootRoutable": true,
+      "purpose": "`pr-branch` prepares a clean review branch by filtering Blueprint bookkeeping scope and persists a durable report.",
+      "reads": [
+        "Project health, effective git config, active diff, artifact digest scope, and report contract through MCP plus git inspection."
+      ],
+      "writes": [
+        ".blueprint/reports/pr-branch-latest.md",
+        "confirmed git branch"
+      ],
+      "risk": "High: git branch mutation.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_artifact_summary_digest",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_report_write"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#pr-branch",
+        "waveTitle": "Quality And Shipping",
+        "command": "pr-branch",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_artifact_summary_digest",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_report_write"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, require a clean tree and review-branch confirmation before git mutation, default to excluding .blueprint/** bookkeeping when configured, persist only the durable report through blueprint_artifact_report_write, and route follow-ups only to implemented commands or manual git/PR steps.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "review",
+      "command": "/blu-review",
+      "route": "/blu review",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-review",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-review.toml",
+      "skillPath": "skills/blueprint-review/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#review",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#review",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`review` orchestrates bounded peer review from saved phase plans and evidence, preserves reviewer availability and disagreement honestly, and persists the peer-review artifact through review MCP tools.",
+      "reads": [
+        "Phase resolution, artifact inventory, saved phase plans, saved execution summaries, execution targets, and peer-review authoring context through MCP tools."
+      ],
+      "writes": [
+        "phase XX-REVIEWS.md"
+      ],
+      "risk": "Medium: external reviewer orchestration without default repo mutation.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_artifact_list",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_phase_plan_index",
+        "blueprint_phase_plan_read",
+        "blueprint_phase_summary_index",
+        "blueprint_phase_summary_read",
+        "blueprint_phase_execution_targets",
+        "blueprint_review_authoring_context",
+        "blueprint_review_validate_model",
+        "blueprint_review_record"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-reviewer"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-reviewer"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#review",
+        "waveTitle": "Quality, Shipping, Docs, And Maintenance",
+        "command": "review",
+        "primarySkill": "blueprint-review",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_artifact_list",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_phase_plan_index",
+          "blueprint_phase_plan_read",
+          "blueprint_phase_summary_index",
+          "blueprint_phase_summary_read",
+          "blueprint_phase_execution_targets",
+          "blueprint_review_authoring_context",
+          "blueprint_review_validate_model",
+          "blueprint_review_record"
+        ],
+        "optionalAgents": [
+          "blueprint-reviewer"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile for saved-plan peer review: load skills/blueprint-review/references/review-runtime-contract.md, resolve the phase and artifact inventory, read only selected phase plans and related summaries through MCP, keep requested reviewers, available and unavailable reviewers, reviewer-availability gates, overwrite confirmation, disagreement posture, execution mode, active stage, and next safe action explicit, use blueprint-reviewer only for bounded packet and synthesis quality checks, validate the structured review.peer-review model through blueprint_review_validate_model, persist it through blueprint_review_record, preserve partial reviewer coverage honestly, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "secure-phase",
+      "command": "/blu-secure-phase",
+      "route": "/blu secure-phase",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-review",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-secure-phase.toml",
+      "skillPath": "skills/blueprint-review/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#secure-phase",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#secure-phase",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`secure-phase` verifies declared saved-plan threats against completed execution evidence and persists phase security evidence through review MCP tools.",
+      "reads": [
+        "Saved plans, summaries, threat evidence, artifact inventory, and security authoring context through MCP tools."
+      ],
+      "writes": [
+        "phase XX-SECURITY.md"
+      ],
+      "risk": "Low: audit artifact only.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_artifact_list",
+        "blueprint_phase_plan_index",
+        "blueprint_phase_plan_read",
+        "blueprint_phase_summary_index",
+        "blueprint_phase_summary_read",
+        "blueprint_phase_execution_targets",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_review_authoring_context",
+        "blueprint_review_validate_model",
+        "blueprint_review_record"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-security-auditor"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-security-auditor"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#secure-phase",
+        "waveTitle": "Quality, Shipping, Docs, And Maintenance",
+        "command": "secure-phase",
+        "primarySkill": "blueprint-review",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_artifact_list",
+          "blueprint_phase_plan_index",
+          "blueprint_phase_plan_read",
+          "blueprint_phase_summary_index",
+          "blueprint_phase_summary_read",
+          "blueprint_phase_execution_targets",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_review_authoring_context",
+          "blueprint_review_validate_model",
+          "blueprint_review_record"
+        ],
+        "optionalAgents": [
+          "blueprint-security-auditor"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile for bounded threat verification; workflow.secure_phase defaults false and controls mandatory routing, recommendations, and closeout gates only, not command existence. If workflow.code_review=false, secure-phase is never mandatory regardless of workflow.secure_phase. /blu-secure-phase remains manually runnable and implemented. Persist review.security through review MCP tools and route only after open threats are closed or accepted.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "ship",
+      "command": "/blu-ship",
+      "route": "/blu ship",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-ship.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#ship",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#ship",
+      "executionProfile": "high-risk-maintenance",
+      "rootRoutable": true,
+      "purpose": "`ship` prepares a confirmation-gated shipping run from saved Blueprint evidence and records actual push or PR outcomes.",
+      "reads": [
+        "Project health, optional phase metadata, effective config, saved evidence, artifact digest scope, and report contract through MCP plus git/gh inspection."
+      ],
+      "writes": [
+        ".blueprint/reports/ship-latest.md",
+        ".blueprint/STATE.md when routing changes",
+        "approved git remote or PR state"
+      ],
+      "risk": "High: remote and git mutation path.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_phase_locate",
+        "blueprint_config_get",
+        "blueprint_artifact_list",
+        "blueprint_artifact_summary_digest",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_report_write",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#ship",
+        "waveTitle": "Quality And Shipping",
+        "command": "ship",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_phase_locate",
+          "blueprint_config_get",
+          "blueprint_artifact_list",
+          "blueprint_artifact_summary_digest",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_report_write",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, and evaluate saved review/security evidence through effective config before ready shipping. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented; write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "ui-review",
+      "command": "/blu-ui-review",
+      "route": "/blu ui-review",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-review",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-ui-review.toml",
+      "skillPath": "skills/blueprint-review/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#ui-review",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#ui-review",
+      "executionProfile": "long-running-mutation",
+      "rootRoutable": true,
+      "purpose": "`ui-review` audits shipped UI work against saved execution and UI-spec evidence, optionally delegates bounded six-pillar analysis, and persists the UI-review artifact through review MCP tools.",
+      "reads": [
+        "Phase resolution, artifact inventory, saved execution and UI-spec evidence, and UI-review authoring context through MCP tools."
+      ],
+      "writes": [
+        "phase XX-UI-REVIEW.md"
+      ],
+      "risk": "Low: review artifact only.",
+      "requiredTools": [
+        "blueprint_phase_locate",
+        "blueprint_artifact_list",
+        "blueprint_artifact_contract_read",
+        "blueprint_config_get",
+        "blueprint_review_authoring_context",
+        "blueprint_review_validate_model",
+        "blueprint_review_record"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [
+        "blueprint-ui-auditor"
+      ],
+      "availableOptionalAgents": [
+        "blueprint-ui-auditor"
+      ],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#ui-review",
+        "waveTitle": "Quality, Shipping, Docs, And Maintenance",
+        "command": "ui-review",
+        "primarySkill": "blueprint-review",
+        "exactMcpDestination": [
+          "blueprint_phase_locate",
+          "blueprint_artifact_list",
+          "blueprint_artifact_contract_read",
+          "blueprint_config_get",
+          "blueprint_review_authoring_context",
+          "blueprint_review_validate_model",
+          "blueprint_review_record"
+        ],
+        "optionalAgents": [
+          "blueprint-ui-auditor"
+        ],
+        "hookInvolvement": [
+          "read-before-edit",
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Long-running-mutation profile for phase-scoped UI audit: load skills/blueprint-review/references/ui-review-runtime-contract.md, resolve the phase and artifact inventory, read review.ui-review through blueprint_artifact_contract_read, keep saved execution evidence, UI-spec coverage, visual-evidence limits, overwrite confirmation, inline versus blueprint-ui-auditor execution mode, scored findings posture, active stage, and next safe action explicit, use blueprint-ui-auditor only for bounded UI/code analysis when available, validate the structured review.ui-review model through blueprint_review_validate_model, persist it through blueprint_review_record, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
+        "evidenceState": [
+          "locked",
+          "source-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "undo",
+      "command": "/blu-undo",
+      "route": "/blu undo",
+      "wave": 4,
+      "family": "Quality And Shipping",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-undo.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#undo",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#undo",
+      "executionProfile": "high-risk-maintenance",
+      "rootRoutable": true,
+      "purpose": "`undo` previews a bounded revert, persists a durable undo report, and runs only confirmed safe revert-style git steps.",
+      "reads": [
+        "Project health, optional phase metadata, affected artifacts, artifact digest scope, and report contract through MCP plus git history inspection."
+      ],
+      "writes": [
+        ".blueprint/reports/undo-latest.md",
+        ".blueprint/STATE.md when routing changes",
+        "approved git revert commits"
+      ],
+      "risk": "High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_phase_locate",
+        "blueprint_artifact_list",
+        "blueprint_artifact_summary_digest",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_report_write",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#undo",
+        "waveTitle": "Quality And Shipping",
+        "command": "undo",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_phase_locate",
+          "blueprint_artifact_list",
+          "blueprint_artifact_summary_digest",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_report_write",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, hard-stop on dirty or unsafe git state, require undo confirmation, write undo-latest before mutation, run only safe git revert style steps, overwrite undo-latest with actual outcome, and update state only after a successful revert changes routing.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "cleanup",
+      "command": "/blu-cleanup",
+      "route": "/blu cleanup",
+      "wave": 5,
+      "family": "Workspace And Maintenance",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-cleanup.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#cleanup",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#cleanup",
+      "executionProfile": "high-risk-maintenance",
+      "rootRoutable": true,
+      "purpose": "`cleanup` archives completed Blueprint phase directories through a protected-scope confirmation flow and persists a durable cleanup report.",
+      "reads": [
+        "Project health, roadmap references, artifact inventory, cleanup evidence digest, and filesystem preflight."
+      ],
+      "writes": [
+        ".blueprint/reports/cleanup-latest.md",
+        ".blueprint/STATE.md when routing changes",
+        "confirmed phase archive destination"
+      ],
+      "risk": "High: confirmation-gated phase-directory archival and removal behavior.",
+      "requiredTools": [
+        "blueprint_project_status",
+        "blueprint_roadmap_read",
+        "blueprint_artifact_list",
+        "blueprint_artifact_summary_digest",
+        "blueprint_artifact_report_write",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#cleanup",
+        "waveTitle": "Workspace And Maintenance",
+        "command": "cleanup",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_project_status",
+          "blueprint_roadmap_read",
+          "blueprint_artifact_list",
+          "blueprint_artifact_summary_digest",
+          "blueprint_artifact_report_write",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, protect the current phase and active roadmap references, require cleanup and destination confirmations before filesystem mutation, write cleanup-latest before archival, and update state only after successful approved archival.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "new-workspace",
+      "command": "/blu-new-workspace",
+      "route": "/blu new-workspace",
+      "wave": 5,
+      "family": "Workspace And Maintenance",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-new-workspace.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#new-workspace",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#new-workspace",
+      "executionProfile": "high-risk-maintenance",
+      "rootRoutable": true,
+      "purpose": "`new-workspace` creates a confirmed multi-repo workspace and records it in host-global Blueprint workspace state.",
+      "reads": [
+        "Effective config, host-global workspace registry, source repo status, and target path preflight."
+      ],
+      "writes": [
+        "workspace manifest under the selected workspace",
+        "~/.<host>/blueprint/workspaces registry"
+      ],
+      "risk": "High: filesystem and git worktree mutation outside the current repo.",
+      "requiredTools": [
+        "blueprint_config_get",
+        "blueprint_workspace_registry_get",
+        "blueprint_workspace_create"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#new-workspace",
+        "waveTitle": "Workspace And Maintenance",
+        "command": "new-workspace",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_config_get",
+          "blueprint_workspace_registry_get",
+          "blueprint_workspace_create"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/new-workspace-runtime-contract.md, derive workspace root from config or explicit input, stop on dirty sources or conflicts, require new-workspace-confirmation, and persist only through blueprint_workspace_create and the host-global registry it owns.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "reapply-patches",
+      "command": "/blu-reapply-patches",
+      "route": "/blu reapply-patches",
+      "wave": 5,
+      "family": "Workspace And Maintenance",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-reapply-patches.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#reapply-patches",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#reapply-patches",
+      "executionProfile": "high-risk-maintenance",
+      "rootRoutable": true,
+      "purpose": "`reapply-patches` previews, confirms, replays, and records host-global Blueprint patch reapplication.",
+      "reads": [
+        "Host-global patch registry, selected patch manifests, target compatibility, and dry-run replay result."
+      ],
+      "writes": [
+        "approved git patch replay",
+        "~/.<host>/blueprint/patches replay audit"
+      ],
+      "risk": "High: confirmation-gated patch replay across repo files.",
+      "requiredTools": [
+        "blueprint_patch_list",
+        "blueprint_patch_reapply",
+        "blueprint_patch_record"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#reapply-patches",
+        "waveTitle": "Workspace And Maintenance",
+        "command": "reapply-patches",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_patch_list",
+          "blueprint_patch_reapply",
+          "blueprint_patch_record"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md, list patches first, dry-run the exact replay set through blueprint_patch_reapply, stop on dirty or incompatible targets, require reapply-patches-confirmation, replay only the previewed patch ids, and record the outcome through blueprint_patch_record.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "remove-workspace",
+      "command": "/blu-remove-workspace",
+      "route": "/blu remove-workspace",
+      "wave": 5,
+      "family": "Workspace And Maintenance",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-remove-workspace.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#remove-workspace",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#remove-workspace",
+      "executionProfile": "high-risk-maintenance",
+      "rootRoutable": true,
+      "purpose": "`remove-workspace` tears down an exact confirmed workspace and updates the host-global workspace registry.",
+      "reads": [
+        "Host-global workspace registry, workspace manifest, recorded repo members, and dirty-tree preflight."
+      ],
+      "writes": [
+        "workspace teardown on disk",
+        "~/.<host>/blueprint/workspaces registry"
+      ],
+      "risk": "High: confirmation-gated workspace teardown and registry cleanup.",
+      "requiredTools": [
+        "blueprint_workspace_registry_get",
+        "blueprint_workspace_remove"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#remove-workspace",
+        "waveTitle": "Workspace And Maintenance",
+        "command": "remove-workspace",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_workspace_registry_get",
+          "blueprint_workspace_remove"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md, resolve a single registry-backed workspace target, stop on ambiguity, drift, or dirty members, require remove-workspace-confirmation, and persist teardown only through blueprint_workspace_remove.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "update",
+      "command": "/blu-update",
+      "route": "/blu update",
+      "wave": 5,
+      "family": "Workspace And Maintenance",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-update.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#update",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#update",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`update` inspects the installed Blueprint extension and prepares an advisory out-of-band update checklist.",
+      "reads": [
+        "Host, installed extension path, installed version, provenance, latest-version lookup status, and warnings."
+      ],
+      "writes": [
+        "~/.<host>/blueprint/updates/ when checklist persistence is chosen"
+      ],
+      "risk": "Low: advisory only; no in-session self-update.",
+      "requiredTools": [
+        "blueprint_update_check",
+        "blueprint_update_plan"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#update",
+        "waveTitle": "Workspace And Maintenance",
+        "command": "update",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_update_check",
+          "blueprint_update_plan"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/update-runtime-contract.md, keep installed extension handling read-only, use update-mode-gate for saved checklist versus manual fallback, persist only through blueprint_update_plan under host-global update state, and always end with restart guidance.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    },
+    {
+      "name": "workstreams",
+      "command": "/blu-workstreams",
+      "route": "/blu workstreams",
+      "wave": 5,
+      "family": "Workspace And Maintenance",
+      "primarySkill": "blueprint-maintenance",
+      "declaredStatus": "implemented",
+      "status": "implemented",
+      "implemented": true,
+      "runnable": true,
+      "blockedBy": [],
+      "manifestPath": "commands/blu-workstreams.toml",
+      "skillPath": "skills/blueprint-maintenance/SKILL.md",
+      "specPath": "src/mcp/command-runtime-metadata.ts#workstreams",
+      "sourceId": "src/mcp/command-runtime-metadata.ts#workstreams",
+      "executionProfile": "interactive-read",
+      "rootRoutable": true,
+      "purpose": "`workstreams` lists, creates, switches, resumes, or completes project-local Blueprint workstreams through MCP-owned state.",
+      "reads": [
+        "Project-local workstream index and saved per-stream state."
+      ],
+      "writes": [
+        ".blueprint/workstreams/WORKSTREAMS.md",
+        ".blueprint/workstreams/<slug>/state.json",
+        ".blueprint/STATE.md for returned resume patches"
+      ],
+      "risk": "Medium: project-local state mutation with switching semantics.",
+      "requiredTools": [
+        "blueprint_workstream_list",
+        "blueprint_workstream_mutate",
+        "blueprint_state_update"
+      ],
+      "requiredToolsSatisfied": true,
+      "optionalAgents": [],
+      "availableOptionalAgents": [],
+      "runtimeReference": {
+        "path": "src/mcp/command-runtime-metadata.ts#workstreams",
+        "waveTitle": "Workspace And Maintenance",
+        "command": "workstreams",
+        "primarySkill": "blueprint-maintenance",
+        "exactMcpDestination": [
+          "blueprint_workstream_list",
+          "blueprint_workstream_mutate",
+          "blueprint_state_update"
+        ],
+        "optionalAgents": [],
+        "hookInvolvement": [
+          ".blueprint write guard"
+        ],
+        "contractNotes": "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and apply returned resume statePatch only through blueprint_state_update.",
+        "evidenceState": [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]
+      }
+    }
+  ]
+}

@@ -14,26 +14,103 @@ Phase 3 discovery commands are shipped. Phase 3 discovery shipped the same day a
 
 The shipped lifecycle slice also includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, and the read-only next-step router `/blu-next`.
 
+<!-- command-registry:readme-chooser:start -->
+## Command Chooser
+
+I want to...
+- Start fresh → /blu-new-project
+- Understand an existing repo → /blu-map-codebase
+- Decide next safe action → /blu-next
+- Plan implementation → /blu-plan-phase <phase>
+- Execute safely → /blu-execute-phase <phase>
+- Review/fix code → /blu-code-review <phase>, /blu-code-review-fix <phase>
+- Ship → /blu-ship
+
+This chooser is generated from `generated/command-catalog.json`. 54 direct commands are runnable now; 1 retained command is kept out of runnable help until the live catalog marks it implemented.
+<!-- command-registry:readme-chooser:end -->
+
 ## Current Runtime Layout
 
-The active implementation lives in the repo runtime surfaces below. This list is representative rather than exhaustive:
+<!-- command-registry:readme-runtime-layout:start -->
+The active command map is generated from `src/mcp/command-runtime-metadata.ts` into `generated/command-catalog.json`. Runtime availability still comes from the live `blueprint_command_catalog` check, so missing manifests, skills, MCP tools, or required runtime inputs downgrade commands before they can be recommended.
 
-- `commands/blu-help.toml`
-- `commands/blu-progress.toml`
-- `commands/blu-health.toml`
-- `commands/blu-map-codebase.toml`
-- `commands/blu-debug.toml`
-- `commands/blu-docs-update.toml`
-- `commands/blu-review.toml`
-- `commands/blu-code-review.toml`
-- `commands/blu-code-review-fix.toml`
+- Root router manifest: `commands/blu.toml`
+- Runnable direct command manifests: 54
+- Non-runnable retained command: 1
+
+Runnable command manifests:
+- `commands/blu-add-backlog.toml`
+- `commands/blu-add-phase.toml`
+- `commands/blu-add-tests.toml`
+- `commands/blu-add-todo.toml`
 - `commands/blu-audit-fix.toml`
+- `commands/blu-audit-milestone.toml`
+- `commands/blu-check-todos.toml`
+- `commands/blu-cleanup.toml`
+- `commands/blu-code-review-fix.toml`
+- `commands/blu-code-review.toml`
+- `commands/blu-complete-milestone.toml`
+- `commands/blu-debug.toml`
+- `commands/blu-discuss-phase.toml`
+- `commands/blu-docs-update.toml`
+- `commands/blu-execute-phase.toml`
+- `commands/blu-explore.toml`
+- `commands/blu-fast.toml`
+- `commands/blu-health.toml`
+- `commands/blu-help.toml`
 - `commands/blu-impact.toml`
-- `commands/blu-ui-review.toml`
+- `commands/blu-insert-phase.toml`
+- `commands/blu-list-phase-assumptions.toml`
+- `commands/blu-map-codebase.toml`
+- `commands/blu-milestone-summary.toml`
+- `commands/blu-new-milestone.toml`
+- `commands/blu-new-project.toml`
+- `commands/blu-new-workspace.toml`
+- `commands/blu-next.toml`
+- `commands/blu-note.toml`
+- `commands/blu-pause-work.toml`
+- `commands/blu-plan-milestone-gaps.toml`
+- `commands/blu-plan-phase.toml`
+- `commands/blu-pr-branch.toml`
+- `commands/blu-progress.toml`
+- `commands/blu-quick.toml`
+- `commands/blu-reapply-patches.toml`
+- `commands/blu-remove-phase.toml`
+- `commands/blu-remove-workspace.toml`
+- `commands/blu-research-phase.toml`
+- `commands/blu-resume-work.toml`
+- `commands/blu-review-backlog.toml`
+- `commands/blu-review.toml`
+- `commands/blu-secure-phase.toml`
+- `commands/blu-set-profile.toml`
+- `commands/blu-settings.toml`
 - `commands/blu-ship.toml`
-- `skills/blueprint-router.md`
+- `commands/blu-spec-phase.toml`
+- `commands/blu-ui-phase.toml`
+- `commands/blu-ui-review.toml`
+- `commands/blu-undo.toml`
+- `commands/blu-update.toml`
+- `commands/blu-validate-phase.toml`
+- `commands/blu-verify-work.toml`
+- `commands/blu-workstreams.toml`
+
+Runtime skill bundles used by runnable commands:
+- `skills/blueprint-bootstrap/SKILL.md`
+- `skills/blueprint-capture/SKILL.md`
+- `skills/blueprint-debug/SKILL.md`
+- `skills/blueprint-docs/SKILL.md`
+- `skills/blueprint-governance/SKILL.md`
 - `skills/blueprint-impact/SKILL.md`
 - `skills/blueprint-maintenance/SKILL.md`
+- `skills/blueprint-map/SKILL.md`
+- `skills/blueprint-phase-discovery/SKILL.md`
+- `skills/blueprint-phase-execution/SKILL.md`
+- `skills/blueprint-phase-planning/SKILL.md`
+- `skills/blueprint-phase-validation/SKILL.md`
+- `skills/blueprint-review/SKILL.md`
+- `skills/blueprint-roadmap-admin/SKILL.md`
+- `skills/blueprint-router/SKILL.md`
+<!-- command-registry:readme-runtime-layout:end -->
 
 ## What Blueprint Gives You
 
@@ -162,86 +239,82 @@ Blueprint is designed to keep those artifacts in version control by default so t
 
 ## How The Workflow Fits Together
 
+<!-- command-registry:readme-workflow:start -->
+The runnable command groups below are generated from the same registry as `/blu-help` and `docs/COMMAND-CATALOG.md`.
+
 ### Foundation
 
-Use these to initialize Blueprint, inspect status, and route safely:
-
 - `/blu`: root router for safe command selection and next-step guidance
-- `/blu-help`: show the currently shipped Blueprint commands
-- `/blu-progress`: summarize current Blueprint state, blockers, and next action
-- `/blu-next`: move to the next safe step using actual project state
-- `/blu-new-project`: bootstrap a repo with project, requirements, roadmap, state, config, and phase scaffolding
-- `/blu-map-codebase`: map an existing repo into `.blueprint/codebase/`
-- `/blu-health`: diagnose and repair partial or unhealthy Blueprint state
-- `/blu-settings`: inspect and update repo Blueprint settings
-- `/blu-set-profile`: switch the active Blueprint model profile
+- `/blu-health`: `health` checks Blueprint project health and can run explicit repair-mode normalization through MCP-owned tools.
+- `/blu-help`: `help` shows safe Blueprint router guidance from project readiness and the implemented command catalog.
+- `/blu-map-codebase`: `map-codebase` analyzes a brownfield codebase with mapper-style passes and produces the stable seven-document Blueprint codebase bundle.
+- `/blu-new-project`: new-project initializes a Blueprint project with deep context gathering and PROJECT.md.
+- `/blu-progress`: `progress` summarizes Blueprint repo status, blockers, warnings, and next safe implemented guidance from MCP-owned state.
+- `/blu-set-profile`: `set-profile` changes the current project model_profile through the governance MCP config substrate.
+- `/blu-settings`: `settings` inspects and updates Blueprint repo or default configuration through governance MCP tools.
 
-### Core phase lifecycle
+### Core Lifecycle
 
-Use these to define, build, and verify a phase:
+- `/blu-discuss-phase`: `discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.
+- `/blu-execute-phase`: `execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.
+- `/blu-next`: `next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.
+- `/blu-pause-work`: `pause-work` records a canonical handoff from current Blueprint state and artifact inventory.
+- `/blu-plan-phase`: `plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.
+- `/blu-research-phase`: `research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.
+- `/blu-resume-work`: `resume-work` restores working context from the canonical pause handoff and records the next safe action.
+- `/blu-spec-phase`: `spec-phase` clarifies what a Blueprint phase should deliver and writes the optional phase-scoped spec artifact before later discovery and planning flows.
+- `/blu-ui-phase`: `ui-phase` creates or reuses the single phase-scoped UI artifact, writing either a UI design contract or an explicit skip rationale through MCP-owned phase artifact persistence.
+- `/blu-validate-phase`: `validate-phase` audits saved execution summaries and persists phase verification evidence through the validation MCP substrate.
+- `/blu-verify-work`: `verify-work` runs summary-backed UAT and persists resumable phase UAT evidence through the validation MCP substrate.
 
-- `/blu-discuss-phase`: capture phase context and design intent
-- `/blu-list-phase-assumptions`: inspect Blueprint's current assumptions before planning
-- `/blu-research-phase`: create bounded phase research
-- `/blu-ui-phase`: write a UI spec or an explicit UI-skip rationale
-- `/blu-plan-phase`: create the executable phase plan
-- `/blu-execute-phase`: implement the plan and persist execution summaries
-- `/blu-validate-phase`: audit the completed execution and write verification evidence
-- `/blu-verify-work`: run conversational UAT and record the result
-- `/blu-pause-work`: write a resumable handoff when you need to stop mid-stream
-- `/blu-resume-work`: restore that handoff and continue from live state
+### Roadmap And Milestone
 
-### Roadmap and milestone management
+- `/blu-add-phase`: Append a new whole-number phase to an initialized Blueprint roadmap through MCP-owned roadmap and scaffold writes.
+- `/blu-audit-milestone`: `audit-milestone` compares original milestone intent against saved phase evidence and writes a durable milestone audit report with grouped gaps and traceability notes.
+- `/blu-complete-milestone`: `complete-milestone` performs a report-driven closeout gated by saved milestone audit readiness, writes a durable completion report, and routes to milestone summary.
+- `/blu-insert-phase`: `insert-phase` inserts urgent work as a decimal phase between existing phases, scaffolds the matching phase context starter, records roadmap evolution state, and routes back to discovery without renumbering later phases.
+- `/blu-list-phase-assumptions`: `list-phase-assumptions` surfaces read-only pre-planning assumptions about a phase so users can correct misunderstandings before discovery or planning.
+- `/blu-milestone-summary`: `milestone-summary` builds a durable consolidated milestone spec from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.
+- `/blu-new-milestone`: `new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved consolidated milestone spec, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.
+- `/blu-plan-milestone-gaps`: `plan-milestone-gaps` creates grouped roadmap phases to close actionable gaps identified by the saved milestone audit, keeping persistence on roadmap and state MCP tools.
+- `/blu-remove-phase`: `remove-phase` removes a future roadmap phase, deletes its phase directory, renumbers subsequent roadmap and phase artifacts, and re-anchors state on the safest implemented follow-up.
 
-Use these when your roadmap needs to evolve:
+### Capture And Lightweight Execution
 
-- `/blu-add-phase`: append a new integer phase to the current milestone
-- `/blu-insert-phase`: insert a decimal phase after an existing integer phase
-- `/blu-remove-phase`: remove a future phase and renumber later roadmap references
-- `/blu-audit-milestone`: compare milestone intent against completed evidence
-- `/blu-plan-milestone-gaps`: turn milestone audit gaps into follow-up phases
-- `/blu-complete-milestone`: close an audited milestone
-- `/blu-milestone-summary`: generate a durable milestone summary
-- `/blu-new-milestone`: start the next milestone from carry-forward context
+- `/blu-add-backlog`: `add-backlog` appends explicit parking-lot ideas and can reserve a confirmed 999.x phase stub through MCP-owned capture and scaffold writes.
+- `/blu-add-todo`: `add-todo` appends explicit project-local todo items through the capture index MCP tool.
+- `/blu-check-todos`: `check-todos` inspects pending project-local todos and can mark one active or completed through bounded MCP updates.
+- `/blu-debug`: `debug` investigates a concrete issue, persists a durable debug-latest report, and stops at an explicit follow-up gate before todo capture or fix attempts.
+- `/blu-explore`: `explore` briefly classifies an idea into note, todo, backlog, roadmap, or no-write and persists only the explicitly confirmed target through MCP tools.
+- `/blu-fast`: `fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.
+- `/blu-note`: `note` appends explicit project-local notes through the capture index MCP tool while keeping unsupported list, promote, and global-note asks in safe suggestion mode.
+- `/blu-quick`: `quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.
+- `/blu-review-backlog`: `review-backlog` previews canonical backlog entries, promotes or archives confirmed items, and records the next safe state through MCP-owned transitions.
 
-### Capture and lightweight execution
+### Quality And Shipping
 
-Use these when you need lower-ceremony project management or small delivery work:
+- `/blu-add-tests`: `add-tests` generates focused repo tests from saved phase evidence and persists validation plus report artifacts through MCP tools.
+- `/blu-audit-fix`: `audit-fix` classifies saved review, security, verification, and UAT evidence, applies bounded remediation when not dry-running, persists a durable audit-fix report, and updates state through MCP tools.
+- `/blu-code-review`: `code-review` reviews source files changed during a Blueprint phase, resolves deterministic scope from executed plan metadata or explicit file paths, honors review settings, audits saved phase evidence, and persists the result through review MCP tools instead of prompt-only file writes.
+- `/blu-code-review-fix`: `code-review-fix` applies bounded fixes from saved code-review findings and persists review-fix evidence plus state through MCP tools.
+- `/blu-docs-update`: `docs-update` refreshes or verifies selected repo documentation against saved Blueprint and repo evidence, optionally checks current external truth, and persists the durable docs-update report through MCP.
+- `/blu-impact`: `impact` performs advisory blast-radius analysis for a resolved change scope, persists an impact report bundle when writing is enabled, and renders the requested output format through the impact MCP substrate.
+- `/blu-pr-branch`: `pr-branch` prepares a clean review branch by filtering Blueprint bookkeeping scope and persists a durable report.
+- `/blu-review`: `review` orchestrates bounded peer review from saved phase plans and evidence, preserves reviewer availability and disagreement honestly, and persists the peer-review artifact through review MCP tools.
+- `/blu-secure-phase`: `secure-phase` verifies declared saved-plan threats against completed execution evidence and persists phase security evidence through review MCP tools.
+- `/blu-ship`: `ship` prepares a confirmation-gated shipping run from saved Blueprint evidence and records actual push or PR outcomes.
+- `/blu-ui-review`: `ui-review` audits shipped UI work against saved execution and UI-spec evidence, optionally delegates bounded six-pillar analysis, and persists the UI-review artifact through review MCP tools.
+- `/blu-undo`: `undo` previews a bounded revert, persists a durable undo report, and runs only confirmed safe revert-style git steps.
 
-- `/blu-note`: save a project note
-- `/blu-add-todo`: add a todo item
-- `/blu-check-todos`: list, activate, or complete todos
-- `/blu-add-backlog`: save a parking-lot idea, optionally with a `999.x` stub
-- `/blu-review-backlog`: promote backlog items into the roadmap
-- `/blu-explore`: think through an idea before choosing note, todo, backlog, or roadmap
-- `/blu-fast`: do a truly trivial task inline
-- `/blu-quick`: do a bounded repo task with less ceremony than a full phase
-- `/blu-debug`: run a structured debugging pass and persist a debug report
+### Workspace And Maintenance
 
-### Quality, review, docs, and shipping
-
-Use these after implementation when you want stronger evidence and release hygiene:
-
-The review-branch command `/blu-pr-branch` is now shipped.
-
-- `/blu-code-review`: review the files changed by a completed phase
-- `/blu-code-review-fix`: apply bounded fixes from a saved review
-- `/blu-audit-fix`: run a tighter audit-to-fix remediation loop
-- `/blu-secure-phase`: audit a completed phase for security posture
-- `/blu-ui-review`: review the UX and visual quality of a completed phase
-- `/blu-review`: run cross-CLI peer review over saved plans
-- `/blu-impact`: compute an evidence-backed blast-radius report for proposed or actual changes
-- `/blu-docs-update`: update repo documentation based on real project evidence
-- `/blu-add-tests`: add or update focused tests for a completed phase
-- `/blu-pr-branch`: prepare a clean review branch
-- `/blu-ship`: prepare a confirmation-gated shipping run with PR guidance
-- `/blu-undo`: preview and run a safe revert flow with an explicit report first
-- `/blu-new-workspace`: create an isolated workspace under the configured workspace root after confirmation
-- `/blu-remove-workspace`: preview and remove a recorded workspace after confirmation
-- `/blu-workstreams`: inspect, switch, and archive project-local workstreams with explicit safety gates
-- `/blu-update`: check for newer Blueprint extension releases and produce advisory update guidance
-- `/blu-cleanup`: archive completed phase directories after confirmation
-- `/blu-reapply-patches`: preview and replay a recorded host-global patch set after confirmation
+- `/blu-cleanup`: `cleanup` archives completed Blueprint phase directories through a protected-scope confirmation flow and persists a durable cleanup report.
+- `/blu-new-workspace`: `new-workspace` creates a confirmed multi-repo workspace and records it in host-global Blueprint workspace state.
+- `/blu-reapply-patches`: `reapply-patches` previews, confirms, replays, and records host-global Blueprint patch reapplication.
+- `/blu-remove-workspace`: `remove-workspace` tears down an exact confirmed workspace and updates the host-global workspace registry.
+- `/blu-update`: `update` inspects the installed Blueprint extension and prepares an advisory out-of-band update checklist.
+- `/blu-workstreams`: `workstreams` lists, creates, switches, resumes, or completes project-local Blueprint workstreams through MCP-owned state.
+<!-- command-registry:readme-workflow:end -->
 
 ## Common Workflows
 
@@ -292,11 +365,11 @@ Blueprint is opinionated about safety:
 
 ## Commands Not Public Yet
 
-The retained direct router below is not public in the current runtime and should not be treated as available today:
+<!-- command-registry:readme-non-public:start -->
+The retained entries below are not public runnable commands in the current runtime. `/blu`, `/blu-help`, `/blu-progress`, and `/blu-next` must not advertise them until the live catalog marks them `implemented`.
 
-- `/blu-do` (control-plane docs keep it `planned`, but the live runtime keeps it non-routable until the dedicated manifest is shipped)
-
-If you ask `/blu` or `/blu-help` for available commands, they will not advertise `/blu-do` until it is actually shipped.
+- `do`: runtime status `repairing`, declared `planned`. Blocked by: Missing command manifest: commands/blu-do.toml.
+<!-- command-registry:readme-non-public:end -->
 
 ## Troubleshooting
 

@@ -14,6 +14,12 @@ import {
   listRuntimeOwnedCommandMetadata
 } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+import {
+  buildGeneratedCommandSurfaces,
+  renderUpdatedPrompt,
+  renderUpdatedReadme,
+  renderUpdatedRuntimeReference
+} from "../scripts/generate-command-registry.js";
 
 const repoRoot = process.cwd();
 
@@ -34,6 +40,10 @@ const REPRESENTATIVE_COMMANDS = [
 
 function isBundledControlPlaneDocPath(value: string): boolean {
   return /^docs\//.test(value);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 test("runtime-owned command metadata keeps command and runtime contract truth source-owned", () => {
@@ -123,6 +133,67 @@ test("runtime resources keep command-specific inputs anchored to manifests and s
   ]);
 });
 
+test("generated command registry keeps public command docs and help surfaces in sync", async () => {
+  const surfaces = await buildGeneratedCommandSurfaces();
+  const [
+    generatedCatalog,
+    commandCatalogDoc,
+    readme,
+    rootRouter,
+    helpCommand,
+    runtimeReference
+  ] = await Promise.all([
+    readFile(path.join(repoRoot, "generated/command-catalog.json"), "utf8"),
+    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
+    readFile(path.join(repoRoot, "README.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
+
+  assert.equal(generatedCatalog, surfaces.registryJson);
+  assert.equal(commandCatalogDoc, surfaces.commandCatalogMarkdown);
+  assert.equal(readme, await renderUpdatedReadme(readme, surfaces));
+  assert.equal(
+    rootRouter,
+    await renderUpdatedPrompt(rootRouter, surfaces, "Blueprint rules:\n")
+  );
+  assert.equal(
+    helpCommand,
+    await renderUpdatedPrompt(helpCommand, surfaces, "Execution profile: router.\n")
+  );
+  assert.equal(
+    runtimeReference,
+    await renderUpdatedRuntimeReference(runtimeReference, surfaces)
+  );
+
+  const chooserText = [
+    surfaces.readmeChooserBlock,
+    surfaces.promptChooserBlock
+  ].join("\n");
+
+  for (const chooserEntry of surfaces.registry.intentChooser) {
+    for (const route of chooserEntry.routes) {
+      const commandName = route
+        .replace(/^\/blu-/, "")
+        .replace(/\s+<[^>]+>$/u, "");
+      const command = surfaces.registry.commands.find((entry) => entry.name === commandName);
+
+      assert.ok(command, `Generated chooser route should map to a command: ${route}`);
+      assert.equal(command.implemented, true, `${route} must stay implemented`);
+      assert.equal(command.runnable, true, `${route} must stay runnable`);
+    }
+  }
+
+  for (const command of surfaces.registry.commands.filter((entry) => !entry.implemented)) {
+    assert.doesNotMatch(
+      chooserText,
+      new RegExp(escapeRegExp(command.command)),
+      `${command.command} must not appear in runnable chooser text`
+    );
+  }
+});
+
 test("code-review and secure-phase runtime contracts lock the Wave 4 config-gated routing semantics", async () => {
   const [codeReview, securePhase, settingsDoc] = await Promise.all([
     buildBlueprintCommandRuntimeContractResource("code-review"),
@@ -194,7 +265,7 @@ test("runtime reference rows mirror secure-phase workflow routing metadata", asy
       metadata: VERIFY_WORK_RUNTIME_METADATA,
       required: [
         /workflow\.code_review=false[\s\S]*secure-phase is never mandatory/i,
-        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=false[\s\S]*secure-phase is not required/i,
+        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=false[\s\S]*not secure-phase/i,
         /workflow\.code_review=true[\s\S]*workflow\.secure_phase=true[\s\S]*code-review first[\s\S]*secure-phase after review exists/i,
         /\/blu-secure-phase`? remains manually runnable and implemented/i
       ]
@@ -204,10 +275,10 @@ test("runtime reference rows mirror secure-phase workflow routing metadata", asy
       metadata: SECURE_PHASE_RUNTIME_METADATA,
       required: [
         /src\/mcp\/command-runtime-metadata\.ts#secure-phase/,
-        /source-owned and docs-free runtime metadata/i,
-        /implemented and manually runnable/i,
+        /bounded threat verification/i,
+        /manually runnable and implemented/i,
         /workflow\.secure_phase`? defaults false/i,
-        /workflow\.code_review=false`? secure-phase is never mandatory/i
+        /workflow\.code_review=false[\s\S]*secure-phase is never mandatory/i
       ]
     },
     {

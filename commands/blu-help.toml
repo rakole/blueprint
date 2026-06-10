@@ -6,6 +6,19 @@ Use the `blueprint-router` skill as the primary orchestration contract when that
 
 Execution profile: router.
 
+
+# command-registry:prompt-chooser:start
+Generated intent chooser from generated/command-catalog.json. Before recommending any route below, read the live command catalog and confirm every listed command still has implemented: true.
+I want to...
+- Start fresh → /blu-new-project
+- Understand an existing repo → /blu-map-codebase
+- Decide next safe action → /blu-next
+- Plan implementation → /blu-plan-phase <phase>
+- Execute safely → /blu-execute-phase <phase>
+- Review/fix code → /blu-code-review <phase>, /blu-code-review-fix <phase>
+- Ship → /blu-ship
+# command-registry:prompt-chooser:end
+
 Follow this flow exactly:
 
 1. Read `mcp_blueprint_blueprint_project_status` to determine whether Blueprint is uninitialized, mapping-incomplete, mapped-only, partial, or initialized in the current repo.
