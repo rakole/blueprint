@@ -170,9 +170,14 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
     docsFile,
     /\/blu-quick "Rename BLUEPRINT_API_ENV references and update focused tests" --validate/
   );
+  assert.match(
+    docsFile,
+    /\/blu quick "Update the debug command docs to clarify report overwrite handling" --research/
+  );
   assert.match(docsFile, /blueprint_config_get/);
   assert.match(docsFile, /pre-authorization for bounded non-destructive depth branches/i);
   assert.match(docsFile, /cheap validation evidence by default/i);
+  assert.match(docsFile, /`quick-run-latest` through `blueprint_artifact_report_write`/);
   assert.match(docsFile, /routes to `\/blu-new-project`/);
   assert.doesNotMatch(docsFile, /\/blu quick$/m);
   assert.doesNotMatch(docsFile, /\/blu-quick --full/);
@@ -180,4 +185,5 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
   assert.doesNotMatch(docsFile, /note, todo, backlog/i);
   assert.doesNotMatch(docsFile, /promoted, completed, or archived/i);
   assert.doesNotMatch(docsFile, /malformed index files/i);
+  assert.doesNotMatch(docsFile, /remove copied capture boilerplate/i);
 });

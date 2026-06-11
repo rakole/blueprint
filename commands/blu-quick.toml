@@ -33,7 +33,7 @@ Response requirements:
 - Execution profile: `long-running-mutation`.
 - Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` only when those stages are actually reached during the quick run.
 - Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action visible during non-trivial in-flight work.
-- Keep Blueprint-owned writes inside `.blueprint/reports/quick-run-latest.md` plus `.blueprint/STATE.md`.
+- Keep Blueprint-owned persistence inside `mcp_blueprint_blueprint_artifact_report_write` with the bare `quick-run-latest` report name plus `mcp_blueprint_blueprint_state_update`; do not hand-address `.blueprint/reports/quick-run-latest.md`.
 - Keep `update_topic`, `write_todos`, and any tracker state session-local only; they must never replace Blueprint MCP persistence.
 - Tracker eligibility is only for branchy bounded quick work. Do not turn it into a durable plan, a hidden summary artifact, or a substitute for `/blu-plan-phase` or `/blu-execute-phase`.
 - Treat `--force` as the only way to bypass confirmation for replacing the canonical quick-run report.

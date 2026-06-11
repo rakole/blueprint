@@ -1783,7 +1783,7 @@ export declare const QUICK_RUNTIME_METADATA: {
         readonly rootRoutable: true;
         readonly purpose: "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.";
         readonly reads: readonly ["project status, effective config, command availability, and current next-step posture through MCP"];
-        readonly writes: readonly ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"];
+        readonly writes: readonly ["quick-run-latest report through blueprint_artifact_report_write", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
@@ -3645,7 +3645,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly rootRoutable: true;
             readonly purpose: "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.";
             readonly reads: readonly ["project status, effective config, command availability, and current next-step posture through MCP"];
-            readonly writes: readonly ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"];
+            readonly writes: readonly ["quick-run-latest report through blueprint_artifact_report_write", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;

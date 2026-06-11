@@ -29,6 +29,10 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(quickToml, /use `blueprint-planner`[^\n]+`workflow\.subagents` is enabled/);
   assert.match(quickToml, /use `blueprint-executor`[^\n]+`workflow\.subagents` is enabled/);
   assert.match(quickToml, /quick-run-latest/);
+  assert.match(
+    quickToml,
+    /do not hand-address `\.blueprint\/reports\/quick-run-latest\.md`/i
+  );
 
   assert.match(executionSkill, /references\/quick-runtime-contract\.md/);
   assert.match(executionSkill, /references\/long-running-execution-profile\.md/);
@@ -60,6 +64,10 @@ test("lightweight execution keeps quick as the only long-running visible-progres
     quickMetadata.runtimeReference.contractNotes,
     /persist durable quick-run evidence[\s\S]*canonical quick-run-latest report name/i
   );
+  assert.deepEqual(quickMetadata.spec.writes, [
+    "quick-run-latest report through blueprint_artifact_report_write",
+    ".blueprint/STATE.md"
+  ]);
 });
 
 test("lightweight execution keeps fast on the trivial inline path instead of merging quick's progress layer", async () => {

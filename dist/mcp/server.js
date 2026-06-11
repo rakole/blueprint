@@ -16942,7 +16942,10 @@ var init_command_runtime_metadata = __esm({
         reads: [
           "project status, effective config, command availability, and current next-step posture through MCP"
         ],
-        writes: ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"]
+        writes: [
+          "quick-run-latest report through blueprint_artifact_report_write",
+          ".blueprint/STATE.md"
+        ]
       },
       runtimeReference: {
         path: runtimeMetadataSourceId("quick"),

@@ -27,6 +27,7 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
   assert.match(commandFile, /no repo\/domain research is needed/);
   assert.match(commandFile, /no multi-file blast-radius analysis is needed/);
   assert.match(commandFile, /no validation pass is needed beyond ordinary user review/);
+  assert.match(commandFile, /only update it when Blueprint is initialized and healthy/);
   assert.match(commandFile, /Latency budget: project status only/);
   assert.match(commandFile, /\/blu-quick/);
   assert.match(commandFile, /\/blu-plan-phase/);
@@ -111,6 +112,7 @@ test("fast public docs require concrete task text and avoid capture boilerplate"
 
   assert.match(docsFile, /\/blu-fast "Fix typo in README installation heading"/);
   assert.match(docsFile, /blueprint_project_status/);
+  assert.match(docsFile, /initialized and healthy/);
   assert.doesNotMatch(docsFile, /^- none$/m);
   assert.doesNotMatch(docsFile, /\/blu fast$/m);
   assert.doesNotMatch(docsFile, /note, todo, backlog/i);

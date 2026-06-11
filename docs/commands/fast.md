@@ -16,7 +16,7 @@
 ## Purpose
 
 
-`fast` is Blueprint's command for executing a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a host-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, excludes tracker or long-running progress behavior, and updates state only when the repo is already initialized.
+`fast` is Blueprint's command for executing a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a host-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, excludes tracker or long-running progress behavior, and updates state only when the repo is already initialized and healthy.
 
 
 ## Command Path And Examples
@@ -30,14 +30,14 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- May run inside or outside a Blueprint project, but only persists state inside one.
+- May run inside or outside a Blueprint project, but only persists state inside an initialized and healthy one.
 
 
 ## Outputs
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: may mutate repo files for the trivial task and updates `STATE.md` only when running inside an initialized Blueprint project.
+- Repo side effects: may mutate repo files for the trivial task and updates `STATE.md` only when running inside an initialized and healthy Blueprint project.
 - In-flight posture: none beyond a concise inline summary or reroute; `fast` does not expose the long-running progress layer.
 
 
@@ -118,7 +118,7 @@
 
 
 - The task description is explicit and the expected edit is obvious from the request.
-- If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
+- If no initialized and healthy Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

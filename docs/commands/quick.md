@@ -24,7 +24,7 @@
 - Root router form: `/blu quick`
 - Argument hint: `[task description] [--full] [--validate] [--discuss] [--research] [--force]`
 - `/blu-quick "Rename BLUEPRINT_API_ENV references and update focused tests" --validate`
-- `/blu quick "Update the debug command docs to remove copied capture boilerplate" --research`
+- `/blu quick "Update the debug command docs to clarify report overwrite handling" --research`
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
@@ -50,7 +50,7 @@
 ## Blueprint And Global State Writes
 
 
-- `quick-run report in .blueprint/reports/`
+- `quick-run-latest` through `blueprint_artifact_report_write`
 - `.blueprint/STATE.md`
 
 

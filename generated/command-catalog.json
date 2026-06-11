@@ -2449,7 +2449,7 @@
         "project status, effective config, command availability, and current next-step posture through MCP"
       ],
       "writes": [
-        "quick-run report in .blueprint/reports/",
+        "quick-run-latest report through blueprint_artifact_report_write",
         ".blueprint/STATE.md"
       ],
       "risk": "High: can execute repo changes with reduced ceremony.",
