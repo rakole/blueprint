@@ -28,9 +28,11 @@ helper guidance that apply to non-trivial quick runs.
   `--force` is present, external-service or runtime dependencies, destructive
   shell/git/file operations outside the bounded task, and scope expansion beyond
   quick.
+- Use no subagents by default.
 - Use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and
   `blueprint-verifier` only for bounded work that stays inside the quick-run
-  scope and only when effective config allows subagents.
+  scope, clearly improves quality, and only when effective config allows
+  subagents.
 - If those Blueprint agents are unavailable, unnecessary, or unsafe for the
   bounded scope, continue inline with the same evidence depth and output
   quality one authorized branch at a time.
@@ -39,6 +41,73 @@ helper guidance that apply to non-trivial quick runs.
 - Tracker-backed branching is allowed only as session-local coordination for
   branchy bounded quick work. Pair it with visible `write_todos`, and do not
   let it impersonate a saved phase plan or lifecycle execution.
+- Do not use tracker as a saved plan, and do not use subagents to widen scope.
+
+## Adaptive Subagent Decision Table
+
+Apply this table only after preflight confirms the task still fits `quick`
+scope:
+
+- Default: stay inline and use no subagents.
+- Use `blueprint-researcher` only when `--research` or `--full` is present,
+  the task touches an unfamiliar repo area, or bounded research can reduce
+  implementation risk, and `workflow.subagents` is enabled.
+- Use `blueprint-planner` only when the task needs a short bounded checklist,
+  has multiple ordered steps, still does not deserve a saved phase plan, and
+  `workflow.subagents` is enabled.
+- Use `blueprint-executor` only when implementation can be isolated inside the
+  agreed quick-run scope, write ownership is clear, and
+  `workflow.subagents` is enabled.
+- Use `blueprint-verifier` only when `--validate` or `--full` is present,
+  touched files are greater than 2, the change is risky, or validation failed
+  once and needs fresh-context review, and `workflow.subagents` is enabled.
+- If `workflow.subagents` is disabled or the Blueprint agents are unavailable,
+  keep the quick run inline with the same bounded scope and evidence standard.
+
+## Subagent Packets
+
+When a Blueprint subagent is warranted, pass this bounded handoff packet:
+
+```json
+{
+  "quickTask": "",
+  "boundedScope": [],
+  "forbiddenScope": [],
+  "evidenceAlreadyRead": [],
+  "allowedFilesOrAreas": [],
+  "validationBudget": "cheap | deep",
+  "reportFieldsToReturn": ["evidenceRead", "changesMade", "validation", "risks", "deferredWork"]
+}
+```
+
+Require this compact return packet so the parent can keep the run bounded:
+
+```json
+{
+  "scopeHandled": [],
+  "evidenceUsed": [],
+  "changesOrRecommendations": [],
+  "validationEvidence": [],
+  "risks": [],
+  "deferredWork": [],
+  "nextBoundedUnit": ""
+}
+```
+
+Do not replace these packets with generic helper prose, browser-only notes,
+shell-only logs, or web-search-only substitutes.
+
+## Compact Progress UX
+
+- Show progress only at meaningful stage or gate transitions.
+- Do not spam stage narration.
+- Keep visible status compact: resolved scope, active stage, pending gate,
+  execution mode, next safe action.
+- Use `update_topic` and `write_todos` only when the host exposes them and they
+  add clarity.
+- When helpers are unavailable, use concise prose instead of pretending helper
+  calls happened.
+- Never claim helper calls were made when unavailable.
 
 ## No-Subagent Fallback
 

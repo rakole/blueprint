@@ -77,8 +77,9 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
   summary persistence, carry-forward evidence, synced state refresh, and
   validation handoff.
 - `skills/blueprint-phase-execution/references/quick-runtime-contract.md`
-  Bounded `/blu-quick` contract for optional depth gates, tracker-eligible
-  branching, quick-run report persistence, and follow-up routing.
+  Bounded `/blu-quick` contract for inline-default adaptive subagent gates,
+  compact progress UX, tracker-eligible branching, quick-run report
+  persistence, and follow-up routing.
 - `skills/blueprint-phase-execution/references/fast-runtime-contract.md`
   Trivial `/blu-fast` contract for inline execution, no-subagent behavior, and
   optional state refresh without report persistence.
@@ -164,6 +165,11 @@ does not widen a command's tool scope.
 Use optional agents only when the active command contract allows them. `/blu-fast`
 does not use subagents.
 
+For `/blu-quick`, default inline and use optional agents only when the local
+decision table says the bounded value outweighs the coordination cost. Do not
+substitute browser-only, shell-only, web-search-only, or generic helper agents,
+and do not let tracker state impersonate a saved plan.
+
 ## Shared Execution Posture
 
 - Execution stays host-native and MCP-owned instead of script-owned.
@@ -239,15 +245,19 @@ multi-wave execution.
 - Execution profile: `long-running-mutation` for non-trivial runs.
 - Use the shared long-running execution profile only for the stages the quick
   run actually reaches.
-- Keep the active stage visible, keep the resolved scope, pending gate,
-  execution mode, and next safe action explicit, and treat tracker state as
-  session-local coordination only.
+- Keep the active stage visible only at meaningful stage or gate transitions,
+  keep the resolved scope, pending gate, execution mode, and next safe action
+  explicit, and treat tracker state as session-local coordination only.
 - Start from `blueprint_lightweight_preflight` before optional subagent
   decisions so effective config, health/new-project routing, implemented routes,
   and overwrite gates share one deterministic read path; treat `--discuss`,
   `--research`, `--validate`, and `--full` as bounded non-destructive depth
   preauthorization rather than overwrite, destructive, or scope-expansion
   approval.
+- Use no subagents by default. Bring in `blueprint-researcher`,
+  `blueprint-planner`, `blueprint-executor`, or `blueprint-verifier` only when
+  the quick runtime contract's decision table says the bounded quality gain
+  earns the coordination cost.
 - Run cheap validation for code mutation when a bounded safe check is
   discoverable, or record an explicit skipped reason in the quick report.
 - Persist durable quick-run evidence through

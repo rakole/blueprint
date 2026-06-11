@@ -15,14 +15,19 @@
 ## Purpose
 
 
-`quick` is Blueprint's command for executing a quick task with Blueprint guarantees while skipping unnecessary ceremony. In Blueprint it is implemented as a host-native bounded-execution contract that keeps Blueprint-owned persistence on MCP rails, uses optional depth gates only when the user explicitly asks for them, keeps non-trivial work visibly in flight, and records a durable quick-run report plus the next safe implemented action without turning the run into full lifecycle planning.
+`quick` is Blueprint's command for executing a quick task with Blueprint guarantees while skipping unnecessary ceremony. In Blueprint it is implemented as a host-native bounded-execution contract that keeps Blueprint-owned persistence on MCP rails, uses optional depth gates only when the user explicitly asks for them, keeps non-trivial work visibly in flight, and records a durable quick-run report plus the next safe implemented action without turning the run into full lifecycle planning. Use no subagents by default. Keep the run inline unless a Blueprint subagent clearly earns its coordination cost.
 
+Use this public ladder when choosing a route:
+- `/blu-fast`: trivial inline path for obvious low-risk edits with no progress/report layer.
+- `/blu-quick`: bounded work with light progress/reporting and an explicit next safe action.
+- `/blu-plan-phase` or `/blu-execute-phase`: saved-plan or broader lifecycle route when the work no longer fits quick scope.
 
 ## Command Path And Examples
 
 - CLI command path: `/blu-quick`
 - Root router form: `/blu quick`
-- Argument hint: `[task description] [--full] [--validate] [--discuss] [--research] [--force]`
+- Argument hint: `[task description] [--validate] [--discuss] [--research] [--force] [--full]`
+- `--full` is the uncommon all-depth branch; the default quick path stays narrower.
 - `/blu-quick "Rename BLUEPRINT_API_ENV references and update focused tests" --validate`
 - `/blu quick "Update the quick command docs to clarify report overwrite handling" --research`
 
@@ -66,6 +71,22 @@
 - Read effective config through `blueprint_lightweight_preflight` before deciding whether to use any optional research, planning, execution, or verification subagent path.
 - Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest` and a structured `report.quick-run` model with `schemaVersion: 2`, not Markdown `content` and not a `.blueprint/reports/...` path.
 - The structured model must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`, and may include `runMetrics`.
+- When a Blueprint subagent is used, pass a bounded handoff packet like:
+  - `"quickTask": ""`
+  - `"boundedScope": []`
+  - `"forbiddenScope": []`
+  - `"evidenceAlreadyRead": []`
+  - `"allowedFilesOrAreas": []`
+  - `"validationBudget": "cheap | deep"`
+  - `"reportFieldsToReturn": ["evidenceRead", "changesMade", "validation", "risks", "deferredWork"]`
+- Require a compact return packet like:
+  - `"scopeHandled": []`
+  - `"evidenceUsed": []`
+  - `"changesOrRecommendations": []`
+  - `"validationEvidence": []`
+  - `"risks": []`
+  - `"deferredWork": []`
+  - `"nextBoundedUnit": ""`
 - Quick-run report persistence is schema-backed: validate or repair the structured model against `report.quick-run.modelContract`; MCP renders the final Markdown and rejects hand-written Markdown fallback.
 - Treat the returned report `path` and `status` as authoritative.
 - For code mutation, include cheap validation evidence by default when a bounded safe check is discoverable; otherwise record an explicit skipped reason in the quick-run report.
@@ -77,16 +98,20 @@
 ## In-Flight Progress Contract
 
 - For non-trivial bounded quick runs, keep the shared stage vocabulary visible only for the stages the run actually reaches.
+- Show progress only at meaningful stage or gate transitions.
+- Do not spam stage narration.
 - Use `update_topic` to surface the active stage and `write_todos` to maintain a compact visible checklist for the bounded quick scope.
 - Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action explicit while the run is in flight.
 - Typical pending gates include missing task clarity, depth-mode confirmation, quick-report overwrite approval, and rerouting when the task no longer qualifies as bounded quick work.
 - Execution mode should distinguish whether the run stayed direct or used confirmed discuss, research, implementation, validation, or branchy coordination depth.
-- When `update_topic` or `write_todos` are unavailable, preserve the same progress in prose instead of inventing persistence outside MCP.
+- When `update_topic` or `write_todos` are unavailable, preserve the same compact progress in concise prose instead of inventing persistence outside MCP.
+- Never claim helper calls were made when unavailable.
 
 ## Tracker Eligibility
 
 - Branchy quick work is tracker-eligible when the run splits across optional discuss, research, implementation, or validation substeps that still fit the bounded quick contract.
 - Tracker use is session-local coordination only and must be paired with visible `write_todos`; it does not replace Blueprint MCP persistence.
+- Do not use tracker as a saved plan, and do not use subagents to widen scope.
 - Tracker-backed branching must not create a hidden saved plan, summary artifact, or lifecycle claim.
 - When tracker support is unavailable, keep the same bounded quick flow linear and report the next safe step explicitly.
 
@@ -100,6 +125,12 @@
 - `blueprint-planner`
 - `blueprint-executor`
 - `blueprint-verifier`
+- Use `blueprint-researcher` only when `--research` or `--full` is present, the task touches an unfamiliar repo area, or bounded research can reduce implementation risk, and `workflow.subagents` is enabled.
+- Use `blueprint-planner` only when the task needs a short bounded checklist, has multiple ordered steps, still does not deserve a saved phase plan, and `workflow.subagents` is enabled.
+- Use `blueprint-executor` only when implementation can be isolated inside the agreed quick-run scope, write ownership is clear, and `workflow.subagents` is enabled.
+- Use `blueprint-verifier` only when `--validate` or `--full` is present, touched files exceed 2, the change is risky, or validation failed once and needs fresh-context review, and `workflow.subagents` is enabled.
+- If `workflow.subagents` is disabled or the Blueprint agents are unavailable, keep the quick run inline with the same bounded scope and evidence standards.
+- Do not use generic helper agents, browser-only agents, shell-only agents, or web-search-only substitutes.
 
 
 ## Dependencies

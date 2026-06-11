@@ -49,7 +49,13 @@ type ContractExpectation =
   | "validation-skipped-reason"
   | "research-flag"
   | "validate-flag"
-  | "full-flag";
+  | "full-flag"
+  | "no-subagents-default"
+  | "research-subagents-enabled"
+  | "full-inline-fallback"
+  | "verifier-policy"
+  | "session-local-tracker"
+  | "no-generic-substitutes";
 
 type ScenarioDefinition = {
   id: string;
@@ -109,6 +115,44 @@ const CONTRACT_EXPECTATION_CHECKS: Record<ContractExpectation, (packet: Lightwei
     "full-flag": (packet) => {
       assert.match(packet.promptSurfaceText, /--full/i);
       assert.match(packet.promptSurfaceText, /pre-authorization/i);
+    },
+    "no-subagents-default": (packet) => {
+      assert.match(packet.promptSurfaceText, /Use no subagents by default/i);
+      assert.match(
+        packet.promptSurfaceText,
+        /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i,
+      );
+    },
+    "research-subagents-enabled": (packet) => {
+      assert.match(
+        packet.promptSurfaceText,
+        /use `blueprint-researcher` only when `--research` or `--full` is present, the task touches an unfamiliar repo area/i,
+      );
+      assert.match(packet.promptSurfaceText, /`workflow\.subagents` is enabled/i);
+    },
+    "full-inline-fallback": (packet) => {
+      assert.match(packet.promptSurfaceText, /--full/i);
+      assert.match(
+        packet.promptSurfaceText,
+        /if `workflow\.subagents` is disabled or the Blueprint agents are unavailable, keep the quick run inline/i,
+      );
+    },
+    "verifier-policy": (packet) => {
+      assert.match(
+        packet.promptSurfaceText,
+        /use `blueprint-verifier` only when `--validate` or `--full` is present, touched files are greater than 2, the change is risky, or validation failed once/i,
+      );
+    },
+    "session-local-tracker": (packet) => {
+      assert.match(packet.promptSurfaceText, /tracker-eligible/i);
+      assert.match(packet.promptSurfaceText, /do not use tracker as a saved plan/i);
+      assert.match(packet.promptSurfaceText, /do not use tracker or subagents to widen scope/i);
+    },
+    "no-generic-substitutes": (packet) => {
+      assert.match(
+        packet.promptSurfaceText,
+        /do not use generic helper agents, browser-only agents, shell-only agents, or web-search-only substitutes/i,
+      );
     },
   };
 

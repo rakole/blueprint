@@ -22,8 +22,13 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.ok(quickMetadata);
 
   assert.match(quickToml, /Execution profile: `long-running-mutation`/);
-  assert.match(quickToml, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(quickToml, /Use no subagents by default/i);
+  assert.match(quickToml, /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i);
+  assert.match(quickToml, /`update_topic` to keep the active stage visible and `write_todos`/);
   assert.match(quickToml, /tracker-eligible/i);
+  assert.match(quickToml, /Show progress only at meaningful stage or gate transitions/i);
+  assert.match(quickToml, /Do not spam stage narration/i);
+  assert.match(quickToml, /Never claim helper calls were made when they were unavailable/i);
   assert.match(quickToml, /pre-authorization for (?:a )?bounded non-destructive/i);
   assert.match(quickToml, /run cheap validation by default/i);
   assert.match(quickToml, /report\.quick-run` model with `schemaVersion: 2`/i);
@@ -40,8 +45,15 @@ test("lightweight execution keeps quick as the only long-running visible-progres
     /Return a concise completion summary with only the bounded task outcome, the validation outcome[\s\S]*authoritative quick-run report `status` and `path`, and the next safe implemented action/i
   );
   assert.doesNotMatch(quickToml, /warnings or deferred follow-up work/i);
-  assert.match(quickToml, /use `blueprint-planner`[^\n]+`workflow\.subagents` is enabled/);
-  assert.match(quickToml, /use `blueprint-executor`[^\n]+`workflow\.subagents` is enabled/);
+  assert.match(quickToml, /use `blueprint-researcher`[^\n]+unfamiliar repo area[^\n]+`workflow\.subagents` is enabled/i);
+  assert.match(quickToml, /use `blueprint-planner`[^\n]+short bounded checklist[^\n]+multiple ordered steps[^\n]+`workflow\.subagents` is enabled/i);
+  assert.match(quickToml, /use `blueprint-executor`[^\n]+write ownership is clear[^\n]+`workflow\.subagents` is enabled/i);
+  assert.match(quickToml, /use `blueprint-verifier`[^\n]+greater than 2[^\n]+`workflow\.subagents` is enabled/i);
+  assert.match(quickToml, /if `workflow\.subagents` is disabled or the Blueprint agents are unavailable, keep the quick run inline/i);
+  assert.match(quickToml, /do not use generic helper agents, browser-only agents, shell-only agents, or web-search-only substitutes/i);
+  assert.match(quickToml, /do not use tracker as a saved plan, and do not use subagents to widen scope/i);
+  assert.match(quickToml, /"quickTask": ""/);
+  assert.match(quickToml, /"scopeHandled": \[\]/);
   assert.match(quickToml, /quick-run-latest/);
   assert.match(
     quickToml,
@@ -54,11 +66,25 @@ test("lightweight execution keeps quick as the only long-running visible-progres
     executionSkill,
     /Start from `blueprint_lightweight_preflight` before optional subagent\s+decisions/i
   );
+  assert.match(executionSkill, /For `\/blu-quick`, default inline and use optional agents only when the local\s+decision table says the bounded value outweighs the coordination cost/i);
   assert.match(
     executionSkill,
     /effective config, health\/new-project routing, implemented routes,\s+and overwrite gates/i
   );
   assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
+  assert.match(quickRuntimeContract, /Use no subagents by default/i);
+  assert.match(quickRuntimeContract, /Default: stay inline and use no subagents/i);
+  assert.match(quickRuntimeContract, /workflow\.subagents` is enabled/i);
+  assert.match(
+    quickRuntimeContract,
+    /If `workflow\.subagents` is disabled or the Blueprint agents are unavailable,[\s\S]*keep the quick run inline/i
+  );
+  assert.match(quickRuntimeContract, /Show progress only at meaningful stage or gate transitions/i);
+  assert.match(quickRuntimeContract, /Do not spam stage narration/i);
+  assert.match(quickRuntimeContract, /When helpers are unavailable, use concise prose/i);
+  assert.match(quickRuntimeContract, /Do not use tracker as a saved plan, and do not use subagents to widen scope/i);
+  assert.match(quickRuntimeContract, /"quickTask": ""/);
+  assert.match(quickRuntimeContract, /"nextBoundedUnit": ""/);
   assert.match(quickRuntimeContract, /pre-authorization\s+for bounded non-destructive depth branches/i);
   assert.match(quickRuntimeContract, /Cheap means a focused test, lint, typecheck, or build/i);
   assert.match(quickRuntimeContract, /`schemaVersion: 2`/);
@@ -79,6 +105,14 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
     /Long-running-mutation profile for non-trivial bounded quick runs/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /Use no subagents by default/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /Show progress only at meaningful stage or gate transitions/i
   );
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
@@ -103,6 +137,34 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
     /allow at most one bounded repair attempt/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /use blueprint-researcher only when --research or --full is present, the task touches an unfamiliar repo area/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /use blueprint-planner only for a short bounded checklist with multiple ordered steps/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /use blueprint-executor only when implementation stays isolated inside agreed quick scope with clear write ownership/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /use blueprint-verifier only when --validate or --full is present, touched files exceed 2/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /Forbid generic helper, browser-only, shell-only, and web-search-only substitute agents/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /do not use tracker as a saved plan, and do not use subagents to widen scope/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /use concise prose when helper tools are unavailable and never claim helper calls occurred when they did not/i
   );
   assert.match(
     quickMetadata.runtimeReference.contractNotes,

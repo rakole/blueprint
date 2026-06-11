@@ -187,6 +187,31 @@
       }
     },
     {
+      "id": "quick-no-flags-defaults-inline-policy",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Update docs wording for the install note",
+      "packet": "quick",
+      "contractExpectation": "no-subagents-default",
+      "setup": {
+        "workflowSubagents": true
+      },
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick",
+        "workflowSubagents": true
+      }
+    },
+    {
       "id": "quick-docs-change-validation-skipped-with-reason",
       "fixture": "initialized-repo",
       "mode": "quick",
@@ -289,6 +314,34 @@
       }
     },
     {
+      "id": "quick-research-flag-uses-researcher-only-when-subagents-enabled",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Update docs wording for the install note",
+      "flags": [
+        "--research"
+      ],
+      "packet": "quick",
+      "contractExpectation": "research-subagents-enabled",
+      "setup": {
+        "workflowSubagents": true
+      },
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick",
+        "workflowSubagents": true
+      }
+    },
+    {
       "id": "quick-validate-flag-runs-deep-validation",
       "fixture": "initialized-repo",
       "mode": "quick",
@@ -297,7 +350,7 @@
         "--validate"
       ],
       "packet": "quick",
-      "contractExpectation": "validate-flag",
+      "contractExpectation": "verifier-policy",
       "expect": {
         "route": "quick",
         "projectHealth": "healthy",
@@ -353,7 +406,7 @@
         "--full"
       ],
       "packet": "quick",
-      "contractExpectation": "full-flag",
+      "contractExpectation": "full-inline-fallback",
       "setup": {
         "workflowSubagents": false
       },
@@ -372,6 +425,54 @@
         "validationBudget": "cheap",
         "nextSafeAction": "/blu-quick",
         "workflowSubagents": false
+      }
+    },
+    {
+      "id": "quick-branchy-bounded-work-keeps-tracker-session-local",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "flags": [
+        "--research",
+        "--validate"
+      ],
+      "packet": "quick",
+      "contractExpectation": "session-local-tracker",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "quick-bounded-work-forbids-generic-substitutes",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Update docs wording for the install note",
+      "packet": "quick",
+      "contractExpectation": "no-generic-substitutes",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick"
       }
     },
     {

@@ -17,6 +17,11 @@ test("quick manifest references the execution skill, bounded depth agents, and r
     commandFile,
     /`blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` subagents/
   );
+  assert.match(commandFile, /Use no subagents by default/i);
+  assert.match(
+    commandFile,
+    /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i
+  );
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md/);
   assert.doesNotMatch(
     commandFile,
@@ -28,11 +33,14 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /`update_topic` to keep the active stage visible and `write_todos`/);
   assert.match(commandFile, /tracker-eligible/i);
   assert.match(commandFile, /session-local progress tools only/i);
   assert.match(commandFile, /session-local, pair it with visible `write_todos`/i);
-  assert.match(commandFile, /When the host lacks them, preserve the same progress in prose/i);
+  assert.match(commandFile, /Show progress only at meaningful stage or gate transitions/i);
+  assert.match(commandFile, /Do not spam stage narration/i);
+  assert.match(commandFile, /When the host lacks them, preserve the same compact progress in concise prose/i);
+  assert.match(commandFile, /Never claim helper calls were made when they were unavailable/i);
   assert.match(commandFile, /When tracker support is unavailable, keep the same bounded quick flow linear/i);
   assert.match(commandFile, /`--discuss`/);
   assert.match(commandFile, /`--research`/);
@@ -59,10 +67,19 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /Leave report-depth detail, tracker usage, gates, risks, and deferred work in the durable report/i);
   assert.doesNotMatch(commandFile, /whether tracker-backed branching was needed/i);
   assert.doesNotMatch(commandFile, /warnings or deferred follow-up work/i);
-  assert.match(commandFile, /use `blueprint-researcher`[^\n]+`workflow\.subagents` is enabled/);
-  assert.match(commandFile, /use `blueprint-planner`[^\n]+`workflow\.subagents` is enabled/);
-  assert.match(commandFile, /use `blueprint-executor`[^\n]+`workflow\.subagents` is enabled/);
-  assert.match(commandFile, /use `blueprint-verifier`[^\n]+`workflow\.subagents` is enabled/);
+  assert.match(commandFile, /use `blueprint-researcher`[^\n]+unfamiliar repo area[^\n]+`workflow\.subagents` is enabled/i);
+  assert.match(commandFile, /use `blueprint-planner`[^\n]+short bounded checklist[^\n]+multiple ordered steps[^\n]+`workflow\.subagents` is enabled/i);
+  assert.match(commandFile, /use `blueprint-executor`[^\n]+write ownership is clear[^\n]+`workflow\.subagents` is enabled/i);
+  assert.match(commandFile, /use `blueprint-verifier`[^\n]+`--validate` or `--full`[^\n]+greater than 2[^\n]+`workflow\.subagents` is enabled/i);
+  assert.match(commandFile, /if `workflow\.subagents` is disabled or the Blueprint agents are unavailable, keep the quick run inline/i);
+  assert.match(commandFile, /do not use generic helper agents, browser-only agents, shell-only agents, or web-search-only substitutes/i);
+  assert.match(commandFile, /do not use tracker as a saved plan, and do not use subagents to widen scope/i);
+  assert.match(commandFile, /"quickTask": ""/);
+  assert.match(commandFile, /"boundedScope": \[\]/);
+  assert.match(commandFile, /"reportFieldsToReturn": \["evidenceRead", "changesMade", "validation", "risks", "deferredWork"\]/);
+  assert.match(commandFile, /"scopeHandled": \[\]/);
+  assert.match(commandFile, /"changesOrRecommendations": \[\]/);
+  assert.match(commandFile, /"nextBoundedUnit": ""/);
   assert.match(commandFile, /quick-run-latest/);
   assert.match(commandFile, /\/blu-plan-phase/);
   assert.match(commandFile, /\/blu-execute-phase/);
@@ -100,6 +117,27 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /effective\s+subagent config/);
   assert.match(quickRuntimeContract, /quick-run-latest/);
   assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
+  assert.match(quickRuntimeContract, /Use no subagents by default/i);
+  assert.match(quickRuntimeContract, /Default: stay inline and use no subagents/i);
+  assert.match(quickRuntimeContract, /unfamiliar repo area/i);
+  assert.match(quickRuntimeContract, /short bounded checklist/i);
+  assert.match(quickRuntimeContract, /write ownership is clear/i);
+  assert.match(quickRuntimeContract, /touched files are greater than 2/i);
+  assert.match(quickRuntimeContract, /workflow\.subagents` is enabled/i);
+  assert.match(
+    quickRuntimeContract,
+    /If `workflow\.subagents` is disabled or the Blueprint agents are unavailable,[\s\S]*keep the quick run inline/i
+  );
+  assert.match(quickRuntimeContract, /Do not use tracker as a saved plan, and do not use subagents to widen scope/i);
+  assert.match(quickRuntimeContract, /"quickTask": ""/);
+  assert.match(quickRuntimeContract, /"allowedFilesOrAreas": \[\]/);
+  assert.match(quickRuntimeContract, /"validationBudget": "cheap \| deep"/);
+  assert.match(quickRuntimeContract, /"scopeHandled": \[\]/);
+  assert.match(quickRuntimeContract, /"nextBoundedUnit": ""/);
+  assert.match(quickRuntimeContract, /Show progress only at meaningful stage or gate transitions/i);
+  assert.match(quickRuntimeContract, /Do not spam stage narration/i);
+  assert.match(quickRuntimeContract, /When helpers are unavailable, use concise prose/i);
+  assert.match(quickRuntimeContract, /Never claim helper calls were made when unavailable/i);
   assert.match(quickRuntimeContract, /saved phase plan,\s+multi-wave execution/i);
   assert.match(quickRuntimeContract, /--discuss`, `--research`, `--validate`, and `--full`/);
   assert.match(quickRuntimeContract, /pre-authorization\s+for bounded non-destructive depth branches/i);
@@ -180,6 +218,14 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
+    /Use no subagents by default/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /Show progress only at meaningful stage or gate transitions/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
     /confirmation is required unless --force is present/i
   );
   assert.match(
@@ -201,6 +247,34 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
     /allow at most one bounded repair attempt/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /use blueprint-researcher only when --research or --full is present, the task touches an unfamiliar repo area/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /use blueprint-planner only for a short bounded checklist with multiple ordered steps/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /use blueprint-executor only when implementation stays isolated inside agreed quick scope with clear write ownership/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /use blueprint-verifier only when --validate or --full is present, touched files exceed 2/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /Forbid generic helper, browser-only, shell-only, and web-search-only substitute agents/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /do not use tracker as a saved plan, and do not use subagents to widen scope/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /use concise prose when helper tools are unavailable and never claim helper calls occurred when they did not/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
@@ -249,6 +323,14 @@ test("quick generated catalog preserves the force overwrite bypass in runtime-ow
   );
   assert.match(
     quickEntry.runtimeReference?.contractNotes ?? "",
+    /Use no subagents by default/i
+  );
+  assert.match(
+    quickEntry.runtimeReference?.contractNotes ?? "",
+    /use blueprint-verifier only when --validate or --full is present, touched files exceed 2/i
+  );
+  assert.match(
+    quickEntry.runtimeReference?.contractNotes ?? "",
     /report overwrite unless --force is present/i
   );
   assert.match(
@@ -269,7 +351,25 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
     /\/blu quick "Update the quick command docs to clarify report overwrite handling" --research/
   );
   assert.match(docsFile, /blueprint_lightweight_preflight/);
+  assert.match(docsFile, /Use no subagents by default/i);
+  assert.match(docsFile, /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i);
   assert.match(docsFile, /pre-authorization for bounded non-destructive depth branches/i);
+  assert.match(docsFile, /Show progress only at meaningful stage or gate transitions/i);
+  assert.match(docsFile, /Do not spam stage narration/i);
+  assert.match(
+    docsFile,
+    /Use this public ladder when choosing a route:[\s\S]*\/blu-fast[\s\S]*trivial inline path[\s\S]*\/blu-quick[\s\S]*bounded work with light progress\/reporting[\s\S]*\/blu-plan-phase` or `\/blu-execute-phase[\s\S]*saved-plan or broader lifecycle route/i
+  );
+  assert.match(
+    docsFile,
+    /Argument hint:\s*`\[task description\] \[--validate\] \[--discuss\] \[--research\] \[--force\] \[--full\]`/i
+  );
+  assert.match(docsFile, /`--full` is the uncommon all-depth branch/i);
+  assert.match(docsFile, /use `blueprint-researcher` only when `--research` or `--full` is present, the task touches an unfamiliar repo area/i);
+  assert.match(docsFile, /use `blueprint-planner` only when the task needs a short bounded checklist/i);
+  assert.match(docsFile, /use `blueprint-verifier` only when `--validate` or `--full` is present, touched files exceed 2/i);
+  assert.match(docsFile, /do not use generic helper agents, browser-only agents, shell-only agents, or web-search-only substitutes/i);
+  assert.match(docsFile, /do not use tracker as a saved plan, and do not use subagents to widen scope/i);
   assert.match(docsFile, /cheap validation evidence by default/i);
   assert.match(docsFile, /`quick-run-latest` through `blueprint_artifact_report_write`/);
   assert.match(docsFile, /`schemaVersion: 2`/);
@@ -280,6 +380,8 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
   assert.match(docsFile, /Represent the quick report overwrite confirmation gate in the model `gates`/i);
   assert.match(docsFile, /do not claim success unless validation actually passes/i);
   assert.match(docsFile, /use `validation\.repairAttempt` to distinguish no repair attempt versus still-failing/i);
+  assert.match(docsFile, /"quickTask": ""/);
+  assert.match(docsFile, /"scopeHandled": \[\]/);
   assert.match(
     docsFile,
     /Keep the final chat closeout concise:[\s\S]*authoritative report `status` and `path`[\s\S]*next safe implemented action/i
@@ -287,6 +389,10 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
   assert.match(docsFile, /routes to `\/blu-new-project`/);
   assert.doesNotMatch(docsFile, /\/blu quick$/m);
   assert.doesNotMatch(docsFile, /\/blu-quick --full/);
+  assert.doesNotMatch(
+    docsFile,
+    /Argument hint:\s*`\[task description\] \[--full\]/
+  );
   assert.doesNotMatch(docsFile, /docs\/commands\/do\.md/);
   assert.doesNotMatch(docsFile, /note, todo, backlog/i);
   assert.doesNotMatch(docsFile, /promoted, completed, or archived/i);

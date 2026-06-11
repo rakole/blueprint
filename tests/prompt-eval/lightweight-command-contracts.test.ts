@@ -146,6 +146,13 @@ test("quick prompt-eval packet enforces durable quick-run structure without phas
     "blueprint_state_update"
   ]);
   assert.match(promptText, /quick-run-latest/i);
+  assert.match(promptText, /Use no subagents by default/i);
+  assert.match(
+    promptText,
+    /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i
+  );
+  assert.match(promptText, /Show progress only at meaningful stage or gate transitions/i);
+  assert.match(promptText, /Do not spam stage narration/i);
   assert.match(promptText, /report\.quick-run` model/i);
   assert.match(promptText, /Do not pass Markdown `content`/i);
   assert.match(promptText, /run cheap validation by default/i);
@@ -163,6 +170,18 @@ test("quick prompt-eval packet enforces durable quick-run structure without phas
     promptText,
     /Do not substitute browser-only, web-search-only, shell-only, or generic\s+helper agents/i
   );
+  assert.match(promptText, /do not use generic helper agents, browser-only agents, shell-only agents, or web-search-only substitutes/i);
+  assert.match(promptText, /do not use tracker as a saved plan, and do not use subagents to widen scope/i);
+  assert.match(
+    promptText,
+    /if `workflow\.subagents` is disabled or the Blueprint agents are unavailable,[\s\S]*keep the quick run inline/i
+  );
+  assert.match(promptText, /use `blueprint-researcher` only when `--research` or `--full` is present, the task touches an unfamiliar repo area/i);
+  assert.match(promptText, /use `blueprint-planner` only when the task needs a short bounded checklist/i);
+  assert.match(promptText, /use `blueprint-verifier` only when `--validate` or `--full` is present, touched files are greater than 2/i);
+  assert.match(promptText, /Never claim helper calls were made when they were unavailable/i);
+  assert.match(promptText, /"quickTask": ""/);
+  assert.match(promptText, /"scopeHandled": \[\]/);
   assert.match(promptText, /do not hand-address `\.blueprint\/reports\/quick-run-latest\.md`/i);
   assert.match(
     promptText,
