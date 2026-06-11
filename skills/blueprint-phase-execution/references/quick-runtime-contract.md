@@ -15,20 +15,25 @@ helper guidance that apply to non-trivial quick runs.
 - Keep `quick` bounded. If the request clearly needs a saved phase plan,
   multi-wave execution, or a broader rollout, route to `/blu-plan-phase` or
   `/blu-execute-phase` instead of stretching the command.
-- Use `mcp_blueprint_blueprint_project_status` and
+- Use `mcp_blueprint_blueprint_project_status`,
+  `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, and
   `mcp_blueprint_blueprint_command_catalog` before mutation so initialization,
-  health, and implemented-only routing stay explicit.
+  health, effective subagent config, and implemented-only routing stay explicit.
 
 ## Optional Depth Gates
 
-- `--discuss`, `--research`, `--validate`, and `--full` require explicit
-  confirmation before the run expands into those deeper branches.
+- `--discuss`, `--research`, `--validate`, and `--full` are pre-authorization
+  for bounded non-destructive depth branches inside the quick-run scope.
+- Still require explicit confirmation for quick-run report overwrite unless
+  `--force` is present, external-service or runtime dependencies, destructive
+  shell/git/file operations outside the bounded task, and scope expansion beyond
+  quick.
 - Use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and
-  `blueprint-verifier` only for bounded work that stays inside the confirmed
-  quick-run scope.
+  `blueprint-verifier` only for bounded work that stays inside the quick-run
+  scope and only when effective config allows subagents.
 - If those Blueprint agents are unavailable, unnecessary, or unsafe for the
   bounded scope, continue inline with the same evidence depth and output
-  quality one confirmed branch at a time.
+  quality one authorized branch at a time.
 - Do not substitute browser-only, web-search-only, shell-only, or generic
   helper agents for these Blueprint roles.
 - Tracker-backed branching is allowed only as session-local coordination for
@@ -40,7 +45,7 @@ helper guidance that apply to non-trivial quick runs.
 When optional Blueprint agents are unavailable or skipped, keep the quick run
 single-agent and sequential:
 
-1. Resolve the bounded task and any explicitly confirmed depth gate before
+1. Resolve the bounded task and any authorized depth gate before
    acting.
 2. Read only the evidence needed for the current branch or section.
 3. Complete one discuss, research, execution, or validation unit at a time
@@ -50,6 +55,19 @@ single-agent and sequential:
    and the next bounded unit.
 5. Persist the same durable quick-run evidence through MCP and keep routing
    inside the implemented Blueprint surface.
+
+## Validation Policy
+
+- For `/blu-quick` code mutation, run cheap validation by default when a
+  bounded safe check is discoverable.
+- Cheap means a focused test, lint, typecheck, or build expected to finish
+  quickly.
+- If no cheap validation is available, record an explicit skipped reason in the
+  quick report.
+- `--validate` means stronger validation, not the first time validation exists.
+- Expensive or external validation requires confirmation or routes to lifecycle.
+- Do not claim success if validation failed; record the failure honestly and
+  route to the next safe implemented action.
 
 ## Persistence And Routing
 
@@ -68,7 +86,8 @@ single-agent and sequential:
 ## Completion Criteria
 
 - The task stayed bounded.
-- Any deeper discuss, research, or validation work was explicitly confirmed.
+- Any deeper discuss, research, or validation work stayed inside a bounded
+  preauthorized branch.
 - Tracker or visible progress helpers stayed session-local only.
 - The quick report was persisted through MCP, not via a hand-built path.
 - Routing stayed inside the implemented Blueprint surface.

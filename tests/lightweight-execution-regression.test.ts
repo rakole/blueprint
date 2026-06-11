@@ -24,11 +24,18 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(quickToml, /Execution profile: `long-running-mutation`/);
   assert.match(quickToml, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(quickToml, /tracker-eligible/i);
+  assert.match(quickToml, /pre-authorization for (?:a )?bounded non-destructive/i);
+  assert.match(quickToml, /run cheap validation by default/i);
+  assert.match(quickToml, /use `blueprint-planner`[^\n]+`workflow\.subagents` is enabled/);
+  assert.match(quickToml, /use `blueprint-executor`[^\n]+`workflow\.subagents` is enabled/);
   assert.match(quickToml, /quick-run-latest/);
 
   assert.match(executionSkill, /references\/quick-runtime-contract\.md/);
   assert.match(executionSkill, /references\/long-running-execution-profile\.md/);
+  assert.match(executionSkill, /blueprint_config_get/);
   assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
+  assert.match(quickRuntimeContract, /pre-authorization\s+for bounded non-destructive depth branches/i);
+  assert.match(quickRuntimeContract, /Cheap means a focused test, lint, typecheck, or build/i);
   assert.match(quickRuntimeContract, /quick-run-latest/);
   assert.match(quickRuntimeContract, /\/blu-plan-phase/);
   assert.match(quickRuntimeContract, /\/blu-execute-phase/);
@@ -36,6 +43,14 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
     /Long-running-mutation profile for non-trivial bounded quick runs/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /read effective blueprint_config_get before optional subagent decisions/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /run cheap validation for code mutation when discoverable/i
   );
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
@@ -58,6 +73,8 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   assert.ok(fastMetadata);
 
   assert.match(fastToml, /Execution profile: `interactive-read`/);
+  assert.match(fastToml, /A task qualifies only when all are true/);
+  assert.match(fastToml, /Latency budget: project status only/);
   assert.match(fastToml, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
   assert.match(fastToml, /Do not turn `\/blu-fast` into a long-running progress flow/i);
   assert.match(fastToml, /Do not create quick-run reports, phase artifacts, or other ad hoc persistence as side effects of `fast`\./);
@@ -66,6 +83,8 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   assert.doesNotMatch(fastToml, /tracker-eligible/i);
 
   assert.match(executionSkill, /references\/fast-runtime-contract\.md/);
+  assert.match(fastRuntimeContract, /\/blu-fast` qualifies only when all are true/i);
+  assert.match(fastRuntimeContract, /\/blu-fast` latency budget/i);
   assert.match(fastRuntimeContract, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
   assert.match(fastRuntimeContract, /Do not create quick-run reports, phase summaries, phase artifacts/i);
   assert.match(fastRuntimeContract, /no-subagent execution path/i);
@@ -73,6 +92,10 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   assert.match(
     fastMetadata.runtimeReference.contractNotes,
     /Interactive-read profile for trivial inline execution/i
+  );
+  assert.match(
+    fastMetadata.runtimeReference.contractNotes,
+    /qualify only explicit obvious tasks with no research, multi-file blast-radius analysis/i
   );
   assert.match(
     fastMetadata.runtimeReference.contractNotes,
