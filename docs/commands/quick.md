@@ -64,11 +64,15 @@
 ## Quick Report Contract
 
 - Read effective config through `blueprint_lightweight_preflight` before deciding whether to use any optional research, planning, execution, or verification subagent path.
-- Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest` and a structured `report.quick-run` model, not Markdown `content` and not a `.blueprint/reports/...` path.
+- Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest` and a structured `report.quick-run` model with `schemaVersion: 2`, not Markdown `content` and not a `.blueprint/reports/...` path.
+- The structured model must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`, and may include `runMetrics`.
 - Quick-run report persistence is schema-backed: validate or repair the structured model against `report.quick-run.modelContract`; MCP renders the final Markdown and rejects hand-written Markdown fallback.
-- Treat the returned report `path`, `written`, and `status` as authoritative.
+- Treat the returned report `path` and `status` as authoritative.
 - For code mutation, include cheap validation evidence by default when a bounded safe check is discoverable; otherwise record an explicit skipped reason in the quick-run report.
+- If validation fails, record that failure honestly, make at most one bounded repair attempt when it still fits quick scope, use `validation.repairAttempt` to distinguish no repair attempt versus still-failing, and do not claim success unless validation actually passes. If one bounded repair attempt recovers the failure, record that repaired outcome there too.
+- Represent the quick report overwrite confirmation gate in the model `gates` and still require confirmation unless `--force` is present.
 - Treat `--validate` as stronger validation, not the first time validation exists.
+- Keep the final chat closeout concise: bounded task outcome, validation outcome including skipped reason or repair-attempt outcome when relevant, authoritative report `status` and `path`, and the next safe implemented action. Let the durable report carry deeper risk, deferred-work, gate, and tracker detail unless one of those is the blocker.
 
 ## In-Flight Progress Contract
 
@@ -153,7 +157,7 @@
 
 - Route oversized execution asks to `plan-phase` or `execute-phase` instead of bluffing.
 - If no cheap validation is discoverable, record a skipped reason instead of claiming validation passed.
-- If validation fails, report the failure honestly and route to the next safe implemented action.
+- If validation fails, report the failure honestly and route to the next safe implemented action even after one bounded repair attempt.
 
 
 ## Acceptance Criteria

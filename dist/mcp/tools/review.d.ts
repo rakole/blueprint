@@ -627,8 +627,8 @@ export declare const reviewToolDefinitions: ({
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
             quick: "quick";
-            standard: "standard";
             deep: "deep";
+            standard: "standard";
         }>>;
         includeAuthoringContext: z.ZodOptional<z.ZodBoolean>;
     };
@@ -670,8 +670,8 @@ export declare const reviewToolDefinitions: ({
         }>>;
         depth: z.ZodOptional<z.ZodEnum<{
             quick: "quick";
-            standard: "standard";
             deep: "deep";
+            standard: "standard";
         }>>;
         targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
         model: z.ZodUnknown;
@@ -693,8 +693,8 @@ export declare const reviewToolDefinitions: ({
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
             quick: "quick";
-            standard: "standard";
             deep: "deep";
+            standard: "standard";
         }>>;
         targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
@@ -724,8 +724,8 @@ export declare const reviewToolDefinitions: ({
         }>>;
         depth: z.ZodOptional<z.ZodEnum<{
             quick: "quick";
-            standard: "standard";
             deep: "deep";
+            standard: "standard";
         }>>;
         targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };

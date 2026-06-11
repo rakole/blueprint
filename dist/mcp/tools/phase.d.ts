@@ -1195,9 +1195,9 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
+            research: "research";
             context: "context";
             "discussion-log": "discussion-log";
-            research: "research";
             spec: "spec";
             "ui-spec": "ui-spec";
         }>;
@@ -1211,9 +1211,9 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
+            research: "research";
             context: "context";
             "discussion-log": "discussion-log";
-            research: "research";
             spec: "spec";
             "ui-spec": "ui-spec";
         }>;
@@ -1226,9 +1226,9 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
+            research: "research";
             context: "context";
             "discussion-log": "discussion-log";
-            research: "research";
             spec: "spec";
             "ui-spec": "ui-spec";
         }>;
@@ -1542,8 +1542,8 @@ export declare const phaseToolDefinitions: ({
             "/blu-research-phase": "/blu-research-phase";
         }>>;
         expectedMode: z.ZodOptional<z.ZodEnum<{
-            research: "research";
             discuss: "discuss";
+            research: "research";
         }>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointGetResult>;
@@ -1602,8 +1602,8 @@ export declare const phaseToolDefinitions: ({
             "/blu-research-phase": "/blu-research-phase";
         }>>;
         expectedMode: z.ZodOptional<z.ZodEnum<{
-            research: "research";
             discuss: "discuss";
+            research: "research";
         }>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointDeleteResult>;

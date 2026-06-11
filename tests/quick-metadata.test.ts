@@ -41,7 +41,24 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /`--force`/);
   assert.match(commandFile, /pre-authorization for (?:a )?bounded non-destructive/i);
   assert.match(commandFile, /For code mutation, run cheap validation by default/i);
-  assert.match(commandFile, /validation evidence or skipped reason/i);
+  assert.match(commandFile, /validation outcome including any skipped reason or repair-attempt outcome/i);
+  assert.match(commandFile, /report\.quick-run` model with `schemaVersion: 2`/i);
+  assert.match(
+    commandFile,
+    /must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`, and may include `runMetrics`/i
+  );
+  assert.match(commandFile, /Record the quick report overwrite gate in `gates`/i);
+  assert.match(commandFile, /Treat the returned `path` and `status` as authoritative/i);
+  assert.match(commandFile, /make at most one bounded repair attempt/i);
+  assert.match(commandFile, /use `validation\.repairAttempt` to distinguish no repair attempt, repaired, or still-failing outcomes/i);
+  assert.match(commandFile, /do not claim success unless validation actually passes/i);
+  assert.match(
+    commandFile,
+    /Return a concise completion summary with only the bounded task outcome, the validation outcome[\s\S]*authoritative quick-run report `status` and `path`, and the next safe implemented action/i
+  );
+  assert.match(commandFile, /Leave report-depth detail, tracker usage, gates, risks, and deferred work in the durable report/i);
+  assert.doesNotMatch(commandFile, /whether tracker-backed branching was needed/i);
+  assert.doesNotMatch(commandFile, /warnings or deferred follow-up work/i);
   assert.match(commandFile, /use `blueprint-researcher`[^\n]+`workflow\.subagents` is enabled/);
   assert.match(commandFile, /use `blueprint-planner`[^\n]+`workflow\.subagents` is enabled/);
   assert.match(commandFile, /use `blueprint-executor`[^\n]+`workflow\.subagents` is enabled/);
@@ -87,6 +104,23 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /--discuss`, `--research`, `--validate`, and `--full`/);
   assert.match(quickRuntimeContract, /pre-authorization\s+for bounded non-destructive depth branches/i);
   assert.match(quickRuntimeContract, /run cheap validation by default/i);
+  assert.match(quickRuntimeContract, /`schemaVersion: 2`/);
+  assert.match(
+    quickRuntimeContract,
+    /must include `task`, `classification`, `depthUsed`,\s+`evidenceRead`, `changesMade`, `validation`, `gates`, `risks`,\s+`deferredWork`, and `nextSafeAction`, and may include `runMetrics`/i
+  );
+  assert.match(quickRuntimeContract, /represent that overwrite gate in the\s+model `gates`/i);
+  assert.match(quickRuntimeContract, /Treat the returned report `path` and `status` as authoritative/i);
+  assert.match(quickRuntimeContract, /at most one bounded repair attempt/i);
+  assert.match(
+    quickRuntimeContract,
+    /Use `validation\.repairAttempt` to distinguish failed without repair,\s+repaired, or still-failing outcomes/i
+  );
+  assert.match(quickRuntimeContract, /Do not claim success if validation failed/i);
+  assert.match(
+    quickRuntimeContract,
+    /Keep the final chat closeout high-signal only:[\s\S]*authoritative report `status` and `path`[\s\S]*next safe implemented action/i
+  );
   assert.match(quickRuntimeContract, /blueprint-researcher/);
   assert.match(quickRuntimeContract, /blueprint-planner/);
   assert.match(quickRuntimeContract, /blueprint-executor/);
@@ -146,11 +180,27 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
+    /confirmation is required unless --force is present/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /report overwrite unless --force is present/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
     /bounded non-destructive depth preauthorization/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
     /run cheap validation for code mutation when discoverable/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /never claim success after failed validation/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /allow at most one bounded repair attempt/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
@@ -162,7 +212,48 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
+    /schemaVersion 2 plus task, classification, depthUsed, evidenceRead, changesMade, validation, gates, risks, deferredWork, nextSafeAction, and optional runMetrics/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /overwrite confirmation gate and any --force bypass represented in the model gates/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /treat the returned report path and status as authoritative/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
     /skills\/blueprint-phase-execution\/references\/quick-runtime-contract\.md/i
+  );
+});
+
+test("quick generated catalog preserves the force overwrite bypass in runtime-owned metadata", async () => {
+  const generatedCatalog = JSON.parse(
+    await readFile(path.join(repoRoot, "generated/command-catalog.json"), "utf8")
+  ) as {
+    commands: Array<{
+      name: string;
+      runtimeReference?: {
+        contractNotes?: string;
+      };
+    }>;
+  };
+
+  const quickEntry = generatedCatalog.commands.find((entry) => entry.name === "quick");
+
+  assert.ok(quickEntry);
+  assert.match(
+    quickEntry.runtimeReference?.contractNotes ?? "",
+    /confirmation is required unless --force is present/i
+  );
+  assert.match(
+    quickEntry.runtimeReference?.contractNotes ?? "",
+    /report overwrite unless --force is present/i
+  );
+  assert.match(
+    quickEntry.runtimeReference?.contractNotes ?? "",
+    /overwrite confirmation gate and any --force bypass represented in the model gates/i
   );
 });
 
@@ -181,6 +272,18 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
   assert.match(docsFile, /pre-authorization for bounded non-destructive depth branches/i);
   assert.match(docsFile, /cheap validation evidence by default/i);
   assert.match(docsFile, /`quick-run-latest` through `blueprint_artifact_report_write`/);
+  assert.match(docsFile, /`schemaVersion: 2`/);
+  assert.match(
+    docsFile,
+    /must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`, and may include `runMetrics`/i
+  );
+  assert.match(docsFile, /Represent the quick report overwrite confirmation gate in the model `gates`/i);
+  assert.match(docsFile, /do not claim success unless validation actually passes/i);
+  assert.match(docsFile, /use `validation\.repairAttempt` to distinguish no repair attempt versus still-failing/i);
+  assert.match(
+    docsFile,
+    /Keep the final chat closeout concise:[\s\S]*authoritative report `status` and `path`[\s\S]*next safe implemented action/i
+  );
   assert.match(docsFile, /routes to `\/blu-new-project`/);
   assert.doesNotMatch(docsFile, /\/blu quick$/m);
   assert.doesNotMatch(docsFile, /\/blu-quick --full/);

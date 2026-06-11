@@ -26,6 +26,20 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(quickToml, /tracker-eligible/i);
   assert.match(quickToml, /pre-authorization for (?:a )?bounded non-destructive/i);
   assert.match(quickToml, /run cheap validation by default/i);
+  assert.match(quickToml, /report\.quick-run` model with `schemaVersion: 2`/i);
+  assert.match(
+    quickToml,
+    /must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`, and may include `runMetrics`/i
+  );
+  assert.match(quickToml, /Record the quick report overwrite gate in `gates`/i);
+  assert.match(quickToml, /Treat the returned `path` and `status` as authoritative/i);
+  assert.match(quickToml, /make at most one bounded repair attempt/i);
+  assert.match(quickToml, /use `validation\.repairAttempt` to distinguish no repair attempt, repaired, or still-failing outcomes/i);
+  assert.match(
+    quickToml,
+    /Return a concise completion summary with only the bounded task outcome, the validation outcome[\s\S]*authoritative quick-run report `status` and `path`, and the next safe implemented action/i
+  );
+  assert.doesNotMatch(quickToml, /warnings or deferred follow-up work/i);
   assert.match(quickToml, /use `blueprint-planner`[^\n]+`workflow\.subagents` is enabled/);
   assert.match(quickToml, /use `blueprint-executor`[^\n]+`workflow\.subagents` is enabled/);
   assert.match(quickToml, /quick-run-latest/);
@@ -47,6 +61,17 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
   assert.match(quickRuntimeContract, /pre-authorization\s+for bounded non-destructive depth branches/i);
   assert.match(quickRuntimeContract, /Cheap means a focused test, lint, typecheck, or build/i);
+  assert.match(quickRuntimeContract, /`schemaVersion: 2`/);
+  assert.match(quickRuntimeContract, /model `gates`/i);
+  assert.match(quickRuntimeContract, /at most one bounded repair attempt/i);
+  assert.match(
+    quickRuntimeContract,
+    /Use `validation\.repairAttempt` to distinguish failed without repair,\s+repaired, or still-failing outcomes/i
+  );
+  assert.match(
+    quickRuntimeContract,
+    /Keep the final chat closeout high-signal only:[\s\S]*authoritative report `status` and `path`[\s\S]*next safe implemented action/i
+  );
   assert.match(quickRuntimeContract, /quick-run-latest/);
   assert.match(quickRuntimeContract, /\/blu-plan-phase/);
   assert.match(quickRuntimeContract, /\/blu-execute-phase/);
@@ -61,7 +86,23 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   );
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
+    /confirmation is required unless --force is present/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /report overwrite unless --force is present/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
     /run cheap validation for code mutation when discoverable/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /never claim success after failed validation/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /allow at most one bounded repair attempt/i
   );
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
@@ -70,6 +111,18 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
     /persist durable quick-run evidence[\s\S]*canonical quick-run-latest report name/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /schemaVersion 2 plus task, classification, depthUsed, evidenceRead, changesMade, validation, gates, risks, deferredWork, nextSafeAction, and optional runMetrics/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /overwrite confirmation gate and any --force bypass represented in the model gates/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /treat the returned report path and status as authoritative/i
   );
   assert.deepEqual(quickMetadata.spec.writes, [
     "quick-run-latest report through blueprint_artifact_report_write",

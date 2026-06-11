@@ -66,18 +66,34 @@ single-agent and sequential:
   quick report.
 - `--validate` means stronger validation, not the first time validation exists.
 - Expensive or external validation requires confirmation or routes to lifecycle.
+- If validation fails, make at most one bounded repair attempt when it still
+  fits quick scope.
+- Use `validation.repairAttempt` to distinguish failed without repair,
+  repaired, or still-failing outcomes when that bounded repair path matters.
 - Do not claim success if validation failed; record the failure honestly and
-  route to the next safe implemented action.
+  route to the next safe implemented action even after a bounded repair attempt.
 
 ## Persistence And Routing
 
 - Persist durable quick-run evidence only through
   `mcp_blueprint_blueprint_artifact_report_write` with the bare canonical
-  report name `quick-run-latest` and a structured `report.quick-run` model.
+  report name `quick-run-latest` and a structured `report.quick-run` model
+  with `schemaVersion: 2`.
+- The structured model must include `task`, `classification`, `depthUsed`,
+  `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`,
+  `deferredWork`, and `nextSafeAction`, and may include `runMetrics`.
+- Keep the final chat closeout high-signal only: bounded task outcome,
+  validation outcome including skipped reason or repair-attempt outcome when
+  relevant, authoritative report `status` and `path`, and the next safe
+  implemented action. Leave risks, deferred work, gates, and tracker detail in
+  the durable report unless they are the user-facing blocker.
 - Do not hand-build the final Markdown report or pass Markdown `content`;
   MCP validates the model and renders the canonical report body.
+- Do not hand-address `.blueprint/reports/quick-run-latest.md`.
 - Require explicit overwrite confirmation before replacing the canonical quick
-  report unless `--force` is present.
+  report unless `--force` is present, and represent that overwrite gate in the
+  model `gates`.
+- Treat the returned report `path` and `status` as authoritative.
 - After completion, call `mcp_blueprint_blueprint_state_update` so `STATE.md`
   records `/blu-quick` and points to the next safe implemented action.
 - Prefer `/blu-progress` as the follow-up unless a narrower implemented next

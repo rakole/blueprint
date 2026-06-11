@@ -428,7 +428,15 @@ type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
 type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
 type AddTestsReportPersistenceStatus = "created" | "updated" | "reused";
-type QuickRunVerificationResult = "pass" | "partial" | "blocked" | "not-run";
+type QuickRunConfidence = "high" | "medium" | "low";
+type QuickRunValidationBudget = "none" | "cheap" | "ask" | "route";
+type QuickRunValidationDepth = "none" | "cheap" | "deep";
+type QuickRunEvidenceKind = "file" | "tool" | "command" | "user";
+type QuickRunValidationStatus = "passed" | "failed" | "skipped";
+type QuickRunValidationCommandResult = "passed" | "failed" | "not-run";
+type QuickRunValidationRepairOutcome = "not-attempted" | "repaired" | "still-failing";
+type QuickRunGateStatus = "satisfied" | "deferred" | "blocked";
+type QuickRunOutputTokenBudgetClass = "short" | "normal";
 type AuditFixReportSource = "review" | "security" | "verification" | "uat" | "all";
 type AuditFixReportSeverityFilter = "medium" | "high" | "all";
 type AuditFixReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
@@ -498,24 +506,58 @@ type AddTestsReportModel = {
 };
 
 type QuickRunReportModel = {
-  taskSummary: string[];
-  changedSurfaces: Array<{
-    surface: string;
-    change: string;
-    rationale: string;
+  schemaVersion: 2;
+  task: string;
+  classification: {
+    route: string;
+    confidence: QuickRunConfidence;
+    reasons: string[];
+    validationBudget: QuickRunValidationBudget;
+  };
+  depthUsed: {
+    discuss: boolean;
+    research: boolean;
+    validation: QuickRunValidationDepth;
+    subagents: string[];
+    trackerUsed: boolean;
+  };
+  evidenceRead: Array<{
+    kind: QuickRunEvidenceKind;
+    ref: string;
+    why: string;
   }>;
-  evidenceUsed: Array<{
-    source: string;
+  changesMade: Array<{
+    path: string;
     summary: string;
   }>;
-  changesMade: string[];
-  verification: Array<{
-    check: string;
-    result: QuickRunVerificationResult;
-    evidence: string;
+  validation: {
+    status: QuickRunValidationStatus;
+    commands: Array<{
+      command: string;
+      result: QuickRunValidationCommandResult;
+      durationMs?: number;
+      notes?: string;
+    }>;
+    skippedReason?: string;
+    repairAttempt?: {
+      attempted: boolean;
+      outcome: QuickRunValidationRepairOutcome;
+      note?: string;
+    };
+  };
+  gates: Array<{
+    name: string;
+    status: QuickRunGateStatus;
+    reason?: string;
   }>;
-  followUps: string[];
+  risks: string[];
+  deferredWork: string[];
   nextSafeAction: string;
+  runMetrics?: {
+    administrativeToolCalls?: number;
+    subagentCount?: number;
+    outputTokenBudgetClass?: QuickRunOutputTokenBudgetClass;
+  };
 };
 
 type AddTestsReportDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
@@ -12104,6 +12146,99 @@ function collectModelStringEntries(
   return [];
 }
 
+function collectQuickRunLifecycleClaimEntries(
+  model: Record<string, unknown>
+): Array<{ path: string; value: string }> {
+  const entries: Array<{ path: string; value: string }> = [];
+
+  if (typeof model.task === "string") {
+    entries.push({ path: "model.task", value: model.task });
+  }
+
+  const classification = asJsonObject(model.classification);
+  if (Array.isArray(classification?.reasons)) {
+    for (const [index, reason] of classification.reasons.entries()) {
+      if (typeof reason === "string") {
+        entries.push({
+          path: `model.classification.reasons[${index}]`,
+          value: reason,
+        });
+      }
+    }
+  }
+
+  if (Array.isArray(model.changesMade)) {
+    for (const [index, item] of model.changesMade.entries()) {
+      const row = asJsonObject(item);
+      if (row && typeof row.summary === "string") {
+        entries.push({
+          path: `model.changesMade[${index}].summary`,
+          value: row.summary
+        });
+      }
+    }
+  }
+
+  if (Array.isArray(model.gates)) {
+    for (const [index, item] of model.gates.entries()) {
+      const row = asJsonObject(item);
+      if (row && typeof row.reason === "string") {
+        entries.push({
+          path: `model.gates[${index}].reason`,
+          value: row.reason,
+        });
+      }
+    }
+  }
+
+  if (Array.isArray(model.risks)) {
+    for (const [index, risk] of model.risks.entries()) {
+      if (typeof risk === "string") {
+        entries.push({
+          path: `model.risks[${index}]`,
+          value: risk,
+        });
+      }
+    }
+  }
+
+  if (Array.isArray(model.deferredWork)) {
+    for (const [index, item] of model.deferredWork.entries()) {
+      if (typeof item === "string") {
+        entries.push({
+          path: `model.deferredWork[${index}]`,
+          value: item,
+        });
+      }
+    }
+  }
+
+  const validation = asJsonObject(model.validation);
+  if (typeof validation?.skippedReason === "string") {
+    entries.push({
+      path: "model.validation.skippedReason",
+      value: validation.skippedReason,
+    });
+  }
+
+  const repairAttempt = asJsonObject(validation?.repairAttempt);
+  if (typeof repairAttempt?.note === "string") {
+    entries.push({
+      path: "model.validation.repairAttempt.note",
+      value: repairAttempt.note,
+    });
+  }
+
+  if (typeof model.nextSafeAction === "string") {
+    entries.push({
+      path: "model.nextSafeAction",
+      value: model.nextSafeAction
+    });
+  }
+
+  return entries;
+}
+
 function hasModelPlaceholderLanguage(value: string): boolean {
   return /\b(?:todo|tbd|placeholder|replace with|replace me|fill in|insert here|coming soon|static for now)\b/i.test(
     value
@@ -12899,6 +13034,24 @@ async function buildAuditFixAllowedNextActions(args: {
   };
 }
 
+async function buildQuickRunAllowedNextActions(): Promise<string[]> {
+  const implementedCommands = await getImplementedCommandNames();
+
+  if (implementedCommands.size === 0) {
+    return ["/blu-progress"];
+  }
+
+  const quickSafeCandidates = [
+    "/blu-progress",
+    "/blu-quick",
+    "/blu-debug",
+  ];
+
+  return uniqueSorted(
+    quickSafeCandidates.filter((command) => implementedCommands.has(command))
+  );
+}
+
 async function buildAddTestsAllowedNextActions(args: {
   projectRoot: string;
   phaseNumber: string;
@@ -13222,6 +13375,59 @@ function buildAddTestsReportTaskSchema(args: {
   };
 
   return schema;
+}
+
+function buildQuickRunReportTaskSchema(args: {
+  baseSchema: Record<string, unknown>;
+  allowedActions: string[];
+}): Record<string, unknown> {
+  const schema = cloneJsonObject(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+
+  if (properties) {
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedActions;
+    }
+  }
+
+  schema["x-blueprint-runtimeContext"] = {
+    allowedActions: args.allowedActions,
+    upstreamContext: {
+      allowedActions: "implemented command catalog filtered to quick-safe routes"
+    }
+  };
+
+  return schema;
+}
+
+async function quickRunReportModelSchemas(args: {
+  contract: ReturnType<typeof readArtifactContract>;
+}): Promise<{
+  schemaPath: string | null;
+  baseSchema: Record<string, unknown>;
+  taskSchema: Record<string, unknown>;
+  allowedNextActions: string[];
+}> {
+  const modelContract = args.contract.modelContract;
+
+  if (!modelContract) {
+    throw new Error("report.quick-run does not expose a modelContract.");
+  }
+
+  const baseSchema = cloneJsonObject(modelContract.jsonSchema);
+  const allowedNextActions = await buildQuickRunAllowedNextActions();
+  const taskSchema = buildQuickRunReportTaskSchema({
+    baseSchema,
+    allowedActions: allowedNextActions
+  });
+
+  return {
+    schemaPath: modelContract.schemaPath ?? null,
+    baseSchema,
+    taskSchema,
+    allowedNextActions
+  };
 }
 
 async function addTestsReportModelSchemas(args: {
@@ -13730,6 +13936,7 @@ export async function blueprintArtifactReportAuthoringContext(
   if (contractId === "report.quick-run") {
     const contract = readArtifactContract("report.quick-run");
     const modelContract = contract.modelContract;
+    const schemas = modelContract ? await quickRunReportModelSchemas({ contract }) : null;
 
     return {
       status: modelContract ? "ready" : "invalid",
@@ -13746,10 +13953,14 @@ export async function blueprintArtifactReportAuthoringContext(
       writeArgs: {
         reportName: normalizeReportSlug(args.reportName)
       },
-      allowedNextActions: [],
-      schemaPath: modelContract?.schemaPath ?? null,
-      baseSchema: modelContract ? cloneJsonObject(modelContract.jsonSchema) : null,
-      taskSchema: modelContract ? cloneJsonObject(modelContract.jsonSchema) : null,
+      allowedNextActions: schemas?.allowedNextActions ?? [],
+      schemaPath: schemas?.schemaPath ?? modelContract?.schemaPath ?? null,
+      baseSchema:
+        schemas?.baseSchema ??
+        (modelContract ? cloneJsonObject(modelContract.jsonSchema) : null),
+      taskSchema:
+        schemas?.taskSchema ??
+        (modelContract ? cloneJsonObject(modelContract.jsonSchema) : null),
       modelOnly: true,
       prerequisiteBlockers: modelContract ? [] : ["report.quick-run does not expose a modelContract."],
       reason: modelContract ? null : "Missing report.quick-run model contract.",
@@ -13871,19 +14082,6 @@ function normalizeStringArray(value: unknown): string[] | null {
 }
 
 function normalizeQuickRunReportModel(model: Record<string, unknown>): QuickRunReportModel | null {
-  const taskSummary = normalizeStringArray(model.taskSummary);
-  const changesMade = normalizeStringArray(model.changesMade);
-  const followUps = normalizeStringArray(model.followUps);
-
-  if (
-    taskSummary === null ||
-    changesMade === null ||
-    followUps === null ||
-    typeof model.nextSafeAction !== "string"
-  ) {
-    return null;
-  }
-
   const normalizeRows = <T>(
     value: unknown,
     mapper: (row: Record<string, unknown>) => T | null
@@ -13898,53 +14096,518 @@ function normalizeQuickRunReportModel(model: Record<string, unknown>): QuickRunR
       return rowObject ? mapper(rowObject) : null;
     });
 
-    return rows.some((row) => row === null) ? null : rows as T[];
+    return rows.some((row) => row === null) ? null : (rows as T[]);
   };
+  const classification = asJsonObject(model.classification);
+  const depthUsed = asJsonObject(model.depthUsed);
+  const validation = asJsonObject(model.validation);
+  const runMetrics = model.runMetrics === undefined ? undefined : asJsonObject(model.runMetrics);
 
-  const changedSurfaces = normalizeRows(model.changedSurfaces, (row) =>
-    typeof row.surface === "string" &&
-    typeof row.change === "string" &&
-    typeof row.rationale === "string"
+  if (
+    model.schemaVersion !== 2 ||
+    typeof model.task !== "string" ||
+    !classification ||
+    !depthUsed ||
+    !validation ||
+    typeof model.nextSafeAction !== "string"
+  ) {
+    return null;
+  }
+
+  const classificationReasons = normalizeStringArray(classification.reasons);
+  const depthSubagents = normalizeStringArray(depthUsed.subagents);
+  const evidenceRead = normalizeRows(model.evidenceRead, (row) =>
+    typeof row.kind === "string" &&
+    typeof row.ref === "string" &&
+    typeof row.why === "string"
       ? {
-          surface: row.surface.trim(),
-          change: row.change.trim(),
-          rationale: row.rationale.trim()
+          kind: row.kind as QuickRunEvidenceKind,
+          ref: row.ref.trim(),
+          why: row.why.trim()
         }
       : null
   );
-  const evidenceUsed = normalizeRows(model.evidenceUsed, (row) =>
-    typeof row.source === "string" && typeof row.summary === "string"
+  const changesMade = normalizeRows(model.changesMade, (row) =>
+    typeof row.path === "string" && typeof row.summary === "string"
       ? {
-          source: row.source.trim(),
+          path: row.path.trim(),
           summary: row.summary.trim()
         }
       : null
   );
-  const verification = normalizeRows(model.verification, (row) =>
-    typeof row.check === "string" &&
-    typeof row.result === "string" &&
-    typeof row.evidence === "string"
+  const validationCommands = normalizeRows(validation.commands, (row) =>
+    typeof row.command === "string" && typeof row.result === "string"
       ? {
-          check: row.check.trim(),
-          result: row.result as QuickRunVerificationResult,
-          evidence: row.evidence.trim()
+          command: row.command.trim(),
+          result: row.result as QuickRunValidationCommandResult,
+          ...(typeof row.durationMs === "number" ? { durationMs: row.durationMs } : {}),
+          ...(typeof row.notes === "string" ? { notes: row.notes.trim() } : {})
         }
       : null
   );
+  const validationRepairAttempt =
+    validation.repairAttempt === undefined
+      ? undefined
+      : (() => {
+          const repairAttempt = asJsonObject(validation.repairAttempt);
 
-  if (changedSurfaces === null || evidenceUsed === null || verification === null) {
+          if (
+            !repairAttempt ||
+            typeof repairAttempt.attempted !== "boolean" ||
+            typeof repairAttempt.outcome !== "string"
+          ) {
+            return null;
+          }
+
+          return {
+            attempted: repairAttempt.attempted,
+            outcome: repairAttempt.outcome as QuickRunValidationRepairOutcome,
+            ...(typeof repairAttempt.note === "string"
+              ? { note: repairAttempt.note.trim() }
+              : {})
+          };
+        })();
+  const gates = normalizeRows(model.gates, (row) =>
+    typeof row.name === "string" && typeof row.status === "string"
+      ? {
+          name: row.name.trim(),
+          status: row.status as QuickRunGateStatus,
+          ...(typeof row.reason === "string" ? { reason: row.reason.trim() } : {})
+        }
+      : null
+  );
+  const risks = normalizeStringArray(model.risks);
+  const deferredWork = normalizeStringArray(model.deferredWork);
+
+  if (
+    typeof classification.route !== "string" ||
+    typeof classification.confidence !== "string" ||
+    classificationReasons === null ||
+    typeof classification.validationBudget !== "string" ||
+    typeof depthUsed.discuss !== "boolean" ||
+    typeof depthUsed.research !== "boolean" ||
+    typeof depthUsed.validation !== "string" ||
+    depthSubagents === null ||
+    typeof depthUsed.trackerUsed !== "boolean" ||
+    evidenceRead === null ||
+    changesMade === null ||
+    typeof validation.status !== "string" ||
+    validationCommands === null ||
+    validationRepairAttempt === null ||
+    gates === null ||
+    risks === null ||
+    deferredWork === null
+  ) {
+    return null;
+  }
+
+  if (
+    runMetrics &&
+    ((
+      runMetrics.administrativeToolCalls !== undefined &&
+      typeof runMetrics.administrativeToolCalls !== "number"
+    ) ||
+      (runMetrics.subagentCount !== undefined && typeof runMetrics.subagentCount !== "number") ||
+      (runMetrics.outputTokenBudgetClass !== undefined &&
+        typeof runMetrics.outputTokenBudgetClass !== "string"))
+  ) {
     return null;
   }
 
   return {
-    taskSummary,
-    changedSurfaces,
-    evidenceUsed,
+    schemaVersion: 2,
+    task: model.task.trim(),
+    classification: {
+      route: classification.route.trim(),
+      confidence: classification.confidence as QuickRunConfidence,
+      reasons: classificationReasons,
+      validationBudget: classification.validationBudget as QuickRunValidationBudget
+    },
+    depthUsed: {
+      discuss: depthUsed.discuss,
+      research: depthUsed.research,
+      validation: depthUsed.validation as QuickRunValidationDepth,
+      subagents: depthSubagents,
+      trackerUsed: depthUsed.trackerUsed
+    },
+    evidenceRead,
     changesMade,
-    verification,
-    followUps,
-    nextSafeAction: model.nextSafeAction.trim()
+    validation: {
+      status: validation.status as QuickRunValidationStatus,
+      commands: validationCommands,
+      ...(typeof validation.skippedReason === "string"
+        ? { skippedReason: validation.skippedReason.trim() }
+        : {}),
+      ...(validationRepairAttempt ? { repairAttempt: validationRepairAttempt } : {})
+    },
+    gates,
+    risks,
+    deferredWork,
+    nextSafeAction: model.nextSafeAction.trim(),
+    ...(runMetrics
+      ? {
+          runMetrics: {
+            ...(typeof runMetrics.administrativeToolCalls === "number"
+              ? { administrativeToolCalls: runMetrics.administrativeToolCalls }
+              : {}),
+            ...(typeof runMetrics.subagentCount === "number"
+              ? { subagentCount: runMetrics.subagentCount }
+              : {}),
+            ...(typeof runMetrics.outputTokenBudgetClass === "string"
+              ? {
+                  outputTokenBudgetClass:
+                    runMetrics.outputTokenBudgetClass as QuickRunOutputTokenBudgetClass
+                }
+              : {})
+          }
+        }
+      : {})
   };
+}
+
+function quickRunHasLifecycleCompletionClaim(value: string): boolean {
+  return (
+    /\b(?:phase|lifecycle)\s+(?:completion|complete|completed)\b/i.test(value) ||
+    /\bcompleted\s+(?:phase|lifecycle)\b/i.test(value)
+  );
+}
+
+function quickRunSkippedReasonIsSubstantive(value: string | undefined): boolean {
+  if (value === undefined) {
+    return false;
+  }
+
+  const normalized = value.trim();
+
+  return normalized.length >= 12 && !hasModelPlaceholderLanguage(normalized) && !isGenericNoneValue(normalized);
+}
+
+function quickRunRepairAttemptNoteIsSubstantive(value: string | undefined): boolean {
+  if (value === undefined) {
+    return false;
+  }
+
+  const normalized = value.trim();
+
+  return normalized.length >= 12 && !hasModelPlaceholderLanguage(normalized) && !isGenericNoneValue(normalized);
+}
+
+function quickRunNeedsValidationForChangePath(pathValue: string): boolean {
+  const normalized = pathValue.trim().replace(/\\/g, "/").toLowerCase();
+
+  if (normalized.length === 0 || normalized.startsWith(".blueprint/")) {
+    return false;
+  }
+
+  if (normalized.startsWith("docs/") || /\.(?:md|mdx|txt|rst)$/i.test(normalized)) {
+    return false;
+  }
+
+  if (/(^|\/)(src|tests|test|scripts|commands|hooks|agents)\//.test(normalized)) {
+    return true;
+  }
+
+  if (/^(?:package(?:-lock)?\.json|tsconfig\.json|gemini-extension\.json|tabnine-extension\.json)$/.test(normalized)) {
+    return true;
+  }
+
+  return /\.(?:ts|tsx|js|jsx|mjs|cjs|json|toml|ya?ml|sh)$/i.test(normalized);
+}
+
+function quickRunReportResidualDiagnostics(args: {
+  model: Record<string, unknown>;
+  normalizedModel: QuickRunReportModel | null;
+}): ArtifactReportDiagnostic[] {
+  const diagnostics: ArtifactReportDiagnostic[] = [];
+  const classification = asJsonObject(args.model.classification);
+  const depthUsed = asJsonObject(args.model.depthUsed);
+  const validation = asJsonObject(args.model.validation);
+  const lifecycleClaimEntries = collectQuickRunLifecycleClaimEntries(args.model);
+
+  if (typeof args.model.task !== "string" || args.model.task.trim().length === 0) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.task",
+        code: "content.task_missing",
+        message: "Quick-run report task must be a non-empty string.",
+        context: {},
+        suggestion: "Summarize the bounded quick-run task in model.task."
+      })
+    );
+  }
+
+  if (!classification || typeof classification.route !== "string" || classification.route.trim().length === 0) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.classification.route",
+        code: "content.route_missing",
+        message: "Quick-run classification.route is required.",
+        context: {},
+        suggestion: "Record the routed Blueprint command or quick-run path in classification.route."
+      })
+    );
+  }
+
+  if (typeof args.model.nextSafeAction !== "string" || args.model.nextSafeAction.trim().length === 0) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "content.next_safe_action_missing",
+        message: "Quick-run nextSafeAction must be present.",
+        context: {},
+        suggestion: "Set nextSafeAction to an implemented Blueprint command."
+      })
+    );
+  }
+
+  if (
+    !depthUsed ||
+    !Array.isArray(depthUsed.subagents) ||
+    !depthUsed.subagents.every((item) => typeof item === "string")
+  ) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.depthUsed.subagents",
+        code: "content.subagents_invalid",
+        message: "Quick-run depthUsed.subagents must be an array of strings.",
+        context: {},
+        suggestion: "Provide subagent names as strings or use an empty array when none were used."
+      })
+    );
+  }
+
+  if (!validation || typeof validation.status !== "string") {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.validation.status",
+        code: "content.validation_status_missing",
+        message: "Quick-run validation.status is required.",
+        context: {},
+        suggestion: "Set validation.status to passed, failed, or skipped."
+      })
+    );
+  }
+
+  const normalizedModel = args.normalizedModel;
+  const validationStatus = normalizedModel?.validation.status ?? validation?.status;
+  const skippedReason = normalizedModel?.validation.skippedReason ??
+    (typeof validation?.skippedReason === "string" ? validation.skippedReason.trim() : undefined);
+  const repairAttempt = normalizedModel?.validation.repairAttempt ??
+    (() => {
+      const rawRepairAttempt = asJsonObject(validation?.repairAttempt);
+
+      if (
+        !rawRepairAttempt ||
+        typeof rawRepairAttempt.attempted !== "boolean" ||
+        typeof rawRepairAttempt.outcome !== "string"
+      ) {
+        return undefined;
+      }
+
+      return {
+        attempted: rawRepairAttempt.attempted,
+        outcome: rawRepairAttempt.outcome as QuickRunValidationRepairOutcome,
+        ...(typeof rawRepairAttempt.note === "string"
+          ? { note: rawRepairAttempt.note.trim() }
+          : {})
+      };
+    })();
+  const validationCommands =
+    normalizedModel?.validation.commands ??
+    (Array.isArray(validation?.commands)
+      ? validation.commands
+          .map((row) => asJsonObject(row))
+          .filter((row): row is Record<string, unknown> => row !== null)
+      : []);
+
+  if (validationStatus === "skipped" && !quickRunSkippedReasonIsSubstantive(skippedReason)) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.validation.skippedReason",
+        code: "content.skipped_reason_required",
+        message: "Quick-run validation.skippedReason is required and must be substantive when validation.status is skipped.",
+        context: { status: validationStatus },
+        suggestion: "Explain concretely why validation was skipped for this quick run."
+      })
+    );
+  }
+
+  if (validationStatus === "passed" && validationCommands.length === 0) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.validation.commands",
+        code: "content.passed_requires_command",
+        message: "Quick-run validation.status=passed requires at least one command or manual inspection row.",
+        context: { status: validationStatus },
+        suggestion: "Add a validation.commands row such as manual inspection when the run passed without shell commands."
+      })
+    );
+  }
+
+  if (validationStatus === "failed" && !repairAttempt) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.validation.repairAttempt",
+        code: "content.failed_requires_repair_attempt",
+        message:
+          "Quick-run validation.status=failed requires validation.repairAttempt so the report records whether one bounded repair attempt was not attempted or still failing.",
+        context: { status: validationStatus },
+        suggestion:
+          "Set validation.repairAttempt with attempted=false and outcome=not-attempted, or attempted=true and outcome=still-failing."
+      })
+    );
+  }
+
+  if (repairAttempt) {
+    if (!repairAttempt.attempted && repairAttempt.outcome !== "not-attempted") {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: "model.validation.repairAttempt.outcome",
+          code: "content.repair_attempt_outcome_invalid",
+          message:
+            "Quick-run validation.repairAttempt.outcome must be not-attempted when attempted is false.",
+          context: repairAttempt,
+          suggestion:
+            "Set repairAttempt.outcome to not-attempted, or set attempted=true for repaired or still-failing outcomes."
+        })
+      );
+    }
+
+    if (repairAttempt.attempted && repairAttempt.outcome === "not-attempted") {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: "model.validation.repairAttempt.outcome",
+          code: "content.repair_attempt_outcome_mismatch",
+          message:
+            "Quick-run validation.repairAttempt.outcome cannot be not-attempted when attempted is true.",
+          context: repairAttempt,
+          suggestion: "Use repaired or still-failing when a bounded repair attempt was made."
+        })
+      );
+    }
+
+    if (validationStatus === "skipped") {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: "model.validation.repairAttempt",
+          code: "content.skipped_repair_attempt_irrelevant",
+          message:
+            "Quick-run validation.repairAttempt should be omitted when validation.status is skipped.",
+          context: { status: validationStatus },
+          suggestion:
+            "Remove validation.repairAttempt for skipped validation; use validation.skippedReason instead."
+        })
+      );
+    }
+
+    if (validationStatus === "passed" && repairAttempt.outcome !== "repaired") {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: "model.validation.repairAttempt.outcome",
+          code: "content.passed_repair_attempt_outcome_invalid",
+          message:
+            "Quick-run validation.status=passed can only keep validation.repairAttempt when the bounded repair attempt outcome is repaired.",
+          context: { status: validationStatus, repairAttempt },
+          suggestion: "Remove validation.repairAttempt or set its outcome to repaired."
+        })
+      );
+    }
+
+    if (validationStatus === "failed" && repairAttempt.outcome === "repaired") {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: "model.validation.repairAttempt.outcome",
+          code: "content.failed_repair_attempt_outcome_invalid",
+          message:
+            "Quick-run validation.status=failed cannot use validation.repairAttempt.outcome=repaired.",
+          context: { status: validationStatus, repairAttempt },
+          suggestion: "Use not-attempted or still-failing while validation remains failed."
+        })
+      );
+    }
+
+    if (repairAttempt.note !== undefined && !quickRunRepairAttemptNoteIsSubstantive(repairAttempt.note)) {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: "model.validation.repairAttempt.note",
+          code: "content.repair_attempt_note_not_substantive",
+          message:
+            "Quick-run validation.repairAttempt.note must be substantive when provided.",
+          context: { repairAttempt },
+          suggestion:
+            "Use a brief concrete note that explains the bounded repair attempt decision or outcome."
+        })
+      );
+    }
+  }
+
+  const codeChanges = normalizedModel?.changesMade.filter((row) =>
+    quickRunNeedsValidationForChangePath(row.path)
+  ) ?? [];
+  if (
+    codeChanges.length > 0 &&
+    validationStatus === "skipped" &&
+    !quickRunSkippedReasonIsSubstantive(skippedReason)
+  ) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.validation",
+        code: "content.code_changes_need_validation",
+        message: "Quick-run reports that change repo code paths cannot skip validation without an explicit substantive reason.",
+        context: { changedPaths: codeChanges.map((row) => row.path) },
+        suggestion: "Run validation or explain concretely why the code change could not be validated yet."
+      })
+    );
+  }
+
+  if (
+    !normalizedModel?.gates.some((gate) =>
+      /overwrite|quick-run-report|quick-report/i.test(gate.name)
+    )
+  ) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.gates",
+        code: "content.overwrite_gate_missing",
+        message: "Quick-run report gates must include an overwrite or quick-run-report gate.",
+        context: {},
+        suggestion: "Add a gate row that records the quick-run-report overwrite decision boundary."
+      })
+    );
+  }
+
+  for (const entry of lifecycleClaimEntries) {
+    if (quickRunHasLifecycleCompletionClaim(entry.value)) {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "content.lifecycle_completion_claim",
+          message: `Quick-run report must not claim lifecycle or phase completion: ${entry.value}.`,
+          context: { value: entry.value },
+          suggestion: "Describe the bounded quick-run outcome without claiming lifecycle or phase completion."
+        })
+      );
+    }
+  }
+
+  return diagnostics;
 }
 
 function normalizeAddTestsReportModel(model: Record<string, unknown>): AddTestsReportModel | null {
@@ -14732,40 +15395,74 @@ function renderMarkdownTable(headers: string[], rows: string[][]): string {
 }
 
 function renderQuickRunReportModelContent(model: QuickRunReportModel): string {
+  const repairAttemptSummary = model.validation.repairAttempt
+    ? `- Repair Attempt: ${model.validation.repairAttempt.outcome}${model.validation.repairAttempt.note ? ` - ${model.validation.repairAttempt.note}` : ""}\n`
+    : "";
+
   return `# Quick Run Report
 
-## Task Summary
+## Task
 
-${renderBulletList(model.taskSummary)}
+- ${model.task}
 
-## Changed Surfaces
+## Classification
+
+- Route: ${model.classification.route}
+- Confidence: ${model.classification.confidence}
+- Validation Budget: ${model.classification.validationBudget}
+- Reasons:
+${renderBulletList(model.classification.reasons).replace(/^/gm, "  ")}
+
+## Depth Used
+
+- Discuss: ${model.depthUsed.discuss ? "true" : "false"}
+- Research: ${model.depthUsed.research ? "true" : "false"}
+- Validation: ${model.depthUsed.validation}
+- Tracker Used: ${model.depthUsed.trackerUsed ? "true" : "false"}
+- Subagents:
+${renderBulletList(model.depthUsed.subagents).replace(/^/gm, "  ")}
+
+## Evidence Read
 
 ${renderMarkdownTable(
-  ["Surface", "Change", "Rationale"],
-  model.changedSurfaces.map((row) => [row.surface, row.change, row.rationale])
-)}
-
-## Evidence Used
-
-${renderMarkdownTable(
-  ["Source", "Summary"],
-  model.evidenceUsed.map((row) => [row.source, row.summary])
+  ["Kind", "Ref", "Why"],
+  model.evidenceRead.map((row) => [row.kind, row.ref, row.why])
 )}
 
 ## Changes Made
 
-${renderBulletList(model.changesMade)}
-
-## Verification
-
 ${renderMarkdownTable(
-  ["Check", "Result", "Evidence"],
-  model.verification.map((row) => [row.check, row.result, row.evidence])
+  ["Path", "Summary"],
+  model.changesMade.map((row) => [row.path, row.summary])
 )}
 
-## Follow-Ups
+## Validation
 
-${renderBulletList(model.followUps)}
+- Status: ${model.validation.status}
+${model.validation.skippedReason ? `- Skipped Reason: ${model.validation.skippedReason}\n` : ""}${repairAttemptSummary}${renderMarkdownTable(
+  ["Command", "Result", "Duration (ms)", "Notes"],
+  model.validation.commands.map((row) => [
+    row.command,
+    row.result,
+    row.durationMs === undefined ? "none" : String(row.durationMs),
+    row.notes ?? "none"
+  ])
+)}
+
+## Gates
+
+${renderMarkdownTable(
+  ["Name", "Status", "Reason"],
+  model.gates.map((row) => [row.name, row.status, row.reason ?? "none"])
+)}
+
+## Risks
+
+${renderBulletList(model.risks)}
+
+## Deferred Work
+
+${renderBulletList(model.deferredWork)}
 
 ## Next Safe Action
 
@@ -15112,7 +15809,9 @@ export async function blueprintArtifactReportValidateModel(
         path: "model",
         code: "schema.type",
         message:
-          contractId === "report.audit-fix"
+          contractId === "report.quick-run"
+            ? "Quick-run report model must be a JSON object."
+            : contractId === "report.audit-fix"
             ? "Audit-fix report model must be a JSON object."
             : "Add-tests report model must be a JSON object.",
         context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
@@ -15139,10 +15838,10 @@ export async function blueprintArtifactReportValidateModel(
             : "Read the live report.add-tests authoring context before writing.",
         retryable: true,
         suggestion:
-          contractId === "report.quick-run"
-            ? "Read the live report.quick-run authoring context before writing."
-            : contractId === "report.audit-fix"
+          contractId === "report.audit-fix"
             ? "Read the live report.audit-fix authoring context before writing."
+            : contractId === "report.quick-run"
+            ? "Read the live report.quick-run authoring context before writing."
             : "Read the live report.add-tests authoring context before writing."
       })
     );
@@ -15171,9 +15870,14 @@ export async function blueprintArtifactReportValidateModel(
     }
 
     if (contractId === "report.quick-run") {
-      if (schemaValid) {
-        normalizedModel = normalizeQuickRunReportModel(modelObject);
-      }
+      const quickRunNormalizedModel = schemaValid ? normalizeQuickRunReportModel(modelObject) : null;
+      normalizedModel = quickRunNormalizedModel;
+      diagnostics.push(
+        ...quickRunReportResidualDiagnostics({
+          model: modelObject,
+          normalizedModel: quickRunNormalizedModel
+        })
+      );
     } else if (contractId === "report.audit-fix") {
       normalizedModel = normalizeAuditFixReportModel(modelObject);
       diagnostics.push(
