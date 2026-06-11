@@ -2764,21 +2764,66 @@ function renderDebugTemplate(): string {
 function renderQuickRunTemplate(): string {
   return `# Quick Run Report
 
-## Task Summary
+## Task
 
-- Why the task qualified as a bounded quick run.
+- Bounded task handled in this quick run.
+
+## Classification
+
+- Route: </blu-command>
+- Confidence: <high|medium|low>
+- Validation Budget: <none|cheap|ask|route>
+- Reasons:
+  - Evidence-backed routing rationale.
+
+## Depth Used
+
+- Discuss: <true|false>
+- Research: <true|false>
+- Validation: <none|cheap|deep>
+- Tracker Used: <true|false>
+- Subagents:
+  - <subagent name or none>
+
+## Evidence Read
+
+| Kind | Ref | Why |
+|------|-----|-----|
+| file/tool/command/user | <path, tool, command, or user input> | <why it mattered> |
 
 ## Changes Made
 
-- Concrete repo or Blueprint changes completed.
+| Path | Summary |
+|------|---------|
+| <repo-relative path or none> | <concrete change or no-op summary> |
 
-## Verification
+## Validation
 
-- Checks run or evidence gathered, or \`none\`.
+- Status: <passed|failed|skipped>
+- Commands:
+  - command: <command or manual inspection>
+    result: <passed|failed|not-run>
+    durationMs: <optional integer>
+    notes: <optional notes>
+- Skipped Reason: <required when status=skipped>
+- Repair Attempt: <omit unless validation failed or one bounded repair attempt repaired the failure>
+  - attempted: <true|false>
+  - outcome: <not-attempted|repaired|still-failing>
+  - note: <optional compact note>
 
-## Follow-Ups
+## Gates
 
-- Remaining work or \`none\`.
+| Name | Status | Reason |
+|------|--------|--------|
+| <overwrite or quick-run-report gate> | satisfied/deferred/blocked | <reason or none> |
+
+## Risks
+
+- Risk or \`none\`.
+
+## Deferred Work
+
+- Deferred work or \`none\`.
 
 ## Next Safe Action
 
@@ -2787,133 +2832,241 @@ function renderQuickRunTemplate(): string {
 
 const QUICK_RUN_MODEL_CONTRACT: ArtifactModelContract = {
   schemaId: "blueprint.report.quick-run.model",
-  schemaVersion: "1.0.0",
+  schemaVersion: "2.0.0",
   jsonSchema: {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     type: "object",
     additionalProperties: false,
     required: [
-      "taskSummary",
-      "changedSurfaces",
-      "evidenceUsed",
+      "schemaVersion",
+      "task",
+      "classification",
+      "depthUsed",
+      "evidenceRead",
       "changesMade",
-      "verification",
-      "followUps",
+      "validation",
+      "gates",
+      "risks",
+      "deferredWork",
       "nextSafeAction"
     ],
     properties: {
-      taskSummary: {
-        type: "array",
-        minItems: 1,
-        items: { type: "string", minLength: 1 }
-      },
-      changedSurfaces: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["surface", "change", "rationale"],
-          properties: {
-            surface: { type: "string", minLength: 1 },
-            change: { type: "string", minLength: 1 },
-            rationale: { type: "string", minLength: 1 }
-          }
+      schemaVersion: { const: 2 },
+      task: { type: "string", minLength: 1 },
+      classification: {
+        type: "object",
+        additionalProperties: false,
+        required: ["route", "confidence", "reasons", "validationBudget"],
+        properties: {
+          route: { type: "string", minLength: 1 },
+          confidence: { type: "string", enum: ["high", "medium", "low"] },
+          reasons: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", minLength: 1 }
+          },
+          validationBudget: { type: "string", enum: ["none", "cheap", "ask", "route"] }
         }
       },
-      evidenceUsed: {
+      depthUsed: {
+        type: "object",
+        additionalProperties: false,
+        required: ["discuss", "research", "validation", "subagents", "trackerUsed"],
+        properties: {
+          discuss: { type: "boolean" },
+          research: { type: "boolean" },
+          validation: { type: "string", enum: ["none", "cheap", "deep"] },
+          subagents: {
+            type: "array",
+            items: { type: "string", minLength: 1 }
+          },
+          trackerUsed: { type: "boolean" }
+        }
+      },
+      evidenceRead: {
         type: "array",
-        minItems: 1,
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["source", "summary"],
+          required: ["kind", "ref", "why"],
           properties: {
-            source: { type: "string", minLength: 1 },
-            summary: { type: "string", minLength: 1 }
+            kind: { type: "string", enum: ["file", "tool", "command", "user"] },
+            ref: { type: "string", minLength: 1 },
+            why: { type: "string", minLength: 1 }
           }
         }
       },
       changesMade: {
         type: "array",
-        minItems: 1,
-        items: { type: "string", minLength: 1 }
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["path", "summary"],
+          properties: {
+            path: { type: "string", minLength: 1 },
+            summary: { type: "string", minLength: 1 }
+          }
+        }
       },
-      verification: {
+      validation: {
+        type: "object",
+        additionalProperties: false,
+        required: ["status", "commands"],
+        properties: {
+          status: { type: "string", enum: ["passed", "failed", "skipped"] },
+          commands: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["command", "result"],
+              properties: {
+                command: { type: "string", minLength: 1 },
+                result: { type: "string", enum: ["passed", "failed", "not-run"] },
+                durationMs: { type: "integer", minimum: 0 },
+                notes: { type: "string", minLength: 1 }
+              }
+            }
+          },
+          skippedReason: { type: "string", minLength: 1 },
+          repairAttempt: {
+            type: "object",
+            additionalProperties: false,
+            required: ["attempted", "outcome"],
+            properties: {
+              attempted: { type: "boolean" },
+              outcome: {
+                type: "string",
+                enum: ["not-attempted", "repaired", "still-failing"]
+              },
+              note: { type: "string", minLength: 1 }
+            }
+          }
+        }
+      },
+      gates: {
         type: "array",
         minItems: 1,
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["check", "result", "evidence"],
+          required: ["name", "status"],
           properties: {
-            check: { type: "string", minLength: 1 },
-            result: { type: "string", enum: ["pass", "partial", "blocked", "not-run"] },
-            evidence: { type: "string", minLength: 1 }
+            name: { type: "string", minLength: 1 },
+            status: { type: "string", enum: ["satisfied", "deferred", "blocked"] },
+            reason: { type: "string", minLength: 1 }
           }
         }
       },
-      followUps: {
+      risks: {
         type: "array",
-        minItems: 1,
         items: { type: "string", minLength: 1 }
       },
-      nextSafeAction: { type: "string", minLength: 1 }
+      deferredWork: {
+        type: "array",
+        items: { type: "string", minLength: 1 }
+      },
+      nextSafeAction: { type: "string", minLength: 1 },
+      runMetrics: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          administrativeToolCalls: { type: "integer", minimum: 0 },
+          subagentCount: { type: "integer", minimum: 0 },
+          validationCommandCount: { type: "integer", minimum: 0 },
+          finalSummaryBudget: { type: "string", enum: ["short", "normal"] }
+        }
+      }
     }
   },
   qualityRules: [
     "Do not include MCP-owned identity keys such as cwd, reportName, reportPath, artifact, path, or content; the report write tool owns identity and path derivation.",
-    "Keep the task bounded enough for a quick run and do not impersonate saved phase plans or execution summaries.",
-    "Every changed repo, config, or Blueprint surface must be visible in changedSurfaces with a concrete change and rationale.",
-    "Every claim in taskSummary, changesMade, and verification should be grounded in evidenceUsed or a concrete verification entry.",
+    "Set schemaVersion to 2 and keep the task bounded enough for a quick run; do not impersonate saved phase plans, lifecycle completion, or execution summaries.",
+    "Always include a gate row for overwrite or quick-run-report handling because blueprint_artifact_report_write owns the path-authoritative overwrite decision.",
+    "Every changed repo or Blueprint surface must appear in changesMade with a concrete path and summary, and every claim should be grounded in evidenceRead or validation rows.",
+    "Validation must remain explicit: failed status must render clearly, skipped status requires a concrete skippedReason, bounded repair attempts must use validation.repairAttempt when relevant, and code-path changes cannot omit validation silently.",
     "Use only implemented Blueprint commands in nextSafeAction, and do not copy minimal example wording or placeholder report prose."
   ],
   contextBindings: [
     "reportName, canonical filename, and output path come from blueprint_artifact_report_write arguments.",
     "Project readiness and existing report content come from the report write tool before overwrite or reuse decisions.",
-    "Changed surfaces are supplied by the user request, the actual diff, or command-local evidence gathered during the quick run.",
+    "Quick-run overwrite state is path-authoritative at write time, so the model records only gates and validation intent rather than file identity.",
+    "Changed surfaces, evidence, and validation rows are supplied by the user request, the actual diff, or command-local evidence gathered during the quick run.",
     "Allowed next-safe actions come from the implemented command catalog exposed by the Blueprint runtime."
   ],
   renderedHeadings: [
-    "Task Summary",
-    "Changed Surfaces",
-    "Evidence Used",
+    "Task",
+    "Classification",
+    "Depth Used",
+    "Evidence Read",
     "Changes Made",
-    "Verification",
-    "Follow-Ups",
+    "Validation",
+    "Gates",
+    "Risks",
+    "Deferred Work",
     "Next Safe Action"
   ],
   minimalValidExample: {
-    taskSummary: ["Updated one documentation sentence as a bounded quick run."],
-    changedSurfaces: [
+    schemaVersion: 2,
+    task: "Clarify the quick-run report validation wording.",
+    classification: {
+      route: "/blu-quick",
+      confidence: "high",
+      reasons: ["The request is bounded to the quick-run report contract and runtime validator."],
+      validationBudget: "cheap"
+    },
+    depthUsed: {
+      discuss: false,
+      research: true,
+      validation: "cheap",
+      subagents: [],
+      trackerUsed: false
+    },
+    evidenceRead: [
       {
-        surface: "README.md",
-        change: "Clarified the install wording.",
-        rationale: "The user requested a documentation-only quick fix."
+        kind: "file",
+        ref: "src/mcp/tools/artifacts.ts",
+        why: "Reviewed the quick-run writer and validator before editing."
       }
     ],
-    evidenceUsed: [
+    changesMade: [
       {
-        source: "README.md",
-        summary: "Reviewed the existing install section before editing."
+        path: "src/mcp/tools/artifacts.ts",
+        summary: "Updated the quick-run residual validation rules."
       }
     ],
-    changesMade: ["Clarified the install sentence in README.md."],
-    verification: [
+    validation: {
+      status: "passed",
+      commands: [
+        {
+          command: "manual inspection",
+          result: "passed",
+          notes: "Confirmed the rendered quick-run preview matches the structured model."
+        }
+      ]
+    },
+    gates: [
       {
-        check: "Read README.md",
-        result: "pass",
-        evidence: "Confirmed the updated sentence is present."
+        name: "quick-run-report overwrite gate",
+        status: "satisfied",
+        reason: "The report write tool remains the authority for overwrite decisions."
       }
     ],
-    followUps: ["none"],
-    nextSafeAction: "/blu-progress"
+    risks: [],
+    deferredWork: [],
+    nextSafeAction: "/blu-progress",
+    runMetrics: {
+      administrativeToolCalls: 2,
+      subagentCount: 0,
+      validationCommandCount: 1,
+      finalSummaryBudget: "short"
+    }
   },
   exampleLeakageSignals: [
-    "Updated one documentation sentence as a bounded quick run.",
-    "Clarified the install wording.",
-    "The user requested a documentation-only quick fix.",
-    "Confirmed the updated sentence is present."
+    "Clarify the quick-run report validation wording.",
+    "The request is bounded to the quick-run report contract and runtime validator.",
+    "Updated the quick-run residual validation rules.",
+    "Confirmed the rendered quick-run preview matches the structured model."
   ]
 };
 
@@ -5150,12 +5303,15 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalFilePattern: ".blueprint/reports/quick-run-latest.md",
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: [
-      "Task Summary",
-      "Changed Surfaces",
-      "Evidence Used",
+      "Task",
+      "Classification",
+      "Depth Used",
+      "Evidence Read",
       "Changes Made",
-      "Verification",
-      "Follow-Ups",
+      "Validation",
+      "Gates",
+      "Risks",
+      "Deferred Work",
       "Next Safe Action"
     ],
     lockedMarkers: [],

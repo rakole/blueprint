@@ -292,7 +292,15 @@ type AddTestsManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
 type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
-type QuickRunVerificationResult = "pass" | "partial" | "blocked" | "not-run";
+type QuickRunConfidence = "high" | "medium" | "low";
+type QuickRunValidationBudget = "none" | "cheap" | "ask" | "route";
+type QuickRunValidationDepth = "none" | "cheap" | "deep";
+type QuickRunEvidenceKind = "file" | "tool" | "command" | "user";
+type QuickRunValidationStatus = "passed" | "failed" | "skipped";
+type QuickRunValidationCommandResult = "passed" | "failed" | "not-run";
+type QuickRunValidationRepairOutcome = "not-attempted" | "repaired" | "still-failing";
+type QuickRunGateStatus = "satisfied" | "deferred" | "blocked";
+type QuickRunFinalSummaryBudget = "short" | "normal";
 type AuditFixReportSource = "review" | "security" | "verification" | "uat" | "all";
 type AuditFixReportSeverityFilter = "medium" | "high" | "all";
 type AuditFixReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
@@ -382,24 +390,59 @@ type AddTestsReportModel = {
     nextSafeAction: string;
 };
 type QuickRunReportModel = {
-    taskSummary: string[];
-    changedSurfaces: Array<{
-        surface: string;
-        change: string;
-        rationale: string;
+    schemaVersion: 2;
+    task: string;
+    classification: {
+        route: string;
+        confidence: QuickRunConfidence;
+        reasons: string[];
+        validationBudget: QuickRunValidationBudget;
+    };
+    depthUsed: {
+        discuss: boolean;
+        research: boolean;
+        validation: QuickRunValidationDepth;
+        subagents: string[];
+        trackerUsed: boolean;
+    };
+    evidenceRead: Array<{
+        kind: QuickRunEvidenceKind;
+        ref: string;
+        why: string;
     }>;
-    evidenceUsed: Array<{
-        source: string;
+    changesMade: Array<{
+        path: string;
         summary: string;
     }>;
-    changesMade: string[];
-    verification: Array<{
-        check: string;
-        result: QuickRunVerificationResult;
-        evidence: string;
+    validation: {
+        status: QuickRunValidationStatus;
+        commands: Array<{
+            command: string;
+            result: QuickRunValidationCommandResult;
+            durationMs?: number;
+            notes?: string;
+        }>;
+        skippedReason?: string;
+        repairAttempt?: {
+            attempted: boolean;
+            outcome: QuickRunValidationRepairOutcome;
+            note?: string;
+        };
+    };
+    gates: Array<{
+        name: string;
+        status: QuickRunGateStatus;
+        reason?: string;
     }>;
-    followUps: string[];
+    risks: string[];
+    deferredWork: string[];
     nextSafeAction: string;
+    runMetrics?: {
+        administrativeToolCalls?: number;
+        subagentCount?: number;
+        validationCommandCount?: number;
+        finalSummaryBudget?: QuickRunFinalSummaryBudget;
+    };
 };
 type AuditFixReportModel = {
     status: AuditFixReportStatus;

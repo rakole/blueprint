@@ -3,6 +3,7 @@ import { artifactToolDefinitions } from "./tools/artifacts.js";
 import { configToolDefinitions } from "./tools/config.js";
 import { godReviewToolDefinitions } from "./tools/god-review.js";
 import { impactToolDefinitions } from "./tools/impact.js";
+import { lightweightToolDefinitions } from "./tools/lightweight.js";
 import { phaseToolDefinitions } from "./tools/phase.js";
 import { planRunToolDefinitions } from "./tools/plan-run.js";
 import { projectToolDefinitions } from "./tools/project.js";
@@ -13,6 +14,7 @@ import { workspaceToolDefinitions } from "./tools/workspace.js";
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...projectToolDefinitions,
+  ...lightweightToolDefinitions,
   ...configToolDefinitions,
   ...stateToolDefinitions,
   ...phaseToolDefinitions,

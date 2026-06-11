@@ -16,7 +16,7 @@
 ## Purpose
 
 
-`fast` is Blueprint's command for executing a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a host-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, excludes tracker or long-running progress behavior, and updates state only when the repo is already initialized.
+`fast` is Blueprint's command for executing a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a host-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, excludes tracker or long-running progress behavior, and updates state only when the repo is already initialized and healthy.
 
 
 ## Command Path And Examples
@@ -30,21 +30,23 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- May run inside or outside a Blueprint project, but only persists state inside one.
+- May run inside or outside a Blueprint project, but only persists state inside an initialized and healthy one.
 
 
 ## Outputs
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: may mutate repo files for the trivial task and updates `STATE.md` only when running inside an initialized Blueprint project.
+- Repo side effects: may mutate repo files for the trivial task and updates `STATE.md` only when running inside an initialized and healthy Blueprint project.
 - In-flight posture: none beyond a concise inline summary or reroute; `fast` does not expose the long-running progress layer.
+- Common path tool budget: `blueprint_lightweight_preflight` first, then `blueprint_state_update` only after a successful initialized and healthy run. Do not add redundant primitive Blueprint reads on the common path when preflight already surfaced classification, project health, and next action.
+- Final response budget: max 8 lines with qualification reason, state-update or no-write status, any reroute or warning, and the next safe implemented action.
 
 
 ## Blueprint And Global State Reads
 
 
-- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_lightweight_preflight` -> `{classification, projectStatus, implementedRoutes, gates, nextSafeAction, warnings}`
 
 
 ## Blueprint And Global State Writes
@@ -56,7 +58,7 @@
 ## Required MCP Tools
 
 
-- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_lightweight_preflight` -> `{classification, projectStatus, implementedRoutes, gates, nextSafeAction, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
@@ -112,13 +114,14 @@
 - Refuse to guess when the requested edit is not obvious from the task text.
 - Route oversized execution asks to `quick` or `plan-phase` instead of bluffing.
 - If state refresh is unsafe because Blueprint is missing or unhealthy, complete only the trivial repo task when safe and report no Blueprint write.
+- Never create or replace a quick-run report from `fast`.
 
 
 ## Acceptance Criteria
 
 
 - The task description is explicit and the expected edit is obvious from the request.
-- If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
+- If no initialized and healthy Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

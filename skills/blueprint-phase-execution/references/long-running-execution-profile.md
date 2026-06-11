@@ -17,10 +17,18 @@ Use these stage labels when a non-trivial execution run needs visible progress:
   limits, and execution-mode choices explicit before branching.
 - `Execute`: work through the selected plan, wave, bounded task, or confirmed
   branch.
+- `Validate`: run the command's required verification, repair, and any
+  command-specific validation gates before claiming completion. The active
+  command contract owns whether this stage happens before persistence, after
+  persistence, or on both sides of persistence. For `/blu-quick`, validation
+  must finish before the durable quick-run report is written so the report
+  captures complete evidence. For `/blu-execute-phase`, pre-write verification
+  gates still apply before a `COMPLETED` summary claim, while summary-index
+  refresh, artifact validation, and synced state refresh remain post-summary
+  checks defined by the execute-phase contract.
 - `Persist`: save only the command's declared Blueprint summaries, reports, or
-  state updates through MCP tools.
-- `Validate`: run the command's required verification, repair, and post-write
-  checks before claiming completion.
+  state updates through MCP tools once the active contract says persistence is
+  earned for the current branch.
 - `Route`: report the refreshed next safe implemented action or fall back to
   `/blu-progress` when routing is uncertain.
 

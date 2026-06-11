@@ -248,19 +248,72 @@ test("artifact contract read exposes structured model contracts for phase plan, 
     quickRunContract.contract.modelContract?.schemaId,
     "blueprint.report.quick-run.model"
   );
-  assert.equal(quickRunContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(quickRunContract.contract.modelContract?.schemaVersion, "2.0.0");
   assert.deepEqual(
-    (quickRunContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 3),
-    ["taskSummary", "changedSurfaces", "evidenceUsed"]
+    quickRunContract.contract.modelContract?.jsonSchema.required,
+    [
+      "schemaVersion",
+      "task",
+      "classification",
+      "depthUsed",
+      "evidenceRead",
+      "changesMade",
+      "validation",
+      "gates",
+      "risks",
+      "deferredWork",
+      "nextSafeAction"
+    ]
   );
-  assert.ok(
-    quickRunContract.contract.modelContract?.renderedHeadings.includes("Changed Surfaces")
+  assert.deepEqual(quickRunContract.contract.requiredHeadings, [
+    "Task",
+    "Classification",
+    "Depth Used",
+    "Evidence Read",
+    "Changes Made",
+    "Validation",
+    "Gates",
+    "Risks",
+    "Deferred Work",
+    "Next Safe Action"
+  ]);
+  assert.deepEqual(
+    quickRunContract.contract.modelContract?.renderedHeadings,
+    quickRunContract.contract.requiredHeadings
   );
-  assert.ok(quickRunContract.contract.modelContract?.renderedHeadings.includes("Evidence Used"));
   assert.ok(
     quickRunContract.contract.modelContract?.qualityRules.some((rule) =>
-      /bounded enough for a quick run/i.test(rule)
+      /schemaVersion to 2/i.test(rule)
     )
+  );
+  assert.match(quickRunContract.contract.authoringTemplate, /## Classification/);
+  assert.match(quickRunContract.contract.authoringTemplate, /## Gates/);
+  const quickRunModelProperties = quickRunContract.contract.modelContract?.jsonSchema.properties as
+    | Record<string, unknown>
+    | undefined;
+  assert.ok(quickRunModelProperties && "schemaVersion" in quickRunModelProperties);
+  assert.ok(quickRunModelProperties && "validation" in quickRunModelProperties);
+  assert.ok(quickRunModelProperties && "gates" in quickRunModelProperties);
+  const quickRunValidationProperties = (
+    quickRunModelProperties?.validation as { properties?: Record<string, unknown> } | undefined
+  )?.properties;
+  const quickRunRepairAttemptProperties = (
+    quickRunValidationProperties?.repairAttempt as { properties?: Record<string, unknown> } | undefined
+  )?.properties;
+  const quickRunRunMetricsProperties = (
+    quickRunModelProperties?.runMetrics as { properties?: Record<string, unknown> } | undefined
+  )?.properties;
+  assert.match(quickRunContract.contract.authoringTemplate, /Repair Attempt:/);
+  assert.ok(quickRunValidationProperties && "repairAttempt" in quickRunValidationProperties);
+  assert.ok(quickRunRepairAttemptProperties && "attempted" in quickRunRepairAttemptProperties);
+  assert.ok(quickRunRepairAttemptProperties && "outcome" in quickRunRepairAttemptProperties);
+  assert.ok(quickRunRunMetricsProperties && "administrativeToolCalls" in quickRunRunMetricsProperties);
+  assert.ok(quickRunRunMetricsProperties && "subagentCount" in quickRunRunMetricsProperties);
+  assert.ok(quickRunRunMetricsProperties && "validationCommandCount" in quickRunRunMetricsProperties);
+  assert.ok(quickRunRunMetricsProperties && "finalSummaryBudget" in quickRunRunMetricsProperties);
+  assert.equal(
+    Boolean(quickRunRunMetricsProperties && "outputTokenBudgetClass" in quickRunRunMetricsProperties),
+    false
   );
 
   assert.equal(listedPlanContract?.modelContract?.schemaId, "blueprint.phase.plan.model");

@@ -46,6 +46,13 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
 - Load only the command-specific reference bundle for the active command. Do
   not inline `/blu-quick` or `/blu-fast` runtime details into
   `/blu-execute-phase` context.
+- Keep `/blu-fast` and `/blu-quick` cache-friendly: the static prompt prefix
+  should hold command identity, hard contract, routing ladder, tool
+  boundaries, and response or report schema expectations, while user task,
+  preflight result, overwrite metadata, and files/evidence/validation output
+  stay in the variable suffix via command-specific input bundles.
+- Keep long examples and verbose behavior notes in local references, not in the
+  manifests.
 
 ## Runtime Call Rules
 
@@ -77,8 +84,9 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
   summary persistence, carry-forward evidence, synced state refresh, and
   validation handoff.
 - `skills/blueprint-phase-execution/references/quick-runtime-contract.md`
-  Bounded `/blu-quick` contract for optional depth gates, tracker-eligible
-  branching, quick-run report persistence, and follow-up routing.
+  Bounded `/blu-quick` contract for inline-default adaptive subagent gates,
+  compact progress UX, tracker-eligible branching, quick-run report
+  persistence, and follow-up routing.
 - `skills/blueprint-phase-execution/references/fast-runtime-contract.md`
   Trivial `/blu-fast` contract for inline execution, no-subagent behavior, and
   optional state refresh without report persistence.
@@ -115,6 +123,9 @@ contracts from manifests, local references, and MCP/artifact contract reads.
   `quick-run-latest`, plus the structured quick-run report `model`, not
   Markdown `content` and not a `.blueprint/reports/...` path. Use the returned
   `path` as authoritative.
+- `blueprint_lightweight_preflight`: use it as the deterministic read-only
+  scope, health, config, implemented-route, quick-report overwrite, and next
+  safe action preflight for `/blu-fast` and `/blu-quick`.
 - `blueprint_state_update`: when refreshed artifact truth should drive routing,
   call it with `base: "synced"` so `STATE.md` recomputes the next safe action.
 
@@ -142,15 +153,13 @@ does not widen a command's tool scope.
 
 ### `/blu-quick`
 
-- `blueprint_project_status`
-- `blueprint_config_get`
-- `blueprint_command_catalog`
+- `blueprint_lightweight_preflight`
 - `blueprint_artifact_report_write`
 - `blueprint_state_update`
 
 ### `/blu-fast`
 
-- `blueprint_project_status`
+- `blueprint_lightweight_preflight`
 - `blueprint_state_update`
 
 ## Optional Agents
@@ -162,6 +171,11 @@ does not widen a command's tool scope.
 
 Use optional agents only when the active command contract allows them. `/blu-fast`
 does not use subagents.
+
+For `/blu-quick`, default inline and use optional agents only when the local
+decision table says the bounded value outweighs the coordination cost. Do not
+substitute browser-only, shell-only, web-search-only, or generic helper agents,
+and do not let tracker state impersonate a saved plan.
 
 ## Shared Execution Posture
 
@@ -238,18 +252,34 @@ multi-wave execution.
 - Execution profile: `long-running-mutation` for non-trivial runs.
 - Use the shared long-running execution profile only for the stages the quick
   run actually reaches.
-- Keep the active stage visible, keep the resolved scope, pending gate,
-  execution mode, and next safe action explicit, and treat tracker state as
-  session-local coordination only.
-- Read effective `blueprint_config_get` before optional subagent decisions, and
-  treat `--discuss`, `--research`, `--validate`, and `--full` as bounded
-  non-destructive depth preauthorization rather than overwrite, destructive, or
-  scope-expansion approval.
+- Keep the active stage visible only at meaningful stage or gate transitions,
+  keep the resolved scope, pending gate, execution mode, and next safe action
+  explicit, and treat tracker state as session-local coordination only.
+- Start from `blueprint_lightweight_preflight` before optional subagent
+  decisions so effective config, health/new-project routing, implemented routes,
+  and overwrite gates share one deterministic read path; treat `--discuss`,
+  `--research`, `--validate`, and `--full` as bounded non-destructive depth
+  preauthorization rather than overwrite, destructive, or scope-expansion
+  approval.
+- Keep the common quick path to `blueprint_lightweight_preflight` first. When
+  validation is needed, run validation shell or test commands outside
+  Blueprint MCP before `blueprint_artifact_report_write`, then persist through
+  `blueprint_artifact_report_write` and `blueprint_state_update`. Do not add
+  redundant primitive MCP reads when preflight already surfaced the scope,
+  health, config, route, and overwrite facts the run needs.
+- Use no subagents by default. Bring in `blueprint-researcher`,
+  `blueprint-planner`, `blueprint-executor`, or `blueprint-verifier` only when
+  the quick runtime contract's decision table says the bounded quality gain
+  earns the coordination cost.
 - Run cheap validation for code mutation when a bounded safe check is
   discoverable, or record an explicit skipped reason in the quick report.
 - Persist durable quick-run evidence through
   `blueprint_artifact_report_write` with the bare canonical report name
   `quick-run-latest`.
+- Keep the default final quick closeout within 12 lines: task, depth used,
+  validation status, authoritative report `status` and `path`, warnings or
+  deferred work, and the next safe implemented action. Leave detailed evidence
+  in the quick-run report.
 - Prefer `/blu-progress` after completion unless a narrower implemented next
   step is obvious and safe.
 
@@ -264,8 +294,14 @@ initialized projects, and no quick-run report persistence.
 - Execution profile: `interactive-read`.
 - `/blu-fast` explicitly excludes `update_topic`, `write_todos`, and tracker
   tools; finish the run inline or reroute.
-- Start from `blueprint_project_status`, keep the ask genuinely small, and do
-  not create durable reports or phase artifacts.
+- Start from `blueprint_lightweight_preflight`, keep the ask genuinely small,
+  keep the common path to preflight plus optional `blueprint_state_update`
+  only, avoid redundant primitive MCP reads when preflight already surfaced
+  classification and health, and do not create durable reports or phase
+  artifacts.
+- Keep the final fast closeout within 8 lines: qualification reason,
+  state-update or no-write status, any reroute or warning, and the next safe
+  implemented action.
 - Prefer `/blu-progress` unless a narrower implemented follow-up is obvious
   and safe.
 

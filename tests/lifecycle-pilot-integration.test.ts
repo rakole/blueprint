@@ -551,6 +551,65 @@ function validAddTestsReportContent(): string {
 `;
 }
 
+function validQuickRunReportModel(): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    task: "Upgrade quick-run reporting to the explicit v2 runtime schema.",
+    classification: {
+      route: "/blu-quick",
+      confidence: "high",
+      reasons: ["The work is bounded to quick-run reporting and its runtime validator."],
+      validationBudget: "cheap"
+    },
+    depthUsed: {
+      discuss: false,
+      research: true,
+      validation: "cheap",
+      subagents: [],
+      trackerUsed: false
+    },
+    evidenceRead: [
+      {
+        kind: "file",
+        ref: "tests/lifecycle-pilot-integration.test.ts",
+        why: "The integration fixture exercises quick-run report validation and writing."
+      }
+    ],
+    changesMade: [
+      {
+        path: "src/mcp/tools/artifacts.ts",
+        summary: "Updated quick-run report validation and rendering."
+      }
+    ],
+    validation: {
+      status: "passed",
+      commands: [
+        {
+          command: "manual inspection",
+          result: "passed",
+          notes: "Confirmed the quick-run preview renders the v2 sections."
+        }
+      ]
+    },
+    gates: [
+      {
+        name: "quick-run-report overwrite gate",
+        status: "satisfied",
+        reason: "artifact_report_write stays authoritative for report path and overwrite handling."
+      }
+    ],
+    risks: ["Validation policy is stricter for code-path changes."],
+    deferredWork: [],
+    nextSafeAction: "/blu-progress",
+    runMetrics: {
+      administrativeToolCalls: 2,
+      subagentCount: 0,
+      validationCommandCount: 1,
+      finalSummaryBudget: "short"
+    }
+  };
+}
+
 async function validAddTestsReportModel(repoPath: string): Promise<Record<string, unknown>> {
   const context = await blueprintArtifactReportAuthoringContext({
     cwd: repoPath,
@@ -1210,44 +1269,19 @@ test("artifact report writes report blocking input issues and contract-gate mode
     cwd: repoPath,
     reportName: "quick-run-latest",
     content: validAddTestsReportContent(),
-    model: { taskSummary: ["Completed a focused quick run."] }
+    model: { schemaVersion: 2, task: "Completed a focused quick run." }
   });
   const markdownFallback = await blueprintArtifactReportWrite({
     cwd: repoPath,
     reportName: "quick-run-latest",
-    content: "# Quick Run Report\n\n## Task Summary\n\n- Completed a focused quick run.\n"
+    content: "# Quick Run Report\n\n## Task\n\n- Completed a focused quick run.\n"
   });
   const modelOnly = await blueprintArtifactReportWrite({
     cwd: repoPath,
     reportName: "quick-run-latest",
-    model: { taskSummary: ["Completed a focused quick run."] }
+    model: { schemaVersion: 2, task: "Completed a focused quick run." }
   });
-  const quickRunModel = {
-    taskSummary: ["Completed a focused quick run."],
-    changedSurfaces: [
-      {
-        surface: "commands/blu-quick.toml",
-        change: "Confirmed quick-run reporting behavior.",
-        rationale: "The lifecycle pilot exercised the quick report gate."
-      }
-    ],
-    evidenceUsed: [
-      {
-        source: "tests/lifecycle-pilot-integration.test.ts",
-        summary: "The integration fixture exercises report-write input validation."
-      }
-    ],
-    changesMade: ["Recorded quick-run report evidence through the model-backed writer."],
-    verification: [
-      {
-        check: "blueprintArtifactReportWrite quick-run model",
-        result: "pass",
-        evidence: "The writer returned created for quick-run-latest."
-      }
-    ],
-    followUps: ["none"],
-    nextSafeAction: "/blu-progress"
-  };
+  const quickRunModel = validQuickRunReportModel();
   const validatedQuickRun = await blueprintArtifactReportValidateModel({
     cwd: repoPath,
     reportName: "quick-run-latest",
@@ -1281,8 +1315,16 @@ test("artifact report writes report blocking input issues and contract-gate mode
   assert.match(modelOnly.issues.join("\n"), /schema\.required|required property/i);
   assert.deepEqual(modelOnly.warnings, []);
   assert.equal(validatedQuickRun.status, "valid");
-  assert.match(validatedQuickRun.renderPreview ?? "", /## Changed Surfaces/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /## Classification/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /## Depth Used/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /## Validation/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /## Run Metrics/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /Validation Command Count/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /Final Summary Budget/);
+  assert.doesNotMatch(validatedQuickRun.renderPreview ?? "", /Output Token Budget Class/);
   assert.equal(writtenQuickRun.status, "created");
+  assert.equal(writtenQuickRun.path, ".blueprint/reports/quick-run-latest.md");
+  assert.match(await readFile(reportPath, "utf8"), /Final Summary Budget/);
   assert.equal(nonStructuredContractModel.status, "invalid");
   assert.match(nonStructuredContractModel.issues.join("\n"), /report\.debug/i);
   assert.match(nonStructuredContractModel.issues.join("\n"), /does not expose a modelContract/i);
@@ -1292,4 +1334,502 @@ test("artifact report writes report blocking input issues and contract-gate mode
   assert.deepEqual(genericReportModel.warnings, []);
   assert.equal(modelOnly.written, false);
   assert.match(await readFile(reportPath, "utf8"), /# Quick Run Report/);
+  assert.match(await readFile(reportPath, "utf8"), /- Status: passed/);
+});
+
+test("quick-run authoring context narrows nextSafeAction to quick-safe implemented routes", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "quick-run-latest"
+  });
+  const taskSchemaProperties = (context.taskSchema?.properties ?? null) as
+    | Record<string, unknown>
+    | null;
+  const nextSafeActionSchema = (taskSchemaProperties?.nextSafeAction ?? null) as
+    | { enum?: unknown }
+    | null;
+
+  assert.equal(context.status, "ready");
+  assert.deepEqual(context.allowedNextActions, [
+    "/blu-debug",
+    "/blu-progress",
+    "/blu-quick"
+  ]);
+  assert.ok(!context.allowedNextActions.includes("/blu-do"));
+  assert.ok(!context.allowedNextActions.includes("/blu-complete-milestone"));
+  assert.ok(!context.allowedNextActions.includes("/blu-ship"));
+  assert.ok(!context.allowedNextActions.includes("/blu-undo"));
+  assert.ok(!context.allowedNextActions.includes("/blu-cleanup"));
+  assert.ok(!context.allowedNextActions.includes("/blu-new-workspace"));
+  assert.ok(!context.allowedNextActions.includes("/blu-remove-workspace"));
+  assert.ok(!context.allowedNextActions.includes("/blu-reapply-patches"));
+  assert.ok(!context.allowedNextActions.includes("/blu-run-plan"));
+  assert.ok(!context.allowedNextActions.includes("/blu-plan-phase"));
+  assert.ok(!context.allowedNextActions.includes("/blu-validate-phase"));
+  assert.deepEqual(nextSafeActionSchema?.enum, context.allowedNextActions);
+});
+
+test("quick-run v2 validation enforces residual policy and honest failure rendering", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const missingTask = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      task: ""
+    }
+  });
+  const missingValidationStatus = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      validation: {
+        commands: []
+      }
+    }
+  });
+  const skippedWithoutReason = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      changesMade: [
+        {
+          path: "README.md",
+          summary: "Clarified quick-run wording."
+        }
+      ],
+      validation: {
+        status: "skipped",
+        commands: []
+      }
+    }
+  });
+  const docsOnlySkipped = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      changesMade: [
+        {
+          path: "README.md",
+          summary: "Clarified quick-run wording."
+        }
+      ],
+      validation: {
+        status: "skipped",
+        commands: [],
+        skippedReason: "Documentation-only wording change; no executable behavior changed."
+      }
+    }
+  });
+  const failedWithoutRepairAttempt = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      validation: {
+        status: "failed",
+        commands: [
+          {
+            command: "npx tsx --test tests/lifecycle-pilot-integration.test.ts",
+            result: "failed",
+            notes: "Quick-run schema assertions failed before the runtime update landed."
+          }
+        ]
+      }
+    }
+  });
+  const failedWithoutRepairAttemptModel = {
+    ...validQuickRunReportModel(),
+    validation: {
+      status: "failed",
+      commands: [
+        {
+          command: "npx tsx --test tests/lifecycle-pilot-integration.test.ts",
+          result: "failed",
+          notes: "Quick-run schema assertions failed before the runtime update landed."
+        }
+      ],
+      repairAttempt: {
+        attempted: false,
+        outcome: "not-attempted",
+        note: "Stopped after the first failing cheap validation check to keep the quick run bounded."
+      }
+    }
+  };
+  const failedWithoutRepairAttemptOutcome = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: failedWithoutRepairAttemptModel
+  });
+  const failedAfterRepairAttemptModel = {
+    ...validQuickRunReportModel(),
+    validation: {
+      status: "failed",
+      commands: [
+        {
+          command: "npx tsx --test tests/lifecycle-pilot-integration.test.ts",
+          result: "failed",
+          notes: "The focused validation still failed after one bounded repair attempt."
+        }
+      ],
+      repairAttempt: {
+        attempted: true,
+        outcome: "still-failing",
+        note: "Adjusted the quick-run assertion once and reran the focused test, but the same validation failure remained."
+      }
+    }
+  };
+  const failedAfterRepairAttempt = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: failedAfterRepairAttemptModel
+  });
+  const failedAfterRepairAttemptWrite = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: failedAfterRepairAttemptModel
+  });
+  const skippedWithRepairAttempt = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      changesMade: [
+        {
+          path: "README.md",
+          summary: "Clarified quick-run wording."
+        }
+      ],
+      validation: {
+        status: "skipped",
+        commands: [],
+        skippedReason: "Documentation-only wording change; no executable behavior changed.",
+        repairAttempt: {
+          attempted: false,
+          outcome: "not-attempted",
+          note: "Repair attempts are irrelevant for skipped validation."
+        }
+      }
+    }
+  });
+  const missingGate = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      gates: [
+        {
+          name: "manual review gate",
+          status: "satisfied",
+          reason: "Looked correct."
+        }
+      ]
+    }
+  });
+  const completionClaim = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      task: "Completed phase 3 lifecycle work."
+    }
+  });
+  const classificationCompletionClaim = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      classification: {
+        route: "/blu-quick",
+        confidence: "high",
+        reasons: ["This quick run completed phase completion cleanup."],
+        validationBudget: "cheap"
+      }
+    }
+  });
+  const risksCompletionClaim = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      risks: ["Phase completion is now guaranteed."]
+    }
+  });
+  const deferredWorkCompletionClaim = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      deferredWork: ["Lifecycle completion is already done."]
+    }
+  });
+  const skippedReasonCompletionClaim = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      changesMade: [
+        {
+          path: "README.md",
+          summary: "Clarified quick-run wording."
+        }
+      ],
+      validation: {
+        status: "skipped",
+        commands: [],
+        skippedReason: "Skipped because phase completion is already done."
+      }
+    }
+  });
+  const evidenceNotesMentionCompletion = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      evidenceRead: [
+        {
+          kind: "file",
+          ref: "src/mcp/tools/artifacts.ts",
+          why: "Removed misleading 'phase completion' wording from diagnostic evidence guidance."
+        }
+      ],
+      validation: {
+        status: "passed",
+        commands: [
+          {
+            command: "manual inspection",
+            result: "passed",
+            notes: "Confirmed validation notes may mention phase completion while describing the defect."
+          }
+        ]
+      }
+    }
+  });
+  const unimplementedNextSafeAction = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      nextSafeAction: "/blu-do"
+    }
+  });
+  const milestoneCloseoutNextSafeAction = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      nextSafeAction: "/blu-complete-milestone v1"
+    }
+  });
+  const highRiskNextSafeAction = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      nextSafeAction: "/blu-ship"
+    }
+  });
+  const progressNextSafeAction = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      nextSafeAction: "/blu-progress"
+    }
+  });
+  const handBuiltReportName = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: ".blueprint/reports/quick-run-latest.md",
+    model: validQuickRunReportModel()
+  });
+  const legacyV1Model = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      taskSummary: ["Completed a focused quick run."],
+      changedSurfaces: [
+        {
+          surface: "commands/blu-quick.toml",
+          change: "Confirmed quick-run reporting behavior.",
+          rationale: "The lifecycle pilot exercised the quick report gate."
+        }
+      ],
+      evidenceUsed: [
+        {
+          source: "tests/lifecycle-pilot-integration.test.ts",
+          summary: "The integration fixture exercises report-write input validation."
+        }
+      ],
+      changesMade: ["Recorded quick-run report evidence through the model-backed writer."],
+      verification: [
+        {
+          check: "blueprintArtifactReportWrite quick-run model",
+          result: "pass",
+          evidence: "The writer returned created for quick-run-latest."
+        }
+      ],
+      followUps: ["none"],
+      nextSafeAction: "/blu-progress"
+    }
+  });
+
+  assert.equal(missingTask.status, "invalid");
+  assert.match(
+    missingTask.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.task/
+  );
+  assert.equal(missingValidationStatus.status, "invalid");
+  assert.match(
+    missingValidationStatus.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.validation\.status/
+  );
+  assert.equal(skippedWithoutReason.status, "invalid");
+  assert.match(
+    skippedWithoutReason.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.validation\.skippedReason/
+  );
+  assert.equal(docsOnlySkipped.status, "valid");
+  assert.match(docsOnlySkipped.renderPreview ?? "", /- Status: skipped/);
+  assert.match(docsOnlySkipped.renderPreview ?? "", /Skipped Reason:/);
+  assert.doesNotMatch(docsOnlySkipped.renderPreview ?? "", /Repair Attempt:/);
+  assert.equal(failedWithoutRepairAttempt.status, "invalid");
+  assert.match(
+    failedWithoutRepairAttempt.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.validation\.repairAttempt/
+  );
+  assert.equal(failedWithoutRepairAttemptOutcome.status, "valid");
+  assert.match(failedWithoutRepairAttemptOutcome.renderPreview ?? "", /- Status: failed/);
+  assert.match(
+    failedWithoutRepairAttemptOutcome.renderPreview ?? "",
+    /Repair Attempt: not-attempted - Stopped after the first failing cheap validation check to keep the quick run bounded\./
+  );
+  assert.equal(failedAfterRepairAttempt.status, "valid");
+  assert.match(failedAfterRepairAttempt.renderPreview ?? "", /- Status: failed/);
+  assert.match(
+    failedAfterRepairAttempt.renderPreview ?? "",
+    /Repair Attempt: still-failing - Adjusted the quick-run assertion once and reran the focused test, but the same validation failure remained\./
+  );
+  assert.doesNotMatch(failedAfterRepairAttempt.renderPreview ?? "", /- Status: passed/);
+  assert.equal(failedAfterRepairAttemptWrite.status, "created");
+  const failedReportContent = await readFile(
+    path.join(repoPath, ".blueprint/reports/quick-run-latest.md"),
+    "utf8"
+  );
+  assert.match(failedReportContent, /- Status: failed/);
+  assert.match(failedReportContent, /Repair Attempt: still-failing/);
+  assert.doesNotMatch(failedReportContent, /- Status: passed/);
+  assert.equal(skippedWithRepairAttempt.status, "invalid");
+  assert.match(
+    skippedWithRepairAttempt.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.validation\.repairAttempt/
+  );
+  assert.equal(missingGate.status, "invalid");
+  assert.match(
+    missingGate.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /overwrite_gate_missing/
+  );
+  assert.equal(completionClaim.status, "invalid");
+  assert.match(
+    completionClaim.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /lifecycle_completion_claim/
+  );
+  assert.equal(classificationCompletionClaim.status, "invalid");
+  assert.match(
+    classificationCompletionClaim.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.classification\.reasons\[0\]/
+  );
+  assert.match(
+    classificationCompletionClaim.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /lifecycle_completion_claim/
+  );
+  assert.equal(risksCompletionClaim.status, "invalid");
+  assert.match(
+    risksCompletionClaim.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.risks\[0\]/
+  );
+  assert.match(
+    risksCompletionClaim.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /lifecycle_completion_claim/
+  );
+  assert.equal(deferredWorkCompletionClaim.status, "invalid");
+  assert.match(
+    deferredWorkCompletionClaim.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.deferredWork\[0\]/
+  );
+  assert.match(
+    deferredWorkCompletionClaim.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /lifecycle_completion_claim/
+  );
+  assert.equal(skippedReasonCompletionClaim.status, "invalid");
+  assert.match(
+    skippedReasonCompletionClaim.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.validation\.skippedReason/
+  );
+  assert.match(
+    skippedReasonCompletionClaim.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /lifecycle_completion_claim/
+  );
+  assert.equal(evidenceNotesMentionCompletion.status, "valid");
+  assert.equal(unimplementedNextSafeAction.status, "invalid");
+  assert.match(
+    unimplementedNextSafeAction.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.nextSafeAction/
+  );
+  assert.equal(milestoneCloseoutNextSafeAction.status, "invalid");
+  assert.match(
+    milestoneCloseoutNextSafeAction.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.nextSafeAction/
+  );
+  assert.equal(highRiskNextSafeAction.status, "invalid");
+  assert.match(
+    highRiskNextSafeAction.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.nextSafeAction/
+  );
+  assert.equal(progressNextSafeAction.status, "valid");
+  assert.equal(handBuiltReportName.status, "invalid");
+  assert.match(handBuiltReportName.issues.join("\n"), /known report contract|contract-backed/i);
+  assert.equal(legacyV1Model.status, "invalid");
+  assert.match(
+    legacyV1Model.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.schemaVersion|model\.task|model\.classification/
+  );
+});
+
+test("quick-run v2 validation accepts legacy outputTokenBudgetClass input but renders canonical finalSummaryBudget output", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const validated = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      runMetrics: {
+        administrativeToolCalls: 3,
+        subagentCount: 1,
+        validationCommandCount: 2,
+        outputTokenBudgetClass: "normal"
+      }
+    }
+  });
+
+  assert.equal(validated.status, "valid");
+  assert.match(validated.renderPreview ?? "", /## Run Metrics/);
+  assert.match(validated.renderPreview ?? "", /\| Validation Command Count \| 2 \|/);
+  assert.match(validated.renderPreview ?? "", /\| Final Summary Budget \| normal \|/);
+  assert.doesNotMatch(validated.renderPreview ?? "", /Output Token Budget Class/);
 });

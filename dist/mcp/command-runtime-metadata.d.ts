@@ -1774,26 +1774,27 @@ export declare const QUICK_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: can execute repo changes with reduced ceremony.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_lightweight_preflight", "blueprint_artifact_report_write", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-execution/references/quick-runtime-contract.md", "skills/blueprint-phase-execution/references/long-running-execution-profile.md"];
     readonly spec: {
         readonly path: string;
         readonly title: "`/blu-quick`";
         readonly executionProfile: "long-running-mutation";
         readonly rootRoutable: true;
         readonly purpose: "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.";
-        readonly reads: readonly ["project status, effective config, command availability, and current next-step posture through MCP"];
-        readonly writes: readonly ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"];
+        readonly reads: readonly ["lightweight preflight classification, project status, effective config, command availability, quick-report overwrite posture, and current next-step posture through MCP"];
+        readonly writes: readonly ["quick-run-latest report through blueprint_artifact_report_write", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
         readonly waveTitle: "Capture And Lightweight Execution";
         readonly command: "quick";
         readonly primarySkill: "blueprint-phase-execution";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_lightweight_preflight", "blueprint_artifact_report_write", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
-        readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; read effective blueprint_config_get before optional subagent decisions, keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, treat --discuss, --research, --validate, and --full as bounded non-destructive depth preauthorization while still gating report overwrite, external dependencies, destructive operations, and scope expansion, run cheap validation for code mutation when discoverable or record an explicit skipped reason, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
+        readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep the static prompt prefix on command identity, hard contract, routing ladder, tool boundaries, and report schema expectations, and keep the user task, preflight result, overwrite metadata, and files or validation output in the variable suffix. Use blueprint_lightweight_preflight as the common read path for deterministic scope classification, health/new-project routing, implemented-only routes, effective config, and the quick-run overwrite gate where confirmation is required unless --force is present before optional subagent decisions, and keep the common tool path to blueprint_lightweight_preflight first, optional validation shell or test commands outside Blueprint MCP before persistence when validation is needed, then blueprint_artifact_report_write and blueprint_state_update without redundant primitive reads once preflight surfaced scope, health, config, route, and overwrite posture. Use no subagents by default. Show progress only at meaningful stage or gate transitions, do not emit in-flight updates between transitions, keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration honest without spamming it, and keep resolved scope, active stage, pending gate, execution mode, and next safe action visible in compact form. Treat --discuss, --research, --validate, and --full as bounded non-destructive depth preauthorization while still gating report overwrite unless --force is present, external dependencies, destructive operations, and scope expansion. Use blueprint-researcher only when --research or --full is present, the task touches an unfamiliar repo area, or bounded research reduces implementation risk, use blueprint-planner only for a short bounded checklist with multiple ordered steps that still does not deserve a saved phase plan, use blueprint-executor only when implementation stays isolated inside agreed quick scope with clear write ownership, and use blueprint-verifier only when --validate or --full is present, touched files exceed 2, the change is risky, or failed validation needs fresh-context review; all of those require workflow.subagents to be enabled, otherwise stay inline. Forbid generic helper, browser-only, shell-only, and web-search-only substitute agents, do not use tracker as a saved plan, and do not use subagents to widen scope. Run cheap validation for code mutation when discoverable or record an explicit skipped reason and never claim success after failed validation, allow at most one bounded repair attempt before routing the next safe action, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, use concise prose when helper tools are unavailable and never claim helper calls occurred when they did not, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name with report.quick-run schemaVersion 2 plus task, classification, depthUsed, evidenceRead, changesMade, validation, gates, risks, deferredWork, nextSafeAction, and optional runMetrics, keep optional runMetrics limited to administrativeToolCalls, subagentCount, validationCommandCount, and finalSummaryBudget short or normal without exact token counts, keep the overwrite confirmation gate and any --force bypass represented in the model gates, keep the default final response within 12 lines with task, depth used, validation status, authoritative report path and status, warnings or deferred work, and the next safe action, keep detailed evidence in the quick-run report, treat the returned report path and status as authoritative, and do not let quick impersonate saved planning or broad lifecycle execution or hand-build Markdown reports. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -1875,15 +1876,16 @@ export declare const FAST_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: minimal-planning repo mutation path.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_lightweight_preflight", "blueprint_state_update"];
     readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-execution/references/fast-runtime-contract.md"];
     readonly spec: {
         readonly path: string;
         readonly title: "`/blu-fast`";
         readonly executionProfile: "interactive-read";
         readonly rootRoutable: true;
         readonly purpose: "`fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.";
-        readonly reads: readonly ["project status preflight through MCP"];
+        readonly reads: readonly ["lightweight preflight classification and project status through MCP"];
         readonly writes: readonly ["optional .blueprint/STATE.md"];
     };
     readonly runtimeReference: {
@@ -1891,10 +1893,10 @@ export declare const FAST_RUNTIME_METADATA: {
         readonly waveTitle: "Capture And Lightweight Execution";
         readonly command: "fast";
         readonly primarySkill: "blueprint-phase-execution";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_lightweight_preflight", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
-        readonly contractNotes: "Interactive-read profile for trivial inline execution: qualify only explicit obvious tasks with no research, multi-file blast-radius analysis, useful durable report, validation pass beyond ordinary user review, or subagent value; keep administrative preflight to project status only, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized and healthy, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.";
+        readonly contractNotes: "Interactive-read profile for trivial inline execution: keep the static prompt prefix on command identity, hard contract, routing ladder, tool boundaries, and response schema expectations, and keep the user task, preflight result, and state-update or no-write result in the variable suffix. Use blueprint_lightweight_preflight as the common read path for deterministic scope classification, project health, and implemented-only next action, qualify only explicit obvious tasks with no research, multi-file blast-radius analysis, useful durable report, validation pass beyond ordinary user review, or subagent value, keep the common tool path to blueprint_lightweight_preflight plus optional blueprint_state_update only after a successful initialized and healthy run, and avoid redundant primitive reads once preflight surfaced classification, health, and next action. Keep administrative preflight to lightweight preflight only, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized and healthy, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, keep the final response within 8 lines with qualification reason, state-update or no-write status, any reroute or warning, and the next safe implemented action, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -3636,26 +3638,27 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: can execute repo changes with reduced ceremony.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_lightweight_preflight", "blueprint_artifact_report_write", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-execution/references/quick-runtime-contract.md", "skills/blueprint-phase-execution/references/long-running-execution-profile.md"];
         readonly spec: {
             readonly path: string;
             readonly title: "`/blu-quick`";
             readonly executionProfile: "long-running-mutation";
             readonly rootRoutable: true;
             readonly purpose: "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.";
-            readonly reads: readonly ["project status, effective config, command availability, and current next-step posture through MCP"];
-            readonly writes: readonly ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"];
+            readonly reads: readonly ["lightweight preflight classification, project status, effective config, command availability, quick-report overwrite posture, and current next-step posture through MCP"];
+            readonly writes: readonly ["quick-run-latest report through blueprint_artifact_report_write", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;
             readonly waveTitle: "Capture And Lightweight Execution";
             readonly command: "quick";
             readonly primarySkill: "blueprint-phase-execution";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_lightweight_preflight", "blueprint_artifact_report_write", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
-            readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; read effective blueprint_config_get before optional subagent decisions, keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, treat --discuss, --research, --validate, and --full as bounded non-destructive depth preauthorization while still gating report overwrite, external dependencies, destructive operations, and scope expansion, run cheap validation for code mutation when discoverable or record an explicit skipped reason, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
+            readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep the static prompt prefix on command identity, hard contract, routing ladder, tool boundaries, and report schema expectations, and keep the user task, preflight result, overwrite metadata, and files or validation output in the variable suffix. Use blueprint_lightweight_preflight as the common read path for deterministic scope classification, health/new-project routing, implemented-only routes, effective config, and the quick-run overwrite gate where confirmation is required unless --force is present before optional subagent decisions, and keep the common tool path to blueprint_lightweight_preflight first, optional validation shell or test commands outside Blueprint MCP before persistence when validation is needed, then blueprint_artifact_report_write and blueprint_state_update without redundant primitive reads once preflight surfaced scope, health, config, route, and overwrite posture. Use no subagents by default. Show progress only at meaningful stage or gate transitions, do not emit in-flight updates between transitions, keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration honest without spamming it, and keep resolved scope, active stage, pending gate, execution mode, and next safe action visible in compact form. Treat --discuss, --research, --validate, and --full as bounded non-destructive depth preauthorization while still gating report overwrite unless --force is present, external dependencies, destructive operations, and scope expansion. Use blueprint-researcher only when --research or --full is present, the task touches an unfamiliar repo area, or bounded research reduces implementation risk, use blueprint-planner only for a short bounded checklist with multiple ordered steps that still does not deserve a saved phase plan, use blueprint-executor only when implementation stays isolated inside agreed quick scope with clear write ownership, and use blueprint-verifier only when --validate or --full is present, touched files exceed 2, the change is risky, or failed validation needs fresh-context review; all of those require workflow.subagents to be enabled, otherwise stay inline. Forbid generic helper, browser-only, shell-only, and web-search-only substitute agents, do not use tracker as a saved plan, and do not use subagents to widen scope. Run cheap validation for code mutation when discoverable or record an explicit skipped reason and never claim success after failed validation, allow at most one bounded repair attempt before routing the next safe action, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, use concise prose when helper tools are unavailable and never claim helper calls occurred when they did not, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name with report.quick-run schemaVersion 2 plus task, classification, depthUsed, evidenceRead, changesMade, validation, gates, risks, deferredWork, nextSafeAction, and optional runMetrics, keep optional runMetrics limited to administrativeToolCalls, subagentCount, validationCommandCount, and finalSummaryBudget short or normal without exact token counts, keep the overwrite confirmation gate and any --force bypass represented in the model gates, keep the default final response within 12 lines with task, depth used, validation status, authoritative report path and status, warnings or deferred work, and the next safe action, keep detailed evidence in the quick-run report, treat the returned report path and status as authoritative, and do not let quick impersonate saved planning or broad lifecycle execution or hand-build Markdown reports. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -3737,15 +3740,16 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: minimal-planning repo mutation path.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_lightweight_preflight", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-execution/references/fast-runtime-contract.md"];
         readonly spec: {
             readonly path: string;
             readonly title: "`/blu-fast`";
             readonly executionProfile: "interactive-read";
             readonly rootRoutable: true;
             readonly purpose: "`fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.";
-            readonly reads: readonly ["project status preflight through MCP"];
+            readonly reads: readonly ["lightweight preflight classification and project status through MCP"];
             readonly writes: readonly ["optional .blueprint/STATE.md"];
         };
         readonly runtimeReference: {
@@ -3753,10 +3757,10 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Capture And Lightweight Execution";
             readonly command: "fast";
             readonly primarySkill: "blueprint-phase-execution";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_lightweight_preflight", "blueprint_state_update"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
-            readonly contractNotes: "Interactive-read profile for trivial inline execution: qualify only explicit obvious tasks with no research, multi-file blast-radius analysis, useful durable report, validation pass beyond ordinary user review, or subagent value; keep administrative preflight to project status only, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized and healthy, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.";
+            readonly contractNotes: "Interactive-read profile for trivial inline execution: keep the static prompt prefix on command identity, hard contract, routing ladder, tool boundaries, and response schema expectations, and keep the user task, preflight result, and state-update or no-write result in the variable suffix. Use blueprint_lightweight_preflight as the common read path for deterministic scope classification, project health, and implemented-only next action, qualify only explicit obvious tasks with no research, multi-file blast-radius analysis, useful durable report, validation pass beyond ordinary user review, or subagent value, keep the common tool path to blueprint_lightweight_preflight plus optional blueprint_state_update only after a successful initialized and healthy run, and avoid redundant primitive reads once preflight surfaced classification, health, and next action. Keep administrative preflight to lightweight preflight only, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized and healthy, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, keep the final response within 8 lines with qualification reason, state-update or no-write status, any reroute or warning, and the next safe implemented action, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

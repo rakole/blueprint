@@ -4,13 +4,14 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Execution profile | `long-running-mutation` |
+| Execution profile | Start in `interactive-read`; escalate to `long-running-mutation` only when the investigation becomes non-trivial. |
 
 ## Shared Runtime Contract
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- `debug` uses the shared long-running-mutation posture only for non-trivial investigations that need visible stage, gate, and follow-up reporting.
+- `debug` starts in `interactive-read` for lightweight evidence-backed investigations.
+- `debug` escalates to the shared `long-running-mutation` posture only for non-trivial investigations that need visible stage, gate, and follow-up reporting.
 - `debug` does not imply tracker-backed branching, hidden fix execution, or silent todo capture.
 
 ## Purpose

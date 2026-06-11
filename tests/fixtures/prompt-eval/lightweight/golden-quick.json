@@ -1,0 +1,52 @@
+{
+  "command": "quick",
+  "primarySkill": "blueprint-phase-execution",
+  "executionProfile": "long-running-mutation",
+  "requiredTools": [
+    "blueprint_lightweight_preflight",
+    "blueprint_artifact_report_write",
+    "blueprint_state_update"
+  ],
+  "optionalAgents": [
+    "blueprint-researcher",
+    "blueprint-planner",
+    "blueprint-executor",
+    "blueprint-verifier"
+  ],
+  "inputBundlePaths": [
+    "commands/blu-quick.toml",
+    "skills/blueprint-phase-execution/references/quick-runtime-contract.md",
+    "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+  ],
+  "allowedPersistenceTools": [
+    "blueprint_artifact_report_write",
+    "blueprint_state_update"
+  ],
+  "forbiddenPersistencePatterns": [
+    "do not hand-address .blueprint/reports/quick-run-latest.md",
+    "do not pass Markdown report content",
+    "session-local progress tools never replace MCP persistence",
+    "do not invent phase, research, or validation artifacts"
+  ],
+  "confirmationGates": [
+    "quick-run report overwrite unless --force",
+    "external-service or runtime dependencies",
+    "destructive operations outside the bounded task",
+    "scope expansion beyond quick"
+  ],
+  "routingBoundaries": [
+    "uninitialized Blueprint routes to /blu-new-project",
+    "partial or unhealthy Blueprint routes to /blu-health",
+    "saved phase plan or multi-wave work routes to /blu-plan-phase or /blu-execute-phase",
+    "follow-up recommendations stay implemented-only"
+  ],
+  "finalResponseRequirements": [
+    "max 12 lines by default",
+    "include task and depth used",
+    "include validation status with skipped or repair-attempt detail when relevant",
+    "include authoritative quick-run report status and path",
+    "include warnings or deferred work",
+    "include the next safe implemented action",
+    "keep detailed evidence in the durable report"
+  ]
+}

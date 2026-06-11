@@ -13,8 +13,8 @@ export declare const phaseCheckpointOwnerCommandSchema: z.ZodEnum<{
     "/blu-research-phase": "/blu-research-phase";
 }>;
 export declare const phaseCheckpointResumeModeSchema: z.ZodEnum<{
-    research: "research";
     discuss: "discuss";
+    research: "research";
 }>;
 export declare const phaseCheckpointWriteSchema: z.ZodUnion<readonly [z.ZodObject<{
     schemaVersion: z.ZodLiteral<2>;

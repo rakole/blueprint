@@ -1152,16 +1152,21 @@ test("implemented commands expose their declared optional agent contracts when s
   ]);
 });
 
-test("runtime metadata requires blueprint_config_get for every optional-subagent command", () => {
+test("runtime metadata keeps a config-read path for every optional-subagent command", () => {
   for (const metadata of listRuntimeOwnedCommandMetadata()) {
     if (metadata.optionalAgents.length === 0) {
       continue;
     }
 
+    const hasConfigReadPath =
+      metadata.requiredTools.includes("blueprint_config_get") ||
+      (metadata.requiredTools.includes("blueprint_lightweight_preflight") &&
+        (metadata.commandName === "quick" || metadata.commandName === "fast"));
+
     assert.equal(
-      metadata.requiredTools.includes("blueprint_config_get"),
+      hasConfigReadPath,
       true,
-      `${metadata.commandName} should require blueprint_config_get when optional subagents are exposed`
+      `${metadata.commandName} should require blueprint_config_get or an approved lightweight preflight config path when optional subagents are exposed`
     );
   }
 });
@@ -2290,9 +2295,7 @@ test("quick is implemented once manifest, skill, and report-backed quick-run MCP
   assert.equal(entry.specPath, metadata.sourceId);
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_report_write",
-    "blueprint_command_catalog",
-    "blueprint_config_get",
-    "blueprint_project_status",
+    "blueprint_lightweight_preflight",
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents.sort(), [
@@ -2319,11 +2322,60 @@ test("fast is implemented once manifest, skill, and trivial inline MCP tools exi
   assert.ok(entry.skillPath);
   assert.equal(entry.specPath, metadata.sourceId);
   assert.deepEqual([...entry.requiredTools].sort(), [
-    "blueprint_project_status",
+    "blueprint_lightweight_preflight",
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
+});
+
+test("quick and fast downgrade when required local runtime inputs are missing", async (t) => {
+  const quickMetadata = getRuntimeOwnedCommandMetadata("quick");
+  const fastMetadata = getRuntimeOwnedCommandMetadata("fast");
+
+  assert.ok(quickMetadata);
+  assert.ok(fastMetadata);
+
+  const missingPaths = new Set([
+    ...(quickMetadata.requiredInputPaths ?? []),
+    ...(fastMetadata.requiredInputPaths ?? [])
+  ]);
+  const originalAccess = fs.access;
+
+  fs.access = (async (...args: Parameters<typeof fs.access>) => {
+    if ([...missingPaths].some((relativePath) => isBundledPath(args[0], relativePath))) {
+      const error = new Error("ENOENT");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      throw error;
+    }
+
+    return originalAccess(...args);
+  }) as typeof fs.access;
+  t.after(() => {
+    fs.access = originalAccess;
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const quickEntry = catalog.commands["quick"];
+  const fastEntry = catalog.commands["fast"];
+
+  assert.equal(quickEntry.declaredStatus, "implemented");
+  assert.equal(quickEntry.status, "repairing");
+  assert.equal(quickEntry.implemented, false);
+  assert.equal(quickEntry.specPath, null);
+  assert.match(
+    quickEntry.blockedBy.join("\n"),
+    /Missing runtime input: skills\/blueprint-phase-execution\/references\/quick-runtime-contract\.md|Missing runtime input: skills\/blueprint-phase-execution\/references\/long-running-execution-profile\.md/
+  );
+
+  assert.equal(fastEntry.declaredStatus, "implemented");
+  assert.equal(fastEntry.status, "repairing");
+  assert.equal(fastEntry.implemented, false);
+  assert.equal(fastEntry.specPath, null);
+  assert.match(
+    fastEntry.blockedBy.join("\n"),
+    /Missing runtime input: skills\/blueprint-phase-execution\/references\/fast-runtime-contract\.md/
+  );
 });
 
 test("debug is implemented once manifest, skill, and report-backed debug MCP tools exist", async () => {

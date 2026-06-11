@@ -519,8 +519,8 @@ export declare const impactToolDefinitions: ({
         impactId: z.ZodOptional<z.ZodString>;
         report: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         verbosity: z.ZodOptional<z.ZodEnum<{
-            compact: "compact";
             normal: "normal";
+            compact: "compact";
             detailed: "detailed";
         }>>;
     };
