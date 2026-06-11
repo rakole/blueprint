@@ -300,10 +300,21 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   const quickRunRepairAttemptProperties = (
     quickRunValidationProperties?.repairAttempt as { properties?: Record<string, unknown> } | undefined
   )?.properties;
+  const quickRunRunMetricsProperties = (
+    quickRunModelProperties?.runMetrics as { properties?: Record<string, unknown> } | undefined
+  )?.properties;
   assert.match(quickRunContract.contract.authoringTemplate, /Repair Attempt:/);
   assert.ok(quickRunValidationProperties && "repairAttempt" in quickRunValidationProperties);
   assert.ok(quickRunRepairAttemptProperties && "attempted" in quickRunRepairAttemptProperties);
   assert.ok(quickRunRepairAttemptProperties && "outcome" in quickRunRepairAttemptProperties);
+  assert.ok(quickRunRunMetricsProperties && "administrativeToolCalls" in quickRunRunMetricsProperties);
+  assert.ok(quickRunRunMetricsProperties && "subagentCount" in quickRunRunMetricsProperties);
+  assert.ok(quickRunRunMetricsProperties && "validationCommandCount" in quickRunRunMetricsProperties);
+  assert.ok(quickRunRunMetricsProperties && "finalSummaryBudget" in quickRunRunMetricsProperties);
+  assert.equal(
+    Boolean(quickRunRunMetricsProperties && "outputTokenBudgetClass" in quickRunRunMetricsProperties),
+    false
+  );
 
   assert.equal(listedPlanContract?.modelContract?.schemaId, "blueprint.phase.plan.model");
   assert.equal(listedUatContract?.modelContract?.schemaId, "blueprint.phase.uat.model");

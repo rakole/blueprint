@@ -436,7 +436,7 @@ type QuickRunValidationStatus = "passed" | "failed" | "skipped";
 type QuickRunValidationCommandResult = "passed" | "failed" | "not-run";
 type QuickRunValidationRepairOutcome = "not-attempted" | "repaired" | "still-failing";
 type QuickRunGateStatus = "satisfied" | "deferred" | "blocked";
-type QuickRunOutputTokenBudgetClass = "short" | "normal";
+type QuickRunFinalSummaryBudget = "short" | "normal";
 type AuditFixReportSource = "review" | "security" | "verification" | "uat" | "all";
 type AuditFixReportSeverityFilter = "medium" | "high" | "all";
 type AuditFixReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
@@ -556,7 +556,8 @@ type QuickRunReportModel = {
   runMetrics?: {
     administrativeToolCalls?: number;
     subagentCount?: number;
-    outputTokenBudgetClass?: QuickRunOutputTokenBudgetClass;
+    validationCommandCount?: number;
+    finalSummaryBudget?: QuickRunFinalSummaryBudget;
   };
 };
 
@@ -14201,6 +14202,13 @@ function normalizeQuickRunReportModel(model: Record<string, unknown>): QuickRunR
     return null;
   }
 
+  const finalSummaryBudget =
+    typeof runMetrics?.finalSummaryBudget === "string"
+      ? runMetrics.finalSummaryBudget
+      : typeof runMetrics?.outputTokenBudgetClass === "string"
+        ? runMetrics.outputTokenBudgetClass
+        : undefined;
+
   if (
     runMetrics &&
     ((
@@ -14208,8 +14216,9 @@ function normalizeQuickRunReportModel(model: Record<string, unknown>): QuickRunR
       typeof runMetrics.administrativeToolCalls !== "number"
     ) ||
       (runMetrics.subagentCount !== undefined && typeof runMetrics.subagentCount !== "number") ||
-      (runMetrics.outputTokenBudgetClass !== undefined &&
-        typeof runMetrics.outputTokenBudgetClass !== "string"))
+      (runMetrics.validationCommandCount !== undefined &&
+        typeof runMetrics.validationCommandCount !== "number") ||
+      (finalSummaryBudget !== undefined && typeof finalSummaryBudget !== "string"))
   ) {
     return null;
   }
@@ -14253,15 +14262,43 @@ function normalizeQuickRunReportModel(model: Record<string, unknown>): QuickRunR
             ...(typeof runMetrics.subagentCount === "number"
               ? { subagentCount: runMetrics.subagentCount }
               : {}),
-            ...(typeof runMetrics.outputTokenBudgetClass === "string"
+            ...(typeof runMetrics.validationCommandCount === "number"
+              ? { validationCommandCount: runMetrics.validationCommandCount }
+              : {}),
+            ...(typeof finalSummaryBudget === "string"
               ? {
-                  outputTokenBudgetClass:
-                    runMetrics.outputTokenBudgetClass as QuickRunOutputTokenBudgetClass
+                  finalSummaryBudget: finalSummaryBudget as QuickRunFinalSummaryBudget
                 }
               : {})
           }
         }
       : {})
+  };
+}
+
+function canonicalizeQuickRunReportModelInput(
+  model: Record<string, unknown>
+): Record<string, unknown> {
+  const runMetrics = asJsonObject(model.runMetrics);
+  const {
+    outputTokenBudgetClass,
+    ...remainingRunMetrics
+  } = runMetrics ?? {};
+
+  if (
+    !runMetrics ||
+    typeof runMetrics.finalSummaryBudget === "string" ||
+    typeof outputTokenBudgetClass !== "string"
+  ) {
+    return model;
+  }
+
+  return {
+    ...model,
+    runMetrics: {
+      ...remainingRunMetrics,
+      finalSummaryBudget: outputTokenBudgetClass
+    }
   };
 }
 
@@ -15398,6 +15435,26 @@ function renderQuickRunReportModelContent(model: QuickRunReportModel): string {
   const repairAttemptSummary = model.validation.repairAttempt
     ? `- Repair Attempt: ${model.validation.repairAttempt.outcome}${model.validation.repairAttempt.note ? ` - ${model.validation.repairAttempt.note}` : ""}\n`
     : "";
+  const runMetricsRows = model.runMetrics
+    ? [
+        ...(typeof model.runMetrics.administrativeToolCalls === "number"
+          ? [["Administrative Tool Calls", String(model.runMetrics.administrativeToolCalls)]]
+          : []),
+        ...(typeof model.runMetrics.subagentCount === "number"
+          ? [["Subagent Count", String(model.runMetrics.subagentCount)]]
+          : []),
+        ...(typeof model.runMetrics.validationCommandCount === "number"
+          ? [["Validation Command Count", String(model.runMetrics.validationCommandCount)]]
+          : []),
+        ...(typeof model.runMetrics.finalSummaryBudget === "string"
+          ? [["Final Summary Budget", model.runMetrics.finalSummaryBudget]]
+          : [])
+      ]
+    : [];
+  const runMetricsSection =
+    runMetricsRows.length > 0
+      ? `\n## Run Metrics\n\n${renderMarkdownTable(["Metric", "Value"], runMetricsRows)}\n`
+      : "";
 
   return `# Quick Run Report
 
@@ -15463,6 +15520,7 @@ ${renderBulletList(model.risks)}
 ## Deferred Work
 
 ${renderBulletList(model.deferredWork)}
+${runMetricsSection}
 
 ## Next Safe Action
 
@@ -15850,8 +15908,12 @@ export async function blueprintArtifactReportValidateModel(
   let normalizedModel: AddTestsReportModel | AuditFixReportModel | QuickRunReportModel | null = null;
 
   if (modelObject && context.taskSchema) {
+    const effectiveModelObject =
+      contractId === "report.quick-run"
+        ? canonicalizeQuickRunReportModelInput(modelObject)
+        : modelObject;
     const validate = createArtifactAjvValidator().compile(context.taskSchema);
-    const schemaValid = validate(modelObject);
+    const schemaValid = validate(effectiveModelObject);
 
     if (!schemaValid) {
       diagnostics.push(
@@ -15863,27 +15925,29 @@ export async function blueprintArtifactReportValidateModel(
               : contractId === "report.audit-fix"
                 ? "report.audit-fix"
                 : "report.add-tests",
-            modelObject
+            effectiveModelObject
           )
         )
       );
     }
 
     if (contractId === "report.quick-run") {
-      const quickRunNormalizedModel = schemaValid ? normalizeQuickRunReportModel(modelObject) : null;
+      const quickRunNormalizedModel = schemaValid
+        ? normalizeQuickRunReportModel(effectiveModelObject)
+        : null;
       normalizedModel = quickRunNormalizedModel;
       diagnostics.push(
         ...quickRunReportResidualDiagnostics({
-          model: modelObject,
+          model: effectiveModelObject,
           normalizedModel: quickRunNormalizedModel
         })
       );
     } else if (contractId === "report.audit-fix") {
-      normalizedModel = normalizeAuditFixReportModel(modelObject);
+      normalizedModel = normalizeAuditFixReportModel(effectiveModelObject);
       diagnostics.push(
         ...await collectAuditFixResidualDiagnostics({
-          model: modelObject,
-          normalizedModel: normalizeAuditFixReportModel(modelObject),
+          model: effectiveModelObject,
+          normalizedModel: normalizeAuditFixReportModel(effectiveModelObject),
           authoringContext: context,
           modelContract: readArtifactContract("report.audit-fix").modelContract
         })
@@ -15891,13 +15955,13 @@ export async function blueprintArtifactReportValidateModel(
     } else {
       diagnostics.push(
         ...addTestsReportResidualDiagnostics(
-          modelObject,
+          effectiveModelObject,
           readArtifactContract("report.add-tests").modelContract
         ).map(artifactReportDiagnosticFromAddTests)
       );
 
       if (schemaValid) {
-        normalizedModel = normalizeAddTestsReportModel(modelObject);
+        normalizedModel = normalizeAddTestsReportModel(effectiveModelObject);
       }
     }
   }

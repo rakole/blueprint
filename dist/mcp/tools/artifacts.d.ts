@@ -300,7 +300,7 @@ type QuickRunValidationStatus = "passed" | "failed" | "skipped";
 type QuickRunValidationCommandResult = "passed" | "failed" | "not-run";
 type QuickRunValidationRepairOutcome = "not-attempted" | "repaired" | "still-failing";
 type QuickRunGateStatus = "satisfied" | "deferred" | "blocked";
-type QuickRunOutputTokenBudgetClass = "short" | "normal";
+type QuickRunFinalSummaryBudget = "short" | "normal";
 type AuditFixReportSource = "review" | "security" | "verification" | "uat" | "all";
 type AuditFixReportSeverityFilter = "medium" | "high" | "all";
 type AuditFixReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
@@ -440,7 +440,8 @@ type QuickRunReportModel = {
     runMetrics?: {
         administrativeToolCalls?: number;
         subagentCount?: number;
-        outputTokenBudgetClass?: QuickRunOutputTokenBudgetClass;
+        validationCommandCount?: number;
+        finalSummaryBudget?: QuickRunFinalSummaryBudget;
     };
 };
 type AuditFixReportModel = {

@@ -21281,7 +21281,8 @@ var init_artifact_contracts = __esm({
             properties: {
               administrativeToolCalls: { type: "integer", minimum: 0 },
               subagentCount: { type: "integer", minimum: 0 },
-              outputTokenBudgetClass: { type: "string", enum: ["short", "normal"] }
+              validationCommandCount: { type: "integer", minimum: 0 },
+              finalSummaryBudget: { type: "string", enum: ["short", "normal"] }
             }
           }
         }
@@ -21365,7 +21366,8 @@ var init_artifact_contracts = __esm({
         runMetrics: {
           administrativeToolCalls: 2,
           subagentCount: 0,
-          outputTokenBudgetClass: "short"
+          validationCommandCount: 1,
+          finalSummaryBudget: "short"
         }
       },
       exampleLeakageSignals: [
@@ -48740,7 +48742,8 @@ function normalizeQuickRunReportModel(model) {
   if (typeof classification.route !== "string" || typeof classification.confidence !== "string" || classificationReasons === null || typeof classification.validationBudget !== "string" || typeof depthUsed.discuss !== "boolean" || typeof depthUsed.research !== "boolean" || typeof depthUsed.validation !== "string" || depthSubagents === null || typeof depthUsed.trackerUsed !== "boolean" || evidenceRead === null || changesMade === null || typeof validation.status !== "string" || validationCommands === null || validationRepairAttempt === null || gates === null || risks === null || deferredWork === null) {
     return null;
   }
-  if (runMetrics && (runMetrics.administrativeToolCalls !== void 0 && typeof runMetrics.administrativeToolCalls !== "number" || runMetrics.subagentCount !== void 0 && typeof runMetrics.subagentCount !== "number" || runMetrics.outputTokenBudgetClass !== void 0 && typeof runMetrics.outputTokenBudgetClass !== "string")) {
+  const finalSummaryBudget = typeof runMetrics?.finalSummaryBudget === "string" ? runMetrics.finalSummaryBudget : typeof runMetrics?.outputTokenBudgetClass === "string" ? runMetrics.outputTokenBudgetClass : void 0;
+  if (runMetrics && (runMetrics.administrativeToolCalls !== void 0 && typeof runMetrics.administrativeToolCalls !== "number" || runMetrics.subagentCount !== void 0 && typeof runMetrics.subagentCount !== "number" || runMetrics.validationCommandCount !== void 0 && typeof runMetrics.validationCommandCount !== "number" || finalSummaryBudget !== void 0 && typeof finalSummaryBudget !== "string")) {
     return null;
   }
   return {
@@ -48775,11 +48778,29 @@ function normalizeQuickRunReportModel(model) {
       runMetrics: {
         ...typeof runMetrics.administrativeToolCalls === "number" ? { administrativeToolCalls: runMetrics.administrativeToolCalls } : {},
         ...typeof runMetrics.subagentCount === "number" ? { subagentCount: runMetrics.subagentCount } : {},
-        ...typeof runMetrics.outputTokenBudgetClass === "string" ? {
-          outputTokenBudgetClass: runMetrics.outputTokenBudgetClass
+        ...typeof runMetrics.validationCommandCount === "number" ? { validationCommandCount: runMetrics.validationCommandCount } : {},
+        ...typeof finalSummaryBudget === "string" ? {
+          finalSummaryBudget
         } : {}
       }
     } : {}
+  };
+}
+function canonicalizeQuickRunReportModelInput(model) {
+  const runMetrics = asJsonObject2(model.runMetrics);
+  const {
+    outputTokenBudgetClass,
+    ...remainingRunMetrics
+  } = runMetrics ?? {};
+  if (!runMetrics || typeof runMetrics.finalSummaryBudget === "string" || typeof outputTokenBudgetClass !== "string") {
+    return model;
+  }
+  return {
+    ...model,
+    runMetrics: {
+      ...remainingRunMetrics,
+      finalSummaryBudget: outputTokenBudgetClass
+    }
   };
 }
 function quickRunHasLifecycleCompletionClaim(value) {
@@ -49620,6 +49641,17 @@ function renderMarkdownTable(headers, rows) {
 function renderQuickRunReportModelContent(model) {
   const repairAttemptSummary = model.validation.repairAttempt ? `- Repair Attempt: ${model.validation.repairAttempt.outcome}${model.validation.repairAttempt.note ? ` - ${model.validation.repairAttempt.note}` : ""}
 ` : "";
+  const runMetricsRows = model.runMetrics ? [
+    ...typeof model.runMetrics.administrativeToolCalls === "number" ? [["Administrative Tool Calls", String(model.runMetrics.administrativeToolCalls)]] : [],
+    ...typeof model.runMetrics.subagentCount === "number" ? [["Subagent Count", String(model.runMetrics.subagentCount)]] : [],
+    ...typeof model.runMetrics.validationCommandCount === "number" ? [["Validation Command Count", String(model.runMetrics.validationCommandCount)]] : [],
+    ...typeof model.runMetrics.finalSummaryBudget === "string" ? [["Final Summary Budget", model.runMetrics.finalSummaryBudget]] : []
+  ] : [];
+  const runMetricsSection = runMetricsRows.length > 0 ? `
+## Run Metrics
+
+${renderMarkdownTable(["Metric", "Value"], runMetricsRows)}
+` : "";
   return `# Quick Run Report
 
 ## Task
@@ -49685,6 +49717,7 @@ ${renderBulletList2(model.risks)}
 ## Deferred Work
 
 ${renderBulletList2(model.deferredWork)}
+${runMetricsSection}
 
 ## Next Safe Action
 
@@ -50014,34 +50047,35 @@ async function blueprintArtifactReportValidateModel(args) {
   }
   let normalizedModel = null;
   if (modelObject && context.taskSchema) {
+    const effectiveModelObject = contractId === "report.quick-run" ? canonicalizeQuickRunReportModelInput(modelObject) : modelObject;
     const validate = createArtifactAjvValidator().compile(context.taskSchema);
-    const schemaValid = validate(modelObject);
+    const schemaValid = validate(effectiveModelObject);
     if (!schemaValid) {
       diagnostics.push(
         ...(validate.errors ?? []).map(
           (error2) => schemaDiagnosticFromArtifactReportAjvError(
             error2,
             contractId === "report.quick-run" ? "report.quick-run" : contractId === "report.audit-fix" ? "report.audit-fix" : "report.add-tests",
-            modelObject
+            effectiveModelObject
           )
         )
       );
     }
     if (contractId === "report.quick-run") {
-      const quickRunNormalizedModel = schemaValid ? normalizeQuickRunReportModel(modelObject) : null;
+      const quickRunNormalizedModel = schemaValid ? normalizeQuickRunReportModel(effectiveModelObject) : null;
       normalizedModel = quickRunNormalizedModel;
       diagnostics.push(
         ...quickRunReportResidualDiagnostics({
-          model: modelObject,
+          model: effectiveModelObject,
           normalizedModel: quickRunNormalizedModel
         })
       );
     } else if (contractId === "report.audit-fix") {
-      normalizedModel = normalizeAuditFixReportModel(modelObject);
+      normalizedModel = normalizeAuditFixReportModel(effectiveModelObject);
       diagnostics.push(
         ...await collectAuditFixResidualDiagnostics({
-          model: modelObject,
-          normalizedModel: normalizeAuditFixReportModel(modelObject),
+          model: effectiveModelObject,
+          normalizedModel: normalizeAuditFixReportModel(effectiveModelObject),
           authoringContext: context,
           modelContract: readArtifactContract("report.audit-fix").modelContract
         })
@@ -50049,12 +50083,12 @@ async function blueprintArtifactReportValidateModel(args) {
     } else {
       diagnostics.push(
         ...addTestsReportResidualDiagnostics(
-          modelObject,
+          effectiveModelObject,
           readArtifactContract("report.add-tests").modelContract
         ).map(artifactReportDiagnosticFromAddTests)
       );
       if (schemaValid) {
-        normalizedModel = normalizeAddTestsReportModel(modelObject);
+        normalizedModel = normalizeAddTestsReportModel(effectiveModelObject);
       }
     }
   }

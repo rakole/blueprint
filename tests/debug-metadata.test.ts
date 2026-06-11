@@ -40,8 +40,8 @@ test("debug manifest references the debug skill, debugger agent, and report-back
   assert.match(commandFile, /\/blu-progress/);
 });
 
-test("debug runtime-owned metadata, skill, and local contract capture the explicit follow-up gate", async () => {
-  const [skillFile, runtimeContract] = await Promise.all([
+test("debug runtime-owned metadata, skill, docs, and local contract capture the explicit follow-up gate", async () => {
+  const [skillFile, runtimeContract, docsFile] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-debug/SKILL.md"), "utf8"),
     readFile(
       path.join(
@@ -49,7 +49,8 @@ test("debug runtime-owned metadata, skill, and local contract capture the explic
         "skills/blueprint-debug/references/debug-runtime-contract.md"
       ),
       "utf8"
-    )
+    ),
+    readFile(path.join(repoRoot, "docs/commands/debug.md"), "utf8")
   ]);
 
   assert.equal(DEBUG_RUNTIME_METADATA.commandName, "debug");
@@ -119,4 +120,18 @@ test("debug runtime-owned metadata, skill, and local contract capture the explic
   assert.match(runtimeContract, /\/blu-plan-phase/);
   assert.match(runtimeContract, /\/blu-validate-phase/);
   assert.match(runtimeContract, /\/blu-progress/);
+
+  assert.match(
+    docsFile,
+    /\| Execution profile \| Start in `interactive-read`; escalate to `long-running-mutation` only when the investigation becomes non-trivial\. \|/i
+  );
+  assert.match(
+    docsFile,
+    /`debug` starts in `interactive-read` for lightweight evidence-backed investigations\./i
+  );
+  assert.match(
+    docsFile,
+    /`debug` escalates to the shared `long-running-mutation` posture only for non-trivial investigations/i
+  );
+  assert.doesNotMatch(docsFile, /\| Execution profile \| `long-running-mutation` \|/i);
 });

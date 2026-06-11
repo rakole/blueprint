@@ -2973,7 +2973,8 @@ const QUICK_RUN_MODEL_CONTRACT: ArtifactModelContract = {
         properties: {
           administrativeToolCalls: { type: "integer", minimum: 0 },
           subagentCount: { type: "integer", minimum: 0 },
-          outputTokenBudgetClass: { type: "string", enum: ["short", "normal"] }
+          validationCommandCount: { type: "integer", minimum: 0 },
+          finalSummaryBudget: { type: "string", enum: ["short", "normal"] }
         }
       }
     }
@@ -3057,7 +3058,8 @@ const QUICK_RUN_MODEL_CONTRACT: ArtifactModelContract = {
     runMetrics: {
       administrativeToolCalls: 2,
       subagentCount: 0,
-      outputTokenBudgetClass: "short"
+      validationCommandCount: 1,
+      finalSummaryBudget: "short"
     }
   },
   exampleLeakageSignals: [

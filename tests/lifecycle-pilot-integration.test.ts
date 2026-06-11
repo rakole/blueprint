@@ -604,7 +604,8 @@ function validQuickRunReportModel(): Record<string, unknown> {
     runMetrics: {
       administrativeToolCalls: 2,
       subagentCount: 0,
-      outputTokenBudgetClass: "short"
+      validationCommandCount: 1,
+      finalSummaryBudget: "short"
     }
   };
 }
@@ -1317,8 +1318,13 @@ test("artifact report writes report blocking input issues and contract-gate mode
   assert.match(validatedQuickRun.renderPreview ?? "", /## Classification/);
   assert.match(validatedQuickRun.renderPreview ?? "", /## Depth Used/);
   assert.match(validatedQuickRun.renderPreview ?? "", /## Validation/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /## Run Metrics/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /Validation Command Count/);
+  assert.match(validatedQuickRun.renderPreview ?? "", /Final Summary Budget/);
+  assert.doesNotMatch(validatedQuickRun.renderPreview ?? "", /Output Token Budget Class/);
   assert.equal(writtenQuickRun.status, "created");
   assert.equal(writtenQuickRun.path, ".blueprint/reports/quick-run-latest.md");
+  assert.match(await readFile(reportPath, "utf8"), /Final Summary Budget/);
   assert.equal(nonStructuredContractModel.status, "invalid");
   assert.match(nonStructuredContractModel.issues.join("\n"), /report\.debug/i);
   assert.match(nonStructuredContractModel.issues.join("\n"), /does not expose a modelContract/i);
@@ -1799,4 +1805,31 @@ test("quick-run v2 validation enforces residual policy and honest failure render
     legacyV1Model.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
     /model\.schemaVersion|model\.task|model\.classification/
   );
+});
+
+test("quick-run v2 validation accepts legacy outputTokenBudgetClass input but renders canonical finalSummaryBudget output", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const validated = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: {
+      ...validQuickRunReportModel(),
+      runMetrics: {
+        administrativeToolCalls: 3,
+        subagentCount: 1,
+        validationCommandCount: 2,
+        outputTokenBudgetClass: "normal"
+      }
+    }
+  });
+
+  assert.equal(validated.status, "valid");
+  assert.match(validated.renderPreview ?? "", /## Run Metrics/);
+  assert.match(validated.renderPreview ?? "", /\| Validation Command Count \| 2 \|/);
+  assert.match(validated.renderPreview ?? "", /\| Final Summary Budget \| normal \|/);
+  assert.doesNotMatch(validated.renderPreview ?? "", /Output Token Budget Class/);
 });

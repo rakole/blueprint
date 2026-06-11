@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
@@ -188,6 +189,37 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /blueprint-executor/);
   assert.match(quickRuntimeContract, /blueprint-verifier/);
   assert.match(quickRuntimeContract, /\/blu-progress/);
+});
+
+test("quick runtime contract docs and report.quick-run schema agree on canonical runMetrics keys", async () => {
+  const [quickRuntimeContract, quickRunContract] = await Promise.all([
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-execution/references/quick-runtime-contract.md"
+      ),
+      "utf8"
+    ),
+    readArtifactContract("report.quick-run")
+  ]);
+  const runMetricsProperties = (
+    quickRunContract?.modelContract?.jsonSchema.properties?.runMetrics as
+      | { properties?: Record<string, unknown> }
+      | undefined
+  )?.properties;
+
+  assert.ok(runMetricsProperties);
+  assert.deepEqual(Object.keys(runMetricsProperties).sort(), [
+    "administrativeToolCalls",
+    "finalSummaryBudget",
+    "subagentCount",
+    "validationCommandCount"
+  ]);
+  assert.match(quickRuntimeContract, /administrativeToolCalls\?: number/i);
+  assert.match(quickRuntimeContract, /subagentCount\?: number/i);
+  assert.match(quickRuntimeContract, /validationCommandCount\?: number/i);
+  assert.match(quickRuntimeContract, /finalSummaryBudget\?: "short" \| "normal"/i);
+  assert.doesNotMatch(quickRuntimeContract, /outputTokenBudgetClass/i);
 });
 
 test("quick runtime contract resource is owned by runtime metadata, not docs", async () => {
