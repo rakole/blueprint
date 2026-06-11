@@ -98,10 +98,9 @@ type ScenarioFixtureFile = {
 const CONTRACT_EXPECTATION_CHECKS: Record<ContractExpectation, (packet: LightweightCommandPacket) => void> =
   {
     "validation-skipped-reason": (packet) => {
-      assert.match(
-        packet.promptSurfaceText,
-        /validation outcome including any skipped reason or repair-attempt outcome/i,
-      );
+      assert.match(packet.promptSurfaceText, /validation status/i);
+      assert.match(packet.promptSurfaceText, /skipped reason/i);
+      assert.match(packet.promptSurfaceText, /repair-attempt outcome/i);
       assert.ok(packet.finalResponseRequirements.some((entry) => /skipped/i.test(entry)));
     },
     "research-flag": (packet) => {

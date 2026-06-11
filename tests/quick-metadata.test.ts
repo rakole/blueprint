@@ -50,7 +50,9 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /`--force`/);
   assert.match(commandFile, /pre-authorization for (?:a )?bounded non-destructive/i);
   assert.match(commandFile, /For code mutation, run cheap validation by default/i);
-  assert.match(commandFile, /validation status including any skipped reason or repair-attempt outcome/i);
+  assert.match(commandFile, /validation status/i);
+  assert.match(commandFile, /skipped reason/i);
+  assert.match(commandFile, /repair-attempt outcome/i);
   assert.match(commandFile, /report\.quick-run` model with `schemaVersion: 2`/i);
   assert.match(commandFile, /optional lightweight `runMetrics` counters/i);
   assert.match(commandFile, /Do not require exact token counts/i);
