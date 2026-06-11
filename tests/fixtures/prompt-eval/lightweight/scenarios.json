@@ -1,0 +1,487 @@
+{
+  "schemaVersion": "blueprint.prompt-eval.lightweight-routing-scenarios.v1",
+  "scenarios": [
+    {
+      "id": "fast-readme-typo-happy-path",
+      "fixture": "initialized-repo",
+      "mode": "fast",
+      "taskText": "Fix typo in README heading",
+      "packet": "fast",
+      "expect": {
+        "route": "fast",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [],
+        "validationBudget": "none",
+        "allowedWrites": {
+          "includes": [
+            ".blueprint/STATE.md through blueprint_state_update"
+          ],
+          "excludes": [
+            ".blueprint/reports/quick-run-latest.md",
+            "quick-run-latest through blueprint_artifact_report_write",
+            "phase execution summaries through MCP"
+          ]
+        },
+        "nextSafeAction": "/blu-fast"
+      }
+    },
+    {
+      "id": "fast-vague-task-clarify",
+      "fixture": "initialized-repo",
+      "mode": "fast",
+      "taskText": "fix it",
+      "expect": {
+        "route": "clarify",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "requires-clarification"
+        },
+        "requiredGates": [
+          "task-clarity"
+        ],
+        "validationBudget": "ask",
+        "nextSafeAction": "/blu-fast"
+      }
+    },
+    {
+      "id": "fast-needs-validation-routes-quick",
+      "fixture": "initialized-repo",
+      "mode": "fast",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "packet": "quick",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "allowedWrites": {
+          "includes": [
+            "quick-run-latest through blueprint_artifact_report_write",
+            ".blueprint/STATE.md through blueprint_state_update"
+          ],
+          "excludes": [
+            ".blueprint/reports/quick-run-latest.md",
+            "phase execution summaries through MCP",
+            ".blueprint/phase-plans/ through MCP"
+          ]
+        },
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "fast-needs-research-routes-quick",
+      "fixture": "initialized-repo",
+      "mode": "fast",
+      "taskText": "Fix typo in README heading",
+      "flags": [
+        "--research"
+      ],
+      "packet": "quick",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "fast-broad-migration-routes-plan",
+      "fixture": "initialized-repo",
+      "mode": "fast",
+      "taskText": "Migrate all commands to the new schema",
+      "expect": {
+        "route": "plan-phase",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "scope-review"
+        ],
+        "validationBudget": "route",
+        "nextSafeAction": "/blu-plan-phase"
+      }
+    },
+    {
+      "id": "fast-unhealthy-routes-health-before-state-update",
+      "fixture": "partial-repo",
+      "mode": "fast",
+      "taskText": "Fix typo in README heading",
+      "expect": {
+        "route": "health",
+        "projectHealth": "partial",
+        "initialized": false,
+        "gates": {
+          "healthGate": "route-health",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "project-health"
+        ],
+        "validationBudget": "route",
+        "nextSafeAction": "/blu-health"
+      }
+    },
+    {
+      "id": "quick-small-code-change-cheap-validation",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "flags": [
+        "--validate"
+      ],
+      "packet": "quick",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "allowedWrites": {
+          "includes": [
+            "quick-run-latest through blueprint_artifact_report_write",
+            ".blueprint/STATE.md through blueprint_state_update"
+          ],
+          "excludes": [
+            ".blueprint/reports/quick-run-latest.md",
+            "phase execution summaries through MCP",
+            ".blueprint/phase-plans/ through MCP"
+          ]
+        },
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "quick-docs-change-validation-skipped-with-reason",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Update docs wording for the install note",
+      "packet": "quick",
+      "contractExpectation": "validation-skipped-reason",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "quick-report-exists-no-force-overwrite-gate",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "flags": [
+        "--validate"
+      ],
+      "packet": "quick",
+      "setup": {
+        "existingQuickReport": true
+      },
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "requires-confirmation",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "quick-report-exists-force-bypasses-overwrite-gate",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "flags": [
+        "--validate",
+        "--force"
+      ],
+      "packet": "quick",
+      "setup": {
+        "existingQuickReport": true
+      },
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "force-bypassed",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "quick-research-flag-preauthorizes-bounded-research",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Update docs wording for the install note",
+      "flags": [
+        "--research"
+      ],
+      "packet": "quick",
+      "contractExpectation": "research-flag",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "quick-validate-flag-runs-deep-validation",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "flags": [
+        "--validate"
+      ],
+      "packet": "quick",
+      "contractExpectation": "validate-flag",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick"
+      }
+    },
+    {
+      "id": "quick-full-subagents-enabled",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "flags": [
+        "--full"
+      ],
+      "packet": "quick",
+      "contractExpectation": "full-flag",
+      "setup": {
+        "workflowSubagents": true
+      },
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick",
+        "workflowSubagents": true
+      }
+    },
+    {
+      "id": "quick-full-subagents-disabled-inline-fallback",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "flags": [
+        "--full"
+      ],
+      "packet": "quick",
+      "contractExpectation": "full-flag",
+      "setup": {
+        "workflowSubagents": false
+      },
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "nextSafeAction": "/blu-quick",
+        "workflowSubagents": false
+      }
+    },
+    {
+      "id": "quick-unclear-bug-routes-debug",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Investigate failing auth test",
+      "expect": {
+        "route": "debug",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "issue-statement"
+        ],
+        "validationBudget": "ask",
+        "nextSafeAction": "/blu-debug"
+      }
+    },
+    {
+      "id": "quick-large-migration-routes-plan",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Migrate all commands to the new schema",
+      "expect": {
+        "route": "plan-phase",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "scope-review"
+        ],
+        "validationBudget": "route",
+        "nextSafeAction": "/blu-plan-phase"
+      }
+    },
+    {
+      "id": "quick-unhealthy-routes-health",
+      "fixture": "partial-repo",
+      "mode": "quick",
+      "taskText": "Update docs wording for the install note",
+      "expect": {
+        "route": "health",
+        "projectHealth": "partial",
+        "initialized": false,
+        "gates": {
+          "healthGate": "route-health",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "project-health"
+        ],
+        "validationBudget": "route",
+        "nextSafeAction": "/blu-health"
+      }
+    },
+    {
+      "id": "quick-uninitialized-routes-new-project",
+      "fixture": "uninitialized-repo",
+      "mode": "quick",
+      "taskText": "Update docs wording for the install note",
+      "expect": {
+        "route": "new-project",
+        "projectHealth": "uninitialized",
+        "initialized": false,
+        "gates": {
+          "healthGate": "route-new-project",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "project-bootstrap"
+        ],
+        "validationBudget": "route",
+        "nextSafeAction": "/blu-new-project"
+      }
+    },
+    {
+      "id": "quick-final-route-implemented-only",
+      "fixture": "initialized-repo",
+      "mode": "quick",
+      "taskText": "Rename BLUEPRINT_API_ENV references and update focused tests",
+      "flags": [
+        "--validate"
+      ],
+      "packet": "quick",
+      "expect": {
+        "route": "quick",
+        "projectHealth": "healthy",
+        "initialized": true,
+        "gates": {
+          "healthGate": "pass",
+          "overwriteGate": "none",
+          "clarityGate": "pass"
+        },
+        "requiredGates": [
+          "cheap-validation"
+        ],
+        "validationBudget": "cheap",
+        "nextSafeActionImplementedOnly": true
+      }
+    }
+  ]
+}

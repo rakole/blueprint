@@ -1,0 +1,35 @@
+{
+  "command": "fast",
+  "primarySkill": "blueprint-phase-execution",
+  "executionProfile": "interactive-read",
+  "requiredTools": [
+    "blueprint_lightweight_preflight",
+    "blueprint_state_update"
+  ],
+  "optionalAgents": [],
+  "inputBundlePaths": [
+    "commands/blu-fast.toml",
+    "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
+  ],
+  "allowedPersistenceTools": [
+    "blueprint_state_update"
+  ],
+  "forbiddenPersistencePatterns": [
+    "no quick-run reports",
+    "no phase summaries or artifacts",
+    "no ad hoc Blueprint persistence",
+    "no tracker or visible-progress tools"
+  ],
+  "confirmationGates": [],
+  "routingBoundaries": [
+    "partial or unhealthy Blueprint routes to /blu-health before persistence",
+    "larger work routes to /blu-quick or /blu-plan-phase",
+    "follow-up recommendations stay implemented-only"
+  ],
+  "finalResponseRequirements": [
+    "explain why the task qualified as fast",
+    "state whether Blueprint state was updated",
+    "include warnings or reroutes",
+    "include the next safe implemented action when applicable"
+  ]
+}
