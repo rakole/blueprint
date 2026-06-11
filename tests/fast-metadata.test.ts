@@ -22,6 +22,12 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
   assert.doesNotMatch(commandFile, /agents\/blueprint-[a-z-]+\.md/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_project_status")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
+  assert.match(commandFile, /A task qualifies only when all are true/);
+  assert.match(commandFile, /expected edit is obvious from the request/);
+  assert.match(commandFile, /no repo\/domain research is needed/);
+  assert.match(commandFile, /no multi-file blast-radius analysis is needed/);
+  assert.match(commandFile, /no validation pass is needed beyond ordinary user review/);
+  assert.match(commandFile, /Latency budget: project status only/);
   assert.match(commandFile, /\/blu-quick/);
   assert.match(commandFile, /\/blu-plan-phase/);
   assert.match(commandFile, /\/blu-health/);
@@ -53,6 +59,8 @@ test("fast skill and local runtime contract keep the trivial path off the tracke
   );
   assert.match(skillFile, /Execution profile: `interactive-read`/);
   assert.match(fastRuntimeContract, /no-subagent execution path/i);
+  assert.match(fastRuntimeContract, /\/blu-fast` qualifies only when all are true/i);
+  assert.match(fastRuntimeContract, /\/blu-fast` latency budget/i);
   assert.match(fastRuntimeContract, /Do not create quick-run reports, phase summaries, phase artifacts/i);
   assert.match(fastRuntimeContract, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
   assert.match(fastRuntimeContract, /\/blu-health/);
@@ -72,6 +80,7 @@ test("fast runtime contract resource is owned by runtime metadata, not docs", as
   assert.equal(contract.runtimeReference.path, metadata.sourceId);
   assert.equal(contract.runtimeReference.commandSpecPath, metadata.sourceId);
   assert.equal(contract.spec.primarySkill, "blueprint-phase-execution");
+  assert.deepEqual(contract.spec.reads, ["project status preflight through MCP"]);
   assert.deepEqual(contract.spec.requiredTools, [...metadata.requiredTools]);
   assert.deepEqual(contract.runtimeReference.exactMcpDestination, [
     ...metadata.requiredTools
@@ -89,10 +98,24 @@ test("fast runtime contract resource is owned by runtime metadata, not docs", as
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility/i
+    /qualify only explicit obvious tasks with no research, multi-file blast-radius analysis, useful durable report, validation pass beyond ordinary user review, or subagent value/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
     /skills\/blueprint-phase-execution\/references\/fast-runtime-contract\.md/i
   );
+});
+
+test("fast public docs require concrete task text and avoid capture boilerplate", async () => {
+  const docsFile = await readFile(path.join(repoRoot, "docs/commands/fast.md"), "utf8");
+
+  assert.match(docsFile, /\/blu-fast "Fix typo in README installation heading"/);
+  assert.match(docsFile, /blueprint_project_status/);
+  assert.doesNotMatch(docsFile, /^- none$/m);
+  assert.doesNotMatch(docsFile, /\/blu fast$/m);
+  assert.doesNotMatch(docsFile, /note, todo, backlog/i);
+  assert.doesNotMatch(docsFile, /promoted, completed, or archived/i);
+  assert.doesNotMatch(docsFile, /malformed index files/i);
+  assert.doesNotMatch(docsFile, /Capture outputs/i);
+  assert.doesNotMatch(docsFile, /Capture append fixture/i);
 });

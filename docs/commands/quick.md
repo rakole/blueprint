@@ -23,8 +23,8 @@
 - CLI command path: `/blu-quick`
 - Root router form: `/blu quick`
 - Argument hint: `[task description] [--full] [--validate] [--discuss] [--research] [--force]`
-- `/blu-quick --full`
-- `/blu quick`
+- `/blu-quick "Rename BLUEPRINT_API_ENV references and update focused tests" --validate`
+- `/blu quick "Update the debug command docs to remove copied capture boilerplate" --research`
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
@@ -44,7 +44,7 @@
 ## Blueprint And Global State Reads
 
 
-- Project status, command availability, and the current next-step posture are read through Blueprint MCP tools rather than direct file crawls.
+- Project status, effective config, command availability, and the current next-step posture are read through Blueprint MCP tools rather than direct file crawls.
 
 
 ## Blueprint And Global State Writes
@@ -69,6 +69,8 @@
 - Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest` and a structured `report.quick-run` model, not Markdown `content` and not a `.blueprint/reports/...` path.
 - Quick-run report persistence is schema-backed: validate or repair the structured model against `report.quick-run.modelContract`; MCP renders the final Markdown and rejects hand-written Markdown fallback.
 - Treat the returned report `path`, `written`, and `status` as authoritative.
+- For code mutation, include cheap validation evidence by default when a bounded safe check is discoverable; otherwise record an explicit skipped reason in the quick-run report.
+- Treat `--validate` as stronger validation, not the first time validation exists.
 
 ## In-Flight Progress Contract
 
@@ -116,7 +118,6 @@
 
 
 - `docs/commands/fast.md`
-- `docs/commands/do.md`
 - `docs/commands/plan-phase.md`
 
 
@@ -134,24 +135,27 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm optional discuss, research, or full verification modes before starting.
-- Confirm validation-only depth before starting when the user asks for that narrower pass.
-- Confirm report replacement before overwriting `.blueprint/reports/quick-run-latest.md` unless `--force` is present.
+- Treat `--discuss`, `--research`, `--validate`, and `--full` as pre-authorization for bounded non-destructive depth branches.
+- Confirm report replacement before replacing the canonical quick-run report unless `--force` is present.
+- Confirm external-service or runtime dependencies, destructive shell/git/file operations outside the bounded task, and scope expansion beyond quick.
 - Stop and reroute when the task needs a saved phase plan, multi-wave execution, or broader lifecycle coordination.
 
 
 ## Edge Cases
 
 
-- The input is too vague to classify cleanly into note, todo, backlog, or execution work.
-- The target item already exists or has already been promoted, completed, or archived.
+- The input is blank or too vague to identify a bounded task.
+- The task is symptom-first with unknown root cause; route to `/blu-debug`.
+- The task needs a saved phase plan, multi-wave execution, or broad migration; route to `/blu-plan-phase` or `/blu-execute-phase`.
+- The canonical quick-run report already exists; require overwrite confirmation unless `--force` is present.
 
 
 ## Failure Modes And Recovery
 
 
-- Repair malformed index files through MCP instead of raw append logic.
 - Route oversized execution asks to `plan-phase` or `execute-phase` instead of bluffing.
+- If no cheap validation is discoverable, record a skipped reason instead of claiming validation passed.
+- If validation fails, report the failure honestly and route to the next safe implemented action.
 
 
 ## Acceptance Criteria
@@ -160,16 +164,17 @@
 - `quick` remains bounded and does not impersonate `plan-phase` or `execute-phase`.
 - Non-trivial quick runs use the shared long-running-mutation posture with visible stage and status fields.
 - Branchy quick work is tracker-eligible without turning tracker state into Blueprint persistence.
-- If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
+- If no Blueprint project exists, the command routes to `/blu-new-project` instead of inventing persistence.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
-- Keeps deeper discuss, research, and validation passes opt-in instead of implicit.
+- Keeps deeper discuss, research, and validation branches bounded and flag-preauthorized instead of implicit.
 
 
 ## Test Cases
 
 
 - Branchy bounded quick fixture with visible progress posture.
-- No-project graceful degradation fixture.
-- Direct `quick` happy-path fixture.
+- No-project route-to-new-project fixture.
+- Direct `quick` happy-path fixture with explicit bounded task text.
+- Code mutation fixture with cheap validation evidence or explicit skipped reason.

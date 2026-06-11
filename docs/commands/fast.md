@@ -24,8 +24,8 @@
 - CLI command path: `/blu-fast`
 - Root router form: `/blu fast`
 - Argument hint: `[task description]`
-- `/blu-fast fix-readme-typo`
-- `/blu fast`
+- `/blu-fast "Fix typo in README installation heading"`
+- `/blu-fast "Update package description from Blueprint CLI to Blueprint workflow CLI"`
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
@@ -44,7 +44,7 @@
 ## Blueprint And Global State Reads
 
 
-- none
+- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 
 
 ## Blueprint And Global State Writes
@@ -101,21 +101,23 @@
 ## Edge Cases
 
 
-- The input is too vague to classify cleanly into note, todo, backlog, or execution work.
-- The target item already exists or has already been promoted, completed, or archived.
+- The input is blank or too vague to identify an obvious trivial edit.
+- The task needs repo/domain research, multi-file blast-radius analysis, validation, a durable report, or subagent help; route it to `quick` or `plan-phase`.
+- Blueprint is partial or unhealthy; route to `/blu-health` before any Blueprint-owned persistence.
 
 
 ## Failure Modes And Recovery
 
 
-- Repair malformed index files through MCP instead of raw append logic.
+- Refuse to guess when the requested edit is not obvious from the task text.
 - Route oversized execution asks to `quick` or `plan-phase` instead of bluffing.
+- If state refresh is unsafe because Blueprint is missing or unhealthy, complete only the trivial repo task when safe and report no Blueprint write.
 
 
 ## Acceptance Criteria
 
 
-- Capture outputs stay deterministic and append-only where expected.
+- The task description is explicit and the expected edit is obvious from the request.
 - If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
@@ -127,7 +129,6 @@
 ## Test Cases
 
 
-- Capture append fixture.
-- No-project graceful degradation fixture.
-- Direct `fast` happy-path fixture.
-
+- Direct `fast` happy-path fixture with explicit trivial task text.
+- Vague or oversized task reroute fixture.
+- No-project graceful no-persistence fixture.

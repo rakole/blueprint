@@ -143,6 +143,7 @@ does not widen a command's tool scope.
 ### `/blu-quick`
 
 - `blueprint_project_status`
+- `blueprint_config_get`
 - `blueprint_command_catalog`
 - `blueprint_artifact_report_write`
 - `blueprint_state_update`
@@ -240,6 +241,12 @@ multi-wave execution.
 - Keep the active stage visible, keep the resolved scope, pending gate,
   execution mode, and next safe action explicit, and treat tracker state as
   session-local coordination only.
+- Read effective `blueprint_config_get` before optional subagent decisions, and
+  treat `--discuss`, `--research`, `--validate`, and `--full` as bounded
+  non-destructive depth preauthorization rather than overwrite, destructive, or
+  scope-expansion approval.
+- Run cheap validation for code mutation when a bounded safe check is
+  discoverable, or record an explicit skipped reason in the quick report.
 - Persist durable quick-run evidence through
   `blueprint_artifact_report_write` with the bare canonical report name
   `quick-run-latest`.

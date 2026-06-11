@@ -7,9 +7,19 @@ whether a task truly qualifies for the trivial inline path.
 ## Qualification Rules
 
 - Require an explicit task description.
+- `/blu-fast` qualifies only when all are true:
+  - the task description is explicit
+  - the expected edit is obvious from the request
+  - no repo/domain research is needed
+  - no multi-file blast-radius analysis is needed
+  - no subagent would improve quality
+  - no durable report is useful
+  - no validation pass is needed beyond ordinary user review
+  - Blueprint state is initialized + healthy before Blueprint-owned persistence
 - Keep the ask genuinely small. If the task would benefit from a saved phase
-  plan, a durable Blueprint report, deeper research, validation, or any
-  subagent work, reroute to `/blu-quick` or `/blu-plan-phase`.
+  plan, a durable Blueprint report, deeper research, validation, multi-file
+  analysis, or any subagent work, reroute to `/blu-quick` or
+  `/blu-plan-phase`.
 - `fast` is the no-subagent execution path.
 
 ## State And Persistence
@@ -28,6 +38,15 @@ whether a task truly qualifies for the trivial inline path.
 ## Visibility Rules
 
 - Execution profile: `interactive-read`.
+- `/blu-fast` latency budget:
+  - Blueprint administrative preflight: project status only
+  - subagents: 0
+  - visible progress helpers: 0
+  - tracker state: 0
+  - durable reports: 0
+  - phase artifacts: 0
+  - Blueprint-owned writes: state update only, initialized + healthy only
+  - final response: concise inline summary
 - Do not use `update_topic`, `write_todos`, or tracker tools.
 - Do not turn `/blu-fast` into a long-running progress flow. Finish inline or
   reroute quickly.
