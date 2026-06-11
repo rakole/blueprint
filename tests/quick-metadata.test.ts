@@ -22,9 +22,7 @@ test("quick manifest references the execution skill, bounded depth agents, and r
     commandFile,
     /agents\/blueprint-(researcher|planner|executor|verifier)\.md/
   );
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_project_status")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_command_catalog")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_lightweight_preflight")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_report_write")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
@@ -78,10 +76,11 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   );
   assert.match(
     skillFile,
-    /### `\/blu-quick`[\s\S]*blueprint_project_status[\s\S]*blueprint_config_get[\s\S]*blueprint_command_catalog[\s\S]*blueprint_artifact_report_write[\s\S]*blueprint_state_update/
+    /### `\/blu-quick`[\s\S]*blueprint_lightweight_preflight[\s\S]*blueprint_artifact_report_write[\s\S]*blueprint_state_update/
   );
 
-  assert.match(quickRuntimeContract, /mcp_blueprint_blueprint_config_get/);
+  assert.match(quickRuntimeContract, /mcp_blueprint_blueprint_lightweight_preflight/);
+  assert.match(quickRuntimeContract, /effective\s+subagent config/);
   assert.match(quickRuntimeContract, /quick-run-latest/);
   assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
   assert.match(quickRuntimeContract, /saved phase plan,\s+multi-wave execution/i);
@@ -99,6 +98,10 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   const metadata = getRuntimeOwnedCommandMetadata("quick");
 
   assert.ok(metadata);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-execution/references/quick-runtime-contract.md",
+    "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+  ]);
 
   const contract = await buildBlueprintCommandRuntimeContractResource("quick");
 
@@ -139,7 +142,7 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /read effective blueprint_config_get before optional subagent decisions/i
+    /use blueprint_lightweight_preflight as the common read path/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
@@ -172,9 +175,9 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
   );
   assert.match(
     docsFile,
-    /\/blu quick "Update the debug command docs to clarify report overwrite handling" --research/
+    /\/blu quick "Update the quick command docs to clarify report overwrite handling" --research/
   );
-  assert.match(docsFile, /blueprint_config_get/);
+  assert.match(docsFile, /blueprint_lightweight_preflight/);
   assert.match(docsFile, /pre-authorization for bounded non-destructive depth branches/i);
   assert.match(docsFile, /cheap validation evidence by default/i);
   assert.match(docsFile, /`quick-run-latest` through `blueprint_artifact_report_write`/);

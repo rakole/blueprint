@@ -20,7 +20,7 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
   );
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-[a-z-]+\.md/);
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_project_status")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_lightweight_preflight")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
   assert.match(commandFile, /A task qualifies only when all are true/);
   assert.match(commandFile, /expected edit is obvious from the request/);
@@ -28,7 +28,7 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
   assert.match(commandFile, /no multi-file blast-radius analysis is needed/);
   assert.match(commandFile, /no validation pass is needed beyond ordinary user review/);
   assert.match(commandFile, /only update it when Blueprint is initialized and healthy/);
-  assert.match(commandFile, /Latency budget: project status only/);
+  assert.match(commandFile, /Latency budget: lightweight preflight only/);
   assert.match(commandFile, /\/blu-quick/);
   assert.match(commandFile, /\/blu-plan-phase/);
   assert.match(commandFile, /\/blu-health/);
@@ -73,6 +73,9 @@ test("fast runtime contract resource is owned by runtime metadata, not docs", as
   const metadata = getRuntimeOwnedCommandMetadata("fast");
 
   assert.ok(metadata);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
+  ]);
 
   const contract = await buildBlueprintCommandRuntimeContractResource("fast");
 
@@ -81,7 +84,9 @@ test("fast runtime contract resource is owned by runtime metadata, not docs", as
   assert.equal(contract.runtimeReference.path, metadata.sourceId);
   assert.equal(contract.runtimeReference.commandSpecPath, metadata.sourceId);
   assert.equal(contract.spec.primarySkill, "blueprint-phase-execution");
-  assert.deepEqual(contract.spec.reads, ["project status preflight through MCP"]);
+  assert.deepEqual(contract.spec.reads, [
+    "lightweight preflight classification and project status through MCP"
+  ]);
   assert.deepEqual(contract.spec.requiredTools, [...metadata.requiredTools]);
   assert.deepEqual(contract.runtimeReference.exactMcpDestination, [
     ...metadata.requiredTools
@@ -111,7 +116,7 @@ test("fast public docs require concrete task text and avoid capture boilerplate"
   const docsFile = await readFile(path.join(repoRoot, "docs/commands/fast.md"), "utf8");
 
   assert.match(docsFile, /\/blu-fast "Fix typo in README installation heading"/);
-  assert.match(docsFile, /blueprint_project_status/);
+  assert.match(docsFile, /blueprint_lightweight_preflight/);
   assert.match(docsFile, /initialized and healthy/);
   assert.doesNotMatch(docsFile, /^- none$/m);
   assert.doesNotMatch(docsFile, /\/blu fast$/m);

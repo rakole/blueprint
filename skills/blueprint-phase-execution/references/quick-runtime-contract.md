@@ -15,10 +15,10 @@ helper guidance that apply to non-trivial quick runs.
 - Keep `quick` bounded. If the request clearly needs a saved phase plan,
   multi-wave execution, or a broader rollout, route to `/blu-plan-phase` or
   `/blu-execute-phase` instead of stretching the command.
-- Use `mcp_blueprint_blueprint_project_status`,
-  `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, and
-  `mcp_blueprint_blueprint_command_catalog` before mutation so initialization,
-  health, effective subagent config, and implemented-only routing stay explicit.
+- Use `mcp_blueprint_blueprint_lightweight_preflight` before mutation so
+  deterministic scope classification, initialization, health, effective
+  subagent config, implemented-only routing, quick-report overwrite gates, and
+  next safe action stay explicit.
 
 ## Optional Depth Gates
 

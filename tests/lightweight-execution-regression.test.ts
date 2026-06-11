@@ -36,7 +36,14 @@ test("lightweight execution keeps quick as the only long-running visible-progres
 
   assert.match(executionSkill, /references\/quick-runtime-contract\.md/);
   assert.match(executionSkill, /references\/long-running-execution-profile\.md/);
-  assert.match(executionSkill, /blueprint_config_get/);
+  assert.match(
+    executionSkill,
+    /Start from `blueprint_lightweight_preflight` before optional subagent\s+decisions/i
+  );
+  assert.match(
+    executionSkill,
+    /effective config, health\/new-project routing, implemented routes,\s+and overwrite gates/i
+  );
   assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
   assert.match(quickRuntimeContract, /pre-authorization\s+for bounded non-destructive depth branches/i);
   assert.match(quickRuntimeContract, /Cheap means a focused test, lint, typecheck, or build/i);
@@ -50,7 +57,7 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   );
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
-    /read effective blueprint_config_get before optional subagent decisions/i
+    /use blueprint_lightweight_preflight as the common read path/i
   );
   assert.match(
     quickMetadata.runtimeReference.contractNotes,
@@ -82,7 +89,7 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
 
   assert.match(fastToml, /Execution profile: `interactive-read`/);
   assert.match(fastToml, /A task qualifies only when all are true/);
-  assert.match(fastToml, /Latency budget: project status only/);
+  assert.match(fastToml, /Latency budget: lightweight preflight only/);
   assert.match(fastToml, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
   assert.match(fastToml, /Do not turn `\/blu-fast` into a long-running progress flow/i);
   assert.match(fastToml, /Do not create quick-run reports, phase artifacts, or other ad hoc persistence as side effects of `fast`\./);
@@ -91,6 +98,7 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   assert.doesNotMatch(fastToml, /tracker-eligible/i);
 
   assert.match(executionSkill, /references\/fast-runtime-contract\.md/);
+  assert.match(executionSkill, /Start from `blueprint_lightweight_preflight`/);
   assert.match(fastRuntimeContract, /\/blu-fast` qualifies only when all are true/i);
   assert.match(fastRuntimeContract, /\/blu-fast` latency budget/i);
   assert.match(fastRuntimeContract, /Do not use `update_topic`, `write_todos`, or tracker tools/i);

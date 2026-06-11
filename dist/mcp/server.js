@@ -14276,12 +14276,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs15, exportName) {
+    function addFormats(ajv, list, fs16, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs15[f]);
+        ajv.addFormat(f, fs16[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -14359,7 +14359,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, KNOWN_BLUEPRINT_AGENT_NAMES, NEW_PROJECT_OPTIONAL_AGENTS, NEW_PROJECT_REQUIRED_TOOLS, NEW_PROJECT_REQUIRED_INPUT_PATHS, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, HELP_REQUIRED_TOOLS, NEXT_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, SPEC_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, DOCS_UPDATE_REQUIRED_TOOLS, IMPACT_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, RUN_PLAN_REQUIRED_TOOLS, DEBUG_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, MAP_CODEBASE_REQUIRED_TOOLS, HELP_SPEC_PATH, PROGRESS_SPEC_PATH, NEXT_SPEC_PATH, MAP_CODEBASE_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, SPEC_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, DOCS_UPDATE_SPEC_PATH, IMPACT_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, DEBUG_SPEC_PATH, RUN_PLAN_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, DOCS_UPDATE_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, MAP_CODEBASE_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, HELP_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, NEXT_RUNTIME_METADATA, MAP_CODEBASE_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, SPEC_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, DOCS_UPDATE_RUNTIME_METADATA, IMPACT_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, RUN_PLAN_RUNTIME_METADATA, DEBUG_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, KNOWN_BLUEPRINT_AGENT_NAMES, NEW_PROJECT_OPTIONAL_AGENTS, NEW_PROJECT_REQUIRED_TOOLS, NEW_PROJECT_REQUIRED_INPUT_PATHS, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, HELP_REQUIRED_TOOLS, NEXT_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, SPEC_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, DOCS_UPDATE_REQUIRED_TOOLS, IMPACT_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, RUN_PLAN_REQUIRED_TOOLS, DEBUG_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, MAP_CODEBASE_REQUIRED_TOOLS, HELP_SPEC_PATH, PROGRESS_SPEC_PATH, NEXT_SPEC_PATH, MAP_CODEBASE_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, SPEC_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, DOCS_UPDATE_SPEC_PATH, IMPACT_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, DEBUG_SPEC_PATH, RUN_PLAN_SPEC_PATH, QUICK_SPEC_PATH, FAST_SPEC_PATH, LONG_RUNNING_EXECUTION_PROFILE_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, DOCS_UPDATE_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, MAP_CODEBASE_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, HELP_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, NEXT_RUNTIME_METADATA, MAP_CODEBASE_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, SPEC_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, DOCS_UPDATE_RUNTIME_METADATA, IMPACT_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, RUN_PLAN_RUNTIME_METADATA, DEBUG_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -14805,9 +14805,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_artifact_scaffold"
     ];
     QUICK_REQUIRED_TOOLS = [
-      "blueprint_project_status",
-      "blueprint_config_get",
-      "blueprint_command_catalog",
+      "blueprint_lightweight_preflight",
       "blueprint_artifact_report_write",
       "blueprint_state_update"
     ];
@@ -14834,7 +14832,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_state_update"
     ];
     FAST_REQUIRED_TOOLS = [
-      "blueprint_project_status",
+      "blueprint_lightweight_preflight",
       "blueprint_state_update"
     ];
     SETTINGS_REQUIRED_TOOLS = [
@@ -14981,6 +14979,9 @@ var init_command_runtime_metadata = __esm({
     REAPPLY_PATCHES_SPEC_PATH = "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md";
     DEBUG_SPEC_PATH = "skills/blueprint-debug/references/debug-runtime-contract.md";
     RUN_PLAN_SPEC_PATH = "skills/blueprint-plan-run/references/run-plan-runtime-contract.md";
+    QUICK_SPEC_PATH = "skills/blueprint-phase-execution/references/quick-runtime-contract.md";
+    FAST_SPEC_PATH = "skills/blueprint-phase-execution/references/fast-runtime-contract.md";
+    LONG_RUNNING_EXECUTION_PROFILE_PATH = "skills/blueprint-phase-execution/references/long-running-execution-profile.md";
     PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-researcher"
     );
@@ -16933,6 +16934,10 @@ var init_command_runtime_metadata = __esm({
       },
       requiredTools: QUICK_REQUIRED_TOOLS,
       optionalAgents: QUICK_OPTIONAL_AGENTS,
+      requiredInputPaths: [
+        QUICK_SPEC_PATH,
+        LONG_RUNNING_EXECUTION_PROFILE_PATH
+      ],
       spec: {
         path: runtimeMetadataSourceId("quick"),
         title: "`/blu-quick`",
@@ -16940,7 +16945,7 @@ var init_command_runtime_metadata = __esm({
         rootRoutable: true,
         purpose: "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.",
         reads: [
-          "project status, effective config, command availability, and current next-step posture through MCP"
+          "lightweight preflight classification, project status, effective config, command availability, quick-report overwrite posture, and current next-step posture through MCP"
         ],
         writes: [
           "quick-run-latest report through blueprint_artifact_report_write",
@@ -16959,7 +16964,7 @@ var init_command_runtime_metadata = __esm({
           ".blueprint write guard",
           "workflow advisory"
         ],
-        contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; read effective blueprint_config_get before optional subagent decisions, keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, treat --discuss, --research, --validate, and --full as bounded non-destructive depth preauthorization while still gating report overwrite, external dependencies, destructive operations, and scope expansion, run cheap validation for code mutation when discoverable or record an explicit skipped reason, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.",
+        contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; use blueprint_lightweight_preflight as the common read path for deterministic scope classification, health/new-project routing, implemented-only routes, effective config, and quick-run overwrite gates before optional subagent decisions, keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, treat --discuss, --research, --validate, and --full as bounded non-destructive depth preauthorization while still gating report overwrite, external dependencies, destructive operations, and scope expansion, run cheap validation for code mutation when discoverable or record an explicit skipped reason, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -17059,13 +17064,14 @@ var init_command_runtime_metadata = __esm({
       },
       requiredTools: FAST_REQUIRED_TOOLS,
       optionalAgents: [],
+      requiredInputPaths: [FAST_SPEC_PATH],
       spec: {
         path: runtimeMetadataSourceId("fast"),
         title: "`/blu-fast`",
         executionProfile: "interactive-read",
         rootRoutable: true,
         purpose: "`fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.",
-        reads: ["project status preflight through MCP"],
+        reads: ["lightweight preflight classification and project status through MCP"],
         writes: ["optional .blueprint/STATE.md"]
       },
       runtimeReference: {
@@ -17080,7 +17086,7 @@ var init_command_runtime_metadata = __esm({
           ".blueprint write guard",
           "workflow advisory"
         ],
-        contractNotes: "Interactive-read profile for trivial inline execution: qualify only explicit obvious tasks with no research, multi-file blast-radius analysis, useful durable report, validation pass beyond ordinary user review, or subagent value; keep administrative preflight to project status only, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized and healthy, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.",
+        contractNotes: "Interactive-read profile for trivial inline execution: use blueprint_lightweight_preflight as the common read path for deterministic scope classification, project health, and implemented-only next action, qualify only explicit obvious tasks with no research, multi-file blast-radius analysis, useful durable report, validation pass beyond ordinary user review, or subagent value; keep administrative preflight to lightweight preflight only, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized and healthy, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -70386,7 +70392,8 @@ var init_project = __esm({
     PROJECT_TOOL_NAMES = [
       "blueprint_command_catalog",
       "blueprint_project_init",
-      "blueprint_project_status"
+      "blueprint_project_status",
+      "blueprint_lightweight_preflight"
     ];
     AVAILABLE_TOOL_NAMES = /* @__PURE__ */ new Set([
       ...PROJECT_TOOL_NAMES,
@@ -84742,6 +84749,521 @@ var godReviewToolDefinitions = [
 
 // src/mcp/tool-definitions.ts
 init_impact();
+
+// src/mcp/tools/lightweight.ts
+init_v4();
+import { promises as fs14 } from "node:fs";
+
+// src/mcp/lightweight-classifier.ts
+var VAGUE_TASK_PATTERNS = [
+  /^fix it$/,
+  /^make better$/,
+  /^do quick$/,
+  /^update stuff$/,
+  /^update this$/,
+  /^improve this$/,
+  /^clean this up$/,
+  /^help$/,
+  /^do it$/
+];
+var INVESTIGATION_PATTERNS = [
+  /\binvestigat(?:e|ing|ion)\b/,
+  /\bfailing\b/,
+  /\bflaky\b/,
+  /\berror\b/,
+  /\bexception\b/,
+  /\bstack trace\b/,
+  /\bregression\b/,
+  /\bdebug\b/,
+  /\bdiagnos(?:e|is|ing)\b/,
+  /\broot cause\b/,
+  /\bwhy (?:does|is|are)\b/
+];
+var PLAN_PHASE_PATTERNS = [
+  /\barchitecture\b/,
+  /\barchitectural\b/,
+  /\brefactor\b/,
+  /\bmigration\b/,
+  /\bmigrate\b/,
+  /\bmulti-wave\b/,
+  /\brollout\b/,
+  /\bcross-cutting\b/,
+  /\bmultiple subsystems\b/,
+  /\bseveral subsystems\b/,
+  /\bbroad\b/,
+  /\brepo-wide\b/,
+  /\ball commands\b/,
+  /\ball packages\b/,
+  /\ball routes\b/,
+  /\ball schemas\b/,
+  /\bnew schema\b/,
+  /\bsaved plan\b/,
+  /\bphase plan\b/
+];
+var EXECUTE_PHASE_PATTERNS = [
+  /\bexecute phase\b/,
+  /\bexecute the plan\b/,
+  /\bcarry out the plan\b/,
+  /\bimplement the plan\b/,
+  /\bship the rollout\b/,
+  /\broll out\b/
+];
+var HEALTH_PATTERNS = [
+  /\bhealth check\b/,
+  /\bproject health\b/,
+  /\bunhealthy\b/,
+  /\bpartial blueprint\b/,
+  /\brepair blueprint state\b/,
+  /\bfix blueprint state\b/
+];
+var NEW_PROJECT_PATTERNS = [
+  /\bnew project\b/,
+  /\bstart a project\b/,
+  /\bcreate a project\b/,
+  /\bbootstrap (?:a |an )?(?:new )?(?:blueprint |project|repo|repository|workspace)\b/,
+  /\bbootstrap(?:ing)? (?:this |the )?(?:blueprint |project|repo|repository|workspace)\b/,
+  /\binitialize (?:a |an )?(?:new )?(?:blueprint |project|repo|repository|workspace)\b/,
+  /\binitialize(?:d|ing)? (?:this |the )?(?:blueprint |project|repo|repository|workspace)\b/,
+  /\bset up a project\b/
+];
+var FAST_SURFACE_PATTERNS = [
+  /\breadme\b/,
+  /\bdocs?\b/,
+  /\bdocumentation\b/,
+  /\bheading\b/,
+  /\bcomment\b/,
+  /\bcopy\b/,
+  /\bwording\b/,
+  /\bspelling\b/,
+  /\btypo\b/,
+  /\bpackage description\b/
+];
+var FAST_EDIT_PATTERNS = [
+  /\bfix typo\b/,
+  /\bfix spelling\b/,
+  /\bupdate wording\b/,
+  /\brename heading\b/,
+  /\bupdate package description\b/,
+  /\bclarify\b/
+];
+var QUICK_ACTION_PATTERNS = [
+  /\brename\b/,
+  /\bupdate\b/,
+  /\bfix\b/,
+  /\bchange\b/,
+  /\badd\b/,
+  /\bremove\b/,
+  /\bedit\b/,
+  /\badjust\b/,
+  /\bwire\b/,
+  /\bpatch\b/,
+  /\bbootstrap\b/,
+  /\binitialize\b/
+];
+var BROAD_MIGRATION_PATTERNS = [
+  /\bmigrate all\b/,
+  /\bacross the repo\b/,
+  /\bevery command\b/,
+  /\ball command[s]?\b/,
+  /\bentire\b/,
+  /\bglobal\b/
+];
+var QUICK_SCOPE_RISK_PATTERNS = [
+  /\bacross\b/,
+  /\bfront-?end\b.*\bback-?end\b/,
+  /\bback-?end\b.*\bfront-?end\b/,
+  /\bclient\b.*\bserver\b/,
+  /\bserver\b.*\bclient\b/,
+  /\bdocs?\b.*\btests?\b.*\brelease notes?\b/,
+  /\brelease notes?\b.*\bdocs?\b.*\btests?\b/,
+  /\bmultiple (?:files|modules|packages|surfaces|areas)\b/,
+  /\bseveral (?:files|modules|packages|surfaces|areas)\b/
+];
+var MULTI_FILE_OR_ARCHITECTURE_PATTERNS = [
+  /\band update\b/,
+  /\band add\b/,
+  /\band rename\b/,
+  /\band remove\b/,
+  /\btests?\b/,
+  /\barchitecture\b/,
+  /\bsubsystems?\b/
+];
+function normalizeTaskText(taskText) {
+  return taskText.trim().toLowerCase().replace(/\s+/g, " ");
+}
+function matchesAny(value, patterns) {
+  return patterns.some((pattern) => pattern.test(value));
+}
+function hasFastDisqualifier(taskText, flags) {
+  return Boolean(
+    flags?.discuss || flags?.research || flags?.validate || flags?.full || matchesAny(taskText, INVESTIGATION_PATTERNS) || matchesAny(taskText, BROAD_MIGRATION_PATTERNS) || matchesAny(taskText, MULTI_FILE_OR_ARCHITECTURE_PATTERNS)
+  );
+}
+function isExplicitlyVague(taskText) {
+  if (taskText.length === 0) {
+    return true;
+  }
+  if (VAGUE_TASK_PATTERNS.some((pattern) => pattern.test(taskText))) {
+    return true;
+  }
+  const words = taskText.split(" ");
+  return words.length <= 2 && !matchesAny(taskText, FAST_SURFACE_PATTERNS);
+}
+function qualifiesForFast(taskText, flags) {
+  if (hasFastDisqualifier(taskText, flags)) {
+    return false;
+  }
+  return matchesAny(taskText, FAST_EDIT_PATTERNS) && matchesAny(taskText, FAST_SURFACE_PATTERNS);
+}
+function qualifiesForQuick(taskText) {
+  return matchesAny(taskText, QUICK_ACTION_PATTERNS) && !matchesAny(taskText, BROAD_MIGRATION_PATTERNS) && !matchesAny(taskText, QUICK_SCOPE_RISK_PATTERNS) && !matchesAny(taskText, EXECUTE_PHASE_PATTERNS) && !matchesAny(taskText, NEW_PROJECT_PATTERNS) && !matchesAny(taskText, HEALTH_PATTERNS);
+}
+function buildClassification(route, confidence, reasons, allowedWrites, requiredGates, validationBudget) {
+  return {
+    route,
+    confidence,
+    reasons,
+    allowedWrites,
+    requiredGates,
+    validationBudget
+  };
+}
+function classifyLightweightScope({
+  mode,
+  taskText,
+  flags
+}) {
+  const normalizedTaskText = normalizeTaskText(taskText);
+  if (normalizedTaskText.length === 0) {
+    return buildClassification(
+      "clarify",
+      "high",
+      ["Task text is blank."],
+      [],
+      ["task-clarity"],
+      "ask"
+    );
+  }
+  if (isExplicitlyVague(normalizedTaskText)) {
+    return buildClassification(
+      "clarify",
+      "high",
+      ["Task text is too vague for deterministic routing."],
+      [],
+      ["task-clarity"],
+      "ask"
+    );
+  }
+  if (matchesAny(normalizedTaskText, HEALTH_PATTERNS)) {
+    return buildClassification(
+      "health",
+      "high",
+      ["Task asks for repo or Blueprint health recovery."],
+      [],
+      ["project-health"],
+      "route"
+    );
+  }
+  if (matchesAny(normalizedTaskText, NEW_PROJECT_PATTERNS)) {
+    return buildClassification(
+      "new-project",
+      "high",
+      ["Task is project bootstrap or initialization work."],
+      [".blueprint/ bootstrap artifacts through MCP"],
+      ["bootstrap-intent"],
+      "route"
+    );
+  }
+  if (matchesAny(normalizedTaskText, INVESTIGATION_PATTERNS)) {
+    return buildClassification(
+      "debug",
+      "high",
+      ["Task is symptom-first or investigation-oriented."],
+      [],
+      ["issue-statement"],
+      "ask"
+    );
+  }
+  if (matchesAny(normalizedTaskText, EXECUTE_PHASE_PATTERNS)) {
+    return buildClassification(
+      "execute-phase",
+      "high",
+      ["Task explicitly asks for saved-plan or rollout execution."],
+      ["phase execution summaries through MCP"],
+      ["saved-plan"],
+      "route"
+    );
+  }
+  if (matchesAny(normalizedTaskText, PLAN_PHASE_PATTERNS) || matchesAny(normalizedTaskText, BROAD_MIGRATION_PATTERNS) || matchesAny(normalizedTaskText, QUICK_SCOPE_RISK_PATTERNS)) {
+    return buildClassification(
+      "plan-phase",
+      "high",
+      ["Task looks broad, architectural, or migration-oriented."],
+      [],
+      ["scope-review"],
+      "route"
+    );
+  }
+  if (mode === "fast" && qualifiesForFast(normalizedTaskText, flags)) {
+    return buildClassification(
+      "fast",
+      "high",
+      ["Task is an explicit trivial text or docs edit."],
+      ["repo files", ".blueprint/STATE.md through blueprint_state_update"],
+      [],
+      "none"
+    );
+  }
+  if (qualifiesForQuick(normalizedTaskText)) {
+    const reasons = ["Task is explicit and bounded but not trivial inline work."];
+    if (mode === "fast") {
+      reasons.push("Fast mode can reroute bounded non-trivial work to quick.");
+    }
+    if (flags?.validate || /\btests?\b/.test(normalizedTaskText)) {
+      reasons.push("Task suggests cheap validation should stay in scope.");
+    }
+    return buildClassification(
+      "quick",
+      mode === "fast" ? "high" : "medium",
+      reasons,
+      [
+        "repo files",
+        "quick-run-latest through blueprint_artifact_report_write",
+        ".blueprint/STATE.md through blueprint_state_update"
+      ],
+      flags?.validate || /\btests?\b/.test(normalizedTaskText) ? ["cheap-validation"] : [],
+      "cheap"
+    );
+  }
+  return buildClassification(
+    "clarify",
+    "low",
+    ["Task does not match a safe deterministic lightweight route."],
+    [],
+    ["task-clarity"],
+    "ask"
+  );
+}
+
+// src/mcp/tools/lightweight.ts
+init_artifacts();
+init_config();
+init_project();
+var lightweightPreflightInputSchema = {
+  cwd: string2().optional(),
+  mode: _enum(["fast", "quick"]),
+  taskText: string2(),
+  flags: array(string2()).optional()
+};
+function normalizeFlags(flags = []) {
+  return flags.map((flag) => flag.trim().toLowerCase()).filter((flag) => flag.length > 0).map((flag) => flag.replace(/^--/, ""));
+}
+function toClassifierFlags(flags = []) {
+  const normalized = new Set(normalizeFlags(flags));
+  return {
+    discuss: normalized.has("discuss") || normalized.has("full"),
+    research: normalized.has("research") || normalized.has("full"),
+    validate: normalized.has("validate") || normalized.has("full"),
+    full: normalized.has("full")
+  };
+}
+function projectHealthStatus(status) {
+  if (status.status === "uninitialized") {
+    return "uninitialized";
+  }
+  if (status.status === "partial") {
+    return "partial";
+  }
+  if (!status.initialized) {
+    return "unhealthy";
+  }
+  const blockingWarnings = status.health.warnings.filter(
+    (warning) => !/validated and ready for reuse|ready for reuse/i.test(warning)
+  );
+  return status.health.missingArtifacts.length === 0 && blockingWarnings.length === 0 ? "healthy" : "unhealthy";
+}
+function routeAction(route) {
+  return route === "fast" || route === "quick" ? `/blu-${route}` : `/blu-${route}`;
+}
+function deriveGatedClassification(args) {
+  if (args.healthGate === "route-health") {
+    return {
+      ...args.classification,
+      route: "health",
+      confidence: "high",
+      allowedWrites: [],
+      requiredGates: [
+        .../* @__PURE__ */ new Set([...args.classification.requiredGates, "project-health"])
+      ],
+      validationBudget: "route",
+      reasons: [
+        "Blueprint state is partial or unhealthy; route to health before mutation.",
+        ...args.classification.reasons
+      ]
+    };
+  }
+  if (args.healthGate === "route-new-project") {
+    return {
+      ...args.classification,
+      route: "new-project",
+      confidence: "high",
+      allowedWrites: [],
+      requiredGates: [
+        .../* @__PURE__ */ new Set([...args.classification.requiredGates, "project-bootstrap"])
+      ],
+      validationBudget: "route",
+      reasons: [
+        "Blueprint is uninitialized; route to new-project before Blueprint persistence.",
+        ...args.classification.reasons
+      ]
+    };
+  }
+  if (args.health === "uninitialized" && args.mode === "fast" && args.classification.route === "fast") {
+    return {
+      ...args.classification,
+      allowedWrites: args.classification.allowedWrites.filter(
+        (allowedWrite) => !/\.blueprint\//.test(allowedWrite)
+      ),
+      requiredGates: [
+        .../* @__PURE__ */ new Set([...args.classification.requiredGates, "no-blueprint-persistence"])
+      ],
+      reasons: [
+        "Blueprint is uninitialized; fast may only perform trivial inline repo work without Blueprint persistence.",
+        ...args.classification.reasons
+      ]
+    };
+  }
+  return args.classification;
+}
+function deriveNextSafeAction(args) {
+  if (args.healthGate === "route-health") {
+    return "/blu-health";
+  }
+  if (args.healthGate === "route-new-project") {
+    return "/blu-new-project";
+  }
+  if (args.classification.route === "clarify") {
+    return `/blu-${args.mode}`;
+  }
+  return args.classification.route === "fast" || args.classification.route === "quick" ? `/blu-${args.classification.route}` : routeAction(args.classification.route);
+}
+function workflowConfigSubset(config2) {
+  if (!config2 || typeof config2 !== "object" || !("workflow" in config2)) {
+    return void 0;
+  }
+  const workflow = config2.workflow;
+  if (!workflow || typeof workflow !== "object") {
+    return void 0;
+  }
+  return {
+    subagents: typeof workflow.subagents === "boolean" ? workflow.subagents : void 0,
+    no_uat: typeof workflow.no_uat === "boolean" ? workflow.no_uat : void 0,
+    quick: workflow.quick
+  };
+}
+async function quickRunReportStatus(projectRoot) {
+  const reportPath = buildBlueprintReportPath("quick-run-latest");
+  const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
+  try {
+    const stats = await fs14.stat(absolutePath);
+    return {
+      name: "quick-run-latest",
+      exists: true,
+      path: reportPath,
+      updatedAt: stats.mtime.toISOString()
+    };
+  } catch {
+    return {
+      name: "quick-run-latest",
+      exists: false,
+      path: reportPath
+    };
+  }
+}
+async function blueprintLightweightPreflight(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const normalizedFlags = normalizeFlags(args.flags);
+  const baseClassification = classifyLightweightScope({
+    mode: args.mode,
+    taskText: args.taskText,
+    flags: toClassifierFlags(args.flags)
+  });
+  const status = await blueprintProjectStatus({ cwd: projectRoot });
+  const health = projectHealthStatus(status);
+  const healthGate = health === "partial" || health === "unhealthy" ? "route-health" : health === "uninitialized" && (args.mode === "quick" || baseClassification.route !== "fast") ? "route-new-project" : "pass";
+  const classification = deriveGatedClassification({
+    mode: args.mode,
+    classification: baseClassification,
+    healthGate,
+    health
+  });
+  const catalog = await blueprintCommandCatalog();
+  const implementedRoutes = Object.values(catalog.commands).filter((entry) => entry.implemented).map((entry) => entry.command).sort();
+  const warnings = [...status.health.warnings];
+  let effectiveConfig;
+  if (args.mode === "quick") {
+    try {
+      const configResult = await blueprintConfigGet({
+        cwd: projectRoot,
+        scope: "effective"
+      });
+      effectiveConfig = {
+        workflow: workflowConfigSubset(configResult.config),
+        provenance: configResult.provenance,
+        warnings: configResult.warnings
+      };
+      warnings.push(...configResult.warnings);
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : String(error2);
+      warnings.push(`Effective config could not be read: ${message}`);
+    }
+  }
+  const quickReport = args.mode === "quick" ? await quickRunReportStatus(projectRoot) : void 0;
+  const overwriteGate = args.mode !== "quick" || !quickReport?.exists ? "none" : normalizedFlags.includes("force") ? "force-bypassed" : "requires-confirmation";
+  const clarityGate = classification.route === "clarify" ? "requires-clarification" : "pass";
+  const nextSafeAction = deriveNextSafeAction({
+    mode: args.mode,
+    classification,
+    healthGate,
+    overwriteGate
+  });
+  if (args.mode === "fast" && health === "uninitialized") {
+    warnings.push(
+      "Blueprint is uninitialized; fast may complete trivial repo work inline but must not persist Blueprint state."
+    );
+  }
+  return {
+    mode: args.mode,
+    classification,
+    projectStatus: {
+      initialized: status.initialized,
+      health,
+      currentPhase: status.currentPhase,
+      currentMilestone: status.currentMilestone,
+      nextAction: status.nextAction
+    },
+    ...effectiveConfig ? { effectiveConfig } : {},
+    implementedRoutes,
+    ...quickReport ? { quickReport } : {},
+    gates: {
+      healthGate,
+      overwriteGate,
+      clarityGate
+    },
+    nextSafeAction,
+    warnings: [...new Set(warnings)]
+  };
+}
+var lightweightToolDefinitions = [
+  {
+    name: "blueprint_lightweight_preflight",
+    description: "Read-only deterministic preflight for /blu-fast and /blu-quick scope, health, routing, config, and overwrite gates.",
+    inputSchema: lightweightPreflightInputSchema,
+    handler: async (args) => blueprintLightweightPreflight(args)
+  }
+];
+
+// src/mcp/tool-definitions.ts
 init_phase();
 init_plan_run();
 init_project();
@@ -84751,6 +85273,7 @@ init_update();
 init_workspace();
 var TOOL_DEFINITIONS = [
   ...projectToolDefinitions,
+  ...lightweightToolDefinitions,
   ...configToolDefinitions,
   ...stateToolDefinitions,
   ...phaseToolDefinitions,
@@ -84802,7 +85325,7 @@ var blueprintToolNames = TOOL_DEFINITIONS.map(
 
 // src/mcp/write-failure-log.ts
 init_artifacts();
-import { promises as fs14 } from "node:fs";
+import { promises as fs15 } from "node:fs";
 import path17 from "node:path";
 var BLUEPRINT_DIR2 = ".blueprint";
 var MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
@@ -84884,8 +85407,8 @@ async function appendFailureEntry(cwd, entry) {
   try {
     const projectRoot = await ensureRepoRoot(cwd);
     const absoluteLogPath = path17.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
-    await fs14.mkdir(path17.dirname(absoluteLogPath), { recursive: true });
-    await fs14.appendFile(
+    await fs15.mkdir(path17.dirname(absoluteLogPath), { recursive: true });
+    await fs15.appendFile(
       absoluteLogPath,
       `${JSON.stringify({
         ...entry,

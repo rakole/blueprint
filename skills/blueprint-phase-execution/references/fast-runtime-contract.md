@@ -24,8 +24,9 @@ whether a task truly qualifies for the trivial inline path.
 
 ## State And Persistence
 
-- Start from `mcp_blueprint_blueprint_project_status` so initialization and
-  health are known before any Blueprint-owned write.
+- Start from `mcp_blueprint_blueprint_lightweight_preflight` with `mode:
+  "fast"` so deterministic scope classification, initialization, health, and
+  implemented-only next action are known before any Blueprint-owned write.
 - If Blueprint is partial or unhealthy, stop and route to `/blu-health` before
   persisting through broken state.
 - If Blueprint is uninitialized, the task may still complete inline, but stay
@@ -39,7 +40,7 @@ whether a task truly qualifies for the trivial inline path.
 
 - Execution profile: `interactive-read`.
 - `/blu-fast` latency budget:
-  - Blueprint administrative preflight: project status only
+  - Blueprint administrative preflight: lightweight preflight only
   - subagents: 0
   - visible progress helpers: 0
   - tracker state: 0

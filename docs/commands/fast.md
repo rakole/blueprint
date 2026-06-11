@@ -44,7 +44,7 @@
 ## Blueprint And Global State Reads
 
 
-- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_lightweight_preflight` -> `{classification, projectStatus, implementedRoutes, gates, nextSafeAction, warnings}`
 
 
 ## Blueprint And Global State Writes
@@ -56,7 +56,7 @@
 ## Required MCP Tools
 
 
-- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_lightweight_preflight` -> `{classification, projectStatus, implementedRoutes, gates, nextSafeAction, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 

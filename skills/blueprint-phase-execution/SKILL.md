@@ -115,6 +115,9 @@ contracts from manifests, local references, and MCP/artifact contract reads.
   `quick-run-latest`, plus the structured quick-run report `model`, not
   Markdown `content` and not a `.blueprint/reports/...` path. Use the returned
   `path` as authoritative.
+- `blueprint_lightweight_preflight`: use it as the deterministic read-only
+  scope, health, config, implemented-route, quick-report overwrite, and next
+  safe action preflight for `/blu-fast` and `/blu-quick`.
 - `blueprint_state_update`: when refreshed artifact truth should drive routing,
   call it with `base: "synced"` so `STATE.md` recomputes the next safe action.
 
@@ -142,15 +145,13 @@ does not widen a command's tool scope.
 
 ### `/blu-quick`
 
-- `blueprint_project_status`
-- `blueprint_config_get`
-- `blueprint_command_catalog`
+- `blueprint_lightweight_preflight`
 - `blueprint_artifact_report_write`
 - `blueprint_state_update`
 
 ### `/blu-fast`
 
-- `blueprint_project_status`
+- `blueprint_lightweight_preflight`
 - `blueprint_state_update`
 
 ## Optional Agents
@@ -241,10 +242,12 @@ multi-wave execution.
 - Keep the active stage visible, keep the resolved scope, pending gate,
   execution mode, and next safe action explicit, and treat tracker state as
   session-local coordination only.
-- Read effective `blueprint_config_get` before optional subagent decisions, and
-  treat `--discuss`, `--research`, `--validate`, and `--full` as bounded
-  non-destructive depth preauthorization rather than overwrite, destructive, or
-  scope-expansion approval.
+- Start from `blueprint_lightweight_preflight` before optional subagent
+  decisions so effective config, health/new-project routing, implemented routes,
+  and overwrite gates share one deterministic read path; treat `--discuss`,
+  `--research`, `--validate`, and `--full` as bounded non-destructive depth
+  preauthorization rather than overwrite, destructive, or scope-expansion
+  approval.
 - Run cheap validation for code mutation when a bounded safe check is
   discoverable, or record an explicit skipped reason in the quick report.
 - Persist durable quick-run evidence through
@@ -264,8 +267,8 @@ initialized projects, and no quick-run report persistence.
 - Execution profile: `interactive-read`.
 - `/blu-fast` explicitly excludes `update_topic`, `write_todos`, and tracker
   tools; finish the run inline or reroute.
-- Start from `blueprint_project_status`, keep the ask genuinely small, and do
-  not create durable reports or phase artifacts.
+- Start from `blueprint_lightweight_preflight`, keep the ask genuinely small,
+  and do not create durable reports or phase artifacts.
 - Prefer `/blu-progress` unless a narrower implemented follow-up is obvious
   and safe.
 

@@ -250,7 +250,8 @@ const DOCLESS_FALLBACK_CATALOG_ROWS = [
 const PROJECT_TOOL_NAMES = [
   "blueprint_command_catalog",
   "blueprint_project_init",
-  "blueprint_project_status"
+  "blueprint_project_status",
+  "blueprint_lightweight_preflight"
  ] as const satisfies readonly BlueprintInternalToolName[];
 const AVAILABLE_TOOL_NAMES = new Set([
   ...PROJECT_TOOL_NAMES,
