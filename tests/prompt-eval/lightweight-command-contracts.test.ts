@@ -16,6 +16,11 @@ const fixtureRoot = path.join(
   "tests/fixtures/prompt-eval/lightweight"
 );
 
+const MANIFEST_BUDGETS = {
+  fast: { maxLines: 40, maxBytes: 4500 },
+  quick: { maxLines: 60, maxBytes: 14000 }
+} as const;
+
 async function readGolden(command: "fast" | "quick"): Promise<LightweightCommandGolden> {
   return JSON.parse(
     await readFile(path.join(fixtureRoot, `golden-${command}.json`), "utf8")
@@ -133,6 +138,8 @@ test("fast prompt-eval packet enforces the trivial no-tracker contract", async (
   );
   assert.match(promptText, /Do not create quick-run reports/i);
   assert.match(promptText, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(promptText, /Common path tool budget:[\s\S]*lightweight_preflight[\s\S]*state_update/i);
+  assert.match(promptText, /Final response budget: max 8 lines/i);
   assert.match(promptText, /Do not use subagents/i);
 });
 
@@ -152,15 +159,26 @@ test("quick prompt-eval packet enforces durable quick-run structure without phas
     /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i
   );
   assert.match(promptText, /Show progress only at meaningful stage or gate transitions/i);
-  assert.match(promptText, /Do not spam stage narration/i);
+  assert.match(promptText, /Do not spam stage narration or emit in-flight updates between transitions/i);
   assert.match(promptText, /report\.quick-run` model/i);
   assert.match(promptText, /Do not pass Markdown `content`/i);
   assert.match(promptText, /run cheap validation by default/i);
+  assert.match(
+    promptText,
+    /For `\/blu-quick`, treat\s+the shared `Validate` stage as pre-report verification[\s\S]*before `mcp_blueprint_blueprint_artifact_report_write`/i
+  );
+  assert.doesNotMatch(promptText, /post-write checks/i);
+  assert.match(promptText, /administrativeToolCalls\?: number/i);
+  assert.match(promptText, /subagentCount\?: number/i);
+  assert.match(promptText, /validationCommandCount\?: number/i);
+  assert.match(promptText, /finalSummaryBudget\?: "short" \| "normal"/i);
   assert.match(promptText, /overwrite confirmation/i);
   assert.match(
     promptText,
     /report overwrite(?: confirmation)? unless `?--force`? is present/i
   );
+  assert.match(promptText, /Common path tool budget:[\s\S]*lightweight_preflight[\s\S]*validation shell or test commands[\s\S]*artifact_report_write[\s\S]*state_update/i);
+  assert.match(promptText, /Do not add redundant primitive MCP reads on the common path/i);
   assert.match(promptText, /saved phase plan,\s*multi-wave execution/i);
   assert.match(
     promptText,
@@ -183,10 +201,39 @@ test("quick prompt-eval packet enforces durable quick-run structure without phas
   assert.match(promptText, /"quickTask": ""/);
   assert.match(promptText, /"scopeHandled": \[\]/);
   assert.match(promptText, /do not hand-address `\.blueprint\/reports\/quick-run-latest\.md`/i);
+  assert.match(promptText, /Final response budget: max 12 lines by default/i);
+  assert.match(promptText, /Keep detailed evidence, file lists, validation logs/i);
   assert.match(
     promptText,
     /(?:tracker state session-local only|keep it session-local).*?(?:do not replace Blueprint MCP persistence|do not let it impersonate a saved phase plan)/is
   );
+});
+
+test("lightweight manifests stay cache-friendly and fence-free", async () => {
+  for (const command of LIGHTWEIGHT_COMMANDS) {
+    const packet = await buildLightweightCommandPacket(command);
+    const manifestBytes = Buffer.byteLength(packet.manifestPrompt, "utf8");
+    const manifestLines = packet.manifestPrompt.split("\n").length;
+    const budget = MANIFEST_BUDGETS[command];
+
+    assert.doesNotMatch(
+      packet.manifestPrompt,
+      /```|~~~/
+    );
+    assert.ok(
+      manifestLines <= budget.maxLines,
+      `${command} manifest prompt should stay within ${budget.maxLines} lines, got ${manifestLines}`
+    );
+    assert.ok(
+      manifestBytes <= budget.maxBytes,
+      `${command} manifest prompt should stay within ${budget.maxBytes} bytes, got ${manifestBytes}`
+    );
+    assert.match(packet.manifestPrompt, /Preserve a cache-friendly prompt layout/i);
+    assert.match(
+      packet.manifestPrompt,
+      /Keep detailed behavior in the skill reference and command-specific input bundle|command-specific runtime reference/i
+    );
+  }
 });
 
 test("shared phase-execution skill keeps fast and quick command sections structurally isolated", async () => {

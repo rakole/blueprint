@@ -30,6 +30,7 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_lightweight_preflight")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_report_write")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
+  assert.match(commandFile, /Preserve a cache-friendly prompt layout/i);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
@@ -38,7 +39,7 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /session-local progress tools only/i);
   assert.match(commandFile, /session-local, pair it with visible `write_todos`/i);
   assert.match(commandFile, /Show progress only at meaningful stage or gate transitions/i);
-  assert.match(commandFile, /Do not spam stage narration/i);
+  assert.match(commandFile, /Do not spam stage narration or emit in-flight updates between transitions/i);
   assert.match(commandFile, /When the host lacks them, preserve the same compact progress in concise prose/i);
   assert.match(commandFile, /Never claim helper calls were made when they were unavailable/i);
   assert.match(commandFile, /When tracker support is unavailable, keep the same bounded quick flow linear/i);
@@ -49,24 +50,28 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /`--force`/);
   assert.match(commandFile, /pre-authorization for (?:a )?bounded non-destructive/i);
   assert.match(commandFile, /For code mutation, run cheap validation by default/i);
-  assert.match(commandFile, /validation outcome including any skipped reason or repair-attempt outcome/i);
+  assert.match(commandFile, /validation status including any skipped reason or repair-attempt outcome/i);
   assert.match(commandFile, /report\.quick-run` model with `schemaVersion: 2`/i);
+  assert.match(commandFile, /optional lightweight `runMetrics` counters/i);
+  assert.match(commandFile, /Do not require exact token counts/i);
   assert.match(
     commandFile,
-    /must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`, and may include `runMetrics`/i
+    /must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`[\s\S]*optional lightweight `runMetrics` counters/i
   );
   assert.match(commandFile, /Record the quick report overwrite gate in `gates`/i);
   assert.match(commandFile, /Treat the returned `path` and `status` as authoritative/i);
+  assert.match(commandFile, /Common path tool budget:[\s\S]*lightweight_preflight[\s\S]*validation shell or test commands[\s\S]*artifact_report_write[\s\S]*state_update/i);
+  assert.match(commandFile, /Do not add redundant primitive MCP reads on the common path/i);
   assert.match(commandFile, /make at most one bounded repair attempt/i);
   assert.match(commandFile, /use `validation\.repairAttempt` to distinguish no repair attempt, repaired, or still-failing outcomes/i);
   assert.match(commandFile, /do not claim success unless validation actually passes/i);
   assert.match(
     commandFile,
-    /Return a concise completion summary with only the bounded task outcome, the validation outcome[\s\S]*authoritative quick-run report `status` and `path`, and the next safe implemented action/i
+    /Return a concise completion summary with the task, depth used, validation status[\s\S]*authoritative quick-run report `status` and `path`, warnings or deferred work, and the next safe implemented action/i
   );
-  assert.match(commandFile, /Leave report-depth detail, tracker usage, gates, risks, and deferred work in the durable report/i);
+  assert.match(commandFile, /Keep detailed evidence, file lists, validation logs, overwrite-gate detail, and tracker detail in the durable quick-run report/i);
+  assert.match(commandFile, /Final response budget: max 12 lines by default/i);
   assert.doesNotMatch(commandFile, /whether tracker-backed branching was needed/i);
-  assert.doesNotMatch(commandFile, /warnings or deferred follow-up work/i);
   assert.match(commandFile, /use `blueprint-researcher`[^\n]+unfamiliar repo area[^\n]+`workflow\.subagents` is enabled/i);
   assert.match(commandFile, /use `blueprint-planner`[^\n]+short bounded checklist[^\n]+multiple ordered steps[^\n]+`workflow\.subagents` is enabled/i);
   assert.match(commandFile, /use `blueprint-executor`[^\n]+write ownership is clear[^\n]+`workflow\.subagents` is enabled/i);
@@ -74,12 +79,13 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /if `workflow\.subagents` is disabled or the Blueprint agents are unavailable, keep the quick run inline/i);
   assert.match(commandFile, /do not use generic helper agents, browser-only agents, shell-only agents, or web-search-only substitutes/i);
   assert.match(commandFile, /do not use tracker as a saved plan, and do not use subagents to widen scope/i);
-  assert.match(commandFile, /"quickTask": ""/);
-  assert.match(commandFile, /"boundedScope": \[\]/);
-  assert.match(commandFile, /"reportFieldsToReturn": \["evidenceRead", "changesMade", "validation", "risks", "deferredWork"\]/);
-  assert.match(commandFile, /"scopeHandled": \[\]/);
-  assert.match(commandFile, /"changesOrRecommendations": \[\]/);
-  assert.match(commandFile, /"nextBoundedUnit": ""/);
+  assert.match(commandFile, /compact handoff packet/i);
+  assert.match(commandFile, /compact output packet/i);
+  assert.match(commandFile, /command-specific runtime reference/i);
+  assert.doesNotMatch(commandFile, /"quickTask": ""/);
+  assert.doesNotMatch(commandFile, /"scopeHandled": \[\]/);
+  assert.doesNotMatch(commandFile, /administrativeToolCalls\?: number/i);
+  assert.doesNotMatch(commandFile, /```/);
   assert.match(commandFile, /quick-run-latest/);
   assert.match(commandFile, /\/blu-plan-phase/);
   assert.match(commandFile, /\/blu-execute-phase/);
@@ -110,10 +116,11 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   );
   assert.match(
     skillFile,
-    /### `\/blu-quick`[\s\S]*blueprint_lightweight_preflight[\s\S]*blueprint_artifact_report_write[\s\S]*blueprint_state_update/
+    /### `\/blu-quick`[\s\S]*blueprint_lightweight_preflight[\s\S]*validation shell or test commands outside[\s\S]*blueprint_artifact_report_write[\s\S]*blueprint_state_update/
   );
 
   assert.match(quickRuntimeContract, /mcp_blueprint_blueprint_lightweight_preflight/);
+  assert.match(quickRuntimeContract, /static\s+prefix/i);
   assert.match(quickRuntimeContract, /effective\s+subagent config/);
   assert.match(quickRuntimeContract, /quick-run-latest/);
   assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
@@ -135,9 +142,11 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /"scopeHandled": \[\]/);
   assert.match(quickRuntimeContract, /"nextBoundedUnit": ""/);
   assert.match(quickRuntimeContract, /Show progress only at meaningful stage or gate transitions/i);
-  assert.match(quickRuntimeContract, /Do not spam stage narration/i);
+  assert.match(quickRuntimeContract, /Do not spam stage narration or emit in-flight updates between transitions/i);
   assert.match(quickRuntimeContract, /When helpers are unavailable, use concise prose/i);
   assert.match(quickRuntimeContract, /Never claim helper calls were made when unavailable/i);
+  assert.match(quickRuntimeContract, /Common path tool budget:[\s\S]*lightweight_preflight[\s\S]*validation shell or test commands[\s\S]*artifact_report_write[\s\S]*state_update/i);
+  assert.match(quickRuntimeContract, /Do not add redundant primitive MCP\s+reads on the common path/i);
   assert.match(quickRuntimeContract, /saved phase plan,\s+multi-wave execution/i);
   assert.match(quickRuntimeContract, /--discuss`, `--research`, `--validate`, and `--full`/);
   assert.match(quickRuntimeContract, /pre-authorization\s+for bounded non-destructive depth branches/i);
@@ -145,10 +154,21 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /`schemaVersion: 2`/);
   assert.match(
     quickRuntimeContract,
-    /must include `task`, `classification`, `depthUsed`,\s+`evidenceRead`, `changesMade`, `validation`, `gates`, `risks`,\s+`deferredWork`, and `nextSafeAction`, and may include `runMetrics`/i
+    /must include `task`, `classification`, `depthUsed`,\s+`evidenceRead`, `changesMade`, `validation`, `gates`, `risks`,\s+`deferredWork`, and `nextSafeAction`, and may include(?::|\s+`runMetrics`)/i
   );
   assert.match(quickRuntimeContract, /represent that overwrite gate in the\s+model `gates`/i);
   assert.match(quickRuntimeContract, /Treat the returned report `path` and `status` as authoritative/i);
+  assert.match(quickRuntimeContract, /administrativeToolCalls\?: number/i);
+  assert.match(quickRuntimeContract, /subagentCount\?: number/i);
+  assert.match(quickRuntimeContract, /validationCommandCount\?: number/i);
+  assert.match(quickRuntimeContract, /finalSummaryBudget\?: "short" \| "normal"/i);
+  assert.match(quickRuntimeContract, /When validation is needed, finish validation before[\s\S]*artifact_report_write/i);
+  assert.match(
+    quickRuntimeContract,
+    /For `\/blu-quick`, treat\s+the shared `Validate` stage as pre-report verification[\s\S]*before `mcp_blueprint_blueprint_artifact_report_write`/i
+  );
+  assert.doesNotMatch(quickRuntimeContract, /post-write checks/i);
+  assert.match(quickRuntimeContract, /Do not require exact token counts/i);
   assert.match(quickRuntimeContract, /at most one bounded repair attempt/i);
   assert.match(
     quickRuntimeContract,
@@ -157,8 +177,10 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /Do not claim success if validation failed/i);
   assert.match(
     quickRuntimeContract,
-    /Keep the final chat closeout high-signal only:[\s\S]*authoritative report `status` and `path`[\s\S]*next safe implemented action/i
+    /Keep the final chat closeout high-signal only:[\s\S]*task, depth used, validation status[\s\S]*authoritative report `status` and `path`[\s\S]*warnings or deferred work[\s\S]*next safe implemented action/i
   );
+  assert.match(quickRuntimeContract, /Keep detailed evidence, file lists, validation logs, gates, and tracker\s+detail in the durable report/i);
+  assert.match(quickRuntimeContract, /The final response stayed within 12 lines by default/i);
   assert.match(quickRuntimeContract, /blueprint-researcher/);
   assert.match(quickRuntimeContract, /blueprint-planner/);
   assert.match(quickRuntimeContract, /blueprint-executor/);
@@ -214,7 +236,11 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /use blueprint_lightweight_preflight as the common read path/i
+    /keep the static prompt prefix on command identity, hard contract, routing ladder, tool boundaries, and report schema expectations/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /Use blueprint_lightweight_preflight as the common read path/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
@@ -223,6 +249,10 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
     /Show progress only at meaningful stage or gate transitions/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /do not emit in-flight updates between transitions/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
@@ -239,6 +269,14 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
     /run cheap validation for code mutation when discoverable/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /common tool path to blueprint_lightweight_preflight first, optional validation shell or test commands outside Blueprint MCP before persistence when validation is needed, then blueprint_artifact_report_write and blueprint_state_update/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /without redundant primitive reads once preflight surfaced scope, health, config, route, and overwrite posture/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
@@ -282,6 +320,10 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
+    /optional runMetrics limited to administrativeToolCalls, subagentCount, validationCommandCount, and finalSummaryBudget short or normal without exact token counts/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
     /do not let quick impersonate saved planning or broad lifecycle execution/i
   );
   assert.match(
@@ -295,6 +337,14 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
     /treat the returned report path and status as authoritative/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /default final response within 12 lines with task, depth used, validation status, authoritative report path and status, warnings or deferred work, and the next safe action/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /keep detailed evidence in the quick-run report/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
@@ -337,6 +387,10 @@ test("quick generated catalog preserves the force overwrite bypass in runtime-ow
     quickEntry.runtimeReference?.contractNotes ?? "",
     /overwrite confirmation gate and any --force bypass represented in the model gates/i
   );
+  assert.match(
+    quickEntry.runtimeReference?.contractNotes ?? "",
+    /default final response within 12 lines/i
+  );
 });
 
 test("quick public docs use concrete task examples and avoid capture/planned-command drift", async () => {
@@ -355,7 +409,7 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
   assert.match(docsFile, /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i);
   assert.match(docsFile, /pre-authorization for bounded non-destructive depth branches/i);
   assert.match(docsFile, /Show progress only at meaningful stage or gate transitions/i);
-  assert.match(docsFile, /Do not spam stage narration/i);
+  assert.match(docsFile, /Do not spam stage narration or emit in-flight updates between transitions/i);
   assert.match(
     docsFile,
     /Use this public ladder when choosing a route:[\s\S]*\/blu-fast[\s\S]*trivial inline path[\s\S]*\/blu-quick[\s\S]*bounded work with light progress\/reporting[\s\S]*\/blu-plan-phase` or `\/blu-execute-phase[\s\S]*saved-plan or broader lifecycle route/i
@@ -371,21 +425,28 @@ test("quick public docs use concrete task examples and avoid capture/planned-com
   assert.match(docsFile, /do not use generic helper agents, browser-only agents, shell-only agents, or web-search-only substitutes/i);
   assert.match(docsFile, /do not use tracker as a saved plan, and do not use subagents to widen scope/i);
   assert.match(docsFile, /cheap validation evidence by default/i);
+  assert.match(docsFile, /Common path tool budget:[\s\S]*blueprint_lightweight_preflight[\s\S]*blueprint_artifact_report_write[\s\S]*blueprint_state_update/i);
+  assert.match(docsFile, /Do not add redundant primitive Blueprint reads on the common path/i);
   assert.match(docsFile, /`quick-run-latest` through `blueprint_artifact_report_write`/);
   assert.match(docsFile, /`schemaVersion: 2`/);
   assert.match(
     docsFile,
-    /must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`, and may include `runMetrics`/i
+    /must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`[\s\S]*may include `runMetrics`/i
   );
+  assert.match(docsFile, /Optional `runMetrics` stays lightweight; the command-specific runtime reference owns the exact optional counter names/i);
+  assert.match(docsFile, /Do not require exact token counts/i);
   assert.match(docsFile, /Represent the quick report overwrite confirmation gate in the model `gates`/i);
   assert.match(docsFile, /do not claim success unless validation actually passes/i);
   assert.match(docsFile, /use `validation\.repairAttempt` to distinguish no repair attempt versus still-failing/i);
-  assert.match(docsFile, /"quickTask": ""/);
-  assert.match(docsFile, /"scopeHandled": \[\]/);
+  assert.match(docsFile, /keep the handoff packet and return packet compact, bounded to the agreed scope, and aligned with the command-specific runtime reference/i);
+  assert.doesNotMatch(docsFile, /"quickTask": ""/);
+  assert.doesNotMatch(docsFile, /"scopeHandled": \[\]/);
   assert.match(
     docsFile,
-    /Keep the final chat closeout concise:[\s\S]*authoritative report `status` and `path`[\s\S]*next safe implemented action/i
+    /Keep the final chat closeout concise:[\s\S]*task, depth used, validation status[\s\S]*authoritative report `status` and `path`[\s\S]*warnings or deferred work[\s\S]*next safe implemented action/i
   );
+  assert.match(docsFile, /Keep detailed evidence in the quick-run report/i);
+  assert.match(docsFile, /Final response budget: max 12 lines by default/i);
   assert.match(docsFile, /routes to `\/blu-new-project`/);
   assert.doesNotMatch(docsFile, /\/blu quick$/m);
   assert.doesNotMatch(docsFile, /\/blu-quick --full/);

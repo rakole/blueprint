@@ -39,6 +39,8 @@
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: may mutate repo files for the trivial task and updates `STATE.md` only when running inside an initialized and healthy Blueprint project.
 - In-flight posture: none beyond a concise inline summary or reroute; `fast` does not expose the long-running progress layer.
+- Common path tool budget: `blueprint_lightweight_preflight` first, then `blueprint_state_update` only after a successful initialized and healthy run. Do not add redundant primitive Blueprint reads on the common path when preflight already surfaced classification, project health, and next action.
+- Final response budget: max 8 lines with qualification reason, state-update or no-write status, any reroute or warning, and the next safe implemented action.
 
 
 ## Blueprint And Global State Reads
@@ -112,6 +114,7 @@
 - Refuse to guess when the requested edit is not obvious from the task text.
 - Route oversized execution asks to `quick` or `plan-phase` instead of bluffing.
 - If state refresh is unsafe because Blueprint is missing or unhealthy, complete only the trivial repo task when safe and report no Blueprint write.
+- Never create or replace a quick-run report from `fast`.
 
 
 ## Acceptance Criteria

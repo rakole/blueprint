@@ -27,9 +27,10 @@
     "follow-up recommendations stay implemented-only"
   ],
   "finalResponseRequirements": [
-    "explain why the task qualified as fast",
-    "state whether Blueprint state was updated",
-    "include warnings or reroutes",
-    "include the next safe implemented action when applicable"
+    "max 8 lines",
+    "include qualification reason",
+    "include state update or no-write status",
+    "include warnings or reroutes when present",
+    "include the next safe implemented action"
   ]
 }

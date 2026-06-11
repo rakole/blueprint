@@ -46,6 +46,13 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
 - Load only the command-specific reference bundle for the active command. Do
   not inline `/blu-quick` or `/blu-fast` runtime details into
   `/blu-execute-phase` context.
+- Keep `/blu-fast` and `/blu-quick` cache-friendly: the static prompt prefix
+  should hold command identity, hard contract, routing ladder, tool
+  boundaries, and response or report schema expectations, while user task,
+  preflight result, overwrite metadata, and files/evidence/validation output
+  stay in the variable suffix via command-specific input bundles.
+- Keep long examples and verbose behavior notes in local references, not in the
+  manifests.
 
 ## Runtime Call Rules
 
@@ -254,6 +261,12 @@ multi-wave execution.
   `--research`, `--validate`, and `--full` as bounded non-destructive depth
   preauthorization rather than overwrite, destructive, or scope-expansion
   approval.
+- Keep the common quick path to `blueprint_lightweight_preflight` first. When
+  validation is needed, run validation shell or test commands outside
+  Blueprint MCP before `blueprint_artifact_report_write`, then persist through
+  `blueprint_artifact_report_write` and `blueprint_state_update`. Do not add
+  redundant primitive MCP reads when preflight already surfaced the scope,
+  health, config, route, and overwrite facts the run needs.
 - Use no subagents by default. Bring in `blueprint-researcher`,
   `blueprint-planner`, `blueprint-executor`, or `blueprint-verifier` only when
   the quick runtime contract's decision table says the bounded quality gain
@@ -263,6 +276,10 @@ multi-wave execution.
 - Persist durable quick-run evidence through
   `blueprint_artifact_report_write` with the bare canonical report name
   `quick-run-latest`.
+- Keep the default final quick closeout within 12 lines: task, depth used,
+  validation status, authoritative report `status` and `path`, warnings or
+  deferred work, and the next safe implemented action. Leave detailed evidence
+  in the quick-run report.
 - Prefer `/blu-progress` after completion unless a narrower implemented next
   step is obvious and safe.
 
@@ -278,7 +295,13 @@ initialized projects, and no quick-run report persistence.
 - `/blu-fast` explicitly excludes `update_topic`, `write_todos`, and tracker
   tools; finish the run inline or reroute.
 - Start from `blueprint_lightweight_preflight`, keep the ask genuinely small,
-  and do not create durable reports or phase artifacts.
+  keep the common path to preflight plus optional `blueprint_state_update`
+  only, avoid redundant primitive MCP reads when preflight already surfaced
+  classification and health, and do not create durable reports or phase
+  artifacts.
+- Keep the final fast closeout within 8 lines: qualification reason,
+  state-update or no-write status, any reroute or warning, and the next safe
+  implemented action.
 - Prefer `/blu-progress` unless a narrower implemented follow-up is obvious
   and safe.
 

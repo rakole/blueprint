@@ -81,10 +81,11 @@ const COMMAND_RULES: Record<LightweightCommandName, LightweightRuleSet> = {
       "follow-up recommendations stay implemented-only"
     ],
     finalResponseRequirements: [
-      "explain why the task qualified as fast",
-      "state whether Blueprint state was updated",
-      "include warnings or reroutes",
-      "include the next safe implemented action when applicable"
+      "max 8 lines",
+      "include qualification reason",
+      "include state update or no-write status",
+      "include warnings or reroutes when present",
+      "include the next safe implemented action"
     ]
   },
   quick: {
@@ -111,11 +112,13 @@ const COMMAND_RULES: Record<LightweightCommandName, LightweightRuleSet> = {
       "follow-up recommendations stay implemented-only"
     ],
     finalResponseRequirements: [
-      "include only the bounded task outcome",
-      "include validation outcome with skipped or repair-attempt detail when relevant",
+      "max 12 lines by default",
+      "include task and depth used",
+      "include validation status with skipped or repair-attempt detail when relevant",
       "include authoritative quick-run report status and path",
+      "include warnings or deferred work",
       "include the next safe implemented action",
-      "leave gates, risks, tracker detail, and deferred work in the durable report unless blocking"
+      "keep detailed evidence in the durable report"
     ]
   }
 };

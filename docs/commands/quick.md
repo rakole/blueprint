@@ -44,6 +44,8 @@ Use this public ladder when choosing a route:
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: may mutate repo files for the bounded task and persists a durable quick-run report plus `STATE.md`.
 - In-flight posture for non-trivial runs: keeps the resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
+- Common path tool budget: `blueprint_lightweight_preflight` first. When validation is needed, run validation shell or test commands outside Blueprint MCP before `blueprint_artifact_report_write`; then persist through `blueprint_artifact_report_write` and `blueprint_state_update`. Do not add redundant primitive Blueprint reads on the common path when preflight already surfaced scope, health, effective config, implemented routes, and overwrite posture.
+- Final response budget: max 12 lines by default with task, depth used, validation status, report `status` and `path`, warnings or deferred work, and the next safe implemented action. Keep detailed evidence in the quick-run report.
 
 
 ## Blueprint And Global State Reads
@@ -69,37 +71,25 @@ Use this public ladder when choosing a route:
 ## Quick Report Contract
 
 - Read effective config through `blueprint_lightweight_preflight` before deciding whether to use any optional research, planning, execution, or verification subagent path.
-- Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest` and a structured `report.quick-run` model with `schemaVersion: 2`, not Markdown `content` and not a `.blueprint/reports/...` path.
+- When validation is needed, finish validation before `blueprint_artifact_report_write`; validation shell or test commands stay outside Blueprint MCP.
+- Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest` and a structured `report.quick-run` model with `schemaVersion: 2`, then call `blueprint_state_update`, not Markdown `content` and not a `.blueprint/reports/...` path.
 - The structured model must include `task`, `classification`, `depthUsed`, `evidenceRead`, `changesMade`, `validation`, `gates`, `risks`, `deferredWork`, and `nextSafeAction`, and may include `runMetrics`.
-- When a Blueprint subagent is used, pass a bounded handoff packet like:
-  - `"quickTask": ""`
-  - `"boundedScope": []`
-  - `"forbiddenScope": []`
-  - `"evidenceAlreadyRead": []`
-  - `"allowedFilesOrAreas": []`
-  - `"validationBudget": "cheap | deep"`
-  - `"reportFieldsToReturn": ["evidenceRead", "changesMade", "validation", "risks", "deferredWork"]`
-- Require a compact return packet like:
-  - `"scopeHandled": []`
-  - `"evidenceUsed": []`
-  - `"changesOrRecommendations": []`
-  - `"validationEvidence": []`
-  - `"risks": []`
-  - `"deferredWork": []`
-  - `"nextBoundedUnit": ""`
+- Optional `runMetrics` stays lightweight; the command-specific runtime reference owns the exact optional counter names.
+- Do not require exact token counts.
+- When a Blueprint subagent is used, keep the handoff packet and return packet compact, bounded to the agreed scope, and aligned with the command-specific runtime reference.
 - Quick-run report persistence is schema-backed: validate or repair the structured model against `report.quick-run.modelContract`; MCP renders the final Markdown and rejects hand-written Markdown fallback.
 - Treat the returned report `path` and `status` as authoritative.
 - For code mutation, include cheap validation evidence by default when a bounded safe check is discoverable; otherwise record an explicit skipped reason in the quick-run report.
 - If validation fails, record that failure honestly, make at most one bounded repair attempt when it still fits quick scope, use `validation.repairAttempt` to distinguish no repair attempt versus still-failing, and do not claim success unless validation actually passes. If one bounded repair attempt recovers the failure, record that repaired outcome there too.
 - Represent the quick report overwrite confirmation gate in the model `gates` and still require confirmation unless `--force` is present.
 - Treat `--validate` as stronger validation, not the first time validation exists.
-- Keep the final chat closeout concise: bounded task outcome, validation outcome including skipped reason or repair-attempt outcome when relevant, authoritative report `status` and `path`, and the next safe implemented action. Let the durable report carry deeper risk, deferred-work, gate, and tracker detail unless one of those is the blocker.
+- Keep the final chat closeout concise: task, depth used, validation status including skipped reason or repair-attempt outcome when relevant, authoritative report `status` and `path`, warnings or deferred work, and the next safe implemented action. Let the durable report carry the detailed evidence, file lists, validation logs, gate detail, and tracker detail.
 
 ## In-Flight Progress Contract
 
 - For non-trivial bounded quick runs, keep the shared stage vocabulary visible only for the stages the run actually reaches.
 - Show progress only at meaningful stage or gate transitions.
-- Do not spam stage narration.
+- Do not spam stage narration or emit in-flight updates between transitions.
 - Use `update_topic` to surface the active stage and `write_todos` to maintain a compact visible checklist for the bounded quick scope.
 - Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action explicit while the run is in flight.
 - Typical pending gates include missing task clarity, depth-mode confirmation, quick-report overwrite approval, and rerouting when the task no longer qualifies as bounded quick work.
