@@ -13,8 +13,8 @@ tools:
   - read_file
   - glob
   - grep_search
-max_turns: 18
-timeout_mins: 15
+max_turns: 27
+timeout_mins: 23
 ---
 # Blueprint Researcher
 

@@ -17,8 +17,8 @@ tools:
   - replace
   - write_file
   - run_shell_command
-max_turns: 20
-timeout_mins: 20
+max_turns: 30
+timeout_mins: 30
 ---
 # Blueprint Executor
 

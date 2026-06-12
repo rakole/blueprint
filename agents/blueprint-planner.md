@@ -14,8 +14,8 @@ tools:
   - read_file
   - glob
   - grep_search
-max_turns: 16
-timeout_mins: 12
+max_turns: 24
+timeout_mins: 18
 ---
 # Blueprint Planner
 

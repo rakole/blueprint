@@ -15,8 +15,8 @@ tools:
   - read_file
   - glob
   - grep_search
-max_turns: 18
-timeout_mins: 20
+max_turns: 27
+timeout_mins: 30
 ---
 # Blueprint Debugger
 
