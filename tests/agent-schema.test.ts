@@ -9,23 +9,23 @@ const agentsDir = path.join(repoRoot, "agents");
 const EXPECTED_AGENTS = {
   "blueprint-checker": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 10,
-    timeoutMins: 10
+    maxTurns: 15,
+    timeoutMins: 15
   },
   "blueprint-doc-verifier": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 16,
-    timeoutMins: 15
+    maxTurns: 24,
+    timeoutMins: 23
   },
   "blueprint-debugger": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 18,
-    timeoutMins: 20
+    maxTurns: 27,
+    timeoutMins: 30
   },
   "blueprint-doc-writer": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 16,
-    timeoutMins: 15
+    maxTurns: 24,
+    timeoutMins: 23
   },
   "blueprint-executor": {
     tools: [
@@ -37,58 +37,58 @@ const EXPECTED_AGENTS = {
       "write_file",
       "run_shell_command"
     ],
-    maxTurns: 20,
-    timeoutMins: 20
+    maxTurns: 30,
+    timeoutMins: 30
   },
   "blueprint-mapper": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 16,
-    timeoutMins: 15
+    maxTurns: 24,
+    timeoutMins: 23
   },
   "blueprint-planner": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 16,
-    timeoutMins: 12
+    maxTurns: 24,
+    timeoutMins: 18
   },
   "blueprint-project-researcher": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 12,
-    timeoutMins: 10
-  },
-  "blueprint-reviewer": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 16,
-    timeoutMins: 15
-  },
-  "blueprint-researcher": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
     maxTurns: 18,
     timeoutMins: 15
   },
+  "blueprint-reviewer": {
+    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    maxTurns: 24,
+    timeoutMins: 23
+  },
+  "blueprint-researcher": {
+    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    maxTurns: 27,
+    timeoutMins: 23
+  },
   "blueprint-roadmapper": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 12,
-    timeoutMins: 10
+    maxTurns: 18,
+    timeoutMins: 15
   },
   "blueprint-security-auditor": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 16,
-    timeoutMins: 15
+    maxTurns: 24,
+    timeoutMins: 23
   },
   "blueprint-ui-designer": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 14,
-    timeoutMins: 12
+    maxTurns: 21,
+    timeoutMins: 18
   },
   "blueprint-ui-auditor": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 16,
-    timeoutMins: 15
+    maxTurns: 24,
+    timeoutMins: 23
   },
   "blueprint-verifier": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
-    maxTurns: 16,
-    timeoutMins: 15
+    maxTurns: 24,
+    timeoutMins: 23
   }
 } as const;
 

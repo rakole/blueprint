@@ -15,8 +15,8 @@ tools:
   - read_file
   - glob
   - grep_search
-max_turns: 10
-timeout_mins: 10
+max_turns: 15
+timeout_mins: 15
 ---
 # Blueprint Checker
 

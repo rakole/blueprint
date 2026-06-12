@@ -13,8 +13,8 @@ tools:
   - read_file
   - glob
   - grep_search
-max_turns: 16
-timeout_mins: 15
+max_turns: 24
+timeout_mins: 23
 ---
 # Blueprint Mapper
 
