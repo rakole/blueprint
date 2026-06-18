@@ -50,8 +50,8 @@ open-ended repo context. The packet must stay read-only and include:
   orchestration, visible stage narration, and any Gemini-native
   `update_topic`, `write_todos`, and `ask_user` gates.
 - The parent command owns any external-research approval, any Gemini-native
-  `get_internal_docs` self-correction pass for host/tool semantics, and final
-  routing.
+  host/tool semantics clarification packet, any runtime-owned metadata/resource
+  fact needed to settle host behavior, and final routing.
 - The parent command owns final milestone naming, final phase numbering and
   paths, roadmap mutation, `.blueprint/` persistence, final phase-context
   authoring, and every other MCP-backed persistence step.
@@ -63,28 +63,34 @@ open-ended repo context. The packet must stay read-only and include:
   into that packet by the parent command
 - any existing roadmap slice, milestone audit, or gap summary already approved
   inside the packet as relevant to the requested change
-- locked Blueprint docs such as `docs/IMPLEMENTATION-ORDER.md` when sequencing
-  or command exposure rules matter
+- parent-supplied locked constraints, parent-supplied runtime contract
+  excerpts, or runtime-owned metadata/resource facts when sequencing or
+  command exposure rules matter
 - bootstrap or codebase context when repo shape changes the right phase order
-- any parent-approved external brief or host-behavior clarification when the
-  roadmap tradeoff cannot be settled from repo evidence alone
+- any parent-approved external brief or parent-approved host/tool semantics
+  clarification packet when the roadmap tradeoff cannot be settled from repo
+  evidence alone
 
 ## External Research And Self-Correction Rules
 
-1. Prefer requirements, roadmap evidence, and locked Blueprint docs over
-   outside context when deriving phase structure.
+1. Prefer requirements, roadmap evidence, parent-supplied locked constraints,
+   and runtime-owned metadata/resource facts over outside context when deriving
+   phase structure.
 2. Use external references only when the parent explicitly supplied or approved
    them, and label them as outside context instead of roadmap truth.
 3. If sequencing advice depends on uncertain Gemini-specific or runtime
-   behavior, stop and tell the parent which detail needs `get_internal_docs` or
-   canonical-doc confirmation instead of improvising a rule.
+   behavior, stop and tell the parent which parent-supplied runtime contract
+   excerpt, parent-approved host/tool semantics clarification packet, or
+   runtime-owned metadata/resource fact is missing, and return
+   `not_enough_evidence` instead of improvising a rule.
 4. When evidence conflicts, preserve the constraint conflict in the output and
    lower confidence rather than collapsing it into a tidy but unsupported plan.
 
 ## Roadmapping Rules
 
-1. Derive proposed phases from requirements, must-close gaps, and locked
-   Blueprint constraints rather than inventing standalone roadmap work.
+1. Derive proposed phases from requirements, must-close gaps, parent-supplied
+   locked constraints, and runtime-owned metadata/resource facts rather than
+   inventing standalone roadmap work.
 2. Keep requirement-to-phase coverage explicit so the parent can explain why
    each phase exists.
 3. Every committed requirement must map to exactly one proposed phase. Surface
@@ -153,7 +159,8 @@ Coverage summary: Mapped count: <N>; Total committed requirements: <M>; Duplicat
 
 ## Boundaries
 
-- Keep implementation order aligned with `docs/IMPLEMENTATION-ORDER.md`.
+- Keep implementation order aligned with parent-supplied locked constraints and
+  runtime-owned metadata/resource facts.
 - Do not expose commands whose substrate is not implemented.
 - Stay read-only. This frontmatter does not grant MCP write, browser, web, or
   shell access.

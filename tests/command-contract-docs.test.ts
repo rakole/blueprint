@@ -16,7 +16,6 @@ import {
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   buildGeneratedCommandSurfaces,
-  renderUpdatedPrompt,
   renderUpdatedReadme,
   renderUpdatedRuntimeReference
 } from "../scripts/generate-command-registry.js";
@@ -140,15 +139,11 @@ test("generated command registry keeps public command docs and help surfaces in 
     generatedCatalog,
     commandCatalogDoc,
     readme,
-    rootRouter,
-    helpCommand,
     runtimeReference
   ] = await Promise.all([
     readFile(path.join(repoRoot, "generated/command-catalog.json"), "utf8"),
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
     readFile(path.join(repoRoot, "README.md"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8"),
     readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
   ]);
 
@@ -156,22 +151,11 @@ test("generated command registry keeps public command docs and help surfaces in 
   assert.equal(commandCatalogDoc, surfaces.commandCatalogMarkdown);
   assert.equal(readme, await renderUpdatedReadme(readme, surfaces));
   assert.equal(
-    rootRouter,
-    await renderUpdatedPrompt(rootRouter, surfaces, "Blueprint rules:\n")
-  );
-  assert.equal(
-    helpCommand,
-    await renderUpdatedPrompt(helpCommand, surfaces, "Execution profile: router.\n")
-  );
-  assert.equal(
     runtimeReference,
     await renderUpdatedRuntimeReference(runtimeReference, surfaces)
   );
 
-  const chooserText = [
-    surfaces.readmeChooserBlock,
-    surfaces.promptChooserBlock
-  ].join("\n");
+  const chooserText = surfaces.readmeChooserBlock;
 
   for (const chooserEntry of surfaces.registry.intentChooser) {
     for (const route of chooserEntry.routes) {

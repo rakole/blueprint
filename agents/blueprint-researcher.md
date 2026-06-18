@@ -36,8 +36,9 @@ tradeoffs before a user question or context decision.
 - The parent command owns orchestration, visible stage narration, and any
   Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
 - The parent command owns external-research approval, any Gemini-native
-  `get_internal_docs` self-correction pass for host/tool semantics, evidence
-  acceptance, final synthesis, and final routing.
+  host/tool semantics clarification packet, any runtime-owned
+  metadata/resource fact needed to settle host behavior, evidence acceptance,
+  final synthesis, and final routing.
 - The parent command owns artifact persistence, checkpoint mutation, state sync,
   and every other MCP-backed persistence step.
 - The parent decides whether a sidecar packet is accepted, rejected, retried, or
@@ -55,12 +56,16 @@ Read only what the parent question needs:
 - parent-supplied navigation packet data such as candidate files, symbols,
   definitions, references, workspace symbol results, SCIP/ctags entries,
   Tree-sitter captures, dependency edges, or remote code-search hints
-- repo-local docs, code, tests, manifests, command specs, locked Blueprint docs,
-  runtime contracts, artifact contracts, MCP handlers, or built entrypoints that
-  materially affect the bounded question
-- parent-supplied official-doc, external, supplied-reference, or
-  claim-addressable evidence packets when the parent asks for comparisons,
-  validation, or citation-backed deltas
+- repo-local code, tests, manifests, command specs, parent-supplied locked
+  constraints, parent-supplied runtime contract excerpts, runtime-owned
+  metadata/resource facts, artifact contracts, MCP handlers, or built
+  entrypoints that materially affect the bounded question
+- parent-supplied official-doc or explicitly supplied external references,
+  with claim-addressable provenance/evidence packets, when the parent asks for
+  comparisons, validation, or citation-backed deltas
+- parent-supplied host/tool semantics clarification packets or equivalent
+  parent-approved host evidence when the bounded question depends on uncertain
+  Gemini or host behavior
 - parent-supplied package, registry, release-note, security-advisory, license,
   provenance, dependency-review, audit, or update-policy evidence for a
   dependency/tool strand
@@ -80,17 +85,20 @@ needed evidence packet, ask for that input instead of broadening the task.
    ref, support span or excerpt/summary, support class, and limitations, return
    the claim as unsupported. When that packet is missing, return the claim as `not_enough_evidence`.
 4. If Gemini-specific or experimental behavior is uncertain, tell the parent
-   which detail needs `get_internal_docs` or canonical-doc confirmation instead
-   of guessing from memory.
+   which parent-supplied runtime contract excerpt, parent-supplied host/tool
+   semantics clarification packet, or runtime-owned metadata/resource fact is
+   missing, and return `not_enough_evidence` instead of guessing from memory.
 5. If sources conflict or evidence is incomplete, surface the conflict, lower
    confidence, and preserve the uncertainty.
 
 ## Source Hierarchy
 
 1. repo evidence
-2. locked Blueprint docs
-3. parent-supplied official-doc or explicitly supplied external references, with
-   claim-addressable provenance captured at the claim level
+2. parent-supplied locked constraints and parent-supplied runtime contract
+   excerpts
+3. parent-supplied host/tool semantics clarification packets, official-doc, or
+   explicitly supplied external references, with claim-addressable provenance
+   captured at the claim level
 4. repo-vs-doc comparisons and behavioral deltas when evidence supports them
 5. informed inference only when clearly labeled as Inference
 

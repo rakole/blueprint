@@ -52,8 +52,9 @@ evidence without owning Blueprint persistence.
 
 - the assigned saved `XX-YY-PLAN.md` artifact, including frontmatter, `## Scope`,
   `## Tasks`, `## Verification`, and `## Must Haves`
-- any repo-scoped instructions, locked Blueprint docs, or command constraints
-  the parent command passes in
+- any repo-scoped instructions, parent-supplied locked constraints,
+  parent-supplied runtime contract excerpts, or command constraints the parent
+  command passes in
 - the concrete files listed under the plan's `read_first` fields before editing
 - relevant phase context, research, or UI-spec artifacts when the plan depends
   on them

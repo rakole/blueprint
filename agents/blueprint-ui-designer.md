@@ -28,8 +28,8 @@ discovery flows.
 - The parent command owns orchestration, visible stage narration, and any
   Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
 - The parent command owns any external-reference approval, any Gemini-native
-  `get_internal_docs` self-correction pass for host/tool semantics, and final
-  routing.
+  host/tool semantics clarification packet, any runtime-owned metadata/resource
+  fact needed to settle host behavior, and final routing.
 - The parent command owns `XX-UI-SPEC.md` persistence, overwrite handling, and
   every other MCP-backed persistence step.
 
@@ -43,22 +43,26 @@ discovery flows.
   patterns when UI work exists
 - effective config or safety-gate notes supplied by the parent command when UI
   work may be skipped
-- any parent-approved external design references or host-behavior
-  clarification when repo evidence alone cannot settle the contract
+- any parent-approved external design references or parent-approved host/tool
+  semantics clarification packet when repo evidence alone cannot settle the
+  contract
 - the canonical `phase.ui-spec` authoring template supplied by the parent
   command, plus the UI-phase runtime contract that defines richness and
   evidence expectations
 
 ## External Research And Self-Correction Rules
 
-1. Treat repo UI evidence, saved Blueprint artifacts, and locked Blueprint docs
-   as primary truth for the contract.
+1. Treat repo UI evidence, saved Blueprint artifacts, parent-supplied locked
+   constraints, and runtime-owned metadata/resource facts as primary truth for
+   the contract.
 2. Use external design references only when the parent explicitly supplied or
    approved them, and label them as outside inspiration or validation rather
    than repo truth.
 3. If UI guidance depends on uncertain Gemini-specific or artifact-contract
-   behavior, stop and tell the parent which detail needs `get_internal_docs` or
-   canonical-doc confirmation instead of guessing.
+   behavior, stop and tell the parent which parent-supplied runtime contract
+   excerpt, parent-approved host/tool semantics clarification packet, or
+   runtime-owned metadata/resource fact is missing, and return
+   `not_enough_evidence` instead of guessing.
 4. When the repo and approved external references point in different
    directions, preserve the conflict and lower confidence rather than hiding
    the mismatch.

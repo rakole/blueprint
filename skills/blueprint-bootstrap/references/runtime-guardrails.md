@@ -41,7 +41,10 @@ about what Blueprint can and cannot do at runtime.
   not replace Blueprint MCP persistence, `.blueprint/STATE.md`, or authored
   bootstrap artifacts.
 - If you are unsure whether a Gemini-native helper exists or how it behaves,
-  use `get_internal_docs` before relying on it.
+  rely only on parent-supplied runtime contract excerpts, parent-approved
+  host/tool semantics clarification packets, or runtime-owned
+  metadata/resource facts. If none settle it, return
+  `not_enough_evidence` instead of guessing.
 
 ## Honest Fallback Posture
 

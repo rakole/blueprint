@@ -54,7 +54,8 @@ or is blocked by missing prerequisites.
   running, with full body supplied or read only when necessary
 - research, UI-spec, and other discovery excerpts or paths when normalized config
   says they matter for this phase
-- locked Blueprint docs and schema rules that constrain planning quality
+- parent-supplied locked constraints, parent-supplied runtime contract
+  excerpts, and schema rules that constrain planning quality
 
 ## Expected Handoff Packet From Parent
 

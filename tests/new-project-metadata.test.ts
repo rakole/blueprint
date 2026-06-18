@@ -363,7 +363,12 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(guardrailsRef, /`update_topic`/);
   assert.match(guardrailsRef, /`write_todos`/);
   assert.match(guardrailsRef, /`tracker_create_task`/);
-  assert.match(guardrailsRef, /`get_internal_docs`/);
+  assert.match(
+    guardrailsRef,
+    /parent-supplied runtime contract excerpts, parent-approved\s+host\/tool semantics clarification packets, or runtime-owned\s+metadata\/resource facts/i
+  );
+  assert.match(guardrailsRef, /`not_enough_evidence`/);
+  assert.doesNotMatch(guardrailsRef, /`get_internal_docs`/);
   assert.match(guardrailsRef, /do not pretend they ran/i);
   assert.match(guardrailsRef, /Do not reintroduce `?\.planning\/`?/i);
   assert.match(guardrailsRef, /Do not promise GSD shell choreography/i);

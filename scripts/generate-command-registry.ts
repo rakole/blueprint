@@ -94,7 +94,6 @@ type GeneratedCommandSurfaces = {
   readmeRuntimeLayoutBlock: string;
   readmeWorkflowBlock: string;
   readmeNonPublicBlock: string;
-  promptChooserBlock: string;
   commandCatalogMarkdown: string;
   runtimeReferenceMatrixBlock: string;
 };
@@ -104,8 +103,6 @@ const COMMAND_CATALOG_DOC_PATH = "docs/COMMAND-CATALOG.md";
 const README_PATH = "README.md";
 const RUNTIME_REFERENCE_PATH = "docs/RUNTIME-REFERENCE.md";
 const ROOT_ROUTER_PATH = "commands/blu.toml";
-const HELP_COMMAND_PATH = "commands/blu-help.toml";
-
 const GENERATED_BY =
   "scripts/generate-command-registry.ts";
 const SOURCE_METADATA =
@@ -141,8 +138,6 @@ const README_WORKFLOW_START = "<!-- command-registry:readme-workflow:start -->";
 const README_WORKFLOW_END = "<!-- command-registry:readme-workflow:end -->";
 const README_NON_PUBLIC_START = "<!-- command-registry:readme-non-public:start -->";
 const README_NON_PUBLIC_END = "<!-- command-registry:readme-non-public:end -->";
-const PROMPT_CHOOSER_START = "# command-registry:prompt-chooser:start";
-const PROMPT_CHOOSER_END = "# command-registry:prompt-chooser:end";
 const RUNTIME_MATRIX_START = "<!-- command-registry:runtime-matrix:start -->";
 const RUNTIME_MATRIX_END = "<!-- command-registry:runtime-matrix:end -->";
 
@@ -396,18 +391,6 @@ export function renderReadmeCommandChooser(registry: GeneratedCommandRegistry): 
   return lines.join("\n");
 }
 
-export function renderPromptIntentChooser(registry: GeneratedCommandRegistry): string {
-  const lines = [
-    PROMPT_CHOOSER_START,
-    "Generated intent chooser from generated/command-catalog.json. Before recommending any route below, read the live command catalog and confirm every listed command still has implemented: true.",
-    "I want to...",
-    ...registry.intentChooser.map((entry) => `- ${entry.intent} → ${entry.routes.join(", ")}`),
-    PROMPT_CHOOSER_END
-  ];
-
-  return lines.join("\n");
-}
-
 export function renderReadmeRuntimeLayout(registry: GeneratedCommandRegistry): string {
   const implemented = registry.commands.filter((entry) => entry.implemented);
   const manifestPaths = implemented
@@ -653,7 +636,6 @@ export async function buildGeneratedCommandSurfaces(): Promise<GeneratedCommandS
     readmeRuntimeLayoutBlock: renderReadmeRuntimeLayout(registry),
     readmeWorkflowBlock: renderReadmeWorkflow(registry),
     readmeNonPublicBlock: renderReadmeNonPublic(registry),
-    promptChooserBlock: renderPromptIntentChooser(registry),
     commandCatalogMarkdown: renderCommandCatalogMarkdown(registry),
     runtimeReferenceMatrixBlock: renderRuntimeReferenceMatrix(registry)
   };
@@ -776,21 +758,6 @@ export async function renderUpdatedReadme(
   return readme;
 }
 
-export async function renderUpdatedPrompt(
-  currentPrompt: string,
-  surfaces: GeneratedCommandSurfaces,
-  insertAfter: string
-): Promise<string> {
-  return replaceOrInsertBlock({
-    content: currentPrompt,
-    startMarker: PROMPT_CHOOSER_START,
-    endMarker: PROMPT_CHOOSER_END,
-    replacement: surfaces.promptChooserBlock,
-    insertAfter,
-    trailingNewlines: 2
-  });
-}
-
 export async function renderUpdatedRuntimeReference(
   currentRuntimeReference: string,
   surfaces: GeneratedCommandSurfaces
@@ -806,16 +773,6 @@ export async function renderUpdatedRuntimeReference(
 async function writeGeneratedCommandSurfaces(): Promise<void> {
   const surfaces = await buildGeneratedCommandSurfaces();
   const readme = await renderUpdatedReadme(await readRepoFile(README_PATH), surfaces);
-  const rootRouter = await renderUpdatedPrompt(
-    await readRepoFile(ROOT_ROUTER_PATH),
-    surfaces,
-    "Blueprint rules:\n"
-  );
-  const helpCommand = await renderUpdatedPrompt(
-    await readRepoFile(HELP_COMMAND_PATH),
-    surfaces,
-    "Execution profile: router.\n"
-  );
   const runtimeReference = await renderUpdatedRuntimeReference(
     await readRepoFile(RUNTIME_REFERENCE_PATH),
     surfaces
@@ -824,8 +781,6 @@ async function writeGeneratedCommandSurfaces(): Promise<void> {
   await writeFileIfChanged(REGISTRY_PATH, surfaces.registryJson);
   await writeFileIfChanged(COMMAND_CATALOG_DOC_PATH, surfaces.commandCatalogMarkdown);
   await writeFileIfChanged(README_PATH, readme);
-  await writeFileIfChanged(ROOT_ROUTER_PATH, rootRouter);
-  await writeFileIfChanged(HELP_COMMAND_PATH, helpCommand);
   await writeFileIfChanged(RUNTIME_REFERENCE_PATH, runtimeReference);
 }
 
