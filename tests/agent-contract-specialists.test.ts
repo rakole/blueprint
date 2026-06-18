@@ -9,13 +9,32 @@ async function readAgent(agentName: string): Promise<string> {
   return readFile(path.join(repoRoot, "agents", `${agentName}.md`), "utf8");
 }
 
+const ownedSpecialistAgents = [
+  "blueprint-roadmapper",
+  "blueprint-checker",
+  "blueprint-executor",
+  "blueprint-planner",
+  "blueprint-project-researcher",
+  "blueprint-researcher",
+  "blueprint-ui-designer",
+] as const;
+
+const forbiddenControlPlaneAuthorityPatterns = [
+  /`get_internal_docs`/i,
+  /locked Blueprint docs/i,
+  /canonical-doc/i,
+  /docs\/[A-Z0-9][A-Z0-9.-]*\.md/i,
+  /current Blueprint decisions,\s*drift constraints/i,
+] as const;
+
 test("bootstrap and roadmap specialist agents encode the repaired bounded contracts", async () => {
   const projectResearcher = await readAgent("blueprint-project-researcher");
   const roadmapper = await readAgent("blueprint-roadmapper");
 
   assert.match(projectResearcher, /## Parent-Owned Responsibilities/);
   assert.match(projectResearcher, /external-research approval/i);
-  assert.match(projectResearcher, /`get_internal_docs` self-correction pass/i);
+  assert.match(projectResearcher, /host\/tool semantics clarification packet/i);
+  assert.match(projectResearcher, /runtime-owned metadata\/resource\s+fact/i);
   assert.match(projectResearcher, /## External Research And Self-Correction Rules/);
   assert.match(
     projectResearcher,
@@ -41,7 +60,8 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
 
   assert.match(roadmapper, /## Parent-Owned Responsibilities/);
   assert.match(roadmapper, /external-research approval/i);
-  assert.match(roadmapper, /`get_internal_docs` self-correction pass/i);
+  assert.match(roadmapper, /host\/tool semantics clarification packet/i);
+  assert.match(roadmapper, /runtime-owned metadata\/resource\s+fact/i);
   assert.match(roadmapper, /## Typed Input Contract/);
   assert.match(roadmapper, /Roadmapper Packet/i);
   assert.match(roadmapper, /digestScope/i);
@@ -106,7 +126,8 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(researcher, /## Required Reads/);
   assert.match(researcher, /## Parent-Owned Responsibilities/);
   assert.match(researcher, /external-research approval/i);
-  assert.match(researcher, /`get_internal_docs` self-correction pass/i);
+  assert.match(researcher, /host\/tool semantics clarification packet/i);
+  assert.match(researcher, /runtime-owned metadata\/resource\s+fact/i);
   assert.match(researcher, /## External Research And Self-Correction Rules/);
   assert.match(researcher, /Keep repo truth distinct from outside truth/i);
   assert.match(researcher, /## Required Output Contract/);
@@ -156,7 +177,7 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   );
   assert.match(
     researcher,
-    /official-doc, external, supplied-reference, or claim-addressable evidence\s+packets|official-doc or explicitly supplied external references/i
+    /official-doc,\s+external,\s+supplied-reference,\s+or\s+claim-addressable evidence\s+packets|official-doc or explicitly supplied external references/i
   );
   assert.match(researcher, /Replace every angle-bracket placeholder before returning any draft section/i);
   assert.match(
@@ -167,7 +188,8 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(uiDesigner, /## Required Reads/);
   assert.match(uiDesigner, /## Parent-Owned Responsibilities/);
   assert.match(uiDesigner, /external-reference approval/i);
-  assert.match(uiDesigner, /`get_internal_docs` self-correction pass/i);
+  assert.match(uiDesigner, /host\/tool semantics clarification packet/i);
+  assert.match(uiDesigner, /runtime-owned metadata\/resource\s+fact/i);
   assert.match(uiDesigner, /## External Research And Self-Correction Rules/);
   assert.match(uiDesigner, /## UI Decision Rules/);
   assert.match(uiDesigner, /UI Contract` or\s+`Explicit skip rationale/);
@@ -187,6 +209,95 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(checker, /## Review Modes/);
   assert.match(checker, /Do not apply\s+the UI-specific six-dimension gate to ordinary plan reviews/i);
   assert.match(checker, /re-run\s+the checker/i);
+});
+
+test("owned specialist agents rely on parent-supplied constraint authority instead of repo-root docs truth", async () => {
+  const authorityExpectations = [
+    {
+      agentName: "blueprint-roadmapper",
+      required: [
+        /parent-supplied locked\s+constraints/i,
+        /parent-supplied runtime contract\s+excerpts/i,
+        /runtime-owned metadata\/resource facts/i,
+        /parent-approved host\/tool semantics clarification packet/i,
+        /not_enough_evidence/i,
+      ],
+    },
+    {
+      agentName: "blueprint-checker",
+      required: [
+        /parent-supplied locked\s+constraints/i,
+        /parent-supplied runtime contract\s+excerpts/i,
+      ],
+    },
+    {
+      agentName: "blueprint-executor",
+      required: [
+        /parent-supplied locked\s+constraints/i,
+        /parent-supplied runtime contract\s+excerpts/i,
+      ],
+    },
+    {
+      agentName: "blueprint-planner",
+      required: [
+        /parent-supplied locked\s+constraints/i,
+        /parent-supplied runtime contract\s+excerpts/i,
+      ],
+    },
+    {
+      agentName: "blueprint-project-researcher",
+      required: [
+        /parent-supplied locked\s+constraints/i,
+        /runtime-owned metadata\/resource facts/i,
+        /parent-approved host\/tool semantics clarification packet/i,
+        /not_enough_evidence/i,
+      ],
+    },
+    {
+      agentName: "blueprint-researcher",
+      required: [
+        /parent-supplied locked\s+constraints/i,
+        /parent-supplied runtime contract\s+excerpts/i,
+        /parent-supplied host\/tool semantics clarification packets/i,
+        /not_enough_evidence/i,
+      ],
+    },
+    {
+      agentName: "blueprint-ui-designer",
+      required: [
+        /parent-supplied locked\s+constraints/i,
+        /runtime-owned metadata\/resource facts/i,
+        /parent-approved host\/tool semantics clarification packet/i,
+        /not_enough_evidence/i,
+      ],
+    },
+  ] as const;
+
+  for (const { agentName, required } of authorityExpectations) {
+    const agent = await readAgent(agentName);
+
+    for (const pattern of forbiddenControlPlaneAuthorityPatterns) {
+      assert.doesNotMatch(agent, pattern);
+    }
+
+    for (const pattern of required) {
+      assert.match(agent, pattern);
+    }
+  }
+});
+
+test("owned specialist agents avoid repo-root control-plane docs and internal-doc authority paths", async () => {
+  for (const agentName of ownedSpecialistAgents) {
+    const agent = await readAgent(agentName);
+
+    for (const pattern of forbiddenControlPlaneAuthorityPatterns) {
+      assert.doesNotMatch(
+        agent,
+        pattern,
+        `${agentName} should not rely on repo-root control-plane docs or internal-doc authority`
+      );
+    }
+  }
 });
 
 test("lifecycle planning specialist agents keep parent-owned orchestration and persistence explicit", async () => {

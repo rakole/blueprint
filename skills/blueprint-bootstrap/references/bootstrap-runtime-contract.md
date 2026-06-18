@@ -92,8 +92,11 @@ Map the bootstrap workflow to the shared stages like this:
      contract includes a first-class `modelContract`.
    - Do not use scaffold output as the finished artifact when the command has
      enough context to author a substantive bootstrap seed.
-4. If any Gemini-native tool detail is unclear while you shape the flow, verify
-   it with `get_internal_docs` before relying on it.
+4. If any Gemini-native tool detail is unclear while you shape the flow, rely
+   only on parent-supplied runtime contract excerpts, parent-approved
+   host/tool semantics clarification packets, or runtime-owned
+   metadata/resource facts. If those still leave the behavior unclear, stop and
+   return `not_enough_evidence` instead of guessing.
 5. Start a session-local Bootstrap Evidence Ledger for facts that may shape
    the approval packet or `bootstrapSeed`. Each entry should include:
    - `Claim`: the fact or assertion

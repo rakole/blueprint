@@ -46,7 +46,8 @@ content through MCP without guessing plan structure or dependency order.
   bodies are required only when revising or replacing
 - context, research, UI-spec, validation, and review summaries or excerpts when
   normalized config says those gates matter
-- locked Blueprint docs or schema rules that materially constrain the phase
+- parent-supplied locked constraints, parent-supplied runtime contract
+  excerpts, or schema rules that materially constrain the phase
 
 ## Expected Handoff Packet From Parent
 

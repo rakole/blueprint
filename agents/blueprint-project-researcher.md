@@ -27,8 +27,8 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - The parent command owns orchestration, visible stage narration, and any
   Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
 - The parent command owns any external-research approval, any Gemini-native
-  `get_internal_docs` self-correction pass for host/tool semantics, and final
-  routing.
+  host/tool semantics clarification packet, any runtime-owned metadata/resource
+  fact needed to settle host behavior, and final routing.
 - The parent command owns `.blueprint/` mutation, roadmap persistence, and
   every other MCP-backed persistence step.
 
@@ -38,20 +38,25 @@ Gather repo and product context during bootstrap or milestone-definition work.
   manifests, source/test/docs layout, and any existing `.blueprint/` tree
 - the project prompt, saved-defaults summary, milestone brief, or other user
   intent supplied by the parent command
-- current Blueprint decisions, drift constraints, and any parent-provided
+- parent-supplied locked constraints, parent-supplied runtime contract
+  excerpts, runtime-owned metadata/resource facts, and any parent-provided
   notes about overwrite risk or partial initialization
-- any parent-approved external context bundle or host-behavior clarification
-  when bootstrap decisions depend on facts the repo cannot settle alone
+- any parent-approved external context bundle or parent-approved host/tool
+  semantics clarification packet when bootstrap decisions depend on facts the
+  repo cannot settle alone
 
 ## External Research And Self-Correction Rules
 
-1. Treat repo evidence and locked Blueprint docs as primary truth for bootstrap
+1. Treat repo evidence, parent-supplied locked constraints, and
+   runtime-owned metadata/resource facts as primary truth for bootstrap
    decisions.
 2. Use outside references only when the parent explicitly supplied or approved
    them, and keep that external context separate from repo evidence.
 3. If Gemini-specific or bootstrap-contract behavior is uncertain, stop and
-   tell the parent which detail needs `get_internal_docs` or canonical-doc
-   confirmation instead of guessing from memory.
+   tell the parent which parent-supplied runtime contract excerpt,
+   parent-approved host/tool semantics clarification packet, or
+   runtime-owned metadata/resource fact is missing, and return
+   `not_enough_evidence` instead of guessing from memory.
 4. When repo evidence and approved external context conflict, surface the
    conflict explicitly and lower confidence rather than smoothing it over.
 

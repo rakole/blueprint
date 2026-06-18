@@ -858,28 +858,6 @@ function buildBootstrapStatus(
   };
 }
 
-function extractMarkdownSection(markdown: string, heading: string): string {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = markdown.match(
-    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
-  );
-
-  return match?.[1] ?? "";
-}
-
-function parseRequiredTools(markdown: string): string[] {
-  const section = extractMarkdownSection(markdown, "Required MCP Tools");
-
-  return [...section.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
-}
-
-function parseOptionalAgents(markdown: string, primarySkill: string): string[] {
-  const section = extractMarkdownSection(markdown, "Skills And Subagents");
-  const values = [...section.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]);
-
-  return values.filter((value) => value !== primarySkill);
-}
-
 type ParsedCatalogRow = {
   commandName: string;
   wave: number;

@@ -24,6 +24,20 @@ function isControlPlaneDocPath(value: string): boolean {
   return /^docs\//.test(value);
 }
 
+function isRepoRootControlPlanePath(value: string): boolean {
+  const normalized = value.trim().replaceAll("\\", "/");
+
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  if (normalized.startsWith("docs/")) {
+    return true;
+  }
+
+  return !normalized.includes("/") && /^[A-Za-z0-9._-]+\.md$/i.test(normalized);
+}
+
 test("command resources expose only implemented runtime-contract commands from source-owned metadata", async () => {
   const catalog = await buildBlueprintCommandCatalogResource();
   const commands = await listBlueprintCommandRuntimeContractCommands();
@@ -98,6 +112,27 @@ test("review and maintenance contracts stay docs-free while keeping runtime cove
     assert.deepEqual(contract.runtimeReference?.optionalAgents, [
       ...(metadata?.optionalAgents ?? [])
     ]);
+  }
+});
+
+test("implemented runtime-owned command metadata stays free of repo-root doc dependencies", async () => {
+  const commands = await listBlueprintCommandRuntimeContractCommands();
+
+  for (const commandName of commands) {
+    const metadata = getRuntimeOwnedCommandMetadata(commandName);
+    const contract = await buildBlueprintCommandRuntimeContractResource(commandName);
+
+    assert.ok(metadata, `${commandName} should have runtime metadata`);
+    assert.equal(
+      (metadata?.requiredInputPaths ?? []).some((inputPath) => isRepoRootControlPlanePath(inputPath)),
+      false,
+      `${commandName} requiredInputPaths should stay on bundled runtime assets`
+    );
+    assert.equal(
+      contract.skillInputs.effective.some((inputPath) => isRepoRootControlPlanePath(inputPath)),
+      false,
+      `${commandName} skill inputs should stay on bundled runtime assets`
+    );
   }
 });
 
