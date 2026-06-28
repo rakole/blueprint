@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { DEBUG_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
@@ -40,8 +41,8 @@ test("debug manifest references the debug skill, debugger agent, and report-back
   assert.match(commandFile, /\/blu-progress/);
 });
 
-test("debug runtime-owned metadata, skill, docs, and local contract capture the explicit follow-up gate", async () => {
-  const [skillFile, runtimeContract, docsFile] = await Promise.all([
+test("debug runtime-owned metadata, runtime-contract resource, skill, and local contract capture the explicit follow-up gate", async () => {
+  const [skillFile, runtimeContract, contract] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-debug/SKILL.md"), "utf8"),
     readFile(
       path.join(
@@ -50,7 +51,7 @@ test("debug runtime-owned metadata, skill, docs, and local contract capture the 
       ),
       "utf8"
     ),
-    readFile(path.join(repoRoot, "docs/commands/debug.md"), "utf8")
+    buildBlueprintCommandRuntimeContractResource("debug")
   ]);
 
   assert.equal(DEBUG_RUNTIME_METADATA.commandName, "debug");
@@ -79,6 +80,22 @@ test("debug runtime-owned metadata, skill, docs, and local contract capture the 
     "commands/blu-debug.toml",
     "skills/blueprint-debug/references/debug-runtime-contract.md"
   ]);
+  assert.equal(contract.catalog.specPath, DEBUG_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec.path, DEBUG_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.runtimeReference.path, DEBUG_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference.commandSpecPath,
+    DEBUG_RUNTIME_METADATA.sourceId
+  );
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "commands/blu-debug.toml",
+    "skills/blueprint-debug/references/debug-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 
   assert.match(skillFile, /input_bundles:/);
   assert.match(skillFile, /commands\/blu-debug\.toml/);
@@ -120,18 +137,16 @@ test("debug runtime-owned metadata, skill, docs, and local contract capture the 
   assert.match(runtimeContract, /\/blu-plan-phase/);
   assert.match(runtimeContract, /\/blu-validate-phase/);
   assert.match(runtimeContract, /\/blu-progress/);
-
   assert.match(
-    docsFile,
-    /\| Execution profile \| Start in `interactive-read`; escalate to `long-running-mutation` only when the investigation becomes non-trivial\. \|/i
+    contract.runtimeReference.contractNotes ?? "",
+    /Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations/i
   );
   assert.match(
-    docsFile,
-    /`debug` starts in `interactive-read` for lightweight evidence-backed investigations\./i
+    contract.runtimeReference.contractNotes ?? "",
+    /persist the durable report through blueprint_artifact_report_write with the bare debug-latest name/i
   );
   assert.match(
-    docsFile,
-    /`debug` escalates to the shared `long-running-mutation` posture only for non-trivial investigations/i
+    contract.runtimeReference.contractNotes ?? "",
+    /route implemented follow-ups only to \/blu-quick, \/blu-plan-phase, \/blu-validate-phase, or \/blu-progress/i
   );
-  assert.doesNotMatch(docsFile, /\| Execution profile \| `long-running-mutation` \|/i);
 });

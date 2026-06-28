@@ -17,8 +17,9 @@ test("wave 2 closeout memory and drift script keep the anti-drift workflow sourc
 
   assert.match(
     memoryFile,
-    /`docs\/build\/WAVE-2-AGENT-WORKFLOW\.md`, `docs\/build\/WAVE-2-PARALLEL-CLOSEOUT-PLAN\.md`, and `docs\/build\/WAVE-2-AUTO-AGENT-META-PROMPT\.md` now define the anti-drift closeout workflow for the next 1-to-3-agent cycles/
+    /`AGENTS\.md`, `agent-docs\/08-change-recipes\.md`, `agent-docs\/09-verification-guide\.md`, and `scripts\/drift-fix-memory\.mjs` now define the anti-drift closeout workflow for the next 1-to-3-agent cycles/
   );
+  assert.doesNotMatch(memoryFile, /docs\/build\//);
   assert.match(scriptFile, /const DEFAULT_NAMESPACE = "wave-2-closeout"/);
   assert.match(scriptFile, /const DEFAULT_PLAN_DOC =\s*"MEMORY\.md"/);
   assert.match(scriptFile, /node scripts\/drift-fix-memory\.mjs init/);

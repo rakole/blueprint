@@ -224,20 +224,56 @@ test("generated command catalog exposes run-plan as a prepare-only chooser route
   assert.deepEqual(prepareChooser.routes, ["/blu-run-plan <phase> <planId>"]);
 });
 
-test("repo-facing status docs include run-plan in the Wave 5 shipped surface", async () => {
-  const [architecture, handoff, implementationOrder, geminiGuide] =
-    await Promise.all([
-      readFile(path.join(repoRoot, "docs/ARCHITECTURE.md"), "utf8"),
-      readFile(path.join(repoRoot, "docs/HANDOFF.md"), "utf8"),
-      readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8"),
-      readFile(path.join(repoRoot, "GEMINI.md"), "utf8")
-    ]);
+test("run-plan runtime-owned metadata and generated catalog expose the Wave 5 shipped surface", async () => {
+  const generatedCatalog = JSON.parse(
+    await readFile(path.join(repoRoot, "generated/command-catalog.json"), "utf8")
+  ) as {
+    commands: Array<{
+      name: string;
+      command: string;
+      route: string;
+      wave: number;
+      family: string;
+      status: string;
+      implemented: boolean;
+      sourceId: string;
+      executionProfile: string;
+      purpose: string;
+      runtimeReference?: {
+        waveTitle?: string;
+        contractNotes?: string;
+      };
+    }>;
+  };
+  const entry = generatedCatalog.commands.find((command) => command.name === "run-plan");
 
-  assert.match(architecture, /Wave 5 plan-run harness command, `run-plan`/);
-  assert.match(handoff, /Wave 5 plan-run harness command `run-plan`/);
-  assert.match(
-    implementationOrder,
-    /### Wave 5: Plan run, workspace, and maintenance[\s\S]*- `run-plan`[\s\S]*Shipped in this wave: `run-plan`/
+  assert.ok(entry);
+  assert.equal(entry.command, "/blu-run-plan");
+  assert.equal(entry.route, "/blu run-plan");
+  assert.equal(entry.wave, RUN_PLAN_RUNTIME_METADATA.catalog.wave);
+  assert.equal(entry.family, RUN_PLAN_RUNTIME_METADATA.catalog.family);
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.sourceId, RUN_PLAN_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    entry.executionProfile,
+    RUN_PLAN_RUNTIME_METADATA.spec.executionProfile
   );
-  assert.match(geminiGuide, /Plan run harness:\n`\/blu-run-plan`/);
+  assert.equal(entry.purpose, RUN_PLAN_RUNTIME_METADATA.spec.purpose);
+  assert.equal(
+    entry.runtimeReference?.waveTitle,
+    RUN_PLAN_RUNTIME_METADATA.runtimeReference.waveTitle
+  );
+  assert.match(
+    entry.runtimeReference?.contractNotes ?? "",
+    /always call blueprint_plan_run_prepare with mode: "preview" first/i
+  );
+  assert.match(
+    entry.runtimeReference?.contractNotes ?? "",
+    /require explicit plan-run-prepare-confirmation before mode: "prepare"/i
+  );
+  assert.match(
+    entry.runtimeReference?.contractNotes ?? "",
+    /call blueprint_plan_run_patch_record only for authorized implementation diffs/i
+  );
 });

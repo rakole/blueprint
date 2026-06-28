@@ -113,7 +113,7 @@ async function createLifecyclePilotRepo(): Promise<string> {
 
 ## Canonical References
 
-- docs/future-looking/gemini-cli-tooling/blueprint-gemini-first-effectiveness-spine.md
+- agent-docs/08-change-recipes.md
 `,
     "utf8"
   );

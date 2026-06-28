@@ -139,21 +139,3 @@ test("fast runtime contract resource is owned by runtime metadata, not docs", as
     /skills\/blueprint-phase-execution\/references\/fast-runtime-contract\.md/i
   );
 });
-
-test("fast public docs require concrete task text and avoid capture boilerplate", async () => {
-  const docsFile = await readFile(path.join(repoRoot, "docs/commands/fast.md"), "utf8");
-
-  assert.match(docsFile, /\/blu-fast "Fix typo in README installation heading"/);
-  assert.match(docsFile, /blueprint_lightweight_preflight/);
-  assert.match(docsFile, /initialized and healthy/);
-  assert.match(docsFile, /Common path tool budget:[\s\S]*blueprint_lightweight_preflight[\s\S]*blueprint_state_update/i);
-  assert.match(docsFile, /Final response budget: max 8 lines/i);
-  assert.match(docsFile, /Never create or replace a quick-run report from `fast`/i);
-  assert.doesNotMatch(docsFile, /^- none$/m);
-  assert.doesNotMatch(docsFile, /\/blu fast$/m);
-  assert.doesNotMatch(docsFile, /note, todo, backlog/i);
-  assert.doesNotMatch(docsFile, /promoted, completed, or archived/i);
-  assert.doesNotMatch(docsFile, /malformed index files/i);
-  assert.doesNotMatch(docsFile, /Capture outputs/i);
-  assert.doesNotMatch(docsFile, /Capture append fixture/i);
-});
