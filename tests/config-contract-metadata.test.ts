@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 
 const reservedKeyAssertions = [
@@ -161,11 +163,10 @@ test("settings docs describe workflow.no_uat as lifecycle optionality with manua
   assert.match(settingsReference, /quality gates still block completion/i);
 });
 
-test("settings surfaces document workflow.secure_phase as conditional routing only", async () => {
-  const [settingsCommand, settingsDoc, settingsReference, artifactSchema] =
+test("settings runtime-owned surfaces keep workflow.secure_phase as conditional routing only", async () => {
+  const [settingsCommand, settingsReference, verifyWorkContract, securePhaseContract] =
     await Promise.all([
       readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
-      readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8"),
       readFile(
         path.join(
           repoRoot,
@@ -173,7 +174,8 @@ test("settings surfaces document workflow.secure_phase as conditional routing on
         ),
         "utf8"
       ),
-      readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8")
+      buildBlueprintCommandRuntimeContractResource("verify-work"),
+      buildBlueprintCommandRuntimeContractResource("secure-phase")
     ]);
 
   assert.match(settingsCommand, /`workflow\.secure_phase`/);
@@ -189,20 +191,6 @@ test("settings surfaces document workflow.secure_phase as conditional routing on
   assert.match(
     settingsCommand,
     /Never hide or remove manual `\/blu-secure-phase`; explicit invocation remains valid/i
-  );
-
-  assert.match(settingsDoc, /`workflow\.secure_phase` defaults to `false`/i);
-  assert.match(
-    settingsDoc,
-    /required workflow-routing and lifecycle-gate step only when `workflow\.code_review` is `true`/i
-  );
-  assert.match(
-    settingsDoc,
-    /If `workflow\.code_review` is `false`, secure-phase is never mandated by routing or gates regardless of `workflow\.secure_phase`/i
-  );
-  assert.match(
-    settingsDoc,
-    /`\/blu-secure-phase` remains manually runnable even when `workflow\.secure_phase` is `false`/i
   );
 
   assert.match(
@@ -222,21 +210,32 @@ test("settings surfaces document workflow.secure_phase as conditional routing on
     /Manual `\/blu-secure-phase` remains explicitly runnable even when `workflow\.secure_phase` is `false`/i
   );
 
-  assert.match(artifactSchema, /"secure_phase": false/);
   assert.match(
-    artifactSchema,
-    /`workflow\.secure_phase` defaults to `false` and is surfaced through `\/blu-settings` as the secure-phase requirement toggle/i
+    verifyWorkContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=false means secure-phase is never mandatory regardless of workflow\.secure_phase/i
   );
   assert.match(
-    artifactSchema,
-    /routing and lifecycle gates require `\/blu-secure-phase` only when `workflow\.code_review` is `true`/i
+    verifyWorkContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true with workflow\.secure_phase=false can make mandatory code review the next gate but not secure-phase/i
   );
   assert.match(
-    artifactSchema,
-    /if `workflow\.code_review` is `false`, secure-phase is never mandated regardless of `workflow\.secure_phase`/i
+    verifyWorkContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true with workflow\.secure_phase=true routes code-review first and only routes secure-phase after review exists/i
   );
   assert.match(
-    artifactSchema,
-    /manual `\/blu-secure-phase` remains explicitly runnable even when the toggle is `false`/i
+    verifyWorkContract.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable and implemented/i
+  );
+  assert.match(
+    securePhaseContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase defaults false and controls mandatory routing, recommendations, and closeout gates only, not command existence/i
+  );
+  assert.match(
+    securePhaseContract.runtimeReference?.contractNotes ?? "",
+    /If workflow\.code_review=false, secure-phase is never mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    securePhaseContract.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable and implemented/i
   );
 });

@@ -5,19 +5,20 @@ import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import {
-  NEXT_RUNTIME_METADATA,
-  SHIP_RUNTIME_METADATA,
-  VERIFY_WORK_RUNTIME_METADATA,
+  CODE_REVIEW_RUNTIME_METADATA,
   MAP_CODEBASE_RUNTIME_METADATA,
+  NEXT_RUNTIME_METADATA,
   SECURE_PHASE_RUNTIME_METADATA,
+  SHIP_RUNTIME_METADATA,
   SPEC_PHASE_RUNTIME_METADATA,
+  VERIFY_WORK_RUNTIME_METADATA,
+  type RuntimeOwnedCommandMetadata,
   listRuntimeOwnedCommandMetadata
 } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   buildGeneratedCommandSurfaces,
-  renderUpdatedReadme,
-  renderUpdatedRuntimeReference
+  renderUpdatedReadme
 } from "../scripts/generate-command-registry.js";
 
 const repoRoot = process.cwd();
@@ -44,6 +45,34 @@ function isBundledControlPlaneDocPath(value: string): boolean {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function assertRuntimeReferenceParity(
+  contract: Awaited<ReturnType<typeof buildBlueprintCommandRuntimeContractResource>>,
+  metadata: RuntimeOwnedCommandMetadata
+): void {
+  assert.ok(contract.runtimeReference);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference.commandSpecPath, metadata.sourceId);
+  assert.equal(contract.runtimeReference.wave, metadata.catalog.wave);
+  assert.equal(contract.runtimeReference.waveTitle, metadata.runtimeReference.waveTitle);
+  assert.equal(contract.runtimeReference.command, metadata.commandName);
+  assert.equal(contract.runtimeReference.primarySkill, metadata.runtimeReference.primarySkill);
+  assert.deepEqual(
+    contract.runtimeReference.exactMcpDestination,
+    [...metadata.runtimeReference.exactMcpDestination]
+  );
+  assert.deepEqual(contract.runtimeReference.optionalAgents, [
+    ...metadata.runtimeReference.optionalAgents
+  ]);
+  assert.deepEqual(contract.runtimeReference.hookInvolvement, [
+    ...metadata.runtimeReference.hookInvolvement
+  ]);
+  assert.equal(contract.runtimeReference.contractNotes, metadata.runtimeReference.contractNotes);
+  assert.deepEqual(contract.runtimeReference.evidenceState, [
+    ...metadata.runtimeReference.evidenceState
+  ]);
 }
 
 test("runtime-owned command metadata keeps command and runtime contract truth source-owned", () => {
@@ -133,26 +162,128 @@ test("runtime resources keep command-specific inputs anchored to manifests and s
   ]);
 });
 
-test("generated command registry keeps public command docs and help surfaces in sync", async () => {
+test("runtime-owned routing metadata preserves config-gated code-review and secure-phase behavior", async () => {
+  const [verifyWork, codeReview, securePhase, ship, next] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("verify-work"),
+    buildBlueprintCommandRuntimeContractResource("code-review"),
+    buildBlueprintCommandRuntimeContractResource("secure-phase"),
+    buildBlueprintCommandRuntimeContractResource("ship"),
+    buildBlueprintCommandRuntimeContractResource("next")
+  ]);
+
+  assert.match(
+    verifyWork.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=false means secure-phase is never mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    verifyWork.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true with workflow\.secure_phase=false can make mandatory code review the next gate but not secure-phase/i
+  );
+  assert.match(
+    verifyWork.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true with workflow\.secure_phase=true routes code-review first and only routes secure-phase after review exists/i
+  );
+  assert.match(
+    verifyWork.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable and implemented/i
+  );
+
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=false, code-review routing must never make \/blu-secure-phase <phase> mandatory even if workflow\.secure_phase=true/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true and workflow\.secure_phase=true and security is still missing, \/blu-secure-phase <phase> is the primary routed next action/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable even when config-gated routing prefers another implemented next step/i
+  );
+
+  assert.match(
+    securePhase.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase defaults false and controls mandatory routing, recommendations, and closeout gates only, not command existence/i
+  );
+  assert.match(
+    securePhase.runtimeReference?.contractNotes ?? "",
+    /If workflow\.code_review=false, secure-phase is never mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    securePhase.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable and implemented/i
+  );
+
+  assert.match(
+    ship.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase defaults false; when workflow\.code_review=false, security evidence is never mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    ship.runtimeReference?.contractNotes ?? "",
+    /when workflow\.code_review=true and workflow\.secure_phase=false, review evidence may be mandatory while security evidence is not/i
+  );
+  assert.match(
+    ship.runtimeReference?.contractNotes ?? "",
+    /when workflow\.code_review=true and workflow\.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping/i
+  );
+  assert.match(
+    ship.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable and implemented/i
+  );
+
+  assert.match(
+    next.runtimeReference?.contractNotes ?? "",
+    /when workflow\.code_review=false, never make \/blu-secure-phase <phase> mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    next.runtimeReference?.contractNotes ?? "",
+    /when workflow\.code_review=true and workflow\.secure_phase=false, route to mandatory code review when review evidence is missing but do not require secure-phase/i
+  );
+  assert.match(
+    next.runtimeReference?.contractNotes ?? "",
+    /when workflow\.code_review=true and workflow\.secure_phase=true, route \/blu-code-review <phase> before \/blu-secure-phase <phase>/i
+  );
+});
+
+test("runtime-owned runtime-reference rows stay aligned for next, verify-work, secure-phase, and ship", async () => {
+  const [next, verifyWork, securePhase, ship] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("next"),
+    buildBlueprintCommandRuntimeContractResource("verify-work"),
+    buildBlueprintCommandRuntimeContractResource("secure-phase"),
+    buildBlueprintCommandRuntimeContractResource("ship")
+  ]);
+
+  assertRuntimeReferenceParity(next, NEXT_RUNTIME_METADATA);
+  assertRuntimeReferenceParity(verifyWork, VERIFY_WORK_RUNTIME_METADATA);
+  assertRuntimeReferenceParity(securePhase, SECURE_PHASE_RUNTIME_METADATA);
+  assertRuntimeReferenceParity(ship, SHIP_RUNTIME_METADATA);
+  assert.equal(next.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
+  assert.equal(
+    verifyWork.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.equal(
+    securePhase.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.equal(ship.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
+});
+
+test("generated command registry keeps README command surfaces in sync without repo-root docs", async () => {
   const surfaces = await buildGeneratedCommandSurfaces();
-  const [
-    generatedCatalog,
-    commandCatalogDoc,
-    readme,
-    runtimeReference
-  ] = await Promise.all([
+  const [generatedCatalog, readme] = await Promise.all([
     readFile(path.join(repoRoot, "generated/command-catalog.json"), "utf8"),
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "README.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+    readFile(path.join(repoRoot, "README.md"), "utf8")
   ]);
 
   assert.equal(generatedCatalog, surfaces.registryJson);
-  assert.equal(commandCatalogDoc, surfaces.commandCatalogMarkdown);
   assert.equal(readme, await renderUpdatedReadme(readme, surfaces));
-  assert.equal(
-    runtimeReference,
-    await renderUpdatedRuntimeReference(runtimeReference, surfaces)
+  assert.doesNotMatch(surfaces.readmeWorkflowBlock, /docs\/COMMAND-CATALOG\.md/);
+  assert.doesNotMatch(surfaces.readmeChooserBlock, /docs\/COMMAND-CATALOG\.md/);
+  assert.doesNotMatch(surfaces.readmeRuntimeLayoutBlock, /docs\/RUNTIME-REFERENCE\.md/);
+  assert.match(
+    surfaces.readmeWorkflowBlock,
+    /generated\/command-catalog\.json[\s\S]*\/blu-help/
   );
 
   const chooserText = surfaces.readmeChooserBlock;
@@ -176,138 +307,5 @@ test("generated command registry keeps public command docs and help surfaces in 
       new RegExp(escapeRegExp(command.command)),
       `${command.command} must not appear in runnable chooser text`
     );
-  }
-});
-
-test("code-review and secure-phase runtime contracts lock the Wave 4 config-gated routing semantics", async () => {
-  const [codeReview, securePhase, settingsDoc] = await Promise.all([
-    buildBlueprintCommandRuntimeContractResource("code-review"),
-    buildBlueprintCommandRuntimeContractResource("secure-phase"),
-    readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8")
-  ]);
-
-  assert.match(
-    codeReview.runtimeReference?.contractNotes ?? "",
-    /workflow\.code_review=false/i
-  );
-  assert.match(
-    codeReview.runtimeReference?.contractNotes ?? "",
-    /must never make \/blu-secure-phase <phase> mandatory/i
-  );
-  assert.match(
-    codeReview.runtimeReference?.contractNotes ?? "",
-    /workflow\.secure_phase=true/i
-  );
-  assert.match(
-    codeReview.runtimeReference?.contractNotes ?? "",
-    /security is still missing/i
-  );
-  assert.match(
-    codeReview.runtimeReference?.contractNotes ?? "",
-    /\/blu-secure-phase <phase>/i
-  );
-  assert.match(
-    codeReview.runtimeReference?.contractNotes ?? "",
-    /workflow\.secure_phase=false/i
-  );
-  assert.match(
-    codeReview.runtimeReference?.contractNotes ?? "",
-    /code-review-fix/i
-  );
-  assert.match(
-    codeReview.runtimeReference?.contractNotes ?? "",
-    /\/blu-secure-phase remains manually runnable even when config-gated routing prefers another implemented next step\./i
-  );
-  assert.equal(securePhase.catalog.command, "/blu-secure-phase");
-  assert.equal(securePhase.catalog.implemented, true);
-  assert.equal(securePhase.catalog.status, "implemented");
-  assert.match(
-    settingsDoc,
-    /required workflow-routing and lifecycle-gate step only when `workflow\.code_review` is `true`/i
-  );
-});
-
-test("runtime reference rows mirror secure-phase workflow routing metadata", async () => {
-  const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
-
-  const expectedRows = [
-    {
-      command: "next",
-      metadata: NEXT_RUNTIME_METADATA,
-      required: [
-        /blueprint_project_status/,
-        /blueprint_config_get/,
-        /blueprint_state_load/,
-        /blueprint_artifact_list/,
-        /blueprint_command_catalog/,
-        /workflow\.code_review=false[\s\S]*never make `?\/blu-secure-phase <phase>`? mandatory/i,
-        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=false[\s\S]*do not require secure-phase/i,
-        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=true[\s\S]*\/blu-code-review <phase>[\s\S]*\/blu-secure-phase <phase>/i
-      ]
-    },
-    {
-      command: "verify-work",
-      metadata: VERIFY_WORK_RUNTIME_METADATA,
-      required: [
-        /workflow\.code_review=false[\s\S]*secure-phase is never mandatory/i,
-        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=false[\s\S]*not secure-phase/i,
-        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=true[\s\S]*code-review first[\s\S]*secure-phase after review exists/i,
-        /\/blu-secure-phase`? remains manually runnable and implemented/i
-      ]
-    },
-    {
-      command: "secure-phase",
-      metadata: SECURE_PHASE_RUNTIME_METADATA,
-      required: [
-        /src\/mcp\/command-runtime-metadata\.ts#secure-phase/,
-        /bounded threat verification/i,
-        /manually runnable and implemented/i,
-        /workflow\.secure_phase`? defaults false/i,
-        /workflow\.code_review=false[\s\S]*secure-phase is never mandatory/i
-      ]
-    },
-    {
-      command: "ship",
-      metadata: SHIP_RUNTIME_METADATA,
-      required: [
-        /workflow\.secure_phase`? defaults false/i,
-        /workflow\.code_review=false`?[\s\S]*security evidence is never mandatory/i,
-        /workflow\.code_review=true`?[\s\S]*workflow\.secure_phase=false`?[\s\S]*review evidence may be mandatory while security evidence is not/i,
-        /workflow\.code_review=true`?[\s\S]*workflow\.secure_phase=true`?[\s\S]*code-review evidence first/i,
-        /\/blu-secure-phase`? remains manually runnable and implemented/i,
-        /runtime-owned/
-      ]
-    }
-  ];
-
-  for (const { command, metadata, required } of expectedRows) {
-    const row = runtimeReference
-      .split("\n")
-      .find((line) => line.startsWith(`| \`${command}\``));
-
-    assert.ok(row, `Missing runtime reference row for ${command}`);
-    const cells = row
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-    const hookCell = cells[5]?.replace(/`/g, "");
-    const expectedHooks = metadata.runtimeReference.hookInvolvement.length > 0
-      ? metadata.runtimeReference.hookInvolvement.join("; ")
-      : "none";
-
-    assert.match(row, new RegExp(metadata.sourceId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    assert.equal(hookCell, expectedHooks, `${command} hook involvement should match metadata`);
-
-    for (const tool of metadata.requiredTools) {
-      assert.match(row, new RegExp(tool));
-    }
-
-    for (const pattern of required) {
-      assert.match(row, pattern);
-    }
-
-    for (const state of metadata.runtimeReference.evidenceState) {
-      assert.match(row, new RegExp(state));
-    }
   }
 });

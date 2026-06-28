@@ -3,6 +3,7 @@ node_modules/
 # under dist/ must be committed as part of the shipped extension.
 .DS_Store
 .idea/
+/docs/
 /docs/build/TEMP.md
 /dilution-report/
 .plan/

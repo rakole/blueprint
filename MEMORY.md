@@ -7,8 +7,8 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Active GSD milestone: Blueprint Defect Discovery Milestone, initialized on 2026-05-01. This milestone is discovery-only: systematically audit Blueprint workflow slices, classify current defects, and write detailed `docs/bugs/*.md` reports plus an index. Do not implement fixes until the user chooses a later repair milestone.
-- Active GSD phase status: Phase 1, Bug Taxonomy And Reporting Harness, is planned as of 2026-05-01 with three executable plans for `docs/bugs/TEMPLATE.md`, `docs/bugs/INDEX.md`, and `docs/bugs/BPBUG-000-illustrative-example.md`; next action is `$gsd-execute-phase 1`.
+- Current product posture: Blueprint ships the retained Wave 0 through Wave 5 surfaces plus the additive `impact` command, while `/blu`, `/blu-help`, and `/blu-progress` must keep routing and recommendations inside the live `implemented` catalog surface.
+- Current repo posture: repo-root `docs/` is intentionally local, ignored, and untracked after the docs-folder-removal rollout. Agent guidance should come from source-owned and runtime-owned files under `AGENTS.md`, `agent-docs/`, `commands/`, `skills/`, `agents/`, `src/`, `generated/`, `tests/`, and MCP runtime resources.
 - Current milestone: post-shipment lifecycle and roadmap-admin closeout now also includes the shipped Wave 3 capture slice, the shipped Wave 3 lightweight execution slice, the shipped Wave 3 debug slice, the shipped Wave 4 docs, review, remediation, review-fix, peer-review, UI-audit, test-generation, impact, review-branch, shipping, and undo slices, the shipped Wave 5 `new-workspace`, `remove-workspace`, `workstreams`, cleanup, patch-replay, and advisory update slice; `complete-milestone`, `milestone-summary`, `new-milestone`, `insert-phase`, `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore`, `fast`, `quick`, `debug`, `docs-update`, `impact`, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `add-tests`, `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `reapply-patches`, and `update` are implemented alongside the earlier lifecycle, governance, and roadmap-admin surfaces
 - Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the roadmap-discovery command `list-phase-assumptions`, the lifecycle commands `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, and `add-tests`, the Wave 3 lightweight execution commands `fast` and `quick`, the Wave 3 debug command `debug`, the router command `next`, the governance handoff/resume commands `pause-work` and `resume-work`, the Wave 2 roadmap-admin commands `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, and `new-milestone`, the Wave 3 capture commands `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, and `explore`, the Wave 4 docs and review commands `docs-update`, `impact`, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, and `ui-review`, and the maintenance commands `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `reapply-patches`, and `update` are implemented, and routing still filters to implemented commands only. `/blu-impact` now has its command manifest, `blueprint-impact` primary skill, runtime-contract reference, report writing/rendering, docs, tests, built assets, and Phase 11 self-impact hardening aligned.
 - Brownfield bootstrap decision: brownfield repos now map first. `mapping-incomplete` and `mapped-only` are intentional codebase-only readiness states; unmapped brownfield and `mapping-incomplete` route to `/blu-map-codebase`, while `mapped-only` routes to `/blu-new-project` and preserves `.blueprint/codebase/*.md`.
@@ -19,11 +19,12 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 ## Stable References
 
 - Durable repo instructions: `AGENTS.md`
-- Drift ledger: `docs/DRIFT.MD`
-- Shared architecture decisions: `docs/DECISIONS.md`
-- MCP contracts: `docs/MCP-TOOLS.md`
-- Command inventory: `docs/COMMAND-CATALOG.md`
-- Current handoff: `docs/HANDOFF.md`
+- Agent manual entrypoint: `agent-docs/README.md`
+- Runtime-owned command metadata: `src/mcp/command-runtime-metadata.ts`
+- Live command inventory snapshot: `generated/command-catalog.json`
+- Runtime resource projection: `src/mcp/command-resources.ts`
+- Implemented-only routing logic: `src/mcp/tools/project.ts`
+- Rollout and command completion snapshot: `PROGRESS.md`
 
 ## Operational Notes (Worktrees + GitHub Writes)
 
@@ -75,45 +76,48 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 ## Retained Commands
 
 - Total retained commands: 53, plus the explicitly approved additive `/blu-impact` command now shipped as an implemented advisory/reporting command
-- Root router spec: `docs/commands/root-router.md`
-- Per-command specs: `docs/commands/*.md`
-- Command inventory index: `docs/COMMAND-CATALOG.md`
+- Root router manifest: `commands/blu.toml`
+- Per-command manifests: `commands/blu-*.toml`
+- Shared runtime ownership: `src/mcp/command-runtime-metadata.ts`
+- Live inventory and routability snapshot: `generated/command-catalog.json`
+- Runtime contract resources: `blueprint://commands/catalog` and `blueprint://commands/{command}/runtime-contract`
 
-## Important Docs
+## Important Sources
 
+- `AGENTS.md`
+- `agent-docs/README.md`
 - `README.md`
-- `docs/DRIFT.MD`
-- `docs/DECISIONS.md`
-- `docs/ARCHITECTURE.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/GEMINI-CONSTRAINTS.md`
-- `docs/PHASE-LIFECYCLE.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/IMPLEMENTATION-ORDER.md`
-- `docs/TEST-STRATEGY.md`
-- `docs/HANDOFF.md`
+- `PROGRESS.md`
+- `generated/command-catalog.json`
+- `src/mcp/command-runtime-metadata.ts`
+- `src/mcp/command-resources.ts`
+- `src/mcp/tools/project.ts`
+- `commands/blu.toml` and `commands/blu-*.toml`
+- `skills/*/SKILL.md`
+- `agents/*.md`
+- `tests/`
 
 ## Recommended Read Order Before Coding
 
 1. `AGENTS.md`
-2. `docs/DRIFT.MD`
-3. `docs/DECISIONS.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/ARTIFACT-SCHEMA.md`
-6. `docs/MCP-TOOLS.md`
-7. `docs/GEMINI-CONSTRAINTS.md`
-8. `docs/PHASE-LIFECYCLE.md`
-9. `docs/SKILLS-AND-AGENTS.md`
-10. `docs/IMPLEMENTATION-ORDER.md`
-11. `docs/COMMAND-CATALOG.md`
-12. `docs/commands/<command>.md`
+2. `agent-docs/README.md`
+3. `agent-docs/00-operating-rules.md`
+4. `agent-docs/01-product-runtime-model.md`
+5. `agent-docs/02-repo-map.md`
+6. `src/mcp/command-runtime-metadata.ts`
+7. `generated/command-catalog.json`
+8. `src/mcp/command-resources.ts`
+9. `commands/blu.toml` and the relevant `commands/blu-*.toml`
+10. The matching `skills/*/SKILL.md` and `agents/*.md`
+11. The touched source files under `src/`
+12. The focused tests for the touched area
+13. `PROGRESS.md`
 
 ## Next Implementation Slice
 
-- For the active GSD milestone, execute Phase 1: Bug Taxonomy And Reporting Harness. The plan creates the `docs/bugs/` index, bug-report template, severity/confidence vocabulary, affected-surface taxonomy, illustrative non-real example, and no-fix boundary checks before auditing workflow-specific slices.
+- Keep the docs-folder-removal rollout closed over source-owned guidance only: `MEMORY.md`, `AGENTS.md`, `agent-docs/`, runtime metadata/resources, and focused tests should not point agents back at repo-root `docs/`.
 - `/blu-impact` Phase 11 final hardening is the current closeout posture: self-impact release-readiness coverage exercises command, MCP, docs, skill, artifact-contract, package, test, and `dist` blast-radius signals, with scope provenance recorded as first-class evidence in persisted reports
-- keep the shipped `complete-milestone`, `milestone-summary`, `new-milestone`, `pr-branch`, `ship`, and `cleanup` contracts aligned with their docs, manifests, shared skills, and implemented-only routing behavior
+- keep the shipped `complete-milestone`, `milestone-summary`, `new-milestone`, `pr-branch`, `ship`, and `cleanup` contracts aligned with their manifests, shared skills, runtime metadata, and implemented-only routing behavior
 - keep the shipped `insert-phase` contract aligned across its manifest, primary skill contract, required MCP substrate, and regression coverage
 - start any post-Wave-2 rollout from a fresh plan instead of treating the closeout trio as still upcoming
 - preserve the shipped `add-phase`, `remove-phase`, `plan-milestone-gaps`, and `audit-milestone` contracts plus implemented-only routing behavior
@@ -185,7 +189,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - shared runtime hardening now routes core path validation, JSON parsing, prompt-boundary checks, and hidden-control-character sanitization through `src/shared/security.ts`, with hooks reusing the same detector set for advisory parity
 - `review` shipped on 2026-04-13 with a dedicated `/blu-review` manifest, the discoverable `blueprint-review` skill, plan inventory plus plan-read MCP grounding, and peer-review persistence through `blueprint_review_record` as `XX-REVIEWS.md`
 - `ui-review` shipped on 2026-04-13 with a dedicated `/blu-ui-review` manifest, the discoverable `blueprint-review` skill, the bounded `blueprint-ui-auditor` agent contract, and UI audit persistence through `blueprint_review_record`
-- `docs/build/WAVE-2-AGENT-WORKFLOW.md`, `docs/build/WAVE-2-PARALLEL-CLOSEOUT-PLAN.md`, and `docs/build/WAVE-2-AUTO-AGENT-META-PROMPT.md` now define the anti-drift closeout workflow for the next 1-to-3-agent cycles
+- `AGENTS.md`, `agent-docs/08-change-recipes.md`, `agent-docs/09-verification-guide.md`, and `scripts/drift-fix-memory.mjs` now define the anti-drift closeout workflow for the next 1-to-3-agent cycles
 - `docs-update` shipped on 2026-04-12 with a dedicated `blueprint-docs` skill, the `blueprint-doc-writer` and `blueprint-doc-verifier` agent contracts, a routable command manifest, and report persistence through `blueprint_artifact_report_write`
 - `pr-branch` shipped on 2026-04-13 with a dedicated `/blu-pr-branch` manifest, the `blueprint-maintenance` skill, a canonical `.blueprint/reports/pr-branch-latest.md` report, and explicit git confirmation gates grounded in `blueprint_project_status`, `blueprint_config_get`, and `blueprint_artifact_summary_digest`
 - `ship` shipped on 2026-04-13 with a dedicated `/blu-ship` manifest, the `blueprint-maintenance` skill, a canonical `.blueprint/reports/ship-latest.md` report, explicit push or PR confirmation gates, and manual fallback guidance when `gh` is missing or unauthenticated

@@ -4,6 +4,7 @@ import { execFile as execFileCallback } from "node:child_process";
 import { promises as fs } from "node:fs";
 import {
   access,
+  cp,
   mkdir,
   mkdtemp,
   readFile,
@@ -27,6 +28,7 @@ import {
 } from "../src/mcp/tools/impact.js";
 
 const repoRoot = process.cwd();
+const impactFixtureBaseRepo = path.join(repoRoot, "tests/fixtures/impact/base-repo");
 const execFileAsync = promisify(execFileCallback);
 
 const IMPACT_TOOL_NAMES = [
@@ -73,6 +75,20 @@ async function createTempRepo(): Promise<string> {
   await writeRepoFile(repoPath, "src/app.ts", "export const value = 1;\n");
   await git(repoPath, ["add", "."]);
   await git(repoPath, ["commit", "-m", "baseline"]);
+
+  return repoPath;
+}
+
+async function createImpactFixtureRepo(): Promise<string> {
+  const repoPath = await createTempDir();
+
+  await cp(impactFixtureBaseRepo, repoPath, { recursive: true });
+  await git(repoPath, ["init"]);
+  await git(repoPath, ["branch", "-M", "main"]);
+  await git(repoPath, ["config", "user.email", "codex@example.com"]);
+  await git(repoPath, ["config", "user.name", "Codex"]);
+  await git(repoPath, ["add", "."]);
+  await git(repoPath, ["commit", "-m", "baseline fixture"]);
 
   return repoPath;
 }
@@ -807,46 +823,51 @@ test("impact context load resolves phase and roadmapItem targets independently w
 });
 
 test("impact analyze normalizes all file input shapes with mismatch union warnings and deterministic ids", async () => {
+  const repoPath = await createImpactFixtureRepo();
   const normalizationConfig = {
     ...lowNoiseConfig(),
     risk: {
       blockBelowConfidenceForSensitiveAreas: 0
     }
   };
-  const first = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    changedFiles: ["src/app.ts", "commands/blu-impact.toml"],
-    files: ["docs/overview.md"],
-    config: normalizationConfig,
-    scope: {
-      files: ["package.json", "src/app.ts"],
-      changedFiles: ["tests/impact-tools.test.ts"]
-    }
-  });
-  const second = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    files: ["tests/impact-tools.test.ts", "package.json"],
-    config: normalizationConfig,
-    scope: {
-      changedFiles: ["commands/blu-impact.toml"],
-      files: ["docs/overview.md", "src/app.ts"]
-    }
-  });
+  try {
+    const first = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts", "commands/blu-impact.toml"],
+      files: ["docs/overview.md"],
+      config: normalizationConfig,
+      scope: {
+        files: ["package.json", "src/app.ts"],
+        changedFiles: ["tests/impact-tools.test.ts"]
+      }
+    });
+    const second = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      files: ["tests/impact-tools.test.ts", "package.json"],
+      config: normalizationConfig,
+      scope: {
+        changedFiles: ["commands/blu-impact.toml"],
+        files: ["docs/overview.md", "src/app.ts"]
+      }
+    });
 
-  assert.equal(first.impactStatus, "WARN");
-  assert.deepEqual(
-    first.surfaces.map((surface) => surface.path),
-    [
-      "commands/blu-impact.toml",
-      "docs/overview.md",
-      "package.json",
-      "src/app.ts",
-      "tests/impact-tools.test.ts"
-    ]
-  );
-  assert.match(first.warnings.join("\n"), /file inputs differed/);
-  assert.equal(first.impactId, second.impactId);
-  assert.deepEqual(first.surfaces, second.surfaces);
+    assert.equal(first.impactStatus, "WARN");
+    assert.deepEqual(
+      first.surfaces.map((surface) => surface.path),
+      [
+        "commands/blu-impact.toml",
+        "docs/overview.md",
+        "package.json",
+        "src/app.ts",
+        "tests/impact-tools.test.ts"
+      ]
+    );
+    assert.match(first.warnings.join("\n"), /file inputs differed/);
+    assert.equal(first.impactId, second.impactId);
+    assert.deepEqual(first.surfaces, second.surfaces);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
 });
 
 test("impact analyze classifies the surface matrix overlaps deterministically", async () => {
@@ -1098,50 +1119,55 @@ test("impact analyze raises WARN for obligations without conflating risk and con
 });
 
 test("impact analyze treats runtime metadata as the command source of truth without reviving docs", async () => {
+  const repoPath = await createImpactFixtureRepo();
   const runtimeMetadata = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: ["src/mcp/command-runtime-metadata.ts"],
     config: lowNoiseConfig(),
     context: minimalPhase6Context({})
   });
-  const docsOnly = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    changedFiles: ["docs/overview.md"],
-    config: lowNoiseConfig(),
-    context: minimalPhase6Context({})
-  });
+  try {
+    const docsOnly = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["docs/overview.md"],
+      config: lowNoiseConfig(),
+      context: minimalPhase6Context({})
+    });
 
-  assert.equal(runtimeMetadata.status, "BLOCK");
-  assertHasObligation(runtimeMetadata, "Command contract review required");
-  assertHasObligation(runtimeMetadata, "Command-facing guidance should be reviewed");
-  assertHasObligation(
-    runtimeMetadata,
-    "Command metadata tests must cover command contract changes"
-  );
-  assertHasObligation(runtimeMetadata, "Runtime source changes require generated dist review");
-  assert.equal(findingByCheck(runtimeMetadata, "build.dist-coverage")?.status, "WARN");
-  assert.equal(
-    runtimeMetadata.surfaces.some(
-      (surface) =>
-        surface.path === "src/mcp/command-runtime-metadata.ts" &&
-        surface.surfaces.includes("command-catalog")
-    ),
-    true
-  );
+    assert.equal(runtimeMetadata.status, "BLOCK");
+    assertHasObligation(runtimeMetadata, "Command contract review required");
+    assertHasObligation(runtimeMetadata, "Command-facing guidance should be reviewed");
+    assertHasObligation(
+      runtimeMetadata,
+      "Command metadata tests must cover command contract changes"
+    );
+    assertHasObligation(runtimeMetadata, "Runtime source changes require generated dist review");
+    assert.equal(findingByCheck(runtimeMetadata, "build.dist-coverage")?.status, "WARN");
+    assert.equal(
+      runtimeMetadata.surfaces.some(
+        (surface) =>
+          surface.path === "src/mcp/command-runtime-metadata.ts" &&
+          surface.surfaces.includes("command-catalog")
+      ),
+      true
+    );
 
-  assert.equal(docsOnly.status, "PASS");
-  assert.equal(obligationTitles(docsOnly).includes("Command contract review required"), false);
-  assert.equal(
-    obligationTitles(docsOnly).includes("Runtime source changes require generated dist review"),
-    false
-  );
-  assert.equal(
-    docsOnly.surfaces.some(
-      (surface) =>
-        surface.path === "docs/overview.md" && surface.surfaces.includes("command-catalog")
-    ),
-    false
-  );
+    assert.equal(docsOnly.status, "PASS");
+    assert.equal(obligationTitles(docsOnly).includes("Command contract review required"), false);
+    assert.equal(
+      obligationTitles(docsOnly).includes("Runtime source changes require generated dist review"),
+      false
+    );
+    assert.equal(
+      docsOnly.surfaces.some(
+        (surface) =>
+          surface.path === "docs/overview.md" && surface.surfaces.includes("command-catalog")
+      ),
+      false
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
 });
 
 test("impact analyze keeps description-only scope low-confidence and non-PASS", async () => {
@@ -2083,6 +2109,7 @@ test("impact analyze requires runtime context for command manifest surfaces", as
 });
 
 test("impact analyze blocks router planned-command exposure review but not benign guardrail docs", async () => {
+  const repoPath = await createImpactFixtureRepo();
   const context = minimalPhase6Context({
     impact: {
       declaredStatus: "planned",
@@ -2097,22 +2124,26 @@ test("impact analyze blocks router planned-command exposure review but not benig
     config: lowNoiseConfig(),
     context
   });
-  const genericDoc = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    changedFiles: ["docs/overview.md"],
-    config: lowNoiseConfig(),
-    context
-  });
+  try {
+    const genericDoc = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["docs/overview.md"],
+      config: lowNoiseConfig(),
+      context
+    });
 
-  assert.equal(
-    findingByCheck(router, "contract.planned-command-exposure")?.title,
-    "planned command exposure requires review"
-  );
-  assert.equal(findingByCheck(router, "contract.planned-command-exposure")?.status, "BLOCK");
-  assert.equal(
-    findingByCheck(genericDoc, "contract.planned-command-exposure"),
-    undefined
-  );
+    assert.equal(
+      findingByCheck(router, "contract.planned-command-exposure")?.title,
+      "planned command exposure requires review"
+    );
+    assert.equal(findingByCheck(router, "contract.planned-command-exposure")?.status, "BLOCK");
+    assert.equal(
+      findingByCheck(genericDoc, "contract.planned-command-exposure"),
+      undefined
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
 });
 
 test("impact analyze creates command review, docs, and metadata-test obligations", async () => {
@@ -2330,6 +2361,7 @@ test("impact analyze creates security, deployment, release, and test obligations
 });
 
 test("impact self-analysis produces release-readiness coverage for the implemented workflow", async () => {
+  const repoPath = await createImpactFixtureRepo();
   const implementationFiles = [
     "commands/blu-impact.toml",
     "docs/runtime-guide.md",
@@ -2346,30 +2378,31 @@ test("impact self-analysis produces release-readiness coverage for the implement
     "tests/impact-fixtures.test.ts",
     "tests/impact-metadata.test.ts"
   ];
-  const analysis = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    changedFiles: implementationFiles,
-    config: {
-      ownership: {
-        sources: [],
-        fallbackReviewers: ["@blueprint/runtime"]
-      },
-      dependencyGraph: {
-        sources: []
-      },
-      risk: {
-        blockBelowConfidenceForSensitiveAreas: 0
-      }
-    }
-  });
-  const markdown = await blueprintImpactOutputRender({
-    cwd: repoRoot,
-    mode: "markdown",
-    report: analysis.report
-  });
-  const repoPath = await createTempRepo();
-
   try {
+    await writeRepoFile(repoPath, "docs/runtime-guide.md", "# Runtime Guide\n");
+    await writeRepoFile(repoPath, "docs/artifact-guide.md", "# Artifact Guide\n");
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: implementationFiles,
+      config: {
+        ownership: {
+          sources: [],
+          fallbackReviewers: ["@blueprint/runtime"]
+        },
+        dependencyGraph: {
+          sources: []
+        },
+        risk: {
+          blockBelowConfidenceForSensitiveAreas: 0
+        }
+      }
+    });
+    const markdown = await blueprintImpactOutputRender({
+      cwd: repoPath,
+      mode: "markdown",
+      report: analysis.report
+    });
     const write = await blueprintImpactReportWrite({
       cwd: repoPath,
       report: analysis.report

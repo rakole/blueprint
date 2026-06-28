@@ -243,7 +243,7 @@ Blueprint is designed to keep those artifacts in version control by default so t
 ## How The Workflow Fits Together
 
 <!-- command-registry:readme-workflow:start -->
-The runnable command groups below are generated from the same registry as `/blu-help` and `docs/COMMAND-CATALOG.md`.
+The runnable command groups below are generated from the same registry as `generated/command-catalog.json` and stay aligned with `/blu-help`.
 
 ### Foundation
 
