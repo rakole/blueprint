@@ -14,7 +14,7 @@ Diagnose Blueprint project health, config provenance, state consistency, and art
 6. Call `mcp_blueprint_blueprint_artifact_validate`.
 7. In read-only mode, stop after reporting diagnosis and exact repair options.
 8. In `--repair` mode, get explicit confirmation with `ask_user` after presenting an exact write preview.
-9. After confirmation, call `mcp_blueprint_blueprint_config_set` only when config normalization is required.
+9. After confirmation, call `mcp_blueprint_blueprint_config_set` only when config normalization is required, passing `repairMalformedProjectConfig: true` only for malformed project-config replacement.
 10. After confirmation, call `mcp_blueprint_blueprint_state_sync` only when state reconstruction is required.
 11. Re-read `mcp_blueprint_blueprint_project_status` when a post-repair next action is needed.
 
@@ -27,6 +27,7 @@ Diagnose Blueprint project health, config provenance, state consistency, and art
 
 - Read-only mode performs no writes.
 - Config repair uses `mcp_blueprint_blueprint_config_set` with `scope: "project"` and a JSON-object `patch` only for normalization.
+- Malformed `.blueprint/config.json` repair additionally passes `repairMalformedProjectConfig: true`; ordinary settings writes must not use that repair flag.
 - State repair uses `mcp_blueprint_blueprint_state_sync` only for reconstruction.
 - Do not mutate unrelated repo files.
 

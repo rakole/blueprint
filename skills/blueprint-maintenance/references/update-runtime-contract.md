@@ -28,7 +28,9 @@ This reference is the detailed `/blu-update` workflow contract. The command mani
 
 - If the user wants a saved checklist, call `mcp_blueprint_blueprint_update_plan`.
 - Pass `mode = "ask_user"` when structured gating was available and `mode = "manual"` otherwise.
-- Treat returned steps, notes, `requiresRestart`, `savedPaths`, and status as authoritative.
+- Treat returned steps, notes, `requiresRestart`, warnings, and `persistenceStatus` as authoritative.
+- Treat `persistenceStatus === "saved"` plus non-null `path` as the only saved-checklist signal.
+- When `persistenceStatus === "not_saved"`, treat `savedPaths` and `intendedPath` as attempted targets only, report that no checklist was saved, and surface warnings plus manual fallback steps.
 
 ### Validate
 

@@ -5,6 +5,7 @@ type PhasePlanPathLocation = {
 };
 export declare function normalizePlanId(value: NumericInput): string;
 export declare function parsePlanArtifactPath(pathValue: string, phasePrefix: string): string | null;
+export declare function parseCanonicalPlanArtifactPath(pathValue: string, located: PhasePlanPathLocation): string | null;
 export declare function planPathFor(located: PhasePlanPathLocation, planId: string): string;
 export declare function extractPlanIdFromFrontmatterLine(line: string): string | null;
 export declare function reconcileAutoAssignedPlanContent(content: string, planId: string): string;

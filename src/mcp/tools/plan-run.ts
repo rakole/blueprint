@@ -21,6 +21,7 @@ import { normalizePlanId } from "./phase-plan-identifiers.js";
 import { normalizePhaseNumber, type NumericInput } from "./phase-numbering.js";
 import {
   blueprintPatchRecord,
+  rollbackPatchRecordToSnapshot,
   blueprintWorkspaceCreate,
   blueprintWorkspaceRegistryGet,
   blueprintWorkspaceRemove
@@ -2240,8 +2241,80 @@ async function readJsonObjectIfPresent(
   }
 }
 
+function maybeFailPlanRunRecordWrite(filePath: string): void {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE;
+
+  if (!injectedFailure) {
+    return;
+  }
+
+  const matchesPath =
+    injectedFailure === "1" || path.resolve(injectedFailure) === path.resolve(filePath);
+
+  if (!matchesPath) {
+    return;
+  }
+
+  delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE;
+  throw new Error(`Injected PlanRun record write failure for ${filePath}`);
+}
+
+function parsePositivePlanRunTestIntegerEnv(name: string): number | null {
+  const raw = process.env[name];
+
+  if (!raw) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+async function waitForPlanRunTestPath(filePath: string, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    try {
+      await fs.access(filePath);
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+
+  throw new Error(`Timed out waiting for PlanRun test release file: ${filePath}`);
+}
+
+async function maybeDelayPlanRunPatchRollbackForTest(): Promise<void> {
+  const markerPath = process.env.BLUEPRINT_TEST_PLAN_RUN_PATCH_ROLLBACK_MARKER;
+  const releasePath = process.env.BLUEPRINT_TEST_PLAN_RUN_PATCH_ROLLBACK_RELEASE;
+  const delayMs = parsePositivePlanRunTestIntegerEnv(
+    "BLUEPRINT_TEST_PLAN_RUN_PATCH_ROLLBACK_DELAY_MS"
+  );
+
+  if (!markerPath && !releasePath && !delayMs) {
+    return;
+  }
+
+  if (markerPath) {
+    await fs.mkdir(path.dirname(markerPath), { recursive: true });
+    await fs.writeFile(markerPath, "rollback-pending\n", "utf8");
+  }
+
+  if (releasePath) {
+    await waitForPlanRunTestPath(releasePath, delayMs ?? 5_000);
+    return;
+  }
+
+  if (delayMs) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+}
+
 async function writeAtomicJsonFile(filePath: string, value: Record<string, unknown>): Promise<void> {
   await ensureParentDirectory(filePath);
+  maybeFailPlanRunRecordWrite(filePath);
 
   const tempPath = path.join(
     path.dirname(filePath),
@@ -3047,46 +3120,70 @@ export async function blueprintPlanRunPatchRecord(
     });
   }
 
-  const patchRecord = await blueprintPatchRecord({
-    cwd: diffProjectRoot.projectRoot,
-    patchId,
-    patch: diff.patch,
-    trackedFiles: changedFilePaths,
-    label: `Plan run ${phase}/${planId}`,
-    sourceVersion: diffBaseHead,
-    compatibility: {
-      repoRootName: path.basename(projectRoot)
+  const patchRecord = await blueprintPatchRecord(
+    {
+      cwd: diffProjectRoot.projectRoot,
+      patchId,
+      patch: diff.patch,
+      trackedFiles: changedFilePaths,
+      label: `Plan run ${phase}/${planId}`,
+      sourceVersion: diffBaseHead,
+      compatibility: {
+        repoRootName: path.basename(projectRoot)
+      },
+      audit: {
+        action: "record",
+        outcome: "recorded",
+        targetHead: diff.currentHead,
+        warnings: diff.warnings
+      }
     },
-    audit: {
-      action: "record",
-      outcome: "recorded",
-      targetHead: diff.currentHead,
-      warnings: diff.warnings
+    {
+      captureRollbackSnapshot: true
     }
-  });
-  const recordedRun = await blueprintPlanRunRecord({
-    cwd: projectRoot,
-    runId: run.runId,
-    phase,
-    planId,
-    status: "IMPLEMENTED",
-    worktreePath: run.worktree.path ?? undefined,
-    branchName: run.worktree.branchName ?? undefined,
-    baseHead: diffBaseHead,
-    currentHead: diff.currentHead ?? undefined,
-    changedFiles: changedFilePaths,
-    unauthorizedChangedFiles: [],
-    commandsRun: args.commandsRun,
-    verification: args.verification,
-    patch: {
-      patchId: patchRecord.patchId,
-      recorded: true,
-      registryPath: patchRecord.registryPath,
-      patchPath: patchRecord.patchPath
-    },
-    notes: args.notes,
-    warnings: [...(args.warnings ?? []), ...diff.warnings]
-  });
+  );
+  let recordedRun: PlanRunRecordResult;
+
+  try {
+    recordedRun = await blueprintPlanRunRecord({
+      cwd: projectRoot,
+      runId: run.runId,
+      phase,
+      planId,
+      status: "IMPLEMENTED",
+      worktreePath: run.worktree.path ?? undefined,
+      branchName: run.worktree.branchName ?? undefined,
+      baseHead: diffBaseHead,
+      currentHead: diff.currentHead ?? undefined,
+      changedFiles: changedFilePaths,
+      unauthorizedChangedFiles: [],
+      commandsRun: args.commandsRun,
+      verification: args.verification,
+      patch: {
+        patchId: patchRecord.patchId,
+        recorded: true,
+        registryPath: patchRecord.registryPath,
+        patchPath: patchRecord.patchPath
+      },
+      notes: args.notes,
+      warnings: [...(args.warnings ?? []), ...diff.warnings]
+    });
+  } catch (error) {
+    try {
+      await maybeDelayPlanRunPatchRollbackForTest();
+      await rollbackPatchRecordToSnapshot(patchRecord.rollbackSnapshot);
+    } catch (rollbackError) {
+      const originalMessage = error instanceof Error ? error.message : String(error);
+      const rollbackMessage =
+        rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+
+      throw new Error(
+        `PlanRun metadata persistence failed after patch registry write, and patch registry rollback also failed. Original error: ${originalMessage}. Rollback error: ${rollbackMessage}`
+      );
+    }
+
+    throw error;
+  }
 
   return {
     status: "recorded",

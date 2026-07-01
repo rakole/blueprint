@@ -17,6 +17,7 @@ Follow this flow exactly:
 
 Response requirements:
 - Confirm the profile change from the old value to the new value.
+- If `updatedKeys` is empty, report that the requested profile was already active and no config value changed.
 - Report `updatedKeys` and the project config path returned by `mcp_blueprint_blueprint_config_set_profile`.
 - Explicitly state that `defaults.json` was not modified.
 """

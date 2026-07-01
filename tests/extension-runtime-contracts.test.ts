@@ -330,6 +330,35 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
   }
 });
 
+test("legitimate roadmap-add callers pass the confirmation receipt after approval gates", async () => {
+  const [exploreManifest, planMilestoneGapsManifest, captureSkill] = await Promise.all([
+    readRelativePath("commands/blu-explore.toml"),
+    readRelativePath("commands/blu-plan-milestone-gaps.toml"),
+    readRelativePath("skills/blueprint-capture/SKILL.md")
+  ]);
+
+  assert.match(
+    exploreManifest,
+    /mcp_blueprint_blueprint_roadmap_add_phase[\s\S]{0,260}`confirmed: true` receipt from the routing confirmation gate/,
+    "/blu-explore should pass confirmed: true after its routing confirmation gate"
+  );
+  assert.match(
+    planMilestoneGapsManifest,
+    /After confirmation[\s\S]{0,180}Pass `confirmed: true` from the grouped plan confirmation gate/,
+    "/blu-plan-milestone-gaps should pass confirmed: true after grouped plan approval"
+  );
+  assert.match(
+    captureSkill,
+    /`blueprint_roadmap_add_phase`:[\s\S]{0,220}`confirmed: true` after the active command's approval gate/,
+    "blueprint-capture shared contract should preserve the add-phase confirmation receipt"
+  );
+  assert.match(
+    captureSkill,
+    /Use `blueprint_roadmap_add_phase` only[\s\S]{0,260}`confirmed: true` from the routing confirmation gate/,
+    "blueprint-capture explore flow should bind roadmap adds to the routing confirmation receipt"
+  );
+});
+
 test("new-project canonical guardrails forbid shell execution and tool-name drift", async () => {
   const [manifest, raw] = await Promise.all([
     readRelativePath("commands/blu-new-project.toml"),

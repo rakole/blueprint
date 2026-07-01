@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,6 +14,7 @@ import {
 } from "../src/mcp/tools/plan-run.js";
 import {
   blueprintPatchList,
+  blueprintPatchRecord,
   blueprintWorkspaceCreate
 } from "../src/mcp/tools/workspace.js";
 import {
@@ -240,6 +241,54 @@ async function withGlobalHome<T>(
   }
 }
 
+async function withEnvironment<T>(
+  overrides: Record<string, string | undefined>,
+  callback: () => Promise<T>
+): Promise<T> {
+  const previousValues = new Map<string, string | undefined>();
+
+  for (const [key, value] of Object.entries(overrides)) {
+    previousValues.set(key, process.env[key]);
+
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  try {
+    return await callback();
+  } finally {
+    for (const [key, value] of previousValues.entries()) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForPath(filePath: string): Promise<void> {
+  const deadline = Date.now() + 5_000;
+
+  while (Date.now() < deadline) {
+    try {
+      await access(filePath);
+      return;
+    } catch {
+      await sleep(10);
+    }
+  }
+
+  throw new Error(`Timed out waiting for ${filePath}`);
+}
+
 async function prepareRun(
   repoPath: string,
   globalHome: string
@@ -347,6 +396,192 @@ test("plan-run patch record captures authorized worktree diff and updates run me
   assert.equal(loaded.run?.git.patchId, "plan-run-3-01-run-01");
   assert.deepEqual(loaded.run?.git.changedFiles, ["src/app.ts"]);
   assert.equal(loaded.history.at(-1)?.status, "IMPLEMENTED");
+});
+
+test("plan-run patch record preserves existing patch registry entries", async (t) => {
+  const { workspaceRoot, globalHome } = await createPlanRunTestRoot(t);
+  const { repoPath } = await createPlanRunRepo(workspaceRoot);
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const { worktreePath } = await prepareRun(repoPath, globalHome);
+
+  await withGlobalHome(globalHome, () =>
+    blueprintPatchRecord({
+      cwd: repoPath,
+      patchId: "manual-entry",
+      patch: "diff --git a/src/app.ts b/src/app.ts\n",
+      trackedFiles: ["src/app.ts"],
+      sourceVersion: "manual-source"
+    })
+  );
+  await writeFile(path.join(worktreePath, "src/app.ts"), "export const value = 'changed';\n", "utf8");
+
+  const recorded = await withGlobalHome(globalHome, () =>
+    blueprintPlanRunPatchRecord({
+      cwd: repoPath,
+      phase: "3",
+      planId: "1"
+    })
+  );
+  const listed = await withGlobalHome(globalHome, () =>
+    blueprintPatchList({
+      cwd: repoPath
+    })
+  );
+
+  assert.equal(recorded.status, "recorded");
+  assert.deepEqual(
+    listed.patches.map((patch) => patch.patchId).sort(),
+    ["manual-entry", "plan-run-3-01-run-01"]
+  );
+});
+
+test("plan-run patch record rolls back global patch entry when run metadata persistence fails", async (t) => {
+  const { workspaceRoot, globalHome } = await createPlanRunTestRoot(t);
+  const { repoPath } = await createPlanRunRepo(workspaceRoot);
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const { worktreePath } = await prepareRun(repoPath, globalHome);
+  const loadedBefore = await blueprintPlanRunLoad({
+    cwd: repoPath,
+    phase: "3",
+    planId: "1",
+    runId: "run-01"
+  });
+  const patchId = "plan-run-3-01-run-01";
+  const patchRegistryPath = path.join(globalHome, "patches");
+
+  assert.ok(loadedBefore.path);
+  await writeFile(path.join(worktreePath, "src/app.ts"), "export const value = 'changed';\n", "utf8");
+
+  await assert.rejects(
+    withEnvironment(
+      {
+        BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE: loadedBefore.path
+      },
+      () =>
+        withGlobalHome(globalHome, () =>
+          blueprintPlanRunPatchRecord({
+            cwd: repoPath,
+            phase: "3",
+            planId: "1"
+          })
+        )
+    ),
+    /Injected PlanRun record write failure/
+  );
+
+  const listedAfterFailure = await withGlobalHome(globalHome, () =>
+    blueprintPatchList({
+      cwd: repoPath
+    })
+  );
+  const loadedAfterFailure = await blueprintPlanRunLoad({
+    cwd: repoPath,
+    phase: "3",
+    planId: "1",
+    runId: "run-01"
+  });
+
+  assert.deepEqual(listedAfterFailure.patches, []);
+  await assert.rejects(readFile(path.join(patchRegistryPath, `${patchId}.patch`)));
+  await assert.rejects(readFile(path.join(patchRegistryPath, `${patchId}.json`)));
+  await assert.rejects(readFile(path.join(patchRegistryPath, `${patchId}.audit.ndjson`)));
+  assert.equal(loadedAfterFailure.run?.git.patchId, null);
+  assert.equal(loadedAfterFailure.history.at(-1)?.status, "PREPARED");
+
+  const recorded = await withGlobalHome(globalHome, () =>
+    blueprintPlanRunPatchRecord({
+      cwd: repoPath,
+      phase: "3",
+      planId: "1"
+    })
+  );
+  const listedAfterRetry = await withGlobalHome(globalHome, () =>
+    blueprintPatchList({
+      cwd: repoPath,
+      patchIds: [patchId]
+    })
+  );
+
+  assert.equal(recorded.status, "recorded");
+  assert.equal(recorded.patchId, patchId);
+  assert.equal(listedAfterRetry.patches.length, 1);
+  assert.equal(listedAfterRetry.patches[0]?.patchId, patchId);
+});
+
+test("plan-run patch record does not roll back a successful same-run retry during compensation", async (t) => {
+  const { workspaceRoot, globalHome } = await createPlanRunTestRoot(t);
+  const { repoPath } = await createPlanRunRepo(workspaceRoot);
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const { worktreePath } = await prepareRun(repoPath, globalHome);
+  const loadedBefore = await blueprintPlanRunLoad({
+    cwd: repoPath,
+    phase: "3",
+    planId: "1",
+    runId: "run-01"
+  });
+  const patchId = "plan-run-3-01-run-01";
+  const patchRegistryPath = path.join(globalHome, "patches");
+  const rollbackMarkerPath = path.join(globalHome, "rollback-pending.marker");
+  const rollbackReleasePath = path.join(globalHome, "rollback-release.marker");
+
+  assert.ok(loadedBefore.path);
+  await writeFile(path.join(worktreePath, "src/app.ts"), "export const value = 'changed';\n", "utf8");
+
+  const firstAttempt = withEnvironment(
+    {
+      BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE: loadedBefore.path,
+      BLUEPRINT_TEST_PLAN_RUN_PATCH_ROLLBACK_MARKER: rollbackMarkerPath,
+      BLUEPRINT_TEST_PLAN_RUN_PATCH_ROLLBACK_RELEASE: rollbackReleasePath
+    },
+    () =>
+      withGlobalHome(globalHome, () =>
+        blueprintPlanRunPatchRecord({
+          cwd: repoPath,
+          phase: "3",
+          planId: "1"
+        })
+      )
+  );
+
+  await waitForPath(rollbackMarkerPath);
+
+  const retry = await withGlobalHome(globalHome, () =>
+    blueprintPlanRunPatchRecord({
+      cwd: repoPath,
+      phase: "3",
+      planId: "1"
+    })
+  );
+
+  await writeFile(rollbackReleasePath, "release\n", "utf8");
+  await assert.rejects(firstAttempt, /patch registry rollback also failed/);
+
+  const listedAfterRace = await withGlobalHome(globalHome, () =>
+    blueprintPatchList({
+      cwd: repoPath,
+      patchIds: [patchId]
+    })
+  );
+  const loadedAfterRace = await blueprintPlanRunLoad({
+    cwd: repoPath,
+    phase: "3",
+    planId: "1",
+    runId: "run-01"
+  });
+
+  assert.equal(retry.status, "recorded");
+  assert.equal(retry.patchId, patchId);
+  assert.equal(listedAfterRace.patches.length, 1);
+  assert.equal(listedAfterRace.patches[0]?.patchId, patchId);
+  assert.match(await readFile(path.join(patchRegistryPath, `${patchId}.patch`), "utf8"), /changed/);
+  assert.equal(loadedAfterRace.run?.git.patchId, patchId);
+  assert.equal(loadedAfterRace.history.at(-1)?.status, "IMPLEMENTED");
 });
 
 test("plan-run patch record blocks unauthorized changes without writing patch registry entries", async (t) => {

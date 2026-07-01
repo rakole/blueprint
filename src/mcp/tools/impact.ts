@@ -12,7 +12,8 @@ import {
   artifactToolDefinitions,
   ensureRepoRoot,
   getProjectRoot,
-  toRepoRelativePath
+  toRepoRelativePath,
+  withBlueprintRepoLock
 } from "./artifacts.js";
 import { blueprintConfigGet, configToolDefinitions } from "./config.js";
 import {
@@ -8073,10 +8074,14 @@ function renderImpactHumanText(
   return `${lines.join("\n")}\n`;
 }
 
-function ensureImpactBundleDir(projectRoot: string, impactId: string): string {
-  const impactRoot = ensurePathWithinRootSync(projectRoot, path.join(projectRoot, IMPACT_REPORT_ROOT), {
+function ensureImpactReportRoot(projectRoot: string): string {
+  return ensurePathWithinRootSync(projectRoot, path.join(projectRoot, IMPACT_REPORT_ROOT), {
     label: "impact report root"
   });
+}
+
+function ensureImpactBundleDir(projectRoot: string, impactId: string): string {
+  const impactRoot = ensureImpactReportRoot(projectRoot);
   const impactDir = ensurePathWithinRootSync(impactRoot, path.join(impactRoot, impactId), {
     label: "impact report directory"
   });
@@ -8122,43 +8127,115 @@ async function compareImpactBundle(
   return { existing: true, identical: true };
 }
 
-async function pruneImpactStaleBundleFiles(
+function uniqueImpactBundleWorkDir(impactRoot: string, impactId: string, purpose: string): string {
+  const suffix = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  return ensurePathWithinRootSync(
+    impactRoot,
+    path.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
+    { label: `impact report ${purpose} directory` }
+  );
+}
+
+function persistenceErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function stageImpactBundleFiles(
   projectRoot: string,
-  impactDir: string,
+  impactRoot: string,
+  impactId: string,
   files: Map<string, string>
-): Promise<void> {
-  if (!(await pathExists(impactDir))) {
-    return;
-  }
+): Promise<string> {
+  const stagingDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "staging");
 
-  const entries = await fs.readdir(impactDir, { withFileTypes: true });
+  try {
+    await fs.mkdir(stagingDir);
 
-  for (const entry of entries) {
-    if (!files.has(entry.name)) {
-      const stalePath = ensurePathWithinRootSync(impactDir, path.join(impactDir, entry.name), {
-        label: "stale impact report file"
+    for (const [fileName, content] of files) {
+      const filePath = ensurePathWithinRootSync(stagingDir, path.join(stagingDir, fileName), {
+        label: "staged impact report file"
       });
-      ensurePathWithinRootSync(projectRoot, stalePath, { label: "stale impact report file" });
-      await fs.rm(stalePath, { recursive: entry.isDirectory(), force: true });
+      ensurePathWithinRootSync(projectRoot, filePath, { label: "staged impact report file" });
+      await fs.writeFile(filePath, content, "utf8");
     }
+
+    const stagedComparison = await compareImpactBundle(projectRoot, stagingDir, files);
+
+    if (!stagedComparison.existing || !stagedComparison.identical) {
+      throw new Error("Staged impact report bundle did not match the expected file set.");
+    }
+
+    return stagingDir;
+  } catch (error) {
+    await fs.rm(stagingDir, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
   }
 }
 
-async function writeImpactBundleFilesAtomically(
+async function promoteStagedImpactBundle(
+  impactRoot: string,
+  impactDir: string,
+  stagingDir: string,
+  impactId: string
+): Promise<string[]> {
+  const warnings: string[] = [];
+  const backupDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "backup");
+  const hadExistingBundle = await pathExists(impactDir);
+  let backupCreated = false;
+  let promoted = false;
+
+  try {
+    if (hadExistingBundle) {
+      await fs.rename(impactDir, backupDir);
+      backupCreated = true;
+    }
+
+    await fs.rename(stagingDir, impactDir);
+    promoted = true;
+  } catch (error) {
+    if (backupCreated && !promoted) {
+      await fs.rm(impactDir, { recursive: true, force: true }).catch(() => undefined);
+
+      try {
+        await fs.rename(backupDir, impactDir);
+      } catch (restoreError) {
+        await fs.rm(stagingDir, { recursive: true, force: true }).catch(() => undefined);
+        throw new Error(
+          `Impact report bundle replacement failed and the previous bundle could not be restored. Replacement error: ${persistenceErrorMessage(error)}. Restore error: ${persistenceErrorMessage(restoreError)}.`
+        );
+      }
+    }
+
+    await fs.rm(stagingDir, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
+  }
+
+  if (backupCreated) {
+    try {
+      await fs.rm(backupDir, { recursive: true, force: true });
+    } catch (error) {
+      warnings.push(
+        `Impact report bundle was replaced, but cleanup of the previous staged backup failed: ${persistenceErrorMessage(error)}`
+      );
+    }
+  }
+
+  return warnings;
+}
+
+async function replaceImpactBundleTransactionally(
   projectRoot: string,
+  impactId: string,
   impactDir: string,
   files: Map<string, string>
-): Promise<void> {
-  for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path.join(impactDir, fileName), {
-      label: "impact report file"
-    });
-    ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
-    const tempPath = `${filePath}.tmp-${process.pid}-${stableHash({ fileName, content })}`;
+): Promise<string[]> {
+  const impactRoot = ensureImpactReportRoot(projectRoot);
 
-    await fs.writeFile(tempPath, content, "utf8");
-    await fs.rename(tempPath, filePath);
-  }
+  await fs.mkdir(impactRoot, { recursive: true });
+  const stagingDir = await stageImpactBundleFiles(projectRoot, impactRoot, impactId, files);
+
+  return promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impactId);
 }
 
 async function readSavedImpactReport(
@@ -8231,48 +8308,68 @@ export async function blueprintImpactReportWrite(
   const bundle = buildImpactReportBundle(parsed.report, {
     writeEvidenceLog: args.writeEvidenceLog
   });
-  const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const comparison = await compareImpactBundle(projectRoot, impactDir, bundle.files);
 
-  if (comparison.existing && comparison.identical) {
-    return {
-      status: "reused",
-      impactId,
-      impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
-      paths,
-      written: false,
-      errors: [],
-      warnings: parsed.warnings
-    };
-  }
+  return withBlueprintRepoLock(projectRoot, `impact-report-${impactId}`, async () => {
+    const impactDir = ensureImpactBundleDir(projectRoot, impactId);
+    const comparison = await compareImpactBundle(projectRoot, impactDir, bundle.files);
 
-  if (comparison.existing && !args.overwrite) {
-    return {
-      status: "invalid",
-      impactId,
-      impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
-      paths,
-      written: false,
-      errors: [
-        `Impact report bundle ${IMPACT_REPORT_ROOT}/${impactId} already exists with different content; pass overwrite=true to replace it.`
-      ],
-      warnings: parsed.warnings
-    };
-  }
+    if (comparison.existing && comparison.identical) {
+      return {
+        status: "reused",
+        impactId,
+        impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+        paths,
+        written: false,
+        errors: [],
+        warnings: parsed.warnings
+      };
+    }
 
-  await fs.mkdir(impactDir, { recursive: true });
-  await pruneImpactStaleBundleFiles(projectRoot, impactDir, bundle.files);
-  await writeImpactBundleFilesAtomically(projectRoot, impactDir, bundle.files);
+    if (comparison.existing && !args.overwrite) {
+      return {
+        status: "invalid",
+        impactId,
+        impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+        paths,
+        written: false,
+        errors: [
+          `Impact report bundle ${IMPACT_REPORT_ROOT}/${impactId} already exists with different content; pass overwrite=true to replace it.`
+        ],
+        warnings: parsed.warnings
+      };
+    }
 
-  return {
-    status: comparison.existing ? "overwritten" : "written",
-    impactId,
-    impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
-    paths,
-    written: true,
-    errors: [],
-    warnings: parsed.warnings
-  };
+    try {
+      const persistenceWarnings = await replaceImpactBundleTransactionally(
+        projectRoot,
+        impactId,
+        impactDir,
+        bundle.files
+      );
+
+      return {
+        status: comparison.existing ? "overwritten" : "written",
+        impactId,
+        impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+        paths,
+        written: true,
+        errors: [],
+        warnings: [...parsed.warnings, ...persistenceWarnings]
+      };
+    } catch (error) {
+      return {
+        status: "invalid",
+        impactId,
+        impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+        paths,
+        written: false,
+        errors: [
+          `Impact report bundle ${IMPACT_REPORT_ROOT}/${impactId} could not be written transactionally: ${persistenceErrorMessage(error)}`
+        ],
+        warnings: parsed.warnings
+      };
+    }
+  });
 }
 
 export async function blueprintImpactOutputRender(

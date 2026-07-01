@@ -42,6 +42,10 @@ test("roadmap-admin skill captures remove-phase guards and state follow-up", asy
   assert.match(skillFile, /\/blu-remove-phase/);
   assert.match(skillFile, /blueprint_phase_locate/);
   assert.match(skillFile, /blueprint_roadmap_remove_phase/);
+  assert.match(
+    skillFile,
+    /`blueprint_roadmap_remove_phase` with `confirmed: true` after approved `remove-phase-confirmation`/
+  );
   assert.match(skillFile, /future-phase guard/i);
   assert.match(skillFile, /execution evidence/i);
   assert.match(skillFile, /ask_user/);

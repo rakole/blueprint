@@ -18,7 +18,15 @@ export function normalizeBlueprintInput(value: NumericInput): string {
 }
 
 export function normalizePhaseNumber(value: NumericInput): string {
-  return normalizeBlueprintPhaseRef(normalizeBlueprintInput(value));
+  const normalized = normalizeBlueprintPhaseRef(normalizeBlueprintInput(value));
+
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) {
+    throw new Error(
+      `Blueprint phase references support whole-number phases and one decimal insertion level only: ${normalized}`
+    );
+  }
+
+  return normalized;
 }
 
 export function basePhaseNumber(value: NumericInput): string {
@@ -88,11 +96,11 @@ export function comparePhaseNumbers(left: NumericInput, right: NumericInput): nu
 }
 
 export function formatPhasePrefix(value: NumericInput): string {
-  return formatBlueprintPhasePrefix(normalizeBlueprintInput(value));
+  return formatBlueprintPhasePrefix(normalizePhaseNumber(value));
 }
 
 export function extractPhaseNumberToken(value: NumericInput): string | null {
-  const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
+  const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)*)/);
   return match ? normalizePhaseNumber(match[1]) : null;
 }
 

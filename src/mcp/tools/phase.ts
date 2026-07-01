@@ -99,6 +99,7 @@ import {
   extractReferencedPlanId,
   normalizeMaybePlanId,
   normalizePlanId,
+  parseCanonicalPlanArtifactPath,
   parsePlanArtifactPath,
   planPathFor,
   reconcileAutoAssignedPlanContent
@@ -107,8 +108,9 @@ import {
   artifactPathFor,
   buildArtifactPath,
   checkpointPathFor,
-  findArtifact,
+  findPhaseArtifact,
   findPhaseSpecArtifact,
+  findPhaseValidationArtifact,
   findPhaseDirectory,
   listPhaseArtifacts,
   materializePhaseDirectory,
@@ -121,6 +123,13 @@ import {
   type PhaseArtifactKind,
   type PhaseValidationArtifactKind
 } from "./phase-locations.js";
+import {
+  formatStalePhaseTopologyMessage,
+  PHASE_TOPOLOGY_LOCK_NAME,
+  phaseTopologyFingerprintFromLocation,
+  phaseTopologyFingerprintsMatch,
+  type PhaseTopologyFingerprint
+} from "./phase-topology-lock.js";
 import {
   asJsonObject,
   cloneJsonObject,
@@ -256,6 +265,7 @@ type RoadmapAddPhaseArgs = {
   cwd?: string;
   description: string;
   expectedPhaseNumber?: string;
+  confirmed?: boolean;
   goal?: string;
   requirementIds?: string[];
   successCriteria?: string[];
@@ -266,6 +276,7 @@ type RoadmapInsertPhaseArgs = {
   cwd?: string;
   after: NumericInput;
   description: string;
+  confirmed?: boolean;
   goal?: string;
   requirementIds?: string[];
   successCriteria?: string[];
@@ -274,6 +285,7 @@ type RoadmapInsertPhaseArgs = {
 type RoadmapRemovePhaseArgs = {
   cwd?: string;
   phase: NumericInput;
+  confirmed?: boolean;
   force?: boolean;
 };
 
@@ -283,7 +295,7 @@ type RoadmapPromoteBacklogArgs = {
   previewOnly?: boolean;
 };
 
-type PhaseLookupArgs = {
+export type PhaseLookupArgs = {
   cwd?: string;
   phase?: NumericInput;
 };
@@ -1428,6 +1440,7 @@ const roadmapAddPhaseInputSchema = {
   cwd: z.string().optional(),
   description: z.string(),
   expectedPhaseNumber: z.string().optional(),
+  confirmed: z.boolean().optional(),
   goal: z.string().optional(),
   requirementIds: z.array(z.string()).optional(),
   successCriteria: z.array(z.string()).optional(),
@@ -1459,6 +1472,7 @@ const roadmapInsertPhaseInputSchema = {
   cwd: z.string().optional(),
   after: z.union([z.string(), z.number()]),
   description: z.string(),
+  confirmed: z.boolean().optional(),
   goal: z.string().optional(),
   requirementIds: z.array(z.string()).min(1),
   successCriteria: z.array(z.string()).optional()
@@ -1466,6 +1480,7 @@ const roadmapInsertPhaseInputSchema = {
 const roadmapRemovePhaseInputSchema = {
   cwd: z.string().optional(),
   phase: z.union([z.string(), z.number()]),
+  confirmed: z.boolean().optional(),
   force: z.boolean().optional()
 };
 const roadmapPromoteBacklogInputSchema = {
@@ -2032,6 +2047,21 @@ function requireRoadmapPhaseMetadata(options: {
       `Phase successCriteria must include 2-5 concrete criteria. Re-run ${options.command} with successCriteria containing 2-5 items.`
     );
   }
+}
+
+function requireConfirmedRoadmapMutation(options: {
+  command: "/blu-add-phase" | "/blu-insert-phase" | "/blu-remove-phase";
+  confirmed: boolean | undefined;
+  gate: "phase-number-confirmation" | "phase-insert-confirmation" | "remove-phase-confirmation";
+  mutation: string;
+}): void {
+  if (options.confirmed === true) {
+    return;
+  }
+
+  throw new Error(
+    `${options.command} blocked: confirmed: true is required after the ${options.gate} ask_user approval before ${options.mutation}. Safe default: stop without writing.`
+  );
 }
 
 function buildRoadmapPhaseListBlock(options: {
@@ -5370,6 +5400,23 @@ function isPhasePlanEvidenceArtifact(artifactPath: string, targetPath: string): 
   return normalized.startsWith(`${BLUEPRINT_PHASES_PATH}/`) && normalized.endsWith(".md");
 }
 
+function isCanonicalPhasePlanArtifactPath(
+  artifactPath: string,
+  resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
+): boolean {
+  return parseCanonicalPlanArtifactPath(artifactPath, resolved) !== null;
+}
+
+function isCanonicalPhaseSummaryArtifactPath(
+  artifactPath: string,
+  resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
+): boolean {
+  return (
+    path.posix.dirname(artifactPath) === resolved.phaseDir &&
+    parseSummaryArtifactPath(artifactPath, resolved.phasePrefix) !== null
+  );
+}
+
 function isCanonicalPhaseSpecArtifactPath(
   artifactPath: string,
   resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
@@ -5397,6 +5444,39 @@ function isNoncanonicalPhaseSpecLookalikePath(
     basename === canonicalSpecFileName ||
     (basename.startsWith(`${resolved.phasePrefix}-`) && basename.endsWith("-SPEC.md"))
   );
+}
+
+function isCanonicalPhaseEvidenceArtifactPath(
+  artifactPath: string,
+  resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
+): boolean {
+  if (isCanonicalPhasePlanArtifactPath(artifactPath, resolved)) {
+    return true;
+  }
+
+  if (isCanonicalPhaseSummaryArtifactPath(artifactPath, resolved)) {
+    return true;
+  }
+
+  return (
+    artifactPath === artifactPathFor(resolved, "context") ||
+    artifactPath === artifactPathFor(resolved, "discussion-log") ||
+    artifactPath === artifactPathFor(resolved, "research") ||
+    artifactPath === artifactPathFor(resolved, "spec") ||
+    artifactPath === artifactPathFor(resolved, "ui-spec") ||
+    artifactPath === validationArtifactPathFor(resolved, "verification") ||
+    artifactPath === validationArtifactPathFor(resolved, "uat") ||
+    artifactPath === buildArtifactPath(resolved.phaseDir, resolved.phasePrefix, "-REVIEW.md")
+  );
+}
+
+function canonicalPhaseReadinessInventory(
+  artifacts: readonly string[],
+  resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
+): string[] {
+  return artifacts
+    .filter((artifact) => isCanonicalPhaseEvidenceArtifactPath(artifact, resolved))
+    .sort((left, right) => left.localeCompare(right));
 }
 
 function isPhasePlanAcceptanceCriterionVerifiable(value: string): boolean {
@@ -5474,6 +5554,10 @@ async function collectKnownPhasePlanEvidenceArtifacts(
 
   return phaseArtifacts.filter((artifact) => {
     if (!isPhasePlanEvidenceArtifact(artifact, targetPath)) {
+      return false;
+    }
+
+    if (!isCanonicalPhaseEvidenceArtifactPath(artifact, resolved)) {
       return false;
     }
 
@@ -7096,15 +7180,46 @@ function isScaffoldGeneratedPhaseArtifact(content: string): boolean {
   return isScaffoldGeneratedArtifact(content);
 }
 
-async function resolveLocatedPhaseForMutation(
-  args: PhaseLookupArgs
-): Promise<{
+type LocatedPhaseForMutation = {
   projectRoot: string;
   resolved: ResolvedPhaseLocation;
   located: PhaseLocateResult;
   artifacts: string[];
   matchedPhase: ParsedRoadmapPhase | null;
-}> {
+};
+
+export type PhaseTopologySnapshot = {
+  projectRoot: string;
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+  artifacts: string[];
+  fingerprint: PhaseTopologyFingerprint;
+};
+
+function assertFreshPhaseTopology(args: {
+  operation: string;
+  expected: PhaseTopologyFingerprint;
+  resolved: ResolvedPhaseLocation;
+  matchedPhase: ParsedRoadmapPhase | null;
+}): void {
+  const actual = phaseTopologyFingerprintFromLocation(args.resolved, args.matchedPhase);
+
+  if (!phaseTopologyFingerprintsMatch(args.expected, actual)) {
+    throw new Error(
+      formatStalePhaseTopologyMessage({
+        operation: args.operation,
+        expected: args.expected,
+        actual
+      })
+    );
+  }
+}
+
+async function resolveLocatedPhaseForMutation(
+  args: PhaseLookupArgs
+): Promise<LocatedPhaseForMutation> {
   const snapshot = await resolvePhaseRuntimeSnapshot(args);
   const resolved = snapshot.resolved;
 
@@ -7121,12 +7236,53 @@ async function resolveLocatedPhaseForMutation(
   };
 }
 
+export async function resolvePhaseTopologySnapshot(
+  args: PhaseLookupArgs
+): Promise<PhaseTopologySnapshot> {
+  const snapshot = await resolveLocatedPhaseForMutation(args);
+
+  return {
+    projectRoot: snapshot.projectRoot,
+    phaseNumber: snapshot.resolved.phaseNumber,
+    phasePrefix: snapshot.resolved.phasePrefix,
+    phaseName: snapshot.resolved.phaseName,
+    phaseDir: snapshot.resolved.phaseDir,
+    artifacts: snapshot.artifacts,
+    fingerprint: phaseTopologyFingerprintFromLocation(
+      snapshot.resolved,
+      snapshot.matchedPhase
+    )
+  };
+}
+
+async function withFreshPhaseTopologyForMutation<T>(
+  projectRoot: string,
+  args: PhaseLookupArgs,
+  expected: PhaseTopologyFingerprint,
+  operation: string,
+  task: (latest: LocatedPhaseForMutation) => Promise<T>
+): Promise<T> {
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const latest = await resolveLocatedPhaseForMutation({ ...args, cwd: projectRoot });
+
+    assertFreshPhaseTopology({
+      operation,
+      expected,
+      resolved: latest.resolved,
+      matchedPhase: latest.matchedPhase
+    });
+
+    return task(latest);
+  });
+}
+
 async function resolvePlannedContextScaffoldPhase(
   args: PhaseArtifactScaffoldArgs
 ): Promise<{
   projectRoot: string;
   resolved: ResolvedPhaseLocation;
-  warnings: string[];
+  matchedPhase: ParsedRoadmapPhase;
+  expectedTopology: PhaseTopologyFingerprint;
 } | null> {
   if (args.artifact !== "context") {
     return null;
@@ -7148,17 +7304,18 @@ async function resolvePlannedContextScaffoldPhase(
     matchedPhase.phaseNumber,
     matchedPhase.phaseName
   );
-  const phaseDirState = await materializePhaseDirectory(snapshot.projectRoot, phaseDir);
+  const resolved = {
+    phaseNumber: matchedPhase.phaseNumber,
+    phasePrefix: matchedPhase.phasePrefix,
+    phaseName: matchedPhase.phaseName,
+    phaseDir
+  };
 
   return {
     projectRoot: snapshot.projectRoot,
-    resolved: {
-      phaseNumber: matchedPhase.phaseNumber,
-      phasePrefix: matchedPhase.phasePrefix,
-      phaseName: matchedPhase.phaseName,
-      phaseDir
-    },
-    warnings: phaseDirState.warnings
+    resolved,
+    matchedPhase,
+    expectedTopology: phaseTopologyFingerprintFromLocation(resolved, matchedPhase)
   };
 }
 
@@ -7271,13 +7428,33 @@ export async function blueprintRoadmapAddPhase(
     successCriteria: effectiveSuccessCriteria
   });
 
-  return withBlueprintRepoLock(projectRoot, "roadmap-add-phase", async () => {
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
     const roadmap = await readRoadmap(projectRoot);
     const existingAuditBackedPhase = findMatchingAuditBackedPhase(
       roadmap.phases,
       normalizedDescription,
       auditBackedDetails
     );
+    const phaseNumber = computeNextWholePhaseNumber(roadmap.phases);
+
+    if (
+      !existingAuditBackedPhase &&
+      args.expectedPhaseNumber &&
+      normalizePhaseNumber(args.expectedPhaseNumber) !== phaseNumber
+    ) {
+      throw new Error(
+        `Confirmed next phase ${normalizePhaseNumber(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
+      );
+    }
+
+    requireConfirmedRoadmapMutation({
+      command: "/blu-add-phase",
+      confirmed: args.confirmed,
+      gate: "phase-number-confirmation",
+      mutation: existingAuditBackedPhase
+        ? `reusing audit-backed Phase ${existingAuditBackedPhase.phaseNumber}`
+        : `creating Phase ${phaseNumber}`
+    });
 
     if (
       existingAuditBackedPhase &&
@@ -7291,8 +7468,6 @@ export async function blueprintRoadmapAddPhase(
         auditBackedDetails as RoadmapAuditBackedDetails
       );
     }
-
-    const phaseNumber = computeNextWholePhaseNumber(roadmap.phases);
 
     if (
       args.expectedPhaseNumber &&
@@ -7487,7 +7662,7 @@ export async function blueprintRoadmapInsertPhase(
     successCriteria: effectiveSuccessCriteria
   });
 
-  return withBlueprintRepoLock(projectRoot, "roadmap-insert-phase", async () => {
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
     const roadmap = await readRoadmap(projectRoot);
     const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === afterPhaseNumber);
 
@@ -7525,6 +7700,13 @@ export async function blueprintRoadmapInsertPhase(
           : `Phase ${phaseNumber} already has a conflicting directory under ${BLUEPRINT_PHASES_PATH}: ${existingDecimalDirectory.phaseDir}. Resolve the drift before inserting it into the roadmap.`
       );
     }
+
+    requireConfirmedRoadmapMutation({
+      command: "/blu-insert-phase",
+      confirmed: args.confirmed,
+      gate: "phase-insert-confirmation",
+      mutation: `inserting Phase ${phaseNumber} after Phase ${afterPhaseNumber}`
+    });
 
     const groupPhases = roadmap.phases.filter(
       (phase) => basePhaseNumber(phase.phaseNumber) === afterPhaseNumber
@@ -7648,43 +7830,247 @@ function renameLeadingPhaseToken(
   return `${replacementPrefix}${match[2]}`;
 }
 
+type PhaseTopologyMoveJournalEntry = {
+  fromPath: string;
+  toPath: string;
+};
+
+type PhaseArtifactRenamePlan = {
+  fromPath: string;
+  toPath: string;
+  originalPath: string;
+  originalDestinationPath: string;
+  from: string;
+  to: string;
+};
+
+async function assertExistingPhaseTopologyDirectory(
+  directoryPath: string,
+  repoRelativeDirectory: string
+): Promise<void> {
+  let stats;
+
+  try {
+    stats = await fs.stat(directoryPath);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+
+    if (code === "ENOENT") {
+      throw new Error(
+        `Phase topology source directory is missing before mutation: ${repoRelativeDirectory}. Resolve the drift before mutating the roadmap.`
+      );
+    }
+
+    throw error;
+  }
+
+  if (!stats.isDirectory()) {
+    throw new Error(
+      `Phase topology source path is not a directory before mutation: ${repoRelativeDirectory}. Resolve the drift before mutating the roadmap.`
+    );
+  }
+}
+
+async function assertPhaseTopologyDestinationAvailable(
+  destinationPath: string,
+  repoRelativeDestination: string
+): Promise<void> {
+  if (await pathExists(destinationPath)) {
+    throw new Error(
+      `Phase topology destination already exists before mutation: ${repoRelativeDestination}. Resolve the collision before mutating the roadmap.`
+    );
+  }
+}
+
+async function collectPhaseArtifactRenamePlans(options: {
+  projectRoot: string;
+  sourceRootPath: string;
+  destinationRootPath: string;
+  oldPhaseNumber: string;
+  newPhasePrefix: string;
+  sourceRelativePath?: string;
+  executionRelativePath?: string;
+}): Promise<PhaseArtifactRenamePlan[]> {
+  const sourceRelativePath = options.sourceRelativePath ?? "";
+  const executionRelativePath = options.executionRelativePath ?? "";
+  const scanDirectoryPath = sourceRelativePath
+    ? path.join(options.sourceRootPath, sourceRelativePath)
+    : options.sourceRootPath;
+  const entries = await fs.readdir(scanDirectoryPath, { withFileTypes: true });
+  const plans: PhaseArtifactRenamePlan[] = [];
+
+  for (const entry of entries) {
+    const originalRelativePath = sourceRelativePath
+      ? path.join(sourceRelativePath, entry.name)
+      : entry.name;
+    const executionFromRelativePath = executionRelativePath
+      ? path.join(executionRelativePath, entry.name)
+      : entry.name;
+    const renamedEntry = renameLeadingPhaseToken(
+      entry.name,
+      options.oldPhaseNumber,
+      options.newPhasePrefix
+    );
+    const executionToRelativePath = executionRelativePath
+      ? path.join(executionRelativePath, renamedEntry ?? entry.name)
+      : renamedEntry ?? entry.name;
+
+    if (renamedEntry) {
+      const fromPath = path.join(options.destinationRootPath, executionFromRelativePath);
+      const toPath = path.join(options.destinationRootPath, executionToRelativePath);
+
+      plans.push({
+        fromPath,
+        toPath,
+        originalPath: path.join(options.sourceRootPath, originalRelativePath),
+        originalDestinationPath: path.join(options.sourceRootPath, executionToRelativePath),
+        from: toRepoRelativePath(options.projectRoot, fromPath),
+        to: toRepoRelativePath(options.projectRoot, toPath)
+      });
+    }
+
+    if (entry.isDirectory()) {
+      plans.push(
+        ...(await collectPhaseArtifactRenamePlans({
+          ...options,
+          sourceRelativePath: originalRelativePath,
+          executionRelativePath: executionToRelativePath
+        }))
+      );
+    }
+  }
+
+  return plans;
+}
+
+async function preflightPhaseArtifactRenamePlans(
+  plans: PhaseArtifactRenamePlan[]
+): Promise<void> {
+  const destinationPaths = new Set<string>();
+
+  for (const plan of plans) {
+    const normalizedDestinationPath = path.resolve(plan.toPath);
+
+    if (destinationPaths.has(normalizedDestinationPath)) {
+      throw new Error(
+        `Phase artifact rename plan has a duplicate destination before mutation: ${plan.to}.`
+      );
+    }
+
+    destinationPaths.add(normalizedDestinationPath);
+
+    if (
+      path.resolve(plan.originalDestinationPath) !== path.resolve(plan.originalPath) &&
+      (await pathExists(plan.originalDestinationPath))
+    ) {
+      throw new Error(
+        `Phase artifact destination already exists before mutation: ${plan.to}. Resolve the collision before mutating the roadmap.`
+      );
+    }
+  }
+}
+
+async function renameWithPhaseTopologyRollback(
+  fromPath: string,
+  toPath: string,
+  journal: PhaseTopologyMoveJournalEntry[]
+): Promise<void> {
+  await fs.rename(fromPath, toPath);
+  journal.push({ fromPath, toPath });
+}
+
+async function rollbackPhaseTopologyMoves(
+  journal: PhaseTopologyMoveJournalEntry[]
+): Promise<string[]> {
+  const failures: string[] = [];
+
+  for (const entry of [...journal].reverse()) {
+    if (!(await pathExists(entry.toPath))) {
+      continue;
+    }
+
+    if (await pathExists(entry.fromPath)) {
+      failures.push(
+        `Could not roll back ${entry.toPath} because ${entry.fromPath} already exists.`
+      );
+      continue;
+    }
+
+    const failureCountBeforeMkdir = failures.length;
+
+    await fs.mkdir(path.dirname(entry.fromPath), { recursive: true }).catch((error) => {
+      failures.push(
+        `Could not recreate rollback parent ${path.dirname(entry.fromPath)}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
+
+    if (failures.length > failureCountBeforeMkdir) {
+      continue;
+    }
+
+    try {
+      await fs.rename(entry.toPath, entry.fromPath);
+    } catch (error) {
+      failures.push(
+        `Could not roll back ${entry.toPath} to ${entry.fromPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  return failures;
+}
+
+async function applyPhaseArtifactRenamePlans(
+  plans: PhaseArtifactRenamePlan[],
+  journal: PhaseTopologyMoveJournalEntry[]
+): Promise<Array<{ from: string; to: string }>> {
+  const renamedArtifacts: Array<{ from: string; to: string }> = [];
+
+  for (const plan of plans) {
+    await renameWithPhaseTopologyRollback(plan.fromPath, plan.toPath, journal);
+    renamedArtifacts.push({
+      from: plan.from,
+      to: plan.to
+    });
+  }
+
+  return renamedArtifacts;
+}
+
 async function renamePhaseArtifactsInPlace(
   projectRoot: string,
   rootDirectoryPath: string,
   oldPhaseNumber: string,
   newPhasePrefix: string
 ): Promise<Array<{ from: string; to: string }>> {
-  const renamedArtifacts: Array<{ from: string; to: string }> = [];
-  const entries = await fs.readdir(rootDirectoryPath, { withFileTypes: true });
+  const plans = await collectPhaseArtifactRenamePlans({
+    projectRoot,
+    sourceRootPath: rootDirectoryPath,
+    destinationRootPath: rootDirectoryPath,
+    oldPhaseNumber,
+    newPhasePrefix
+  });
+  const journal: PhaseTopologyMoveJournalEntry[] = [];
 
-  for (const entry of entries) {
-    const currentPath = path.join(rootDirectoryPath, entry.name);
-    const renamedEntry = renameLeadingPhaseToken(entry.name, oldPhaseNumber, newPhasePrefix);
-    const nextPath = renamedEntry ? path.join(rootDirectoryPath, renamedEntry) : currentPath;
+  await preflightPhaseArtifactRenamePlans(plans);
 
-    if (renamedEntry) {
-      await fs.rename(currentPath, nextPath);
-      renamedArtifacts.push({
-        from: toRepoRelativePath(projectRoot, currentPath),
-        to: toRepoRelativePath(projectRoot, nextPath)
-      });
-    }
+  try {
+    return await applyPhaseArtifactRenamePlans(plans, journal);
+  } catch (error) {
+    const rollbackFailures = await rollbackPhaseTopologyMoves(journal);
 
-    const stats = await fs.stat(nextPath);
-
-    if (stats.isDirectory()) {
-      renamedArtifacts.push(
-        ...(await renamePhaseArtifactsInPlace(
-          projectRoot,
-          nextPath,
-          oldPhaseNumber,
-          newPhasePrefix
-        ))
+    if (rollbackFailures.length > 0) {
+      throw new Error(
+        [
+          error instanceof Error ? error.message : String(error),
+          "Rollback failures:",
+          ...rollbackFailures
+        ].join("\n")
       );
     }
-  }
 
-  return renamedArtifacts;
+    throw error;
+  }
 }
 
 function findPhaseRenumberTargets(
@@ -7702,14 +8088,30 @@ function findPhaseRenumberTargets(
     );
   }
 
+  const [targetBase, targetDecimal] = targetPhaseNumber.split(".");
   const renumberTargets: Array<{
     previousPhase: ParsedRoadmapPhase;
     newPhaseNumber: string;
   }> = [];
+  const isDecimalRemoval = targetDecimal !== undefined;
 
   for (let index = targetIndex + 1; index < phases.length; index += 1) {
+    const candidatePhase = phases[index];
+
+    if (!candidatePhase) {
+      continue;
+    }
+
+    if (isDecimalRemoval) {
+      const [candidateBase, candidateDecimal] = candidatePhase.phaseNumber.split(".");
+
+      if (candidateBase !== targetBase || candidateDecimal === undefined) {
+        break;
+      }
+    }
+
     renumberTargets.push({
-      previousPhase: phases[index],
+      previousPhase: candidatePhase,
       newPhaseNumber:
         index === targetIndex + 1
           ? targetPhaseNumber
@@ -7720,11 +8122,55 @@ function findPhaseRenumberTargets(
   return renumberTargets;
 }
 
+function findWholePhaseDecimalChildren(
+  phases: ParsedRoadmapPhase[],
+  targetPhaseNumber: string
+): ParsedRoadmapPhase[] {
+  if (!isIntegerPhaseNumber(targetPhaseNumber)) {
+    return [];
+  }
+
+  const targetIndex = phases.findIndex((phase) => phase.phaseNumber === targetPhaseNumber);
+
+  if (targetIndex === -1) {
+    return [];
+  }
+
+  return phases.slice(targetIndex + 1).filter((phase) => {
+    const [phaseBase, phaseDecimal] = phase.phaseNumber.split(".");
+
+    return phaseBase === targetPhaseNumber && phaseDecimal !== undefined;
+  });
+}
+
+function phaseTopologyTransactionRootPath(
+  projectRoot: string,
+  operation: string,
+  phaseNumber: string
+): string {
+  const safePhaseNumber = phaseNumber.replace(/[^0-9.]/g, "_");
+
+  return resolveBlueprintPath(
+    projectRoot,
+    `${BLUEPRINT_DIR}/locks/${PHASE_TOPOLOGY_LOCK_NAME}-${operation}-${safePhaseNumber}-${process.pid}-${Date.now()}-${process.hrtime.bigint()}.txn`
+  );
+}
+
+type PhaseDirectoryRenumberPlan = {
+  previousPhase: ParsedRoadmapPhase;
+  newPhaseNumber: string;
+  newPhasePrefix: string;
+  previousPhaseDir: string;
+  newPhaseDir: string;
+  previousPhaseDirPath: string;
+  newPhaseDirPath: string;
+  artifactRenamePlans: PhaseArtifactRenamePlan[];
+};
+
 export async function blueprintRoadmapRemovePhase(
   args: RoadmapRemovePhaseArgs
 ): Promise<RoadmapRemovePhaseResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
   const targetPhaseNumber = extractPhaseNumberToken(args.phase ?? "");
 
   if (!targetPhaseNumber) {
@@ -7733,181 +8179,282 @@ export async function blueprintRoadmapRemovePhase(
     );
   }
 
-  const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === targetPhaseNumber);
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const roadmap = await readRoadmap(projectRoot);
+    const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === targetPhaseNumber);
 
-  if (!targetPhase) {
-    const recovery = buildRemovePhaseRecovery(targetPhaseNumber, roadmap);
+    if (!targetPhase) {
+      const recovery = buildRemovePhaseRecovery(targetPhaseNumber, roadmap);
 
-    throw new Error(
-      [`Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`,
-        "Recovery:",
-        ...recovery.map((entry) => `- ${entry}`)
-      ].join("\n")
-    );
-  }
-
-  const currentState = await loadBlueprintState(projectRoot);
-  const currentPhaseNumber = extractPhaseNumberToken(currentState.currentPhase);
-
-  if (!currentPhaseNumber) {
-    throw new Error(
-      `Cannot validate future-phase removal because ${BLUEPRINT_DIR}/STATE.md does not contain a usable current phase.`
-    );
-  }
-
-  if (comparePhaseNumbers(targetPhaseNumber, currentPhaseNumber) <= 0) {
-    throw new Error(
-      `Cannot remove Phase ${targetPhaseNumber}. Only future phases can be removed; current phase is ${currentPhaseNumber}.`
-    );
-  }
-
-  const targetPhaseDirectory = await findPhaseDirectory(projectRoot, targetPhaseNumber);
-
-  if (!targetPhaseDirectory.phaseDir) {
-    throw new Error(
-      targetPhaseDirectory.reason === "ambiguous"
-        ? `Phase ${targetPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.`
-        : `Phase ${targetPhaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.`
-    );
-  }
-
-  const targetPhaseDirPath = resolveBlueprintPath(projectRoot, targetPhaseDirectory.phaseDir);
-  const removedArtifacts = await listPhaseArtifacts(targetPhaseDirPath, projectRoot);
-  const executionArtifacts = removedArtifacts.filter(
-    (artifactPath) =>
-      /-SUMMARY\.md$/i.test(artifactPath) ||
-      /-VERIFICATION\.md$/i.test(artifactPath) ||
-      /-UAT\.md$/i.test(artifactPath)
-  );
-
-  const warnings: string[] = [];
-
-  if (executionArtifacts.length > 0) {
-    if (!args.force) {
       throw new Error(
-        `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Re-run /blu-remove-phase with explicit force confirmation if you intend to remove it anyway.`
+        [`Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`,
+          "Recovery:",
+          ...recovery.map((entry) => `- ${entry}`)
+        ].join("\n")
       );
     }
 
-    warnings.push(
-      `Phase ${targetPhaseNumber} was removed with execution evidence (${executionArtifacts.join(", ")}) because explicit force confirmation was provided.`
-    );
-  }
+    const currentState = await loadBlueprintState(projectRoot);
+    const currentPhaseNumber = extractPhaseNumberToken(currentState.currentPhase);
 
-  const renumberTargets = findPhaseRenumberTargets(roadmap.phases, targetPhaseNumber);
-  const renumberMap = new Map(
-    renumberTargets.map(({ previousPhase, newPhaseNumber }) => [
-      previousPhase.phaseNumber,
-      newPhaseNumber
-    ])
-  );
-  const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-  const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
-  const removedPhaseLine = removePhaseLineFromRoadmap(rawRoadmap, targetPhaseNumber);
-
-  if (!removedPhaseLine.removed) {
-    throw new Error(
-      `Phase ${targetPhaseNumber} could not be removed from the roadmap phases list.`
-    );
-  }
-
-  const removedPhaseDetails = removePhaseDetailsFromRoadmap(
-    removedPhaseLine.content,
-    targetPhaseNumber
-  );
-
-  if (!removedPhaseDetails.removed) {
-    warnings.push(
-      `Phase ${targetPhaseNumber} did not have a matching entry under the roadmap's "## Phase Details" section.`
-    );
-  }
-
-  const updatedRoadmap = rewriteRoadmapPhaseReferences(
-    removedPhaseDetails.content,
-    renumberMap
-  );
-  const renumberedPhases: RoadmapRemovePhaseResult["renumberedPhases"] = [];
-  const preparedRenumberTargets = [];
-
-  for (const { previousPhase, newPhaseNumber } of renumberTargets) {
-    const locatedPhaseDirectory = await findPhaseDirectory(projectRoot, previousPhase.phaseNumber);
-
-    if (!locatedPhaseDirectory.phaseDir) {
+    if (!currentPhaseNumber) {
       throw new Error(
-        locatedPhaseDirectory.reason === "ambiguous"
-          ? `Phase ${previousPhase.phaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.`
-          : `Phase ${previousPhase.phaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.`
+        `Cannot validate future-phase removal because ${BLUEPRINT_DIR}/STATE.md does not contain a usable current phase.`
       );
     }
 
-    preparedRenumberTargets.push({
-      previousPhase,
-      newPhaseNumber,
-      previousPhaseDir: locatedPhaseDirectory.phaseDir
+    if (comparePhaseNumbers(targetPhaseNumber, currentPhaseNumber) <= 0) {
+      throw new Error(
+        `Cannot remove Phase ${targetPhaseNumber}. Only future phases can be removed; current phase is ${currentPhaseNumber}.`
+      );
+    }
+
+    const targetPhaseDirectory = await findPhaseDirectory(projectRoot, targetPhaseNumber);
+
+    if (!targetPhaseDirectory.phaseDir) {
+      throw new Error(
+        targetPhaseDirectory.reason === "ambiguous"
+          ? `Phase ${targetPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.`
+          : `Phase ${targetPhaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.`
+      );
+    }
+
+    const targetPhaseDirPath = resolveBlueprintPath(projectRoot, targetPhaseDirectory.phaseDir);
+    await assertExistingPhaseTopologyDirectory(
+      targetPhaseDirPath,
+      targetPhaseDirectory.phaseDir
+    );
+    const removedArtifacts = await listPhaseArtifacts(targetPhaseDirPath, projectRoot);
+    const executionArtifacts = removedArtifacts.filter(
+      (artifactPath) =>
+        /-SUMMARY\.md$/i.test(artifactPath) ||
+        /-VERIFICATION\.md$/i.test(artifactPath) ||
+        /-UAT\.md$/i.test(artifactPath)
+    );
+
+    const warnings: string[] = [];
+
+    requireConfirmedRoadmapMutation({
+      command: "/blu-remove-phase",
+      confirmed: args.confirmed,
+      gate: "remove-phase-confirmation",
+      mutation: `removing Phase ${targetPhaseNumber}`
     });
-  }
 
-  await fs.rm(targetPhaseDirPath, { recursive: true, force: true });
+    if (executionArtifacts.length > 0) {
+      if (!args.force) {
+        throw new Error(
+          `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Re-run /blu-remove-phase with explicit force confirmation if you intend to remove it anyway.`
+        );
+      }
 
-  for (const { previousPhase, newPhaseNumber, previousPhaseDir } of preparedRenumberTargets) {
-    const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
-    const previousDirectoryName = path.basename(previousPhaseDirPath);
-    const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
-    const renamedDirectoryName = renameLeadingPhaseToken(
-      previousDirectoryName,
-      previousPhase.phaseNumber,
-      newPhasePrefix
-    );
-
-    if (!renamedDirectoryName) {
-      throw new Error(
-        `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
+      warnings.push(
+        `Phase ${targetPhaseNumber} was removed with execution evidence (${executionArtifacts.join(", ")}) because explicit force confirmation was provided.`
       );
     }
 
-    const newPhaseDirPath = path.join(path.dirname(previousPhaseDirPath), renamedDirectoryName);
+    const decimalChildPhases = findWholePhaseDecimalChildren(
+      roadmap.phases,
+      targetPhaseNumber
+    );
 
-    await fs.rename(previousPhaseDirPath, newPhaseDirPath);
+    if (decimalChildPhases.length > 0) {
+      throw new Error(
+        [
+          `Cannot remove whole Phase ${targetPhaseNumber} because it has decimal child phases: ${decimalChildPhases
+            .map((phase) => phase.phaseNumber)
+            .join(", ")}.`,
+          "Whole-phase removal with decimal child phases is currently unsupported because it would corrupt later phase identity during renumbering.",
+          "Remove or resolve the child phases first, then re-run /blu-remove-phase."
+        ].join(" ")
+      );
+    }
 
-    const renamedArtifacts = await renamePhaseArtifactsInPlace(
+    const renumberTargets = findPhaseRenumberTargets(roadmap.phases, targetPhaseNumber);
+    const renumberMap = new Map(
+      renumberTargets.map(({ previousPhase, newPhaseNumber }) => [
+        previousPhase.phaseNumber,
+        newPhaseNumber
+      ])
+    );
+    const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
+    const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+    const removedPhaseLine = removePhaseLineFromRoadmap(rawRoadmap, targetPhaseNumber);
+
+    if (!removedPhaseLine.removed) {
+      throw new Error(
+        `Phase ${targetPhaseNumber} could not be removed from the roadmap phases list.`
+      );
+    }
+
+    const removedPhaseDetails = removePhaseDetailsFromRoadmap(
+      removedPhaseLine.content,
+      targetPhaseNumber
+    );
+
+    if (!removedPhaseDetails.removed) {
+      warnings.push(
+        `Phase ${targetPhaseNumber} did not have a matching entry under the roadmap's "## Phase Details" section.`
+      );
+    }
+
+    const updatedRoadmap = rewriteRoadmapPhaseReferences(
+      removedPhaseDetails.content,
+      renumberMap
+    );
+    const renumberedPhases: RoadmapRemovePhaseResult["renumberedPhases"] = [];
+    const preparedRenumberTargets: PhaseDirectoryRenumberPlan[] = [];
+
+    for (const { previousPhase, newPhaseNumber } of renumberTargets) {
+      const locatedPhaseDirectory = await findPhaseDirectory(projectRoot, previousPhase.phaseNumber);
+
+      if (!locatedPhaseDirectory.phaseDir) {
+        throw new Error(
+          locatedPhaseDirectory.reason === "ambiguous"
+            ? `Phase ${previousPhase.phaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.`
+            : `Phase ${previousPhase.phaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.`
+        );
+      }
+
+      const previousPhaseDir = locatedPhaseDirectory.phaseDir;
+      const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
+      const previousDirectoryName = path.basename(previousPhaseDirPath);
+      const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
+      const renamedDirectoryName = renameLeadingPhaseToken(
+        previousDirectoryName,
+        previousPhase.phaseNumber,
+        newPhasePrefix
+      );
+
+      if (!renamedDirectoryName) {
+        throw new Error(
+          `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
+        );
+      }
+
+      const newPhaseDirPath = path.join(path.dirname(previousPhaseDirPath), renamedDirectoryName);
+      const newPhaseDir = toRepoRelativePath(projectRoot, newPhaseDirPath);
+
+      await assertExistingPhaseTopologyDirectory(previousPhaseDirPath, previousPhaseDir);
+      if (path.resolve(newPhaseDirPath) !== path.resolve(targetPhaseDirPath)) {
+        await assertPhaseTopologyDestinationAvailable(newPhaseDirPath, newPhaseDir);
+      }
+      const artifactRenamePlans = await collectPhaseArtifactRenamePlans({
+        projectRoot,
+        sourceRootPath: previousPhaseDirPath,
+        destinationRootPath: newPhaseDirPath,
+        oldPhaseNumber: previousPhase.phaseNumber,
+        newPhasePrefix
+      });
+      await preflightPhaseArtifactRenamePlans(artifactRenamePlans);
+
+      preparedRenumberTargets.push({
+        previousPhase,
+        newPhaseNumber,
+        newPhasePrefix,
+        previousPhaseDir,
+        newPhaseDir,
+        previousPhaseDirPath,
+        newPhaseDirPath,
+        artifactRenamePlans
+      });
+    }
+
+    const transactionRootPath = phaseTopologyTransactionRootPath(
       projectRoot,
-      newPhaseDirPath,
-      previousPhase.phaseNumber,
-      newPhasePrefix
+      "remove",
+      targetPhaseNumber
+    );
+    const transactionRootRelativePath = toRepoRelativePath(projectRoot, transactionRootPath);
+    const tombstonePhaseDirPath = path.join(
+      transactionRootPath,
+      path.basename(targetPhaseDirPath)
+    );
+    const journal: PhaseTopologyMoveJournalEntry[] = [];
+    let committed = false;
+
+    await assertPhaseTopologyDestinationAvailable(
+      transactionRootPath,
+      transactionRootRelativePath
     );
 
-    renumberedPhases.push({
-      previousPhaseNumber: previousPhase.phaseNumber,
-      newPhaseNumber,
-      previousPhasePrefix: previousPhase.phasePrefix,
-      newPhasePrefix,
-      phaseName: previousPhase.phaseName,
-      previousPhaseDir,
-      newPhaseDir: toRepoRelativePath(projectRoot, newPhaseDirPath),
-      renamedArtifacts
-    });
-  }
+    try {
+      await fs.mkdir(transactionRootPath, { recursive: true });
+      await renameWithPhaseTopologyRollback(
+        targetPhaseDirPath,
+        tombstonePhaseDirPath,
+        journal
+      );
 
-  warnings.push(
-    ...await writeTextFile(roadmapPath, updatedRoadmap, {
-      label: roadmap.path
-    })
-  );
+      for (const plan of preparedRenumberTargets) {
+        await renameWithPhaseTopologyRollback(
+          plan.previousPhaseDirPath,
+          plan.newPhaseDirPath,
+          journal
+        );
+        const renamedArtifacts = await applyPhaseArtifactRenamePlans(
+          plan.artifactRenamePlans,
+          journal
+        );
 
-  return {
-    removedPhase: {
-      phaseNumber: targetPhase.phaseNumber,
-      phasePrefix: targetPhase.phasePrefix,
-      phaseName: targetPhase.phaseName,
-      phaseDir: targetPhaseDirectory.phaseDir,
-      removedArtifacts
-    },
-    renumberedPhases,
-    roadmapPath: roadmap.path,
-    milestone: roadmap.milestone,
-    written: true,
-    warnings
-  };
+        renumberedPhases.push({
+          previousPhaseNumber: plan.previousPhase.phaseNumber,
+          newPhaseNumber: plan.newPhaseNumber,
+          previousPhasePrefix: plan.previousPhase.phasePrefix,
+          newPhasePrefix: plan.newPhasePrefix,
+          phaseName: plan.previousPhase.phaseName,
+          previousPhaseDir: plan.previousPhaseDir,
+          newPhaseDir: plan.newPhaseDir,
+          renamedArtifacts
+        });
+      }
+
+      warnings.push(
+        ...await writeTextFile(roadmapPath, updatedRoadmap, {
+          label: roadmap.path
+        })
+      );
+      committed = true;
+    } catch (error) {
+      const rollbackFailures = await rollbackPhaseTopologyMoves(journal);
+
+      if (rollbackFailures.length === 0) {
+        await fs.rm(transactionRootPath, { recursive: true, force: true }).catch(() => undefined);
+        throw error;
+      }
+
+      throw new Error(
+        [
+          error instanceof Error ? error.message : String(error),
+          "Rollback failures:",
+          ...rollbackFailures
+        ].join("\n")
+      );
+    }
+
+    if (committed) {
+      await fs.rm(transactionRootPath, { recursive: true, force: true }).catch((error) => {
+        warnings.push(
+          `Phase ${targetPhaseNumber} was removed, but cleanup of transaction tombstone ${transactionRootRelativePath} failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+      });
+    }
+
+    return {
+      removedPhase: {
+        phaseNumber: targetPhase.phaseNumber,
+        phasePrefix: targetPhase.phasePrefix,
+        phaseName: targetPhase.phaseName,
+        phaseDir: targetPhaseDirectory.phaseDir,
+        removedArtifacts
+      },
+      renumberedPhases,
+      roadmapPath: roadmap.path,
+      milestone: roadmap.milestone,
+      written: true,
+      warnings
+    };
+  });
 }
 
 async function materializePromotedBacklogPhaseDirectory(
@@ -7962,16 +8509,38 @@ async function materializePromotedBacklogPhaseDirectory(
         );
       }
 
-      if (promotedPhaseDirPath !== reservedPhaseDirPath) {
-        await fs.rename(reservedPhaseDirPath, promotedPhaseDirPath);
-      }
+      const journal: PhaseTopologyMoveJournalEntry[] = [];
 
-      await renamePhaseArtifactsInPlace(
-        projectRoot,
-        promotedPhaseDirPath,
-        item.reservedPhase,
-        phasePrefix
-      );
+      try {
+        if (promotedPhaseDirPath !== reservedPhaseDirPath) {
+          await renameWithPhaseTopologyRollback(
+            reservedPhaseDirPath,
+            promotedPhaseDirPath,
+            journal
+          );
+        }
+
+        await renamePhaseArtifactsInPlace(
+          projectRoot,
+          promotedPhaseDirPath,
+          item.reservedPhase,
+          phasePrefix
+        );
+      } catch (error) {
+        const rollbackFailures = await rollbackPhaseTopologyMoves(journal);
+
+        if (rollbackFailures.length > 0) {
+          throw new Error(
+            [
+              error instanceof Error ? error.message : String(error),
+              "Rollback failures:",
+              ...rollbackFailures
+            ].join("\n")
+          );
+        }
+
+        throw error;
+      }
 
       return {
         phaseDir: toRepoRelativePath(projectRoot, promotedPhaseDirPath),
@@ -8090,84 +8659,86 @@ export async function blueprintRoadmapPromoteBacklog(
     };
   }
 
-  const roadmap = await readRoadmap(projectRoot);
-  const roadmapAbsolutePath = resolveBlueprintPath(projectRoot, roadmap.path);
-  let roadmapBody = await fs.readFile(roadmapAbsolutePath, "utf8");
-  const roadmapPhases = [...roadmap.phases];
-  const promotedItems: RoadmapPromoteBacklogResult["promotedItems"] = [];
-  const createdPhaseDirs: string[] = [];
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const roadmap = await readRoadmap(projectRoot);
+    const roadmapAbsolutePath = resolveBlueprintPath(projectRoot, roadmap.path);
+    let roadmapBody = await fs.readFile(roadmapAbsolutePath, "utf8");
+    const roadmapPhases = [...roadmap.phases];
+    const promotedItems: RoadmapPromoteBacklogResult["promotedItems"] = [];
+    const createdPhaseDirs: string[] = [];
 
-  for (const item of selectedItems) {
-    const phaseNumber = nextIntegerPhaseNumber(roadmapPhases);
-    const phasePrefix = formatPhasePrefix(phaseNumber);
-    const phaseName = normalizePhaseDescription(item.description);
-    const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
-    const phaseDirectory = await materializePromotedBacklogPhaseDirectory(
-      projectRoot,
-      item,
-      phasePrefix,
-      phaseName
-    );
+    for (const item of selectedItems) {
+      const phaseNumber = nextIntegerPhaseNumber(roadmapPhases);
+      const phasePrefix = formatPhasePrefix(phaseNumber);
+      const phaseName = normalizePhaseDescription(item.description);
+      const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
+      const phaseDirectory = await materializePromotedBacklogPhaseDirectory(
+        projectRoot,
+        item,
+        phasePrefix,
+        phaseName
+      );
 
-    roadmapBody = appendPhaseDetailsToRoadmap(
-      appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName, {
-        goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
-        successCriteria: [
-          `Backlog item ${item.backlogId} has an authored phase context.`,
-          `The promoted phase can move through planning with explicit scope decisions.`
-        ]
-      }),
-      phaseNumber,
-      phaseName,
-      {
-        dependsOnPhaseNumber,
-        goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
-        successCriteria:
-          `Backlog item ${item.backlogId} has an authored phase context.; The promoted phase can move through planning with explicit scope decisions.`
+      roadmapBody = appendPhaseDetailsToRoadmap(
+        appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName, {
+          goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
+          successCriteria: [
+            `Backlog item ${item.backlogId} has an authored phase context.`,
+            `The promoted phase can move through planning with explicit scope decisions.`
+          ]
+        }),
+        phaseNumber,
+        phaseName,
+        {
+          dependsOnPhaseNumber,
+          goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
+          successCriteria:
+            `Backlog item ${item.backlogId} has an authored phase context.; The promoted phase can move through planning with explicit scope decisions.`
+        }
+      );
+      roadmapPhases.push({
+        phaseNumber,
+        phasePrefix,
+        phaseName,
+        completed: false,
+        summary: null,
+        goal: null,
+        successCriteria: null,
+        requirements: []
+      });
+      promotedItems.push({
+        backlogId: item.backlogId,
+        phaseNumber,
+        phasePrefix,
+        phaseName,
+        reservedPhase: item.reservedPhase,
+        phaseDir: phaseDirectory.phaseDir,
+        createdPhaseDir: phaseDirectory.createdPhaseDir,
+        reusedReservedPhaseDir: phaseDirectory.reusedReservedPhaseDir
+      });
+      if (phaseDirectory.createdPhaseDir) {
+        createdPhaseDirs.push(phaseDirectory.phaseDir);
       }
-    );
-    roadmapPhases.push({
-      phaseNumber,
-      phasePrefix,
-      phaseName,
-      completed: false,
-      summary: null,
-      goal: null,
-      successCriteria: null,
-      requirements: []
-    });
-    promotedItems.push({
-      backlogId: item.backlogId,
-      phaseNumber,
-      phasePrefix,
-      phaseName,
-      reservedPhase: item.reservedPhase,
-      phaseDir: phaseDirectory.phaseDir,
-      createdPhaseDir: phaseDirectory.createdPhaseDir,
-      reusedReservedPhaseDir: phaseDirectory.reusedReservedPhaseDir
-    });
-    if (phaseDirectory.createdPhaseDir) {
-      createdPhaseDirs.push(phaseDirectory.phaseDir);
+      warnings.push(...phaseDirectory.warnings);
     }
-    warnings.push(...phaseDirectory.warnings);
-  }
 
-  warnings.push(
-    ...await writeTextFile(roadmapAbsolutePath, roadmapBody, {
-      label: roadmapPath
-    })
-  );
+    warnings.push(
+      ...await writeTextFile(roadmapAbsolutePath, roadmapBody, {
+        label: roadmapPath
+      })
+    );
 
-  return {
-    status: "updated",
-    backlogPath,
-    roadmapPath,
-    backlogItems: backlog.backlogItems,
-    selectedBacklogIds: selectedItems.map((item) => item.backlogId),
-    promotedItems,
-    createdPhaseDirs,
-    warnings
-  };
+    return {
+      status: "updated",
+      backlogPath,
+      roadmapPath,
+      backlogItems: backlog.backlogItems,
+      selectedBacklogIds: selectedItems.map((item) => item.backlogId),
+      promotedItems,
+      createdPhaseDirs,
+      warnings
+    };
+  });
 }
 
 export async function blueprintPhaseLocate(
@@ -8430,9 +9001,20 @@ async function buildPhaseContext(
   }
 
   const artifacts = located.artifacts;
+  const locatedPath = {
+    phaseDir: located.phaseDir,
+    phasePrefix: located.phasePrefix
+  };
   const contextPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-CONTEXT.md");
   const researchPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-RESEARCH.md");
   const uiSpecPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-UI-SPEC.md");
+  const contextArtifact = findPhaseArtifact(artifacts, locatedPath, "context");
+  const discussionLogArtifact = findPhaseArtifact(artifacts, locatedPath, "discussion-log");
+  const researchArtifact = findPhaseArtifact(artifacts, locatedPath, "research");
+  const specArtifact = findPhaseArtifact(artifacts, locatedPath, "spec");
+  const uiSpecArtifact = findPhaseArtifact(artifacts, locatedPath, "ui-spec");
+  const verificationArtifact = findPhaseValidationArtifact(artifacts, locatedPath, "verification");
+  const uatArtifact = findPhaseValidationArtifact(artifacts, locatedPath, "uat");
 
   return {
     phaseSelection,
@@ -8449,14 +9031,14 @@ async function buildPhaseContext(
       },
       artifacts: {
         all: artifacts,
-        context: findArtifact(artifacts, "-CONTEXT.md"),
-        discussionLog: findArtifact(artifacts, "-DISCUSSION-LOG.md"),
-        research: findArtifact(artifacts, "-RESEARCH.md"),
-        spec: findPhaseSpecArtifact(artifacts, located.phaseDir, located.phasePrefix),
-        uiSpec: findArtifact(artifacts, "-UI-SPEC.md"),
-        verification: findArtifact(artifacts, "-VERIFICATION.md"),
-        uat: findArtifact(artifacts, "-UAT.md"),
-        plans: artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")),
+        context: contextArtifact,
+        discussionLog: discussionLogArtifact,
+        research: researchArtifact,
+        spec: specArtifact,
+        uiSpec: uiSpecArtifact,
+        verification: verificationArtifact,
+        uat: uatArtifact,
+        plans: artifacts.filter((artifact) => isCanonicalPhasePlanArtifactPath(artifact, locatedPath)),
         summaries: artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"))
       }
     },
@@ -8480,7 +9062,7 @@ async function buildPhaseContext(
       (artifact) => !artifacts.includes(artifact)
     ),
     warnings: [
-      ...(!findArtifact(artifacts, "-CONTEXT.md")
+      ...(!contextArtifact
         ? ["Research quality will be limited until XX-CONTEXT.md exists."]
         : []),
       ...codebase.warnings,
@@ -8683,26 +9265,98 @@ export async function blueprintPhaseArtifactScaffold(
   args: PhaseArtifactScaffoldArgs
 ): Promise<PhaseArtifactScaffoldResult> {
   const plannedContextScaffold = await resolvePlannedContextScaffoldPhase(args);
-  const { projectRoot, resolved } =
-    plannedContextScaffold ?? (await resolveLocatedPhaseForMutation(args));
-  const artifactPath = artifactPathFor(resolved, args.artifact);
-  const scaffoldResult = await blueprintArtifactScaffold({
-    cwd: projectRoot,
-    artifacts: [artifactPath],
-    overwrite: args.overwrite
-  });
+  if (plannedContextScaffold) {
+    const { projectRoot, expectedTopology } = plannedContextScaffold;
 
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    artifact: args.artifact,
-    path: artifactPath,
-    createdFiles: scaffoldResult.createdFiles,
-    reusedFiles: scaffoldResult.reusedFiles,
-    warnings: [...(plannedContextScaffold?.warnings ?? []), ...scaffoldResult.warnings]
-  };
+    return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+      const latest = await resolvePlannedContextScaffoldPhase({ ...args, cwd: projectRoot });
+
+      if (!latest) {
+        throw new Error(
+          "Phase artifact scaffold rejected stale planned phase topology before materializing context."
+        );
+      }
+
+      assertFreshPhaseTopology({
+        operation: "Phase artifact scaffold",
+        expected: expectedTopology,
+        resolved: latest.resolved,
+        matchedPhase: latest.matchedPhase
+      });
+
+      const phaseDirState = await materializePhaseDirectory(projectRoot, latest.resolved.phaseDir);
+      const artifactPath = artifactPathFor(latest.resolved, args.artifact);
+
+      try {
+        const scaffoldResult = await withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
+          return blueprintArtifactScaffold({
+            cwd: projectRoot,
+            artifacts: [artifactPath],
+            overwrite: args.overwrite
+          });
+        });
+
+        return {
+          phaseNumber: latest.resolved.phaseNumber,
+          phasePrefix: latest.resolved.phasePrefix,
+          phaseName: latest.resolved.phaseName,
+          phaseDir: latest.resolved.phaseDir,
+          artifact: args.artifact,
+          path: artifactPath,
+          createdFiles: scaffoldResult.createdFiles,
+          reusedFiles: scaffoldResult.reusedFiles,
+          warnings: [...phaseDirState.warnings, ...scaffoldResult.warnings]
+        };
+      } catch (error) {
+        if (phaseDirState.created) {
+          try {
+            await fs.rm(phaseDirState.phaseDirPath, { recursive: true, force: true });
+          } catch (rollbackError) {
+            const reason = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+            const original = error instanceof Error ? error.message : String(error);
+
+            throw new Error(
+              `Phase artifact scaffold failed and rollback of ${latest.resolved.phaseDir} also failed: ${reason}. Original error: ${original}`
+            );
+          }
+        }
+
+        throw error;
+      }
+    });
+  }
+
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
+
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase artifact scaffold",
+    async ({ resolved }) => {
+      const artifactPath = artifactPathFor(resolved, args.artifact);
+      const scaffoldResult = await withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
+        return blueprintArtifactScaffold({
+          cwd: projectRoot,
+          artifacts: [artifactPath],
+          overwrite: args.overwrite
+        });
+      });
+
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        artifact: args.artifact,
+        path: artifactPath,
+        createdFiles: scaffoldResult.createdFiles,
+        reusedFiles: scaffoldResult.reusedFiles,
+        warnings: scaffoldResult.warnings
+      };
+    }
+  );
 }
 
 function phaseArtifactSuggestedRepairs(
@@ -8823,9 +9477,9 @@ ${normalizeTextContent(skipRationale)}
 export async function blueprintPhaseArtifactWrite(
   args: PhaseArtifactWriteArgs
 ): Promise<PhaseArtifactWriteResult> {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   const artifactPath = artifactPathFor(resolved, args.artifact);
-  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
 
@@ -8932,123 +9586,245 @@ export async function blueprintPhaseArtifactWrite(
     normalizedContent = canonicalizeResearchHeadingLines(normalizedContent);
   }
 
-  const exists = await pathExists(absolutePath);
-  const warnings: string[] = [];
   const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
 
-  if (exists) {
-    const existingContent = await fs.readFile(absolutePath, "utf8");
-    const existingValidation = validatePhaseArtifactContent(
-      args.artifact === "research"
-        ? canonicalizeResearchHeadingLines(normalizeTextContent(existingContent))
-        : existingContent,
-      args.artifact
-    );
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase artifact write",
+    async ({ resolved }) => {
+      const artifactPath = artifactPathFor(resolved, args.artifact);
+      const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
 
-    if (existingContent === normalizedContent) {
-      if (!validation.valid) {
-        return invalidPhaseArtifactWriteResult({
-          resolved,
+      return withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
+    const exists = await pathExists(absolutePath);
+    const warnings: string[] = [];
+
+    if (exists) {
+      const existingContent = await fs.readFile(absolutePath, "utf8");
+      const existingValidation = validatePhaseArtifactContent(
+        args.artifact === "research"
+          ? canonicalizeResearchHeadingLines(normalizeTextContent(existingContent))
+          : existingContent,
+        args.artifact
+      );
+
+      if (existingContent === normalizedContent) {
+        if (!validation.valid) {
+          return invalidPhaseArtifactWriteResult({
+            resolved,
+            artifact: args.artifact,
+            path: artifactPath,
+            validation,
+            warnings
+          });
+        }
+
+        warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
           artifact: args.artifact,
           path: artifactPath,
-          validation,
-          warnings
-        });
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "reused",
+          validation: {
+            valid: validation.valid,
+            issues: validation.issues,
+            warnings: validation.warnings,
+            suggestedRepairs: [],
+            diagnostics: validation.diagnostics
+          },
+          warnings: [...warnings, ...validation.warnings]
+        };
       }
 
-      warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+      if (!(args.overwrite ?? false) && !isScaffoldGeneratedPhaseArtifact(existingContent)) {
+        throw new Error(
+          `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+        );
+      }
 
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
+      if (!(args.overwrite ?? false) && !existingValidation.valid) {
+        warnings.push(`Replacing the existing scaffold ${args.artifact} artifact with authored content.`);
+      } else if (!(args.overwrite ?? false)) {
+        throw new Error(
+          `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+        );
+      }
+    }
+
+    if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
+      return invalidPhaseArtifactWriteResult({
+        resolved,
         artifact: args.artifact,
         path: artifactPath,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "reused",
-        validation: {
-          valid: validation.valid,
-          issues: validation.issues,
-          warnings: validation.warnings,
-          suggestedRepairs: [],
-          diagnostics: validation.diagnostics
-        },
-        warnings: [...warnings, ...validation.warnings]
-      };
+        validation,
+        warnings
+      });
     }
 
-    if (!(args.overwrite ?? false) && !isScaffoldGeneratedPhaseArtifact(existingContent)) {
-      throw new Error(
-        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
-      );
+    warnings.push(
+      ...await writeTextFile(absolutePath, normalizedContent, {
+        label: artifactPath
+      })
+    );
+
+    if (exists) {
+      warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
     }
 
-    if (!(args.overwrite ?? false) && !existingValidation.valid) {
-      warnings.push(`Replacing the existing scaffold ${args.artifact} artifact with authored content.`);
-    } else if (!(args.overwrite ?? false)) {
-      throw new Error(
-        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
-      );
-    }
-  }
-
-  if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
-    return invalidPhaseArtifactWriteResult({
-      resolved,
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
       artifact: args.artifact,
       path: artifactPath,
-      validation,
-      warnings
-    });
-  }
-
-  warnings.push(
-    ...await writeTextFile(absolutePath, normalizedContent, {
-      label: artifactPath
-    })
+      written: true,
+      created: !exists,
+      overwritten: exists,
+      status: exists ? "updated" : "created",
+      validation: {
+        valid: validation.valid,
+        issues: validation.issues,
+        warnings: validation.warnings,
+        suggestedRepairs: [],
+        diagnostics: validation.diagnostics
+      },
+      warnings: [...warnings, ...validation.warnings]
+    };
+      });
+    }
   );
-
-  if (exists) {
-    warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
-  }
-
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    artifact: args.artifact,
-    path: artifactPath,
-    written: true,
-    created: !exists,
-    overwritten: exists,
-    status: exists ? "updated" : "created",
-    validation: {
-      valid: validation.valid,
-      issues: validation.issues,
-      warnings: validation.warnings,
-      suggestedRepairs: [],
-      diagnostics: validation.diagnostics
-    },
-    warnings: [...warnings, ...validation.warnings]
-  };
 }
 
 export async function blueprintPhaseUiSkipWrite(
   args: PhaseUiSkipWriteArgs
 ): Promise<PhaseArtifactWriteResult> {
-  const { resolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
 
-  return blueprintPhaseArtifactWrite({
-    cwd: args.cwd,
-    phase: resolved.phaseNumber,
-    artifact: "ui-spec",
-    content: renderExplicitUiSkipArtifact(resolved, args.skipRationale),
-    overwrite: args.overwrite
-  });
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase UI skip write",
+    async ({ resolved }) => {
+      const artifactPath = artifactPathFor(resolved, "ui-spec");
+      const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+      const normalizedContent = normalizeTextContent(
+        renderExplicitUiSkipArtifact(resolved, args.skipRationale)
+      );
+      const validation = validatePhaseArtifactContent(normalizedContent, "ui-spec");
+
+      return withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
+        const exists = await pathExists(absolutePath);
+        const warnings: string[] = [];
+
+        if (exists) {
+          const existingContent = await fs.readFile(absolutePath, "utf8");
+          const existingValidation = validatePhaseArtifactContent(existingContent, "ui-spec");
+
+          if (existingContent === normalizedContent) {
+            if (!validation.valid) {
+              return invalidPhaseArtifactWriteResult({
+                resolved,
+                artifact: "ui-spec",
+                path: artifactPath,
+                validation,
+                warnings
+              });
+            }
+
+            warnings.push("Preserved existing ui-spec artifact because the content was unchanged.");
+
+            return {
+              phaseNumber: resolved.phaseNumber,
+              phasePrefix: resolved.phasePrefix,
+              phaseName: resolved.phaseName,
+              phaseDir: resolved.phaseDir,
+              artifact: "ui-spec",
+              path: artifactPath,
+              written: false,
+              created: false,
+              overwritten: false,
+              status: "reused",
+              validation: {
+                valid: validation.valid,
+                issues: validation.issues,
+                warnings: validation.warnings,
+                suggestedRepairs: [],
+                diagnostics: validation.diagnostics
+              },
+              warnings: [...warnings, ...validation.warnings]
+            };
+          }
+
+          if (!(args.overwrite ?? false) && !isScaffoldGeneratedPhaseArtifact(existingContent)) {
+            throw new Error(
+              `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+            );
+          }
+
+          if (!(args.overwrite ?? false) && !existingValidation.valid) {
+            warnings.push("Replacing the existing scaffold ui-spec artifact with authored content.");
+          } else if (!(args.overwrite ?? false)) {
+            throw new Error(
+              `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+            );
+          }
+        }
+
+        if (!validation.valid) {
+          return invalidPhaseArtifactWriteResult({
+            resolved,
+            artifact: "ui-spec",
+            path: artifactPath,
+            validation,
+            warnings
+          });
+        }
+
+        warnings.push(
+          ...await writeTextFile(absolutePath, normalizedContent, {
+            label: artifactPath
+          })
+        );
+
+        if (exists) {
+          warnings.push(`Replaced existing ui-spec artifact: ${artifactPath}`);
+        }
+
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          artifact: "ui-spec",
+          path: artifactPath,
+          written: true,
+          created: !exists,
+          overwritten: exists,
+          status: exists ? "updated" : "created",
+          validation: {
+            valid: validation.valid,
+            issues: validation.issues,
+            warnings: validation.warnings,
+            suggestedRepairs: [],
+            diagnostics: validation.diagnostics
+          },
+          warnings: [...warnings, ...validation.warnings]
+        };
+      });
+    }
+  );
 }
 
 export async function blueprintPhaseValidationRead(
@@ -9165,9 +9941,9 @@ export async function blueprintPhaseValidationRead(
 export async function blueprintPhaseValidationWrite(
   args: PhaseValidationWriteArgs
 ): Promise<PhaseValidationWriteResult> {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   const artifactPath = validationArtifactPathFor(resolved, args.artifact);
-  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
 
@@ -9211,6 +9987,14 @@ export async function blueprintPhaseValidationWrite(
     };
   }
 
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase validation write",
+    async ({ resolved }) => {
+      const artifactPath = validationArtifactPathFor(resolved, args.artifact);
+      const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const summaryIndex = await blueprintPhaseSummaryIndex({
     cwd: projectRoot,
     phase: resolved.phaseNumber
@@ -9447,6 +10231,8 @@ export async function blueprintPhaseValidationWrite(
     issues: validation.issues,
     warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
   };
+    }
+  );
 }
 
 async function buildPhasePlanIndexFromResolved(
@@ -9463,10 +10249,12 @@ async function buildPhasePlanIndexFromResolved(
   const gapClosurePlans = new Set<string>();
 
   for (const planPath of planPaths) {
-    const planId = parsePlanArtifactPath(planPath, resolved.phasePrefix);
+    const planId = parseCanonicalPlanArtifactPath(planPath, resolved);
 
     if (!planId) {
-      warnings.push(`Ignoring non-canonical plan artifact name: ${planPath}`);
+      if (path.posix.dirname(planPath) === resolved.phaseDir) {
+        warnings.push(`Ignoring non-canonical plan artifact name: ${planPath}`);
+      }
       continue;
     }
 
@@ -9811,7 +10599,7 @@ export async function blueprintPhasePlanReadiness(
       buildReadinessHashEntry({
         pathValue: resolved.phaseDir,
         kind: "phase.artifact.inventory",
-        value: snapshot.artifacts
+        value: canonicalPhaseReadinessInventory(snapshot.artifacts, resolved)
       })
     );
     planIndex = await buildPhasePlanIndexFromResolved({
@@ -9971,9 +10759,10 @@ export async function blueprintPhasePlanReadiness(
     }
   }
 
-  const reviewPath = context.phase?.artifacts.all.find(
-    (artifact) => artifact.endsWith("-REVIEW.md") && !artifact.endsWith("-UI-REVIEW.md")
-  ) ?? null;
+  const reviewPath =
+    expectedArtifactPaths?.review && context.phase?.artifacts.all.includes(expectedArtifactPaths.review)
+      ? expectedArtifactPaths.review
+      : null;
   if (expectedArtifactPaths?.review && !reviewPath) {
     const missingRead = await readReadinessPath({
       projectRoot,
@@ -10217,23 +11006,37 @@ export async function blueprintPhasePlanValidateModel(
 export async function blueprintPhasePlanWrite(
   args: PhasePlanWriteArgs
 ): Promise<PhasePlanWriteResult> {
-  const { projectRoot, resolved: initialResolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved: initialResolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(initialResolved, matchedPhase);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
   const modelOnly = args.authoringMode === "model-only";
   const strictValidation = (args.validationMode ?? "strict") === "strict";
   const shouldReturnPlanSetValidation = args.returnPlanSetValidation ?? hasModel;
-  return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
+
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase plan write",
+    async ({ resolved: latestResolved }) => withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
     let freshness: PhasePlanWriteResult["freshness"];
     const lockedSnapshot = await resolvePhaseRuntimeSnapshot({
       cwd: projectRoot,
-      phase: initialResolved.phaseNumber
+      phase: latestResolved.phaseNumber
     });
     const resolved = lockedSnapshot.resolved;
 
     if (!resolved) {
       throw new Error(lockedSnapshot.located.reason ?? "Phase could not be resolved for plan writing.");
     }
+
+    assertFreshPhaseTopology({
+      operation: "Phase plan write",
+      expected: expectedTopology,
+      resolved,
+      matchedPhase: lockedSnapshot.matchedPhase
+    });
 
     const existingIndex = await buildPhasePlanIndexFromResolved({
       projectRoot,
@@ -10625,7 +11428,8 @@ export async function blueprintPhasePlanWrite(
         : {}),
       warnings: [...warnings, ...prospectiveValidation.warnings]
     };
-  });
+    })
+  );
 }
 
 export async function blueprintPhaseSummaryIndex(
@@ -10662,6 +11466,7 @@ async function resolvePhaseSummaryAuthoringData(
   projectRoot: string;
   located: PhaseLocateResult;
   resolved: ResolvedPhaseLocation | null;
+  matchedPhase: ParsedRoadmapPhase | null;
   planId: string;
   summaryPath: string | null;
   planRead: PhasePlanReadResult | null;
@@ -10675,13 +11480,15 @@ async function resolvePhaseSummaryAuthoringData(
   acceptanceCriteria: string[];
 }> {
   const planId = normalizePlanId(args.planId);
-  const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved, matchedPhase } = snapshot;
 
   if (!resolved) {
     return {
       projectRoot,
       located,
       resolved: null,
+      matchedPhase,
       planId,
       summaryPath: null,
       planRead: null,
@@ -10717,6 +11524,7 @@ async function resolvePhaseSummaryAuthoringData(
     projectRoot,
     located,
     resolved,
+    matchedPhase,
     planId,
     summaryPath: summaryPathFor(resolved, planId),
     planRead,
@@ -11610,6 +12418,7 @@ export async function blueprintPhaseSummaryWrite(
   }
   const { projectRoot, resolved } = data;
   const {
+    matchedPhase,
     planId,
     summaryPath,
     planRead,
@@ -11621,6 +12430,7 @@ export async function blueprintPhaseSummaryWrite(
     missingDependencyPlans
   } = data;
   const pathValue = summaryPath ?? summaryPathFor(resolved, planId);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   const prerequisites = buildPhaseSummaryAuthoringPrerequisites({
     resolved,
     planId,
@@ -11660,6 +12470,8 @@ export async function blueprintPhaseSummaryWrite(
       warnings: plan.validation?.warnings ?? []
     };
   }
+  const linkedPlanPath = plan.path ?? prerequisites.linkedPlanPath;
+  const expectedLinkedPlanHash = plan.content === null ? null : hashString(plan.content);
 
   if (missingDependencyPlans.length > 0) {
     return {
@@ -11669,19 +12481,18 @@ export async function blueprintPhaseSummaryWrite(
       phaseDir: resolved.phaseDir,
       planId,
       path: pathValue,
-      linkedPlanPath: plan.path,
+      linkedPlanPath,
       written: false,
       created: false,
       overwritten: false,
       status: "invalid",
       issues: [
-        `${plan.path}: linked plan is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}`
+        `${linkedPlanPath}: linked plan is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}`
       ],
       warnings: plan.validation?.warnings ?? []
     };
   }
 
-  const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
 
@@ -11693,7 +12504,7 @@ export async function blueprintPhaseSummaryWrite(
       phaseDir: resolved.phaseDir,
       planId,
       path: pathValue,
-      linkedPlanPath: plan.path,
+      linkedPlanPath,
       written: false,
       created: false,
       overwritten: false,
@@ -11721,7 +12532,7 @@ export async function blueprintPhaseSummaryWrite(
         phaseDir: resolved.phaseDir,
         planId,
         path: pathValue,
-        linkedPlanPath: plan.path,
+        linkedPlanPath,
         written: false,
         created: false,
         overwritten: false,
@@ -11757,7 +12568,7 @@ export async function blueprintPhaseSummaryWrite(
         phaseDir: resolved.phaseDir,
         planId,
         path: pathValue,
-        linkedPlanPath: plan.path,
+        linkedPlanPath,
         written: false,
         created: false,
         overwritten: false,
@@ -11787,7 +12598,7 @@ export async function blueprintPhaseSummaryWrite(
         model: normalizedModel,
         resolved,
         planId,
-        linkedPlanPath: plan.path,
+        linkedPlanPath,
         summaryPath: pathValue
       })
     );
@@ -11809,7 +12620,7 @@ export async function blueprintPhaseSummaryWrite(
 
   if (summaryStatus === "COMPLETED" && prerequisites.unsatisfiedDependencyPlans.length > 0) {
     writeModeIssues.push(
-      `${plan.path}: depends on incomplete execution plan(s): ${prerequisites.unsatisfiedDependencyPlans
+      `${linkedPlanPath}: depends on incomplete execution plan(s): ${prerequisites.unsatisfiedDependencyPlans
         .map((dependency) => `${dependency.planId} (${dependency.path})`)
         .join(", ")}. Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Readiness, Completion State, Next Safe Action, Verification, Gap / Repair Routes, and Follow-Ups to match, and keep the dependency blocker explicit until those dependency summaries exist.`
     );
@@ -11823,7 +12634,7 @@ export async function blueprintPhaseSummaryWrite(
       phaseDir: resolved.phaseDir,
       planId,
       path: pathValue,
-      linkedPlanPath: plan.path,
+      linkedPlanPath,
       written: false,
       created: false,
       overwritten: false,
@@ -11838,7 +12649,7 @@ export async function blueprintPhaseSummaryWrite(
   }
 
   const strictValidation = validateStrictSummaryArtifactContent(normalizedContent, {
-    linkedPlanPath: plan.path,
+    linkedPlanPath,
     requirePlanMarker: true
   });
   const completedRoute = completedRouteAfterSelectedCompletion({
@@ -11868,7 +12679,6 @@ export async function blueprintPhaseSummaryWrite(
       ? ["Execution summary content must not be empty."]
       : validation.issues;
   const warnings = [...validation.warnings];
-  const exists = await pathExists(absolutePath);
 
   if (!validation.valid) {
     return {
@@ -11878,7 +12688,7 @@ export async function blueprintPhaseSummaryWrite(
       phaseDir: resolved.phaseDir,
       planId,
       path: pathValue,
-      linkedPlanPath: plan.path,
+      linkedPlanPath,
       written: false,
       created: false,
       overwritten: false,
@@ -11887,6 +12697,48 @@ export async function blueprintPhaseSummaryWrite(
       warnings: [...modelWarnings, ...warnings]
     };
   }
+
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase summary write",
+    async ({ resolved }) => withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
+      const lockedPlan = await readPhasePlanFromResolved({
+        projectRoot,
+        resolved,
+        planId
+      });
+      const lockedPlanHash = lockedPlan.content === null ? null : hashString(lockedPlan.content);
+
+      if (
+        !lockedPlan.found ||
+        !lockedPlan.path ||
+        lockedPlan.path !== linkedPlanPath ||
+        lockedPlanHash !== expectedLinkedPlanHash
+      ) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId,
+          path: summaryPathFor(resolved, planId),
+          linkedPlanPath,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          issues: [
+            `${linkedPlanPath}: linked plan changed since summary authoring context was read. Re-read blueprint_phase_summary_authoring_context and retry before writing the summary.`
+          ],
+          warnings: [...modelWarnings, ...warnings]
+        };
+      }
+
+      const lockedPathValue = summaryPathFor(resolved, planId);
+      const absolutePath = resolveBlueprintPath(projectRoot, lockedPathValue);
+      const exists = await pathExists(absolutePath);
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
@@ -11900,8 +12752,8 @@ export async function blueprintPhaseSummaryWrite(
         phaseName: resolved.phaseName,
         phaseDir: resolved.phaseDir,
         planId,
-        path: pathValue,
-        linkedPlanPath: plan.path,
+        path: lockedPathValue,
+        linkedPlanPath,
         written: false,
         created: false,
         overwritten: false,
@@ -11911,21 +12763,21 @@ export async function blueprintPhaseSummaryWrite(
       };
     }
 
-    if (!(args.overwrite ?? false)) {
-      throw new Error(
-        `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
-      );
-    }
+	    if (!(args.overwrite ?? false)) {
+	      throw new Error(
+	        `${lockedPathValue} already exists. Re-run only after explicit overwrite confirmation.`
+	      );
+	    }
   }
 
-  warnings.push(
-    ...await writeTextFile(absolutePath, normalizedContent, {
-      label: pathValue
-    })
-  );
+	  warnings.push(
+	    ...await writeTextFile(absolutePath, normalizedContent, {
+	      label: lockedPathValue
+	    })
+	  );
 
   if (exists) {
-    warnings.push(`Replaced existing summary artifact: ${pathValue}`);
+    warnings.push(`Replaced existing summary artifact: ${lockedPathValue}`);
   }
 
   return {
@@ -11934,8 +12786,8 @@ export async function blueprintPhaseSummaryWrite(
     phaseName: resolved.phaseName,
     phaseDir: resolved.phaseDir,
     planId,
-    path: pathValue,
-    linkedPlanPath: plan.path,
+    path: lockedPathValue,
+    linkedPlanPath,
     written: true,
     created: !exists,
     overwritten: exists,
@@ -11943,6 +12795,8 @@ export async function blueprintPhaseSummaryWrite(
     issues,
     warnings: [...modelWarnings, ...warnings]
   };
+    })
+  );
 }
 
 export async function blueprintPhaseCheckpointGet(
@@ -12025,76 +12879,85 @@ export async function blueprintPhaseCheckpointGet(
 export async function blueprintPhaseCheckpointPut(
   args: PhaseCheckpointPutArgs
 ): Promise<PhaseCheckpointPutResult> {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const checkpointPath = checkpointPathFor(resolved);
-  const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
-  const nextCheckpoint = ensureCheckpointForPersistence(args.checkpoint, checkpointPath);
-  const nextRaw = `${JSON.stringify(nextCheckpoint, null, 2)}\n`;
-  const warnings: string[] = [];
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
 
-  if (await pathExists(absolutePath)) {
-    const existingRaw = await fs.readFile(absolutePath, "utf8");
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase checkpoint put",
+    async ({ resolved }) => withBlueprintRepoLock(projectRoot, "phase-checkpoint", async () => {
+    const checkpointPath = checkpointPathFor(resolved);
+    const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
+    const nextCheckpoint = ensureCheckpointForPersistence(args.checkpoint, checkpointPath);
+    const nextRaw = `${JSON.stringify(nextCheckpoint, null, 2)}\n`;
+    const warnings: string[] = [];
 
-    if (existingRaw === nextRaw) {
-      warnings.push(`Preserved existing phase checkpoint because the content was unchanged.`);
+    if (await pathExists(absolutePath)) {
+      const existingRaw = await fs.readFile(absolutePath, "utf8");
 
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        path: checkpointPath,
-        updated: false,
-        warnings
-      };
-    }
+      if (existingRaw === nextRaw) {
+        warnings.push(`Preserved existing phase checkpoint because the content was unchanged.`);
 
-    const existingCheckpoint = ensureCheckpointObject(
-      safeJsonParseObject(existingRaw, {
-        label: checkpointPath,
-        maxBytes: 256 * 1024
-      }),
-      checkpointPath
-    );
-    const ownershipSafety = evaluateCheckpointResumeSafety(
-      existingCheckpoint,
-      checkpointPath,
-      args.checkpoint.ownerCommand,
-      args.checkpoint.mode
-    );
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          path: checkpointPath,
+          updated: false,
+          warnings
+        };
+      }
 
-    if (!ownershipSafety.safeToResume) {
-      throw new Error(
-        checkpointOwnershipBlockerReason(
-          checkpointPath,
-          ownershipSafety.warnings,
-          "overwrite"
-        )
+      const existingCheckpoint = ensureCheckpointObject(
+        safeJsonParseObject(existingRaw, {
+          label: checkpointPath,
+          maxBytes: 256 * 1024
+        }),
+        checkpointPath
       );
+      const ownershipSafety = evaluateCheckpointResumeSafety(
+        existingCheckpoint,
+        checkpointPath,
+        args.checkpoint.ownerCommand,
+        args.checkpoint.mode
+      );
+
+      if (!ownershipSafety.safeToResume) {
+        throw new Error(
+          checkpointOwnershipBlockerReason(
+            checkpointPath,
+            ownershipSafety.warnings,
+            "overwrite"
+          )
+        );
+      }
+
+      warnings.push(...ownershipSafety.warnings);
     }
 
-    warnings.push(...ownershipSafety.warnings);
-  }
+    await writeJsonFile(absolutePath, nextCheckpoint);
 
-  await writeJsonFile(absolutePath, nextCheckpoint);
-
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    path: checkpointPath,
-    updated: true,
-    warnings
-  };
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      path: checkpointPath,
+      updated: true,
+      warnings
+    };
+    })
+  );
 }
 
 export async function blueprintPhaseCheckpointDelete(
   args: PhaseCheckpointDeleteArgs = {}
 ): Promise<PhaseCheckpointDeleteResult> {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved, matchedPhase } = snapshot;
 
   if (!resolved) {
     return {
@@ -12109,31 +12972,11 @@ export async function blueprintPhaseCheckpointDelete(
     };
   }
 
-  const checkpointPath = checkpointPathFor(resolved);
-  const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
-
-  if (!(await pathExists(absolutePath))) {
-    return {
-      phaseFound: true,
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      path: checkpointPath,
-      deleted: false,
-      reason: `${checkpointPath} did not exist.`
-    };
-  }
-
-  const parsed = ensureCheckpointObject(
-    safeJsonParseObject(await fs.readFile(absolutePath, "utf8"), {
-      label: checkpointPath,
-      maxBytes: 256 * 1024
-    }),
-    checkpointPath
-  );
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
 
   if (!args.expectedOwnerCommand && !args.expectedMode) {
+    const checkpointPath = checkpointPathFor(resolved);
+
     return {
       phaseFound: true,
       phaseNumber: resolved.phaseNumber,
@@ -12146,7 +12989,35 @@ export async function blueprintPhaseCheckpointDelete(
     };
   }
 
-  if (args.expectedOwnerCommand || args.expectedMode) {
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase checkpoint delete",
+    async ({ resolved }) => withBlueprintRepoLock(projectRoot, "phase-checkpoint", async () => {
+    const checkpointPath = checkpointPathFor(resolved);
+    const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
+
+    if (!(await pathExists(absolutePath))) {
+      return {
+        phaseFound: true,
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        path: checkpointPath,
+        deleted: false,
+        reason: `${checkpointPath} did not exist.`
+      };
+    }
+
+    const parsed = ensureCheckpointObject(
+      safeJsonParseObject(await fs.readFile(absolutePath, "utf8"), {
+        label: checkpointPath,
+        maxBytes: 256 * 1024
+      }),
+      checkpointPath
+    );
     const expectedOwnerCommand =
       args.expectedOwnerCommand ?? checkpointExpectedOwnerFromMode(args.expectedMode ?? null);
     const expectedMode =
@@ -12175,20 +13046,21 @@ export async function blueprintPhaseCheckpointDelete(
         )
       };
     }
-  }
 
-  await fs.rm(absolutePath, { force: true });
+    await fs.rm(absolutePath, { force: true });
 
-  return {
-    phaseFound: true,
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    path: checkpointPath,
-    deleted: true,
-    reason: null
-  };
+    return {
+      phaseFound: true,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      path: checkpointPath,
+      deleted: true,
+      reason: null
+    };
+    })
+  );
 }
 
 export const phaseToolDefinitions = [

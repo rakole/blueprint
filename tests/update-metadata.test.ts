@@ -36,6 +36,9 @@ test("update manifest references the maintenance skill, update MCP tools, and th
   assert.match(commandFile, /update-mode-gate/);
   assert.match(commandFile, /manual fallback/i);
   assert.match(commandFile, /~\/.<host>\/blueprint\/updates\//);
+  assert.match(commandFile, /persistenceStatus === "saved"/);
+  assert.match(commandFile, /non-null `path`/);
+  assert.match(commandFile, /`persistenceStatus === "not_saved"`/);
   assert.match(commandFile, /Never write into the installed extension directory/i);
   assert.match(commandFile, /restart guidance/i);
 });
@@ -52,6 +55,10 @@ test("update local runtime contract, maintenance skill, and runtime resource ali
   assert.match(runtimeReference, /`mcp_blueprint_blueprint_update_plan`/);
   assert.match(runtimeReference, /update-mode-gate/);
   assert.match(runtimeReference, /manual fallback/i);
+  assert.match(runtimeReference, /persistenceStatus === "saved"/);
+  assert.match(runtimeReference, /non-null `path`/);
+  assert.match(runtimeReference, /`persistenceStatus === "not_saved"`/);
+  assert.match(runtimeReference, /`savedPaths` and `intendedPath` as attempted targets/i);
   assert.match(runtimeReference, /restart guidance/i);
   assert.match(runtimeReference, /installed extension directory/i);
 
@@ -61,6 +68,9 @@ test("update local runtime contract, maintenance skill, and runtime resource ali
   assert.match(skillDoc, /Execution profile: `interactive-read`/);
   assert.match(skillDoc, /update-mode-gate/);
   assert.match(skillDoc, /Keep all Blueprint-owned update persistence under `~\/.<host>\/blueprint\/updates\/`/i);
+  assert.match(skillDoc, /persistenceStatus === "saved"/);
+  assert.match(skillDoc, /non-null `path`/);
+  assert.match(skillDoc, /`savedPaths` and `intendedPath` as attempted targets/i);
   assert.doesNotMatch(
     skillDoc,
     /`remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable/
@@ -126,6 +136,6 @@ test("live update tool exports and source-owned result shapes match the shipped 
   assert.deepEqual(toolNames, ["blueprint_update_check", "blueprint_update_plan"]);
   assert.match(updateSource, /type UpdateCheckResult = \{[\s\S]*host:[\s\S]*extensionPath:[\s\S]*extensionManifestPath:[\s\S]*installedVersion:[\s\S]*installProvenance:[\s\S]*latestVersionLookupStatus:[\s\S]*latestVersion:[\s\S]*latestVersionSource:[\s\S]*updateAvailable:[\s\S]*warnings:/);
   assert.doesNotMatch(updateSource, /type UpdateCheckResult = \{[\s\S]*installSource:[\s\S]*jsonPath:[\s\S]*markdownPath:/);
-  assert.match(updateSource, /type UpdatePlanResult = UpdateCheckResult & \{[\s\S]*mode:[\s\S]*steps:[\s\S]*notes:[\s\S]*requiresRestart:[\s\S]*savedPaths:[\s\S]*updatesDir:[\s\S]*metadataPath:[\s\S]*checklistPath:[\s\S]*path:[\s\S]*status:/);
+  assert.match(updateSource, /type UpdatePlanResult = UpdateCheckResult & \{[\s\S]*mode:[\s\S]*steps:[\s\S]*notes:[\s\S]*requiresRestart:[\s\S]*savedPaths:[\s\S]*updatesDir:[\s\S]*metadataPath:[\s\S]*checklistPath:[\s\S]*intendedPath:[\s\S]*path:[\s\S]*status:[\s\S]*persistenceStatus:/);
   assert.doesNotMatch(updateSource, /type UpdatePlanResult = UpdateCheckResult & \{[\s\S]*installSource:[\s\S]*jsonPath:[\s\S]*markdownPath:/);
 });

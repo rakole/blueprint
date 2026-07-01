@@ -1,6 +1,6 @@
 # Cleanup Runtime Contract
 
-This reference is the detailed `/blu-cleanup` workflow contract. The command manifest stays thin, the `blueprint-maintenance` skill owns orchestration, and filesystem archival remains protected-scope and confirmation-gated.
+This reference is the detailed `/blu-cleanup` workflow contract. The command manifest stays thin, the `blueprint-maintenance` skill owns orchestration, and filesystem archival remains protected-scope, confirmation-gated, and committed only through `blueprint_cleanup_archive`.
 
 ## Stage Mapping
 
@@ -21,25 +21,26 @@ This reference is the detailed `/blu-cleanup` workflow contract. The command man
 
 - Only propose phase directories from completed milestones that are no longer referenced by the active roadmap and are not current.
 - Keep protected exclusions visible: current phase, active roadmap references, evidence-incomplete directories, and final kept directories.
+- Call `mcp_blueprint_blueprint_cleanup_archive` with `mode: "preview"` and treat its selected phase directories, protected exclusions, digest inputs, destination status, waiting state, and blockers as authoritative.
 - Require destructive confirmation and surface `cleanup-confirmation`.
 - If creating a new archive destination needs approval, surface `archive-destination-confirmation`.
 - If replacing `cleanup-latest` needs approval, surface `report-overwrite-confirmation`.
 
 ### Execute
 
-- Run only approved filesystem operations.
-- If using copy-then-delete, delete originals only after archive copy succeeds cleanly.
-- Never archive the current phase, active roadmap references, or evidence-incomplete phase directories.
+- After confirmation, call `mcp_blueprint_blueprint_cleanup_archive` with `mode: "commit"`, `confirmed: true`, the approved destination/operation/overwrite choices, and the preview's `expectedSelectedPhaseDirs` plus `expectedProtectedPhaseDirs`.
+- Never run shell `mv`, `cp`, `rm`, or direct filesystem operations from the prompt.
+- Let the tool enforce current phase, active roadmap references, evidence-incomplete phase directories, destination creation approval, destination collisions, stale preview mismatches, and copy-then-delete ordering.
 
 ### Persist
 
-- Persist the approved cleanup plan before filesystem mutation through `mcp_blueprint_blueprint_artifact_report_write` with bare `reportName: "cleanup-latest"`.
-- If cleanup changes routing, call `mcp_blueprint_blueprint_state_update` only after report write and successful filesystem work.
-- Preserve the cleanup report even if archival partially fails after report persistence.
+- `mcp_blueprint_blueprint_cleanup_archive` owns `.blueprint/reports/cleanup-latest.md` and writes it only from the actual archive outcome.
+- If cleanup changes routing, call `mcp_blueprint_blueprint_state_update` only after `mcp_blueprint_blueprint_cleanup_archive` returns `status: "archived"` with `reportWritten: true`.
+- Preserve and report the runtime-written cleanup report on partial failure when `reportWritten` is true; otherwise surface the missing report as a blocker and do not claim cleanup completion.
 
 ### Validate
 
-- Verify archived directories, protected exclusions, archive destination, report path, and partial failures.
+- Verify archived, failed, skipped, and kept directories, protected exclusions, archive destination, report path, and partial failures from the `mcp_blueprint_blueprint_cleanup_archive` result.
 
 ### Route
 
@@ -48,8 +49,8 @@ This reference is the detailed `/blu-cleanup` workflow contract. The command man
 
 ## Persistence Boundaries
 
-- Blueprint-owned writes are limited to `.blueprint/reports/cleanup-latest.md` and `.blueprint/STATE.md` when routing changes.
-- Archive destinations inside `.blueprint/` require existing destination or explicit creation approval.
+- Blueprint-owned writes are limited to `.blueprint/reports/cleanup-latest.md`, the confirmed `.blueprint/archive/` destination, and `.blueprint/STATE.md` when routing changes.
+- Archive destinations require existing `.blueprint/archive/` destination or explicit creation approval.
 - The manifest does not read a report contract for cleanup; do not add `artifact_contract_read` to this command.
 
 ## Required MCP FQNs
@@ -58,5 +59,5 @@ This reference is the detailed `/blu-cleanup` workflow contract. The command man
 - `mcp_blueprint_blueprint_roadmap_read`
 - `mcp_blueprint_blueprint_artifact_list`
 - `mcp_blueprint_blueprint_artifact_summary_digest`
-- `mcp_blueprint_blueprint_artifact_report_write`
+- `mcp_blueprint_blueprint_cleanup_archive`
 - `mcp_blueprint_blueprint_state_update`

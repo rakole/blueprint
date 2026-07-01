@@ -134,6 +134,14 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
     /Roadmap-admin commands resolve active inputs from the structured `input_bundles` frontmatter/
   );
   assert.match(skillFile, /durable requirement ID declared in `\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(
+    skillFile,
+    /`blueprint_roadmap_add_phase` and `blueprint_roadmap_insert_phase`:[\s\S]*`confirmed: true` after approved `phase-number-confirmation`[\s\S]*`confirmed: true` after approved `gap-plan-confirmation`[\s\S]*`confirmed: true` after approved `phase-insert-confirmation`/
+  );
+  assert.match(
+    skillFile,
+    /persist the roadmap mutation through `blueprint_roadmap_add_phase` with `confirmed: true` after approved `phase-number-confirmation`/
+  );
   assert.match(skillFile, /auditBackedDetails\.repairRequirementIds/);
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(skillFile, /compact starter handoff/i);

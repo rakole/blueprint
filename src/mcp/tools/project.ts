@@ -30,6 +30,7 @@ import {
 import {
   configToolDefinitions,
   blueprintConfigGet,
+  preflightProjectConfigDefaultsPath,
   seedProjectConfig
 } from "./config.js";
 import {
@@ -42,6 +43,7 @@ import {
   blueprintStateLoad,
   blueprintStateUpdate
 } from "./state.js";
+import { cleanupToolDefinitions } from "./cleanup.js";
 import { reviewToolDefinitions } from "./review.js";
 import { impactToolDefinitions } from "./impact.js";
 import { updateToolDefinitions } from "./update.js";
@@ -261,6 +263,7 @@ const AVAILABLE_TOOL_NAMES = new Set([
   ...planRunToolDefinitions.map((definition) => definition.name),
   ...reviewToolDefinitions.map((definition) => definition.name),
   ...artifactToolDefinitions.map((definition) => definition.name),
+  ...cleanupToolDefinitions.map((definition) => definition.name),
   ...impactToolDefinitions.map((definition) => definition.name),
   ...updateToolDefinitions.map((definition) => definition.name),
   ...workspaceToolDefinitions.map((definition) => definition.name)
@@ -1187,6 +1190,8 @@ export async function blueprintProjectInit(
     });
   }
 
+  preflightProjectConfigDefaultsPath(args.defaultsPath);
+
   const initialPhase = bootstrapSeed.roadmapPhases[0]?.phase
     ? normalizeBlueprintPhaseRef(
         bootstrapSeed.roadmapPhases[0].phase,
@@ -1369,13 +1374,14 @@ export async function blueprintProjectStatus(
     bootstrap,
     health: {
       missingArtifacts: inspection.core.missing,
-      warnings: [
+      warnings: [...new Set([
         ...configWarnings,
+        ...(stateResult.warnings ?? []),
         ...bootstrapDiagnostics.placeholderArtifacts.map(
           (artifact) => `Bootstrap artifact still looks like a placeholder: ${artifact}`
         ),
         ...bootstrapDiagnostics.traceabilityWarnings
-      ]
+      ])]
     }
   };
 }

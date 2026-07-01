@@ -104,6 +104,7 @@ are not normal execution inputs for the runtime-owned maintenance commands.
 - `blueprint_artifact_contract_read`
 - `blueprint_artifact_summary_digest`
 - `blueprint_artifact_report_write`
+- `blueprint_cleanup_archive`
 - `blueprint_state_update`
 
 ## Shared MCP Contracts
@@ -111,13 +112,14 @@ are not normal execution inputs for the runtime-owned maintenance commands.
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories, slugs, or filenames.
 - `blueprint_artifact_contract_read`: for known report shapes such as `report.pr-branch`, `report.ship`, and `report.undo`, use the returned `authoringTemplate` as the heading and schema authority before report persistence.
 - `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths`, `trackedFiles`, and related file inputs only, and treat `inputsUsed` as the authoritative digest scope.
-- `blueprint_artifact_report_write`: pass a bare report name such as `pr-branch-latest`, `ship-latest`, `undo-latest`, or `cleanup-latest`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
+- `blueprint_artifact_report_write`: pass a bare report name such as `pr-branch-latest`, `ship-latest`, or `undo-latest`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
+- `blueprint_cleanup_archive`: for cleanup, use `mode: "preview"` before confirmation and `mode: "commit"` after confirmation. Treat its selected, protected, archived, failed, skipped, kept, `reportPath`, and `reportWritten` fields as authoritative.
 
 ## Workflow Rules
 
 Shared rule for all maintenance flows:
 
-- run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow when the command owns a durable maintenance report
+- run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and keep durable reports tied to the owning runtime mutation path
 - use `update_topic` tool and keep a compact shipping checklist with `write_todos` only for non-trivial shipping or review-branch work; tracker-eligible only for session-local coordination, never as a second persistence layer
 
 ### `workstreams`
@@ -134,9 +136,9 @@ Shared rule for all maintenance flows:
 5. Treat dirty active-stream transitions as hard stops. `switch`, `resume`, and completing the current active workstream must stop on a dirty tree and keep that waiting state visible as `dirty-working-tree` with the next safe action.
 6. Require explicit confirmation through `ask_user` before switching away from an active workstream, and keep the pending gate explicit as `workstream-switch-confirmation` until the user approves.
 7. Require explicit confirmation through `ask_user` before completing the current active workstream, and keep the pending gate explicit as `workstream-archive-confirmation` until the user approves.
-8. Persist workstream state only through `blueprint_workstream_mutate`, and treat its returned `active`, `workstreams`, `affectedPaths`, `waitingState`, `nextAction`, and `statePatch` as authoritative. The mutate tool owns `WORKSTREAMS.md` regeneration plus per-stream `state.json` writes.
+8. Persist workstream state only through `blueprint_workstream_mutate`, and treat its returned `active`, `workstreams`, `affectedPaths`, `waitingState`, `nextAction`, and `statePatch` as authoritative. The mutate tool owns `WORKSTREAMS.md` regeneration, per-stream `state.json` writes, and durable resume restoration into `.blueprint/STATE.md`.
 9. Keep failure handling honest: stop on `missing-workstream`, `missing-resume-snapshot`, or `corrupt-workstream-index` instead of inventing fallback state. Do not smooth past a missing snapshot or a stale workstream index.
-10. For `resume`, apply only the returned `statePatch` through `blueprint_state_update`, let the state tool stamp `lastUpdated`, and keep the change bounded to the saved `STATE.md` subset. Do not widen the flow into `/blu-resume-work`.
+10. For `resume`, treat the returned `statePatch` as an already-applied transparency payload from `blueprint_workstream_mutate`; do not make a second state-update call. Keep the change bounded to the saved `STATE.md` subset and do not widen the flow into `/blu-resume-work`.
 11. Keep workstream state project-local. Never reintroduce `workflow.use_workstreams`, a host-global workstream registry, or `.planning/` ownership for this feature.
 
 ### `new-workspace`
@@ -182,7 +184,7 @@ Shared rule for all maintenance flows:
 2. Keep extension-path handling read-only. Never write into the installed extension directory and never imply an in-session self-update path.
 3. Use Gemini-native `ask_user` only for the saved-checklist versus manual-fallback mode gate when the host can ask interactively.
 4. Keep all Blueprint-owned update persistence under `~/.<host>/blueprint/updates/`.
-5. Persist saved checklist output only through `blueprint_update_plan`, treat its returned `savedPaths` as authoritative, and keep manual fallback explicit when saved persistence is skipped.
+5. Persist saved checklist output only through `blueprint_update_plan`, treat `persistenceStatus === "saved"` plus non-null `path` as the saved signal, treat `savedPaths` and `intendedPath` as attempted targets when `persistenceStatus === "not_saved"`, and surface warnings plus manual fallback when persistence is skipped or fails.
 6. End every run with restart guidance and the next safe out-of-band update action.
 
 ### `pr-branch`
@@ -255,7 +257,7 @@ Shared in-flight contract for `undo`:
 9. Require explicit confirmation that includes the exact revert scope, candidate commits, dependency-impact notes, the `undo-latest` report, and the precise git commands that will run. Keep the pending gate explicit as `undo-confirmation` until the user approves.
 10. If replacing `undo-latest` needs overwrite approval, keep the report-overwrite waiting state explicit as `report-overwrite-confirmation` and name the next safe action before continuing.
 11. Read `blueprint_artifact_contract_read` for `report.undo` before report persistence, and use the returned `authoringTemplate` as the canonical `undo-latest` report authority.
-12. Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest` before git mutation begins, and use the returned `path` as the authoritative saved report location.
+12. Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest` before git mutation begins, and use the returned `path` as the authoritative saved report location. Keep the report-before-mutate posture for undo by preserving this approved-plan write before any git revert step begins.
 13. Run only safe revert-style git steps. Never use `git reset --hard`, implicit branch deletion, or other destructive shortcuts for this command.
 14. After the revert attempt finishes, overwrite `undo-latest` through `blueprint_artifact_report_write` so the durable report captures the actual outcome, blockers, and stale-evidence fallout instead of leaving only the pre-mutation plan.
 15. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the post-mutation report overwrite is written and the revert succeeds.
@@ -276,10 +278,10 @@ Shared in-flight contract for `cleanup`:
 5. Read saved milestone completion, summary, and related evidence through `blueprint_artifact_list` before proposing any archive scope.
 6. Keep the cleanup scope explicit: only archive phase directories from completed milestones, never the current phase or any phase still referenced by the active roadmap, keep evidence-incomplete directories in the protected set, and stop instead of guessing when saved evidence is incomplete.
 7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` so the cleanup plan stays grounded in the saved milestone evidence and the selected directories.
-8. Require explicit confirmation that includes the selected phase directories, protected exclusions, archive destination, whether the operation is move versus copy-then-delete, and report overwrite behavior. Use Gemini-native `ask_user` for the destructive cleanup confirmation and archive-destination creation approval when that interaction tool is available. Keep the destructive approval gate visible as `cleanup-confirmation` until the user approves, keep `archive-destination-confirmation` visible until the user explicitly approves creating a new cleanup destination, and if `ask_user` is unavailable stop honestly with the named pending gate still visible and the next safe action explicit.
-9. If replacing `cleanup-latest` needs overwrite approval, keep the report-overwrite waiting state visible as `report-overwrite-confirmation`, require explicit overwrite confirmation through Gemini-native `ask_user` when that interaction tool is available, and stop honestly with that named pending gate still visible when `ask_user` is unavailable. Persist the approved cleanup plan through `blueprint_artifact_report_write` with the bare report name `cleanup-latest` before filesystem mutation begins, and use the returned `path` as the authoritative saved report location.
-10. Run only the approved filesystem operations, and if a copy path is used, delete originals only after the archive copy succeeds. If filesystem archival partially fails after report persistence, preserve the written cleanup report, keep already archived and failed directories explicit, and surface the partial failure honestly.
-11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and filesystem work succeeds.
+8. Build the destructive preview through `blueprint_cleanup_archive` with `mode: "preview"` and treat its selected phase directories, protected exclusions, digest inputs, destination status, waiting state, and blockers as authoritative.
+9. Require explicit confirmation that includes the selected phase directories, protected exclusions, archive destination, whether the operation is move versus copy-then-delete, and report overwrite behavior. Use Gemini-native `ask_user` for the destructive cleanup confirmation, archive-destination creation approval, and report overwrite approval when that interaction tool is available. Keep the destructive approval gate visible as `cleanup-confirmation`, keep `archive-destination-confirmation` visible until the user explicitly approves creating a new cleanup destination, keep `report-overwrite-confirmation` visible until overwrite is explicitly approved, and if `ask_user` is unavailable stop honestly with the named pending gate still visible and the next safe action explicit.
+10. Commit archival only through `blueprint_cleanup_archive` with `mode: "commit"`, `confirmed: true`, the approved destination/operation/overwrite choices, and the preview's `expectedSelectedPhaseDirs` plus `expectedProtectedPhaseDirs`. Never run shell `mv`, `cp`, `rm`, or direct filesystem operations yourself. Treat the returned `archivedPhaseDirs`, `failedPhaseDirs`, `skippedPhaseDirs`, `keptPhaseDirs`, `reportPath`, and `reportWritten` as authoritative; `cleanup-latest` is runtime-written only from the actual archive outcome.
+11. If filesystem archival partially fails, preserve the runtime-written cleanup report when `reportWritten` is true, keep already archived, failed, skipped, and kept directories explicit, and surface the partial failure honestly. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` only after `blueprint_cleanup_archive` returns `status: "archived"` with `reportWritten: true`.
 
 ### `reapply-patches`
 
@@ -310,9 +312,9 @@ Shared in-flight contract for `cleanup`:
 - For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `new-workspace`, report the resolved workspace path, manifest path, registry path, repo members, chosen strategy, branch, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
 - For `remove-workspace`, report the resolved workspace path, manifest path, registry path, removed repo members, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
-- For `workstreams`, report the active workstream, the selected target, any affected paths, any active pending gate or waiting state, whether a resume state patch was returned, and the safest implemented follow-up or manual next step.
+- For `workstreams`, report the active workstream, the selected target, any affected paths, any active pending gate or waiting state, whether a resume state patch was applied, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
-- For `update`, report the resolved host, extension path, installed version, latest-version lookup status, whether an update appears available, any active pending gate or waiting state, the saved checklist status when applicable, and the restart-focused next safe action.
+- For `update`, report the resolved host, extension path, installed version, latest-version lookup status, whether an update appears available, any active pending gate or waiting state, the `persistenceStatus`, the saved `path` only when it is non-null, the `intendedPath` plus warnings when persistence is `not_saved`, and the restart-focused next safe action.
 - For `reapply-patches`, report the selected patch ids, preview or replay outcome, registry path, audit status, any active pending gate or waiting state, any conflict or compatibility warnings, and the safest implemented follow-up or manual next step.
 
 ## Completion Self-Check
@@ -321,7 +323,7 @@ Before claiming completion, verify:
 
 - The active command's manifest and matching `skills/blueprint-maintenance/references/*-runtime-contract.md` from `input_bundles.commands[...]` were loaded, and no sibling maintenance reference was treated as active input.
 - Required MCP calls used runtime FQNs and followed contract order: project/config/registry/list/check preflight first, digest and contract reads before report writes, dry-run before patch replay, and state updates only after the owning report or mutation result exists.
-- Blueprint-owned persistence went only through the owning MCP tools, with returned `status`, `written`, `created`, `updated`, `path`, `savedPaths`, `affectedPaths`, `workspacePath`, `manifestPath`, `registryPath`, `inputsUsed`, `warnings`, `waitingState`, `nextAction`, and `reason` fields treated as authoritative.
+- Blueprint-owned persistence went only through the owning MCP tools, with returned `status`, `persistenceStatus`, `written`, `created`, `updated`, `path`, `intendedPath`, `savedPaths`, `affectedPaths`, `workspacePath`, `manifestPath`, `registryPath`, `inputsUsed`, `warnings`, `waitingState`, `nextAction`, and `reason` fields treated as authoritative.
 - Every required gate cleared before mutation: git or remote changes, workspace create/remove, workstream switch/archive, cleanup/archive/report overwrite, update checklist mode, patch replay, and any overwrite, repair, destructive, host-global, or strategy-change write.
 - Dirty-tree, drift, validation, model-check, dry-run conflict, tool rejection, or partial-failure results were repaired through the named MCP path or reported as blockers; invalid, skipped, partial, or blocked work was not described as successful completion.
 - The command stayed inside its write boundary: no direct `.blueprint/` edits, no hidden registries, no installed-extension mutation, no prompt-only persistence, no planned-only routing surface, and no unrelated Blueprint runtime, source, docs, or sibling-skill changes.

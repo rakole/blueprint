@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 
 export type BlueprintRuntimeHostId = "gemini" | "tabnine";
@@ -18,6 +19,7 @@ export type BlueprintRuntimeHost = {
 const BLUEPRINT_HOST_IDS = ["gemini", "tabnine"] as const satisfies readonly BlueprintRuntimeHostId[];
 
 let cachedRuntimeHost: BlueprintRuntimeHost | null = null;
+let cachedRuntimeHostKey: string | null = null;
 
 function normalizeHostId(value: string | undefined): BlueprintRuntimeHostId | null {
   const normalized = value?.trim().toLowerCase();
@@ -33,6 +35,22 @@ function normalizeHostId(value: string | undefined): BlueprintRuntimeHostId | nu
 
 function trimTrailingSeparators(value: string): string {
   return value.replace(/[\\/]+$/, "");
+}
+
+function expandHomePath(value: string): string {
+  if (value === "~") {
+    return os.homedir();
+  }
+
+  if (value.startsWith("~/") || value.startsWith("~\\")) {
+    return path.join(os.homedir(), value.slice(2));
+  }
+
+  if (value.startsWith("~")) {
+    throw new Error("BLUEPRINT_GLOBAL_HOME must use ~ or ~/ when using a home-relative path.");
+  }
+
+  return value;
 }
 
 function inferHostFromExtensionPath(extensionPath: string | undefined): BlueprintRuntimeHostId | null {
@@ -65,7 +83,20 @@ function inferHostFromExtensionPath(extensionPath: string | undefined): Blueprin
 
 function buildDefaultGlobalBlueprintDir(host: BlueprintRuntimeHostId): string {
   const cliHomeDirName = host === "tabnine" ? ".tabnine" : ".gemini";
-  return `~/${cliHomeDirName}/blueprint`;
+
+  return path.join(os.homedir(), cliHomeDirName, "blueprint");
+}
+
+function normalizeGlobalBlueprintDir(value: string): string {
+  return trimTrailingSeparators(path.resolve(expandHomePath(value)));
+}
+
+function buildRuntimeHostCacheKey(env: NodeJS.ProcessEnv): string {
+  return JSON.stringify({
+    host: env.BLUEPRINT_HOST ?? null,
+    extensionPath: env.BLUEPRINT_EXTENSION_PATH ?? null,
+    globalHome: env.BLUEPRINT_GLOBAL_HOME ?? null
+  });
 }
 
 function buildRuntimeHost(
@@ -79,7 +110,7 @@ function buildRuntimeHost(
   const contextFileName = host === "tabnine" ? "TABNINE.md" : "GEMINI.md";
   const manifestFileName =
     host === "tabnine" ? "tabnine-extension.json" : "gemini-extension.json";
-  const globalBlueprintDir = trimTrailingSeparators(
+  const globalBlueprintDir = normalizeGlobalBlueprintDir(
     env.BLUEPRINT_GLOBAL_HOME?.trim() || buildDefaultGlobalBlueprintDir(host)
   );
 
@@ -104,6 +135,12 @@ export function resolveBlueprintRuntimeHost(
 }
 
 export function getBlueprintRuntimeHost(): BlueprintRuntimeHost {
-  cachedRuntimeHost ??= buildRuntimeHost();
+  const cacheKey = buildRuntimeHostCacheKey(process.env);
+
+  if (cachedRuntimeHost === null || cachedRuntimeHostKey !== cacheKey) {
+    cachedRuntimeHost = buildRuntimeHost();
+    cachedRuntimeHostKey = cacheKey;
+  }
+
   return cachedRuntimeHost;
 }

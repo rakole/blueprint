@@ -60,6 +60,7 @@ const SUMMARY_COUNT_KEYS = [
 
 const DIAGNOSTIC_SUMMARY_LIMIT = 3;
 const MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1500;
+const NON_SUCCESS_SUMMARY_STATUSES = new Set(MUTATION_FAILURE_STATUSES);
 
 function findSummaryPath(result: ToolResult): string | null {
   for (const key of SUMMARY_PATH_KEYS) {
@@ -239,10 +240,200 @@ function buildCountSummary(result: ToolResult): string[] {
   return fragments;
 }
 
-function buildMutationFlags(result: ToolResult): string[] {
+function buildUpdatePlanNotSavedCountSummary(result: ToolResult): string[] {
+  const fragments: string[] = [];
+
+  for (const [key, label] of [
+    ["steps", "steps"],
+    ["notes", "notes"],
+    ["warnings", "warnings"]
+  ] as const) {
+    const count = getArrayCount(result, key);
+
+    if (count && count > 0) {
+      fragments.push(`${count} ${label}`);
+    }
+  }
+
+  return fragments;
+}
+
+function formatPositiveCount(result: ToolResult, key: string, label: string): string | null {
+  const count = getArrayCount(result, key);
+
+  return count && count > 0 ? `${count} ${label}` : null;
+}
+
+function buildPatchReapplySummary(result: ToolResult): string {
+  const status = getString(result, "status");
+  const preview = getBoolean(result, "preview") === true;
+  const conflictCount = getArrayCount(result, "conflicts") ?? 0;
+  const skippedCount = getArrayCount(result, "skippedPatches") ?? 0;
+  const rollback = asRecord(result.rollback);
+  const rollbackAttempted = rollback ? getBoolean(rollback, "attempted") === true : false;
+  const rollbackSucceeded = rollback ? getBoolean(rollback, "succeeded") === true : false;
+  const details = [
+    status ? `status: ${status}` : null,
+    formatPositiveCount(result, "appliedPatches", "applied patches"),
+    formatPositiveCount(result, "skippedPatches", "skipped patches"),
+    rollbackAttempted ? `rollback ${rollbackSucceeded ? "succeeded" : "incomplete"}` : null,
+    formatPositiveCount(result, "conflicts", "conflicts")
+  ].filter((detail): detail is string => detail !== null);
+  const suffix = details.length > 0 ? ` (${details.join(", ")})` : "";
+
+  if (status === "partial") {
+    return `Patch replay failed after partially mutating the working tree${suffix}.`;
+  }
+
+  if (status === "failed" && rollbackAttempted && rollbackSucceeded) {
+    return `Patch replay failed after mutation and rolled back affected files${suffix}.`;
+  }
+
+  if (conflictCount > 0 || skippedCount > 0 || status === "blocked" || status === "failed") {
+    return preview
+      ? `Patch replay preview did not apply recorded patches${suffix}.`
+      : `Did not reapply recorded patches${suffix}.`;
+  }
+
+  if (preview || status === "preview") {
+    return `Previewed recorded patches${suffix}.`;
+  }
+
+  if (status === "skipped") {
+    return `Skipped patch reapply${suffix}.`;
+  }
+
+  return `Reapplied recorded patches${suffix}.`;
+}
+
+function buildCleanupReportNotWrittenSummary(result: ToolResult): string {
+  const status = getString(result, "status");
+  const reportPath = getString(result, "reportPath");
+  const reason = getString(result, "reason");
+  const details = [
+    status ? `status: ${status}` : null,
+    formatPositiveCount(result, "archivedPhaseDirs", "archived phase directories"),
+    formatPositiveCount(result, "failedPhaseDirs", "failed phase directories"),
+    formatPositiveCount(result, "skippedPhaseDirs", "skipped phase directories"),
+    formatPositiveCount(result, "keptPhaseDirs", "kept phase directories"),
+    formatPositiveCount(result, "issues", "issues")
+  ].filter((detail): detail is string => detail !== null);
+  const location = reportPath ? ` at \`${reportPath}\`` : "";
+  const detailSuffix = details.length > 0 ? ` (${details.join(", ")})` : "";
+  const reasonSuffix = reason ? ` Reason: ${cleanSentenceFragment(reason)}.` : "";
+
+  return `Cleanup archive report was not written${location}${detailSuffix}.${reasonSuffix}`;
+}
+
+function getNonSuccessSummaryVerb(status: string, preferredVerb?: string | null): string {
+  if (status === "invalid" && preferredVerb) {
+    return preferredVerb;
+  }
+
+  switch (status) {
+    case "invalid":
+      return "Invalid";
+    case "project_missing":
+      return "Project missing";
+    case "not_found":
+      return "Not found";
+    case "blocked":
+      return "Blocked";
+    case "refused":
+      return "Refused";
+    case "rejected":
+      return "Rejected";
+    case "failed":
+    case "error":
+      return "Failed";
+    case "partial":
+      return "Partially completed";
+    case "stale":
+    default:
+      return "Did not complete";
+  }
+}
+
+function buildNonSuccessStatusSummary(
+  toolName: string,
+  subject: string,
+  status: string,
+  result: ToolResult,
+  preferredVerb?: string | null
+): string {
+  const reason = getString(result, "reason");
+  const waitingState = getString(result, "waitingState");
+  const path = findSummaryPath(result);
+  const content = getString(result, "content");
+  const mutationFlags = buildMutationFlags(toolName, result);
+  const countSummary = buildCountSummary(result);
+  const details: string[] = [];
+
+  if (path) {
+    details.push(`at \`${path}\``);
+  }
+
+  if (content) {
+    details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
+  }
+
+  if (mutationFlags.length > 0) {
+    details.push(`(${mutationFlags.join(", ")})`);
+  }
+
+  details.push(`status: ${status}`);
+
+  if (waitingState) {
+    details.push(`waitingState: ${waitingState}`);
+  }
+
+  if (reason) {
+    details.push(`reason: ${cleanSentenceFragment(reason)}`);
+  }
+
+  if (countSummary.length > 0) {
+    details.push(`(${countSummary.join(", ")})`);
+  }
+
+  const detailSuffix = details.length > 0 ? ` ${details.join(" ")}` : "";
+  const diagnosticSuffix = buildDiagnosticSuffix(status, result);
+
+  return `${getNonSuccessSummaryVerb(status, preferredVerb)} ${subject}${detailSuffix}.${diagnosticSuffix}`;
+}
+
+function buildStateNoopSummary(toolName: string, result: ToolResult): string | null {
+  const updated = getBoolean(result, "updated");
+  const synced = getBoolean(result, "synced");
+  const updatedFieldCount = getArrayCount(result, "updatedFields");
+  const syncedFieldCount = getArrayCount(result, "syncedFields");
+  const path = findSummaryPath(result);
+  const location = path ? ` at \`${path}\`` : "";
+
+  if (
+    toolName === "blueprint_state_update" &&
+    (updated === false || updatedFieldCount === 0)
+  ) {
+    return `No state changes${location}.`;
+  }
+
+  if (
+    toolName === "blueprint_state_sync" &&
+    (synced === false || syncedFieldCount === 0)
+  ) {
+    return `State already synchronized${location}.`;
+  }
+
+  return null;
+}
+
+function buildMutationFlags(toolName: string, result: ToolResult): string[] {
   const flags: string[] = [];
 
   for (const key of ["created", "written", "updated", "deleted", "overwritten"] as const) {
+    if (toolName === "blueprint_state_update" && key === "updated") {
+      continue;
+    }
+
     if (getBoolean(result, key)) {
       flags.push(key);
     }
@@ -337,9 +528,54 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
   const phaseFound = getBoolean(result, "phaseFound");
   const content = getString(result, "content");
   const status = getString(result, "status");
-  const mutationFlags = buildMutationFlags(result);
+  const mutationFlags = buildMutationFlags(toolName, result);
   const countSummary = buildCountSummary(result);
-  const operationVerb = summarizeMutationOutcome(toolName, result) ?? getOperationVerb(toolName);
+  const mutationOutcomeVerb = summarizeMutationOutcome(toolName, result);
+  const operationVerb = mutationOutcomeVerb ?? getOperationVerb(toolName);
+
+  if (toolName === "blueprint_patch_reapply") {
+    return buildPatchReapplySummary(result);
+  }
+
+  const stateNoopSummary = buildStateNoopSummary(toolName, result);
+
+  if (stateNoopSummary !== null) {
+    return stateNoopSummary;
+  }
+
+  if (
+    toolName === "blueprint_update_plan" &&
+    getString(result, "persistenceStatus") === "not_saved"
+  ) {
+    const savedPaths = asRecord(result.savedPaths);
+    const intendedPath = getString(result, "intendedPath") ??
+      (savedPaths ? getString(savedPaths, "metadataPath") : null);
+    const notSavedCountSummary = buildUpdatePlanNotSavedCountSummary(result);
+    const notSavedDetails = [
+      intendedPath ? `intended path \`${intendedPath}\`` : null,
+      notSavedCountSummary.length > 0
+        ? `(${notSavedCountSummary.join(", ")})`
+        : null
+    ].filter((detail): detail is string => detail !== null);
+    const notSavedSuffix = notSavedDetails.length > 0
+      ? `; ${notSavedDetails.join(" ")}`
+      : "";
+
+    return `Did not save ${subject}${notSavedSuffix}.`;
+  }
+
+  if (status && NON_SUCCESS_SUMMARY_STATUSES.has(status)) {
+    return buildNonSuccessStatusSummary(toolName, subject, status, result, mutationOutcomeVerb);
+  }
+
+  if (
+    toolName === "blueprint_cleanup_archive" &&
+    getString(result, "mode") === "commit" &&
+    getString(result, "reportPath") &&
+    getBoolean(result, "reportWritten") === false
+  ) {
+    return buildCleanupReportNotWrittenSummary(result);
+  }
 
   if (phaseFound === false) {
     return reason

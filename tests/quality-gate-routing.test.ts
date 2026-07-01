@@ -30,10 +30,17 @@ type PhaseFixture = {
   withSecurity?: boolean;
   uiSpecMode?: "contract" | "skip-rationale";
   reviewVerdict?: "PASS" | "FOLLOW_UP" | "BLOCKED";
+  uiReviewVerdict?: "PASS" | "FOLLOW_UP" | "BLOCKED";
   reviewNextSafeAction?: string;
+  uiReviewNextSafeAction?: string;
   reviewFixStatus?: "COMPLETED" | "PARTIAL" | "BLOCKED";
   reviewFixCompletionState?: "complete" | "pending" | "blocked";
   reviewFixNextSafeAction?: string;
+  securityStatus?: "COMPLETED" | "PARTIAL" | "BLOCKED";
+  securityCompletionState?: "complete" | "partial" | "blocked" | "pending";
+  securityNextSafeAction?: string;
+  securityOpenThreat?: boolean;
+  securityPendingOpenThreatStatus?: string;
   reviewFindings?: string[];
   reviewFollowUps?: string[];
   reviewFixFindingsAddressed?: string[];
@@ -532,17 +539,57 @@ ${findingsAddressedSection}
 }
 
 function securityContent(phase: PhaseFixture): string {
+  const status = phase.securityStatus ?? "COMPLETED";
+  const completionState = phase.securityCompletionState ?? "complete";
+  const nextSafeAction = phase.securityNextSafeAction ?? "/blu-progress";
+  const hasOpenThreat = phase.securityOpenThreat ?? status === "BLOCKED";
+  const summaryLine =
+    status === "COMPLETED"
+      ? "- The changed code files have no open threat mitigation follow-ups."
+      : status === "PARTIAL"
+        ? "- The changed code files still have security follow-up work before closeout."
+        : "- The changed code files still have an open threat blocking closeout.";
+  const threatRegisterRow = hasOpenThreat
+    ? `| T-01 | ${phaseArtifactPath(phase, "-01-PLAN.md")} | data-integrity | src/feature.ts | unaccepted | Saved mitigation evidence required. | open | Missing saved mitigation evidence for the declared threat. | Open threat blocks next-step routing. |`
+    : "| none | none | none | none | none | none | none | none | none |";
+  const findingsRow =
+    status === "COMPLETED"
+      ? "| none | none | none | none | none | none |"
+      : status === "PARTIAL"
+        ? "| hardening-follow-up | low | T-01 | follow-up | Saved security evidence is incomplete. | Finish the saved repair route. |"
+        : "| open-threat | high | T-01 | open | Missing saved mitigation evidence for the declared threat. | Verify or accept the open threat. |";
+  const manualWorkRow =
+    status === "COMPLETED"
+      ? "| none | none | none | NONE |"
+      : `| Security follow-up | Saved security evidence is ${status.toLowerCase()}. | ${nextSafeAction} | DEFERRED |`;
+  const gapRouteRow =
+    status === "COMPLETED"
+      ? "| none | none | none | NONE |"
+      : `| Security closeout | Saved security evidence is ${status.toLowerCase()}. | ${nextSafeAction} | OPEN |`;
+  const followUpLine =
+    status === "COMPLETED"
+      ? "- none"
+      : `- Continue with \`${nextSafeAction}\` before claiming security closeout.`;
+  const pendingOpenThreatStatus =
+    phase.securityPendingOpenThreatStatus ?? (hasOpenThreat ? "still-open" : "none");
+  const verifierNote = hasOpenThreat
+    ? "Open threat blocks next-step routing."
+    : status === "COMPLETED"
+      ? "no open security follow-up remains."
+      : "security follow-up remains open.";
+
   return `# ${phaseTitle(phase)} - Security
 
-**Status:** COMPLETED
-**Readiness:** ready-for-routing
-**Completion State:** complete
+**Status:** ${status}
+**Readiness:** ${status === "COMPLETED" ? "ready-for-routing" : status === "PARTIAL" ? "needs-follow-up" : "blocked"}
+**Completion State:** ${completionState}
+**Next Safe Action:** ${nextSafeAction}
 
 ## Security Summary
 
-- The changed code files have no open threat mitigation follow-ups.
+${summaryLine}
 
-## Evidence Coverage
+## Evidence Reviewed
 
 | Evidence | Status | Rationale |
 |----------|--------|-----------|
@@ -552,9 +599,9 @@ function securityContent(phase: PhaseFixture): string {
 
 ## Threat Register
 
-| Threat ID | Status | Evidence | Verifier Note |
-|-----------|--------|----------|---------------|
-| none | none | none | none |
+| Threat ID | Source Plan | Category | Component | Disposition | Mitigation | Status | Evidence | Verifier Note |
+|-----------|-------------|----------|-----------|-------------|------------|--------|----------|---------------|
+${threatRegisterRow}
 
 ## Accepted Risks
 
@@ -564,50 +611,65 @@ function securityContent(phase: PhaseFixture): string {
 
 ## Findings
 
-| Kind | Severity | Threat ID | Evidence | Recommendation | Status |
-|------|----------|-----------|----------|----------------|--------|
-| none | none | none | none | none | none |
+| Kind | Severity | Threat ID | Status | Evidence | Recommendation |
+|------|----------|-----------|--------|----------|----------------|
+${findingsRow}
 
 ## Manual / Deferred Work
 
 | Item | Reason | Follow-Up | Status |
 |------|--------|-----------|--------|
-| none | none | none | NONE |
+${manualWorkRow}
 
 ## Gap / Repair Routes
 
 | Gap | Evidence | Repair | Status |
 |-----|----------|--------|--------|
-| none | none | none | NONE |
+${gapRouteRow}
 
 ## Follow-Ups
 
-- none
+${followUpLine}
 
 ## Security Audit Trail
 
 - Audit date: 2026-05-07
 - Execution mode: inline
 - Overwrite gate: not-needed
-- Verify or accept decision: verified
-- Pending open threat status: none
-- Verifier note: no open security follow-up remains.
+- Verify-or-accept decision: verified
+- Pending-open-threat status: ${pendingOpenThreatStatus}
+- Verifier note: ${verifierNote}
 
 ## Next Safe Action
 
-- /blu-progress
+- ${nextSafeAction}
 `;
 }
 
 function uiReviewContent(phase: PhaseFixture): string {
+  const verdict = phase.uiReviewVerdict ?? "PASS";
+  const nextSafeAction = phase.uiReviewNextSafeAction ?? "/blu-progress";
+  const summaryLine =
+    verdict === "PASS"
+      ? "- The shipped UI work satisfies the saved phase UI contract."
+      : verdict === "FOLLOW_UP"
+        ? "- The shipped UI work has a follow-up finding that must be repaired before closeout."
+        : "- The shipped UI work has a blocking UI review finding before closeout.";
+  const findingsRow =
+    verdict === "PASS"
+      ? `| hierarchy | pass | ${phaseArtifactPath(phase, "-UI-SPEC.md")} | The responsive hierarchy matches the saved UI contract. |`
+      : verdict === "FOLLOW_UP"
+        ? `| hierarchy | follow-up | ${phaseArtifactPath(phase, "-UI-SPEC.md")} | Repair the saved UI hierarchy follow-up before closeout. |`
+        : `| hierarchy | blocked | ${phaseArtifactPath(phase, "-UI-SPEC.md")} | Blocking UI evidence must be repaired before closeout. |`;
+
   return `# ${phaseTitle(phase)} - UI Review
 
-**Verdict:** PASS
-**Readiness:** ready-for-closeout
+**Verdict:** ${verdict}
+**Readiness:** ${verdict === "PASS" ? "ready-for-closeout" : verdict === "FOLLOW_UP" ? "needs-follow-up" : "blocked"}
 
 ## Review Summary
 
-- The shipped UI work satisfies the saved phase UI contract.
+${summaryLine}
 
 ## Evidence Coverage
 
@@ -620,11 +682,11 @@ function uiReviewContent(phase: PhaseFixture): string {
 
 | Pillar | Result | Evidence | Notes |
 |--------|--------|----------|-------|
-| hierarchy | pass | ${phaseArtifactPath(phase, "-UI-SPEC.md")} | The responsive hierarchy matches the saved UI contract. |
+${findingsRow}
 
 ## Next Safe Action
 
-- /blu-progress
+- ${nextSafeAction}
 `;
 }
 
@@ -1367,7 +1429,8 @@ test("repo-wide progress routes saved review remediation debt after security eve
         withUat: false,
         withReview: true,
         withSecurity: true,
-        reviewNextSafeAction: "/blu-code-review-fix 1"
+        reviewNextSafeAction: "/blu-code-review-fix 1",
+        securityNextSafeAction: "/blu-validate-phase 1"
       })
     ]
   });
@@ -1518,7 +1581,7 @@ test("completed REVIEW-FIX that addresses every actionable saved review id keeps
   assert.equal(nextAction, "Run /blu-validate-phase 1.");
 });
 
-test("completed REVIEW-FIX without explicit addressed ids keeps legacy routing, clears debt, and emits a warning", async (t) => {
+test("completed REVIEW-FIX without explicit addressed ids keeps remediation debt open when saved review has actionable ids", async (t) => {
   const phase = implementedPhase({
     withReview: true,
     withReviewFix: true,
@@ -1550,14 +1613,21 @@ test("completed REVIEW-FIX without explicit addressed ids keeps legacy routing, 
     implementedCommandNames: new Set(["code-review-fix", "validate-phase"])
   });
 
-  assert.equal(evaluation.reviewNextSafeAction, "/blu-validate-phase 1");
-  assert.equal(evaluation.reviewDebtKind, null);
-  assert.equal(evaluation.gatesSatisfied, true);
+  assert.equal(evaluation.reviewNextSafeAction, null);
+  assert.equal(evaluation.reviewDebtKind, "remediation");
+  assert.equal(evaluation.gatesSatisfied, false);
   assert.match(
     evaluation.warnings.join("\n"),
-    /lacks explicit parseable addressed ids in Findings Addressed; quality-gate routing will keep legacy debt-clearing behavior/i
+    /lacks explicit parseable addressed ids in Findings Addressed while the source Review artifact has 2 actionable saved review target id\(s\); quality-gate routing will keep remediation debt open\. Missing: F-01, FU-01\./i
   );
-  assert.equal(nextAction, "Run /blu-validate-phase 1.");
+  assert.equal(
+    formatPhaseQualityGateDebtReason(evaluation),
+    "Saved review remediation debt remains for 3 reviewable file(s)."
+  );
+  assert.equal(
+    nextAction,
+    "Run /blu-code-review-fix 1 to continue resolving saved review remediation debt."
+  );
 });
 
 test("partial REVIEW-FIX add-tests route outranks stale REVIEW follow-up and keeps remediation debt visible", async (t) => {
@@ -2041,6 +2111,528 @@ test("workflow.code_review true and workflow.secure_phase true routes secure-pha
   assert.doesNotMatch(status.nextAction, /\/blu-code-review-fix 1/);
 });
 
+test("completed SECURITY with progress next action satisfies required secure-phase gate", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withReview: true,
+        withSecurity: true,
+        securityStatus: "COMPLETED",
+        securityCompletionState: "complete",
+        securityNextSafeAction: "/blu-progress",
+        securityOpenThreat: false
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+
+  assert.equal(evaluation.hasSecurity, true);
+  assert.equal(evaluation.securityDebtKind, null);
+  assert.equal(evaluation.securityNextSafeAction, null);
+  assert.equal(evaluation.gatesSatisfied, true);
+  assert.doesNotMatch(evaluation.warnings.join("\n"), /illegal Next Safe Action/i);
+});
+
+test("completed SECURITY with validate-phase next action satisfies gate before validation exists", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withVerification: false,
+        withUat: false,
+        withReview: true,
+        withSecurity: true,
+        securityStatus: "COMPLETED",
+        securityCompletionState: "complete",
+        securityNextSafeAction: "/blu-validate-phase 1",
+        securityOpenThreat: false
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(evaluation.hasSecurity, true);
+  assert.equal(evaluation.securityDebtKind, null);
+  assert.equal(evaluation.securityNextSafeAction, null);
+  assert.equal(evaluation.gatesSatisfied, true);
+  assert.doesNotMatch(evaluation.warnings.join("\n"), /illegal|stale Next Safe Action/i);
+  assert.match(status.nextAction, /\/blu-validate-phase 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-secure-phase 1/);
+});
+
+test("completed SECURITY with verify-work next action satisfies gate when UAT is required", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withUat: false,
+        withReview: true,
+        withSecurity: true,
+        securityStatus: "COMPLETED",
+        securityCompletionState: "complete",
+        securityNextSafeAction: "/blu-verify-work 1",
+        securityOpenThreat: false
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(evaluation.hasSecurity, true);
+  assert.equal(evaluation.securityDebtKind, null);
+  assert.equal(evaluation.securityNextSafeAction, null);
+  assert.equal(evaluation.gatesSatisfied, true);
+  assert.doesNotMatch(evaluation.warnings.join("\n"), /illegal|stale Next Safe Action/i);
+  assert.match(status.nextAction, /\/blu-verify-work 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-secure-phase 1/);
+});
+
+test("completed SECURITY with stale or illegal next safe action keeps secure-phase debt open", async (t) => {
+  const scenarios = [
+    {
+      name: "stale validation route",
+      securityNextSafeAction: "/blu-validate-phase 1"
+    },
+    {
+      name: "stale UAT route",
+      securityNextSafeAction: "/blu-verify-work 1"
+    },
+    {
+      name: "repair-like route",
+      securityNextSafeAction: "/blu-audit-fix 1"
+    },
+    {
+      name: "non-implemented route",
+      securityNextSafeAction: "/blu-not-implemented 1"
+    },
+    {
+      name: "missing Blueprint command",
+      securityNextSafeAction: "none"
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    await t.test(scenario.name, async (t) => {
+      const repoPath = await createQualityGateRepo({
+        phases: [
+          implementedPhase({
+            withReview: true,
+            withSecurity: true,
+            securityStatus: "COMPLETED",
+            securityCompletionState: "complete",
+            securityNextSafeAction: scenario.securityNextSafeAction,
+            securityOpenThreat: false
+          })
+        ],
+        configPatch: {
+          workflow: {
+            code_review: true,
+            secure_phase: true
+          }
+        }
+      });
+      t.after(async () => {
+        await rm(path.dirname(repoPath), { recursive: true, force: true });
+      });
+
+      const evaluation = await evaluatePhaseQualityGates({
+        projectRoot: repoPath,
+        phaseNumber: "1",
+        phasePrefix: "01",
+        phaseDir: "01-quality-gate"
+      });
+      const nextAction = buildPhaseQualityGateNextAction({
+        phaseNumber: "1",
+        evaluation,
+        implementedCommandNames: new Set([
+          "audit-fix",
+          "secure-phase",
+          "validate-phase",
+          "verify-work"
+        ])
+      });
+      const status = await blueprintProjectStatus({ cwd: repoPath });
+
+      assert.equal(evaluation.hasSecurity, true);
+      assert.equal(evaluation.securityDebtKind, "incomplete");
+      assert.equal(evaluation.securityNextSafeAction, null);
+      assert.equal(evaluation.gatesSatisfied, false);
+      assert.match(
+        evaluation.warnings.join("\n"),
+        /completed Security artifact has a missing, illegal, or stale Next Safe Action/i
+      );
+      assert.equal(
+        formatPhaseQualityGateDebtReason(evaluation),
+        "Saved security evidence is not complete for 3 reviewable file(s)."
+      );
+      assert.equal(
+        nextAction,
+        "Run /blu-secure-phase 1 to complete the phase security gate."
+      );
+      assert.match(status.nextAction, /\/blu-secure-phase 1/);
+      assert.doesNotMatch(
+        status.nextAction,
+        /\/blu-audit-fix 1|\/blu-validate-phase 1|\/blu-verify-work 1|\/blu-not-implemented 1/
+      );
+    });
+  }
+});
+
+test("SECURITY parser uses renderer status headers and audit label spellings", async (t) => {
+  const scenarios = [
+    {
+      name: "live Threat Register status column blocks routing",
+      securityOpenThreat: true,
+      securityPendingOpenThreatStatus: "none"
+    },
+    {
+      name: "legacy pending open threat audit label blocks routing",
+      securityOpenThreat: false,
+      securityPendingOpenThreatStatus: "still-open",
+      legacyAuditLabel: true
+    },
+    {
+      name: "live Findings status column detects open independently",
+      securityOpenThreat: false,
+      securityPendingOpenThreatStatus: "none",
+      findingStatus: "open"
+    },
+    {
+      name: "live Findings status column detects blocked independently",
+      securityOpenThreat: false,
+      securityPendingOpenThreatStatus: "none",
+      findingStatus: "blocked"
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    await t.test(scenario.name, async (t) => {
+      const repoPath = await createQualityGateRepo({
+        phases: [
+          implementedPhase({
+            withReview: true,
+            withSecurity: true,
+            securityStatus: "COMPLETED",
+            securityCompletionState: "complete",
+            securityNextSafeAction: "/blu-progress",
+            securityOpenThreat: scenario.securityOpenThreat,
+            securityPendingOpenThreatStatus: scenario.securityPendingOpenThreatStatus
+          })
+        ],
+        configPatch: {
+          workflow: {
+            code_review: true,
+            secure_phase: true
+          }
+        }
+      });
+      t.after(async () => {
+        await rm(path.dirname(repoPath), { recursive: true, force: true });
+      });
+
+      if (scenario.legacyAuditLabel || scenario.findingStatus !== undefined) {
+        const securityPath = path.join(
+          repoPath,
+          ".blueprint/phases/01-quality-gate/01-SECURITY.md"
+        );
+        let content = await readFile(securityPath, "utf8");
+
+        if (scenario.legacyAuditLabel) {
+          content = content.replace(
+            "Pending-open-threat status:",
+            "Pending open threat status:"
+          );
+        }
+
+        if (scenario.findingStatus !== undefined) {
+          const closedFindingsTable = `## Findings
+
+| Kind | Severity | Threat ID | Status | Evidence | Recommendation |
+|------|----------|-----------|--------|----------|----------------|
+| none | none | none | none | none | none |`;
+          const blockingFindingsTable = `## Findings
+
+| Kind | Severity | Threat ID | Status | Evidence | Recommendation |
+|------|----------|-----------|--------|----------|----------------|
+| hardening-follow-up | high | T-01 | ${scenario.findingStatus} | Missing saved mitigation evidence for the mapped finding. | Verify or accept the finding. |`;
+          content = content.replace(
+            closedFindingsTable,
+            blockingFindingsTable
+          );
+          assert.match(content, /\*\*Status:\*\* COMPLETED/);
+          assert.match(
+            content,
+            /\| none \| none \| none \| none \| none \| none \| none \| none \| none \|/
+          );
+          assert.match(
+            content,
+            new RegExp(
+              `\\| hardening-follow-up \\| high \\| T-01 \\| ${scenario.findingStatus} \\|`
+            )
+          );
+        }
+
+        await writeFile(securityPath, content, "utf8");
+      }
+
+      const evaluation = await evaluatePhaseQualityGates({
+        projectRoot: repoPath,
+        phaseNumber: "1",
+        phasePrefix: "01",
+        phaseDir: "01-quality-gate"
+      });
+      const status = await blueprintProjectStatus({ cwd: repoPath });
+
+      assert.equal(evaluation.hasSecurity, true);
+      assert.equal(evaluation.securityDebtKind, "blocked");
+      assert.equal(evaluation.securityNextSafeAction, "/blu-progress");
+      assert.equal(evaluation.gatesSatisfied, false);
+      assert.match(status.nextAction, /\/blu-secure-phase 1/);
+    });
+  }
+});
+
+test("non-complete SECURITY keeps current-phase routing blocked", async (t) => {
+  const scenarios = [
+    {
+      name: "PARTIAL security rejects arbitrary implemented repair action",
+      securityStatus: "PARTIAL" as const,
+      securityCompletionState: "partial" as const,
+      securityNextSafeAction: "/blu-audit-fix 1",
+      securityOpenThreat: false,
+      expectedAction: /\/blu-secure-phase 1/,
+      rejectedAction: /\/blu-audit-fix 1/,
+      expectedDebt: "incomplete" as const,
+      expectedWarning: /non-complete Security artifact has a missing, illegal, or stale Next Safe Action/i
+    },
+    {
+      name: "BLOCKED security falls back to secure-phase",
+      securityStatus: "BLOCKED" as const,
+      securityCompletionState: "blocked" as const,
+      securityNextSafeAction: "Blocked: pending-open-threat",
+      securityOpenThreat: true,
+      expectedAction: /\/blu-secure-phase 1/,
+      rejectedAction: /\/blu-audit-fix 1/,
+      expectedDebt: "blocked" as const,
+      expectedWarning: null
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    await t.test(scenario.name, async (t) => {
+      const repoPath = await createQualityGateRepo({
+        phases: [
+          implementedPhase({
+            withReview: true,
+            withSecurity: true,
+            securityStatus: scenario.securityStatus,
+            securityCompletionState: scenario.securityCompletionState,
+            securityNextSafeAction: scenario.securityNextSafeAction,
+            securityOpenThreat: scenario.securityOpenThreat
+          })
+        ],
+        configPatch: {
+          workflow: {
+            code_review: true,
+            secure_phase: true
+          }
+        }
+      });
+      t.after(async () => {
+        await rm(path.dirname(repoPath), { recursive: true, force: true });
+      });
+
+      const evaluation = await evaluatePhaseQualityGates({
+        projectRoot: repoPath,
+        phaseNumber: "1",
+        phasePrefix: "01",
+        phaseDir: "01-quality-gate"
+      });
+      const status = await blueprintProjectStatus({ cwd: repoPath });
+      const state = await blueprintStateLoad({ cwd: repoPath });
+
+      assert.equal(evaluation.hasSecurity, true);
+      assert.equal(evaluation.securityDebtKind, scenario.expectedDebt);
+      assert.equal(evaluation.gatesSatisfied, false);
+      assert.equal(evaluation.securityNextSafeAction, null);
+      if (scenario.expectedWarning) {
+        assert.match(evaluation.warnings.join("\n"), scenario.expectedWarning);
+      }
+      assert.match(status.nextAction, scenario.expectedAction);
+      assert.match(state.derivedStatus.nextAction, scenario.expectedAction);
+      assert.doesNotMatch(status.nextAction, scenario.rejectedAction);
+      assert.doesNotMatch(state.derivedStatus.nextAction, scenario.rejectedAction);
+      assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone v1|\/blu-discuss-phase 2/);
+      assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone v1|\/blu-discuss-phase 2/);
+    });
+  }
+});
+
+test("partial SECURITY accepts the saved blocking UAT repair route", async (t) => {
+  const phase = implementedPhase({
+    withReview: true,
+    withSecurity: true,
+    securityStatus: "PARTIAL",
+    securityCompletionState: "partial",
+    securityNextSafeAction: "/blu-audit-fix 1",
+    securityOpenThreat: false
+  });
+  const repoPath = await createQualityGateRepo({
+    phases: [phase],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/01-quality-gate/01-UAT.md"),
+    blockingUatContent(phase, "/blu-audit-fix 1"),
+    "utf8"
+  );
+
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(evaluation.hasSecurity, true);
+  assert.equal(evaluation.securityDebtKind, "incomplete");
+  assert.equal(evaluation.securityNextSafeAction, "/blu-audit-fix 1");
+  assert.equal(evaluation.gatesSatisfied, false);
+  assert.doesNotMatch(
+    evaluation.warnings.join("\n"),
+    /non-complete Security artifact has a missing, illegal, or stale Next Safe Action/i
+  );
+  assert.match(status.nextAction, /\/blu-audit-fix 1/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-audit-fix 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-secure-phase 1|\/blu-audit-milestone v1/);
+  assert.doesNotMatch(
+    state.derivedStatus.nextAction,
+    /\/blu-secure-phase 1|\/blu-audit-milestone v1/
+  );
+});
+
+test("non-complete SECURITY blocks completed-phase and milestone routing", async (t) => {
+  const earlierPhaseRepoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        completed: true,
+        withReview: true,
+        withSecurity: true,
+        securityStatus: "PARTIAL",
+        securityCompletionState: "partial",
+        securityNextSafeAction: "/blu-audit-fix 1"
+      }),
+      {
+        phase: 2,
+        title: "Later Work",
+        slug: "later-work",
+        completed: false,
+        withContext: false
+      }
+    ],
+    currentPhase: 2,
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
+  });
+  const milestoneRepoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        completed: true,
+        withReview: true,
+        withSecurity: true,
+        securityStatus: "BLOCKED",
+        securityCompletionState: "blocked",
+        securityNextSafeAction: "Blocked: pending-open-threat",
+        securityOpenThreat: true
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(earlierPhaseRepoPath), { recursive: true, force: true });
+    await rm(path.dirname(milestoneRepoPath), { recursive: true, force: true });
+  });
+
+  const earlierPhaseStatus = await blueprintProjectStatus({ cwd: earlierPhaseRepoPath });
+  const earlierPhaseState = await blueprintStateLoad({ cwd: earlierPhaseRepoPath });
+  const milestoneStatus = await blueprintProjectStatus({ cwd: milestoneRepoPath });
+  const milestoneState = await blueprintStateLoad({ cwd: milestoneRepoPath });
+
+  assert.match(earlierPhaseStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.match(earlierPhaseState.derivedStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.doesNotMatch(
+    earlierPhaseStatus.nextAction,
+    /\/blu-audit-fix 1|\/blu-discuss-phase 2|\/blu-plan-phase 2/
+  );
+  assert.match(milestoneStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.match(milestoneState.derivedStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.doesNotMatch(milestoneStatus.nextAction, /\/blu-audit-milestone v1|\/blu-complete-milestone|\/blu-new-milestone/);
+});
+
 test("completed phase missing REVIEW blocks later phase routing and surfaces the blocking phase", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [
@@ -2212,6 +2804,107 @@ test("completed UI phase missing UI-REVIEW blocks later phase routing and surfac
 
   assert.match(status.nextAction, /\/blu-ui-review 1/);
   assert.doesNotMatch(status.nextAction, /\/blu-discuss-phase 2|\/blu-plan-phase 2/);
+});
+
+test("non-pass UI-REVIEW keeps current-phase routing blocked", async (t) => {
+  const scenarios = [
+    {
+      name: "FOLLOW_UP uses saved implemented repair action",
+      uiReviewVerdict: "FOLLOW_UP" as const,
+      uiReviewNextSafeAction: "/blu-audit-fix 1",
+      expectedAction: /\/blu-audit-fix 1/
+    },
+    {
+      name: "BLOCKED falls back to ui-review",
+      uiReviewVerdict: "BLOCKED" as const,
+      uiReviewNextSafeAction: "/blu-progress",
+      expectedAction: /\/blu-ui-review 1/
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    await t.test(scenario.name, async (t) => {
+      const repoPath = await createQualityGateRepo({
+        phases: [
+          implementedPhase({
+            withUiSpec: true,
+            withReview: true,
+            withSecurity: true,
+            withUiReview: true,
+            uiReviewVerdict: scenario.uiReviewVerdict,
+            uiReviewNextSafeAction: scenario.uiReviewNextSafeAction
+          })
+        ]
+      });
+      t.after(async () => {
+        await rm(path.dirname(repoPath), { recursive: true, force: true });
+      });
+
+      const status = await blueprintProjectStatus({ cwd: repoPath });
+      const state = await blueprintStateLoad({ cwd: repoPath });
+
+      assert.match(status.nextAction, scenario.expectedAction);
+      assert.match(state.derivedStatus.nextAction, scenario.expectedAction);
+      assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone v1|\/blu-discuss-phase 2/);
+      assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone v1|\/blu-discuss-phase 2/);
+    });
+  }
+});
+
+test("non-pass UI-REVIEW blocks completed-phase and milestone routing", async (t) => {
+  const earlierPhaseRepoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        phase: 1,
+        title: "UI Gate",
+        slug: "ui-gate",
+        completed: true,
+        withUiSpec: true,
+        withReview: true,
+        withSecurity: true,
+        withUiReview: true,
+        uiReviewVerdict: "FOLLOW_UP",
+        uiReviewNextSafeAction: "/blu-audit-fix 1"
+      }),
+      {
+        phase: 2,
+        title: "Later Work",
+        slug: "later-work",
+        completed: false,
+        withContext: false
+      }
+    ],
+    currentPhase: 2
+  });
+  const milestoneRepoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        completed: true,
+        withUiSpec: true,
+        withReview: true,
+        withSecurity: true,
+        withUiReview: true,
+        uiReviewVerdict: "BLOCKED",
+        uiReviewNextSafeAction: "/blu-progress"
+      })
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(earlierPhaseRepoPath), { recursive: true, force: true });
+    await rm(path.dirname(milestoneRepoPath), { recursive: true, force: true });
+  });
+
+  const earlierPhaseStatus = await blueprintProjectStatus({ cwd: earlierPhaseRepoPath });
+  const earlierPhaseState = await blueprintStateLoad({ cwd: earlierPhaseRepoPath });
+  const milestoneStatus = await blueprintProjectStatus({ cwd: milestoneRepoPath });
+  const milestoneState = await blueprintStateLoad({ cwd: milestoneRepoPath });
+
+  assert.match(earlierPhaseStatus.nextAction, /\/blu-audit-fix 1/);
+  assert.match(earlierPhaseState.derivedStatus.nextAction, /\/blu-audit-fix 1/);
+  assert.doesNotMatch(earlierPhaseStatus.nextAction, /\/blu-discuss-phase 2|\/blu-plan-phase 2/);
+  assert.match(milestoneStatus.nextAction, /\/blu-ui-review 1/);
+  assert.match(milestoneState.derivedStatus.nextAction, /\/blu-ui-review 1/);
+  assert.doesNotMatch(milestoneStatus.nextAction, /\/blu-audit-milestone v1|\/blu-complete-milestone|\/blu-new-milestone/);
 });
 
 test("stale secure-phase review follow-up does not loop after security exists", async (t) => {

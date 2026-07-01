@@ -1540,6 +1540,73 @@ test("phase plan validation and writes see saved plan artifacts added after an e
   assert.doesNotMatch(finalIssues, /missing plan "01"/);
 });
 
+test("phase plan index and authoring ignore nested archive plan lookalikes", async (t) => {
+  const repoPath = await createPhaseRepo();
+  const archiveDir = path.join(repoPath, ".blueprint/phases/03-phase-discovery/archive");
+  const nestedPlanPath = ".blueprint/phases/03-phase-discovery/archive/03-01-PLAN.md";
+  const nestedVerificationPath = ".blueprint/phases/03-phase-discovery/archive/03-VERIFICATION.md";
+  const nestedUatPath = ".blueprint/phases/03-phase-discovery/archive/03-UAT.md";
+  const nestedReviewPath = ".blueprint/phases/03-phase-discovery/archive/03-REVIEW.md";
+  const canonicalPlanPath = ".blueprint/phases/03-phase-discovery/03-01-PLAN.md";
+  const canonicalReviewPath = ".blueprint/phases/03-phase-discovery/03-REVIEW.md";
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(archiveDir, { recursive: true });
+  await writeFile(
+    path.join(repoPath, nestedPlanPath),
+    validPlanContent("01", 1),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, nestedVerificationPath),
+    "# Phase 03: Phase Discovery - Verification\n\nArchived validation should not satisfy readiness.\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, nestedUatPath),
+    "# Phase 03: Phase Discovery - UAT\n\nArchived UAT should not satisfy readiness.\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, nestedReviewPath),
+    "# Phase 03: Phase Discovery - Review\n\n- F-ARCHIVE-1: Archived finding.\n",
+    "utf8"
+  );
+
+  const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
+  const context = await blueprintPhasePlanAuthoringContext({ cwd: repoPath, phase: "3" });
+  const readiness = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3" });
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    content: validPlanContent("00", 1),
+    overwrite: true
+  });
+
+  assert.deepEqual(index.plans, []);
+  assert.deepEqual(index.missingPlans, [canonicalPlanPath]);
+  assert.equal(context.planId, "01");
+  assert.equal(context.path, canonicalPlanPath);
+  assert.deepEqual(context.allowedDependencyPlanIds, []);
+  assert.equal(context.knownEvidenceArtifacts.includes(nestedPlanPath), false);
+  assert.deepEqual(readiness.planIndex?.plans, []);
+  assert.deepEqual(readiness.planIndex?.missingPlans, [canonicalPlanPath]);
+  assert.equal(readiness.readSet.some((entry) => entry.path === nestedPlanPath), false);
+  assert.equal(readiness.readSet.some((entry) => entry.path === nestedVerificationPath), false);
+  assert.equal(readiness.readSet.some((entry) => entry.path === nestedUatPath), false);
+  assert.equal(readiness.readSet.some((entry) => entry.path === nestedReviewPath), false);
+  assert.equal(readiness.readSet.some((entry) => entry.path === canonicalReviewPath), true);
+  assert.equal(readiness.validationEvidence.found, false);
+  assert.deepEqual(readiness.validationEvidence.paths, []);
+  assert.equal(readiness.reviewFindings.found, false);
+  assert.equal(readiness.reviewFindings.path, null);
+  assert.equal(created.planId, "01");
+  assert.equal(created.path, canonicalPlanPath);
+  assert.equal(created.status, "created");
+});
+
 test("phase plan authoring context keeps schemas inspectable when readiness blocks drafting", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

@@ -183,6 +183,22 @@ export declare const godReviewSessionSchema: z.ZodObject<{
         fileSetHash: z.ZodString;
         prNumber: z.ZodNullable<z.ZodNumber>;
     }, z.core.$strip>;
+    phaseTopologyFingerprint: z.ZodOptional<z.ZodObject<{
+        phaseNumber: z.ZodString;
+        phasePrefix: z.ZodString;
+        phaseName: z.ZodNullable<z.ZodString>;
+        phaseDir: z.ZodString;
+        roadmapEntry: z.ZodNullable<z.ZodObject<{
+            phaseNumber: z.ZodString;
+            phasePrefix: z.ZodString;
+            phaseName: z.ZodString;
+            completed: z.ZodBoolean;
+            summary: z.ZodNullable<z.ZodString>;
+            goal: z.ZodNullable<z.ZodString>;
+            successCriteria: z.ZodNullable<z.ZodString>;
+            requirements: z.ZodReadonly<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
     groups: z.ZodArray<z.ZodObject<{
         id: z.ZodEnum<{
             "correctness-contracts": "correctness-contracts";
@@ -311,7 +327,7 @@ export type GodReviewFixSelection = {
     currentFingerprint: GodReviewScopeFingerprint | null;
 };
 export type GodReviewStartResult = {
-    status: "started" | "reused" | "invalid" | "refused";
+    status: "started" | "reused" | "stale" | "invalid" | "refused";
     activated: boolean;
     refusal?: string;
     reason: string | null;
@@ -329,6 +345,7 @@ export type GodReviewStartResult = {
     nextCommand: string | null;
     written: boolean;
     createdPaths: string[];
+    staleReasons: string[];
     warnings: string[];
 };
 export type GodReviewNextResult = {
@@ -433,10 +450,7 @@ export type GodReviewCleanupResult = {
 };
 declare const godReviewStartArgsSchema: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
-    activeCommand: z.ZodEnum<{
-        "/blu-code-review": "/blu-code-review";
-        "/blu-code-review-fix": "/blu-code-review-fix";
-    }>;
+    activeCommand: z.ZodLiteral<"/blu-code-review">;
     rawInvocation: z.ZodString;
     scopeKind: z.ZodOptional<z.ZodEnum<{
         phase: "phase";
@@ -452,10 +466,7 @@ declare const godReviewStartArgsSchema: z.ZodObject<{
 type GodReviewStartArgs = z.infer<typeof godReviewStartArgsSchema>;
 declare const godReviewNextArgsSchema: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
-    activeCommand: z.ZodEnum<{
-        "/blu-code-review": "/blu-code-review";
-        "/blu-code-review-fix": "/blu-code-review-fix";
-    }>;
+    activeCommand: z.ZodLiteral<"/blu-code-review">;
     rawInvocation: z.ZodString;
     phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     runId: z.ZodOptional<z.ZodString>;
@@ -464,10 +475,7 @@ declare const godReviewNextArgsSchema: z.ZodObject<{
 type GodReviewNextArgs = z.infer<typeof godReviewNextArgsSchema>;
 declare const godReviewAppendArgsSchema: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
-    activeCommand: z.ZodEnum<{
-        "/blu-code-review": "/blu-code-review";
-        "/blu-code-review-fix": "/blu-code-review-fix";
-    }>;
+    activeCommand: z.ZodLiteral<"/blu-code-review">;
     rawInvocation: z.ZodString;
     phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     runId: z.ZodOptional<z.ZodString>;
@@ -577,6 +585,14 @@ export declare function buildGodReviewReportPaths(args: {
     runId: string;
 }): GodReviewReportPaths;
 export declare function buildInitialGodReviewGroups(): GodReviewGroupState[];
+type GodReviewPersistenceBundleStep = "report" | "session" | "human-state";
+type GodReviewPersistenceBundleHook = (args: {
+    step: GodReviewPersistenceBundleStep;
+    relativePath: string;
+}) => void | Promise<void>;
+export declare const godReviewPersistenceTestHooks: {
+    setBeforeBundleWriteForTest(hook: GodReviewPersistenceBundleHook | null): () => void;
+};
 export declare function renderGodReviewReportHeader(args: {
     runId: string;
     status: GodReviewSessionStatus;

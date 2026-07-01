@@ -14,13 +14,14 @@ Follow this flow exactly:
 6. Read `mcp_blueprint_blueprint_artifact_validate` to collect validation issues and `suggestedRepairs`.
 7. In read-only mode, stop after reporting the diagnosis and the exact repair options.
 8. If `--repair` is present, require an explicit confirmation-style response before any write. use `ask_user` for confirmation.
-9. After explicit confirmation, call `mcp_blueprint_blueprint_config_set` only when config normalization is required. Pass a JSON-object `patch` only, keep repairs project-local at `scope: "project"`, and treat the returned `configPath` as authoritative.
+9. After explicit confirmation, call `mcp_blueprint_blueprint_config_set` only when config normalization is required. Pass a JSON-object `patch` only, keep repairs project-local at `scope: "project"`, pass `repairMalformedProjectConfig: true` when replacing malformed `.blueprint/config.json`, and treat the returned `configPath` as authoritative.
 10. After explicit confirmation, call `mcp_blueprint_blueprint_state_sync` only when state reconstruction is required.
 11. Re-read `mcp_blueprint_blueprint_project_status` if you need to summarize the post-repair next safe action.
 
 Repair safety requirements:
 - `--repair` must never imply silent writes.
 - Explain exactly which config or state changes will be written before calling `mcp_blueprint_blueprint_config_set` or `mcp_blueprint_blueprint_state_sync`.
+- Malformed project config repair must pass `repairMalformedProjectConfig: true`; do not use that flag for ordinary settings changes.
 - Do not mutate unrelated repo files.
 - If Blueprint is completely uninitialized, recommend `/blu-new-project` instead of treating repair as bootstrap.
 """

@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { type DirectoryLockRecoveryHooksForTest } from "../directory-lock.js";
 import { type BlueprintRuntimeHost } from "../runtime-host.js";
 declare const UPDATE_STAGE_ORDER: readonly ["Resolve", "Read", "Decide", "Execute", "Persist", "Validate", "Route"];
 declare const UPDATE_PLAN_MODES: readonly ["ask_user", "manual"];
@@ -46,8 +47,21 @@ type UpdatePlanResult = UpdateCheckResult & {
         metadataPath: string;
         checklistPath: string;
     };
-    path: string;
+    intendedPath: string;
+    path: string | null;
     status: "created" | "updated";
+    persistenceStatus: "saved" | "not_saved";
+};
+type UpdatePlanLockTimingForTest = {
+    retryMs?: number;
+    staleMs?: number;
+    heartbeatMs?: number;
+};
+type UpdatePlanLockCallbackObserverForTest = (event: "enter" | "exit", lockPath: string) => Promise<void> | void;
+export declare const updateToolTestHooks: {
+    setUpdatePlanLockTimingForTest(timing: UpdatePlanLockTimingForTest): () => void;
+    setUpdatePlanLockRecoveryHooksForTest(hooks: DirectoryLockRecoveryHooksForTest): () => void;
+    setUpdatePlanLockCallbackObserverForTest(observer: UpdatePlanLockCallbackObserverForTest): () => void;
 };
 export declare function blueprintUpdateCheck(args?: UpdateCheckArgs, env?: NodeJS.ProcessEnv): Promise<UpdateCheckResult>;
 export declare function blueprintUpdatePlan(args?: UpdatePlanArgs, env?: NodeJS.ProcessEnv): Promise<UpdatePlanResult>;

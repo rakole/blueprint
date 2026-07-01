@@ -251,6 +251,203 @@ test("thrown write failures are logged before the exception escapes MCP", async 
   );
   assert.match(
     (entry.error as Record<string, unknown>).stack as string,
-    /blueprintPhaseArtifactWrite/
+    /src\/mcp\/tools\/phase\.ts|executeToolHandlerWithFailureLogging/
   );
+});
+
+test("non-standard mutation failure result shapes are logged durably", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const cases = [
+    {
+      toolName: "blueprint_patch_reapply",
+      result: {
+        status: "blocked",
+        appliedPatches: [],
+        skippedPatches: ["conflict"],
+        conflicts: [{ patchId: "conflict", message: "patch does not apply" }],
+        preview: false,
+        targetHead: "abc123"
+      }
+    },
+    {
+      toolName: "blueprint_update_plan",
+      result: {
+        status: "created",
+        persistenceStatus: "not_saved",
+        path: null,
+        intendedPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
+        warnings: ["Unable to persist Blueprint update artifacts."]
+      }
+    },
+    {
+      toolName: "blueprint_cleanup_archive",
+      result: {
+        status: "archived",
+        mode: "commit",
+        reportPath: ".blueprint/reports/cleanup-latest.md",
+        reportWritten: false,
+        archivedPhaseDirs: [".blueprint/phases/01-finished"],
+        failedPhaseDirs: [],
+        skippedPhaseDirs: [],
+        keptPhaseDirs: [],
+        issues: ["cleanup-latest could not be written"],
+        reason: "Cleanup archive archived, but cleanup-latest could not be written."
+      }
+    }
+  ];
+
+  for (const entry of cases) {
+    await executeToolHandlerWithFailureLogging(
+      {
+        name: entry.toolName,
+        description: "fixture",
+        handler: async () => entry.result
+      },
+      {
+        cwd: repoPath,
+        source: entry.toolName
+      }
+    );
+  }
+
+  const entries = await readFailureLogEntries(repoPath);
+
+  assert.equal(entries.length, cases.length);
+  assert.deepEqual(
+    entries.map((entry) => entry.toolName),
+    cases.map((entry) => entry.toolName)
+  );
+
+  for (const [index, entry] of entries.entries()) {
+    assert.equal(entry.failureKind, "rejected");
+    assert.equal((entry.request as Record<string, unknown>).source, cases[index]?.toolName);
+  }
+
+  assert.equal(
+    ((entries[0]?.result as Record<string, unknown>).conflicts as unknown[]).length,
+    1
+  );
+  assert.equal(
+    (entries[1]?.result as Record<string, unknown>).persistenceStatus,
+    "not_saved"
+  );
+  assert.equal(
+    (entries[2]?.result as Record<string, unknown>).reportWritten,
+    false
+  );
+});
+
+test("phase ui skip write rejections are logged by the central mutation wrapper", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = {
+    status: "invalid",
+    written: false,
+    artifact: "ui-spec",
+    path: ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md",
+    validation: {
+      valid: false,
+      issues: ["UI skip artifact is missing the explicit skip rationale."],
+      warnings: [],
+      diagnostics: [
+        {
+          severity: "error",
+          message: "UI skip artifact is missing the explicit skip rationale."
+        }
+      ]
+    },
+    warnings: []
+  };
+
+  await executeToolHandlerWithFailureLogging(
+    {
+      name: "blueprint_phase_ui_skip_write",
+      description: "fixture",
+      handler: async () => result
+    },
+    {
+      cwd: repoPath,
+      phase: "3",
+      skipRationale: ""
+    }
+  );
+
+  const [entry] = await readFailureLogEntries(repoPath);
+
+  assert.equal(entry.toolName, "blueprint_phase_ui_skip_write");
+  assert.equal(entry.failureKind, "rejected");
+  assert.equal((entry.result as Record<string, unknown>).status, "invalid");
+  assert.equal((entry.result as Record<string, unknown>).written, false);
+  assert.match(
+    JSON.stringify((entry.result as Record<string, unknown>).validation),
+    /skip rationale/i
+  );
+});
+
+test("god review stale and refused mutation results are logged durably", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const cases = [
+    {
+      toolName: "blueprint_god_review_record_fix",
+      result: {
+        status: "stale",
+        written: false,
+        staleReasons: ["Frozen scope changed since god-review started."],
+        issues: ["Re-run god-review before recording hidden fix edits."],
+        diagnostics: [
+          {
+            severity: "error",
+            message: "Frozen scope changed since god-review started."
+          }
+        ]
+      }
+    },
+    {
+      toolName: "blueprint_god_review_start",
+      result: {
+        status: "refused",
+        written: false,
+        reason: "Hidden god-review mutator refused activation outside its owning workflow.",
+        issues: ["Activation was denied before any side effects."]
+      }
+    }
+  ];
+
+  for (const entry of cases) {
+    await executeToolHandlerWithFailureLogging(
+      {
+        name: entry.toolName,
+        description: "fixture",
+        handler: async () => entry.result
+      },
+      {
+        cwd: repoPath,
+        source: entry.toolName
+      }
+    );
+  }
+
+  const entries = await readFailureLogEntries(repoPath);
+
+  assert.equal(entries.length, cases.length);
+  assert.deepEqual(
+    entries.map((entry) => entry.toolName),
+    cases.map((entry) => entry.toolName)
+  );
+
+  for (const [index, entry] of entries.entries()) {
+    assert.equal(entry.failureKind, "rejected");
+    assert.equal((entry.result as Record<string, unknown>).status, cases[index]?.result.status);
+  }
 });

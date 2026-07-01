@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import {
   normalizeBlueprintInput,
   type NumericInput
@@ -24,7 +26,22 @@ export function parsePlanArtifactPath(
   phasePrefix: string
 ): string | null {
   const match = pathValue.match(
-    new RegExp(`${phasePrefix.replace(".", "\\.")}-(\\d+)-PLAN\\.md$`)
+    new RegExp(`${escapeForRegex(phasePrefix)}-(\\d+)-PLAN\\.md$`)
+  );
+
+  return match ? normalizePlanId(match[1]) : null;
+}
+
+export function parseCanonicalPlanArtifactPath(
+  pathValue: string,
+  located: PhasePlanPathLocation
+): string | null {
+  if (path.posix.dirname(pathValue) !== located.phaseDir) {
+    return null;
+  }
+
+  const match = path.posix.basename(pathValue).match(
+    new RegExp(`^${escapeForRegex(located.phasePrefix)}-(\\d+)-PLAN\\.md$`)
   );
 
   return match ? normalizePlanId(match[1]) : null;

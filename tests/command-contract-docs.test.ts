@@ -348,6 +348,45 @@ test("generated command registry keeps README command surfaces in sync without r
     /generated\/command-catalog\.json[\s\S]*\/blu-help/
   );
 
+  const workstreams = surfaces.registry.commands.find((entry) => entry.name === "workstreams");
+
+  assert.ok(workstreams, "Generated registry should include /blu-workstreams");
+  assert.deepEqual(workstreams.requiredTools, [
+    "blueprint_workstream_list",
+    "blueprint_workstream_mutate"
+  ]);
+  assert.deepEqual(workstreams.runtimeReference?.exactMcpDestination, [
+    "blueprint_workstream_list",
+    "blueprint_workstream_mutate"
+  ]);
+  assert.match(
+    workstreams.runtimeReference?.contractNotes ?? "",
+    /statePatch as already applied by that mutate tool/i
+  );
+  assert.doesNotMatch(
+    workstreams.runtimeReference?.contractNotes ?? "",
+    /blueprint_state_update/
+  );
+
+  const roadmapConfirmationCommands = [
+    "add-phase",
+    "insert-phase",
+    "remove-phase",
+    "plan-milestone-gaps",
+    "explore"
+  ] as const;
+
+  for (const commandName of roadmapConfirmationCommands) {
+    const command = surfaces.registry.commands.find((entry) => entry.name === commandName);
+
+    assert.ok(command, `Generated registry should include /blu-${commandName}`);
+    assert.match(
+      command.runtimeReference?.contractNotes ?? "",
+      /confirmed: true/,
+      `/blu-${commandName} generated runtime notes should keep the confirmation receipt`
+    );
+  }
+
   const chooserText = surfaces.readmeChooserBlock;
 
   for (const chooserEntry of surfaces.registry.intentChooser) {

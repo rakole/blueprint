@@ -16,7 +16,12 @@ import {
   writeJsonFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
-import type { BlueprintState } from "./state.js";
+import {
+  prepareBlueprintStateUpdate,
+  type BlueprintState,
+  type PreparedStateUpdate,
+  writePreparedBlueprintStateUpdate
+} from "./state.js";
 import { resolveBlueprintRuntimeHost } from "../runtime-host.js";
 import {
   assertNoNullBytes,
@@ -39,6 +44,7 @@ const WORKSPACE_REGISTRY_LOCK_RETRY_MS = 50;
 const WORKSPACE_REGISTRY_LOCK_STALE_MS = 60_000;
 const WORKSPACE_REGISTRY_LOCK_OWNER_FILE = "owner";
 const WORKSPACE_REGISTRY_LOCK_LEASE_FILE = "lease";
+const WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX = "owner.";
 const WORKSTREAMS_ROOT_PATH = `${BLUEPRINT_DIR}/workstreams`;
 const WORKSTREAMS_INDEX_PATH = `${WORKSTREAMS_ROOT_PATH}/WORKSTREAMS.md`;
 const WORKSTREAM_STATE_FILENAME = "state.json";
@@ -55,6 +61,7 @@ const WORKSTREAM_WAITING_STATES = [
 ] as const;
 const WORKSTREAMS_COMMAND = "/blu-workstreams";
 const PROGRESS_COMMAND = "/blu-progress";
+const WORKSTREAM_TRANSITION_LOCK_PATH = `${BLUEPRINT_DIR}/locks/workstreams.lock`;
 
 type WorkspaceStrategy = (typeof WORKSPACE_STRATEGIES)[number];
 type PatchAuditAction = (typeof PATCH_AUDIT_ACTIONS)[number];
@@ -117,6 +124,8 @@ type WorkstreamMutateArgs = {
   cwd?: string;
   operation: WorkstreamOperation;
   workstream: string;
+  confirmed?: boolean;
+  expectedActiveWorkstream?: string;
 };
 
 type WorkstreamMutateResult = {
@@ -227,6 +236,19 @@ type WorkspaceRegistryLockHandle = {
   token: string;
 };
 
+type WorkspaceRegistryLockRecoveryGuardHandle = {
+  lockPath: string;
+  recoveryPath: string;
+  ownerPath: string;
+  token: string;
+};
+
+export type WorkspaceRegistryLockRecoveryHooksForTest = {
+  beforeStaleRecoveryClaim?(lockPath: string): Promise<void> | void;
+  beforeStaleLockQuarantine?(lockPath: string): Promise<void> | void;
+  afterRecoveryGuardRelease?(lockPath: string): Promise<void> | void;
+};
+
 type PatchCompatibility = {
   host: string | null;
   repoRootName: string;
@@ -321,6 +343,33 @@ type PatchRecordResult = {
   updated: boolean;
 };
 
+type PatchRecordGenerationFingerprint = {
+  patchFileHash: string | null;
+  manifestFileHash: string | null;
+  auditFileHash: string | null;
+  indexFileHash: string | null;
+};
+
+export type PatchRecordRollbackSnapshot = {
+  registryPath: string;
+  patchId: string;
+  wasIndexed: boolean;
+  registryPatches: string[];
+  patchFile: WorkstreamFileSnapshot;
+  manifestFile: WorkstreamFileSnapshot;
+  auditFile: WorkstreamFileSnapshot;
+  expectedPostWriteFingerprint: PatchRecordGenerationFingerprint;
+};
+
+type PatchRecordRollbackBaselineSnapshot = Omit<
+  PatchRecordRollbackSnapshot,
+  "expectedPostWriteFingerprint"
+>;
+
+type PatchRecordResultWithRollbackSnapshot = PatchRecordResult & {
+  rollbackSnapshot: PatchRecordRollbackSnapshot;
+};
+
 type PatchReapplyArgs = {
   cwd?: string;
   patchIds?: string[];
@@ -332,13 +381,37 @@ type PatchConflict = {
   message: string;
 };
 
+type PatchReapplyStatus =
+  | "applied"
+  | "preview"
+  | "blocked"
+  | "failed"
+  | "partial"
+  | "skipped";
+
+type PatchReapplyRollback = {
+  attempted: boolean;
+  succeeded: boolean;
+  restoredFiles: string[];
+  dirtyFiles: string[];
+  message: string | null;
+};
+
 type PatchReapplyResult = {
+  status: PatchReapplyStatus;
   registryPath: string;
   appliedPatches: string[];
   skippedPatches: string[];
   conflicts: PatchConflict[];
   preview: boolean;
   targetHead: string | null;
+  rollback?: PatchReapplyRollback;
+};
+
+type PatchReplaySnapshot = {
+  patchId: string;
+  manifest: PatchManifest;
+  patch: string;
 };
 
 const workspaceRegistryGetInputSchema = {
@@ -364,7 +437,9 @@ const workstreamListInputSchema = {
 const workstreamMutateInputSchema = {
   cwd: z.string().optional(),
   operation: z.enum(WORKSTREAM_OPERATIONS),
-  workstream: z.string().trim().min(1)
+  workstream: z.string().trim().min(1),
+  confirmed: z.boolean().optional(),
+  expectedActiveWorkstream: z.string().trim().min(1).optional()
 };
 const patchListInputSchema = {
   cwd: z.string().optional(),
@@ -762,9 +837,14 @@ function renderWorkstreamsIndex(workstreams: WorkstreamStateDocument[]): string 
 
 async function writeFileAtomically(filePath: string, content: string): Promise<void> {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(tempPath, content, "utf8");
-  await fs.rename(tempPath, filePath);
+  try {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(tempPath, content, "utf8");
+    await fs.rename(tempPath, filePath);
+  } catch (error) {
+    await fs.rm(tempPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 
 async function writeJsonAtomically(
@@ -783,6 +863,13 @@ type WorkstreamFileSnapshot = {
 type WorkstreamDirectorySnapshot = {
   path: string;
   existed: boolean;
+};
+
+type RepoFileSnapshot = {
+  path: string;
+  relativePath: string;
+  existed: boolean;
+  content: Buffer | null;
 };
 
 async function snapshotFiles(paths: string[]): Promise<WorkstreamFileSnapshot[]> {
@@ -824,6 +911,59 @@ async function restoreFileSnapshots(snapshots: WorkstreamFileSnapshot[]): Promis
     await fs.mkdir(path.dirname(snapshot.path), { recursive: true });
     await fs.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
   }
+}
+
+async function snapshotRepoFiles(
+  repoRoot: string,
+  relativePaths: string[]
+): Promise<RepoFileSnapshot[]> {
+  const snapshots: RepoFileSnapshot[] = [];
+
+  for (const relativePath of [...new Set(relativePaths)]) {
+    const targetPath = path.resolve(repoRoot, relativePath);
+    ensurePathWithinRootSync(repoRoot, targetPath, {
+      label: "Patch replay tracked file"
+    });
+
+    if (!(await pathExists(targetPath))) {
+      snapshots.push({
+        path: targetPath,
+        relativePath,
+        existed: false,
+        content: null
+      });
+      continue;
+    }
+
+    snapshots.push({
+      path: targetPath,
+      relativePath,
+      existed: true,
+      content: await fs.readFile(targetPath)
+    });
+  }
+
+  return snapshots;
+}
+
+async function restoreRepoFileSnapshots(
+  snapshots: RepoFileSnapshot[]
+): Promise<string[]> {
+  const restoredFiles: string[] = [];
+
+  for (const snapshot of snapshots) {
+    if (!snapshot.existed) {
+      await fs.rm(snapshot.path, { force: true }).catch(() => undefined);
+      restoredFiles.push(snapshot.relativePath);
+      continue;
+    }
+
+    await fs.mkdir(path.dirname(snapshot.path), { recursive: true });
+    await fs.writeFile(snapshot.path, snapshot.content ?? Buffer.alloc(0));
+    restoredFiles.push(snapshot.relativePath);
+  }
+
+  return restoredFiles;
 }
 
 async function restoreDirectorySnapshots(
@@ -1119,6 +1259,35 @@ function buildMissingCurrentStateSnapshotResult(
   });
 }
 
+function activeWorkstreamMatchesExpected(
+  active: WorkstreamStateDocument | null,
+  expectedActiveWorkstream: string | undefined
+): boolean {
+  if (!expectedActiveWorkstream) {
+    return true;
+  }
+
+  if (!active) {
+    return false;
+  }
+
+  const normalizedExpected = expectedActiveWorkstream.trim().toLowerCase();
+
+  if (active.name.toLowerCase() === normalizedExpected || active.slug === normalizedExpected) {
+    return true;
+  }
+
+  try {
+    return active.slug === slugifyWorkstreamName(expectedActiveWorkstream);
+  } catch {
+    return false;
+  }
+}
+
+function activeWorkstreamDescription(active: WorkstreamStateDocument | null): string {
+  return active ? `${active.name} (${active.slug})` : "none";
+}
+
 function findWorkstreamEntry(
   workstreams: WorkstreamStateDocument[],
   requested: string
@@ -1184,6 +1353,47 @@ async function persistWorkstreamState(
     indexRelativePath
   ];
 }
+
+async function persistWorkstreamStateWithPreparedStateUpdate(args: {
+  projectRoot: string;
+  workstreams: WorkstreamStateDocument[];
+  affectedSlugs: string[];
+  preparedStateUpdate: PreparedStateUpdate;
+}): Promise<{
+  affectedPaths: string[];
+  stateWarnings: string[];
+}> {
+  const uniqueSlugs = [...new Set(args.affectedSlugs)];
+  const indexPath = workstreamsIndexAbsolute(args.projectRoot);
+  const statePath = resolveBlueprintPath(args.projectRoot, BLUEPRINT_STATE_PATH);
+  const statePaths = uniqueSlugs.map((slug) => workstreamStateAbsolute(args.projectRoot, slug));
+  const snapshots = await snapshotFiles([statePath, indexPath, ...statePaths]);
+  const directorySnapshots = await snapshotDirectories([
+    workstreamsRootAbsolute(args.projectRoot),
+    ...uniqueSlugs.map((slug) => path.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
+  ]);
+
+  try {
+    // Resume commits workstream files first, then lets the prepared STATE.md writer
+    // take phase-topology -> state and reject stale route snapshots. The snapshots
+    // above roll back active workstream/index changes if that locked write fails.
+    const affectedPaths = await persistWorkstreamState(
+      args.projectRoot,
+      args.workstreams,
+      uniqueSlugs
+    );
+    const stateResult = await writePreparedBlueprintStateUpdate(args.preparedStateUpdate);
+
+    return {
+      affectedPaths: [...new Set([...affectedPaths, stateResult.statePath])],
+      stateWarnings: stateResult.warnings
+    };
+  } catch (error) {
+    await restoreFileSnapshots(snapshots);
+    await restoreDirectorySnapshots(directorySnapshots);
+    throw error;
+  }
+}
 async function runGit(
   args: string[],
   options: { cwd?: string; allowFailure?: boolean } = {}
@@ -1244,6 +1454,27 @@ function maybeFailWorkspaceRegistryWrite(registryPath: string): void {
   throw new Error(`Injected workspace registry write failure for ${registryPath}`);
 }
 
+function maybeFailPatchRegistryWrite(registryPath: string): void {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_PATCH_REGISTRY_WRITE_ONCE;
+
+  if (!injectedFailure) {
+    return;
+  }
+
+  const indexPath = patchIndexPath(registryPath);
+  const matchesRegistry =
+    injectedFailure === "1" ||
+    path.resolve(injectedFailure) === path.resolve(registryPath) ||
+    path.resolve(injectedFailure) === path.resolve(indexPath);
+
+  if (!matchesRegistry) {
+    return;
+  }
+
+  delete process.env.BLUEPRINT_TEST_FAIL_PATCH_REGISTRY_WRITE_ONCE;
+  throw new Error(`Injected patch registry write failure for ${registryPath}`);
+}
+
 function parsePositiveIntegerEnv(name: string): number | null {
   const raw = process.env[name];
 
@@ -1272,11 +1503,74 @@ function workspaceRegistryLockHeartbeatMs(): number {
   );
 }
 
+let workspaceRegistryLockRecoveryHooksForTest:
+  | WorkspaceRegistryLockRecoveryHooksForTest
+  | null = null;
+
+export const workspaceToolTestHooks: {
+  setWorkspaceRegistryLockRecoveryHooksForTest(
+    hooks: WorkspaceRegistryLockRecoveryHooksForTest
+  ): () => void;
+} = {
+  setWorkspaceRegistryLockRecoveryHooksForTest(hooks) {
+    const previous = workspaceRegistryLockRecoveryHooksForTest;
+    workspaceRegistryLockRecoveryHooksForTest = { ...hooks };
+
+    return () => {
+      workspaceRegistryLockRecoveryHooksForTest = previous;
+    };
+  }
+};
+
 async function maybeDelayWorkspaceRemoveForTest(): Promise<void> {
   const delayMs = parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REMOVE_DELAY_MS");
 
   if (!delayMs) {
     return;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+async function maybeCreateWorkspaceTargetDuringMkdirForTest(
+  workspacePath: string
+): Promise<void> {
+  const injectedTarget = process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
+
+  if (
+    !injectedTarget ||
+    path.resolve(injectedTarget) !== path.resolve(workspacePath)
+  ) {
+    return;
+  }
+
+  delete process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
+  await fs.mkdir(workspacePath, { recursive: true });
+  await fs.writeFile(path.join(workspacePath, "foreign-content.txt"), "preserve\n", "utf8");
+}
+
+async function maybeDelayPatchRecordBeforeIndexForTest(): Promise<void> {
+  const delayMs = parsePositiveIntegerEnv("BLUEPRINT_TEST_PATCH_RECORD_BEFORE_INDEX_DELAY_MS");
+
+  if (!delayMs) {
+    return;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+async function maybeDelayPatchRecordAfterPatchWriteForTest(): Promise<void> {
+  const delayMs = parsePositiveIntegerEnv("BLUEPRINT_TEST_PATCH_RECORD_AFTER_PATCH_WRITE_DELAY_MS");
+
+  if (!delayMs) {
+    return;
+  }
+
+  const markerPath = process.env.BLUEPRINT_TEST_PATCH_RECORD_AFTER_PATCH_WRITE_MARKER;
+
+  if (markerPath) {
+    await fs.mkdir(path.dirname(markerPath), { recursive: true });
+    await fs.writeFile(markerPath, "patch-written\n", "utf8");
   }
 
   await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -1331,6 +1625,26 @@ async function gitWorkingTreeClean(
   return result.success && result.stdout.length === 0;
 }
 
+async function gitStatusShortPaths(repoPath: string): Promise<string[]> {
+  const result = await runGit(["-C", repoPath, "status", "--short"], {
+    allowFailure: true
+  });
+
+  if (!result.success || result.stdout.trim().length === 0) {
+    return [];
+  }
+
+  return result.stdout
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const statusPath = line.length > 3 ? line.slice(3) : line;
+      const renameTarget = statusPath.split(" -> ").at(-1);
+      return renameTarget ?? statusPath;
+    });
+}
+
 async function gitWorkingTreeCleanForWorkstreamTransition(
   repoPath: string
 ): Promise<boolean> {
@@ -1344,6 +1658,7 @@ async function gitWorkingTreeCleanForWorkstreamTransition(
       "--",
       ".",
       `:(exclude)${WORKSTREAMS_ROOT_PATH}/**`,
+      `:(exclude)${BLUEPRINT_DIR}/locks/**`,
       `:(exclude)${BLUEPRINT_STATE_PATH}`
     ],
     {
@@ -1573,15 +1888,30 @@ function workspaceRegistryLockLeasePath(lockPath: string): string {
   return path.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
 }
 
+function workspaceRegistryLockRecoveryPath(lockPath: string): string {
+  return `${lockPath}.recovery`;
+}
+
+function workspaceRegistryLockRecoveryGuardOwnerPath(
+  recoveryPath: string,
+  token: string
+): string {
+  return path.join(recoveryPath, `${WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+}
+
+function workspaceRegistryLockQuarantinePath(targetPath: string): string {
+  return `${targetPath}.reclaimed-${process.pid}-${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}`;
+}
+
 async function writeWorkspaceRegistryLockFile(filePath: string, contents: string): Promise<void> {
   await fs.writeFile(filePath, `${contents}\n`, "utf8");
 }
 
-async function readWorkspaceRegistryLockOwner(
-  lockHandle: WorkspaceRegistryLockHandle
-): Promise<string | null> {
+async function readWorkspaceRegistryLockOwnerAtPath(lockPath: string): Promise<string | null> {
   try {
-    return (await fs.readFile(lockHandle.ownerPath, "utf8")).trim();
+    return (await fs.readFile(workspaceRegistryLockOwnerPath(lockPath), "utf8")).trim();
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return null;
@@ -1589,6 +1919,12 @@ async function readWorkspaceRegistryLockOwner(
 
     throw error;
   }
+}
+
+async function readWorkspaceRegistryLockOwner(
+  lockHandle: WorkspaceRegistryLockHandle
+): Promise<string | null> {
+  return readWorkspaceRegistryLockOwnerAtPath(lockHandle.lockPath);
 }
 
 async function refreshWorkspaceRegistryLockLease(
@@ -1604,20 +1940,9 @@ async function refreshWorkspaceRegistryLockLease(
   return true;
 }
 
-async function getWorkspaceRegistryLockAgeMs(lockPath: string): Promise<number | null> {
-  const leasePath = workspaceRegistryLockLeasePath(lockPath);
-
+async function getWorkspaceRegistryLockPathAgeMs(targetPath: string): Promise<number | null> {
   try {
-    const stats = await fs.stat(leasePath);
-    return Date.now() - stats.mtimeMs;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw error;
-    }
-  }
-
-  try {
-    const stats = await fs.stat(lockPath);
+    const stats = await fs.stat(targetPath);
     return Date.now() - stats.mtimeMs;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -1625,6 +1950,244 @@ async function getWorkspaceRegistryLockAgeMs(lockPath: string): Promise<number |
     }
 
     throw error;
+  }
+}
+
+async function getWorkspaceRegistryLockRecoveryGuardAgeMs(
+  recoveryPath: string
+): Promise<number | null> {
+  let entries: string[];
+
+  try {
+    entries = await fs.readdir(recoveryPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  }
+
+  let newestOwnerMtimeMs: number | null = null;
+
+  for (const entry of entries) {
+    if (!entry.startsWith(WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX)) {
+      continue;
+    }
+
+    try {
+      const stats = await fs.stat(path.join(recoveryPath, entry));
+      newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+
+  if (newestOwnerMtimeMs !== null) {
+    return Date.now() - newestOwnerMtimeMs;
+  }
+
+  return getWorkspaceRegistryLockPathAgeMs(recoveryPath);
+}
+
+async function getWorkspaceRegistryLockAgeMs(lockPath: string): Promise<number | null> {
+  const leasePath = workspaceRegistryLockLeasePath(lockPath);
+  const leaseAgeMs = await getWorkspaceRegistryLockPathAgeMs(leasePath);
+
+  if (leaseAgeMs !== null) {
+    return leaseAgeMs;
+  }
+
+  return getWorkspaceRegistryLockPathAgeMs(lockPath);
+}
+
+async function createWorkspaceRegistryLockRecoveryGuardHandle(
+  lockPath: string,
+  recoveryPath: string
+): Promise<WorkspaceRegistryLockRecoveryGuardHandle> {
+  const token = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const recoveryGuard: WorkspaceRegistryLockRecoveryGuardHandle = {
+    lockPath,
+    recoveryPath,
+    ownerPath: workspaceRegistryLockRecoveryGuardOwnerPath(recoveryPath, token),
+    token
+  };
+
+  try {
+    await writeWorkspaceRegistryLockFile(recoveryGuard.ownerPath, token);
+  } catch (error) {
+    await fs.rmdir(recoveryPath).catch(() => undefined);
+    throw error;
+  }
+
+  return recoveryGuard;
+}
+
+async function refreshOwnedWorkspaceRegistryLockRecoveryGuard(
+  recoveryGuard: WorkspaceRegistryLockRecoveryGuardHandle
+): Promise<boolean> {
+  let stats;
+
+  try {
+    stats = await fs.stat(recoveryGuard.ownerPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+
+    throw error;
+  }
+
+  if (Date.now() - stats.mtimeMs > workspaceRegistryLockStaleMs()) {
+    return false;
+  }
+
+  try {
+    const now = new Date();
+    await fs.utimes(recoveryGuard.ownerPath, now, now);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+
+    throw error;
+  }
+
+  return true;
+}
+
+async function releaseWorkspaceRegistryLockRecoveryGuard(
+  recoveryGuard: WorkspaceRegistryLockRecoveryGuardHandle
+): Promise<void> {
+  if (!(await refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard))) {
+    return;
+  }
+
+  try {
+    await fs.unlink(recoveryGuard.ownerPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return;
+    }
+
+    throw error;
+  }
+
+  await fs.rmdir(recoveryGuard.recoveryPath).catch(() => undefined);
+}
+
+async function reclaimStaleWorkspaceRegistryLockRecoveryGuard(
+  recoveryPath: string
+): Promise<boolean> {
+  const ageMs = await getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath);
+
+  if (ageMs === null) {
+    return true;
+  }
+
+  if (ageMs <= workspaceRegistryLockStaleMs()) {
+    return false;
+  }
+
+  const quarantinePath = workspaceRegistryLockQuarantinePath(recoveryPath);
+
+  try {
+    await fs.rename(recoveryPath, quarantinePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return true;
+    }
+
+    throw error;
+  }
+
+  await fs.rm(quarantinePath, { recursive: true, force: true });
+  return true;
+}
+
+async function tryAcquireWorkspaceRegistryLockRecoveryGuard(
+  lockPath: string
+): Promise<WorkspaceRegistryLockRecoveryGuardHandle | null> {
+  const recoveryPath = workspaceRegistryLockRecoveryPath(lockPath);
+
+  for (;;) {
+    try {
+      await fs.mkdir(recoveryPath);
+      return createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recoveryPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+        throw error;
+      }
+
+      if (await reclaimStaleWorkspaceRegistryLockRecoveryGuard(recoveryPath)) {
+        continue;
+      }
+
+      return null;
+    }
+  }
+}
+
+async function recoverStaleWorkspaceRegistryLock(lockPath: string): Promise<boolean> {
+  const recoveryGuard = await tryAcquireWorkspaceRegistryLockRecoveryGuard(lockPath);
+
+  if (recoveryGuard === null) {
+    return false;
+  }
+
+  try {
+    const observedAgeMs = await getWorkspaceRegistryLockAgeMs(lockPath);
+
+    if (observedAgeMs === null) {
+      return true;
+    }
+
+    if (observedAgeMs <= workspaceRegistryLockStaleMs()) {
+      return false;
+    }
+
+    const observedOwner = await readWorkspaceRegistryLockOwnerAtPath(lockPath);
+    await workspaceRegistryLockRecoveryHooksForTest?.beforeStaleLockQuarantine?.(lockPath);
+
+    if (!(await refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard))) {
+      return false;
+    }
+
+    const currentAgeMs = await getWorkspaceRegistryLockAgeMs(lockPath);
+
+    if (currentAgeMs === null) {
+      return true;
+    }
+
+    if (currentAgeMs <= workspaceRegistryLockStaleMs()) {
+      return false;
+    }
+
+    const currentOwner = await readWorkspaceRegistryLockOwnerAtPath(lockPath);
+
+    if (currentOwner !== observedOwner) {
+      return false;
+    }
+
+    const quarantinePath = workspaceRegistryLockQuarantinePath(lockPath);
+
+    try {
+      await fs.rename(lockPath, quarantinePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return true;
+      }
+
+      throw error;
+    }
+
+    await fs.rm(quarantinePath, { recursive: true, force: true });
+    return true;
+  } finally {
+    await releaseWorkspaceRegistryLockRecoveryGuard(recoveryGuard).catch(() => undefined);
+    await workspaceRegistryLockRecoveryHooksForTest?.afterRecoveryGuardRelease?.(lockPath);
   }
 }
 
@@ -1658,7 +2221,21 @@ async function acquireWorkspaceRegistryLock(
   for (;;) {
     try {
       await fs.mkdir(lockPath);
-      return createWorkspaceRegistryLockHandle(lockPath);
+      const lockHandle = await createWorkspaceRegistryLockHandle(lockPath);
+
+      if (await pathExists(workspaceRegistryLockRecoveryPath(lockPath))) {
+        if (await reclaimStaleWorkspaceRegistryLockRecoveryGuard(
+          workspaceRegistryLockRecoveryPath(lockPath)
+        )) {
+          return lockHandle;
+        }
+
+        await releaseWorkspaceRegistryLock(lockHandle);
+        await new Promise((resolve) => setTimeout(resolve, workspaceRegistryLockRetryMs()));
+        continue;
+      }
+
+      return lockHandle;
     } catch (error) {
       const lockError = error as NodeJS.ErrnoException;
 
@@ -1670,8 +2247,11 @@ async function acquireWorkspaceRegistryLock(
         const ageMs = await getWorkspaceRegistryLockAgeMs(lockPath);
 
         if (ageMs !== null && ageMs > workspaceRegistryLockStaleMs()) {
-          await fs.rm(lockPath, { recursive: true, force: true });
-          continue;
+          await workspaceRegistryLockRecoveryHooksForTest?.beforeStaleRecoveryClaim?.(lockPath);
+
+          if (await recoverStaleWorkspaceRegistryLock(lockPath)) {
+            continue;
+          }
         }
       } catch (statError) {
         if ((statError as NodeJS.ErrnoException).code === "ENOENT") {
@@ -1732,6 +2312,38 @@ async function withWorkspaceRegistryLock<T>(
   }
 }
 
+async function withPatchRegistryLock<T>(
+  registryPath: string,
+  callback: () => Promise<T>
+): Promise<T> {
+  const lockPath = `${registryPath}.lock`;
+  const lockHandle = await acquireWorkspaceRegistryLock(lockPath);
+  const stopHeartbeat = startWorkspaceRegistryLockHeartbeat(lockHandle);
+
+  try {
+    return await callback();
+  } finally {
+    stopHeartbeat();
+    await releaseWorkspaceRegistryLock(lockHandle);
+  }
+}
+
+async function withWorkstreamTransitionLock<T>(
+  projectRoot: string,
+  callback: () => Promise<T>
+): Promise<T> {
+  const lockPath = resolveBlueprintPath(projectRoot, WORKSTREAM_TRANSITION_LOCK_PATH);
+  const lockHandle = await acquireWorkspaceRegistryLock(lockPath);
+  const stopHeartbeat = startWorkspaceRegistryLockHeartbeat(lockHandle);
+
+  try {
+    return await callback();
+  } finally {
+    stopHeartbeat();
+    await releaseWorkspaceRegistryLock(lockHandle);
+  }
+}
+
 function normalizePatchId(value: string): string {
   const trimmed = value.trim();
   validateFieldNameSegment(trimmed, "Patch id");
@@ -1770,8 +2382,52 @@ function patchAuditPath(registryPath: string, patchId: string): string {
   return path.join(registryPath, `${patchId}.audit.ndjson`);
 }
 
-function sha256(value: string): string {
+function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+async function fileContentHash(filePath: string): Promise<string | null> {
+  try {
+    return sha256(await fs.readFile(filePath));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function capturePatchRecordGenerationFingerprint(args: {
+  registryPath: string;
+  patchId: string;
+}): Promise<PatchRecordGenerationFingerprint> {
+  const [patchFileHash, manifestFileHash, auditFileHash, indexFileHash] =
+    await Promise.all([
+      fileContentHash(patchContentPath(args.registryPath, args.patchId)),
+      fileContentHash(patchManifestPath(args.registryPath, args.patchId)),
+      fileContentHash(patchAuditPath(args.registryPath, args.patchId)),
+      fileContentHash(patchIndexPath(args.registryPath))
+    ]);
+
+  return {
+    patchFileHash,
+    manifestFileHash,
+    auditFileHash,
+    indexFileHash
+  };
+}
+
+function patchRecordGenerationFingerprintsMatch(
+  left: PatchRecordGenerationFingerprint,
+  right: PatchRecordGenerationFingerprint
+): boolean {
+  return (
+    left.patchFileHash === right.patchFileHash &&
+    left.manifestFileHash === right.manifestFileHash &&
+    left.auditFileHash === right.auditFileHash &&
+    left.indexFileHash === right.indexFileHash
+  );
 }
 
 function normalizeTrackedFiles(repoRoot: string, trackedFiles: string[]): string[] {
@@ -1913,12 +2569,23 @@ async function readPatchRegistryDocument(registryPath: string): Promise<PatchReg
   const patchIds = ((parsed as { patches: unknown[] }).patches ?? []).map((patchId) =>
     normalizeRecordedPatchId(patchId, indexPath)
   );
+  const parsedRecord = parsed as Record<string, unknown>;
+  const version = parsedRecord.version;
+
+  if (typeof version !== "number" || !Number.isInteger(version)) {
+    throw new Error(
+      `Patch registry is malformed at ${indexPath}; version must be ${PATCH_REGISTRY_VERSION}.`
+    );
+  }
+
+  if (version !== PATCH_REGISTRY_VERSION) {
+    throw new Error(
+      `Patch registry version is unsupported at ${indexPath}: ${version}.`
+    );
+  }
 
   return {
-    version:
-      typeof (parsed as Record<string, unknown>).version === "number"
-        ? ((parsed as Record<string, unknown>).version as number)
-        : PATCH_REGISTRY_VERSION,
+    version,
     patches: [...new Set(patchIds)]
   };
 }
@@ -1928,7 +2595,11 @@ async function writePatchRegistryDocument(
   document: PatchRegistryDocument
 ): Promise<void> {
   await fs.mkdir(registryPath, { recursive: true });
-  await writeJsonFile(patchIndexPath(registryPath), document as unknown as Record<string, unknown>);
+  maybeFailPatchRegistryWrite(registryPath);
+  await writeJsonAtomically(
+    patchIndexPath(registryPath),
+    document as unknown as Record<string, unknown>
+  );
 }
 
 async function readPatchManifest(registryPath: string, patchId: string): Promise<PatchManifest> {
@@ -1985,6 +2656,73 @@ async function loadPatchContent(
   }
 
   return patch;
+}
+
+async function capturePatchRecordRollbackSnapshot(args: {
+  registryPath: string;
+  patchId: string;
+  registry: PatchRegistryDocument;
+}): Promise<PatchRecordRollbackBaselineSnapshot> {
+  const [patchFile, manifestFile, auditFile] = await snapshotFiles([
+    patchContentPath(args.registryPath, args.patchId),
+    patchManifestPath(args.registryPath, args.patchId),
+    patchAuditPath(args.registryPath, args.patchId)
+  ]);
+
+  return {
+    registryPath: args.registryPath,
+    patchId: args.patchId,
+    wasIndexed: args.registry.patches.includes(args.patchId),
+    registryPatches: args.registry.patches,
+    patchFile,
+    manifestFile,
+    auditFile
+  };
+}
+
+export async function rollbackPatchRecordToSnapshot(
+  snapshot: PatchRecordRollbackSnapshot
+): Promise<void> {
+  await withPatchRegistryLock(snapshot.registryPath, async () => {
+    const currentFingerprint = await capturePatchRecordGenerationFingerprint({
+      registryPath: snapshot.registryPath,
+      patchId: snapshot.patchId
+    });
+
+    if (
+      !patchRecordGenerationFingerprintsMatch(
+        currentFingerprint,
+        snapshot.expectedPostWriteFingerprint
+      )
+    ) {
+      throw new Error(
+        `Patch registry rollback refused for ${snapshot.patchId}; record changed after failed PlanRun persistence.`
+      );
+    }
+
+    await restoreFileSnapshots([
+      snapshot.patchFile,
+      snapshot.manifestFile,
+      snapshot.auditFile
+    ]);
+
+    const currentRegistry = await readPatchRegistryDocument(snapshot.registryPath);
+    const currentPatches = currentRegistry.patches.filter(
+      (patchId) => patchId !== snapshot.patchId
+    );
+    const snapshotPatchSet = new Set(snapshot.registryPatches);
+    const concurrentPatches = currentPatches.filter(
+      (patchId) => !snapshotPatchSet.has(patchId)
+    );
+    const patches = snapshot.wasIndexed
+      ? [...snapshot.registryPatches, ...concurrentPatches]
+      : currentPatches;
+
+    await writePatchRegistryDocument(snapshot.registryPath, {
+      version: currentRegistry.version,
+      patches
+    });
+  });
 }
 
 function assertNotInstalledExtensionTarget(repoRoot: string): void {
@@ -2772,7 +3510,6 @@ export async function blueprintWorkspaceCreate(
 
   assertNotInstalledExtensionPath(workspacePath, "Workspace path");
   ensureWorkspaceTargetIsSafe(workspacePath, sourceRepos);
-  await ensureWorkspaceTargetDoesNotExist(workspacePath);
 
   for (const sourceRepo of sourceRepos) {
     assertNotInstalledExtensionPath(sourceRepo.sourcePath, "Workspace source repo");
@@ -2802,10 +3539,14 @@ export async function blueprintWorkspaceCreate(
     const createdMembers: CreatedWorkspaceMember[] = [];
     const usedTargetNames = new Set<string>();
     const createdAt = new Date().toISOString();
+    let createdWorkspaceRoot = false;
 
     try {
       await fs.mkdir(path.dirname(workspacePath), { recursive: true });
+      await ensureWorkspaceTargetDoesNotExist(workspacePath);
+      await maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath);
       await fs.mkdir(workspacePath, { recursive: false });
+      createdWorkspaceRoot = true;
 
       for (const sourceRepo of sourceRepos) {
         const createdMember = await createWorkspaceMember(
@@ -2843,7 +3584,10 @@ export async function blueprintWorkspaceCreate(
       };
     } catch (error) {
       await rollbackCreatedMembers(createdMembers);
-      await fs.rm(workspacePath, { recursive: true, force: true }).catch(() => undefined);
+
+      if (createdWorkspaceRoot) {
+        await fs.rm(workspacePath, { recursive: true, force: true }).catch(() => undefined);
+      }
 
       if (error instanceof Error) {
         throw error;
@@ -2942,6 +3686,20 @@ export async function blueprintWorkstreamMutate(
   args: WorkstreamMutateArgs
 ): Promise<WorkstreamMutateResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
+
+  if (!(await pathExists(path.join(projectRoot, BLUEPRINT_DIR)))) {
+    return blueprintWorkstreamMutateLocked(projectRoot, args);
+  }
+
+  return withWorkstreamTransitionLock(projectRoot, () =>
+    blueprintWorkstreamMutateLocked(projectRoot, args)
+  );
+}
+
+async function blueprintWorkstreamMutateLocked(
+  projectRoot: string,
+  args: WorkstreamMutateArgs
+): Promise<WorkstreamMutateResult> {
   const store = await loadWorkstreamStore(projectRoot);
 
   if (store.status !== "ready") {
@@ -3049,6 +3807,42 @@ export async function blueprintWorkstreamMutate(
 
   const currentActive = workstreams.find((entry) => entry.status === "active") ?? null;
   const targetIsActive = currentActive?.slug === target.slug;
+  const confirmationWaitingState: WorkstreamWaitingState | null =
+    operation === "switch" && target.status !== "completed" && !targetIsActive
+      ? "workstream-switch-confirmation"
+      : operation === "complete" && targetIsActive
+        ? "workstream-archive-confirmation"
+        : null;
+
+  if (confirmationWaitingState) {
+    if (!activeWorkstreamMatchesExpected(currentActive, args.expectedActiveWorkstream)) {
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: confirmationWaitingState,
+        nextAction: `Rerun ${WORKSTREAMS_COMMAND} after previewing the current active workstream, then confirm the ${operation} request again.`,
+        reason: `Active workstream changed since the confirmation preview. Expected ${args.expectedActiveWorkstream}; found ${activeWorkstreamDescription(currentActive)}.`,
+        statePatch: null
+      });
+    }
+
+    if (args.confirmed !== true) {
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: confirmationWaitingState,
+        nextAction: `Preview ${target.slug} and the current active workstream, ask for explicit confirmation, then retry ${operation} with confirmed: true.`,
+        reason:
+          operation === "switch"
+            ? `Switching from ${activeWorkstreamDescription(currentActive)} to ${target.name} (${target.slug}) requires explicit confirmation.`
+            : `Completing the active workstream ${target.name} (${target.slug}) requires explicit archive confirmation.`,
+        statePatch: null
+      });
+    }
+  }
+
   const requiresCleanTree =
     operation === "switch"
       ? !targetIsActive
@@ -3158,6 +3952,28 @@ export async function blueprintWorkstreamMutate(
       });
     }
 
+    const resumeStatePatch = buildResumeStatePatch(target.stateSnapshot);
+    let preparedStateUpdate: PreparedStateUpdate;
+
+    try {
+      preparedStateUpdate = await prepareBlueprintStateUpdate({
+        cwd: projectRoot,
+        patch: resumeStatePatch ?? {}
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: "missing-resume-snapshot",
+        nextAction: `Repair or recreate the saved STATE.md snapshot for ${target.slug} before retrying resume.`,
+        reason: `Saved STATE.md snapshot for workstream ${target.name} cannot be restored: ${reason}`,
+        statePatch: null
+      });
+    }
+
     let currentSnapshot: WorkstreamStateSnapshot | null = null;
 
     if (currentActive && currentActive.slug !== target.slug) {
@@ -3191,19 +4007,30 @@ export async function blueprintWorkstreamMutate(
       workstreams,
       active: target
     };
-    const affectedPaths = await persistWorkstreamState(projectRoot, workstreams, [
+    const affectedSlugs = [
       ...(currentActive && currentActive.slug !== target.slug ? [currentActive.slug] : []),
       target.slug
-    ]);
+    ];
+    const { affectedPaths, stateWarnings } =
+      await persistWorkstreamStateWithPreparedStateUpdate({
+        projectRoot,
+        workstreams,
+        affectedSlugs,
+        preparedStateUpdate
+      });
+    const resumeStore: LoadedWorkstreamStore = {
+      ...reloadedStore,
+      warnings: [...reloadedStore.warnings, ...stateWarnings]
+    };
 
-    return buildMutationResult(reloadedStore, {
+    return buildMutationResult(resumeStore, {
       status: targetIsActive ? "reused" : "updated",
       operation,
       affectedPaths,
       waitingState: null,
-      nextAction: `Apply the returned state patch through blueprint_state_update, then continue work on ${target.slug}.`,
+      nextAction: `Continue work on ${target.slug}; ${BLUEPRINT_STATE_PATH} was restored from its saved snapshot.`,
       reason: null,
-      statePatch: buildResumeStatePatch(target.stateSnapshot)
+      statePatch: resumeStatePatch
     });
   }
 
@@ -3263,143 +4090,214 @@ export async function blueprintPatchList(
   args: PatchListArgs = {}
 ): Promise<PatchListResult> {
   const registryPath = expandHomePath(resolveBlueprintRuntimeHost().patchRegistryPath);
-  const registry = await readPatchRegistryDocument(registryPath);
   const repoRoot = args.cwd ? await resolveGitRepoRoot(args.cwd) : null;
   const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
-  const patchIds = selectedPatchIds(registry, requestedPatchIds);
+  const registryLockPath = `${registryPath}.lock`;
 
-  const patches = await Promise.all(
-    patchIds.map(async (patchId) => {
-      const manifest = await readPatchManifest(registryPath, patchId);
-      await loadPatchContent(registryPath, patchId, manifest);
+  if (
+    !(await pathExists(registryPath)) &&
+    !(await pathExists(patchIndexPath(registryPath))) &&
+    !(await pathExists(registryLockPath))
+  ) {
+    selectedPatchIds(
+      {
+        version: PATCH_REGISTRY_VERSION,
+        patches: []
+      },
+      requestedPatchIds
+    );
 
-      return {
-        patchId,
-        label: manifest.label,
-        createdAt: manifest.createdAt,
-        sourceVersion: manifest.sourceVersion,
-        trackedFiles: manifest.trackedFiles,
-        manifestPath: patchManifestPath(registryPath, patchId),
-        patchPath: patchContentPath(registryPath, patchId),
-        auditPath: patchAuditPath(registryPath, patchId),
-        lastAppliedAt: manifest.lastAppliedAt,
-        lastOutcome: manifest.lastOutcome,
-        compatibility: await buildPatchCompatibilityStatus(manifest, repoRoot)
-      };
-    })
-  );
+    return {
+      registryPath,
+      patches: []
+    };
+  }
 
-  return {
-    registryPath,
-    patches
-  };
+  return withPatchRegistryLock(registryPath, async () => {
+    const registry = await readPatchRegistryDocument(registryPath);
+    const patchIds = selectedPatchIds(registry, requestedPatchIds);
+    const patches = await Promise.all(
+      patchIds.map(async (patchId) => {
+        const manifest = await readPatchManifest(registryPath, patchId);
+        await loadPatchContent(registryPath, patchId, manifest);
+
+        return {
+          patchId,
+          label: manifest.label,
+          createdAt: manifest.createdAt,
+          sourceVersion: manifest.sourceVersion,
+          trackedFiles: manifest.trackedFiles,
+          manifestPath: patchManifestPath(registryPath, patchId),
+          patchPath: patchContentPath(registryPath, patchId),
+          auditPath: patchAuditPath(registryPath, patchId),
+          lastAppliedAt: manifest.lastAppliedAt,
+          lastOutcome: manifest.lastOutcome,
+          compatibility: await buildPatchCompatibilityStatus(manifest, repoRoot)
+        };
+      })
+    );
+
+    return {
+      registryPath,
+      patches
+    };
+  });
 }
 
 export async function blueprintPatchRecord(
-  args: PatchRecordArgs
-): Promise<PatchRecordResult> {
+  args: PatchRecordArgs,
+  options: { captureRollbackSnapshot: true }
+): Promise<PatchRecordResultWithRollbackSnapshot>;
+export async function blueprintPatchRecord(args: PatchRecordArgs): Promise<PatchRecordResult>;
+export async function blueprintPatchRecord(
+  args: PatchRecordArgs,
+  options: { captureRollbackSnapshot?: boolean } = {}
+): Promise<PatchRecordResult | PatchRecordResultWithRollbackSnapshot> {
   const repoRoot = await resolvePatchReplayTarget(args.cwd);
   const runtimeHost = resolveBlueprintRuntimeHost();
   const registryPath = expandHomePath(runtimeHost.patchRegistryPath);
   const patchId = normalizePatchId(args.patchId);
   const trackedFiles = normalizeTrackedFiles(repoRoot, args.trackedFiles);
-  const registry = await readPatchRegistryDocument(registryPath);
-  const createdAt = new Date().toISOString();
-  const patchPath = patchContentPath(registryPath, patchId);
-  const manifestPath = patchManifestPath(registryPath, patchId);
-  const auditPath = patchAuditPath(registryPath, patchId);
-  const existingManifest = (await pathExists(manifestPath))
-    ? await readPatchManifest(registryPath, patchId)
-    : null;
-  const updatingStoredPatch = existingManifest !== null;
-  const hasNewPatchContent = typeof args.patch === "string" && args.patch.length > 0;
-  const patch =
-    hasNewPatchContent
-      ? args.patch
-      : existingManifest
-        ? await loadPatchContent(registryPath, patchId, existingManifest)
-        : null;
 
-  if (!patch) {
-    throw new Error(`Patch content is required when creating a new registry entry: ${patchId}`);
-  }
+  return withPatchRegistryLock(registryPath, async () => {
+    const registry = await readPatchRegistryDocument(registryPath);
+    const createdAt = new Date().toISOString();
+    const patchPath = patchContentPath(registryPath, patchId);
+    const manifestPath = patchManifestPath(registryPath, patchId);
+    const auditPath = patchAuditPath(registryPath, patchId);
+    const existingManifest = (await pathExists(manifestPath))
+      ? await readPatchManifest(registryPath, patchId)
+      : null;
+    const updatingStoredPatch = existingManifest !== null;
+    const hasNewPatchContent = typeof args.patch === "string" && args.patch.length > 0;
+    const patch =
+      hasNewPatchContent
+        ? args.patch
+        : existingManifest
+          ? await loadPatchContent(registryPath, patchId, existingManifest)
+          : null;
 
-  assertNoNullBytes(patch, "Patch content");
-  const normalizedPatch = patch.endsWith("\n") ? patch : `${patch}\n`;
-  const patchHash = sha256(normalizedPatch);
-  let repoRemote: string | null;
-  let sourceVersion: string | null;
-  let compatibility: PatchCompatibility;
+    if (!patch) {
+      throw new Error(`Patch content is required when creating a new registry entry: ${patchId}`);
+    }
 
-  if (updatingStoredPatch && !hasNewPatchContent && existingManifest) {
-    repoRemote = existingManifest.repoRemote;
-    sourceVersion = existingManifest.sourceVersion;
-    compatibility = existingManifest.compatibility;
-  } else {
-    repoRemote = await gitRemoteUrl(repoRoot);
-    sourceVersion = args.sourceVersion ?? (await gitHeadSha(repoRoot));
-    compatibility = {
-      host: args.compatibility?.host ?? runtimeHost.host,
-      repoRootName: args.compatibility?.repoRootName ?? path.basename(repoRoot),
-      remoteUrl:
-        args.compatibility?.remoteUrl === undefined
-          ? repoRemote
-          : args.compatibility.remoteUrl
+    assertNoNullBytes(patch, "Patch content");
+    const normalizedPatch = patch.endsWith("\n") ? patch : `${patch}\n`;
+    const patchHash = sha256(normalizedPatch);
+    let repoRemote: string | null;
+    let sourceVersion: string | null;
+    let compatibility: PatchCompatibility;
+
+    if (updatingStoredPatch && !hasNewPatchContent && existingManifest) {
+      repoRemote = existingManifest.repoRemote;
+      sourceVersion = existingManifest.sourceVersion;
+      compatibility = existingManifest.compatibility;
+    } else {
+      repoRemote = await gitRemoteUrl(repoRoot);
+      sourceVersion = args.sourceVersion ?? (await gitHeadSha(repoRoot));
+      compatibility = {
+        host: args.compatibility?.host ?? runtimeHost.host,
+        repoRootName: args.compatibility?.repoRootName ?? path.basename(repoRoot),
+        remoteUrl:
+          args.compatibility?.remoteUrl === undefined
+            ? repoRemote
+            : args.compatibility.remoteUrl
+      };
+    }
+    const manifest: PatchManifest = {
+      version: PATCH_MANIFEST_VERSION,
+      patchId,
+      label: args.label?.trim() || null,
+      createdAt: existingManifest?.createdAt ?? createdAt,
+      sourceVersion,
+      repoRootName: path.basename(repoRoot),
+      repoRemote,
+      patchFile: path.basename(patchPath),
+      patchHash,
+      trackedFiles,
+      compatibility,
+      lastAppliedAt:
+        args.audit?.outcome === "applied" ? createdAt : existingManifest?.lastAppliedAt ?? null,
+      lastOutcome: args.audit?.outcome ?? existingManifest?.lastOutcome ?? "recorded"
     };
-  }
-  const manifest: PatchManifest = {
-    version: PATCH_MANIFEST_VERSION,
-    patchId,
-    label: args.label?.trim() || null,
-    createdAt: existingManifest?.createdAt ?? createdAt,
-    sourceVersion,
-    repoRootName: path.basename(repoRoot),
-    repoRemote,
-    patchFile: path.basename(patchPath),
-    patchHash,
-    trackedFiles,
-    compatibility,
-    lastAppliedAt:
-      args.audit?.outcome === "applied" ? createdAt : existingManifest?.lastAppliedAt ?? null,
-    lastOutcome: args.audit?.outcome ?? existingManifest?.lastOutcome ?? "recorded"
-  };
+    const snapshots = await snapshotFiles([
+      patchPath,
+      manifestPath,
+      auditPath,
+      patchIndexPath(registryPath)
+    ]);
+    const rollbackSnapshotBaseline = options.captureRollbackSnapshot
+      ? await capturePatchRecordRollbackSnapshot({
+          registryPath,
+          patchId,
+          registry
+        })
+      : null;
+    let rollbackSnapshot: PatchRecordRollbackSnapshot | null = null;
 
-  await fs.mkdir(registryPath, { recursive: true });
-  await fs.writeFile(patchPath, normalizedPatch, "utf8");
-  await writeJsonFile(manifestPath, manifest as unknown as Record<string, unknown>);
+    try {
+      await fs.mkdir(registryPath, { recursive: true });
+      await writeFileAtomically(patchPath, normalizedPatch);
+      await maybeDelayPatchRecordAfterPatchWriteForTest();
+      await writeJsonFile(manifestPath, manifest as unknown as Record<string, unknown>);
 
-  if (!registry.patches.includes(patchId)) {
-    await writePatchRegistryDocument(registryPath, {
-      version: registry.version || PATCH_REGISTRY_VERSION,
-      patches: [...registry.patches, patchId]
-    });
-  }
+      if (!registry.patches.includes(patchId)) {
+        await maybeDelayPatchRecordBeforeIndexForTest();
+        await writePatchRegistryDocument(registryPath, {
+          version: PATCH_REGISTRY_VERSION,
+          patches: [...registry.patches, patchId]
+        });
+      }
 
-  const auditEntry: PatchAuditEntry = {
-    version: PATCH_AUDIT_VERSION,
-    timestamp: createdAt,
-    action: args.audit?.action ?? "record",
-    outcome: args.audit?.outcome ?? "recorded",
-    cwd: path.resolve(args.cwd ?? process.cwd()),
-    repoRoot,
-    targetHead: args.audit?.targetHead ?? sourceVersion,
-    trackedFiles,
-    conflicts: args.audit?.conflicts ?? [],
-    warnings: args.audit?.warnings ?? [],
-    dryRun: args.audit?.dryRun ?? false
-  };
+      const auditEntry: PatchAuditEntry = {
+        version: PATCH_AUDIT_VERSION,
+        timestamp: createdAt,
+        action: args.audit?.action ?? "record",
+        outcome: args.audit?.outcome ?? "recorded",
+        cwd: path.resolve(args.cwd ?? process.cwd()),
+        repoRoot,
+        targetHead: args.audit?.targetHead ?? sourceVersion,
+        trackedFiles,
+        conflicts: args.audit?.conflicts ?? [],
+        warnings: args.audit?.warnings ?? [],
+        dryRun: args.audit?.dryRun ?? false
+      };
 
-  await appendPatchAuditEntry(registryPath, patchId, auditEntry);
+      await appendPatchAuditEntry(registryPath, patchId, auditEntry);
 
-  return {
-    patchId,
-    registryPath,
-    manifestPath,
-    patchPath,
-    auditPath,
-    trackedFiles,
-    updated: existingManifest !== null
-  };
+      if (rollbackSnapshotBaseline) {
+        rollbackSnapshot = {
+          ...rollbackSnapshotBaseline,
+          expectedPostWriteFingerprint: await capturePatchRecordGenerationFingerprint({
+            registryPath,
+            patchId
+          })
+        };
+      }
+    } catch (error) {
+      await restoreFileSnapshots(snapshots);
+      throw error;
+    }
+
+    const result: PatchRecordResult = {
+      patchId,
+      registryPath,
+      manifestPath,
+      patchPath,
+      auditPath,
+      trackedFiles,
+      updated: existingManifest !== null
+    };
+
+    if (rollbackSnapshot) {
+      return {
+        ...result,
+        rollbackSnapshot
+      };
+    }
+
+    return result;
+  });
 }
 
 export async function blueprintPatchReapply(
@@ -3407,24 +4305,49 @@ export async function blueprintPatchReapply(
 ): Promise<PatchReapplyResult> {
   const repoRoot = await resolvePatchReplayTarget(args.cwd);
   const registryPath = expandHomePath(resolveBlueprintRuntimeHost().patchRegistryPath);
-  const registry = await readPatchRegistryDocument(registryPath);
   const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
-  const patchIds = await selectedPatchIdsForReplay(
-    registryPath,
-    registry,
-    repoRoot,
-    requestedPatchIds
-  );
+  const replaySnapshot = await withPatchRegistryLock(registryPath, async () => {
+    const registry = await readPatchRegistryDocument(registryPath);
+    const patchIds = await selectedPatchIdsForReplay(
+      registryPath,
+      registry,
+      repoRoot,
+      requestedPatchIds
+    );
+    const snapshots: PatchReplaySnapshot[] = [];
+
+    for (const patchId of patchIds) {
+      const manifest = await readPatchManifest(registryPath, patchId);
+      const compatibility = await buildPatchCompatibilityStatus(manifest, repoRoot);
+
+      if (compatibility.status === "mismatch") {
+        throw new Error(
+          `Patch compatibility mismatch for ${patchId}: ${compatibility.reasons.join(" ")}`
+        );
+      }
+
+      snapshots.push({
+        patchId,
+        manifest,
+        patch: await loadPatchContent(registryPath, patchId, manifest)
+      });
+    }
+
+    return snapshots;
+  });
+  const patchIds = replaySnapshot.map((snapshot) => snapshot.patchId);
   const dirtyTree = !(await gitWorkingTreeClean(repoRoot));
   const targetHead = await gitHeadSha(repoRoot);
+  const preview = args.dryRun ?? false;
 
   if (patchIds.length === 0) {
     return {
+      status: preview ? "preview" : "skipped",
       registryPath,
       appliedPatches: [],
       skippedPatches: [],
       conflicts: [],
-      preview: args.dryRun ?? false,
+      preview,
       targetHead
     };
   }
@@ -3434,93 +4357,129 @@ export async function blueprintPatchReapply(
   }
 
   const conflicts: PatchConflict[] = [];
-  const patchFiles: string[] = [];
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-patch-reapply-"));
 
-  for (const patchId of patchIds) {
-    const manifest = await readPatchManifest(registryPath, patchId);
-    const compatibility = await buildPatchCompatibilityStatus(manifest, repoRoot);
+  try {
+    const patchFiles = await Promise.all(
+      replaySnapshot.map(async (snapshot, index) => {
+        const patchFile = path.join(tempDir, `${index}-${snapshot.patchId}.patch`);
+        await fs.writeFile(patchFile, snapshot.patch, "utf8");
+        return patchFile;
+      })
+    );
+    const checkResult = await runGit(
+      ["-C", repoRoot, "apply", "--check", "--verbose", ...patchFiles],
+      { allowFailure: true }
+    );
 
-    if (compatibility.status === "mismatch") {
-      throw new Error(
-        `Patch compatibility mismatch for ${patchId}: ${compatibility.reasons.join(" ")}`
-      );
-    }
+    if (!checkResult.success) {
+      for (const [index, snapshot] of replaySnapshot.entries()) {
+        const patchCheck = await runGit(
+          ["-C", repoRoot, "apply", "--check", "--verbose", patchFiles[index] ?? ""],
+          { allowFailure: true }
+        );
 
-    await loadPatchContent(registryPath, patchId, manifest);
-    patchFiles.push(patchContentPath(registryPath, patchId));
-  }
-
-  const checkResult = await runGit(
-    ["-C", repoRoot, "apply", "--check", "--verbose", ...patchFiles],
-    { allowFailure: true }
-  );
-
-  if (!checkResult.success) {
-    for (const patchId of patchIds) {
-      const patchFile = patchContentPath(registryPath, patchId);
-      const patchCheck = await runGit(
-        ["-C", repoRoot, "apply", "--check", "--verbose", patchFile],
-        { allowFailure: true }
-      );
-
-      if (!patchCheck.success) {
-        conflicts.push({
-          patchId,
-          message: patchCheck.stderr || patchCheck.stdout || "Patch did not apply cleanly."
-        });
+        if (!patchCheck.success) {
+          conflicts.push({
+            patchId: snapshot.patchId,
+            message: patchCheck.stderr || patchCheck.stdout || "Patch did not apply cleanly."
+          });
+        }
       }
+
+      return {
+        status: "blocked",
+        registryPath,
+        appliedPatches: [],
+        skippedPatches: patchIds,
+        conflicts,
+        preview,
+        targetHead
+      };
+    }
+
+    if (preview) {
+      return {
+        status: "preview",
+        registryPath,
+        appliedPatches: [],
+        skippedPatches: [],
+        conflicts: [],
+        preview: true,
+        targetHead
+      };
+    }
+
+    const affectedFiles = replaySnapshot.flatMap((snapshot) => snapshot.manifest.trackedFiles);
+    const preApplySnapshots = await snapshotRepoFiles(repoRoot, affectedFiles);
+    const applyResult = await runGit(
+      ["-C", repoRoot, "apply", "--verbose", "--whitespace=nowarn", ...patchFiles],
+      { allowFailure: true }
+    );
+
+    if (!applyResult.success) {
+      const baseMessage = applyResult.stderr || applyResult.stdout || "Patch replay failed.";
+      const dirtyFilesBeforeRollback = await gitStatusShortPaths(repoRoot);
+      let rollback: PatchReapplyRollback | undefined;
+      let message = baseMessage;
+      let status: PatchReapplyStatus = "failed";
+
+      if (dirtyFilesBeforeRollback.length > 0) {
+        let restoredFiles: string[] = [];
+        let rollbackError: unknown;
+
+        try {
+          restoredFiles = await restoreRepoFileSnapshots(preApplySnapshots);
+        } catch (error) {
+          rollbackError = error;
+        }
+
+        const dirtyFiles = await gitStatusShortPaths(repoRoot);
+        const succeeded = !rollbackError && dirtyFiles.length === 0;
+        status = succeeded ? "failed" : "partial";
+        rollback = {
+          attempted: true,
+          succeeded,
+          restoredFiles,
+          dirtyFiles,
+          message: succeeded
+            ? "Patch replay changed the worktree before git apply failed; affected files were restored."
+            : `Patch replay changed the worktree before git apply failed, and rollback did not fully clean the tree.${rollbackError instanceof Error ? ` ${rollbackError.message}` : ""}`
+        };
+        message = succeeded
+          ? `${baseMessage} Worktree changes from the failed patch replay were rolled back.`
+          : `${baseMessage} Worktree may be partially mutated; inspect dirty files before retrying.`;
+      }
+
+      return {
+        status,
+        registryPath,
+        appliedPatches: [],
+        skippedPatches: patchIds,
+        conflicts: [
+          {
+            patchId: patchIds.join(","),
+            message
+          }
+        ],
+        preview: false,
+        targetHead,
+        ...(rollback ? { rollback } : {})
+      };
     }
 
     return {
+      status: "applied",
       registryPath,
-      appliedPatches: [],
-      skippedPatches: patchIds,
-      conflicts,
-      preview: args.dryRun ?? false,
-      targetHead
-    };
-  }
-
-  if (args.dryRun) {
-    return {
-      registryPath,
-      appliedPatches: [],
+      appliedPatches: patchIds,
       skippedPatches: [],
       conflicts: [],
-      preview: true,
-      targetHead
-    };
-  }
-
-  const applyResult = await runGit(
-    ["-C", repoRoot, "apply", "--verbose", "--whitespace=nowarn", ...patchFiles],
-    { allowFailure: true }
-  );
-
-  if (!applyResult.success) {
-    return {
-      registryPath,
-      appliedPatches: [],
-      skippedPatches: patchIds,
-      conflicts: [
-        {
-          patchId: patchIds.join(","),
-          message: applyResult.stderr || applyResult.stdout || "Patch replay failed."
-        }
-      ],
       preview: false,
       targetHead
     };
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
   }
-
-  return {
-    registryPath,
-    appliedPatches: patchIds,
-    skippedPatches: [],
-    conflicts: [],
-    preview: false,
-    targetHead
-  };
 }
 
 export const workspaceToolDefinitions = [

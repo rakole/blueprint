@@ -1,14 +1,19 @@
 import * as z from "zod/v4";
 import { type LightweightMode, type ScopeClassification } from "../lightweight-classifier.js";
+import { blueprintProjectStatus } from "./project.js";
 type LightweightPreflightArgs = {
     cwd?: string;
     mode: LightweightMode;
     taskText: string;
     flags?: string[];
 };
+type LightweightPreflightRoute = ScopeClassification["route"] | "map-codebase" | "progress";
+type LightweightPreflightClassification = Omit<ScopeClassification, "route"> & {
+    route: LightweightPreflightRoute;
+};
 type LightweightPreflightProjectStatus = {
     initialized: boolean;
-    health: "healthy" | "partial" | "uninitialized" | "unhealthy";
+    health: "healthy" | "unhealthy" | Exclude<Awaited<ReturnType<typeof blueprintProjectStatus>>["status"], "initialized">;
     currentPhase?: string | null;
     currentMilestone?: string | null;
     nextAction?: string | null;
@@ -24,7 +29,7 @@ type LightweightPreflightEffectiveConfig = {
 };
 type LightweightPreflightResult = {
     mode: LightweightMode;
-    classification: ScopeClassification;
+    classification: LightweightPreflightClassification;
     projectStatus: LightweightPreflightProjectStatus;
     effectiveConfig?: LightweightPreflightEffectiveConfig;
     implementedRoutes: string[];
@@ -35,7 +40,7 @@ type LightweightPreflightResult = {
         updatedAt?: string;
     };
     gates: {
-        healthGate: "pass" | "route-health" | "route-new-project";
+        healthGate: "pass" | "route-health" | "route-new-project" | "route-map-codebase" | "route-progress";
         overwriteGate?: "none" | "requires-confirmation" | "force-bypassed";
         clarityGate: "pass" | "requires-clarification";
     };

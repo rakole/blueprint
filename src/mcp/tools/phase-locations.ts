@@ -252,9 +252,27 @@ export function findPhaseSpecArtifact(
 ): string | null {
   const expectedPath = buildArtifactPath(phaseDir, phasePrefix, "-SPEC.md");
 
-  return (
-    artifacts.find((artifact) => artifact === expectedPath) ?? null
-  );
+  return artifacts.find((artifact) => artifact === expectedPath) ?? null;
+}
+
+export function findPhaseArtifact(
+  artifacts: string[],
+  located: PhasePathLocation,
+  artifact: PhaseArtifactKind
+): string | null {
+  const expectedPath = artifactPathFor(located, artifact);
+
+  return artifacts.find((candidate) => candidate === expectedPath) ?? null;
+}
+
+export function findPhaseValidationArtifact(
+  artifacts: string[],
+  located: PhasePathLocation,
+  artifact: PhaseValidationArtifactKind
+): string | null {
+  const expectedPath = validationArtifactPathFor(located, artifact);
+
+  return artifacts.find((candidate) => candidate === expectedPath) ?? null;
 }
 
 export function artifactPathFor(located: PhasePathLocation, artifact: PhaseArtifactKind): string {

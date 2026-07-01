@@ -104,6 +104,45 @@ test("phase context write accepts structured model and renders canonical context
   assert.match(savedContent, /\| Source \| Relevance \|/);
 });
 
+test("concurrent phase context creates require overwrite after the first canonical write wins", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const results = await Promise.allSettled([
+    blueprintPhaseArtifactWrite({
+      cwd: repoPath,
+      phase: "3",
+      artifact: "context",
+      model: validPhaseContextModel({ openQuestions: ["Which source writes first?"] })
+    }),
+    blueprintPhaseArtifactWrite({
+      cwd: repoPath,
+      phase: "3",
+      artifact: "context",
+      model: validPhaseContextModel({ openQuestions: ["Which source writes second?"] })
+    })
+  ]);
+  const fulfilled = results.filter(
+    (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof blueprintPhaseArtifactWrite>>> =>
+      result.status === "fulfilled"
+  );
+  const rejected = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected"
+  );
+  const savedContent = await readFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    "utf8"
+  );
+
+  assert.equal(fulfilled.length, 1, JSON.stringify(results, null, 2));
+  assert.equal(rejected.length, 1, JSON.stringify(results, null, 2));
+  assert.equal(fulfilled[0]?.value.status, "created");
+  assert.match(String(rejected[0]?.reason), /already exists.*explicit overwrite/i);
+  assert.match(savedContent, /Which source writes (first|second)\?/);
+});
+
 test("phase context write renders honest empty model arrays as none sentinels", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

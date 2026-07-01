@@ -920,7 +920,6 @@ test("workstreams is implemented once manifest, skill, and project-local workstr
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
-    "blueprint_state_update",
     "blueprint_workstream_list",
     "blueprint_workstream_mutate"
   ]);
@@ -1079,6 +1078,26 @@ test("remove-phase is implemented once manifest, skill, and roadmap removal MCP 
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
+});
+
+test("roadmap mutation runtime contracts preserve confirmation receipts", async () => {
+  const expectations = [
+    "add-phase",
+    "insert-phase",
+    "remove-phase",
+    "plan-milestone-gaps",
+    "explore"
+  ] as const;
+
+  for (const commandName of expectations) {
+    const contract = await buildBlueprintCommandRuntimeContractResource(commandName);
+
+    assert.match(
+      contract.runtimeReference?.contractNotes ?? "",
+      /confirmed: true/,
+      `${commandName} runtime contract should keep the roadmap confirmation receipt`
+    );
+  }
 });
 
 test("implemented commands expose their declared optional agent contracts when shipped", async () => {
@@ -2212,7 +2231,7 @@ test("ship is implemented once manifest, skill, and report-backed shipping MCP t
   assert.deepEqual(entry.blockedBy, []);
 });
 
-test("cleanup is implemented once manifest, skill, and archival report MCP tools exist", async () => {
+test("cleanup is implemented once manifest, skill, and archival mutation MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["cleanup"];
 
@@ -2225,8 +2244,8 @@ test("cleanup is implemented once manifest, skill, and archival report MCP tools
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_list",
-    "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
+    "blueprint_cleanup_archive",
     "blueprint_project_status",
     "blueprint_roadmap_read",
     "blueprint_state_update"

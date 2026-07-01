@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { type DirectoryLockRecoveryHooksForTest } from "../directory-lock.js";
 type ConfigScope = "project" | "defaults" | "effective";
 type ModelProfile = "quality" | "balanced" | "budget" | "inherit";
 type ProgressMode = "quiet" | "stage" | "checklist";
@@ -100,6 +101,7 @@ type ConfigSetArgs = {
     scope?: Exclude<ConfigScope, "effective">;
     cwd?: string;
     defaultsPath?: string;
+    repairMalformedProjectConfig?: boolean;
     patch?: Record<string, unknown>;
 };
 type ConfigSetProfileArgs = {
@@ -129,7 +131,7 @@ type ConfigSetResult = {
 };
 type ConfigSetProfileResult = {
     profile: ModelProfile;
-    updatedKeys: ["model_profile"];
+    updatedKeys: string[];
     configPath: string;
 };
 type SeedProjectConfigResult = {
@@ -138,6 +140,18 @@ type SeedProjectConfigResult = {
     provenance: ConfigProvenance;
     warnings: string[];
 };
+type ConfigDefaultsLockTimingForTest = {
+    retryMs?: number;
+    staleMs?: number;
+    heartbeatMs?: number;
+};
+type ConfigDefaultsLockCallbackObserverForTest = (event: "enter" | "exit", lockPath: string) => Promise<void> | void;
+export declare const configToolTestHooks: {
+    setConfigDefaultsLockTimingForTest(timing: ConfigDefaultsLockTimingForTest): () => void;
+    setConfigDefaultsLockRecoveryHooksForTest(hooks: DirectoryLockRecoveryHooksForTest): () => void;
+    setConfigDefaultsLockCallbackObserverForTest(observer: ConfigDefaultsLockCallbackObserverForTest): () => void;
+};
+export declare function preflightProjectConfigDefaultsPath(defaultsPath?: string): string;
 export declare function blueprintConfigGet(args?: ConfigGetArgs): Promise<ConfigGetResult>;
 export declare function blueprintConfigSet(args?: ConfigSetArgs): Promise<ConfigSetResult>;
 export declare function blueprintConfigSetProfile(args: ConfigSetProfileArgs): Promise<ConfigSetProfileResult>;
@@ -165,6 +179,7 @@ export declare const configToolDefinitions: ({
         }>>;
         cwd: z.ZodOptional<z.ZodString>;
         defaultsPath: z.ZodOptional<z.ZodString>;
+        repairMalformedProjectConfig: z.ZodOptional<z.ZodBoolean>;
         patch: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ConfigSetResult>;

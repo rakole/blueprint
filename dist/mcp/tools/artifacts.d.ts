@@ -633,6 +633,23 @@ type TextWriteOptions = {
     label?: string;
     enforcePromptBoundary?: boolean;
 };
+export type BlueprintArtifactsJsonFileSystemForTest = {
+    writeFile(filePath: string, contents: string, encoding: BufferEncoding): Promise<void>;
+    rename(oldPath: string, newPath: string): Promise<void>;
+    rm(filePath: string, options: {
+        force: true;
+    }): Promise<void>;
+};
+export type BlueprintRepoLockTimingForTest = {
+    retryMs?: number;
+    staleMs?: number;
+    heartbeatMs?: number;
+};
+export type BlueprintRepoLockRecoveryHooksForTest = {
+    beforeStaleRecoveryClaim?(lockPath: string): Promise<void> | void;
+    beforeStaleLockQuarantine?(lockPath: string): Promise<void> | void;
+    afterRecoveryGuardRelease?(lockPath: string): Promise<void> | void;
+};
 export type CaptureIndexRow = {
     id: string;
     added: string;
@@ -681,6 +698,12 @@ export declare function toRepoRelativePath(projectRoot: string, absolutePath: st
 export declare function resolveRepoRelativePath(projectRoot: string, relativePath: string): string;
 export declare function resolveBlueprintPath(projectRoot: string, relativePath: string): string;
 export declare function ensureParentDirectory(targetPath: string): Promise<void>;
+export declare function blueprintRepoLockNameSegment(value: string): string;
+export declare const blueprintArtifactsTestHooks: {
+    setJsonFileSystemForTest(fileSystem: BlueprintArtifactsJsonFileSystemForTest): () => void;
+    setRepoLockTimingForTest(timing: BlueprintRepoLockTimingForTest): () => void;
+    setRepoLockRecoveryHooksForTest(hooks: BlueprintRepoLockRecoveryHooksForTest): () => void;
+};
 export declare function readJsonIfPresent(filePath: string): Promise<Record<string, unknown> | null>;
 export declare function writeJsonFile(filePath: string, value: Record<string, unknown>): Promise<void>;
 export declare function writeTextFile(filePath: string, value: string, options?: TextWriteOptions): Promise<string[]>;

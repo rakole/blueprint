@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { promises as fs } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -1328,10 +1329,28 @@ async function createWorkstreamRepo(): Promise<string> {
 async function createStateLoadRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-state-load-public-");
 
-  await mkdir(path.join(repoPath, ".blueprint/phases"), { recursive: true });
+  await mkdir(path.join(repoPath, ".blueprint/phases/02-public-state-load"), { recursive: true });
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "# Roadmap\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] Phase 2: Public state load
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-public-state-load/02-CONTEXT.md"),
+    "# Phase 2 Context\n",
+    "utf8"
+  );
   await writeFile(
     path.join(repoPath, ".blueprint/config.json"),
     JSON.stringify({ version: 2 }, null, 2),
@@ -2538,6 +2557,7 @@ test("public patch list trims top-level registryPath and nested patch file paths
 
 test("public patch reapply responses trim registryPath at the MCP boundary", () => {
   const result = {
+    status: "applied",
     registryPath: "/tmp/global-home/patches",
     appliedPatches: ["readme-fix"],
     skippedPatches: [],
@@ -2552,12 +2572,69 @@ test("public patch reapply responses trim registryPath at the MCP boundary", () 
   assert.ok(!("registryPath" in parsed));
   assert.doesNotMatch(text, /"registryPath":/);
   assert.deepEqual(parsed, {
+    status: "applied",
     appliedPatches: ["readme-fix"],
     skippedPatches: [],
     conflicts: [],
     preview: false,
     targetHead: "abc123"
   });
+});
+
+test("patch reapply conflict summaries and public responses are not success-shaped", () => {
+  const result = {
+    status: "blocked",
+    registryPath: "/tmp/global-home/patches",
+    appliedPatches: [],
+    skippedPatches: ["conflict"],
+    conflicts: [{ patchId: "conflict", message: "patch does not apply" }],
+    preview: false,
+    targetHead: "abc123"
+  };
+  const summary = summarizeToolResult("blueprint_patch_reapply", result);
+  const text = createToolResponseContent("blueprint_patch_reapply", result)[0].text;
+  const parsed = JSON.parse(text);
+
+  assert.equal(
+    summary,
+    "Did not reapply recorded patches (status: blocked, 1 skipped patches, 1 conflicts)."
+  );
+  assert.doesNotMatch(summary, /^Completed patch reapply/);
+  assert.ok(!("registryPath" in parsed));
+  assert.equal(parsed.status, "blocked");
+  assert.deepEqual(parsed.skippedPatches, ["conflict"]);
+  assert.equal(parsed.conflicts.length, 1);
+});
+
+test("patch reapply rollback summaries and public responses are explicit", () => {
+  const result = {
+    status: "failed",
+    registryPath: "/tmp/global-home/patches",
+    appliedPatches: [],
+    skippedPatches: ["mutated"],
+    conflicts: [{ patchId: "mutated", message: "apply failed and rolled back" }],
+    preview: false,
+    targetHead: "abc123",
+    rollback: {
+      attempted: true,
+      succeeded: true,
+      restoredFiles: ["README.md"],
+      dirtyFiles: [],
+      message: "Affected files were restored."
+    }
+  };
+  const summary = summarizeToolResult("blueprint_patch_reapply", result);
+  const text = createToolResponseContent("blueprint_patch_reapply", result)[0].text;
+  const parsed = JSON.parse(text);
+
+  assert.equal(
+    summary,
+    "Patch replay failed after mutation and rolled back affected files (status: failed, 1 skipped patches, rollback succeeded, 1 conflicts)."
+  );
+  assert.ok(!("registryPath" in parsed));
+  assert.equal(parsed.status, "failed");
+  assert.equal(parsed.rollback.succeeded, true);
+  assert.deepEqual(parsed.rollback.dirtyFiles, []);
 });
 
 test("public state update responses trim top-level statePath and preserve non-empty warnings at the MCP boundary", () => {
@@ -2632,6 +2709,58 @@ test("public state sync responses omit empty top-level warnings at the MCP bound
   assert.deepEqual(parsed, {
     syncedFields: ["currentPhase", "nextAction"]
   });
+});
+
+test("state update and sync summaries preserve populated behavior and report empty field arrays as no-op", () => {
+  const populatedUpdateSummary = summarizeToolResult("blueprint_state_update", {
+    updated: true,
+    updatedFields: ["currentPhase", "nextAction", "lastUpdated"],
+    statePath: ".blueprint/STATE.md",
+    warnings: []
+  });
+  const emptyUpdateSummary = summarizeToolResult("blueprint_state_update", {
+    updatedFields: [],
+    statePath: ".blueprint/STATE.md",
+    warnings: []
+  });
+  const explicitNoopUpdateSummary = summarizeToolResult("blueprint_state_update", {
+    updated: false,
+    updatedFields: [],
+    statePath: ".blueprint/STATE.md",
+    warnings: []
+  });
+  const populatedSyncSummary = summarizeToolResult("blueprint_state_sync", {
+    synced: true,
+    syncedFields: ["currentPhase", "nextAction"],
+    statePath: ".blueprint/STATE.md",
+    warnings: []
+  });
+  const emptySyncSummary = summarizeToolResult("blueprint_state_sync", {
+    syncedFields: [],
+    statePath: ".blueprint/STATE.md",
+    warnings: []
+  });
+  const explicitNoopSyncSummary = summarizeToolResult("blueprint_state_sync", {
+    synced: false,
+    syncedFields: [],
+    statePath: ".blueprint/STATE.md",
+    warnings: []
+  });
+
+  assert.equal(
+    populatedUpdateSummary,
+    "Updated state update at `.blueprint/STATE.md` (3 updated fields)."
+  );
+  assert.equal(emptyUpdateSummary, "No state changes at `.blueprint/STATE.md`.");
+  assert.equal(explicitNoopUpdateSummary, "No state changes at `.blueprint/STATE.md`.");
+  assert.equal(
+    populatedSyncSummary,
+    "Completed state sync at `.blueprint/STATE.md` (2 synced fields)."
+  );
+  assert.equal(emptySyncSummary, "State already synchronized at `.blueprint/STATE.md`.");
+  assert.equal(explicitNoopSyncSummary, "State already synchronized at `.blueprint/STATE.md`.");
+  assert.doesNotMatch(emptyUpdateSummary, /^Updated state update/);
+  assert.doesNotMatch(emptySyncSummary, /^Completed state sync/);
 });
 
 test("public state load responses preserve derived metadata at the MCP boundary", () => {
@@ -2965,7 +3094,7 @@ test("invalid model validation summaries surface diagnostic messages", () => {
 
   assert.equal(
     summary,
-    "Completed phase plan validate model at `.blueprint/phases/03-validation-engine/03-01-PLAN.md` status: invalid. Diagnostics: Phase plan model evidenceCoverage must include exactly one row for known saved evidence artifact .blueprint/phases/03-validation-engine/03-CONTEXT.md."
+    "Invalid phase plan validate model at `.blueprint/phases/03-validation-engine/03-01-PLAN.md` status: invalid. Diagnostics: Phase plan model evidenceCoverage must include exactly one row for known saved evidence artifact .blueprint/phases/03-validation-engine/03-CONTEXT.md."
   );
 });
 
@@ -6150,6 +6279,7 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
     cwd: directAddRepoPath,
     description: "Offline mode",
     expectedPhaseNumber: "3",
+    confirmed: true,
     goal: "Add offline mode as traceable roadmap work.",
     requirementIds: ["RQ-03"],
     successCriteria: [
@@ -6161,6 +6291,7 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
     cwd: directInsertRepoPath,
     after: "2",
     description: "Research follow-up",
+    confirmed: true,
     goal: "Capture a focused research follow-up before release hardening.",
     requirementIds: ["RQ-04"],
     successCriteria: [
@@ -6188,6 +6319,7 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
         cwd: publicRepoPath,
         description: "Offline mode",
         expectedPhaseNumber: "3",
+        confirmed: true,
         goal: "Add offline mode as traceable roadmap work.",
         requirementIds: ["RQ-03"],
         successCriteria: [
@@ -6213,6 +6345,7 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
         cwd: publicRepoPath,
         after: "2",
         description: "Research follow-up",
+        confirmed: true,
         goal: "Capture a focused research follow-up before release hardening.",
         requirementIds: ["RQ-04"],
         successCriteria: [
@@ -6368,7 +6501,8 @@ test("public roadmap remove phase live MCP response omits empty top-level warnin
   const publicRepoPath = await createRoadmapRemovePhaseRepo();
   const directResult = await blueprintToolRegistry.blueprint_roadmap_remove_phase.handler({
     cwd: directRepoPath,
-    phase: "3"
+    phase: "3",
+    confirmed: true
   });
 
   assert.deepEqual(directResult.warnings, []);
@@ -6390,7 +6524,8 @@ test("public roadmap remove phase live MCP response omits empty top-level warnin
       name: "blueprint_roadmap_remove_phase",
       arguments: {
         cwd: publicRepoPath,
-        phase: "3"
+        phase: "3",
+        confirmed: true
       }
     });
 
@@ -6975,9 +7110,10 @@ test("public config get tool trims duplicate sourcePath only at the MCP boundary
   const directRepoPath = await createConfigSetRepo();
   const repoPath = await createConfigSetRepo();
   const nullRepoPath = await createUninitializedProjectStatusRepo();
-  const directDefaultsPath = path.join(path.dirname(directRepoPath), "blueprint-defaults.json");
-  const defaultsPath = path.join(path.dirname(repoPath), "blueprint-defaults.json");
-  const nullDefaultsPath = path.join(path.dirname(nullRepoPath), "blueprint-defaults.json");
+  const globalHome = path.dirname(repoPath);
+  const directDefaultsPath = path.join(globalHome, "blueprint-direct-defaults.json");
+  const defaultsPath = path.join(globalHome, "blueprint-defaults.json");
+  const nullDefaultsPath = path.join(globalHome, "blueprint-null-defaults.json");
 
   await writeFile(
     directDefaultsPath,
@@ -6995,20 +7131,32 @@ test("public config get tool trims duplicate sourcePath only at the MCP boundary
     "utf8"
   );
 
-  const directProjectResult = await blueprintToolRegistry.blueprint_config_get.handler({
-    cwd: directRepoPath,
-    scope: "project",
-    defaultsPath: directDefaultsPath
-  });
-  const directDefaultsResult = await blueprintToolRegistry.blueprint_config_get.handler({
-    cwd: directRepoPath,
-    scope: "defaults",
-    defaultsPath: directDefaultsPath
-  });
-  const directNullSourcePathResult = await blueprintToolRegistry.blueprint_config_get.handler({
-    cwd: nullRepoPath,
-    scope: "project",
-    defaultsPath: nullDefaultsPath
+  const {
+    directProjectResult,
+    directDefaultsResult,
+    directNullSourcePathResult
+  } = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: globalHome }, async () => {
+    const directProjectResult = await blueprintToolRegistry.blueprint_config_get.handler({
+      cwd: directRepoPath,
+      scope: "project",
+      defaultsPath: directDefaultsPath
+    });
+    const directDefaultsResult = await blueprintToolRegistry.blueprint_config_get.handler({
+      cwd: directRepoPath,
+      scope: "defaults",
+      defaultsPath: directDefaultsPath
+    });
+    const directNullSourcePathResult = await blueprintToolRegistry.blueprint_config_get.handler({
+      cwd: nullRepoPath,
+      scope: "project",
+      defaultsPath: nullDefaultsPath
+    });
+
+    return {
+      directProjectResult,
+      directDefaultsResult,
+      directNullSourcePathResult
+    };
   });
 
   assert.equal(directProjectResult.sourcePath, ".blueprint/config.json");
@@ -7025,29 +7173,41 @@ test("public config get tool trims duplicate sourcePath only at the MCP boundary
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
   try {
-    const projectResponse = await client.callTool({
-      name: "blueprint_config_get",
-      arguments: {
-        cwd: repoPath,
-        scope: "project",
-        defaultsPath
-      }
-    });
-    const defaultsResponse = await client.callTool({
-      name: "blueprint_config_get",
-      arguments: {
-        cwd: repoPath,
-        scope: "defaults",
-        defaultsPath
-      }
-    });
-    const nullSourcePathResponse = await client.callTool({
-      name: "blueprint_config_get",
-      arguments: {
-        cwd: nullRepoPath,
-        scope: "project",
-        defaultsPath: nullDefaultsPath
-      }
+    const {
+      projectResponse,
+      defaultsResponse,
+      nullSourcePathResponse
+    } = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: globalHome }, async () => {
+      const projectResponse = await client.callTool({
+        name: "blueprint_config_get",
+        arguments: {
+          cwd: repoPath,
+          scope: "project",
+          defaultsPath
+        }
+      });
+      const defaultsResponse = await client.callTool({
+        name: "blueprint_config_get",
+        arguments: {
+          cwd: repoPath,
+          scope: "defaults",
+          defaultsPath
+        }
+      });
+      const nullSourcePathResponse = await client.callTool({
+        name: "blueprint_config_get",
+        arguments: {
+          cwd: nullRepoPath,
+          scope: "project",
+          defaultsPath: nullDefaultsPath
+        }
+      });
+
+      return {
+        projectResponse,
+        defaultsResponse,
+        nullSourcePathResponse
+      };
     });
 
     assert.equal(projectResponse.content[0]?.type, "text");
@@ -7118,43 +7278,46 @@ test("public impact context load tool trims nested config provenance and sourceP
 
 test("public project init tool trims redundant success-path diagnostics on live MCP responses", async () => {
   const repoPath = await createProjectInitRepo();
-  const defaultsPath = path.join(path.dirname(repoPath), "blueprint-defaults.json");
-  const directResult = await blueprintProjectInit({
-    cwd: repoPath,
-    defaultsPath,
-    bootstrapMode: "interactive",
-    bootstrapSeed: {
-      vision:
-        "Create a focused fixture that validates public Blueprint project init MCP responses.",
-      currentMilestone: "v1",
-      constraints: ["Keep successful MCP bootstrap payloads concise and actionable."],
-      assumptions: ["The repo fixture starts without Blueprint artifacts."],
-      requirements: [
-        {
-          id: "BP-01",
-          scope: "committed",
-          group: "Bootstrap",
-          requirement:
-            "Expose successful project init MCP responses without redundant configuration provenance.",
-          status: "planned",
-          notes: "Trim only the shared public boundary response."
-        }
-      ],
-      roadmapPhases: [
-        {
-          phase: "1",
-          title: "Bootstrap Response Trim",
-          objective:
-            "Initialize the repo and preserve only actionable success-path bootstrap context.",
-          requirementIds: ["BP-01"],
-          successCriteria: [
-            "Blueprint bootstrap artifacts are written for the repo.",
-            "The public MCP response keeps next-step guidance while omitting redundant success metadata."
-          ]
-        }
-      ]
-    }
-  });
+  const globalHome = path.dirname(repoPath);
+  const defaultsPath = path.join(globalHome, "blueprint-defaults.json");
+  const directResult = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: globalHome }, () =>
+    blueprintProjectInit({
+      cwd: repoPath,
+      defaultsPath,
+      bootstrapMode: "interactive",
+      bootstrapSeed: {
+        vision:
+          "Create a focused fixture that validates public Blueprint project init MCP responses.",
+        currentMilestone: "v1",
+        constraints: ["Keep successful MCP bootstrap payloads concise and actionable."],
+        assumptions: ["The repo fixture starts without Blueprint artifacts."],
+        requirements: [
+          {
+            id: "BP-01",
+            scope: "committed",
+            group: "Bootstrap",
+            requirement:
+              "Expose successful project init MCP responses without redundant configuration provenance.",
+            status: "planned",
+            notes: "Trim only the shared public boundary response."
+          }
+        ],
+        roadmapPhases: [
+          {
+            phase: "1",
+            title: "Bootstrap Response Trim",
+            objective:
+              "Initialize the repo and preserve only actionable success-path bootstrap context.",
+            requirementIds: ["BP-01"],
+            successCriteria: [
+              "Blueprint bootstrap artifacts are written for the repo.",
+              "The public MCP response keeps next-step guidance while omitting redundant success metadata."
+            ]
+          }
+        ]
+      }
+    })
+  );
 
   assert.deepEqual(directResult.warnings, []);
 
@@ -7170,45 +7333,47 @@ test("public project init tool trims redundant success-path diagnostics on live 
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
   try {
-    const response = await client.callTool({
-      name: "blueprint_project_init",
-      arguments: {
-        cwd: repoPath,
-        defaultsPath,
-        bootstrapMode: "interactive",
-        bootstrapSeed: {
-          vision:
-            "Create a focused fixture that validates public Blueprint project init MCP responses.",
-          currentMilestone: "v1",
-          constraints: ["Keep successful MCP bootstrap payloads concise and actionable."],
-          assumptions: ["The repo fixture starts without Blueprint artifacts."],
-          requirements: [
-            {
-              id: "BP-01",
-              scope: "committed",
-              group: "Bootstrap",
-              requirement:
-                "Expose successful project init MCP responses without redundant configuration provenance.",
-              status: "planned",
-              notes: "Trim only the shared public boundary response."
-            }
-          ],
-          roadmapPhases: [
-            {
-              phase: "1",
-              title: "Bootstrap Response Trim",
-              objective:
-                "Initialize the repo and preserve only actionable success-path bootstrap context.",
-              requirementIds: ["BP-01"],
-              successCriteria: [
-                "Blueprint bootstrap artifacts are written for the repo.",
-                "The public MCP response keeps next-step guidance while omitting redundant success metadata."
-              ]
-            }
-          ]
+    const response = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: globalHome }, () =>
+      client.callTool({
+        name: "blueprint_project_init",
+        arguments: {
+          cwd: repoPath,
+          defaultsPath,
+          bootstrapMode: "interactive",
+          bootstrapSeed: {
+            vision:
+              "Create a focused fixture that validates public Blueprint project init MCP responses.",
+            currentMilestone: "v1",
+            constraints: ["Keep successful MCP bootstrap payloads concise and actionable."],
+            assumptions: ["The repo fixture starts without Blueprint artifacts."],
+            requirements: [
+              {
+                id: "BP-01",
+                scope: "committed",
+                group: "Bootstrap",
+                requirement:
+                  "Expose successful project init MCP responses without redundant configuration provenance.",
+                status: "planned",
+                notes: "Trim only the shared public boundary response."
+              }
+            ],
+            roadmapPhases: [
+              {
+                phase: "1",
+                title: "Bootstrap Response Trim",
+                objective:
+                  "Initialize the repo and preserve only actionable success-path bootstrap context.",
+                requirementIds: ["BP-01"],
+                successCriteria: [
+                  "Blueprint bootstrap artifacts are written for the repo.",
+                  "The public MCP response keeps next-step guidance while omitting redundant success metadata."
+                ]
+              }
+            ]
+          }
         }
-      }
-    });
+      })
+    );
 
     assert.equal(response.content[0]?.type, "text");
     assert.ok(response.structuredContent);
@@ -7254,6 +7419,7 @@ test("public state update tool trims top-level statePath and omits empty top-lev
   });
 
   assert.equal(directResult.statePath, ".blueprint/STATE.md");
+  assert.equal(directResult.updated, true);
   assert.ok(Array.isArray(directResult.updatedFields));
   assert.deepEqual(directResult.warnings, []);
 
@@ -7283,6 +7449,7 @@ test("public state update tool trims top-level statePath and omits empty top-lev
     assert.equal(response.content[0]?.text, JSON.stringify(response.structuredContent));
     assert.ok(!("statePath" in response.structuredContent));
     assert.ok(!("warnings" in response.structuredContent));
+    assert.equal(response.structuredContent.updated, true);
     assert.ok(Array.isArray(response.structuredContent.updatedFields));
     assert.ok(response.structuredContent.updatedFields.includes("currentPhase"));
     assert.ok(response.structuredContent.updatedFields.includes("lastUpdated"));
@@ -7309,6 +7476,7 @@ test("public state sync tool trims top-level statePath and preserves non-empty t
   const directResult = await blueprintStateSync({ cwd: repoPath });
 
   assert.equal(directResult.statePath, ".blueprint/STATE.md");
+  assert.equal(directResult.synced, true);
   assert.ok(Array.isArray(directResult.syncedFields));
   assert.deepEqual(directResult.warnings, [
     "STATE.md is ahead of ROADMAP.md: current phase 2 will be used instead of the stale roadmap phase 1.",
@@ -7348,6 +7516,7 @@ test("public state sync tool trims top-level statePath and preserves non-empty t
     assert.equal(response.content[0]?.text, JSON.stringify(response.structuredContent));
     assert.ok(!("statePath" in response.structuredContent));
     assert.deepEqual(response.structuredContent.warnings, directResult.warnings);
+    assert.equal(response.structuredContent.synced, true);
     assert.ok(Array.isArray(response.structuredContent.syncedFields));
     assert.ok(response.structuredContent.syncedFields.includes("nextAction"));
     assert.ok(response.structuredContent.syncedFields.includes("lastUpdated"));
@@ -9038,12 +9207,31 @@ test("update summaries stay concise for advisory check and checklist persistence
   });
   const planSummary = summarizeToolResult("blueprint_update_plan", {
     mode: "manual",
+    path: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
+    intendedPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
     metadataPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
     checklistPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.md",
     status: "created",
+    persistenceStatus: "saved",
     steps: Array.from({ length: 7 }, () => "step"),
     notes: ["note 1", "note 2"],
     warnings: ["Latest version lookup unavailable."],
+    requiresRestart: true
+  });
+  const notSavedPlanSummary = summarizeToolResult("blueprint_update_plan", {
+    mode: "manual",
+    path: null,
+    intendedPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
+    savedPaths: {
+      updatesDir: "/Users/example/.gemini/blueprint/updates",
+      metadataPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
+      checklistPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.md"
+    },
+    status: "created",
+    persistenceStatus: "not_saved",
+    steps: Array.from({ length: 7 }, () => "step"),
+    notes: ["note 1"],
+    warnings: ["Unable to persist Blueprint update artifacts."],
     requiresRestart: true
   });
 
@@ -9052,6 +9240,221 @@ test("update summaries stay concise for advisory check and checklist persistence
     planSummary,
     "Prepared Blueprint update plan at `/Users/example/.gemini/blueprint/updates/update-plan-latest.json` status: created (7 steps, 2 notes)."
   );
+  assert.equal(
+    notSavedPlanSummary,
+    "Did not save Blueprint update plan; intended path `/Users/example/.gemini/blueprint/updates/update-plan-latest.json` (7 steps, 1 notes, 1 warnings)."
+  );
+  assert.doesNotMatch(notSavedPlanSummary, /Prepared Blueprint update plan/);
+  assert.doesNotMatch(notSavedPlanSummary, /status: created/);
+});
+
+test("cleanup archive summaries surface missing cleanup-latest reports", () => {
+  const summary = summarizeToolResult("blueprint_cleanup_archive", {
+    status: "archived",
+    mode: "commit",
+    reportPath: ".blueprint/reports/cleanup-latest.md",
+    reportWritten: false,
+    archivedPhaseDirs: [
+      ".blueprint/phases/01-prior-milestone-alpha",
+      ".blueprint/phases/02-prior-milestone-beta"
+    ],
+    failedPhaseDirs: [],
+    skippedPhaseDirs: [],
+    keptPhaseDirs: [".blueprint/phases/05-current-maintenance"],
+    issues: [
+      "Cleanup archive archived, but .blueprint/reports/cleanup-latest.md could not be written: simulated failure"
+    ],
+    reason:
+      "Cleanup archive archived, but .blueprint/reports/cleanup-latest.md could not be written: simulated failure"
+  });
+
+  assert.equal(
+    summary,
+    "Cleanup archive report was not written at `.blueprint/reports/cleanup-latest.md` (status: archived, 2 archived phase directories, 1 kept phase directories, 1 issues). Reason: Cleanup archive archived, but .blueprint/reports/cleanup-latest.md could not be written: simulated failure."
+  );
+  assert.doesNotMatch(summary, /^Completed cleanup archive/);
+});
+
+test("cleanup dirty-tree blocked summaries are not success-shaped", () => {
+  const summary = summarizeToolResult("blueprint_cleanup_archive", {
+    status: "blocked",
+    mode: "commit",
+    reportPath: ".blueprint/reports/cleanup-latest.md",
+    waitingState: "dirty-working-tree",
+    reportWritten: false,
+    issues: [
+      "Cleanup archive commit requires a clean working tree before report persistence or archive mutation.",
+      "M src/file.ts"
+    ],
+    diagnostics: [
+      "Cleanup archive commit requires a clean working tree before report persistence or archive mutation.",
+      "M src/file.ts"
+    ],
+    reason: "Cleanup archive commit requires a clean working tree before report persistence or archive mutation."
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Blocked cleanup archive/);
+  assert.match(summary, /status: blocked/);
+  assert.match(summary, /waitingState: dirty-working-tree/);
+  assert.match(summary, /reason: Cleanup archive commit requires a clean working tree/);
+  assert.match(summary, /2 issues/);
+  assert.match(summary, /Diagnostics: .*M src\/file\.ts/);
+});
+
+test("workstream blocked summaries are not success-shaped", () => {
+  const summary = summarizeToolResult("blueprint_workstream_mutate", {
+    status: "blocked",
+    operation: "complete",
+    waitingState: "dirty-working-tree",
+    reason: "Workstream transition requires a clean working tree.",
+    issues: ["M src/workstream.ts"],
+    diagnostics: [
+      {
+        severity: "error",
+        message: "Workstream transition requires a clean working tree."
+      }
+    ]
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Blocked workstream state/);
+  assert.match(summary, /status: blocked/);
+  assert.match(summary, /waitingState: dirty-working-tree/);
+  assert.match(summary, /reason: Workstream transition requires a clean working tree/);
+  assert.match(summary, /1 issues/);
+  assert.match(summary, /Diagnostics: .*Workstream transition requires a clean working tree/);
+});
+
+test("god review stale summaries are not success-shaped", () => {
+  const summary = summarizeToolResult("blueprint_god_review_record_fix", {
+    status: "stale",
+    written: false,
+    reason: "Frozen scope changed since god-review started.",
+    issues: ["Re-run god-review before recording hidden fix edits."],
+    diagnostics: [
+      {
+        severity: "error",
+        message: "Frozen scope changed since god-review started."
+      }
+    ]
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Did not complete god review record fix/);
+  assert.match(summary, /status: stale/);
+  assert.match(summary, /reason: Frozen scope changed since god-review started/);
+  assert.match(summary, /1 issues/);
+  assert.match(summary, /Diagnostics: .*Re-run god-review/);
+});
+
+test("god review refused summaries are not success-shaped", () => {
+  const summary = summarizeToolResult("blueprint_god_review_start", {
+    status: "refused",
+    written: false,
+    reason: "Hidden god-review mutator refused activation outside its owning workflow.",
+    issues: ["Activation was denied before any side effects."],
+    diagnostics: [
+      "Hidden god-review mutator refused activation outside its owning workflow."
+    ]
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Refused god review start/);
+  assert.match(summary, /status: refused/);
+  assert.match(summary, /reason: Hidden god-review mutator refused activation/);
+  assert.match(summary, /1 issues/);
+  assert.match(summary, /Diagnostics: .*Activation was denied/);
+});
+
+test("cleanup invalid summaries are not success-shaped", () => {
+  const summary = summarizeToolResult("blueprint_cleanup_archive", {
+    status: "invalid",
+    mode: "preview",
+    operation: "move",
+    reason: "Invalid blueprint_cleanup_archive arguments.",
+    issues: ["Invalid enum value."],
+    diagnostics: ["Invalid enum value."]
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Invalid cleanup archive/);
+  assert.match(summary, /status: invalid/);
+  assert.match(summary, /reason: Invalid blueprint_cleanup_archive arguments/);
+  assert.match(summary, /1 issues/);
+  assert.match(summary, /Diagnostics: .*Invalid enum value/);
+});
+
+test("cleanup project_missing summaries are not success-shaped", () => {
+  const summary = summarizeToolResult("blueprint_cleanup_archive", {
+    status: "project_missing",
+    mode: "commit",
+    operation: "move",
+    waitingState: "missing-project-state",
+    reason: "Cleanup archive requires an initialized project.",
+    issues: ["Cleanup archive requires an initialized project."],
+    diagnostics: ["Blueprint project state is missing."]
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Project missing cleanup archive/);
+  assert.match(summary, /status: project_missing/);
+  assert.match(summary, /waitingState: missing-project-state/);
+  assert.match(summary, /reason: Cleanup archive requires an initialized project/);
+  assert.match(summary, /1 issues/);
+  assert.match(summary, /Diagnostics: .*Blueprint project state is missing/);
+});
+
+test("roadmap promote backlog invalid summaries are not success-shaped", () => {
+  const summary = summarizeToolResult("blueprint_roadmap_promote_backlog", {
+    status: "invalid",
+    roadmapPath: ".blueprint/ROADMAP.md",
+    selectedBacklogIds: ["BACKLOG-404"],
+    promotedItems: [],
+    warnings: ["Backlog item BACKLOG-404 was not found."]
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Invalid roadmap promote backlog/);
+  assert.match(summary, /at `.blueprint\/ROADMAP.md`/);
+  assert.match(summary, /status: invalid/);
+  assert.match(summary, /1 selected backlog items/);
+  assert.match(summary, /1 warnings/);
+});
+
+test("god review invalid mutator summaries are not success-shaped when no write occurred", () => {
+  const summary = summarizeToolResult("blueprint_god_review_cleanup", {
+    status: "invalid",
+    written: false,
+    reason: "Invalid blueprint_god_review_cleanup arguments.",
+    issues: ["runId is required."],
+    diagnostics: ["runId is required."]
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Invalid god review cleanup/);
+  assert.match(summary, /status: invalid/);
+  assert.match(summary, /reason: Invalid blueprint_god_review_cleanup arguments/);
+  assert.match(summary, /1 issues/);
+  assert.match(summary, /Diagnostics: .*runId is required/);
+});
+
+test("not_found public summaries are not success-shaped", () => {
+  const summary = summarizeToolResult("blueprint_god_review_load_findings", {
+    status: "not_found",
+    activated: true,
+    reportPath: ".blueprint/reports/god-review-latest.md",
+    reason: ".blueprint/reports/god-review-latest.md does not exist.",
+    findings: [],
+    remediations: [],
+    warnings: []
+  });
+
+  assert.doesNotMatch(summary, /^Completed/);
+  assert.match(summary, /^Not found god review load findings/);
+  assert.match(summary, /at `.blueprint\/reports\/god-review-latest.md`/);
+  assert.match(summary, /status: not_found/);
+  assert.match(summary, /reason: .blueprint\/reports\/god-review-latest.md does not exist/);
 });
 
 test("public update plan response omits extension manifest path and trims only redundant update-plan paths", () => {
@@ -9198,6 +9601,70 @@ test("public update plan response omits top-level warnings only when empty while
   assert.deepEqual(nonEmptyPublicResult.notes, nonEmptyWarnings.notes);
   assert.equal(nonEmptyPublicResult.extensionPath, nonEmptyWarnings.extensionPath);
   assert.equal(nonEmptyPublicResult.updateAvailable, nonEmptyWarnings.updateAvailable);
+});
+
+test("public update plan response preserves failed persistence truth fields", () => {
+  const failedPersistenceResult = {
+    mode: "manual",
+    path: null,
+    intendedPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
+    extensionPath: "/Users/example/.gemini/extensions/blueprint",
+    extensionManifestPath: "/Users/example/.gemini/extensions/blueprint/gemini-extension.json",
+    installedVersion: "0.1.0",
+    installProvenance: {
+      kind: "extension-path-only",
+      source: "/Users/example/.gemini/extensions/blueprint",
+      branch: null,
+      head: null
+    },
+    latestVersionLookupStatus: "manual_only",
+    latestVersion: null,
+    latestVersionSource: null,
+    updateAvailable: null,
+    savedPaths: {
+      updatesDir: "/Users/example/.gemini/blueprint/updates",
+      metadataPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
+      checklistPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.md"
+    },
+    status: "created",
+    persistenceStatus: "not_saved",
+    steps: [{ stage: "Persist", title: "Persist advisory metadata", detail: "detail" }],
+    notes: ["Manual fallback remains available."],
+    warnings: [
+      "Unable to persist Blueprint update artifacts under /Users/example/.gemini/blueprint/updates: simulated failure. Returning manual steps without saved files."
+    ],
+    requiresRestart: true
+  };
+
+  const publicResult = sanitizeToolResultForPublicResponse(
+    "blueprint_update_plan",
+    failedPersistenceResult
+  ) as Record<string, any>;
+  const text = createToolResponseContent("blueprint_update_plan", failedPersistenceResult)[0].text;
+  const parsedText = JSON.parse(text);
+
+  assert.deepEqual(parsedText, publicResult);
+  assert.equal(publicResult.persistenceStatus, "not_saved");
+  assert.equal(publicResult.path, null);
+  assert.ok("path" in publicResult);
+  assert.equal(
+    publicResult.intendedPath,
+    failedPersistenceResult.savedPaths.metadataPath
+  );
+  assert.equal(
+    publicResult.savedPaths?.metadataPath,
+    failedPersistenceResult.savedPaths.metadataPath
+  );
+  assert.equal(
+    publicResult.savedPaths?.checklistPath,
+    failedPersistenceResult.savedPaths.checklistPath
+  );
+  assert.ok(!("updatesDir" in (publicResult.savedPaths ?? {})));
+  assert.deepEqual(publicResult.warnings, failedPersistenceResult.warnings);
+  assert.match(text, /"persistenceStatus":"not_saved"/);
+  assert.match(text, /"path":null/);
+  assert.match(text, /"intendedPath":"\/Users\/example\/\.gemini\/blueprint\/updates\/update-plan-latest\.json"/);
+  assert.match(text, /"warnings":\[/);
 });
 
 test("public update check response trims top-level extension manifest path and only removes redundant provenance source", () => {
@@ -9844,6 +10311,7 @@ test("public patch reapply live MCP response trims registryPath", async () => {
         assert.equal(response.content[0]?.text, JSON.stringify(response.structuredContent));
         assert.ok(!("registryPath" in response.structuredContent));
         assert.doesNotMatch(response.content[0]?.text ?? "", /"registryPath":/);
+        assert.equal(response.structuredContent.status, "applied");
         assert.deepEqual(response.structuredContent.appliedPatches, ["readme-fix"]);
         assert.deepEqual(response.structuredContent.conflicts, []);
         assert.equal(response.structuredContent.preview, false);
@@ -9922,6 +10390,85 @@ test("public update plan live MCP response preserves non-empty warnings while om
         assert.doesNotMatch(response.content[0]?.text ?? "", /"source":/);
         assert.doesNotMatch(response.content[0]?.text ?? "", /updatesDir/);
         assert.match(response.content[0]?.text ?? "", /"warnings":\[/);
+      }
+    );
+  } finally {
+    await Promise.all([client.close(), server.close()]);
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("public update plan live MCP response preserves failed persistence fields and warnings", async (t) => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-update-plan-public-failure-"));
+  const globalHome = path.join(tempRoot, "global-home");
+  const extensionPath = await createInstalledExtensionFixture(tempRoot, "tabnine");
+  const metadataPath = path.join(globalHome, "updates", "update-plan-latest.json");
+  const checklistPath = path.join(globalHome, "updates", "update-plan-latest.md");
+  const server = createBlueprintServer();
+  const client = new Client(
+    { name: "blueprint-update-plan-public-failure-test-client", version: "1.0.0" },
+    { capabilities: {} }
+  );
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const realWriteFile = fs.writeFile.bind(fs);
+  let simulatedFailureTriggered = false;
+
+  t.mock.method(fs, "writeFile", async (filePath, data, options) => {
+    const normalizedPath =
+      typeof filePath === "string" ? filePath : path.resolve(String(filePath));
+
+    if (normalizedPath.includes("update-plan-latest.md.tmp-")) {
+      simulatedFailureTriggered = true;
+      throw new Error("simulated checklist write failure");
+    }
+
+    return realWriteFile(
+      filePath as Parameters<typeof fs.writeFile>[0],
+      data as Parameters<typeof fs.writeFile>[1],
+      options as Parameters<typeof fs.writeFile>[2]
+    );
+  });
+
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+  try {
+    await withEnvOverrides(
+      {
+        BLUEPRINT_HOST: "tabnine",
+        BLUEPRINT_GLOBAL_HOME: globalHome,
+        BLUEPRINT_EXTENSION_PATH: extensionPath
+      },
+      async () => {
+        const response = await client.callTool({
+          name: "blueprint_update_plan",
+          arguments: {
+            mode: "manual"
+          }
+        });
+
+        assert.equal(simulatedFailureTriggered, true);
+        assert.equal(response.content[0]?.type, "text");
+        assert.ok(response.structuredContent);
+        assert.equal(response.content[0]?.text, JSON.stringify(response.structuredContent));
+        assert.equal(response.structuredContent.status, "created");
+        assert.equal(response.structuredContent.persistenceStatus, "not_saved");
+        assert.equal(response.structuredContent.path, null);
+        assert.ok("path" in response.structuredContent);
+        assert.equal(response.structuredContent.intendedPath, metadataPath);
+        assert.equal(response.structuredContent.savedPaths?.metadataPath, metadataPath);
+        assert.equal(response.structuredContent.savedPaths?.checklistPath, checklistPath);
+        assert.ok(!("updatesDir" in (response.structuredContent.savedPaths ?? {})));
+        assert.ok(Array.isArray(response.structuredContent.warnings));
+        assert.ok((response.structuredContent.warnings?.length ?? 0) > 0);
+        assert.match(
+          response.structuredContent.warnings?.join("\n") ?? "",
+          /Unable to persist Blueprint update artifacts/i
+        );
+        assert.match(response.content[0]?.text ?? "", /"persistenceStatus":"not_saved"/);
+        assert.match(response.content[0]?.text ?? "", /"path":null/);
+        assert.match(response.content[0]?.text ?? "", /"warnings":\[/);
+        await assert.rejects(fs.access(metadataPath));
+        await assert.rejects(fs.access(checklistPath));
       }
     );
   } finally {

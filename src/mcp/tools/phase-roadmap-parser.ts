@@ -98,7 +98,7 @@ function parseRoadmapPhaseLine(line: string): {
   requirements: string[];
 } | null {
   const match = line.match(
-    /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
+    /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)*):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
   );
 
   if (!match) {
@@ -270,7 +270,7 @@ export function parseRoadmapDocument(raw: string): {
     const newlineIndex = block.indexOf("\n");
     const header = newlineIndex === -1 ? block.trim() : block.slice(0, newlineIndex).trim();
     const body = newlineIndex === -1 ? "" : block.slice(newlineIndex + 1);
-    const headerMatch = header.match(/^(\d+(?:\.\d+)?): (.+)$/);
+    const headerMatch = header.match(/^(\d+(?:\.\d+)*): (.+)$/);
 
     if (!headerMatch) {
       continue;

@@ -17,6 +17,7 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
+  blueprintCodebaseArtifactWrite,
   blueprintArtifactScaffold,
   resolveBlueprintPath,
   type BootstrapSeed
@@ -114,6 +115,35 @@ function buildBootstrapSeed(): BootstrapSeed {
     ],
     assumptions: ["Fixture bootstrap exists only to exercise config and state tools."]
   };
+}
+
+async function writeMappedCodebaseBundle(repoPath: string): Promise<void> {
+  type CodebaseArtifactId = Parameters<typeof blueprintCodebaseArtifactWrite>[0]["artifactId"];
+  const authoredBundle: Record<CodebaseArtifactId, string> = {
+    "codebase.stack": "# Stack\n\nTypeScript runtime with MCP-facing tooling.\n",
+    "codebase.architecture":
+      "# Architecture\n\nMCP tools and command manifests anchor the runtime layout.\n",
+    "codebase.structure":
+      "# Structure\n\nBlueprint runtime code lives in src/, with tests under tests/.\n",
+    "codebase.conventions":
+      "# Conventions\n\nBlueprint keeps runtime tool names explicit and persistence inside MCP.\n",
+    "codebase.testing":
+      "# Testing\n\nThe repo uses node:test via tsx and fixture-backed integration coverage.\n",
+    "codebase.integrations":
+      "# Integrations\n\nThe runtime integrates through @modelcontextprotocol/sdk and related command surfaces.\n",
+    "codebase.concerns":
+      "# Concerns\n\nPlaceholder codebase docs should not be treated as authoritative mapped context.\n"
+  };
+
+  for (const [artifactId, content] of Object.entries(authoredBundle) as Array<[CodebaseArtifactId, string]>) {
+    const result = await blueprintCodebaseArtifactWrite({
+      cwd: repoPath,
+      artifactId,
+      content
+    });
+
+    assert.notEqual(result.status, "invalid", JSON.stringify(result));
+  }
 }
 
 function countStateFrontmatterDelimiters(content: string): number {
@@ -231,6 +261,76 @@ test("state_update patches STATE.md deterministically and reports updated fields
   assert.match(stateDocument, /- Need roadmap review/);
 });
 
+test("state_update rejects phase-mismatched and unknown nextAction commands without writing", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  const beforeStateDocument = await readFile(statePath, "utf8");
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      patch: {
+        currentPhase: "1",
+        nextAction: "Run /blu-validate-phase 999"
+      }
+    }),
+    /current phase 1.*\/blu-validate-phase 999/
+  );
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      patch: {
+        currentPhase: "2"
+      }
+    }),
+    /current phase 2.*\/blu-discuss-phase 1/
+  );
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      patch: {
+        currentPhase: "1",
+        nextAction: "Run /blu-teleport-phase 1"
+      }
+    }),
+    /not an implemented Blueprint command/
+  );
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      patch: {
+        currentPhase: "1",
+        nextAction: "Run /blu-progress, then /blu-do"
+      }
+    }),
+    /next action references \/blu-do.*not an implemented Blueprint command/
+  );
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      patch: {
+        activeCommand: "/blu-do"
+      }
+    }),
+    /active command references \/blu-do.*not an implemented Blueprint command/
+  );
+
+  assert.equal(await readFile(statePath, "utf8"), beforeStateDocument);
+});
+
 test("state_sync writes STATE.md frontmatter from roadmap phase progress", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {
@@ -259,6 +359,132 @@ test("state_sync writes STATE.md frontmatter from roadmap phase progress", async
   assert.equal(countStateFrontmatterDelimiters(stateDocument), 2);
 });
 
+test("state_sync rejects uninitialized repos without creating Blueprint runtime state", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    blueprintStateSync({ cwd: repoPath }),
+    /Cannot sync Blueprint state before \.blueprint\/ exists/
+  );
+
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/locks")), false);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/STATE.md")), false);
+});
+
+test("state_update rejects bootstrap-ineligible repos without creating locks or STATE.md", async (t) => {
+  const uninitializedRepo = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(uninitializedRepo), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: uninitializedRepo,
+      patch: {
+        nextAction: "Run /blu-health"
+      }
+    }),
+    /Cannot update Blueprint state before core \.blueprint\/ project artifacts exist.*\/blu-new-project/
+  );
+  assert.equal(await pathExists(path.join(uninitializedRepo, ".blueprint")), false);
+  assert.equal(await pathExists(path.join(uninitializedRepo, ".blueprint/locks")), false);
+  assert.equal(await pathExists(path.join(uninitializedRepo, ".blueprint/STATE.md")), false);
+
+  const mappingIncompleteRepo = await createGitRepo("blueprint-state-update-mapping-");
+  t.after(async () => {
+    await rm(path.dirname(mappingIncompleteRepo), { recursive: true, force: true });
+  });
+  await mkdir(path.join(mappingIncompleteRepo, "src"), { recursive: true });
+  await writeFile(
+    path.join(mappingIncompleteRepo, "package.json"),
+    JSON.stringify({ name: "state-update-mapping", private: true }, null, 2),
+    "utf8"
+  );
+  await mkdir(path.join(mappingIncompleteRepo, ".blueprint/codebase"), { recursive: true });
+  await writeFile(
+    path.join(mappingIncompleteRepo, ".blueprint/codebase/STACK.md"),
+    "# Stack\n\nPartial codebase map.\n",
+    "utf8"
+  );
+  assert.equal(
+    (await blueprintProjectStatus({ cwd: mappingIncompleteRepo })).status,
+    "mapping-incomplete"
+  );
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: mappingIncompleteRepo,
+      patch: {
+        nextAction: "Run /blu-health"
+      }
+    }),
+    /Cannot update Blueprint state before core \.blueprint\/ project artifacts exist.*\/blu-map-codebase/
+  );
+  assert.equal(await pathExists(path.join(mappingIncompleteRepo, ".blueprint/locks")), false);
+  assert.equal(await pathExists(path.join(mappingIncompleteRepo, ".blueprint/STATE.md")), false);
+
+  const mappedOnlyRepo = await createGitRepo("blueprint-state-update-mapped-");
+  t.after(async () => {
+    await rm(path.dirname(mappedOnlyRepo), { recursive: true, force: true });
+  });
+  await mkdir(path.join(mappedOnlyRepo, "src"), { recursive: true });
+  await writeFile(
+    path.join(mappedOnlyRepo, "package.json"),
+    JSON.stringify({ name: "state-update-mapped", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(mappedOnlyRepo, "src/index.ts"), "export const value = 1;\n", "utf8");
+  await writeMappedCodebaseBundle(mappedOnlyRepo);
+  assert.equal((await blueprintProjectStatus({ cwd: mappedOnlyRepo })).status, "mapped-only");
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: mappedOnlyRepo,
+      patch: {
+        nextAction: "Run /blu-health"
+      }
+    }),
+    /Cannot update Blueprint state before core \.blueprint\/ project artifacts exist.*\/blu-new-project/
+  );
+  assert.equal(await pathExists(path.join(mappedOnlyRepo, ".blueprint/locks")), false);
+  assert.equal(await pathExists(path.join(mappedOnlyRepo, ".blueprint/STATE.md")), false);
+});
+
+test("state_sync returns persistence warnings from the atomic write layer", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
+
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  const stateDocument = await readFile(statePath, "utf8");
+
+  await writeFile(
+    statePath,
+    `${stateDocument.trimEnd()}\n\n## Roadmap Evolution Notes\n\n- Keep this note but remove the warning-only control character:\u0007\n`,
+    "utf8"
+  );
+
+  const result = await blueprintStateSync({ cwd: repoPath });
+  const syncedStateDocument = await readFile(statePath, "utf8");
+
+  assert.match(
+    result.warnings.join("\n"),
+    /Removed 1 invisible or control character\(s\) before persistence/
+  );
+  assert.doesNotMatch(syncedStateDocument, /\u0007/);
+});
+
 test("state_update normalizes directory-shaped currentPhase patches", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {
@@ -270,10 +496,19 @@ test("state_update normalizes directory-shaped currentPhase patches", async (t) 
     bootstrapMode: "auto",
     bootstrapSeed: buildBootstrapSeed()
   });
+  await mkdir(path.join(repoPath, ".blueprint/phases/02-lets-do-some-work"), {
+    recursive: true
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-lets-do-some-work/02-CONTEXT.md"),
+    "# Phase 2 Context\n",
+    "utf8"
+  );
   const result = await blueprintStateUpdate({
     cwd: repoPath,
     patch: {
-      currentPhase: "02-lets-do-some-work"
+      currentPhase: "02-lets-do-some-work",
+      nextAction: "Run /blu-discuss-phase 2"
     }
   });
   const stateDocument = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
@@ -281,8 +516,10 @@ test("state_update normalizes directory-shaped currentPhase patches", async (t) 
 
   assert.equal(result.statePath, ".blueprint/STATE.md");
   assert.ok(result.updatedFields.includes("currentPhase"));
+  assert.ok(result.updatedFields.includes("nextAction"));
   assert.equal(loaded.currentPhase, "2");
   assert.match(stateDocument, /- Current phase: 2/);
+  assert.match(stateDocument, /- Next action: Run \/blu-discuss-phase 2/);
 });
 
 test("state_update preserves roadmap evolution notes for urgent decimal insertions", async (t) => {

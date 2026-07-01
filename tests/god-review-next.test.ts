@@ -1,7 +1,7 @@
 import test from "node:test";
 import type { TestContext } from "node:test";
 import assert from "node:assert/strict";
-import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -134,6 +134,20 @@ async function readRelative(repoPath: string, relativePath: string): Promise<str
   return readFile(path.join(repoPath, relativePath), "utf8");
 }
 
+async function replacePhaseRoadmapGoal(repoPath: string): Promise<void> {
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const roadmap = await readFile(roadmapPath, "utf8");
+
+  await writeFile(
+    roadmapPath,
+    roadmap.replace(
+      "**Goal**: Review changed files in god mode.",
+      "**Goal**: Replacement topology identity for the same phase slot."
+    ),
+    "utf8"
+  );
+}
+
 async function writeFakeGh(t: TestContext): Promise<void> {
   const binDir = await mkdtemp(path.join(os.tmpdir(), "blueprint-gh-next-"));
   const ghPath = path.join(binDir, "gh");
@@ -215,6 +229,16 @@ test("blueprint_god_review_next returns the frozen pending group without redisco
   assert.equal(await readRelative(repoPath, start.reportPath!), reportBefore);
 });
 
+test("blueprint_god_review_next rejects fix-mode active command", async () => {
+  const result = await blueprintGodReviewNext({
+    activeCommand: "/blu-code-review-fix",
+    rawInvocation: "/blu-code-review-fix --feels-like-god --run-id god-wrong-mode"
+  } as never);
+
+  assert.equal(result.status, "invalid");
+  assert.equal(result.activated, false);
+});
+
 test("blueprint_god_review_next blocks changed explicit file-set fingerprints without rewriting artifacts", async () => {
   const repoPath = await writeFixtureRepo();
   await writeFile(path.join(repoPath, "src/extra.ts"), "export const extra = true;\n", "utf8");
@@ -251,6 +275,68 @@ test("blueprint_god_review_next blocks changed explicit file-set fingerprints wi
   assert.equal(next.written, false);
   assert.equal(await readRelative(repoPath, start.sessionPath!), sessionBefore);
   assert.equal(await readRelative(repoPath, start.reportPath!), reportBefore);
+});
+
+test("blueprint_god_review_next blocks stale phase topology without rewriting artifacts", async () => {
+  const repoPath = await writeFixtureRepo();
+  const start = await blueprintGodReviewStart({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review",
+    rawInvocation: "/blu-code-review 5 --feels-like-god",
+    scopeKind: "phase",
+    phase: 5
+  });
+  assert.equal(start.status, "started");
+
+  const sessionBefore = await readRelative(repoPath, start.sessionPath!);
+  const reportBefore = await readRelative(repoPath, start.reportPath!);
+  await replacePhaseRoadmapGoal(repoPath);
+
+  const next = await blueprintGodReviewNext({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review",
+    rawInvocation: "/blu-code-review 5 --feels-like-god --continue",
+    phase: 5
+  });
+
+  assert.equal(next.status, "stale");
+  assert.match(next.staleReasons.join("\n"), /stale phase topology/i);
+  assert.equal(next.written, false);
+  assert.equal(await readRelative(repoPath, start.sessionPath!), sessionBefore);
+  assert.equal(await readRelative(repoPath, start.reportPath!), reportBefore);
+});
+
+test("blueprint_god_review_next rejects legacy phase sessions without captured topology", async () => {
+  const repoPath = await writeFixtureRepo();
+  const start = await blueprintGodReviewStart({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review",
+    rawInvocation: "/blu-code-review 5 --feels-like-god",
+    scopeKind: "phase",
+    phase: 5
+  });
+  assert.equal(start.status, "started");
+
+  const session = godReviewSessionSchema.parse(
+    JSON.parse(await readRelative(repoPath, start.sessionPath!))
+  );
+  const legacySession = { ...session } as Record<string, unknown>;
+  delete legacySession.phaseTopologyFingerprint;
+  await writeFile(
+    path.join(repoPath, start.sessionPath!),
+    `${JSON.stringify(legacySession, null, 2)}\n`,
+    "utf8"
+  );
+
+  const next = await blueprintGodReviewNext({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review",
+    rawInvocation: "/blu-code-review 5 --feels-like-god --continue",
+    phase: 5
+  });
+
+  assert.equal(next.status, "stale");
+  assert.match(next.staleReasons.join("\n"), /missing captured phase topology/i);
 });
 
 test("blueprint_god_review_next blocks uncommitted explicit-file content drift", async () => {
@@ -324,6 +410,32 @@ test("blueprint_god_review_next blocks changed current-diff fingerprints and pre
   assert.equal(next.written, false);
   assert.equal(await readRelative(repoPath, start.sessionPath!), sessionBefore);
   assert.equal(await readRelative(repoPath, start.reportPath!), reportBefore);
+});
+
+test("blueprint_god_review_next keeps deleted current-diff files reviewable when the diff is unchanged", async () => {
+  const repoPath = await writeFixtureRepo();
+  await rm(path.join(repoPath, "src/feature.ts"));
+  const start = await blueprintGodReviewStart({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review",
+    rawInvocation:
+      "/blu-code-review --feels-like-god --current-diff --run-id god-current-deleted-next",
+    runId: "god-current-deleted-next"
+  });
+  assert.equal(start.status, "started");
+  assert.deepEqual(start.files, ["src/feature.ts"]);
+
+  const next = await blueprintGodReviewNext({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review",
+    rawInvocation:
+      "/blu-code-review --feels-like-god --run-id god-current-deleted-next --continue",
+    runId: "god-current-deleted-next"
+  });
+
+  assert.equal(next.status, "ready");
+  assert.deepEqual(next.files, ["src/feature.ts"]);
+  assert.deepEqual(next.staleReasons, []);
 });
 
 test("blueprint_god_review_next blocks changed PR fingerprints and preserves artifacts", async (t) => {

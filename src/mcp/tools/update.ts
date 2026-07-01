@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +8,11 @@ import { promisify } from "node:util";
 import * as z from "zod/v4";
 
 import { writeJsonFile, writeTextFile } from "./artifacts.js";
+import {
+  type DirectoryLockRecoveryHooksForTest,
+  type DirectoryLockTiming,
+  withDirectoryLock
+} from "../directory-lock.js";
 import { resolveBlueprintRuntimeHost, type BlueprintRuntimeHost } from "../runtime-host.js";
 import {
   assertNoNullBytes,
@@ -18,6 +24,9 @@ const UPDATE_PLAN_FILE = "update-plan-latest.json";
 const UPDATE_CHECKLIST_FILE = "update-plan-latest.md";
 const UPDATE_ARTIFACT_TEMP_SUFFIX = ".tmp";
 const UPDATE_ARTIFACT_BACKUP_SUFFIX = ".bak";
+const UPDATE_PLAN_LOCK_DIR = "update-plan-latest.lock";
+const UPDATE_PLAN_LOCK_RETRY_MS = 50;
+const UPDATE_PLAN_LOCK_STALE_MS = 60_000;
 const GIT_COMMAND_TIMEOUT_MS = 5_000;
 const HTTP_LOOKUP_TIMEOUT_MS = 5_000;
 const UPDATE_STAGE_ORDER = [
@@ -90,9 +99,22 @@ type UpdatePlanResult = UpdateCheckResult & {
     metadataPath: string;
     checklistPath: string;
   };
-  path: string;
+  intendedPath: string;
+  path: string | null;
   status: "created" | "updated";
+  persistenceStatus: "saved" | "not_saved";
 };
+
+type UpdatePlanLockTimingForTest = {
+  retryMs?: number;
+  staleMs?: number;
+  heartbeatMs?: number;
+};
+
+type UpdatePlanLockCallbackObserverForTest = (
+  event: "enter" | "exit",
+  lockPath: string
+) => Promise<void> | void;
 
 type GitMetadata = {
   branch: string | null;
@@ -115,6 +137,70 @@ const updateCheckInputSchema = {
 const updatePlanInputSchema = {
   cwd: z.string().optional(),
   mode: z.enum(UPDATE_PLAN_MODES).optional()
+};
+
+let updatePlanLockTimingForTest: UpdatePlanLockTimingForTest | null = null;
+let updatePlanLockRecoveryHooksForTest: DirectoryLockRecoveryHooksForTest | null = null;
+let updatePlanLockCallbackObserverForTest: UpdatePlanLockCallbackObserverForTest | null = null;
+
+function positiveTimingOverride(value: number | undefined, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return fallback;
+  }
+
+  return Math.floor(value);
+}
+
+function updatePlanLockTiming(): DirectoryLockTiming {
+  const staleMs = positiveTimingOverride(
+    updatePlanLockTimingForTest?.staleMs,
+    UPDATE_PLAN_LOCK_STALE_MS
+  );
+
+  return {
+    retryMs: positiveTimingOverride(
+      updatePlanLockTimingForTest?.retryMs,
+      UPDATE_PLAN_LOCK_RETRY_MS
+    ),
+    staleMs,
+    heartbeatMs: positiveTimingOverride(
+      updatePlanLockTimingForTest?.heartbeatMs,
+      Math.max(25, Math.floor(staleMs / 4))
+    )
+  };
+}
+
+export const updateToolTestHooks: {
+  setUpdatePlanLockTimingForTest(timing: UpdatePlanLockTimingForTest): () => void;
+  setUpdatePlanLockRecoveryHooksForTest(hooks: DirectoryLockRecoveryHooksForTest): () => void;
+  setUpdatePlanLockCallbackObserverForTest(
+    observer: UpdatePlanLockCallbackObserverForTest
+  ): () => void;
+} = {
+  setUpdatePlanLockTimingForTest(timing) {
+    const previous = updatePlanLockTimingForTest;
+    updatePlanLockTimingForTest = { ...timing };
+
+    return () => {
+      updatePlanLockTimingForTest = previous;
+    };
+  },
+  setUpdatePlanLockRecoveryHooksForTest(hooks) {
+    const previous = updatePlanLockRecoveryHooksForTest;
+    updatePlanLockRecoveryHooksForTest = { ...hooks };
+
+    return () => {
+      updatePlanLockRecoveryHooksForTest = previous;
+    };
+  },
+  setUpdatePlanLockCallbackObserverForTest(observer) {
+    const previous = updatePlanLockCallbackObserverForTest;
+    updatePlanLockCallbackObserverForTest = observer;
+
+    return () => {
+      updatePlanLockCallbackObserverForTest = previous;
+    };
+  }
 };
 
 function defaultUpdatePlanMode(host: BlueprintRuntimeHost["host"]): UpdatePlanMode {
@@ -889,33 +975,103 @@ async function removeIfExists(targetPath: string): Promise<void> {
   await fs.rm(targetPath, { force: true });
 }
 
+async function removeIfExistsSafely(
+  targetPath: string,
+  label: string
+): Promise<string | null> {
+  try {
+    await removeIfExists(targetPath);
+    return null;
+  } catch (error) {
+    return error instanceof Error
+      ? `Failed to remove ${label} ${targetPath}: ${error.message}`
+      : `Failed to remove ${label} ${targetPath}.`;
+  }
+}
+
+function createUpdatePlanNonce(): string {
+  return `${process.pid}-${Date.now()}-${randomUUID()}`;
+}
+
+async function withUpdatePlanLock<T>(
+  updatesDir: string,
+  callback: () => Promise<T>
+): Promise<T> {
+  const lockPath = path.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
+  const lockOptions = {
+    lockPath,
+    timing: updatePlanLockTiming()
+  };
+  const runObservedCallback = async () => {
+    await updatePlanLockCallbackObserverForTest?.("enter", lockPath);
+
+    try {
+      return await callback();
+    } finally {
+      await updatePlanLockCallbackObserverForTest?.("exit", lockPath);
+    }
+  };
+
+  if (updatePlanLockRecoveryHooksForTest) {
+    return withDirectoryLock(
+      { ...lockOptions, recoveryHooks: updatePlanLockRecoveryHooksForTest },
+      runObservedCallback
+    );
+  }
+
+  return withDirectoryLock(lockOptions, runObservedCallback);
+}
+
 async function restoreFromBackup(
   backupPath: string,
   targetPath: string
-): Promise<string | null> {
+): Promise<{ backupExisted: boolean; restored: boolean; warning: string | null }> {
   if (!(await pathExists(backupPath))) {
-    return null;
+    return {
+      backupExisted: false,
+      restored: false,
+      warning: null
+    };
   }
 
   try {
     await removeIfExists(targetPath);
     await fs.rename(backupPath, targetPath);
-    return null;
+    return {
+      backupExisted: true,
+      restored: true,
+      warning: null
+    };
   } catch (error) {
-    return error instanceof Error
-      ? `Failed to restore ${targetPath} from backup: ${error.message}`
-      : `Failed to restore ${targetPath} from backup.`;
+    const warning = error instanceof Error
+      ? `Failed to restore ${targetPath} from backup ${backupPath}: ${error.message}. Backup left in place for manual recovery.`
+      : `Failed to restore ${targetPath} from backup ${backupPath}. Backup left in place for manual recovery.`;
+
+    return {
+      backupExisted: true,
+      restored: false,
+      warning
+    };
   }
+}
+
+async function determineUpdatePlanStatus(
+  metadataPath: string,
+  checklistPath: string
+): Promise<UpdatePlanResult["status"]> {
+  const created = !((await pathExists(metadataPath)) || (await pathExists(checklistPath)));
+
+  return created ? "created" : "updated";
 }
 
 async function persistUpdatePlanArtifacts(
   generatedAt: string,
   plan: UpdatePlanResult
-): Promise<string[]> {
+): Promise<{ persistenceStatus: UpdatePlanResult["persistenceStatus"]; warnings: string[] }> {
   const warnings: string[] = [];
   const serializedPlan = serializeUpdatePlan(generatedAt, plan);
   const checklistMarkdown = renderChecklistMarkdown(generatedAt, plan);
-  const nonce = `${process.pid}-${Date.now()}`;
+  const nonce = createUpdatePlanNonce();
   const metadataTmpPath = `${plan.savedPaths.metadataPath}${UPDATE_ARTIFACT_TEMP_SUFFIX}-${nonce}`;
   const checklistTmpPath = `${plan.savedPaths.checklistPath}${UPDATE_ARTIFACT_TEMP_SUFFIX}-${nonce}`;
   const metadataBackupPath = `${plan.savedPaths.metadataPath}${UPDATE_ARTIFACT_BACKUP_SUFFIX}-${nonce}`;
@@ -947,9 +1103,21 @@ async function persistUpdatePlanArtifacts(
     await fs.rename(checklistTmpPath, plan.savedPaths.checklistPath);
     checklistPromoted = true;
 
-    await removeIfExists(metadataBackupPath);
-    await removeIfExists(checklistBackupPath);
-    return warnings;
+    for (const [backupPath, label] of [
+      [metadataBackupPath, "update metadata backup"],
+      [checklistBackupPath, "update checklist backup"]
+    ] as const) {
+      const cleanupWarning = await removeIfExistsSafely(backupPath, label);
+
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
+    }
+
+    return {
+      persistenceStatus: "saved",
+      warnings
+    };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "unknown write failure";
 
@@ -957,37 +1125,75 @@ async function persistUpdatePlanArtifacts(
       `Unable to persist Blueprint update artifacts under ${plan.savedPaths.updatesDir}: ${reason}. Returning manual steps without saved files.`
     );
 
-    await removeIfExists(metadataTmpPath);
-    await removeIfExists(checklistTmpPath);
+    for (const [tempPath, label] of [
+      [metadataTmpPath, "update metadata temp file"],
+      [checklistTmpPath, "update checklist temp file"]
+    ] as const) {
+      const cleanupWarning = await removeIfExistsSafely(tempPath, label);
+
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
+    }
 
     if (metadataPromoted && !metadataBackupCreated) {
-      await removeIfExists(plan.savedPaths.metadataPath);
+      const cleanupWarning = await removeIfExistsSafely(
+        plan.savedPaths.metadataPath,
+        "partially promoted update metadata"
+      );
+
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
     }
 
     if (checklistPromoted && !checklistBackupCreated) {
-      await removeIfExists(plan.savedPaths.checklistPath);
+      const cleanupWarning = await removeIfExistsSafely(
+        plan.savedPaths.checklistPath,
+        "partially promoted update checklist"
+      );
+
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
     }
 
-    const metadataRestoreWarning = await restoreFromBackup(
+    const metadataRestore = await restoreFromBackup(
       metadataBackupPath,
       plan.savedPaths.metadataPath
     );
-    const checklistRestoreWarning = await restoreFromBackup(
+    const checklistRestore = await restoreFromBackup(
       checklistBackupPath,
       plan.savedPaths.checklistPath
     );
 
-    if (metadataRestoreWarning) {
-      warnings.push(metadataRestoreWarning);
+    if (metadataRestore.warning) {
+      warnings.push(metadataRestore.warning);
     }
 
-    if (checklistRestoreWarning) {
-      warnings.push(checklistRestoreWarning);
+    if (checklistRestore.warning) {
+      warnings.push(checklistRestore.warning);
     }
 
-    await removeIfExists(metadataBackupPath);
-    await removeIfExists(checklistBackupPath);
-    return warnings;
+    for (const [backupPath, label, restore] of [
+      [metadataBackupPath, "update metadata backup", metadataRestore],
+      [checklistBackupPath, "update checklist backup", checklistRestore]
+    ] as const) {
+      if (restore.warning) {
+        continue;
+      }
+
+      const cleanupWarning = await removeIfExistsSafely(backupPath, label);
+
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
+    }
+
+    return {
+      persistenceStatus: "not_saved",
+      warnings
+    };
   }
 }
 
@@ -1008,8 +1214,6 @@ export async function blueprintUpdatePlan(
   const updatesDir = path.resolve(expandHomePath(runtimeHost.updatesDir));
   const metadataPath = path.join(updatesDir, UPDATE_PLAN_FILE);
   const checklistPath = path.join(updatesDir, UPDATE_CHECKLIST_FILE);
-  const created = !((await pathExists(metadataPath)) || (await pathExists(checklistPath)));
-  const generatedAt = new Date().toISOString();
   const savedPaths = {
     updatesDir,
     metadataPath,
@@ -1017,20 +1221,48 @@ export async function blueprintUpdatePlan(
   };
   const steps = buildUpdateSteps(check, mode, savedPaths);
   const notes = buildUpdateNotes(check, mode);
-  const plan: UpdatePlanResult = {
+
+  const buildPlan = (status: UpdatePlanResult["status"]): UpdatePlanResult => ({
     ...check,
+    warnings: [...check.warnings],
     mode,
     steps,
     notes,
     requiresRestart: true,
     savedPaths,
+    intendedPath: metadataPath,
     path: metadataPath,
-    status: created ? "created" : "updated"
-  };
-  const persistenceWarnings = await persistUpdatePlanArtifacts(generatedAt, plan);
-  plan.warnings.push(...persistenceWarnings);
+    status,
+    persistenceStatus: "saved"
+  });
 
-  return plan;
+  try {
+    return await withUpdatePlanLock(updatesDir, async () => {
+      const generatedAt = new Date().toISOString();
+      const plan = buildPlan(await determineUpdatePlanStatus(metadataPath, checklistPath));
+      const persistenceResult = await persistUpdatePlanArtifacts(generatedAt, plan);
+      plan.persistenceStatus = persistenceResult.persistenceStatus;
+
+      if (persistenceResult.persistenceStatus === "not_saved") {
+        plan.path = null;
+      }
+
+      plan.warnings.push(...persistenceResult.warnings);
+
+      return plan;
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "unknown persistence failure";
+    const plan = buildPlan(await determineUpdatePlanStatus(metadataPath, checklistPath));
+
+    plan.persistenceStatus = "not_saved";
+    plan.path = null;
+    plan.warnings.push(
+      `Unable to persist Blueprint update artifacts under ${updatesDir}: ${reason}. Returning manual steps without saved files.`
+    );
+
+    return plan;
+  }
 }
 
 export const updateToolDefinitions = [

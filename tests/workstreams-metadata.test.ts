@@ -28,7 +28,9 @@ test("workstreams manifest references the maintenance skill, workstream MCP tool
   );
   assert.match(commandFile, /mcp_blueprint_blueprint_workstream_list/);
   assert.match(commandFile, /mcp_blueprint_blueprint_workstream_mutate/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /already applied by the mutate tool/i);
+  assert.match(commandFile, /do not make a second best-effort state update call/i);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /workstream-switch-confirmation/);
   assert.match(commandFile, /workstream-archive-confirmation/);
@@ -47,14 +49,17 @@ test("workstreams local runtime contract, runtime resource, and maintenance skil
   assert.match(runtimeReference, /Stage Mapping/);
   assert.match(runtimeReference, /Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
   assert.match(runtimeReference, /\.blueprint\/workstreams\//);
-  assert.match(runtimeReference, /`WORKSTREAMS\.md` regeneration and per-stream `state\.json` writes/);
+  assert.match(runtimeReference, /`WORKSTREAMS\.md` regeneration, per-stream `state\.json` writes/);
   assert.match(runtimeReference, /workstream-switch-confirmation/);
   assert.match(runtimeReference, /missing-resume-snapshot/);
   assert.match(runtimeReference, /corrupt-workstream-index/);
+  assert.match(runtimeReference, /already applied to `.blueprint\/STATE\.md`/);
+  assert.match(runtimeReference, /do not issue a second state-update call/i);
 
   assert.match(skillDoc, /\/blu-workstreams/);
   assert.match(skillDoc, /blueprint_workstream_list/);
   assert.match(skillDoc, /blueprint_workstream_mutate/);
+  assert.match(skillDoc, /already-applied transparency payload/);
   assert.match(skillDoc, /workstream-switch-confirmation/);
   assert.match(skillDoc, /workstream-archive-confirmation/);
   assert.match(skillDoc, /workflow\.use_workstreams/);
@@ -68,6 +73,14 @@ test("workstreams local runtime contract, runtime resource, and maintenance skil
   assert.match(
     runtimeContract.runtimeReference?.contractNotes ?? "",
     /switch\/archive confirmation gates before mutation/i
+  );
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /statePatch as already applied by that mutate tool/i
+  );
+  assert.doesNotMatch(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /blueprint_state_update/
   );
   assert.deepEqual(
     runtimeContract.runtimeReference?.exactMcpDestination,
@@ -116,9 +129,9 @@ test("repo-facing status docs treat workstreams as a shipped Wave 5 command", as
   assert.equal(entry.specPath, metadata?.sourceId);
   assert.deepEqual(entry.requiredTools, [
     "blueprint_workstream_list",
-    "blueprint_workstream_mutate",
-    "blueprint_state_update"
+    "blueprint_workstream_mutate"
   ]);
+  assert.deepEqual(metadata.requiredTools, entry.requiredTools);
   assert.ok(workspaceTools.includes("blueprint_workstream_list"));
   assert.ok(workspaceTools.includes("blueprint_workstream_mutate"));
 });

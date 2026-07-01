@@ -31,6 +31,8 @@ export declare function resolveRequestedPhase(projectRoot: string, requestedPhas
 export declare function buildArtifactPath(phaseDir: string, phasePrefix: string, suffix: string): string;
 export declare function findArtifact(artifacts: string[], suffix: string): string | null;
 export declare function findPhaseSpecArtifact(artifacts: string[], phaseDir: string, phasePrefix: string): string | null;
+export declare function findPhaseArtifact(artifacts: string[], located: PhasePathLocation, artifact: PhaseArtifactKind): string | null;
+export declare function findPhaseValidationArtifact(artifacts: string[], located: PhasePathLocation, artifact: PhaseValidationArtifactKind): string | null;
 export declare function artifactPathFor(located: PhasePathLocation, artifact: PhaseArtifactKind): string;
 export declare function validationArtifactPathFor(located: PhasePathLocation, artifact: PhaseValidationArtifactKind): string;
 export declare function checkpointPathFor(located: PhasePathLocation): string;

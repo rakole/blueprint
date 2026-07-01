@@ -23,6 +23,7 @@ import {
   validateResearchArtifactContent,
   validateUatArtifactContent,
   validateVerificationArtifactContent,
+  withBlueprintRepoLock,
   writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
@@ -39,6 +40,13 @@ import {
   blueprintDirectCommand,
   blueprintRunDirectCommand
 } from "../command-paths.js";
+import {
+  formatStalePhaseTopologyMessage,
+  PHASE_TOPOLOGY_LOCK_NAME,
+  phaseTopologyFingerprintFromLocation,
+  phaseTopologyFingerprintsMatch,
+  type PhaseTopologyFingerprint
+} from "./phase-topology-lock.js";
 import {
   formatBlueprintPhasePrefix,
   normalizeBlueprintPhaseRef
@@ -70,16 +78,29 @@ export type BlueprintStateMetadata = {
   };
 };
 
-type StateUpdateArgs = {
+export type StateUpdateArgs = {
   cwd?: string;
   base?: "stored" | "synced";
   patch?: Partial<BlueprintState>;
 };
 
-type StateUpdateResult = {
+export type StateUpdateResult = {
+  updated: boolean;
   updatedFields: string[];
   statePath: string;
   warnings: string[];
+};
+
+export type PreparedStateUpdate = StateUpdateResult & {
+  projectRoot: string;
+  absoluteStatePath: string;
+  content: string;
+  routingFreshness: PreparedStateRoutingFreshness | null;
+};
+
+type PreparedStateRoutingFreshness = {
+  currentPhase: string;
+  topology: PhaseTopologyFingerprint;
 };
 
 type StateLoadArgs = {
@@ -90,6 +111,7 @@ type StateLoadResult = {
   state: BlueprintState;
   metadata: BlueprintStateMetadata;
   blockers: string[];
+  warnings?: string[];
   derivedStatus: {
     projectStatus: string;
     currentPhase: string | null;
@@ -180,6 +202,7 @@ type StateSyncArgs = {
 };
 
 type StateSyncResult = {
+  synced: boolean;
   syncedFields: string[];
   warnings: string[];
   statePath: string;
@@ -231,6 +254,8 @@ type CurrentPhaseArtifactStatus = {
   hasUsableUiSpec: boolean;
   noUiSkipRationaleSuggested: boolean;
   hasUiReview: boolean;
+  uiReviewGateSatisfied: boolean;
+  uiReviewNextSafeAction: string | null;
   hasReview: boolean;
   hasSecurity: boolean;
   hasVerification: boolean;
@@ -410,6 +435,22 @@ type WorkflowRoutingSignals = {
   uatRequired: boolean;
 };
 
+type BlueprintStateReadResult = {
+  state: BlueprintState;
+  status: "loaded" | "missing" | "malformed";
+  warnings: string[];
+};
+
+type RoadmapSignals = {
+  currentMilestone: string | null;
+  currentPhase: string | null;
+  allPhasesComplete: boolean;
+  phases: RoadmapPhaseSignal[];
+  missing: boolean;
+  malformed: boolean;
+  warnings: string[];
+};
+
 const DEFAULT_STATE: BlueprintState = {
   projectStatus: "uninitialized",
   currentMilestone: "v1",
@@ -452,6 +493,16 @@ const BLOCKING_UAT_REPAIR_COMMANDS: ReadonlySet<string> = new Set([
   blueprintDirectCommand("verify-work"),
   blueprintDirectCommand("audit-fix"),
   blueprintDirectCommand("add-tests")
+]);
+const CROSS_PHASE_REPAIR_ROUTING_COMMANDS: ReadonlySet<string> = new Set([
+  blueprintDirectCommand("add-tests"),
+  blueprintDirectCommand("audit-fix"),
+  blueprintDirectCommand("code-review"),
+  blueprintDirectCommand("code-review-fix"),
+  blueprintDirectCommand("secure-phase"),
+  blueprintDirectCommand("ui-review"),
+  blueprintDirectCommand("validate-phase"),
+  blueprintDirectCommand("verify-work")
 ]);
 
 const stateUpdateInputSchema = {
@@ -510,6 +561,15 @@ function normalizeLines(values: string[] | undefined): string[] {
 function normalizeParagraph(value: string | undefined, fallback = "None recorded."): string {
   const normalized = value?.trim().replace(/\r\n/g, "\n");
   return normalized && normalized.length > 0 ? normalized : fallback;
+}
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === code
+  );
 }
 
 function parseFrontmatter(raw: string): Record<string, string> {
@@ -920,9 +980,31 @@ ${roadmapEvolutionNotes}
 function parseStateDocument(raw: string): BlueprintState {
   const { body } = stripStateFrontmatter(raw);
   const getLineValue = (label: string): string | null => {
-    const match = body.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
+    const match = body.match(new RegExp(`^- ${label}:[ \\t]*(.*)$`, "m"));
     return match ? match[1].trim() : null;
   };
+  const requiredLabels = [
+    "Project status",
+    "Current milestone",
+    "Current phase",
+    "Active command",
+    "Next action",
+    "Last updated"
+  ] as const;
+  const values = Object.fromEntries(
+    requiredLabels.map((label) => [label, getLineValue(label)])
+  ) as Record<(typeof requiredLabels)[number], string | null>;
+  const missingLabels = requiredLabels.filter(
+    (label) =>
+      values[label] === null ||
+      (label !== "Current phase" && values[label]?.length === 0)
+  );
+
+  if (missingLabels.length > 0) {
+    throw new Error(
+      `${BLUEPRINT_STATE_PATH} is missing required state fields: ${missingLabels.join(", ")}.`
+    );
+  }
 
   const blockersSection = extractMarkdownSection(body, "Blockers");
   const roadmapEvolutionNotesSection = extractMarkdownSection(body, "Roadmap Evolution Notes");
@@ -938,22 +1020,57 @@ function parseStateDocument(raw: string): BlueprintState {
     .filter((line) => line.startsWith("- "))
     .map((line) => line.slice(2).trim())
     .filter((line) => line.length > 0 && line !== "none");
-  const currentPhaseValue = getLineValue("Current phase");
+  const currentPhaseValue = values["Current phase"] ?? "";
+  const normalizedCurrentPhase = normalizeSelectedPhase(currentPhaseValue);
+
+  if (normalizedCurrentPhase === null && currentPhaseValue.length > 0) {
+    throw new Error(
+      `${BLUEPRINT_STATE_PATH} has an invalid Current phase value: ${currentPhaseValue}.`
+    );
+  }
 
   return {
-    projectStatus: getLineValue("Project status") ?? DEFAULT_STATE.projectStatus,
-    currentMilestone:
-      getLineValue("Current milestone") ?? DEFAULT_STATE.currentMilestone,
-    currentPhase:
-      currentPhaseValue === null
-        ? DEFAULT_STATE.currentPhase
-        : (normalizeSelectedPhase(currentPhaseValue) ?? ""),
-    activeCommand: getLineValue("Active command") ?? DEFAULT_STATE.activeCommand,
-    nextAction: getLineValue("Next action") ?? DEFAULT_STATE.nextAction,
-    lastUpdated: getLineValue("Last updated") ?? DEFAULT_STATE.lastUpdated,
+    projectStatus: values["Project status"] ?? DEFAULT_STATE.projectStatus,
+    currentMilestone: values["Current milestone"] ?? DEFAULT_STATE.currentMilestone,
+    currentPhase: normalizedCurrentPhase ?? "",
+    activeCommand: values["Active command"] ?? DEFAULT_STATE.activeCommand,
+    nextAction: values["Next action"] ?? DEFAULT_STATE.nextAction,
+    lastUpdated: values["Last updated"] ?? DEFAULT_STATE.lastUpdated,
     blockers,
     roadmapEvolutionNotes
   };
+}
+
+async function readBlueprintStateFile(projectRoot: string): Promise<BlueprintStateReadResult> {
+  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+
+  try {
+    const raw = await fs.readFile(statePath, "utf8");
+
+    return {
+      state: parseStateDocument(raw),
+      status: "loaded",
+      warnings: []
+    };
+  } catch (error) {
+    if (isNodeErrorCode(error, "ENOENT")) {
+      return {
+        state: { ...DEFAULT_STATE },
+        status: "missing",
+        warnings: []
+      };
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+
+    return {
+      state: { ...DEFAULT_STATE },
+      status: "malformed",
+      warnings: [
+        `${BLUEPRINT_STATE_PATH} is present but malformed or unreadable: ${message}`
+      ]
+    };
+  }
 }
 
 function normalizePhaseNumber(value: string): string {
@@ -1000,12 +1117,26 @@ function extractNextActionPhaseSelection(nextAction: string): {
   command: string | null;
   currentPhase: string | null;
 } {
-  const match = nextAction.match(/(\/blu-[a-z0-9-]+)(?:\s+(\d+(?:\.\d+)?))?/i);
+  const selection = extractBlueprintCommandSelections(nextAction)[0];
 
   return {
-    command: match?.[1] ?? null,
-    currentPhase: normalizeSelectedPhase(match?.[2])
+    command: selection?.command ?? null,
+    currentPhase: selection?.currentPhase ?? null
   };
+}
+
+type BlueprintCommandSelection = {
+  command: string;
+  currentPhase: string | null;
+};
+
+function extractBlueprintCommandSelections(value: string): BlueprintCommandSelection[] {
+  return [...value.matchAll(/(\/blu-[a-z0-9-]+)(?:\s+(\d+(?:\.\d+)?))?/gi)]
+    .map((match) => ({
+      command: (match[1] ?? "").toLowerCase(),
+      currentPhase: normalizeSelectedPhase(match[2])
+    }))
+    .filter((selection) => selection.command.length > 0);
 }
 
 function isDerivedPhaseDirectoryBlocker(blocker: string): boolean {
@@ -1118,6 +1249,136 @@ async function assertCurrentPhaseContextPathExists(args: {
       `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because ${contextPath} is missing while next action points to ${nextActionSelection.command} ${args.currentPhase}.`
     );
   }
+}
+
+async function assertStateNextActionCanBeStored(args: {
+  projectRoot: string;
+  currentPhase: string | null;
+  nextAction: string;
+  allowCrossPhaseRepairRoutes?: boolean;
+}): Promise<void> {
+  const nextActionSelections = extractBlueprintCommandSelections(args.nextAction);
+
+  if (nextActionSelections.length === 0) {
+    return;
+  }
+
+  const implementedCommands = await getImplementedCommandNames();
+  const nonImplementedCommands = [
+    ...new Set(
+      nextActionSelections
+        .map((selection) => selection.command)
+        .filter((command) => !implementedCommands.has(command))
+    )
+  ];
+
+  if (nonImplementedCommands.length > 0) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because next action references ${nonImplementedCommands.join(", ")}, which ${nonImplementedCommands.length === 1 ? "is not an implemented Blueprint command" : "are not implemented Blueprint commands"}.`
+    );
+  }
+
+  if (nextActionSelections.length > 1) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because next action references multiple Blueprint commands (${nextActionSelections.map((selection) => selection.command).join(", ")}). Store one implemented next action.`
+    );
+  }
+
+  const [nextActionSelection] = nextActionSelections;
+
+  if (!nextActionSelection) {
+    return;
+  }
+
+  if (!implementedCommands.has(nextActionSelection.command)) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because next action references ${nextActionSelection.command}, which is not an implemented Blueprint command.`
+    );
+  }
+
+  if (nextActionSelection.currentPhase === null) {
+    return;
+  }
+
+  if (args.currentPhase === null) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because next action points to ${nextActionSelection.command} ${nextActionSelection.currentPhase} without a stored current phase.`
+    );
+  }
+
+  if (nextActionSelection.currentPhase !== args.currentPhase) {
+    const canStoreCrossPhaseRepairRoute =
+      args.allowCrossPhaseRepairRoutes === true &&
+      CROSS_PHASE_REPAIR_ROUTING_COMMANDS.has(nextActionSelection.command) &&
+      comparePhaseNumbers(nextActionSelection.currentPhase, args.currentPhase) <= 0 &&
+      (await isCompletedRoadmapPhaseWithDirectory(
+        args.projectRoot,
+        nextActionSelection.currentPhase
+      ));
+
+    if (canStoreCrossPhaseRepairRoute) {
+      return;
+    }
+
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because next action points to ${nextActionSelection.command} ${nextActionSelection.currentPhase}.`
+    );
+  }
+
+  await assertCurrentPhaseContextPathExists({
+    projectRoot: args.projectRoot,
+    currentPhase: args.currentPhase,
+    nextAction: args.nextAction
+  });
+}
+
+async function assertStateActiveCommandCanBeStored(activeCommand: string): Promise<void> {
+  const activeCommandSelections = extractBlueprintCommandSelections(activeCommand);
+
+  if (activeCommandSelections.length === 0) {
+    return;
+  }
+
+  const implementedCommands = await getImplementedCommandNames();
+  const nonImplementedCommands = [
+    ...new Set(
+      activeCommandSelections
+        .map((selection) => selection.command)
+        .filter((command) => !implementedCommands.has(command))
+    )
+  ];
+
+  if (nonImplementedCommands.length > 0) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because active command references ${nonImplementedCommands.join(", ")}, which ${nonImplementedCommands.length === 1 ? "is not an implemented Blueprint command" : "are not implemented Blueprint commands"}.`
+    );
+  }
+
+  if (activeCommandSelections.length > 1) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because active command references multiple Blueprint commands (${activeCommandSelections.map((selection) => selection.command).join(", ")}). Store one implemented active command.`
+    );
+  }
+}
+
+async function isCompletedRoadmapPhaseWithDirectory(
+  projectRoot: string,
+  phaseNumber: string
+): Promise<boolean> {
+  const roadmapSignals = await readRoadmapSignals(projectRoot);
+
+  if (!roadmapSignals.allPhasesComplete) {
+    return false;
+  }
+
+  return (
+    roadmapSignals.phases.some(
+      (phase) =>
+        phase.completed &&
+        normalizePhaseNumber(phase.phaseNumber) === normalizePhaseNumber(phaseNumber)
+    ) &&
+    (await phaseDirectoryExists(projectRoot, phaseNumber))
+  );
 }
 
 function formatPhasePrefix(value: string): string {
@@ -1543,6 +1804,91 @@ function extractPhaseNumberFromDirectory(phaseDir: string): string | null {
   return phaseDir.match(/^(\d+(?:\.\d+)?)/)?.[1] ?? null;
 }
 
+async function resolvePreparedStateRoutingFreshness(
+  projectRoot: string,
+  currentPhase: string | null
+): Promise<PreparedStateRoutingFreshness | null> {
+  if (currentPhase === null) {
+    return null;
+  }
+
+  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  let rawRoadmap: string;
+
+  try {
+    rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+  } catch {
+    return null;
+  }
+
+  const roadmap = parseRoadmapDocument(rawRoadmap);
+  const normalizedCurrentPhase = normalizePhaseNumber(currentPhase);
+  const matchedPhase =
+    roadmap.phases.find(
+      (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizedCurrentPhase
+    ) ?? null;
+
+  if (!matchedPhase) {
+    return null;
+  }
+
+  const phaseRoot = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/phases`);
+  const matchingPhaseDirs = (await listImmediateDirectories(phaseRoot)).filter((phaseDir) => {
+    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir);
+
+    return (
+      extractedPhase !== null &&
+      normalizePhaseNumber(extractedPhase) === normalizedCurrentPhase
+    );
+  });
+
+  if (matchingPhaseDirs.length !== 1) {
+    return null;
+  }
+
+  return {
+    currentPhase: normalizedCurrentPhase,
+    topology: phaseTopologyFingerprintFromLocation(
+      {
+        phaseNumber: matchedPhase.phaseNumber,
+        phasePrefix: matchedPhase.phasePrefix,
+        phaseName: matchedPhase.phaseName,
+        phaseDir: `${BLUEPRINT_DIR}/phases/${matchingPhaseDirs[0]}`
+      },
+      matchedPhase
+    )
+  };
+}
+
+async function assertPreparedStateRoutingFreshness(
+  prepared: PreparedStateUpdate
+): Promise<void> {
+  if (!prepared.routingFreshness) {
+    return;
+  }
+
+  const actual = await resolvePreparedStateRoutingFreshness(
+    prepared.projectRoot,
+    prepared.routingFreshness.currentPhase
+  );
+
+  if (!actual) {
+    throw new Error(
+      `Prepared STATE.md update rejected stale phase topology for Phase ${prepared.routingFreshness.currentPhase}. Expected a matching ROADMAP entry and exactly one phase directory.`
+    );
+  }
+
+  if (!phaseTopologyFingerprintsMatch(prepared.routingFreshness.topology, actual.topology)) {
+    throw new Error(
+      formatStalePhaseTopologyMessage({
+        operation: "Prepared STATE.md update",
+        expected: prepared.routingFreshness.topology,
+        actual: actual.topology
+      })
+    );
+  }
+}
+
 async function getImplementedCommandNames(): Promise<Set<string>> {
   if (!implementedCommandNamesPromise) {
     implementedCommandNamesPromise = (async () => {
@@ -1637,6 +1983,43 @@ function implementedReviewNextSafeAction(
   return reviewNextSafeAction;
 }
 
+const NON_REPAIR_ROUTING_COMMANDS: Set<string> = new Set([
+  blueprintDirectCommand("progress"),
+  blueprintDirectCommand("audit-milestone"),
+  blueprintDirectCommand("complete-milestone"),
+  blueprintDirectCommand("milestone-summary"),
+  blueprintDirectCommand("new-milestone"),
+  blueprintDirectCommand("cleanup"),
+  blueprintDirectCommand("ship"),
+  blueprintDirectCommand("pr-branch"),
+  blueprintDirectCommand("new-workspace"),
+  blueprintDirectCommand("remove-workspace"),
+  blueprintDirectCommand("undo"),
+  blueprintDirectCommand("reapply-patches")
+]);
+
+function implementedRepairNextSafeAction(
+  nextSafeAction: string | null,
+  implementedCommands: Set<string>
+): string | null {
+  if (!nextSafeAction) {
+    return null;
+  }
+
+  const nextCommand =
+    nextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+
+  if (
+    nextCommand === null ||
+    NON_REPAIR_ROUTING_COMMANDS.has(nextCommand) ||
+    !implementedCommands.has(nextCommand)
+  ) {
+    return null;
+  }
+
+  return nextSafeAction;
+}
+
 function implementedBlockingUatNextSafeAction(
   uatNextSafeAction: string | null,
   implementedCommands: Set<string>
@@ -1666,6 +2049,8 @@ function resolvePhaseQualityGateNextAction(args: {
   implementedCommands: Set<string>;
   hasReviewableUiSpec: boolean;
   hasUiReview: boolean;
+  uiReviewGateSatisfied: boolean;
+  uiReviewNextSafeAction: string | null;
 }): string | null {
   const gateFlags = readPhaseQualityGateFlags(args.evaluation);
   const missingGateAction = buildPhaseQualityGateNextAction({
@@ -1690,10 +2075,19 @@ function resolvePhaseQualityGateNextAction(args: {
   if (
     (args.evaluation.gatesSatisfied || !gateFlags.requiresQualityGate) &&
     args.hasReviewableUiSpec &&
-    !args.hasUiReview &&
-    args.implementedCommands.has(blueprintDirectCommand("ui-review"))
+    !args.uiReviewGateSatisfied
   ) {
-    return `Run ${blueprintDirectCommand("ui-review")} ${normalizeBlueprintPhaseRef(args.phaseNumber)} to audit the shipped UI work before phase closeout`;
+    const savedUiReviewAction = args.hasUiReview
+      ? implementedRepairNextSafeAction(args.uiReviewNextSafeAction, args.implementedCommands)
+      : null;
+
+    if (savedUiReviewAction !== null) {
+      return savedUiReviewAction;
+    }
+
+    if (args.implementedCommands.has(blueprintDirectCommand("ui-review"))) {
+      return `Run ${blueprintDirectCommand("ui-review")} ${normalizeBlueprintPhaseRef(args.phaseNumber)} to audit the shipped UI work before phase closeout`;
+    }
   }
 
   return null;
@@ -1709,6 +2103,7 @@ function formatPhaseQualityGateWarning(args: {
     | "reviewNextSafeAction"
     | "hasSecurity"
     | "reviewDebtKind"
+    | "securityDebtKind"
   >;
 }): string | null {
   const debtReason = formatPhaseQualityGateDebtReason(args.evaluation);
@@ -1821,6 +2216,8 @@ async function inspectCurrentPhaseArtifacts(
       hasUsableUiSpec: false,
       noUiSkipRationaleSuggested: false,
       hasUiReview: false,
+      uiReviewGateSatisfied: false,
+      uiReviewNextSafeAction: null,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -1906,6 +2303,8 @@ async function inspectCurrentPhaseArtifacts(
       hasUsableUiSpec: false,
       noUiSkipRationaleSuggested: false,
       hasUiReview: false,
+      uiReviewGateSatisfied: false,
+      uiReviewNextSafeAction: null,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -1958,6 +2357,8 @@ async function inspectCurrentPhaseArtifacts(
       hasUsableUiSpec: false,
       noUiSkipRationaleSuggested: false,
       hasUiReview: false,
+      uiReviewGateSatisfied: false,
+      uiReviewNextSafeAction: null,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -1995,6 +2396,11 @@ async function inspectCurrentPhaseArtifacts(
   let noUiSkipRationaleSuggested = false;
   let hasReviewableUiSpec = false;
   const hasUiReview = phaseArtifacts.includes(uiReviewPath);
+  const uiReviewRoutingState = await readUiReviewRoutingState({
+    projectRoot,
+    uiReviewPath: hasUiReview ? uiReviewPath : null,
+    warnings
+  });
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
@@ -2149,7 +2555,9 @@ async function inspectCurrentPhaseArtifacts(
     evaluation: qualityGateEvaluation,
     implementedCommands: await getImplementedCommandNames(),
     hasReviewableUiSpec,
-    hasUiReview
+    hasUiReview,
+    uiReviewGateSatisfied: uiReviewRoutingState.gateSatisfied,
+    uiReviewNextSafeAction: uiReviewRoutingState.nextSafeAction
   });
   const qualityGateFlags = readPhaseQualityGateFlags(qualityGateEvaluation);
 
@@ -2192,6 +2600,8 @@ async function inspectCurrentPhaseArtifacts(
     hasUsableUiSpec,
     noUiSkipRationaleSuggested,
     hasUiReview,
+    uiReviewGateSatisfied: uiReviewRoutingState.gateSatisfied,
+    uiReviewNextSafeAction: uiReviewRoutingState.nextSafeAction,
     hasReview: qualityGateEvaluation.hasReview,
     hasSecurity: qualityGateEvaluation.hasSecurity,
     hasVerification,
@@ -2220,12 +2630,7 @@ async function inspectCurrentPhaseArtifacts(
   };
 }
 
-async function readRoadmapSignals(projectRoot: string): Promise<{
-  currentMilestone: string | null;
-  currentPhase: string | null;
-  allPhasesComplete: boolean;
-  phases: RoadmapPhaseSignal[];
-}> {
+async function readRoadmapSignals(projectRoot: string): Promise<RoadmapSignals> {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
 
   try {
@@ -2245,21 +2650,56 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
       phases.find((phase) => !phase.completed)?.phaseNumber ??
       phases.at(-1)?.phaseNumber ??
       null;
+    const currentMilestone = milestoneMatch?.[1]?.trim() ?? null;
+    const warnings = [
+      ...(currentMilestone === null
+        ? [
+            `${BLUEPRINT_DIR}/ROADMAP.md is present but has no parseable active milestone; route through ${blueprintDirectCommand("health")} before trusting lifecycle state.`
+          ]
+        : []),
+      ...(phases.length === 0
+        ? [
+            `${BLUEPRINT_DIR}/ROADMAP.md is present but has no parseable phases; route through ${blueprintDirectCommand("health")} before trusting lifecycle state.`
+          ]
+        : [])
+    ];
 
     return {
-      currentMilestone: milestoneMatch?.[1]?.trim() ?? null,
+      currentMilestone,
       currentPhase,
       allPhasesComplete:
         phases.length > 0 &&
         phases.every((phase) => phase.completed),
-      phases
+      phases,
+      missing: false,
+      malformed: warnings.length > 0,
+      warnings
     };
-  } catch {
+  } catch (error) {
+    if (isNodeErrorCode(error, "ENOENT")) {
+      return {
+        currentMilestone: null,
+        currentPhase: null,
+        allPhasesComplete: false,
+        phases: [],
+        missing: true,
+        malformed: false,
+        warnings: []
+      };
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+
     return {
       currentMilestone: null,
       currentPhase: null,
       allPhasesComplete: false,
-      phases: []
+      phases: [],
+      missing: false,
+      malformed: true,
+      warnings: [
+        `${BLUEPRINT_DIR}/ROADMAP.md could not be read: ${message}; route through ${blueprintDirectCommand("health")} before trusting lifecycle state.`
+      ]
     };
   }
 }
@@ -2299,8 +2739,17 @@ async function inspectMilestoneEvidence(
       uiSpecPath === null
         ? false
         : await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
-    const hasUiReview =
-      findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix, "-UI-REVIEW.md") !== null;
+    const uiReviewPath = findPhaseArtifactPath(
+      phaseScopedArtifacts,
+      phasePrefix,
+      "-UI-REVIEW.md"
+    );
+    const hasUiReview = uiReviewPath !== null;
+    const uiReviewRoutingState = await readUiReviewRoutingState({
+      projectRoot,
+      uiReviewPath,
+      warnings
+    });
     const {
       summaryPaths,
       pendingPlanIds,
@@ -2382,7 +2831,9 @@ async function inspectMilestoneEvidence(
       evaluation: qualityGateEvaluation,
       implementedCommands,
       hasReviewableUiSpec,
-      hasUiReview
+      hasUiReview,
+      uiReviewGateSatisfied: uiReviewRoutingState.gateSatisfied,
+      uiReviewNextSafeAction: uiReviewRoutingState.nextSafeAction
     });
     const qualityGateFlags = readPhaseQualityGateFlags(qualityGateEvaluation);
 
@@ -2594,6 +3045,69 @@ function extractNextSafeActionCommand(content: string): string | null {
       .map((line) => extractBlueprintCommand(line))
       .find((command): command is string => command !== null) ?? null
   );
+}
+
+function extractArtifactMarker(content: string, marker: string): string | null {
+  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(
+    new RegExp(`^\\s*\\*\\*${escapedMarker}:?\\*\\*\\s*:?\\s*(.+?)\\s*$`, "im")
+  );
+
+  return match?.[1]?.trim() ?? null;
+}
+
+type UiReviewRoutingState = {
+  verdict: "PASS" | "FOLLOW_UP" | "BLOCKED" | null;
+  nextSafeAction: string | null;
+  gateSatisfied: boolean;
+};
+
+function extractUiReviewVerdict(content: string): UiReviewRoutingState["verdict"] {
+  const verdict = extractArtifactMarker(content, "Verdict")?.toUpperCase() ?? null;
+
+  if (verdict === "PASS" || verdict === "FOLLOW_UP" || verdict === "BLOCKED") {
+    return verdict;
+  }
+
+  return null;
+}
+
+async function readUiReviewRoutingState(args: {
+  projectRoot: string;
+  uiReviewPath: string | null;
+  warnings: string[];
+}): Promise<UiReviewRoutingState> {
+  if (args.uiReviewPath === null) {
+    return {
+      verdict: null,
+      nextSafeAction: null,
+      gateSatisfied: false
+    };
+  }
+
+  try {
+    const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, args.uiReviewPath), "utf8");
+    const verdict = extractUiReviewVerdict(raw);
+    const nextSafeAction = extractNextSafeActionCommand(raw);
+
+    return {
+      verdict,
+      nextSafeAction,
+      gateSatisfied: verdict === "PASS"
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    args.warnings.push(
+      `${args.uiReviewPath}: ${message}; state routing will keep UI-review debt open.`
+    );
+
+    return {
+      verdict: null,
+      nextSafeAction: null,
+      gateSatisfied: false
+    };
+  }
 }
 
 function hasDeferredTestGap(content: string): boolean {
@@ -3208,7 +3722,8 @@ async function deriveNextAction(args: {
 
 async function buildSyncedState(
   projectRoot: string,
-  patch: Pick<Partial<BlueprintState>, "activeCommand" | "currentPhase"> = {}
+  patch: Pick<Partial<BlueprintState>, "activeCommand" | "currentPhase"> = {},
+  options: { stampLastUpdated?: boolean } = {}
 ): Promise<{
   state: BlueprintState;
   metadata: BlueprintStateMetadata;
@@ -3217,10 +3732,11 @@ async function buildSyncedState(
 }> {
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
-  const existingState = await loadBlueprintState(projectRoot);
+  const existingStateRead = await readBlueprintStateFile(projectRoot);
+  const existingState = existingStateRead.state;
   const pauseHandoff = await loadPauseHandoffReport(projectRoot);
   const roadmapSignals = await readRoadmapSignals(projectRoot);
-  const warnings: string[] = [];
+  const warnings: string[] = [...existingStateRead.warnings];
 
   if (!inspection.blueprintRootExists) {
     throw new Error(
@@ -3228,13 +3744,15 @@ async function buildSyncedState(
     );
   }
 
-  if (!(await blueprintPathExists(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH)))) {
+  if (existingStateRead.status === "missing") {
     warnings.push("STATE.md was missing and has been reconstructed from surviving artifacts.");
   }
 
-  if (!(await blueprintPathExists(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`)))) {
+  if (roadmapSignals.missing) {
     warnings.push("ROADMAP.md is missing; state sync fell back to the last known milestone and phase.");
   }
+
+  warnings.push(...roadmapSignals.warnings);
 
   const projectStatus = inspection.readiness;
   const requestedCurrentPhase = normalizeSelectedPhase(patch.currentPhase);
@@ -3271,6 +3789,7 @@ async function buildSyncedState(
     uiSafetyGateEnabled: true,
     uatRequired: true
   };
+  let configReadWarning: string | null = null;
 
   try {
     const effectiveConfig = await blueprintConfigGet({
@@ -3283,8 +3802,11 @@ async function buildSyncedState(
       uiSafetyGateEnabled: effectiveConfig.config.workflow.ui_safety_gate,
       uatRequired: effectiveConfig.config.workflow.no_uat !== true
     };
-  } catch {
-    // Keep the hard-coded Blueprint defaults when config cannot be read.
+    warnings.push(...effectiveConfig.warnings);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    configReadWarning = `Blueprint config could not be read: ${message}`;
+    warnings.push(configReadWarning);
   }
   const milestoneEvidence = await inspectMilestoneEvidence(
     projectRoot,
@@ -3381,9 +3903,29 @@ async function buildSyncedState(
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
+  const diagnosticBlockers = [
+    ...(existingStateRead.status === "malformed"
+      ? [
+          `Malformed ${BLUEPRINT_STATE_PATH}; run ${blueprintDirectCommand("health")} to inspect and repair state before continuing.`
+        ]
+      : []),
+    ...(roadmapSignals.malformed
+      ? [
+          `Malformed ${BLUEPRINT_DIR}/ROADMAP.md; run ${blueprintDirectCommand("health")} to repair roadmap signals before continuing.`
+        ]
+      : []),
+    ...(configReadWarning !== null
+      ? [
+          `Malformed ${BLUEPRINT_DIR}/config.json; run ${blueprintDirectCommand("health")} to repair project configuration before continuing.`
+        ]
+      : [])
+  ];
   const nonStructuralBlockers = existingState.blockers.filter(
     (blocker) =>
       !blocker.startsWith("Missing .blueprint/") &&
+      !blocker.startsWith(`Malformed ${BLUEPRINT_STATE_PATH};`) &&
+      !blocker.startsWith(`Malformed ${BLUEPRINT_DIR}/ROADMAP.md;`) &&
+      !blocker.startsWith(`Malformed ${BLUEPRINT_DIR}/config.json;`) &&
       !blocker.startsWith(PAUSE_HANDOFF_BLOCKER_PREFIX) &&
       !isDerivedPhaseDirectoryBlocker(blocker)
   );
@@ -3410,12 +3952,17 @@ async function buildSyncedState(
     projectStatus === "partial"
       ? [
           ...new Set([
+            ...diagnosticBlockers,
             ...nonStructuralBlockers,
             ...structuralBlockers,
             ...currentPhaseArtifacts.blockers
           ])
         ]
-      : [...new Set([...nonStructuralBlockers, ...currentPhaseArtifacts.blockers])];
+      : [...new Set([
+          ...diagnosticBlockers,
+          ...nonStructuralBlockers,
+          ...currentPhaseArtifacts.blockers
+        ])];
   const activePauseHandoff =
     projectStatus === "initialized" &&
     isPauseHandoffActive(pauseHandoff.handoff, existingState);
@@ -3433,7 +3980,7 @@ async function buildSyncedState(
     currentMilestone,
     currentPhase,
     activeCommand:
-      projectStatus === "partial"
+      projectStatus === "partial" || diagnosticBlockers.length > 0
         ? blueprintDirectCommand("health")
         : activePauseHandoff
           ? PAUSE_WORK_COMMAND
@@ -3461,7 +4008,10 @@ async function buildSyncedState(
           }),
     blockers,
     roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
-    lastUpdated: new Date().toISOString()
+    lastUpdated:
+      (options.stampLastUpdated ?? true)
+        ? new Date().toISOString()
+        : existingState.lastUpdated
   };
 
   return {
@@ -3470,6 +4020,50 @@ async function buildSyncedState(
     warnings,
     milestoneAuditReport
   };
+}
+
+type BlueprintStateSyncReadinessInspection = Awaited<
+  ReturnType<typeof inspectBlueprintArtifacts>
+>;
+
+function hasStateSyncSourceArtifacts(
+  inspection: BlueprintStateSyncReadinessInspection
+): boolean {
+  return (
+    inspection.core.present.length > 0 ||
+    inspection.phases.length > 0 ||
+    inspection.reports.length > 0 ||
+    inspection.codebase.present.length > 0
+  );
+}
+
+async function assertBlueprintStateSyncReady(projectRoot: string): Promise<void> {
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+
+  if (!inspection.blueprintRootExists || !hasStateSyncSourceArtifacts(inspection)) {
+    throw new Error(
+      `Cannot sync Blueprint state before .blueprint/ exists. ${blueprintRunDirectCommand("new-project")} instead.`
+    );
+  }
+}
+
+async function assertBlueprintStateUpdateReady(projectRoot: string): Promise<void> {
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+
+  if (
+    inspection.readiness === "uninitialized" ||
+    inspection.readiness === "mapping-incomplete" ||
+    inspection.readiness === "mapped-only"
+  ) {
+    const nextAction =
+      inspection.readiness === "mapping-incomplete"
+        ? blueprintRunDirectCommand("map-codebase")
+        : blueprintRunDirectCommand("new-project");
+
+    throw new Error(
+      `Cannot update Blueprint state before core .blueprint/ project artifacts exist. ${nextAction} instead.`
+    );
+  }
 }
 
 export async function blueprintPauseHandoffGet(
@@ -3581,14 +4175,9 @@ export async function blueprintPauseHandoffWrite(
 
 export async function loadBlueprintState(cwd?: string): Promise<BlueprintState> {
   const projectRoot = await ensureRepoRoot(cwd);
-  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  const stateRead = await readBlueprintStateFile(projectRoot);
 
-  try {
-    const raw = await fs.readFile(statePath, "utf8");
-    return parseStateDocument(raw);
-  } catch {
-    return { ...DEFAULT_STATE };
-  }
+  return stateRead.state;
 }
 
 export async function blueprintStateLoad(
@@ -3605,14 +4194,18 @@ export async function blueprintStateLoad(
     inspection.readiness === "uninitialized" ||
     inspection.readiness === "mapping-incomplete" ||
     inspection.readiness === "mapped-only";
+  const readOnlyStateRead =
+    readOnlyBootstrapState
+      ? await readBlueprintStateFile(projectRoot)
+      : null;
   const syncedState =
     readOnlyBootstrapState
       ? null
-      : await buildSyncedState(projectRoot);
+      : await buildSyncedState(projectRoot, {}, { stampLastUpdated: false });
   const state =
     readOnlyBootstrapState
       ? {
-          ...(await loadBlueprintState(projectRoot)),
+          ...readOnlyStateRead!.state,
           projectStatus: inspection.readiness,
           currentPhase: "",
           activeCommand:
@@ -3660,7 +4253,10 @@ export async function blueprintStateLoad(
           })
         }
       : syncedState!.state;
-  const currentPhase = readOnlyBootstrapState ? null : state.currentPhase;
+  const currentPhase =
+    readOnlyBootstrapState || state.currentPhase.length === 0
+      ? null
+      : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
   const metadata =
@@ -3671,11 +4267,15 @@ export async function blueprintStateLoad(
     readOnlyBootstrapState
       ? emptyMilestoneAuditReportStatus()
       : syncedState!.milestoneAuditReport;
+  const warnings = readOnlyBootstrapState
+    ? readOnlyStateRead!.warnings
+    : syncedState!.warnings;
 
   return {
     state,
     metadata,
     blockers,
+    ...(warnings.length > 0 ? { warnings } : {}),
     derivedStatus: {
       projectStatus: inspection.readiness,
       currentPhase,
@@ -3686,9 +4286,9 @@ export async function blueprintStateLoad(
   };
 }
 
-export async function blueprintStateUpdate(
+export async function prepareBlueprintStateUpdate(
   args: StateUpdateArgs = {}
-): Promise<StateUpdateResult> {
+): Promise<PreparedStateUpdate> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
   const useSyncedBase = args.base === "synced";
@@ -3720,6 +4320,10 @@ export async function blueprintStateUpdate(
   };
   const routePatchChangesSync =
     routePatch.activeCommand !== undefined || routePatch.currentPhase !== undefined;
+  const storedStateRead =
+    useSyncedBase
+      ? null
+      : await readBlueprintStateFile(projectRoot);
   const syncedBase = useSyncedBase
     ? await buildSyncedState(projectRoot)
     : null;
@@ -3728,7 +4332,7 @@ export async function blueprintStateUpdate(
       ? await buildSyncedState(projectRoot, routePatch)
       : syncedBase;
   const currentState =
-    synced?.state ?? syncedBase?.state ?? (await loadBlueprintState(projectRoot));
+    synced?.state ?? syncedBase?.state ?? storedStateRead!.state;
   const comparisonState = syncedBase?.state ?? currentState;
   const sanitizedPatch =
     useSyncedBase &&
@@ -3751,13 +4355,13 @@ export async function blueprintStateUpdate(
 
   const normalizedNextStateCurrentPhase = normalizeSelectedPhase(nextState.currentPhase);
 
-  if (normalizedNextStateCurrentPhase !== null) {
-    await assertCurrentPhaseContextPathExists({
-      projectRoot,
-      currentPhase: normalizedNextStateCurrentPhase,
-      nextAction: nextState.nextAction
-    });
-  }
+  await assertStateNextActionCanBeStored({
+    projectRoot,
+    currentPhase: normalizedNextStateCurrentPhase,
+    nextAction: nextState.nextAction,
+    allowCrossPhaseRepairRoutes: useSyncedBase && normalizedPatch.nextAction === undefined
+  });
+  await assertStateActiveCommandCanBeStored(nextState.activeCommand);
 
   const updatedFields = [
     ...new Set([
@@ -3769,44 +4373,112 @@ export async function blueprintStateUpdate(
     return JSON.stringify(comparisonState[field]) !== JSON.stringify(nextState[field]);
   });
 
-  const warnings = [...(synced?.warnings ?? [])];
+  const warnings = [
+    ...(storedStateRead?.warnings ?? []),
+    ...(synced?.warnings ?? [])
+  ];
   const metadata = await buildStateMetadataForProject(projectRoot, nextState);
+  const routingFreshness = await resolvePreparedStateRoutingFreshness(
+    projectRoot,
+    normalizedNextStateCurrentPhase
+  );
+
+  return {
+    updated: updatedFields.length > 0,
+    updatedFields,
+    projectRoot,
+    statePath: toRepoRelativePath(projectRoot, statePath),
+    warnings,
+    absoluteStatePath: statePath,
+    content: renderStateDocument(nextState, metadata),
+    routingFreshness
+  };
+}
+
+async function writePreparedBlueprintStateUpdateUnlocked(
+  prepared: PreparedStateUpdate
+): Promise<StateUpdateResult> {
+  const warnings = [...prepared.warnings];
 
   warnings.push(
-    ...await writeTextFile(statePath, renderStateDocument(nextState, metadata), {
+    ...await writeTextFile(prepared.absoluteStatePath, prepared.content, {
       label: BLUEPRINT_STATE_PATH
     })
   );
 
   return {
-    updatedFields,
-    statePath: toRepoRelativePath(projectRoot, statePath),
+    updated: prepared.updated,
+    updatedFields: prepared.updatedFields,
+    statePath: prepared.statePath,
     warnings
   };
+}
+
+export async function writePreparedBlueprintStateUpdate(
+  prepared: PreparedStateUpdate
+): Promise<StateUpdateResult> {
+  return withBlueprintRepoLock(prepared.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () =>
+    withBlueprintRepoLock(prepared.projectRoot, "state", async () => {
+      await assertPreparedStateRoutingFreshness(prepared);
+      return writePreparedBlueprintStateUpdateUnlocked(prepared);
+    })
+  );
+}
+
+export async function blueprintStateUpdate(
+  args: StateUpdateArgs = {}
+): Promise<StateUpdateResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+
+  await assertBlueprintStateUpdateReady(projectRoot);
+
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () =>
+    withBlueprintRepoLock(projectRoot, "state", async () => {
+      await assertBlueprintStateUpdateReady(projectRoot);
+
+      const prepared = await prepareBlueprintStateUpdate({ ...args, cwd: projectRoot });
+
+      await assertPreparedStateRoutingFreshness(prepared);
+      return writePreparedBlueprintStateUpdateUnlocked(prepared);
+    })
+  );
 }
 
 export async function blueprintStateSync(
   args: StateSyncArgs = {}
 ): Promise<StateSyncResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
-  const currentState = await loadBlueprintState(projectRoot);
-  const synced = await buildSyncedState(projectRoot);
-  const nextState = synced.state;
-  const syncedFields = (Object.keys(nextState) as (keyof BlueprintState)[]).filter(
-    (field) =>
-      JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field])
-  );
 
-  await writeTextFile(statePath, renderStateDocument(nextState, synced.metadata), {
-    label: BLUEPRINT_STATE_PATH
+  await assertBlueprintStateSyncReady(projectRoot);
+
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    return withBlueprintRepoLock(projectRoot, "state", async () => {
+      await assertBlueprintStateSyncReady(projectRoot);
+
+      const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+      const currentState = await loadBlueprintState(projectRoot);
+      const synced = await buildSyncedState(projectRoot);
+      const nextState = synced.state;
+      const syncedFields = (Object.keys(nextState) as (keyof BlueprintState)[]).filter(
+        (field) =>
+          JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field])
+      );
+      const writeWarnings = await writeTextFile(
+        statePath,
+        renderStateDocument(nextState, synced.metadata),
+        {
+          label: BLUEPRINT_STATE_PATH
+        }
+      );
+
+      return {
+        synced: syncedFields.length > 0,
+        syncedFields,
+        warnings: [...synced.warnings, ...writeWarnings],
+        statePath: toRepoRelativePath(projectRoot, statePath)
+      };
+    });
   });
-
-  return {
-    syncedFields,
-    warnings: synced.warnings,
-    statePath: toRepoRelativePath(projectRoot, statePath)
-  };
 }
 
 export const stateToolDefinitions = [

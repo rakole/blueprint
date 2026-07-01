@@ -45,6 +45,10 @@ test("roadmap-admin skill captures grouped audit-follow-up planning behavior", a
   assert.match(skillFile, /blueprint_artifact_list/);
   assert.match(skillFile, /grouping reviewable/i);
   assert.match(skillFile, /one explicit confirmation/i);
+  assert.match(
+    skillFile,
+    /repeated `blueprint_roadmap_add_phase` calls with `confirmed: true` from approved `gap-plan-confirmation`/
+  );
   assert.match(skillFile, /requirements traceability repair/i);
   assert.match(skillFile, /ask_user/i);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);

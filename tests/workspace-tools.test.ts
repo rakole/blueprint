@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
@@ -10,10 +10,88 @@ import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js"
 import {
   blueprintWorkspaceCreate,
   blueprintWorkspaceRegistryGet,
-  blueprintWorkspaceRemove
+  blueprintWorkspaceRemove,
+  workspaceToolTestHooks
 } from "../src/mcp/tools/workspace.js";
 
 const execFileAsync = promisify(execFile);
+
+type Deferred<T = void> = {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+  reject(error: unknown): void;
+};
+
+function deferred<T = void>(): Deferred<T> {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitFor<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+  const timeoutPromise = new Promise<T>((_resolve, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error(`Timed out waiting for ${label}.`));
+    }, 5000);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+function fsPathForMock(value: unknown): string {
+  return typeof value === "string" ? value : path.resolve(String(value));
+}
+
+function pauseFirstMkdirToPath(
+  t: TestContext,
+  targetPath: string
+): {
+  paused: Promise<void>;
+  resume(): void;
+} {
+  const realMkdir = fs.mkdir.bind(fs);
+  const paused = deferred<void>();
+  const resume = deferred<void>();
+  let hasPaused = false;
+
+  t.mock.method(fs, "mkdir", async (target, options) => {
+    if (!hasPaused && path.resolve(fsPathForMock(target)) === path.resolve(targetPath)) {
+      hasPaused = true;
+      paused.resolve();
+      await resume.promise;
+    }
+
+    return realMkdir(
+      target as Parameters<typeof fs.mkdir>[0],
+      options as Parameters<typeof fs.mkdir>[1]
+    );
+  });
+
+  t.after(() => {
+    resume.resolve();
+  });
+
+  return {
+    paused: paused.promise,
+    resume: () => resume.resolve()
+  };
+}
 
 async function runGit(args: string[], cwd?: string): Promise<string> {
   const { stdout } = await execFileAsync("git", args, { cwd });
@@ -661,6 +739,41 @@ test("blueprint_workspace_create rolls back disk state and newly-created source 
   assert.equal(await runGit(["branch", "--list", "feature-b"], repoPath), "");
 });
 
+test("blueprint_workspace_create preserves a target that appears during the locked mkdir race", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-create-race-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-race");
+
+  await assert.rejects(
+    withEnvironment(
+      {
+        BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE: workspacePath
+      },
+      () =>
+        withGlobalHome(globalHome, () =>
+          blueprintWorkspaceCreate({
+            cwd: repoPath,
+            name: "feature-race",
+            path: workspacePath
+          })
+        )
+    ),
+    /EEXIST|file already exists|already exists/
+  );
+
+  assert.equal(
+    await fs.readFile(path.join(workspacePath, "foreign-content.txt"), "utf8"),
+    "preserve\n"
+  );
+  await assert.rejects(fs.access(path.join(workspacePath, ".blueprint-workspace.json")));
+  assert.deepEqual((await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet())).workspaces, []);
+});
+
 test("blueprint_workspace_create appends to an existing host-global registry document", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-registry-update-"));
   t.after(async () => {
@@ -1004,6 +1117,88 @@ test("blueprint_workspace_create waits for the registry lock before mutating wor
 
   assert.equal(result.workspacePath, workspacePath);
   assert.equal((await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet())).workspaces.length, 1);
+});
+
+test("workspace registry stale recovery preserves a replacement lock held by another waiter", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-stale-lock-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const registryLockPath = path.join(globalHome, "workspaces.json.lock");
+  const firstWorkspacePath = path.join(tempRoot, "workspaces", "first-observer");
+  const replacementWorkspacePath = path.join(tempRoot, "workspaces", "replacement-owner");
+  const firstObservedStale = deferred<void>();
+  const releaseFirstObserverRecovery = deferred<void>();
+  const replacementPause = pauseFirstMkdirToPath(t, replacementWorkspacePath);
+  let staleRecoveryAttempts = 0;
+
+  await fs.mkdir(registryLockPath, { recursive: true });
+  await fs.writeFile(path.join(registryLockPath, "owner"), "abandoned-owner\n", "utf8");
+  await fs.writeFile(path.join(registryLockPath, "lease"), "abandoned-owner\n", "utf8");
+  await sleep(80);
+
+  const restoreHooks = workspaceToolTestHooks.setWorkspaceRegistryLockRecoveryHooksForTest({
+    beforeStaleRecoveryClaim: async (observedLockPath) => {
+      assert.equal(observedLockPath, registryLockPath);
+      staleRecoveryAttempts += 1;
+
+      if (staleRecoveryAttempts === 1) {
+        firstObservedStale.resolve();
+        await releaseFirstObserverRecovery.promise;
+      }
+    }
+  });
+  t.after(() => {
+    restoreHooks();
+    releaseFirstObserverRecovery.resolve();
+    replacementPause.resume();
+  });
+
+  await withEnvironment(
+    {
+      BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_RETRY_MS: "5",
+      BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_STALE_MS: "40",
+      BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_HEARTBEAT_MS: "10"
+    },
+    () =>
+      withGlobalHome(globalHome, async () => {
+        const firstObserver = blueprintWorkspaceCreate({
+          cwd: repoPath,
+          name: "first-observer",
+          path: firstWorkspacePath
+        });
+
+        await waitFor(firstObservedStale.promise, "first workspace stale observer");
+
+        const replacement = blueprintWorkspaceCreate({
+          cwd: repoPath,
+          name: "replacement-owner",
+          path: replacementWorkspacePath
+        });
+
+        await waitFor(replacementPause.paused, "replacement workspace lock holder");
+        const replacementOwner = await fs.readFile(path.join(registryLockPath, "owner"), "utf8");
+
+        releaseFirstObserverRecovery.resolve();
+        await sleep(90);
+
+        assert.equal(await fs.readFile(path.join(registryLockPath, "owner"), "utf8"), replacementOwner);
+        await assert.rejects(fs.access(firstWorkspacePath));
+
+        replacementPause.resume();
+        await Promise.all([replacement, firstObserver]);
+      })
+  );
+
+  const listed = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
+  assert.deepEqual(
+    listed.workspaces.map((workspace) => workspace.name).sort(),
+    ["first-observer", "replacement-owner"]
+  );
+  assert.equal(staleRecoveryAttempts, 2);
 });
 
 test("blueprint_workspace_create allows workspace roots that merely share a path prefix with the source repo", async (t) => {

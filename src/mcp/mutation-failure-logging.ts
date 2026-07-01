@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolResult } from "./tool-types.js";
-import { getBoolean, getString } from "./tool-result-utils.js";
+import { getArrayCount, getBoolean, getString } from "./tool-result-utils.js";
 import {
   logRejectedMutationResult,
   logThrownMutationError
@@ -18,6 +18,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_roadmap_promote_backlog",
   "blueprint_phase_artifact_scaffold",
   "blueprint_phase_artifact_write",
+  "blueprint_phase_ui_skip_write",
   "blueprint_phase_plan_write",
   "blueprint_phase_summary_write",
   "blueprint_phase_validation_write",
@@ -30,6 +31,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_codebase_artifact_write",
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
+  "blueprint_cleanup_archive",
   "blueprint_review_record",
   "blueprint_god_review_start",
   "blueprint_god_review_append",
@@ -43,12 +45,18 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_patch_record",
   "blueprint_patch_reapply"
 ]);
+// These statuses mean a mutating tool either rejected a write attempt or stopped
+// before side effects because its write preconditions were not satisfied.
 export const MUTATION_FAILURE_STATUSES = new Set([
   "invalid",
   "project_missing",
   "not_found",
   "blocked",
   "rejected",
+  "stale",
+  "refused",
+  "partial",
+  "failed",
   "error"
 ]);
 
@@ -62,6 +70,34 @@ export function shouldLogMutationFailure(
 ): boolean {
   if (!isMutationTool(toolName)) {
     return false;
+  }
+
+  if (toolName === "blueprint_patch_reapply" && getBoolean(result, "preview") === true) {
+    return false;
+  }
+
+  if (
+    toolName === "blueprint_update_plan" &&
+    getString(result, "persistenceStatus") === "not_saved"
+  ) {
+    return true;
+  }
+
+  if (
+    toolName === "blueprint_cleanup_archive" &&
+    getString(result, "mode") === "commit" &&
+    getString(result, "reportPath") &&
+    getBoolean(result, "reportWritten") === false
+  ) {
+    return true;
+  }
+
+  if (
+    toolName === "blueprint_patch_reapply" &&
+    ((getArrayCount(result, "conflicts") ?? 0) > 0 ||
+      (getArrayCount(result, "skippedPatches") ?? 0) > 0)
+  ) {
+    return true;
   }
 
   const status = getString(result, "status");

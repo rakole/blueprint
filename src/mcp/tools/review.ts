@@ -10,6 +10,7 @@ import { readArtifactContract } from "../artifact-contracts/index.js";
 import { blueprintDirectCommand } from "../command-paths.js";
 import { isObviouslyNonPathMarkupToken } from "./path-token-heuristics.js";
 import {
+  blueprintRepoLockNameSegment,
   ensureRepoRoot,
   readUatArtifactState,
   resolveBlueprintPath,
@@ -19,6 +20,7 @@ import {
   validateUatArtifactContent,
   validateReviewArtifactContent,
   validateReviewArtifactScopeCoverage,
+  withBlueprintRepoLock,
   writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
@@ -27,9 +29,16 @@ import {
   blueprintPhaseLocate,
   blueprintPhasePlanIndex,
   blueprintPhasePlanRead,
+  resolvePhaseTopologySnapshot,
   blueprintPhaseSummaryIndex,
   blueprintPhaseSummaryRead
 } from "./phase.js";
+import {
+  formatStalePhaseTopologyMessage,
+  PHASE_TOPOLOGY_LOCK_NAME,
+  phaseTopologyFingerprintsMatch,
+  type PhaseTopologyFingerprint
+} from "./phase-topology-lock.js";
 
 type ReviewArtifactKind =
   | "code-review"
@@ -10189,24 +10198,67 @@ async function resolveCodeReviewRecordValidationFiles(args: {
   return args.recordArgs.scopeFiles;
 }
 
+function assertFreshReviewPhaseTopology(args: {
+  expected: PhaseTopologyFingerprint;
+  actual: PhaseTopologyFingerprint;
+}): void {
+  if (!phaseTopologyFingerprintsMatch(args.expected, args.actual)) {
+    throw new Error(
+      formatStalePhaseTopologyMessage({
+        operation: "Review record write",
+        expected: args.expected,
+        actual: args.actual
+      })
+    );
+  }
+}
+
 export async function blueprintReviewRecord(
   args: ReviewRecordArgs
 ): Promise<ReviewRecordResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate({
+  const expectedSnapshot = await resolvePhaseTopologySnapshot({
+    cwd: projectRoot,
+    phase: args.phase
+  });
+  const expectedTopology = expectedSnapshot.fingerprint;
+
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const locked = await resolvePhaseTopologySnapshot({
+      cwd: projectRoot,
+      phase: args.phase
+    });
+
+    assertFreshReviewPhaseTopology({
+      expected: expectedTopology,
+      actual: locked.fingerprint
+    });
+
+    const reportPath = `${locked.phaseDir}/${locked.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES[args.artifact]}`;
+
+    return withBlueprintRepoLock(
+      projectRoot,
+      `review-record-${blueprintRepoLockNameSegment(reportPath)}`,
+      () => blueprintReviewRecordUnlocked({ ...args, cwd: projectRoot }, expectedTopology)
+    );
+  });
+}
+
+async function blueprintReviewRecordUnlocked(
+  args: ReviewRecordArgs,
+  expectedTopology?: PhaseTopologyFingerprint
+): Promise<ReviewRecordResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await resolvePhaseTopologySnapshot({
     cwd: projectRoot,
     phase: args.phase
   });
 
-  if (
-    !located.found ||
-    !located.phaseNumber ||
-    !located.phasePrefix ||
-    !located.phaseDir
-  ) {
-    throw new Error(
-      located.reason ?? "Phase could not be resolved for review persistence."
-    );
+  if (expectedTopology) {
+    assertFreshReviewPhaseTopology({
+      expected: expectedTopology,
+      actual: located.fingerprint
+    });
   }
 
   const reportPath = `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES[args.artifact]}`;

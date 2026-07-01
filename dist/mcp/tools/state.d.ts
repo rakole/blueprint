@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { type PhaseTopologyFingerprint } from "./phase-topology-lock.js";
 export type BlueprintState = {
     projectStatus: string;
     currentMilestone: string;
@@ -23,15 +24,26 @@ export type BlueprintStateMetadata = {
         percent: number;
     };
 };
-type StateUpdateArgs = {
+export type StateUpdateArgs = {
     cwd?: string;
     base?: "stored" | "synced";
     patch?: Partial<BlueprintState>;
 };
-type StateUpdateResult = {
+export type StateUpdateResult = {
+    updated: boolean;
     updatedFields: string[];
     statePath: string;
     warnings: string[];
+};
+export type PreparedStateUpdate = StateUpdateResult & {
+    projectRoot: string;
+    absoluteStatePath: string;
+    content: string;
+    routingFreshness: PreparedStateRoutingFreshness | null;
+};
+type PreparedStateRoutingFreshness = {
+    currentPhase: string;
+    topology: PhaseTopologyFingerprint;
 };
 type StateLoadArgs = {
     cwd?: string;
@@ -40,6 +52,7 @@ type StateLoadResult = {
     state: BlueprintState;
     metadata: BlueprintStateMetadata;
     blockers: string[];
+    warnings?: string[];
     derivedStatus: {
         projectStatus: string;
         currentPhase: string | null;
@@ -109,6 +122,7 @@ type StateSyncArgs = {
     cwd?: string;
 };
 type StateSyncResult = {
+    synced: boolean;
     syncedFields: string[];
     warnings: string[];
     statePath: string;
@@ -138,6 +152,8 @@ export declare function blueprintPauseHandoffGet(args?: PauseHandoffGetArgs): Pr
 export declare function blueprintPauseHandoffWrite(args: PauseHandoffWriteArgs): Promise<PauseHandoffWriteResult>;
 export declare function loadBlueprintState(cwd?: string): Promise<BlueprintState>;
 export declare function blueprintStateLoad(args?: StateLoadArgs): Promise<StateLoadResult>;
+export declare function prepareBlueprintStateUpdate(args?: StateUpdateArgs): Promise<PreparedStateUpdate>;
+export declare function writePreparedBlueprintStateUpdate(prepared: PreparedStateUpdate): Promise<StateUpdateResult>;
 export declare function blueprintStateUpdate(args?: StateUpdateArgs): Promise<StateUpdateResult>;
 export declare function blueprintStateSync(args?: StateSyncArgs): Promise<StateSyncResult>;
 export declare const stateToolDefinitions: ({

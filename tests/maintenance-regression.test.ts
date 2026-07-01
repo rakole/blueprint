@@ -13,7 +13,7 @@ async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("maintenance manifests keep dirty-tree stops, advisory mode gates, and report-before-mutate gates explicit", async () => {
+test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runtime-owned report gates explicit", async () => {
   const [newWorkspace, removeWorkspace, workstreams, updateCommand, prBranch, ship, undo, cleanup, reapplyPatches] = await Promise.all([
     readRepoFile("commands/blu-new-workspace.toml"),
     readRepoFile("commands/blu-remove-workspace.toml"),
@@ -45,7 +45,8 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and repo
 
   assert.match(workstreams, /mcp_blueprint_blueprint_workstream_list/);
   assert.match(workstreams, /mcp_blueprint_blueprint_workstream_mutate/);
-  assert.match(workstreams, /mcp_blueprint_blueprint_state_update/);
+  assert.doesNotMatch(workstreams, /mcp_blueprint_blueprint_state_update/);
+  assert.match(workstreams, /statePatch.*already applied/i);
   assert.match(workstreams, /ask_user/);
   assert.match(workstreams, /workstream-switch-confirmation/);
   assert.match(workstreams, /workstream-archive-confirmation/);
@@ -101,13 +102,14 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and repo
   assert.match(cleanup, /A dirty working tree, missing phase directory root, or obviously inconsistent phase layout is a hard stop for cleanup/i);
   assert.match(cleanup, /Use Gemini-native `ask_user` for the destructive cleanup confirmation/i);
   assert.match(cleanup, /use Gemini-native `ask_user` for that approval when available/i);
-  assert.match(cleanup, /If `ask_user` is unavailable for either confirmation, stop honestly with the named pending gate still visible/i);
+  assert.match(cleanup, /If `ask_user` is unavailable for any confirmation, stop honestly with the named pending gate still visible/i);
   assert.match(cleanup, /Keep the destructive approval gate visible as `cleanup-confirmation`/i);
   assert.match(cleanup, /keep the waiting state visible as `archive-destination-confirmation`/i);
   assert.match(cleanup, /keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i);
   assert.match(cleanup, /require explicit overwrite confirmation through Gemini-native `ask_user`/i);
-  assert.match(cleanup, /If `ask_user` is unavailable, stop honestly with `report-overwrite-confirmation` still visible/i);
-  assert.match(cleanup, /approved cleanup (plan|scope)[\s\S]*before filesystem mutation begins/i);
+  assert.match(cleanup, /mcp_blueprint_blueprint_cleanup_archive` in `mode: "preview"`/i);
+  assert.match(cleanup, /mcp_blueprint_blueprint_cleanup_archive` in `mode: "commit"`/i);
+  assert.match(cleanup, /write `cleanup-latest` only from the actual archive outcome/i);
   assert.match(cleanup, /next safe action/i);
 
   assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_list/);
@@ -119,10 +121,10 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and repo
   assert.match(reapplyPatches, /next safe action/i);
 });
 
-test("maintenance skill keeps family-wide preflight, pending-gate, and report-before-mutate boundaries aligned", async () => {
+test("maintenance skill keeps family-wide preflight, pending-gate, and runtime-owned report boundaries aligned", async () => {
   const skill = await readRepoFile("skills/blueprint-maintenance/SKILL.md");
 
-  assert.match(skill, /confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow/i);
+  assert.match(skill, /confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and keep durable reports tied to the owning runtime mutation path/i);
   assert.match(skill, /`blueprint_workspace_registry_get`/);
   assert.match(skill, /`blueprint_workspace_create`/);
   assert.match(skill, /`blueprint_workspace_remove`/);
@@ -162,11 +164,10 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /Keep the protected scope explicit throughout the run/i);
   assert.match(skill, /`cleanup-confirmation`/);
   assert.match(skill, /`archive-destination-confirmation`/);
-  assert.match(skill, /Use Gemini-native `ask_user` for the destructive cleanup confirmation and archive-destination creation approval/i);
+  assert.match(skill, /Use Gemini-native `ask_user` for the destructive cleanup confirmation, archive-destination creation approval, and report overwrite approval/i);
   assert.match(skill, /if `ask_user` is unavailable stop honestly with the named pending gate still visible/i);
-  assert.match(skill, /require explicit overwrite confirmation through Gemini-native `ask_user`/i);
-  assert.match(skill, /stop honestly with that named pending gate still visible when `ask_user` is unavailable/i);
-  assert.match(skill, /before filesystem mutation begins/i);
+  assert.match(skill, /keep `report-overwrite-confirmation` visible until overwrite is explicitly approved/i);
+  assert.match(skill, /cleanup-latest` is runtime-written only from the actual archive outcome/i);
   assert.match(skill, /\/blu-reapply-patches/);
   assert.match(skill, /`dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`/);
   assert.match(skill, /`reapply-patches-confirmation`/);
@@ -181,8 +182,8 @@ test("maintenance runtime contract resources keep aborts, approvals, and owned i
     ["undo", /hard-stop on dirty or unsafe git state/i, /undo-runtime-contract\.md/],
     ["new-workspace", /derive workspace root from config or explicit input/i, /new-workspace-runtime-contract\.md/],
     ["remove-workspace", /resolve a single registry-backed workspace target/i, /remove-workspace-runtime-contract\.md/],
-    ["workstreams", /switch\/archive confirmation gates before mutation/i, /workstreams-runtime-contract\.md/],
-    ["cleanup", /protect the current phase and active roadmap references/i, /cleanup-runtime-contract\.md/],
+    ["workstreams", /switch\/archive confirmation gates before mutation[\s\S]*statePatch as already applied/i, /workstreams-runtime-contract\.md/],
+    ["cleanup", /preview and commit cleanup only through blueprint_cleanup_archive/i, /cleanup-runtime-contract\.md/],
     ["update", /update-mode-gate for saved checklist versus manual fallback/i, /update-runtime-contract\.md/],
     ["reapply-patches", /dry-run the exact replay set/i, /reapply-patches-runtime-contract\.md/]
   ] as const;

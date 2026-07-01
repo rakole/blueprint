@@ -8,11 +8,23 @@ import * as z from "zod/v4";
 
 import type { ToolDefinition } from "../tool-types.js";
 import {
+  blueprintPhaseLocate,
+  resolvePhaseTopologySnapshot
+} from "./phase.js";
+import {
+  PHASE_TOPOLOGY_LOCK_NAME,
+  formatStalePhaseTopologyMessage,
+  phaseTopologyFingerprintsMatch,
+  type PhaseTopologyFingerprint
+} from "./phase-topology-lock.js";
+import {
   ensureRepoRoot,
   resolveBlueprintPath,
-  resolveRepoRelativePath
+  resolveRepoRelativePath,
+  withBlueprintRepoLock,
+  writeJsonFile,
+  writeTextFile
 } from "./artifacts.js";
-import { blueprintPhaseLocate } from "./phase.js";
 import { blueprintReviewScope } from "./review.js";
 
 /**
@@ -218,6 +230,25 @@ export const godReviewScopeFingerprintSchema = z.object({
   prNumber: z.number().int().positive().nullable()
 });
 
+const godReviewPhaseRoadmapEntryFingerprintSchema = z.object({
+  phaseNumber: z.string(),
+  phasePrefix: z.string(),
+  phaseName: z.string(),
+  completed: z.boolean(),
+  summary: z.string().nullable(),
+  goal: z.string().nullable(),
+  successCriteria: z.string().nullable(),
+  requirements: z.array(z.string()).readonly()
+});
+
+const godReviewPhaseTopologyFingerprintSchema = z.object({
+  phaseNumber: z.string(),
+  phasePrefix: z.string(),
+  phaseName: z.string().nullable(),
+  phaseDir: z.string(),
+  roadmapEntry: godReviewPhaseRoadmapEntryFingerprintSchema.nullable()
+});
+
 export const godReviewGroupStateSchema = z.object({
   id: z.enum(GOD_REVIEW_GROUP_ID_VALUES),
   prefix: z.enum(GOD_REVIEW_GROUP_PREFIX_VALUES),
@@ -242,6 +273,7 @@ export const godReviewSessionSchema = z
     files: z.array(z.string()),
     skippedFiles: z.array(z.string()),
     scopeFingerprint: godReviewScopeFingerprintSchema,
+    phaseTopologyFingerprint: godReviewPhaseTopologyFingerprintSchema.optional(),
     groups: z.array(godReviewGroupStateSchema),
     nextGroupId: z.enum(GOD_REVIEW_GROUP_ID_VALUES).nullable(),
     cleanup: z.object({
@@ -369,11 +401,12 @@ type GodReviewScopeResolution = {
   files: string[];
   skippedFiles: string[];
   fingerprint: GodReviewScopeFingerprint;
+  phaseTopologyFingerprint?: PhaseTopologyFingerprint;
   warnings: string[];
 };
 
 export type GodReviewStartResult = {
-  status: "started" | "reused" | "invalid" | "refused";
+  status: "started" | "reused" | "stale" | "invalid" | "refused";
   activated: boolean;
   refusal?: string;
   reason: string | null;
@@ -391,6 +424,7 @@ export type GodReviewStartResult = {
   nextCommand: string | null;
   written: boolean;
   createdPaths: string[];
+  staleReasons: string[];
   warnings: string[];
 };
 
@@ -502,7 +536,7 @@ export type GodReviewCleanupResult = {
 
 const godReviewStartInputSchema = {
   cwd: z.string().optional(),
-  activeCommand: z.enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  activeCommand: z.literal("/blu-code-review"),
   rawInvocation: z.string(),
   scopeKind: godReviewScopeKindSchema.optional(),
   phase: z.union([z.string(), z.number()]).optional(),
@@ -515,7 +549,7 @@ type GodReviewStartArgs = z.infer<typeof godReviewStartArgsSchema>;
 
 const godReviewNextInputSchema = {
   cwd: z.string().optional(),
-  activeCommand: z.enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  activeCommand: z.literal("/blu-code-review"),
   rawInvocation: z.string(),
   phase: z.union([z.string(), z.number()]).optional(),
   runId: z.string().optional(),
@@ -537,7 +571,7 @@ const godReviewAppendFindingInputSchema = z.object({
 });
 const godReviewAppendInputSchema = {
   cwd: z.string().optional(),
-  activeCommand: z.enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  activeCommand: z.literal("/blu-code-review"),
   rawInvocation: z.string(),
   phase: z.union([z.string(), z.number()]).optional(),
   runId: z.string().optional(),
@@ -976,6 +1010,7 @@ async function resolveExistingRepoFiles(args: {
   projectRoot: string;
   files: string[];
   sourceLabel: string;
+  allowDeletedFiles?: string[];
 }): Promise<{
   valid: boolean;
   files: string[];
@@ -986,6 +1021,7 @@ async function resolveExistingRepoFiles(args: {
   const resolvedFiles = new Set<string>();
   const warnings: string[] = [];
   const skippedFiles: string[] = [];
+  const deletedFiles = new Set(args.allowDeletedFiles ?? []);
 
   for (const rawFile of args.files) {
     const normalized = normalizeGodReviewRepoRelativeFilePath(rawFile);
@@ -1017,6 +1053,11 @@ async function resolveExistingRepoFiles(args: {
     try {
       stats = await fs.stat(absolutePath);
     } catch {
+      if (deletedFiles.has(normalized.path)) {
+        resolvedFiles.add(normalized.path);
+        continue;
+      }
+
       skippedFiles.push(normalized.path);
       warnings.push(
         `Invalid ${args.sourceLabel} path: ${normalized.path} (file does not exist).`
@@ -1050,6 +1091,58 @@ async function resolveExistingRepoFiles(args: {
           ? `One or more ${args.sourceLabel} paths were invalid.`
           : null
   };
+}
+
+function parseGitNameStatusDeletedFiles(output: string): string[] {
+  return stableUniqueSorted(
+    output
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .flatMap((line) => {
+        const [status, ...paths] = line.split(/\t+/);
+
+        return status === "D" && paths[0] ? [paths[0]] : [];
+      })
+  );
+}
+
+function parseUnifiedDiffDeletedFiles(diff: string): string[] {
+  const deletedFiles: string[] = [];
+  const lines = diff.split("\n");
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = lines[index].match(/^diff --git a\/(.+) b\/(.+)$/);
+
+    if (!header) {
+      continue;
+    }
+
+    let deleted = false;
+
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      if (/^diff --git /.test(lines[cursor])) {
+        break;
+      }
+
+      if (/^deleted file mode /.test(lines[cursor])) {
+        deleted = true;
+        break;
+      }
+    }
+
+    if (deleted) {
+      deletedFiles.push(header[1]);
+    }
+  }
+
+  return stableUniqueSorted(deletedFiles);
+}
+
+function filterCurrentDiffCandidateFiles(files: string[]): string[] {
+  return files.filter(
+    (file) => file !== ".blueprint" && !file.startsWith(".blueprint/")
+  );
 }
 
 async function hashCurrentDiff(projectRoot: string, files: string[]): Promise<string> {
@@ -1104,23 +1197,153 @@ async function writeGodReviewSessionArtifacts(args: {
 }): Promise<string[]> {
   const createdPaths: string[] = [];
 
-  for (const [relativePath, content] of [
-    [args.session.sessionPath, `${JSON.stringify(args.session, null, 2)}\n`],
-    [args.session.reportPath, args.reportHeader],
-    [args.session.humanStatePath, args.humanState]
+  for (const relativePath of [
+    args.session.sessionPath,
+    args.session.reportPath,
+    args.session.humanStatePath
   ] as const) {
     const absolutePath = resolveBlueprintPath(args.projectRoot, relativePath);
-
-    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
 
     if (!(await pathExists(absolutePath))) {
       createdPaths.push(relativePath);
     }
-
-    await fs.writeFile(absolutePath, content, "utf8");
   }
 
+  await writeTextFile(
+    resolveBlueprintPath(args.projectRoot, args.session.reportPath),
+    args.reportHeader,
+    { label: args.session.reportPath }
+  );
+  await writeTextFile(
+    resolveBlueprintPath(args.projectRoot, args.session.humanStatePath),
+    args.humanState,
+    { label: args.session.humanStatePath }
+  );
+  await writeJsonFile(
+    resolveBlueprintPath(args.projectRoot, args.session.sessionPath),
+    args.session as unknown as Record<string, unknown>
+  );
+
   return createdPaths;
+}
+
+type GodReviewPersistenceBundleStep = "report" | "session" | "human-state";
+type GodReviewPersistenceBundleHook = (args: {
+  step: GodReviewPersistenceBundleStep;
+  relativePath: string;
+}) => void | Promise<void>;
+
+let beforeGodReviewPersistenceBundleWriteForTest: GodReviewPersistenceBundleHook | null =
+  null;
+
+export const godReviewPersistenceTestHooks = {
+  setBeforeBundleWriteForTest(
+    hook: GodReviewPersistenceBundleHook | null
+  ): () => void {
+    const previous = beforeGodReviewPersistenceBundleWriteForTest;
+    beforeGodReviewPersistenceBundleWriteForTest = hook;
+
+    return () => {
+      beforeGodReviewPersistenceBundleWriteForTest = previous;
+    };
+  }
+};
+
+async function beforeGodReviewPersistenceBundleWrite(args: {
+  step: GodReviewPersistenceBundleStep;
+  relativePath: string;
+}): Promise<void> {
+  await beforeGodReviewPersistenceBundleWriteForTest?.(args);
+}
+
+async function restoreGodReviewBundleFile(args: {
+  absolutePath: string;
+  relativePath: string;
+  previousContent: string | null;
+}): Promise<void> {
+  if (args.previousContent === null) {
+    await fs.rm(args.absolutePath, { force: true }).catch(() => undefined);
+    return;
+  }
+
+  await writeTextFile(args.absolutePath, args.previousContent, {
+    label: args.relativePath,
+    enforcePromptBoundary: false
+  });
+}
+
+async function writeGodReviewPersistenceBundle(args: {
+  projectRoot: string;
+  reportPath: string;
+  reportContent: string;
+  sessionPath: string;
+  session: GodReviewSession;
+  humanStatePath: string;
+  humanStateContent: string;
+}): Promise<void> {
+  const reportAbsolutePath = resolveBlueprintPath(args.projectRoot, args.reportPath);
+  const sessionAbsolutePath = resolveBlueprintPath(args.projectRoot, args.sessionPath);
+  const humanStateAbsolutePath = resolveBlueprintPath(args.projectRoot, args.humanStatePath);
+  const [previousReport, previousSession, previousHumanState] = await Promise.all([
+    readTextIfPresent(reportAbsolutePath),
+    readTextIfPresent(sessionAbsolutePath),
+    readTextIfPresent(humanStateAbsolutePath)
+  ]);
+
+  try {
+    await beforeGodReviewPersistenceBundleWrite({
+      step: "report",
+      relativePath: args.reportPath
+    });
+    await writeTextFile(reportAbsolutePath, args.reportContent, {
+      label: args.reportPath
+    });
+
+    await beforeGodReviewPersistenceBundleWrite({
+      step: "session",
+      relativePath: args.sessionPath
+    });
+    await writeJsonFile(
+      sessionAbsolutePath,
+      args.session as unknown as Record<string, unknown>
+    );
+
+    await beforeGodReviewPersistenceBundleWrite({
+      step: "human-state",
+      relativePath: args.humanStatePath
+    });
+    await writeTextFile(humanStateAbsolutePath, args.humanStateContent, {
+      label: args.humanStatePath
+    });
+  } catch (error) {
+    try {
+      await restoreGodReviewBundleFile({
+        absolutePath: humanStateAbsolutePath,
+        relativePath: args.humanStatePath,
+        previousContent: previousHumanState
+      });
+      await restoreGodReviewBundleFile({
+        absolutePath: sessionAbsolutePath,
+        relativePath: args.sessionPath,
+        previousContent: previousSession
+      });
+      await restoreGodReviewBundleFile({
+        absolutePath: reportAbsolutePath,
+        relativePath: args.reportPath,
+        previousContent: previousReport
+      });
+    } catch (rollbackError) {
+      const originalMessage = error instanceof Error ? error.message : String(error);
+      const rollbackMessage =
+        rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+
+      throw new Error(
+        `God-review persistence failed and rollback failed. Original error: ${originalMessage}. Rollback error: ${rollbackMessage}.`
+      );
+    }
+
+    throw error;
+  }
 }
 
 function startResultFromSession(args: {
@@ -1150,6 +1373,7 @@ function startResultFromSession(args: {
     nextCommand: args.nextCommand,
     written: args.written,
     createdPaths: args.createdPaths,
+    staleReasons: [],
     warnings: args.warnings
   };
 }
@@ -1177,6 +1401,35 @@ function invalidStartResult(args: {
     nextCommand: null,
     written: false,
     createdPaths: [],
+    staleReasons: [],
+    warnings: args.warnings ?? []
+  };
+}
+
+function staleStartResult(args: {
+  reason: string;
+  staleReasons?: string[];
+  warnings?: string[];
+}): GodReviewStartResult {
+  return {
+    status: "stale",
+    activated: true,
+    reason: args.reason,
+    runId: null,
+    scopeKind: null,
+    phase: null,
+    sessionPath: null,
+    humanStatePath: null,
+    reportPath: null,
+    files: [],
+    skippedFiles: [],
+    scopeFingerprint: null,
+    groups: [],
+    nextGroupId: null,
+    nextCommand: null,
+    written: false,
+    createdPaths: [],
+    staleReasons: args.staleReasons ?? [args.reason],
     warnings: args.warnings ?? []
   };
 }
@@ -1322,26 +1575,6 @@ function invalidCleanupResult(args: {
   };
 }
 
-function determineScopeKind(args: GodReviewStartArgs): GodReviewScopeKind {
-  if (args.scopeKind) {
-    return args.scopeKind;
-  }
-
-  if (args.prNumber !== undefined) {
-    return "pr";
-  }
-
-  if ((args.files ?? []).length > 0) {
-    return "explicit-files";
-  }
-
-  if (/\s--current-diff(?=$|\s)/.test(args.rawInvocation)) {
-    return "current-diff";
-  }
-
-  return "phase";
-}
-
 function parsePhaseFromInvocation(rawInvocation: string): string | null {
   const tokens = rawInvocation.trim().split(/\s+/).slice(1);
 
@@ -1412,6 +1645,265 @@ function parseFlagValues(rawInvocation: string, flag: string): string[] {
 
 function hasInvocationFlag(rawInvocation: string, flag: string): boolean {
   return new RegExp(`(^|\\s)${flag}(?=$|\\s)`).test(rawInvocation);
+}
+
+function splitRawFileFlagValue(value: string): string[] {
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+function parseRawFileScope(rawInvocation: string): {
+  present: boolean;
+  files: string[];
+  reason: string | null;
+} {
+  const tokens = rawInvocation.trim().split(/\s+/).slice(1);
+  const files: string[] = [];
+  let present = false;
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+
+    if (token === "--files" || token === "--file") {
+      present = true;
+      index += 1;
+
+      while (index < tokens.length && !tokens[index].startsWith("--")) {
+        files.push(...splitRawFileFlagValue(tokens[index]));
+        index += 1;
+      }
+
+      index -= 1;
+      continue;
+    }
+
+    if (token.startsWith("--files=") || token.startsWith("--file=")) {
+      present = true;
+      files.push(...splitRawFileFlagValue(token.slice(token.indexOf("=") + 1)));
+    }
+  }
+
+  if (present && files.length === 0) {
+    return {
+      present,
+      files: [],
+      reason: "Raw --files god-review scope must name at least one file."
+    };
+  }
+
+  return {
+    present,
+    files: stableUniqueSorted(files),
+    reason: null
+  };
+}
+
+function parseRawPrNumber(rawInvocation: string): {
+  present: boolean;
+  prNumber: number | undefined;
+  reason: string | null;
+} {
+  const tokens = rawInvocation.trim().split(/\s+/);
+  const values: string[] = [];
+  let present = false;
+  let missingValue = false;
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+
+    if (token === "--pr") {
+      present = true;
+      const value = tokens[index + 1];
+
+      if (value && !value.startsWith("--")) {
+        values.push(value);
+        index += 1;
+      } else {
+        missingValue = true;
+      }
+
+      continue;
+    }
+
+    if (token.startsWith("--pr=")) {
+      present = true;
+      const value = token.slice("--pr=".length);
+
+      if (value.length > 0) {
+        values.push(value);
+      } else {
+        missingValue = true;
+      }
+    }
+  }
+
+  if (!present) {
+    return {
+      present: false,
+      prNumber: undefined,
+      reason: null
+    };
+  }
+
+  if (missingValue) {
+    return {
+      present: true,
+      prNumber: undefined,
+      reason: "Raw --pr god-review scope must name a positive integer."
+    };
+  }
+
+  const uniqueValues = stableUniqueSorted(values);
+
+  if (uniqueValues.length > 1) {
+    return {
+      present: true,
+      prNumber: undefined,
+      reason: "Raw --pr god-review scope was supplied more than once with conflicting values."
+    };
+  }
+
+  const rawPrNumber = uniqueValues[0];
+
+  if (!/^\d+$/.test(rawPrNumber)) {
+    return {
+      present: true,
+      prNumber: undefined,
+      reason: `Raw --pr god-review scope must be a positive integer, received ${rawPrNumber}.`
+    };
+  }
+
+  const prNumber = Number(rawPrNumber);
+
+  if (!Number.isSafeInteger(prNumber) || prNumber <= 0) {
+    return {
+      present: true,
+      prNumber: undefined,
+      reason: `Raw --pr god-review scope must be a positive integer, received ${rawPrNumber}.`
+    };
+  }
+
+  return {
+    present: true,
+    prNumber,
+    reason: null
+  };
+}
+
+function sameStringSet(left: string[], right: string[]): boolean {
+  const normalizedLeft = stableUniqueSorted(left);
+  const normalizedRight = stableUniqueSorted(right);
+
+  return (
+    normalizedLeft.length === normalizedRight.length &&
+    normalizedLeft.every((value, index) => value === normalizedRight[index])
+  );
+}
+
+function resolveStartScopeInputs(args: GodReviewStartArgs):
+  | {
+      valid: true;
+      scopeKind: GodReviewScopeKind;
+      prNumber: number | undefined;
+      files: string[] | undefined;
+    }
+  | { valid: false; reason: string } {
+  const rawPr = parseRawPrNumber(args.rawInvocation);
+
+  if (rawPr.reason !== null) {
+    return { valid: false, reason: rawPr.reason };
+  }
+
+  const rawFiles = parseRawFileScope(args.rawInvocation);
+
+  if (rawFiles.reason !== null) {
+    return { valid: false, reason: rawFiles.reason };
+  }
+
+  const rawCurrentDiff = hasInvocationFlag(args.rawInvocation, "--current-diff");
+  const structuredFiles = stableUniqueSorted(args.files ?? []);
+  const structuredFilesPresent = structuredFiles.length > 0;
+
+  if (args.prNumber !== undefined && rawPr.present && rawPr.prNumber !== args.prNumber) {
+    return {
+      valid: false,
+      reason: "Structured prNumber conflicts with raw --pr god-review scope."
+    };
+  }
+
+  if (
+    structuredFilesPresent &&
+    rawFiles.present &&
+    !sameStringSet(structuredFiles, rawFiles.files)
+  ) {
+    return {
+      valid: false,
+      reason: "Structured files conflict with raw --files god-review scope."
+    };
+  }
+
+  const prNumber = args.prNumber ?? rawPr.prNumber;
+  const files = structuredFilesPresent
+    ? structuredFiles
+    : rawFiles.present
+      ? rawFiles.files
+      : undefined;
+  const hasPrScope = prNumber !== undefined;
+  const hasFileScope = (files ?? []).length > 0;
+  const hasCurrentDiffScope = rawCurrentDiff || args.scopeKind === "current-diff";
+
+  if (args.scopeKind !== undefined) {
+    if (args.scopeKind !== "pr" && hasPrScope) {
+      return {
+        valid: false,
+        reason: `Raw or structured PR scope conflicts with requested ${args.scopeKind} god-review scope.`
+      };
+    }
+
+    if (args.scopeKind !== "explicit-files" && hasFileScope) {
+      return {
+        valid: false,
+        reason: `Raw or structured file scope conflicts with requested ${args.scopeKind} god-review scope.`
+      };
+    }
+
+    if (args.scopeKind !== "current-diff" && rawCurrentDiff) {
+      return {
+        valid: false,
+        reason: `Raw --current-diff scope conflicts with requested ${args.scopeKind} god-review scope.`
+      };
+    }
+
+    return {
+      valid: true,
+      scopeKind: args.scopeKind,
+      prNumber,
+      files
+    };
+  }
+
+  const inferredScopeKinds = [
+    hasPrScope ? "pr" : null,
+    hasFileScope ? "explicit-files" : null,
+    hasCurrentDiffScope ? "current-diff" : null
+  ].filter((scopeKind): scopeKind is GodReviewScopeKind => scopeKind !== null);
+
+  if (inferredScopeKinds.length > 1) {
+    return {
+      valid: false,
+      reason:
+        "God-review start received conflicting scope selectors; use only one of --pr, --files, --current-diff, or phase scope."
+    };
+  }
+
+  return {
+    valid: true,
+    scopeKind: inferredScopeKinds[0] ?? "phase",
+    prNumber,
+    files
+  };
 }
 
 function normalizeGodReviewSessionPath(rawPath: string): GodReviewRepoPathResult {
@@ -1502,11 +1994,27 @@ function normalizeGodReviewReportPath(rawPath: string): GodReviewRepoPathResult 
     };
   }
 
+  if (
+    !isGeneratedPhaseReportPath(normalizedPath) &&
+    !isGeneratedReportReportPath(normalizedPath)
+  ) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review report path must be a generated hidden god-review report path."
+    };
+  }
+
   return { valid: true, path: normalizedPath };
 }
 
+type GodReviewSessionPathArgs = Pick<
+  GodReviewLoadFindingsArgs,
+  "phase" | "rawInvocation" | "runId" | "sessionPath"
+>;
+
 async function resolveGodReviewSessionPath(
-  args: GodReviewNextArgs,
+  args: GodReviewSessionPathArgs,
   projectRoot: string
 ): Promise<{ valid: true; path: string } | { valid: false; reason: string }> {
   const explicitSessionPath = args.sessionPath ?? parseFlagValue(args.rawInvocation, "--session");
@@ -1617,7 +2125,7 @@ async function resolveGodReviewReportReference(
   args: GodReviewLoadFindingsArgs,
   projectRoot: string
 ): Promise<
-  | { valid: true; reportPath: string; sessionPath: string | null }
+  | { valid: true; reportPath: string; sessionPath: string; session: GodReviewSession }
   | { valid: false; reason: string; reportPath: string | null; sessionPath: string | null; warnings: string[] }
 > {
   if (args.reportPath) {
@@ -1633,25 +2141,54 @@ async function resolveGodReviewReportReference(
         };
     }
 
-    const explicitSessionPath = args.sessionPath;
-    const runId = args.runId;
+    const explicitSessionPath = args.sessionPath ?? parseFlagValue(args.rawInvocation, "--session");
+    const runId = args.runId ?? parseFlagValue(args.rawInvocation, "--run-id");
 
     if (explicitSessionPath) {
       const normalizedSessionPath = normalizeGodReviewSessionPath(explicitSessionPath);
 
-      return normalizedSessionPath.valid
-        ? {
-            valid: true,
-            reportPath: normalized.path,
-            sessionPath: normalizedSessionPath.path
-          }
-        : {
-            valid: false,
-            reason: normalizedSessionPath.reason,
-            reportPath: normalized.path,
-            sessionPath: null,
-            warnings: []
-          };
+      if (!normalizedSessionPath.valid) {
+        return {
+          valid: false,
+          reason: normalizedSessionPath.reason,
+          reportPath: normalized.path,
+          sessionPath: null,
+          warnings: []
+        };
+      }
+
+      const loaded = await loadGodReviewSession({
+        projectRoot,
+        sessionPath: normalizedSessionPath.path
+      });
+
+      if (!loaded.valid) {
+        return {
+          valid: false,
+          reason: loaded.reason,
+          reportPath: normalized.path,
+          sessionPath: normalizedSessionPath.path,
+          warnings: loaded.warnings
+        };
+      }
+
+      if (loaded.session.reportPath !== normalized.path) {
+        return {
+          valid: false,
+          reason:
+            "Explicit god-review report path must match the report recorded by the saved session.",
+          reportPath: normalized.path,
+          sessionPath: normalizedSessionPath.path,
+          warnings: []
+        };
+      }
+
+      return {
+        valid: true,
+        reportPath: normalized.path,
+        sessionPath: normalizedSessionPath.path,
+        session: loaded.session
+      };
     }
 
     if (runId) {
@@ -1665,14 +2202,62 @@ async function resolveGodReviewReportReference(
         };
       }
 
+      const expectedReportPath = buildGodReviewReportPaths({ runId }).reportPath;
+      const expectedSessionPath = buildGodReviewReportPaths({ runId }).sessionPath;
+
+      if (normalized.path !== expectedReportPath) {
+        return {
+          valid: false,
+          reason:
+            "Explicit god-review report path must match the generated report path for the supplied runId.",
+          reportPath: normalized.path,
+          sessionPath: expectedSessionPath,
+          warnings: []
+        };
+      }
+
+      const loaded = await loadGodReviewSession({
+        projectRoot,
+        sessionPath: expectedSessionPath
+      });
+
+      if (!loaded.valid) {
+        return {
+          valid: false,
+          reason: loaded.reason,
+          reportPath: normalized.path,
+          sessionPath: expectedSessionPath,
+          warnings: loaded.warnings
+        };
+      }
+
+      if (loaded.session.reportPath !== normalized.path) {
+        return {
+          valid: false,
+          reason:
+            "Explicit god-review report path must match the report recorded by the saved session.",
+          reportPath: normalized.path,
+          sessionPath: expectedSessionPath,
+          warnings: []
+        };
+      }
+
       return {
         valid: true,
         reportPath: normalized.path,
-        sessionPath: buildGodReviewReportPaths({ runId }).sessionPath
+        sessionPath: expectedSessionPath,
+        session: loaded.session
       };
     }
 
-    return { valid: true, reportPath: normalized.path, sessionPath: null };
+    return {
+      valid: false,
+      reason:
+        "Generated god-review reportPath loads require a saved session identity; pass --session or --run-id so Blueprint can verify the durable session and scope fingerprint.",
+      reportPath: normalized.path,
+      sessionPath: null,
+      warnings: []
+    };
   }
 
   const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
@@ -1705,7 +2290,8 @@ async function resolveGodReviewReportReference(
   return {
     valid: true,
     reportPath: loaded.session.reportPath,
-    sessionPath: loaded.session.sessionPath
+    sessionPath: loaded.session.sessionPath,
+    session: loaded.session
   };
 }
 
@@ -1724,6 +2310,116 @@ function compareGodReviewFingerprints(args: {
   }
 
   return staleReasons;
+}
+
+function compareGodReviewStartScopeToSession(args: {
+  requested: GodReviewScopeResolution;
+  saved: GodReviewSession;
+  activeCommand: GodReviewActiveCommand;
+}): string[] {
+  const reasons: string[] = [];
+
+  if (args.saved.activeCommand !== args.activeCommand) {
+    reasons.push(
+      `activeCommand changed from ${args.saved.activeCommand} to ${args.activeCommand}`
+    );
+  }
+
+  if (args.saved.scopeKind !== args.requested.scopeKind) {
+    reasons.push(
+      `scopeKind changed from ${args.saved.scopeKind} to ${args.requested.scopeKind}`
+    );
+  }
+
+  if (String(args.saved.phase ?? "") !== String(args.requested.phase ?? "")) {
+    reasons.push(
+      `phase changed from ${args.saved.phase ?? "null"} to ${args.requested.phase ?? "null"}`
+    );
+  }
+
+  if (!sameStringSet(args.saved.files, args.requested.files)) {
+    reasons.push("files changed from the saved god-review session scope");
+  }
+
+  if (!sameStringSet(args.saved.skippedFiles, args.requested.skippedFiles)) {
+    reasons.push("skippedFiles changed from the saved god-review session scope");
+  }
+
+  reasons.push(
+    ...compareGodReviewFingerprints({
+      saved: args.saved.scopeFingerprint,
+      current: args.requested.fingerprint
+    })
+  );
+
+  if (args.saved.scopeKind === "phase") {
+    if (!args.saved.phaseTopologyFingerprint) {
+      reasons.push(
+        "saved phase-scoped god-review session is missing captured phase topology"
+      );
+    } else if (
+      !args.requested.phaseTopologyFingerprint ||
+      !phaseTopologyFingerprintsMatch(
+        args.saved.phaseTopologyFingerprint,
+        args.requested.phaseTopologyFingerprint
+      )
+    ) {
+      reasons.push(
+        formatStalePhaseTopologyMessage({
+          operation: "God-review session reuse",
+          expected: args.saved.phaseTopologyFingerprint,
+          actual:
+            args.requested.phaseTopologyFingerprint ??
+            args.saved.phaseTopologyFingerprint
+        })
+      );
+    }
+  }
+
+  return stableUniqueSorted(reasons);
+}
+
+async function phaseTopologyStaleReasonsForGodReviewSession(args: {
+  projectRoot: string;
+  session: GodReviewSession;
+  operation: string;
+}): Promise<string[]> {
+  if (args.session.scopeKind !== "phase") {
+    return [];
+  }
+
+  const expected = args.session.phaseTopologyFingerprint;
+
+  if (!expected) {
+    return [
+      "Saved phase-scoped god-review session is missing captured phase topology; start a fresh hidden review instead of continuing this legacy session."
+    ];
+  }
+
+  try {
+    const current = await resolvePhaseTopologySnapshot({
+      cwd: args.projectRoot,
+      phase: args.session.phase
+    });
+
+    if (phaseTopologyFingerprintsMatch(expected, current.fingerprint)) {
+      return [];
+    }
+
+    return [
+      formatStalePhaseTopologyMessage({
+        operation: args.operation,
+        expected,
+        actual: current.fingerprint
+      })
+    ];
+  } catch (error) {
+    const detail = error instanceof Error ? ` ${error.message}` : "";
+
+    return [
+      `${args.operation} rejected stale phase topology for Phase ${expected.phaseNumber}.${detail}`
+    ];
+  }
 }
 
 async function fingerprintStoredFileSet(args: {
@@ -1777,21 +2473,25 @@ async function fingerprintCurrentDiffForSession(args: {
   staleReasons: string[];
   warnings: string[];
 }> {
-  const [changed, untracked] = await Promise.all([
+  const [changed, nameStatus, untracked] = await Promise.all([
     runExternalCommand("git", ["diff", "--name-only", "HEAD", "--"], args.projectRoot),
+    runExternalCommand("git", ["diff", "--name-status", "HEAD", "--"], args.projectRoot),
     runExternalCommand(
       "git",
       ["ls-files", "--others", "--exclude-standard"],
       args.projectRoot
     )
   ]);
-  const currentFiles = [...changed.split("\n"), ...untracked.split("\n")]
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
+  const currentFiles = filterCurrentDiffCandidateFiles(
+    [...changed.split("\n"), ...untracked.split("\n")]
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+  );
   const resolvedFiles = await resolveExistingRepoFiles({
     projectRoot: args.projectRoot,
     files: currentFiles,
-    sourceLabel: "current-diff god-review scope"
+    sourceLabel: "current-diff god-review scope",
+    allowDeletedFiles: parseGitNameStatusDeletedFiles(nameStatus)
   });
   const headSha = await currentGitHead(args.projectRoot);
   const fingerprint = {
@@ -1853,7 +2553,8 @@ async function fingerprintPrForSession(args: {
   const resolvedFiles = await resolveExistingRepoFiles({
     projectRoot: args.projectRoot,
     files,
-    sourceLabel: "PR god-review scope"
+    sourceLabel: "PR god-review scope",
+    allowDeletedFiles: parseUnifiedDiffDeletedFiles(diff)
   });
   let prView: { baseRefOid?: unknown; headRefOid?: unknown };
 
@@ -1903,7 +2604,23 @@ async function computeCurrentFingerprintForSession(args: {
   warnings: string[];
 }> {
   switch (args.session.scopeKind) {
-    case "phase":
+    case "phase": {
+      const stored = await fingerprintStoredFileSet(args);
+      const topologyStaleReasons = await phaseTopologyStaleReasonsForGodReviewSession({
+        projectRoot: args.projectRoot,
+        session: args.session,
+        operation: "God-review session continuation"
+      });
+
+      return {
+        fingerprint: stored.fingerprint,
+        staleReasons: stableUniqueSorted([
+          ...stored.staleReasons,
+          ...topologyStaleReasons
+        ]),
+        warnings: stored.warnings
+      };
+    }
     case "explicit-files":
       return fingerprintStoredFileSet(args);
     case "current-diff":
@@ -2134,6 +2851,47 @@ function attachRemediationState(args: {
       stale: latestAttempt?.status === "stale"
     };
   });
+}
+
+function requiresDefaultTerminalRemediation(finding: GodReviewParsedFinding): boolean {
+  return (
+    finding.disposition === "follow-up" &&
+    finding.fixEligibility === "eligible" &&
+    (finding.severity === "high" || finding.severity === "medium")
+  );
+}
+
+function collectUnterminalDefaultEligibleFindingIds(args: {
+  findings: GodReviewParsedFinding[];
+  remediations: GodReviewParsedRemediation[];
+}): string[] {
+  return args.findings
+    .filter(requiresDefaultTerminalRemediation)
+    .filter(
+      (finding) =>
+        !args.remediations.some(
+          (remediation) =>
+            remediation.findingId === finding.id && remediation.status !== null
+        )
+    )
+    .map((finding) => finding.id)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function evaluateTerminalRemediationCoverage(report: string): {
+  remainingFindingIds: string[];
+  warnings: string[];
+} {
+  const parsedReport = parseGodReviewReportShell(report);
+  const findings = attachRemediationState(parsedReport);
+
+  return {
+    remainingFindingIds: collectUnterminalDefaultEligibleFindingIds({
+      findings,
+      remediations: parsedReport.remediations
+    }),
+    warnings: parsedReport.warnings
+  };
 }
 
 function invalidFixSelection(args: {
@@ -2752,6 +3510,10 @@ async function resolvePhaseScope(args: {
     phaseDir: scoped.phase.phaseDir,
     phasePrefix: scoped.phase.phasePrefix
   });
+  const topologySnapshot = await resolvePhaseTopologySnapshot({
+    cwd: args.projectRoot,
+    phase: scoped.phase.phaseNumber
+  });
 
   return {
     scopeKind: "phase",
@@ -2769,6 +3531,7 @@ async function resolvePhaseScope(args: {
       }),
       prNumber: null
     },
+    phaseTopologyFingerprint: topologySnapshot.fingerprint,
     warnings: [...scoped.warnings, ...resolvedFiles.warnings]
   };
 }
@@ -2835,21 +3598,25 @@ async function resolveCurrentDiffScope(args: {
     });
   }
 
-  const [changed, untracked] = await Promise.all([
+  const [changed, nameStatus, untracked] = await Promise.all([
     runExternalCommand("git", ["diff", "--name-only", "HEAD", "--"], args.projectRoot),
+    runExternalCommand("git", ["diff", "--name-status", "HEAD", "--"], args.projectRoot),
     runExternalCommand(
       "git",
       ["ls-files", "--others", "--exclude-standard"],
       args.projectRoot
     )
   ]);
-  const changedFiles = [...changed.split("\n"), ...untracked.split("\n")]
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
+  const changedFiles = filterCurrentDiffCandidateFiles(
+    [...changed.split("\n"), ...untracked.split("\n")]
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+  );
   const resolvedFiles = await resolveExistingRepoFiles({
     projectRoot: args.projectRoot,
     files: changedFiles,
-    sourceLabel: "current-diff god-review scope"
+    sourceLabel: "current-diff god-review scope",
+    allowDeletedFiles: parseGitNameStatusDeletedFiles(nameStatus)
   });
 
   if (!resolvedFiles.valid) {
@@ -2916,7 +3683,8 @@ async function resolvePrScope(args: {
   const resolvedFiles = await resolveExistingRepoFiles({
     projectRoot: args.projectRoot,
     files,
-    sourceLabel: "PR god-review scope"
+    sourceLabel: "PR god-review scope",
+    allowDeletedFiles: parseUnifiedDiffDeletedFiles(diff)
   });
 
   if (!resolvedFiles.valid) {
@@ -2970,9 +3738,15 @@ async function resolveGodReviewScope(
   args: GodReviewStartArgs,
   projectRoot: string
 ): Promise<GodReviewScopeResolution | GodReviewStartResult> {
-  const scopeKind = determineScopeKind(args);
+  const startScope = resolveStartScopeInputs(args);
 
-  switch (scopeKind) {
+  if (!startScope.valid) {
+    return invalidStartResult({
+      reason: startScope.reason
+    });
+  }
+
+  switch (startScope.scopeKind) {
     case "phase":
       return resolvePhaseScope({
         projectRoot,
@@ -2982,7 +3756,7 @@ async function resolveGodReviewScope(
     case "explicit-files":
       return resolveExplicitFilesScope({
         projectRoot,
-        files: args.files,
+        files: startScope.files,
         runId: args.runId
       });
     case "current-diff":
@@ -2993,10 +3767,190 @@ async function resolveGodReviewScope(
     case "pr":
       return resolvePrScope({
         projectRoot,
-        prNumber: args.prNumber,
+        prNumber: startScope.prNumber,
         runId: args.runId
       });
   }
+}
+
+function isGodReviewStartResult(
+  value: GodReviewScopeResolution | GodReviewStartResult
+): value is GodReviewStartResult {
+  return "status" in value;
+}
+
+function staleStartResultForPhaseScope(args: {
+  initialScope: GodReviewScopeResolution;
+  latestScope: GodReviewScopeResolution;
+}): GodReviewStartResult | null {
+  if (
+    args.initialScope.scopeKind !== "phase" ||
+    args.latestScope.scopeKind !== "phase" ||
+    !args.initialScope.phaseTopologyFingerprint ||
+    !args.latestScope.phaseTopologyFingerprint ||
+    phaseTopologyFingerprintsMatch(
+      args.initialScope.phaseTopologyFingerprint,
+      args.latestScope.phaseTopologyFingerprint
+    )
+  ) {
+    return null;
+  }
+
+  const reason = formatStalePhaseTopologyMessage({
+    operation: "God-review start",
+    expected: args.initialScope.phaseTopologyFingerprint,
+    actual: args.latestScope.phaseTopologyFingerprint
+  });
+
+  return staleStartResult({
+    reason,
+    staleReasons: [reason],
+    warnings: stableUniqueSorted([...args.initialScope.warnings, ...args.latestScope.warnings])
+  });
+}
+
+async function startGodReviewSessionWithResolvedScope(args: {
+  projectRoot: string;
+  activation: Extract<GodReviewActivationResult, { status: "valid" }>;
+  resolvedScope: GodReviewScopeResolution;
+}): Promise<GodReviewStartResult> {
+  return withBlueprintRepoLock(args.projectRoot, "god-review-session", async () => {
+    const sessionPath = resolveBlueprintPath(
+      args.projectRoot,
+      args.resolvedScope.paths.sessionPath
+    );
+    const existingSessionRaw = await readTextIfPresent(sessionPath);
+
+    if (existingSessionRaw !== null) {
+      let existingSessionJson: unknown;
+
+      try {
+        existingSessionJson = JSON.parse(existingSessionRaw);
+      } catch {
+        return invalidStartResult({
+          reason: `${args.resolvedScope.paths.sessionPath} is not valid JSON.`
+        });
+      }
+
+      const existingSession = godReviewSessionSchema.safeParse(existingSessionJson);
+
+      if (!existingSession.success) {
+        return invalidStartResult({
+          reason: `${args.resolvedScope.paths.sessionPath} is not a valid god-review session.`,
+          warnings: existingSession.error.issues.map((issue) => issue.message)
+        });
+      }
+
+      const scopeMismatchReasons = compareGodReviewStartScopeToSession({
+        requested: args.resolvedScope,
+        saved: existingSession.data,
+        activeCommand: args.activation.activeCommand
+      });
+
+      if (scopeMismatchReasons.length > 0) {
+        return invalidStartResult({
+          reason:
+            "Existing god-review session does not match the requested scope. Use the saved session's continuation command or start a new hidden review run id.",
+          warnings: [...args.resolvedScope.warnings, ...scopeMismatchReasons]
+        });
+      }
+
+      return startResultFromSession({
+        status: "reused",
+        session: existingSession.data,
+        nextCommand: nextGodReviewCommand({
+          activeCommand: existingSession.data.activeCommand,
+          scopeKind: existingSession.data.scopeKind,
+          phase: existingSession.data.phase ?? null,
+          runId: existingSession.data.runId
+        }),
+        written: false,
+        createdPaths: [],
+        warnings: args.resolvedScope.warnings,
+        reason: "Existing god-review session reused."
+      });
+    }
+
+    const now = new Date().toISOString();
+    const runId =
+      args.resolvedScope.scopeKind === "phase"
+        ? `god-${String(args.resolvedScope.phase)}`
+        : path
+            .basename(args.resolvedScope.paths.sessionPath)
+            .replace(/^\.god-review-/, "")
+            .replace(/\.json$/, "");
+    const groups = buildInitialGodReviewGroups();
+    const nextGroupId = groups[0]?.id ?? null;
+    const session: GodReviewSession = {
+      schemaVersion: 1,
+      runId,
+      parentRunId: null,
+      status: "in-progress",
+      createdAt: now,
+      updatedAt: now,
+      activeCommand: args.activation.activeCommand,
+      scopeKind: args.resolvedScope.scopeKind,
+      ...(args.resolvedScope.scopeKind === "phase"
+        ? { phase: args.resolvedScope.phase ?? undefined }
+        : {}),
+      sessionPath: args.resolvedScope.paths.sessionPath,
+      humanStatePath: args.resolvedScope.paths.humanStatePath,
+      reportPath: args.resolvedScope.paths.reportPath,
+      files: args.resolvedScope.files,
+      skippedFiles: args.resolvedScope.skippedFiles,
+      scopeFingerprint: args.resolvedScope.fingerprint,
+      ...(args.resolvedScope.phaseTopologyFingerprint
+        ? { phaseTopologyFingerprint: args.resolvedScope.phaseTopologyFingerprint }
+        : {}),
+      groups,
+      nextGroupId,
+      cleanup: {
+        reviewTerminal: false,
+        godFixTerminal: false,
+        eligible: false
+      }
+    };
+    const nextCommand = nextGodReviewCommand({
+      activeCommand: args.activation.activeCommand,
+      scopeKind: session.scopeKind,
+      phase: session.phase ?? null,
+      runId: session.runId
+    });
+    const reportHeader = renderGodReviewReportHeader({
+      runId: session.runId,
+      status: session.status,
+      scopeKind: session.scopeKind,
+      sessionPath: session.sessionPath,
+      scopeFingerprintSummary: session.scopeFingerprint.fileSetHash
+    });
+    const humanState = renderGodReviewHumanState({
+      runId: session.runId,
+      scopeKind: session.scopeKind,
+      fileCount: session.files.length,
+      currentGroupId: null,
+      nextGroupId,
+      reviewTerminal: false,
+      godFixTerminal: false,
+      stale: false,
+      nextCommand
+    });
+    const createdPaths = await writeGodReviewSessionArtifacts({
+      projectRoot: args.projectRoot,
+      session,
+      reportHeader,
+      humanState
+    });
+
+    return startResultFromSession({
+      status: "started",
+      session,
+      nextCommand,
+      written: true,
+      createdPaths,
+      warnings: args.resolvedScope.warnings,
+      reason: null
+    });
+  });
 }
 
 export function renderGodReviewReportHeader(args: {
@@ -3082,6 +4036,7 @@ export async function blueprintGodReviewStart(
       nextCommand: null,
       written: false,
       createdPaths: [],
+      staleReasons: [],
       warnings: []
     };
   }
@@ -3089,122 +4044,47 @@ export async function blueprintGodReviewStart(
   const projectRoot = await ensureRepoRoot(args.cwd);
   const resolvedScope = await resolveGodReviewScope(args, projectRoot);
 
-  if ("status" in resolvedScope) {
+  if (isGodReviewStartResult(resolvedScope)) {
     return resolvedScope;
   }
 
-  const sessionPath = resolveBlueprintPath(projectRoot, resolvedScope.paths.sessionPath);
-  const existingSessionRaw = await readTextIfPresent(sessionPath);
-
-  if (existingSessionRaw !== null) {
-    let existingSessionJson: unknown;
-
-    try {
-      existingSessionJson = JSON.parse(existingSessionRaw);
-    } catch {
-      return invalidStartResult({
-        reason: `${resolvedScope.paths.sessionPath} is not valid JSON.`
-      });
-    }
-
-    const existingSession = godReviewSessionSchema.safeParse(existingSessionJson);
-
-    if (!existingSession.success) {
-      return invalidStartResult({
-        reason: `${resolvedScope.paths.sessionPath} is not a valid god-review session.`,
-        warnings: existingSession.error.issues.map((issue) => issue.message)
-      });
-    }
-
-    return startResultFromSession({
-      status: "reused",
-      session: existingSession.data,
-      nextCommand: nextGodReviewCommand({
-        activeCommand: existingSession.data.activeCommand,
-        scopeKind: existingSession.data.scopeKind,
-        phase: existingSession.data.phase ?? null,
-        runId: existingSession.data.runId
-      }),
-      written: false,
-      createdPaths: [],
-      warnings: resolvedScope.warnings,
-      reason: "Existing god-review session reused."
+  if (resolvedScope.scopeKind !== "phase") {
+    return startGodReviewSessionWithResolvedScope({
+      projectRoot,
+      activation,
+      resolvedScope
     });
   }
 
-  const now = new Date().toISOString();
-  const runId =
-    resolvedScope.scopeKind === "phase"
-      ? `god-${String(resolvedScope.phase)}`
-      : path
-          .basename(resolvedScope.paths.sessionPath)
-          .replace(/^\.god-review-/, "")
-          .replace(/\.json$/, "");
-  const groups = buildInitialGodReviewGroups();
-  const nextGroupId = groups[0]?.id ?? null;
-  const session: GodReviewSession = {
-    schemaVersion: 1,
-    runId,
-    parentRunId: null,
-    status: "in-progress",
-    createdAt: now,
-    updatedAt: now,
-    activeCommand: activation.activeCommand,
-    scopeKind: resolvedScope.scopeKind,
-    ...(resolvedScope.scopeKind === "phase" ? { phase: resolvedScope.phase ?? undefined } : {}),
-    sessionPath: resolvedScope.paths.sessionPath,
-    humanStatePath: resolvedScope.paths.humanStatePath,
-    reportPath: resolvedScope.paths.reportPath,
-    files: resolvedScope.files,
-    skippedFiles: resolvedScope.skippedFiles,
-    scopeFingerprint: resolvedScope.fingerprint,
-    groups,
-    nextGroupId,
-    cleanup: {
-      reviewTerminal: false,
-      godFixTerminal: false,
-      eligible: false
-    }
-  };
-  const nextCommand = nextGodReviewCommand({
-    activeCommand: activation.activeCommand,
-    scopeKind: session.scopeKind,
-    phase: session.phase ?? null,
-    runId: session.runId
-  });
-  const reportHeader = renderGodReviewReportHeader({
-    runId: session.runId,
-    status: session.status,
-    scopeKind: session.scopeKind,
-    sessionPath: session.sessionPath,
-    scopeFingerprintSummary: session.scopeFingerprint.fileSetHash
-  });
-  const humanState = renderGodReviewHumanState({
-    runId: session.runId,
-    scopeKind: session.scopeKind,
-    fileCount: session.files.length,
-    currentGroupId: null,
-    nextGroupId,
-    reviewTerminal: false,
-    godFixTerminal: false,
-    stale: false,
-    nextCommand
-  });
-  const createdPaths = await writeGodReviewSessionArtifacts({
-    projectRoot,
-    session,
-    reportHeader,
-    humanState
-  });
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const latestScope = await resolveGodReviewScope(args, projectRoot);
 
-  return startResultFromSession({
-    status: "started",
-    session,
-    nextCommand,
-    written: true,
-    createdPaths,
-    warnings: resolvedScope.warnings,
-    reason: null
+    if (isGodReviewStartResult(latestScope)) {
+      const reason =
+        latestScope.reason ??
+        "God-review start rejected stale phase topology before writing hidden review state.";
+
+      return staleStartResult({
+        reason,
+        staleReasons: [reason],
+        warnings: latestScope.warnings
+      });
+    }
+
+    const staleResult = staleStartResultForPhaseScope({
+      initialScope: resolvedScope,
+      latestScope
+    });
+
+    if (staleResult) {
+      return staleResult;
+    }
+
+    return startGodReviewSessionWithResolvedScope({
+      projectRoot,
+      activation,
+      resolvedScope: latestScope
+    });
   });
 }
 
@@ -3389,6 +4269,7 @@ export async function blueprintGodReviewAppend(
     });
   }
 
+  return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
   const loaded = await loadGodReviewSession({
     projectRoot,
     sessionPath: sessionPath.path
@@ -3505,26 +4386,21 @@ export async function blueprintGodReviewAppend(
     runId: updatedSession.runId
   });
   const reportPath = resolveBlueprintPath(projectRoot, updatedSession.reportPath);
-  const sessionFilePath = resolveBlueprintPath(projectRoot, updatedSession.sessionPath);
-  const humanStatePath = resolveBlueprintPath(projectRoot, updatedSession.humanStatePath);
+  const reportBeforeAppend = await readTextIfPresent(reportPath);
 
-  await fs.appendFile(
-    reportPath,
-    renderGodReviewGroupSection({
+  if (reportBeforeAppend === null) {
+    return invalidAppendResult({
+      reason: `${updatedSession.reportPath} does not exist. Start a fresh hidden review before appending this group.`,
+      warnings: fingerprint.warnings
+    });
+  }
+
+  const reportContent = `${reportBeforeAppend}${renderGodReviewGroupSection({
       group: groupDefinition,
       status: args.status,
       findings: normalizedFindings.findings
-    }),
-    "utf8"
-  );
-  await fs.writeFile(
-    sessionFilePath,
-    `${JSON.stringify(updatedSession, null, 2)}\n`,
-    "utf8"
-  );
-  await fs.writeFile(
-    humanStatePath,
-    renderGodReviewHumanState({
+    })}`;
+  const humanStateContent = renderGodReviewHumanState({
       runId: updatedSession.runId,
       scopeKind: updatedSession.scopeKind,
       fileCount: updatedSession.files.length,
@@ -3534,9 +4410,17 @@ export async function blueprintGodReviewAppend(
       godFixTerminal: updatedSession.cleanup.godFixTerminal,
       stale: false,
       nextCommand: updatedNextCommand
-    }),
-    "utf8"
-  );
+    });
+
+  await writeGodReviewPersistenceBundle({
+    projectRoot,
+    reportPath: updatedSession.reportPath,
+    reportContent,
+    sessionPath: updatedSession.sessionPath,
+    session: updatedSession,
+    humanStatePath: updatedSession.humanStatePath,
+    humanStateContent
+  });
 
   return {
     status: "appended",
@@ -3556,6 +4440,7 @@ export async function blueprintGodReviewAppend(
     staleReasons: [],
     warnings: fingerprint.warnings
   };
+  });
 }
 
 export async function blueprintGodReviewLoadFindings(
@@ -3619,6 +4504,21 @@ export async function blueprintGodReviewLoadFindings(
       selection: null,
       warnings: []
     };
+  }
+
+  const fingerprint = await computeCurrentFingerprintForSession({
+    projectRoot,
+    session: reference.session
+  });
+
+  if (fingerprint.staleReasons.length > 0) {
+    return invalidLoadFindingsResult({
+      reason:
+        "God-review scope fingerprint changed. Start a new hidden review before loading saved findings.",
+      reportPath: reference.reportPath,
+      sessionPath: reference.sessionPath,
+      warnings: [...fingerprint.warnings, ...fingerprint.staleReasons]
+    });
   }
 
   const parsedReport = parseGodReviewReportShell(report);
@@ -3708,6 +4608,7 @@ export async function blueprintGodReviewRecordFix(
     });
   }
 
+  return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
   const loaded = await loadGodReviewSession({
     projectRoot,
     sessionPath: sessionPath.path
@@ -3725,6 +4626,35 @@ export async function blueprintGodReviewRecordFix(
   }
 
   const session = loaded.session;
+  const topologyStaleReasons = await phaseTopologyStaleReasonsForGodReviewSession({
+    projectRoot,
+    session,
+    operation: "God-review record-fix"
+  });
+
+  if (topologyStaleReasons.length > 0) {
+    return {
+      status: "stale",
+      activated: true,
+      reason:
+        "God-review phase topology changed. Start a new hidden review before recording fixes for this session.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      remediationId: null,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      filesChanged: args.filesChanged ?? [],
+      terminal: false,
+      cleanupEligible: session.cleanup.eligible,
+      written: false,
+      staleReasons: topologyStaleReasons,
+      warnings: topologyStaleReasons
+    };
+  }
+
   const reportPath = args.reportPath ?? session.reportPath;
   const normalizedReportPath = normalizeGodReviewReportPath(reportPath);
 
@@ -3914,11 +4844,20 @@ export async function blueprintGodReviewRecordFix(
         : args.evidence,
     followUp: args.followUp
   });
+  const remediationPayload = appendRemediationLogPayload({ report, entry });
+  const reportAfterEntry = `${report}${remediationPayload}`;
+  const terminalCoverage = evaluateTerminalRemediationCoverage(reportAfterEntry);
   const updatedAt = new Date().toISOString();
-  const terminal = args.terminal === true;
+  const terminalRequested = args.terminal === true;
+  const terminalBlocked =
+    terminalCoverage.remainingFindingIds.length > 0 &&
+    (terminalRequested || session.cleanup.godFixTerminal);
+  const godFixTerminal = terminalBlocked
+    ? false
+    : session.cleanup.godFixTerminal || terminalRequested;
   const cleanup = {
     ...session.cleanup,
-    godFixTerminal: session.cleanup.godFixTerminal || terminal
+    godFixTerminal
   };
   cleanup.eligible = cleanup.reviewTerminal && cleanup.godFixTerminal;
   const updatedSession: GodReviewSession = {
@@ -3926,7 +4865,7 @@ export async function blueprintGodReviewRecordFix(
     updatedAt,
     cleanup
   };
-  const nextCommand = terminal
+  const nextCommand = cleanup.godFixTerminal
     ? "hidden fix terminal"
     : nextGodReviewCommand({
         activeCommand: "/blu-code-review-fix",
@@ -3935,19 +4874,7 @@ export async function blueprintGodReviewRecordFix(
         runId: session.runId
       });
 
-  await fs.appendFile(
-    reportAbsolutePath,
-    appendRemediationLogPayload({ report, entry }),
-    "utf8"
-  );
-  await fs.writeFile(
-    resolveBlueprintPath(projectRoot, updatedSession.sessionPath),
-    `${JSON.stringify(updatedSession, null, 2)}\n`,
-    "utf8"
-  );
-  await fs.writeFile(
-    resolveBlueprintPath(projectRoot, updatedSession.humanStatePath),
-    renderGodReviewHumanState({
+  const humanStateContent = renderGodReviewHumanState({
       runId: updatedSession.runId,
       scopeKind: updatedSession.scopeKind,
       fileCount: updatedSession.files.length,
@@ -3957,9 +4884,17 @@ export async function blueprintGodReviewRecordFix(
       godFixTerminal: updatedSession.cleanup.godFixTerminal,
       stale: args.status === "stale",
       nextCommand
-    }),
-    "utf8"
-  );
+    });
+
+  await writeGodReviewPersistenceBundle({
+    projectRoot,
+    reportPath: updatedSession.reportPath,
+    reportContent: reportAfterEntry,
+    sessionPath: updatedSession.sessionPath,
+    session: updatedSession,
+    humanStatePath: updatedSession.humanStatePath,
+    humanStateContent
+  });
 
   return {
     status: "recorded",
@@ -3978,8 +4913,17 @@ export async function blueprintGodReviewRecordFix(
     cleanupEligible: updatedSession.cleanup.eligible,
     written: true,
     staleReasons: args.status === "stale" ? selection?.staleReasons ?? [] : [],
-    warnings: parsedReport.warnings
+    warnings: [
+      ...parsedReport.warnings,
+      ...terminalCoverage.warnings,
+      ...(terminalBlocked
+        ? [
+            `Hidden fix terminal was not recorded because eligible findings still lack terminal remediation: ${terminalCoverage.remainingFindingIds.join(", ")}.`
+          ]
+        : [])
+    ]
   };
+  });
 }
 
 async function noEligibleHiddenFixTerminal(args: {
@@ -4084,6 +5028,7 @@ export async function blueprintGodReviewCleanup(
     });
   }
 
+  return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
   const loaded = await loadGodReviewSession({
     projectRoot,
     sessionPath: sessionPath.path
@@ -4098,6 +5043,28 @@ export async function blueprintGodReviewCleanup(
   }
 
   const session = loaded.session;
+  const topologyStaleReasons = await phaseTopologyStaleReasonsForGodReviewSession({
+    projectRoot,
+    session,
+    operation: "God-review cleanup"
+  });
+
+  if (topologyStaleReasons.length > 0) {
+    return invalidCleanupResult({
+      reason:
+        "God-review phase topology changed. Start a new hidden review before cleaning up this session.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      preservedPaths: [session.reportPath],
+      cleanupEligible: false,
+      reviewTerminal: session.cleanup.reviewTerminal,
+      godFixTerminal: session.cleanup.godFixTerminal,
+      warnings: topologyStaleReasons
+    });
+  }
+
   const reportPath = resolveBlueprintPath(projectRoot, session.reportPath);
   const report = await readTextIfPresent(reportPath);
 
@@ -4178,6 +5145,24 @@ export async function blueprintGodReviewCleanup(
     });
   }
 
+  const terminalCoverage = evaluateTerminalRemediationCoverage(report);
+
+  if (terminalCoverage.remainingFindingIds.length > 0) {
+    return invalidCleanupResult({
+      status: "blocked",
+      reason: `God-review cleanup is blocked because eligible findings still lack terminal remediation: ${terminalCoverage.remainingFindingIds.join(", ")}.`,
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      preservedPaths: [session.reportPath],
+      cleanupEligible: false,
+      reviewTerminal: true,
+      godFixTerminal: false,
+      warnings: [...warnings, ...terminalCoverage.warnings]
+    });
+  }
+
   const sessionAbsolutePath = resolveBlueprintPath(projectRoot, session.sessionPath);
   const humanStateAbsolutePath = resolveBlueprintPath(projectRoot, session.humanStatePath);
   const deletedPaths: string[] = [];
@@ -4207,6 +5192,7 @@ export async function blueprintGodReviewCleanup(
     godFixTerminal: true,
     warnings
   };
+  });
 }
 
 function parseBulletValue(lines: string[], label: string): string | null {

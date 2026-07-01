@@ -58,10 +58,12 @@ MCP tools.
 
 ### Execute
 
-- Call `mcp_blueprint_blueprint_roadmap_insert_phase` only after confirmation.
+- Call `mcp_blueprint_blueprint_roadmap_insert_phase` only after confirmation,
+  with `confirmed: true` bound to the approved `phase-insert-confirmation`
+  receipt.
 - Pass the confirmed integer `after` anchor, confirmed `description`, confirmed
-  `goal`, confirmed `successCriteria`, and confirmed durable `requirementIds`
-  declared in `.blueprint/REQUIREMENTS.md`.
+  `goal`, confirmed `successCriteria`, confirmed durable `requirementIds`
+  declared in `.blueprint/REQUIREMENTS.md`, and `confirmed: true`.
 - Require requirement validation before mutation: the confirmed IDs must be
   declared in `.blueprint/REQUIREMENTS.md`, must not be `none yet` or
   placeholders, and must not already be mapped to another roadmap phase.
@@ -227,8 +229,8 @@ command must still own all MCP calls.
   not accepted.
 - Requirement validation rejected IDs already mapped to another roadmap phase,
   so inserted-phase traceability stayed unique before mutation.
-- `mcp_blueprint_blueprint_roadmap_insert_phase` succeeded and returned
-  `written: true`.
+- `mcp_blueprint_blueprint_roadmap_insert_phase` succeeded with
+  `confirmed: true` and returned `written: true`.
 - `${phaseDir}/${phasePrefix}-CONTEXT.md` was created or reused through
   `mcp_blueprint_blueprint_artifact_scaffold`.
 - `mcp_blueprint_blueprint_state_update` recorded the inserted decimal phase,

@@ -29,10 +29,12 @@ import {
   blueprintArtifactValidate,
   blueprintCodebaseArtifactWrite
 } from "../src/mcp/tools/artifacts.js";
+import { blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintStateLoad,
-  blueprintStateSync
+  blueprintStateSync,
+  blueprintStateUpdate
 } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
@@ -182,6 +184,21 @@ async function createRepoFromFixture(fixtureName: string): Promise<string> {
         "utf8"
       );
     }
+
+    const configPath = path.join(repoPath, ".blueprint/config.json");
+    const config = JSON.parse(await readFile(configPath, "utf8")) as {
+      maintenance?: { patch_registry?: string };
+    };
+
+    if (config.maintenance?.patch_registry === "~/.gemini/blueprint/patches") {
+      config.maintenance.patch_registry = path.join(
+        os.homedir(),
+        ".gemini",
+        "blueprint",
+        "patches"
+      );
+      await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+    }
   }
 
   return repoPath;
@@ -221,6 +238,38 @@ async function writeMappedCodebaseBundle(repoPath: string): Promise<void> {
     });
     assert.notEqual(result.status, "invalid", JSON.stringify(result));
   }
+}
+
+async function writeOperationalDebris(repoPath: string): Promise<void> {
+  const locksPath = path.join(repoPath, ".blueprint/locks");
+  const lockPath = path.join(locksPath, "phase-topology.lock");
+  const recoveryPath = path.join(locksPath, "phase-topology.lock.recovery");
+  const transactionPath = path.join(
+    locksPath,
+    "phase-topology-remove-2-123-456-789.txn/tombstone"
+  );
+  const quarantinePath = path.join(locksPath, ".phase-topology.lock.123.456.token.stale");
+
+  await mkdir(lockPath, { recursive: true });
+  await writeFile(path.join(lockPath, "owner"), "abandoned-owner\n", "utf8");
+  await writeFile(path.join(lockPath, "lease"), "abandoned-owner\n", "utf8");
+  await mkdir(recoveryPath, { recursive: true });
+  await writeFile(path.join(recoveryPath, "owner.recovery-token"), "recovery-token\n", "utf8");
+  await mkdir(transactionPath, { recursive: true });
+  await mkdir(path.join(transactionPath, "02-phase"), { recursive: true });
+  await writeFile(path.join(transactionPath, "02-phase/02-CONTEXT.md"), "# Tombstone\n", "utf8");
+  await mkdir(quarantinePath, { recursive: true });
+  await writeFile(path.join(quarantinePath, "owner"), "stale-owner\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/mcp-write-failures.ndjson"),
+    "{\"event\":\"write-failure\"}\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/.STATE.md.123.456.token.tmp"),
+    "temporary state write\n",
+    "utf8"
+  );
 }
 
 async function createExecutionReadyRepo(): Promise<string> {
@@ -1754,6 +1803,85 @@ test("read-path tools keep scaffold-only repos eligible for new-project bootstra
   assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
 });
 
+test("read-path tools ignore stale operational debris during bootstrap classification", async (t) => {
+  const scaffoldRepo = await createGitRepo("blueprint-scaffold-debris-status-");
+  await writeFile(
+    path.join(scaffoldRepo, "package.json"),
+    JSON.stringify({ name: "scaffold-debris-status", private: true }, null, 2),
+    "utf8"
+  );
+  await writeOperationalDebris(scaffoldRepo);
+  t.after(async () => {
+    await rm(path.dirname(scaffoldRepo), { recursive: true, force: true });
+  });
+
+  const scaffoldStatus = await blueprintProjectStatus({ cwd: scaffoldRepo });
+  const scaffoldState = await blueprintStateLoad({ cwd: scaffoldRepo });
+  const scaffoldArtifacts = await blueprintArtifactList({ cwd: scaffoldRepo });
+  const scaffoldValidation = await blueprintArtifactValidate({ cwd: scaffoldRepo });
+
+  assert.equal(scaffoldStatus.status, "uninitialized");
+  assert.equal(scaffoldStatus.bootstrap.repoShape, "scaffold-only");
+  assert.match(scaffoldStatus.nextAction, /\/blu-new-project/);
+  assert.equal(scaffoldState.derivedStatus.projectStatus, "uninitialized");
+  assert.deepEqual(scaffoldArtifacts.artifacts.core, []);
+  assert.match(scaffoldValidation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.equal(
+    await pathExists(path.join(scaffoldRepo, ".blueprint/locks/phase-topology.lock/owner")),
+    true
+  );
+
+  const mappingRepo = await createGitRepo("blueprint-mapping-debris-status-");
+  await mkdir(path.join(mappingRepo, "src"), { recursive: true });
+  await writeFile(
+    path.join(mappingRepo, "package.json"),
+    JSON.stringify({ name: "mapping-debris-status", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(mappingRepo, "src/index.ts"), "export const value = 1;\n", "utf8");
+  await writeOperationalDebris(mappingRepo);
+  t.after(async () => {
+    await rm(path.dirname(mappingRepo), { recursive: true, force: true });
+  });
+
+  const mappingStatus = await blueprintProjectStatus({ cwd: mappingRepo });
+  const mappingState = await blueprintStateLoad({ cwd: mappingRepo });
+  const mappingArtifacts = await blueprintArtifactList({ cwd: mappingRepo });
+  const mappingValidation = await blueprintArtifactValidate({ cwd: mappingRepo });
+
+  assert.equal(mappingStatus.status, "mapping-incomplete");
+  assert.match(mappingStatus.nextAction, /\/blu-map-codebase/);
+  assert.equal(mappingState.derivedStatus.projectStatus, "mapping-incomplete");
+  assert.deepEqual(mappingArtifacts.missing.sort(), CODEBASE_ARTIFACTS_SORTED);
+  assert.match(mappingValidation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+
+  const mappedRepo = await createGitRepo("blueprint-mapped-debris-status-");
+  await mkdir(path.join(mappedRepo, "src"), { recursive: true });
+  await writeFile(
+    path.join(mappedRepo, "package.json"),
+    JSON.stringify({ name: "mapped-debris-status", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(mappedRepo, "src/index.ts"), "export const value = 1;\n", "utf8");
+  await writeMappedCodebaseBundle(mappedRepo);
+  await writeOperationalDebris(mappedRepo);
+  t.after(async () => {
+    await rm(path.dirname(mappedRepo), { recursive: true, force: true });
+  });
+
+  const mappedStatus = await blueprintProjectStatus({ cwd: mappedRepo });
+  const mappedState = await blueprintStateLoad({ cwd: mappedRepo });
+  const mappedValidation = await blueprintArtifactValidate({ cwd: mappedRepo });
+
+  assert.equal(mappedStatus.status, "mapped-only");
+  assert.equal(mappedStatus.bootstrap.codebaseMapped, true);
+  assert.match(mappedStatus.nextAction, /\/blu-new-project/);
+  assert.doesNotMatch(mappedStatus.nextAction, /\/blu-health/);
+  assert.equal(mappedState.derivedStatus.projectStatus, "mapped-only");
+  assert.equal(mappedValidation.valid, true);
+  assert.doesNotMatch(mappedValidation.suggestedRepairs.join("\n"), /\/blu-health/);
+});
+
 test("read-path tools keep docs-only starter repos greenfield and bootstrap-eligible", async (t) => {
   const repoPath = await createGitRepo("blueprint-docs-only-status-");
   await writeFile(path.join(repoPath, "SPEC.md"), "# Product Spec\n", "utf8");
@@ -1957,6 +2085,70 @@ test("state sync reconstructs STATE.md from surviving roadmap and artifact signa
   assert.match(loadedState.blockers.join("\n"), /Missing \.blueprint\/REQUIREMENTS\.md/);
 });
 
+test("state load and project status surface malformed present STATE.md", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(statePath, "# not a Blueprint state file\n", "utf8");
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const syncResult = await blueprintStateSync({ cwd: repoPath });
+
+  assert.equal(status.status, "initialized");
+  assert.equal(status.initialized, true);
+  assert.equal(state.derivedStatus.hasBlockers, true);
+  assert.match(state.derivedStatus.nextAction, /\/blu-health/);
+  assert.match(status.nextAction, /\/blu-health/);
+  assert.match((state.warnings ?? []).join("\n"), /STATE\.md.*malformed/i);
+  assert.match(status.health.warnings.join("\n"), /STATE\.md.*malformed/i);
+  assert.match(syncResult.warnings.join("\n"), /STATE\.md.*malformed/i);
+  assert.match(state.blockers.join("\n"), /Malformed \.blueprint\/STATE\.md/);
+});
+
+test("state load and project status surface invalid non-empty current phase", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    statePath,
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v2
+- Current phase: nope
+- Active command: /blu-progress
+- Next action: Run /blu-progress to review state
+- Last updated: 2026-04-12T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const syncResult = await blueprintStateSync({ cwd: repoPath });
+
+  assert.equal(status.status, "initialized");
+  assert.equal(status.initialized, true);
+  assert.equal(state.derivedStatus.hasBlockers, true);
+  assert.match(state.derivedStatus.nextAction, /\/blu-health/);
+  assert.match(status.nextAction, /\/blu-health/);
+  assert.match((state.warnings ?? []).join("\n"), /invalid Current phase value: nope/);
+  assert.match(status.health.warnings.join("\n"), /invalid Current phase value: nope/);
+  assert.match(syncResult.warnings.join("\n"), /invalid Current phase value: nope/);
+  assert.match(state.blockers.join("\n"), /Malformed \.blueprint\/STATE\.md/);
+});
+
 test("initialized Blueprint repos report healthy read-path status and artifact coverage", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   t.after(async () => {
@@ -1965,8 +2157,11 @@ test("initialized Blueprint repos report healthy read-path status and artifact c
 
   const status = await blueprintProjectStatus({ cwd: repoPath });
   const state = await blueprintStateLoad({ cwd: repoPath });
+  const stateAgain = await blueprintStateLoad({ cwd: repoPath });
   const artifacts = await blueprintArtifactList({ cwd: repoPath });
   const validation = await blueprintArtifactValidate({ cwd: repoPath });
+  const stateDocument = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+  const persistedLastUpdated = stateDocument.match(/^- Last updated: (.+)$/m)?.[1] ?? "";
 
   assert.equal(status.status, "initialized");
   assert.equal(status.initialized, true);
@@ -1977,6 +2172,11 @@ test("initialized Blueprint repos report healthy read-path status and artifact c
   assert.equal(state.derivedStatus.currentPhase, "2");
   assert.equal(state.derivedStatus.hasBlockers, false);
   assert.match(state.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+  assert.notEqual(persistedLastUpdated, "");
+  assert.equal(state.state.lastUpdated, persistedLastUpdated);
+  assert.equal(state.metadata.last_updated, persistedLastUpdated);
+  assert.equal(stateAgain.state.lastUpdated, persistedLastUpdated);
+  assert.equal(stateAgain.metadata.last_updated, persistedLastUpdated);
   assert.ok(artifacts.artifacts.core.includes(".blueprint/STATE.md"));
   assert.equal(artifacts.artifacts.codebase.length, 7);
   assert.ok(artifacts.artifacts.codebase.includes(".blueprint/codebase/STRUCTURE.md"));
@@ -3179,6 +3379,109 @@ test("project status requires milestone-wide validation evidence before closeout
   assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
 });
 
+test("state_update stores synced cross-phase milestone validation repair routes", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none", {
+    missingEarlierVerification: true
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced"
+  });
+  const stateDocument = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(result.statePath, ".blueprint/STATE.md");
+  assert.match(stateDocument, /- Current phase: 3/);
+  assert.match(stateDocument, /- Next action: Run \/blu-validate-phase 2/);
+  assert.equal(state.derivedStatus.currentPhase, "3");
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
+});
+
+test("state_update rejects explicit synced cross-phase nextAction patches", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none", {
+    missingEarlierVerification: true
+  });
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const beforeStateDocument = await readFile(statePath, "utf8");
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      base: "synced",
+      patch: {
+        nextAction: "Run /blu-validate-phase 2"
+      }
+    }),
+    /current phase 3.*\/blu-validate-phase 2/
+  );
+
+  assert.equal(await readFile(statePath, "utf8"), beforeStateDocument);
+});
+
+test("state_update rejects synced cross-phase repairs that target a later phase", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none");
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  const phaseThreeVerificationPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-milestone-closeout/03-VERIFICATION.md"
+  );
+  const phaseTwoContextPath = path.join(
+    repoPath,
+    ".blueprint/phases/02-validation-hardening/02-CONTEXT.md"
+  );
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(
+    phaseTwoContextPath,
+    `# Phase 02: Validation Hardening - Context
+
+## Decisions
+
+- Phase 2 is complete enough for selected-phase routing to move past discovery checks.
+`,
+    "utf8"
+  );
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          research: false,
+          ui_phase: false
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await rm(phaseThreeVerificationPath);
+  const beforeStateDocument = await readFile(statePath, "utf8");
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      base: "synced",
+      patch: {
+        currentPhase: "2"
+      }
+    }),
+    /current phase 2.*\/blu-validate-phase 3/
+  );
+
+  assert.equal(await readFile(statePath, "utf8"), beforeStateDocument);
+});
+
 test("project status tolerates earlier summary shape drift during milestone closeout", async (t) => {
   const repoPath = await createMilestoneCloseoutRepo("none", {
     malformedEarlierSummary: true
@@ -3290,6 +3593,54 @@ test("project status prefers reconciled roadmap signals over stale STATE.md valu
   assert.match(status.nextAction, /\/blu-discuss-phase 3/);
 });
 
+test("project status routes malformed present ROADMAP.md through health instead of stale STATE.md", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    statePath,
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: old-milestone
+- Current phase: 2
+- Active command: /blu-progress
+- Next action: Run /blu-progress to review Phase 2 and the next safe action
+- Last updated: 2026-04-10T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    roadmapPath,
+    `# Broken Roadmap
+
+This file is present but has no active milestone and no parseable phase list.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const syncResult = await blueprintStateSync({ cwd: repoPath });
+
+  assert.equal(status.status, "initialized");
+  assert.match(status.nextAction, /\/blu-health/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-health/);
+  assert.doesNotMatch(status.nextAction, /\/blu-research-phase 2/);
+  assert.match((state.warnings ?? []).join("\n"), /ROADMAP\.md.*no parseable phases/i);
+  assert.match(status.health.warnings.join("\n"), /ROADMAP\.md.*no parseable phases/i);
+  assert.match(syncResult.warnings.join("\n"), /ROADMAP\.md.*no parseable phases/i);
+  assert.match(state.blockers.join("\n"), /Malformed \.blueprint\/ROADMAP\.md/);
+});
+
 test("project status keeps missing planned phases with later phase artifacts on health", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
@@ -3358,13 +3709,63 @@ test("project status reports malformed config as a health warning instead of thr
   await writeFile(configPath, "{ invalid json", "utf8");
 
   const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
 
   assert.equal(status.status, "initialized");
   assert.equal(status.initialized, true);
+  assert.match(status.nextAction, /\/blu-health/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-health/);
   assert.match(
     status.health.warnings.join("\n"),
     /Blueprint config could not be read:/
   );
+  assert.match(
+    (state.warnings ?? []).join("\n"),
+    /Blueprint config could not be read:/
+  );
+});
+
+test("config_set repairs malformed project config only with explicit repair intent", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(configPath, "{ invalid json", "utf8");
+
+  await assert.rejects(
+    blueprintConfigSet({
+      cwd: repoPath,
+      patch: {
+        workflow: {
+          subagents: false
+        }
+      }
+    }),
+    /Unexpected token|Expected property name|JSON/
+  );
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    scope: "project",
+    repairMalformedProjectConfig: true,
+    patch: {
+      workflow: {
+        subagents: false
+      }
+    }
+  });
+  const repairedConfig = JSON.parse(await readFile(configPath, "utf8")) as Record<string, unknown>;
+
+  assert.deepEqual(result.updatedKeys, ["workflow.subagents"]);
+  assert.match(result.warnings.join("\n"), /Malformed \.blueprint\/config\.json was replaced/);
+  assert.deepEqual(repairedConfig, {
+    version: 2,
+    workflow: {
+      subagents: false
+    }
+  });
 });
 
 test("state load clears stale structural blockers after the repo is healthy again", async (t) => {
@@ -3414,6 +3815,33 @@ test("artifact validation flags malformed legacy config and incomplete bundles w
   assert.match(validation.issues.join("\n"), /Config warning: Ignored disallowed config key: workflow\.use_workspaces/);
   assert.match(validation.issues.join("\n"), /Codebase artifact bundle is incomplete/);
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-health --repair/);
+});
+
+test("state load and sync surface non-fatal config normalization warnings", async (t) => {
+  const repoPath = await createRepoFromFixture("legacy-config-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const syncResult = await blueprintStateSync({ cwd: repoPath });
+
+  assert.match(
+    (state.warnings ?? []).join("\n"),
+    /Migrated legacy config key commit_docs/
+  );
+  assert.match(
+    (state.warnings ?? []).join("\n"),
+    /Ignored disallowed config key: workflow\.use_workspaces/
+  );
+  assert.match(
+    syncResult.warnings.join("\n"),
+    /Migrated legacy config key parallelization/
+  );
+  assert.match(
+    syncResult.warnings.join("\n"),
+    /Ignored disallowed config key: workflow\.use_workspaces/
+  );
 });
 
 test("artifact validation does not flag an in-progress discovery phase as structurally broken", async (t) => {

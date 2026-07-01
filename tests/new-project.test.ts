@@ -50,6 +50,47 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+async function withEnvOverrides<T>(
+  overrides: Record<string, string | undefined>,
+  callback: () => Promise<T>
+): Promise<T> {
+  const previousEntries = Object.fromEntries(
+    Object.keys(overrides).map((key) => [key, process.env[key]])
+  );
+
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  try {
+    return await callback();
+  } finally {
+    for (const [key, value] of Object.entries(previousEntries)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
+
+async function copySavedDefaultsFixture(
+  fixtureName: string,
+  tempRoot: string
+): Promise<string> {
+  const defaultsPath = path.join(tempRoot, "defaults.json");
+  const sourcePath = path.join(fixtureRoot, "saved-defaults", fixtureName);
+
+  await writeFile(defaultsPath, await readFile(sourcePath, "utf8"), "utf8");
+
+  return defaultsPath;
+}
+
 async function createRepoFromFixture(fixtureName: string): Promise<string> {
   const repoPath = await createGitRepo("blueprint-new-project-");
 
@@ -1255,20 +1296,20 @@ test("new-project rejects bootstrap seed roadmap gaps before writes", async (t) 
 
 test("new-project applies valid saved defaults and reports provenance", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
-  const defaultsPath = path.join(
-    fixtureRoot,
-    "saved-defaults/valid-defaults.json"
-  );
+  const tempRoot = path.dirname(repoPath);
+  const defaultsPath = await copySavedDefaultsFixture("valid-defaults.json", tempRoot);
   t.after(async () => {
-    await rm(path.dirname(repoPath), { recursive: true, force: true });
+    await rm(tempRoot, { recursive: true, force: true });
   });
 
-  const result = await blueprintProjectInit({
-    cwd: repoPath,
-    bootstrapMode: "auto",
-    bootstrapSeed: buildAutoBootstrapSeed(),
-    defaultsPath
-  });
+  const result = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: tempRoot }, () =>
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapMode: "auto",
+      bootstrapSeed: buildAutoBootstrapSeed(),
+      defaultsPath
+    })
+  );
   const config = await readJsonFile<Record<string, unknown>>(
     path.join(repoPath, ".blueprint/config.json")
   );
@@ -1282,23 +1323,69 @@ test("new-project applies valid saved defaults and reports provenance", async (t
   );
 });
 
-test("new-project can skip valid saved defaults by user choice", async (t) => {
+test("new-project rejects escaped defaultsPath before bootstrap scaffold writes", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
-  const defaultsPath = path.join(
-    fixtureRoot,
-    "saved-defaults/valid-defaults.json"
-  );
+  const tempRoot = path.dirname(repoPath);
+  const globalHome = path.join(tempRoot, "global-home");
+  const outsideDefaultsPath = path.join(tempRoot, "outside-defaults.json");
   t.after(async () => {
-    await rm(path.dirname(repoPath), { recursive: true, force: true });
+    await rm(tempRoot, { recursive: true, force: true });
   });
 
-  const result = await blueprintProjectInit({
-    cwd: repoPath,
-    bootstrapMode: "auto",
-    bootstrapSeed: buildAutoBootstrapSeed(),
-    defaultsPath,
-    savedDefaultsPolicy: "skip"
+  await mkdir(globalHome, { recursive: true });
+
+  await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: globalHome }, async () => {
+    await assert.rejects(
+      blueprintProjectInit({
+        cwd: repoPath,
+        bootstrapMode: "auto",
+        bootstrapSeed: buildAutoBootstrapSeed(),
+        defaultsPath: outsideDefaultsPath
+      }),
+      /defaultsPath must resolve inside the Blueprint host-global directory/
+    );
   });
+
+  for (const relativePath of [
+    ".blueprint/PROJECT.md",
+    ".blueprint/REQUIREMENTS.md",
+    ".blueprint/ROADMAP.md",
+    ".blueprint/phases",
+    ".blueprint/config.json",
+    ".blueprint/STATE.md"
+  ]) {
+    assert.equal(
+      await pathExists(path.join(repoPath, relativePath)),
+      false,
+      `${relativePath} should not exist after defaultsPath preflight failure`
+    );
+  }
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.initialized, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.doesNotMatch(status.nextAction, /\/blu-health/);
+});
+
+test("new-project can skip valid saved defaults by user choice", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  const tempRoot = path.dirname(repoPath);
+  const defaultsPath = await copySavedDefaultsFixture("valid-defaults.json", tempRoot);
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const result = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: tempRoot }, () =>
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapMode: "auto",
+      bootstrapSeed: buildAutoBootstrapSeed(),
+      defaultsPath,
+      savedDefaultsPolicy: "skip"
+    })
+  );
   const config = await readJsonFile<Record<string, unknown>>(
     path.join(repoPath, ".blueprint/config.json")
   );
@@ -1341,12 +1428,14 @@ test("new-project ignores repo-specific saved defaults during project bootstrap"
     )
   );
 
-  const result = await blueprintProjectInit({
-    cwd: repoPath,
-    bootstrapMode: "auto",
-    bootstrapSeed: buildAutoBootstrapSeed(),
-    defaultsPath
-  });
+  const result = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: tempRoot }, () =>
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapMode: "auto",
+      bootstrapSeed: buildAutoBootstrapSeed(),
+      defaultsPath
+    })
+  );
   const config = await readJsonFile<Record<string, unknown>>(
     path.join(repoPath, ".blueprint/config.json")
   );
@@ -1363,20 +1452,20 @@ test("new-project ignores repo-specific saved defaults during project bootstrap"
 
 test("new-project falls back to hardcoded defaults when saved defaults are malformed", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
-  const defaultsPath = path.join(
-    fixtureRoot,
-    "saved-defaults/malformed-defaults.json"
-  );
+  const tempRoot = path.dirname(repoPath);
+  const defaultsPath = await copySavedDefaultsFixture("malformed-defaults.json", tempRoot);
   t.after(async () => {
-    await rm(path.dirname(repoPath), { recursive: true, force: true });
+    await rm(tempRoot, { recursive: true, force: true });
   });
 
-  const result = await blueprintProjectInit({
-    cwd: repoPath,
-    bootstrapMode: "auto",
-    bootstrapSeed: buildAutoBootstrapSeed(),
-    defaultsPath
-  });
+  const result = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: tempRoot }, () =>
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapMode: "auto",
+      bootstrapSeed: buildAutoBootstrapSeed(),
+      defaultsPath
+    })
+  );
   const config = await readJsonFile<Record<string, unknown>>(
     path.join(repoPath, ".blueprint/config.json")
   );
@@ -1388,21 +1477,21 @@ test("new-project falls back to hardcoded defaults when saved defaults are malfo
 
 test("new-project supports host workflow preference patch after skipped defaults", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
-  const defaultsPath = path.join(
-    fixtureRoot,
-    "saved-defaults/valid-defaults.json"
-  );
+  const tempRoot = path.dirname(repoPath);
+  const defaultsPath = await copySavedDefaultsFixture("valid-defaults.json", tempRoot);
   t.after(async () => {
-    await rm(path.dirname(repoPath), { recursive: true, force: true });
+    await rm(tempRoot, { recursive: true, force: true });
   });
 
-  const initResult = await blueprintProjectInit({
-    cwd: repoPath,
-    bootstrapMode: "auto",
-    bootstrapSeed: buildAutoBootstrapSeed(),
-    defaultsPath,
-    savedDefaultsPolicy: "skip"
-  });
+  const initResult = await withEnvOverrides({ BLUEPRINT_GLOBAL_HOME: tempRoot }, () =>
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapMode: "auto",
+      bootstrapSeed: buildAutoBootstrapSeed(),
+      defaultsPath,
+      savedDefaultsPolicy: "skip"
+    })
+  );
   const configPatch = await blueprintConfigSet({
     cwd: repoPath,
     scope: "project",

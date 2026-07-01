@@ -1,5 +1,5 @@
 import * as z from "zod/v4";
-import type { BlueprintState } from "./state.js";
+import { type BlueprintState } from "./state.js";
 declare const WORKSPACE_STRATEGIES: readonly ["worktree", "clone"];
 declare const PATCH_AUDIT_ACTIONS: readonly ["record", "preview", "reapply"];
 declare const PATCH_OUTCOMES: readonly ["recorded", "applied", "conflict", "blocked"];
@@ -51,6 +51,8 @@ type WorkstreamMutateArgs = {
     cwd?: string;
     operation: WorkstreamOperation;
     workstream: string;
+    confirmed?: boolean;
+    expectedActiveWorkstream?: string;
 };
 type WorkstreamMutateResult = {
     status: "updated" | "reused" | "blocked" | "project_missing" | "invalid";
@@ -120,6 +122,11 @@ type WorkspaceRemoveResult = {
     removedMembers: WorkspaceRepoMember[];
     skippedMembers: string[];
 };
+export type WorkspaceRegistryLockRecoveryHooksForTest = {
+    beforeStaleRecoveryClaim?(lockPath: string): Promise<void> | void;
+    beforeStaleLockQuarantine?(lockPath: string): Promise<void> | void;
+    afterRecoveryGuardRelease?(lockPath: string): Promise<void> | void;
+};
 type PatchCompatibility = {
     host: string | null;
     repoRootName: string;
@@ -174,6 +181,25 @@ type PatchRecordResult = {
     trackedFiles: string[];
     updated: boolean;
 };
+type PatchRecordGenerationFingerprint = {
+    patchFileHash: string | null;
+    manifestFileHash: string | null;
+    auditFileHash: string | null;
+    indexFileHash: string | null;
+};
+export type PatchRecordRollbackSnapshot = {
+    registryPath: string;
+    patchId: string;
+    wasIndexed: boolean;
+    registryPatches: string[];
+    patchFile: WorkstreamFileSnapshot;
+    manifestFile: WorkstreamFileSnapshot;
+    auditFile: WorkstreamFileSnapshot;
+    expectedPostWriteFingerprint: PatchRecordGenerationFingerprint;
+};
+type PatchRecordResultWithRollbackSnapshot = PatchRecordResult & {
+    rollbackSnapshot: PatchRecordRollbackSnapshot;
+};
 type PatchReapplyArgs = {
     cwd?: string;
     patchIds?: string[];
@@ -183,20 +209,42 @@ type PatchConflict = {
     patchId: string;
     message: string;
 };
+type PatchReapplyStatus = "applied" | "preview" | "blocked" | "failed" | "partial" | "skipped";
+type PatchReapplyRollback = {
+    attempted: boolean;
+    succeeded: boolean;
+    restoredFiles: string[];
+    dirtyFiles: string[];
+    message: string | null;
+};
 type PatchReapplyResult = {
+    status: PatchReapplyStatus;
     registryPath: string;
     appliedPatches: string[];
     skippedPatches: string[];
     conflicts: PatchConflict[];
     preview: boolean;
     targetHead: string | null;
+    rollback?: PatchReapplyRollback;
 };
+type WorkstreamFileSnapshot = {
+    path: string;
+    existed: boolean;
+    content: string | null;
+};
+export declare const workspaceToolTestHooks: {
+    setWorkspaceRegistryLockRecoveryHooksForTest(hooks: WorkspaceRegistryLockRecoveryHooksForTest): () => void;
+};
+export declare function rollbackPatchRecordToSnapshot(snapshot: PatchRecordRollbackSnapshot): Promise<void>;
 export declare function blueprintWorkspaceRegistryGet(_args?: WorkspaceRegistryGetArgs): Promise<WorkspaceRegistryGetResult>;
 export declare function blueprintWorkspaceCreate(args: WorkspaceCreateArgs): Promise<WorkspaceCreateResult>;
 export declare function blueprintWorkspaceRemove(args: WorkspaceRemoveArgs): Promise<WorkspaceRemoveResult>;
 export declare function blueprintWorkstreamList(args?: WorkstreamListArgs): Promise<WorkstreamListResult>;
 export declare function blueprintWorkstreamMutate(args: WorkstreamMutateArgs): Promise<WorkstreamMutateResult>;
 export declare function blueprintPatchList(args?: PatchListArgs): Promise<PatchListResult>;
+export declare function blueprintPatchRecord(args: PatchRecordArgs, options: {
+    captureRollbackSnapshot: true;
+}): Promise<PatchRecordResultWithRollbackSnapshot>;
 export declare function blueprintPatchRecord(args: PatchRecordArgs): Promise<PatchRecordResult>;
 export declare function blueprintPatchReapply(args?: PatchReapplyArgs): Promise<PatchReapplyResult>;
 export declare const workspaceToolDefinitions: ({
@@ -249,6 +297,8 @@ export declare const workspaceToolDefinitions: ({
             resume: "resume";
         }>;
         workstream: z.ZodString;
+        confirmed: z.ZodOptional<z.ZodBoolean>;
+        expectedActiveWorkstream: z.ZodOptional<z.ZodString>;
     };
     handler: (args: Record<string, unknown>) => Promise<WorkstreamMutateResult>;
 } | {

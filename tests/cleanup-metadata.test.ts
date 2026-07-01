@@ -32,7 +32,7 @@ test("cleanup manifest references the maintenance skill, high-risk maintenance p
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_cleanup_archive/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /cleanup-latest/);
   assert.match(commandFile, /`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/);
@@ -40,8 +40,7 @@ test("cleanup manifest references the maintenance skill, high-risk maintenance p
   assert.match(commandFile, /archive-destination-confirmation/);
   assert.match(commandFile, /report-overwrite-confirmation/);
   assert.match(commandFile, /Gemini-native `ask_user`/);
-  assert.match(commandFile, /If `ask_user` is unavailable for either confirmation, stop honestly with the named pending gate still visible/i);
-  assert.match(commandFile, /If `ask_user` is unavailable, stop honestly with `report-overwrite-confirmation` still visible/i);
+  assert.match(commandFile, /If `ask_user` is unavailable for any confirmation, stop honestly with the named pending gate still visible/i);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /active roadmap/i);
   assert.match(commandFile, /protected exclusions explicit/i);
@@ -61,7 +60,7 @@ test("maintenance skill captures cleanup visibility, report persistence, and pro
   assert.match(skillFile, /blueprint_roadmap_read/);
   assert.match(skillFile, /blueprint_artifact_list/);
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
-  assert.match(skillFile, /blueprint_artifact_report_write/);
+  assert.match(skillFile, /blueprint_cleanup_archive/);
   assert.match(skillFile, /Execution profile: `high-risk-maintenance`/);
   assert.match(
     skillFile,
@@ -78,10 +77,10 @@ test("maintenance skill captures cleanup visibility, report persistence, and pro
   assert.match(skillFile, /report-overwrite-confirmation/);
   assert.match(skillFile, /Gemini-native `ask_user`/);
   assert.match(skillFile, /if `ask_user` is unavailable stop honestly with the named pending gate still visible/i);
-  assert.match(skillFile, /stop honestly with that named pending gate still visible when `ask_user` is unavailable/i);
+  assert.match(skillFile, /keep `report-overwrite-confirmation` visible until overwrite is explicitly approved/i);
   assert.match(skillFile, /protected scope explicit/i);
   assert.match(skillFile, /never the current phase/i);
-  assert.match(skillFile, /before filesystem mutation begins/i);
+  assert.match(skillFile, /actual archive outcome/i);
 });
 
 test("cleanup local runtime contract and runtime resource expose the protected-scope visibility and waiting-state contract", async () => {
@@ -101,6 +100,7 @@ test("cleanup local runtime contract and runtime resource expose the protected-s
   assert.match(runtimeReference, /cleanup-confirmation/);
   assert.match(runtimeReference, /archive-destination-confirmation/);
   assert.match(runtimeReference, /report-overwrite-confirmation/);
+  assert.match(runtimeReference, /blueprint_cleanup_archive/);
   assert.match(runtimeReference, /Require destructive confirmation and surface `cleanup-confirmation`/i);
   assert.match(runtimeReference, /current phase, active roadmap references, evidence-incomplete directories, and final kept directories/i);
   assert.match(runtimeReference, /manual cleanup follow-up/i);
@@ -109,7 +109,7 @@ test("cleanup local runtime contract and runtime resource expose the protected-s
   assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /cleanup-runtime-contract\.md/);
   assert.match(
     runtimeContract.runtimeReference?.contractNotes ?? "",
-    /protect the current phase and active roadmap references/i
+    /preview and commit cleanup only through blueprint_cleanup_archive/i
   );
   assert.deepEqual(
     runtimeContract.runtimeReference?.exactMcpDestination,
@@ -150,7 +150,7 @@ test("repo-facing status docs treat cleanup as a shipped command", async () => {
   assert.match(metadata.runtimeReference.contractNotes, /cleanup-runtime-contract\.md/);
   assert.match(
     metadata.runtimeReference.contractNotes,
-    /protect the current phase and active roadmap references/i
+    /preview and commit cleanup only through blueprint_cleanup_archive/i
   );
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);

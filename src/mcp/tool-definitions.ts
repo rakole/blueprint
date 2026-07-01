@@ -1,5 +1,6 @@
 import type { ToolDefinition } from "./tool-types.js";
 import { artifactToolDefinitions } from "./tools/artifacts.js";
+import { cleanupToolDefinitions } from "./tools/cleanup.js";
 import { configToolDefinitions } from "./tools/config.js";
 import { godReviewToolDefinitions } from "./tools/god-review.js";
 import { impactToolDefinitions } from "./tools/impact.js";
@@ -22,6 +23,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...reviewToolDefinitions,
   ...godReviewToolDefinitions,
   ...artifactToolDefinitions,
+  ...cleanupToolDefinitions,
   ...impactToolDefinitions,
   ...updateToolDefinitions,
   ...workspaceToolDefinitions

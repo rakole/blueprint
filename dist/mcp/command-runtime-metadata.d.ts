@@ -101,7 +101,7 @@ export declare const ADD_PHASE_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly [".blueprint write guard"];
-        readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, choose and confirm durable requirementIds plus a concrete goal plus 2-5 successCriteria, prefer ask_user for the exact phase-number and roadmap-metadata confirmation gate, pass the confirmed number as expectedPhaseNumber, confirmed IDs as requirementIds, objective as goal, and criteria as successCriteria, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
+        readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, choose and confirm durable requirementIds plus a concrete goal plus 2-5 successCriteria, prefer ask_user for the exact phase-number and roadmap-metadata confirmation gate, pass confirmed: true with the confirmed number as expectedPhaseNumber, confirmed IDs as requirementIds, objective as goal, and criteria as successCriteria, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -135,7 +135,7 @@ export declare const INSERT_PHASE_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_insert_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.";
+        readonly contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass confirmed: true and the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -169,7 +169,7 @@ export declare const REMOVE_PHASE_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_locate", "blueprint_roadmap_remove_phase", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.";
+        readonly contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, pass confirmed: true after remove-phase-confirmation before removal, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -203,7 +203,7 @@ export declare const PLAN_MILESTONE_GAPS_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_roadmap_add_phase", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-roadmapper"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.";
+        readonly contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls with confirmed: true after grouped plan approval, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -1440,7 +1440,7 @@ export declare const WORKSTREAMS_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: project-local state mutation with switching semantics.";
     };
-    readonly requiredTools: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate"];
     readonly optionalAgents: readonly [];
     readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/workstreams-runtime-contract.md"];
     readonly spec: {
@@ -1450,17 +1450,17 @@ export declare const WORKSTREAMS_RUNTIME_METADATA: {
         readonly rootRoutable: true;
         readonly purpose: "`workstreams` lists, creates, switches, resumes, or completes project-local Blueprint workstreams through MCP-owned state.";
         readonly reads: readonly ["Project-local workstream index and saved per-stream state."];
-        readonly writes: readonly [".blueprint/workstreams/WORKSTREAMS.md", ".blueprint/workstreams/<slug>/state.json", ".blueprint/STATE.md for returned resume patches"];
+        readonly writes: readonly [".blueprint/workstreams/WORKSTREAMS.md", ".blueprint/workstreams/<slug>/state.json", ".blueprint/STATE.md during resume snapshot restoration"];
     };
     readonly runtimeReference: {
         readonly path: string;
         readonly waveTitle: "Workspace And Maintenance";
         readonly command: "workstreams";
         readonly primarySkill: "blueprint-maintenance";
-        readonly exactMcpDestination: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly [".blueprint write guard"];
-        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and apply returned resume statePatch only through blueprint_state_update.";
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and treat returned resume statePatch as already applied by that mutate tool.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -1474,7 +1474,7 @@ export declare const CLEANUP_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: confirmation-gated phase-directory archival and removal behavior.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_cleanup_archive", "blueprint_state_update"];
     readonly optionalAgents: readonly [];
     readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/cleanup-runtime-contract.md"];
     readonly spec: {
@@ -1484,17 +1484,17 @@ export declare const CLEANUP_RUNTIME_METADATA: {
         readonly rootRoutable: true;
         readonly purpose: "`cleanup` archives completed Blueprint phase directories through a protected-scope confirmation flow and persists a durable cleanup report.";
         readonly reads: readonly ["Project health, roadmap references, artifact inventory, cleanup evidence digest, and filesystem preflight."];
-        readonly writes: readonly [".blueprint/reports/cleanup-latest.md", ".blueprint/STATE.md when routing changes", "confirmed phase archive destination"];
+        readonly writes: readonly [".blueprint/reports/cleanup-latest.md through blueprint_cleanup_archive", ".blueprint/STATE.md when routing changes", "confirmed phase archive destination through blueprint_cleanup_archive"];
     };
     readonly runtimeReference: {
         readonly path: string;
         readonly waveTitle: "Workspace And Maintenance";
         readonly command: "cleanup";
         readonly primarySkill: "blueprint-maintenance";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_cleanup_archive", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly [".blueprint write guard"];
-        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, protect the current phase and active roadmap references, require cleanup and destination confirmations before filesystem mutation, write cleanup-latest before archival, and update state only after successful approved archival.";
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, preview and commit cleanup only through blueprint_cleanup_archive, protect the current phase, active roadmap references, and evidence-incomplete directories in runtime code, require cleanup and destination confirmations before commit mode, write cleanup-latest only from the actual archive outcome, and update state only after successful approved archival.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -1760,7 +1760,7 @@ export declare const EXPLORE_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+        readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed: true, confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -1965,7 +1965,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly [".blueprint write guard"];
-            readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, choose and confirm durable requirementIds plus a concrete goal plus 2-5 successCriteria, prefer ask_user for the exact phase-number and roadmap-metadata confirmation gate, pass the confirmed number as expectedPhaseNumber, confirmed IDs as requirementIds, objective as goal, and criteria as successCriteria, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
+            readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, choose and confirm durable requirementIds plus a concrete goal plus 2-5 successCriteria, prefer ask_user for the exact phase-number and roadmap-metadata confirmation gate, pass confirmed: true with the confirmed number as expectedPhaseNumber, confirmed IDs as requirementIds, objective as goal, and criteria as successCriteria, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -1999,7 +1999,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_insert_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.";
+            readonly contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass confirmed: true and the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -2033,7 +2033,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_locate", "blueprint_roadmap_remove_phase", "blueprint_state_update"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.";
+            readonly contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, pass confirmed: true after remove-phase-confirmation before removal, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -2067,7 +2067,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_roadmap_add_phase", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-roadmapper"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.";
+            readonly contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls with confirmed: true after grouped plan approval, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -3304,7 +3304,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: project-local state mutation with switching semantics.";
         };
-        readonly requiredTools: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate"];
         readonly optionalAgents: readonly [];
         readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/workstreams-runtime-contract.md"];
         readonly spec: {
@@ -3314,17 +3314,17 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly rootRoutable: true;
             readonly purpose: "`workstreams` lists, creates, switches, resumes, or completes project-local Blueprint workstreams through MCP-owned state.";
             readonly reads: readonly ["Project-local workstream index and saved per-stream state."];
-            readonly writes: readonly [".blueprint/workstreams/WORKSTREAMS.md", ".blueprint/workstreams/<slug>/state.json", ".blueprint/STATE.md for returned resume patches"];
+            readonly writes: readonly [".blueprint/workstreams/WORKSTREAMS.md", ".blueprint/workstreams/<slug>/state.json", ".blueprint/STATE.md during resume snapshot restoration"];
         };
         readonly runtimeReference: {
             readonly path: string;
             readonly waveTitle: "Workspace And Maintenance";
             readonly command: "workstreams";
             readonly primarySkill: "blueprint-maintenance";
-            readonly exactMcpDestination: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly [".blueprint write guard"];
-            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and apply returned resume statePatch only through blueprint_state_update.";
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and treat returned resume statePatch as already applied by that mutate tool.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -3338,7 +3338,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: confirmation-gated phase-directory archival and removal behavior.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_cleanup_archive", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
         readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/cleanup-runtime-contract.md"];
         readonly spec: {
@@ -3348,17 +3348,17 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly rootRoutable: true;
             readonly purpose: "`cleanup` archives completed Blueprint phase directories through a protected-scope confirmation flow and persists a durable cleanup report.";
             readonly reads: readonly ["Project health, roadmap references, artifact inventory, cleanup evidence digest, and filesystem preflight."];
-            readonly writes: readonly [".blueprint/reports/cleanup-latest.md", ".blueprint/STATE.md when routing changes", "confirmed phase archive destination"];
+            readonly writes: readonly [".blueprint/reports/cleanup-latest.md through blueprint_cleanup_archive", ".blueprint/STATE.md when routing changes", "confirmed phase archive destination through blueprint_cleanup_archive"];
         };
         readonly runtimeReference: {
             readonly path: string;
             readonly waveTitle: "Workspace And Maintenance";
             readonly command: "cleanup";
             readonly primarySkill: "blueprint-maintenance";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_cleanup_archive", "blueprint_state_update"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly [".blueprint write guard"];
-            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, protect the current phase and active roadmap references, require cleanup and destination confirmations before filesystem mutation, write cleanup-latest before archival, and update state only after successful approved archival.";
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, preview and commit cleanup only through blueprint_cleanup_archive, protect the current phase, active roadmap references, and evidence-incomplete directories in runtime code, require cleanup and destination confirmations before commit mode, write cleanup-latest only from the actual archive outcome, and update state only after successful approved archival.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -3624,7 +3624,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
             readonly optionalAgents: readonly ["blueprint-researcher"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+            readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed: true, confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

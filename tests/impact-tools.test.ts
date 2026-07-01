@@ -8,6 +8,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rm,
   writeFile
 } from "node:fs/promises";
@@ -17,6 +18,7 @@ import { promisify } from "node:util";
 
 import { IMPACT_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
+import { blueprintArtifactsTestHooks } from "../src/mcp/tools/artifacts.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintImpactAnalyze,
@@ -282,6 +284,63 @@ function minimalPhase6Context(
 
 function findingByCheck(analysis: ImpactAnalysis, checkId: string) {
   return analysis.findings.find((finding) => finding.checkId === checkId);
+}
+
+function fsPathForMock(value: unknown): string {
+  if (value instanceof URL) {
+    return value.pathname;
+  }
+
+  return typeof value === "string" ? value : path.resolve(String(value));
+}
+
+function deferredVoid(): {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (reason?: unknown) => void;
+} {
+  let resolve!: () => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+async function readImpactBundleFiles(
+  repoPath: string,
+  impactDir: string
+): Promise<{ entries: string[]; files: Record<string, string> }> {
+  const bundleDir = path.join(repoPath, impactDir);
+  const entries = await readdir(bundleDir, { withFileTypes: true });
+  const sortedEntries = entries.map((entry) => entry.name).sort();
+  const files: Record<string, string> = {};
+
+  for (const entry of entries) {
+    assert.equal(entry.isFile(), true, `${entry.name} should be a file in ${impactDir}`);
+    files[entry.name] = await readFile(path.join(bundleDir, entry.name), "utf8");
+  }
+
+  return { entries: sortedEntries, files };
 }
 
 function obligationTitles(analysis: ImpactAnalysis): string[] {
@@ -3208,6 +3267,228 @@ test("impact report writer reuses identical bundles and requires overwrite for c
     assert.equal(overwritten.written, true);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer preserves the previous bundle when staged replacement fails", async (t) => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const changedReport = {
+      ...analysis.report,
+      summary: `${analysis.report.summary} Additional reviewer-visible detail.`
+    };
+
+    const first = await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
+    const impactMarkdownPath = path.join(repoPath, first.paths.impactMarkdown);
+    const impactJsonPath = path.join(repoPath, first.paths.impactJson);
+    const summaryJsonPath = path.join(repoPath, first.paths.summaryJson);
+    const stalePath = path.join(repoPath, first.impactDir, "unexpected.txt");
+    const originalMarkdown = await readFile(impactMarkdownPath, "utf8");
+    const originalImpactJson = await readFile(impactJsonPath, "utf8");
+    const originalSummaryJson = await readFile(summaryJsonPath, "utf8");
+
+    await writeFile(stalePath, "stale file from previous generation\n");
+
+    const realWriteFile = fs.writeFile.bind(fs);
+    let simulatedFailureTriggered = false;
+
+    t.mock.method(fs, "writeFile", async (filePath, data, options) => {
+      const normalizedPath = fsPathForMock(filePath);
+
+      if (
+        normalizedPath.includes(`.${analysis.impactId}.staging-`) &&
+        normalizedPath.endsWith(`${path.sep}summary.json`)
+      ) {
+        simulatedFailureTriggered = true;
+        throw new Error("simulated staged summary write failure");
+      }
+
+      return realWriteFile(
+        filePath as Parameters<typeof fs.writeFile>[0],
+        data as Parameters<typeof fs.writeFile>[1],
+        options as Parameters<typeof fs.writeFile>[2]
+      );
+    });
+
+    const failed = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: changedReport,
+      overwrite: true
+    });
+    const impactRootEntries = await readdir(path.join(repoPath, ".blueprint", "impact"));
+
+    assert.equal(simulatedFailureTriggered, true);
+    assert.equal(failed.status, "invalid");
+    assert.equal(failed.written, false);
+    assert.match(failed.errors.join("\n"), /could not be written transactionally/);
+    assert.match(failed.errors.join("\n"), /simulated staged summary write failure/);
+    assert.equal(await readFile(impactMarkdownPath, "utf8"), originalMarkdown);
+    assert.equal(await readFile(impactJsonPath, "utf8"), originalImpactJson);
+    assert.equal(await readFile(summaryJsonPath, "utf8"), originalSummaryJson);
+    assert.equal(JSON.parse(await readFile(impactJsonPath, "utf8")).summary, analysis.report.summary);
+    assert.equal(JSON.parse(await readFile(summaryJsonPath, "utf8")).impactId, analysis.impactId);
+    await access(stalePath);
+    assert.equal(
+      impactRootEntries.some((entry) => entry.startsWith(`.${analysis.impactId}.staging-`)),
+      false
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer serializes concurrent same-impact replacements", async (t) => {
+  const repoPath = await createTempRepo();
+  const expectedRepoPath = await createTempRepo();
+  const restoreLockTiming = blueprintArtifactsTestHooks.setRepoLockTimingForTest({
+    retryMs: 1,
+    staleMs: 60_000,
+    heartbeatMs: 10
+  });
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const changedReport = {
+      ...analysis.report,
+      summary: `${analysis.report.summary} Additional reviewer-visible detail.`
+    };
+    const first = await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
+    const expectedWrite = await blueprintImpactReportWrite({
+      cwd: expectedRepoPath,
+      report: changedReport,
+      overwrite: true
+    });
+    const expectedBundle = await readImpactBundleFiles(expectedRepoPath, expectedWrite.impactDir);
+    const expectedPathFiles = Object.values(expectedWrite.paths)
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => path.posix.basename(value))
+      .sort();
+    const lockPath = path.join(
+      repoPath,
+      ".blueprint",
+      "locks",
+      `impact-report-${analysis.impactId}.lock`
+    );
+    const realWriteFile = fs.writeFile.bind(fs);
+    const realMkdir = fs.mkdir.bind(fs);
+    const firstStagedWriteStarted = deferredVoid();
+    const releaseFirstStagedWrite = deferredVoid();
+    const contendedLockAttempted = deferredVoid();
+    let stagedImpactMarkdownWritePaused = false;
+    let contendedLockAttempts = 0;
+
+    t.mock.method(fs, "writeFile", async (filePath, data, options) => {
+      const normalizedPath = fsPathForMock(filePath);
+
+      if (
+        !stagedImpactMarkdownWritePaused &&
+        normalizedPath.includes(`.${analysis.impactId}.staging-`) &&
+        normalizedPath.endsWith(`${path.sep}IMPACT.md`)
+      ) {
+        stagedImpactMarkdownWritePaused = true;
+        firstStagedWriteStarted.resolve();
+        await releaseFirstStagedWrite.promise;
+      }
+
+      return realWriteFile(
+        filePath as Parameters<typeof fs.writeFile>[0],
+        data as Parameters<typeof fs.writeFile>[1],
+        options as Parameters<typeof fs.writeFile>[2]
+      );
+    });
+
+    t.mock.method(fs, "mkdir", async (dirPath, options) => {
+      const normalizedPath = fsPathForMock(dirPath);
+
+      try {
+        return await realMkdir(
+          dirPath as Parameters<typeof fs.mkdir>[0],
+          options as Parameters<typeof fs.mkdir>[1]
+        );
+      } catch (error) {
+        if (
+          normalizedPath === lockPath &&
+          stagedImpactMarkdownWritePaused &&
+          (error as NodeJS.ErrnoException).code === "EEXIST"
+        ) {
+          contendedLockAttempts += 1;
+          contendedLockAttempted.resolve();
+        }
+
+        throw error;
+      }
+    });
+
+    const leftPromise = blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: changedReport,
+      overwrite: true
+    });
+    await withTimeout(
+      firstStagedWriteStarted.promise,
+      1_000,
+      "first replacement did not pause inside staged bundle writes"
+    );
+
+    const rightPromise = blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: changedReport,
+      overwrite: true
+    });
+    let contentionError: unknown = null;
+
+    try {
+      await withTimeout(
+        contendedLockAttempted.promise,
+        1_000,
+        "second replacement did not contend for the same impact report lock"
+      );
+    } catch (error) {
+      contentionError = error;
+    } finally {
+      releaseFirstStagedWrite.resolve();
+    }
+
+    const [left, right] = await Promise.all([leftPromise, rightPromise]);
+
+    if (contentionError) {
+      throw contentionError;
+    }
+
+    const statuses = [left.status, right.status].sort();
+    const writtenCount = [left, right].filter((result) => result.written).length;
+    const finalBundle = await readImpactBundleFiles(repoPath, first.impactDir);
+    const impactRootEntries = await readdir(path.join(repoPath, ".blueprint", "impact"));
+
+    assert.equal(stagedImpactMarkdownWritePaused, true);
+    assert.equal(contendedLockAttempts > 0, true);
+    assert.deepEqual(statuses, ["overwritten", "reused"]);
+    assert.equal(writtenCount, 1);
+    assert.deepEqual(expectedBundle.entries, expectedPathFiles);
+    assert.deepEqual(finalBundle.entries, expectedBundle.entries);
+    assert.deepEqual(finalBundle.files, expectedBundle.files);
+    assert.equal(finalBundle.files["IMPACT.md"], expectedBundle.files["IMPACT.md"]);
+    assert.equal(finalBundle.files["impact.json"], expectedBundle.files["impact.json"]);
+    assert.equal(finalBundle.files["summary.json"], expectedBundle.files["summary.json"]);
+    assert.deepEqual(impactRootEntries.sort(), [analysis.impactId]);
+    assert.equal(
+      impactRootEntries.some((entry) => entry.startsWith(`.${analysis.impactId}.`)),
+      false
+    );
+  } finally {
+    restoreLockTiming();
+    await rm(repoPath, { recursive: true, force: true });
+    await rm(expectedRepoPath, { recursive: true, force: true });
   }
 });
 

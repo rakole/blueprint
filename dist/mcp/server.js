@@ -282,10 +282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path18) {
-  if (!path18)
+function getElementAtPath(obj, path22) {
+  if (!path22)
     return obj;
-  return path18.reduce((acc, key) => acc?.[key], obj);
+  return path22.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path18, issues) {
+function prefixIssues(path22, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path18);
+    iss.path.unshift(path22);
     return iss;
   });
 }
@@ -10713,8 +10713,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path18) {
-      let input = path18;
+    function removeDotSegments(path22) {
+      let input = path22;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -10913,8 +10913,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path18, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path18 && path18 !== "/" ? path18 : void 0;
+        const [path22, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path22 && path22 !== "/" ? path22 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -14276,12 +14276,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs16, exportName) {
+    function addFormats(ajv, list, fs18, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs16[f]);
+        ajv.addFormat(f, fs18[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -14472,7 +14472,7 @@ var init_command_runtime_metadata = __esm({
         ],
         optionalAgents: [],
         hookInvolvement: [".blueprint write guard"],
-        contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, choose and confirm durable requirementIds plus a concrete goal plus 2-5 successCriteria, prefer ask_user for the exact phase-number and roadmap-metadata confirmation gate, pass the confirmed number as expectedPhaseNumber, confirmed IDs as requirementIds, objective as goal, and criteria as successCriteria, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, choose and confirm durable requirementIds plus a concrete goal plus 2-5 successCriteria, prefer ask_user for the exact phase-number and roadmap-metadata confirmation gate, pass confirmed: true with the confirmed number as expectedPhaseNumber, confirmed IDs as requirementIds, objective as goal, and criteria as successCriteria, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -14904,15 +14904,14 @@ var init_command_runtime_metadata = __esm({
     ];
     WORKSTREAMS_REQUIRED_TOOLS = [
       "blueprint_workstream_list",
-      "blueprint_workstream_mutate",
-      "blueprint_state_update"
+      "blueprint_workstream_mutate"
     ];
     CLEANUP_REQUIRED_TOOLS = [
       "blueprint_project_status",
       "blueprint_roadmap_read",
       "blueprint_artifact_list",
       "blueprint_artifact_summary_digest",
-      "blueprint_artifact_report_write",
+      "blueprint_cleanup_archive",
       "blueprint_state_update"
     ];
     UPDATE_REQUIRED_TOOLS = [
@@ -15070,7 +15069,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: INSERT_PHASE_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass confirmed: true and the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -15111,7 +15110,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: REMOVE_PHASE_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, pass confirmed: true after remove-phase-confirmation before removal, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -15153,7 +15152,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: PLAN_MILESTONE_GAPS_REQUIRED_TOOLS,
         optionalAgents: ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS,
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls with confirmed: true after grouped plan approval, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -16580,7 +16579,7 @@ var init_command_runtime_metadata = __esm({
         writes: [
           ".blueprint/workstreams/WORKSTREAMS.md",
           ".blueprint/workstreams/<slug>/state.json",
-          ".blueprint/STATE.md for returned resume patches"
+          ".blueprint/STATE.md during resume snapshot restoration"
         ]
       },
       runtimeReference: {
@@ -16591,7 +16590,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: WORKSTREAMS_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: [".blueprint write guard"],
-        contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and apply returned resume statePatch only through blueprint_state_update.",
+        contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and treat returned resume statePatch as already applied by that mutate tool.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -16618,9 +16617,9 @@ var init_command_runtime_metadata = __esm({
           "Project health, roadmap references, artifact inventory, cleanup evidence digest, and filesystem preflight."
         ],
         writes: [
-          ".blueprint/reports/cleanup-latest.md",
+          ".blueprint/reports/cleanup-latest.md through blueprint_cleanup_archive",
           ".blueprint/STATE.md when routing changes",
-          "confirmed phase archive destination"
+          "confirmed phase archive destination through blueprint_cleanup_archive"
         ]
       },
       runtimeReference: {
@@ -16631,7 +16630,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: CLEANUP_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: [".blueprint write guard"],
-        contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, protect the current phase and active roadmap references, require cleanup and destination confirmations before filesystem mutation, write cleanup-latest before archival, and update state only after successful approved archival.",
+        contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, preview and commit cleanup only through blueprint_cleanup_archive, protect the current phase, active roadmap references, and evidence-incomplete directories in runtime code, require cleanup and destination confirmations before commit mode, write cleanup-latest only from the actual archive outcome, and update state only after successful approved archival.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -16918,7 +16917,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: EXPLORE_REQUIRED_TOOLS,
         optionalAgents: EXPLORE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed: true, confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -23826,8 +23825,342 @@ var init_security = __esm({
   }
 });
 
-// src/mcp/runtime-host.ts
+// src/mcp/directory-lock.ts
+import { randomUUID } from "node:crypto";
+import { promises as fs } from "node:fs";
 import path3 from "node:path";
+function createDirectoryLockToken() {
+  return `${process.pid}-${Date.now()}-${randomUUID()}`;
+}
+function directoryLockOwnerPath(lockPath) {
+  return path3.join(lockPath, DIRECTORY_LOCK_OWNER_FILE);
+}
+function directoryLockLeasePath(lockPath) {
+  return path3.join(lockPath, DIRECTORY_LOCK_LEASE_FILE);
+}
+function directoryLockRecoveryPath(lockPath) {
+  return `${lockPath}.recovery`;
+}
+function directoryLockRecoveryGuardOwnerPath(recoveryPath, token) {
+  return path3.join(recoveryPath, `${DIRECTORY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+}
+function directoryLockQuarantinePath(targetPath) {
+  return path3.join(
+    path3.dirname(targetPath),
+    `.${path3.basename(targetPath)}.${process.pid}.${Date.now()}.${randomUUID()}.stale`
+  );
+}
+async function writeDirectoryLockFile(filePath, contents) {
+  await fs.writeFile(filePath, `${contents}
+`, "utf8");
+}
+async function readDirectoryLockOwner(lockHandle) {
+  return readDirectoryLockOwnerAtPath(lockHandle.ownerPath);
+}
+async function readDirectoryLockOwnerAtPath(ownerPath) {
+  try {
+    return (await fs.readFile(ownerPath, "utf8")).trim();
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
+async function refreshDirectoryLockLease(lockHandle) {
+  const ownerToken = await readDirectoryLockOwner(lockHandle);
+  if (ownerToken !== lockHandle.token) {
+    return false;
+  }
+  await writeDirectoryLockFile(lockHandle.leasePath, lockHandle.token);
+  return true;
+}
+async function getDirectoryLockPathAgeMs(targetPath) {
+  try {
+    const stats = await fs.stat(targetPath);
+    return Date.now() - stats.mtimeMs;
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
+async function getDirectoryLockRecoveryGuardAgeMs(recoveryPath) {
+  let entries;
+  try {
+    entries = await fs.readdir(recoveryPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+  let newestOwnerMtimeMs = null;
+  for (const entry of entries) {
+    if (!entry.startsWith(DIRECTORY_LOCK_RECOVERY_GUARD_PREFIX)) {
+      continue;
+    }
+    try {
+      const stats = await fs.stat(path3.join(recoveryPath, entry));
+      newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
+    } catch (error2) {
+      if (error2.code !== "ENOENT") {
+        throw error2;
+      }
+    }
+  }
+  if (newestOwnerMtimeMs !== null) {
+    return Date.now() - newestOwnerMtimeMs;
+  }
+  return getDirectoryLockPathAgeMs(recoveryPath);
+}
+async function getDirectoryLockAgeMs(lockPath) {
+  const leasePath = directoryLockLeasePath(lockPath);
+  try {
+    const stats = await fs.stat(leasePath);
+    return Date.now() - stats.mtimeMs;
+  } catch (error2) {
+    if (error2.code !== "ENOENT") {
+      throw error2;
+    }
+  }
+  return getDirectoryLockPathAgeMs(lockPath);
+}
+async function readDirectoryLockOwnerForPath(lockPath) {
+  return readDirectoryLockOwnerAtPath(directoryLockOwnerPath(lockPath));
+}
+async function createDirectoryLockRecoveryGuardHandle(lockPath, recoveryPath, staleMs) {
+  const token = createDirectoryLockToken();
+  const recoveryGuard = {
+    lockPath,
+    recoveryPath,
+    ownerPath: directoryLockRecoveryGuardOwnerPath(recoveryPath, token),
+    token,
+    staleMs
+  };
+  try {
+    await writeDirectoryLockFile(recoveryGuard.ownerPath, token);
+  } catch (error2) {
+    await fs.rmdir(recoveryPath).catch(() => void 0);
+    throw error2;
+  }
+  return recoveryGuard;
+}
+async function refreshOwnedDirectoryLockRecoveryGuard(recoveryGuard) {
+  let stats;
+  try {
+    stats = await fs.stat(recoveryGuard.ownerPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return false;
+    }
+    throw error2;
+  }
+  if (Date.now() - stats.mtimeMs > recoveryGuard.staleMs) {
+    return false;
+  }
+  try {
+    const now = /* @__PURE__ */ new Date();
+    await fs.utimes(recoveryGuard.ownerPath, now, now);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return false;
+    }
+    throw error2;
+  }
+  return true;
+}
+async function releaseDirectoryLockRecoveryGuard(recoveryGuard) {
+  if (!await refreshOwnedDirectoryLockRecoveryGuard(recoveryGuard)) {
+    return;
+  }
+  try {
+    await fs.unlink(recoveryGuard.ownerPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return;
+    }
+    throw error2;
+  }
+  await fs.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
+}
+async function createDirectoryLockHandle(lockPath) {
+  const token = createDirectoryLockToken();
+  const lockHandle = {
+    lockPath,
+    ownerPath: directoryLockOwnerPath(lockPath),
+    leasePath: directoryLockLeasePath(lockPath),
+    token
+  };
+  try {
+    await writeDirectoryLockFile(lockHandle.ownerPath, token);
+    await writeDirectoryLockFile(lockHandle.leasePath, token);
+  } catch (error2) {
+    await fs.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    throw error2;
+  }
+  return lockHandle;
+}
+async function reclaimStaleDirectoryLockRecoveryGuard(recoveryPath, staleMs) {
+  const ageMs = await getDirectoryLockRecoveryGuardAgeMs(recoveryPath);
+  if (ageMs === null) {
+    return true;
+  }
+  if (ageMs <= staleMs) {
+    return false;
+  }
+  const quarantinePath = directoryLockQuarantinePath(recoveryPath);
+  try {
+    await fs.rename(recoveryPath, quarantinePath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return true;
+    }
+    throw error2;
+  }
+  await fs.rm(quarantinePath, { recursive: true, force: true });
+  return true;
+}
+async function tryAcquireDirectoryLockRecoveryGuard(lockPath, staleMs) {
+  const recoveryPath = directoryLockRecoveryPath(lockPath);
+  for (; ; ) {
+    try {
+      await fs.mkdir(recoveryPath);
+      return createDirectoryLockRecoveryGuardHandle(lockPath, recoveryPath, staleMs);
+    } catch (error2) {
+      if (error2.code !== "EEXIST") {
+        throw error2;
+      }
+      if (await reclaimStaleDirectoryLockRecoveryGuard(recoveryPath, staleMs)) {
+        continue;
+      }
+      return null;
+    }
+  }
+}
+async function recoverStaleDirectoryLock(options) {
+  const recoveryGuard = await tryAcquireDirectoryLockRecoveryGuard(
+    options.lockPath,
+    options.timing.staleMs
+  );
+  if (recoveryGuard === null) {
+    return false;
+  }
+  try {
+    const ageMs = await getDirectoryLockAgeMs(options.lockPath);
+    if (ageMs === null) {
+      return true;
+    }
+    if (ageMs <= options.timing.staleMs) {
+      return false;
+    }
+    const observedOwner = await readDirectoryLockOwnerForPath(options.lockPath);
+    await options.recoveryHooks?.beforeStaleLockQuarantine?.(options.lockPath);
+    if (!await refreshOwnedDirectoryLockRecoveryGuard(recoveryGuard)) {
+      return false;
+    }
+    const currentAgeMs = await getDirectoryLockAgeMs(options.lockPath);
+    if (currentAgeMs === null) {
+      return true;
+    }
+    if (currentAgeMs <= options.timing.staleMs) {
+      return false;
+    }
+    const currentOwner = await readDirectoryLockOwnerForPath(options.lockPath);
+    if (currentOwner !== observedOwner) {
+      return false;
+    }
+    const quarantinePath = directoryLockQuarantinePath(options.lockPath);
+    try {
+      await fs.rename(options.lockPath, quarantinePath);
+    } catch (error2) {
+      if (error2.code === "ENOENT") {
+        return true;
+      }
+      throw error2;
+    }
+    await fs.rm(quarantinePath, { recursive: true, force: true });
+    return true;
+  } finally {
+    await releaseDirectoryLockRecoveryGuard(recoveryGuard).catch(() => void 0);
+    await options.recoveryHooks?.afterRecoveryGuardRelease?.(options.lockPath);
+  }
+}
+async function acquireDirectoryLock(options) {
+  await fs.mkdir(path3.dirname(options.lockPath), { recursive: true });
+  for (; ; ) {
+    try {
+      await fs.mkdir(options.lockPath);
+      return createDirectoryLockHandle(options.lockPath);
+    } catch (error2) {
+      const lockError = error2;
+      if (lockError.code !== "EEXIST") {
+        throw error2;
+      }
+      try {
+        const ageMs = await getDirectoryLockAgeMs(options.lockPath);
+        if (ageMs !== null && ageMs > options.timing.staleMs) {
+          await options.recoveryHooks?.beforeStaleRecoveryClaim?.(options.lockPath);
+          if (await recoverStaleDirectoryLock(options)) {
+            continue;
+          }
+        }
+      } catch (statError) {
+        if (statError.code === "ENOENT") {
+          continue;
+        }
+        throw statError;
+      }
+      await new Promise((resolve) => setTimeout(resolve, options.timing.retryMs));
+    }
+  }
+}
+function startDirectoryLockHeartbeat(lockHandle, heartbeatMs) {
+  const timer = setInterval(() => {
+    void refreshDirectoryLockLease(lockHandle).then((refreshed) => {
+      if (!refreshed) {
+        clearInterval(timer);
+      }
+    }).catch(() => {
+      clearInterval(timer);
+    });
+  }, heartbeatMs);
+  timer.unref?.();
+  return () => {
+    clearInterval(timer);
+  };
+}
+async function releaseDirectoryLock(lockHandle) {
+  const ownerToken = await readDirectoryLockOwner(lockHandle).catch(() => null);
+  if (ownerToken !== lockHandle.token) {
+    return;
+  }
+  await fs.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
+}
+async function withDirectoryLock(options, callback) {
+  const lockHandle = await acquireDirectoryLock(options);
+  const stopHeartbeat = startDirectoryLockHeartbeat(lockHandle, options.timing.heartbeatMs);
+  try {
+    return await callback();
+  } finally {
+    stopHeartbeat();
+    await releaseDirectoryLock(lockHandle);
+  }
+}
+var DIRECTORY_LOCK_OWNER_FILE, DIRECTORY_LOCK_LEASE_FILE, DIRECTORY_LOCK_RECOVERY_GUARD_PREFIX;
+var init_directory_lock = __esm({
+  "src/mcp/directory-lock.ts"() {
+    "use strict";
+    DIRECTORY_LOCK_OWNER_FILE = "owner";
+    DIRECTORY_LOCK_LEASE_FILE = "lease";
+    DIRECTORY_LOCK_RECOVERY_GUARD_PREFIX = "owner.";
+  }
+});
+
+// src/mcp/runtime-host.ts
+import os from "node:os";
+import path4 from "node:path";
 function normalizeHostId(value) {
   const normalized = value?.trim().toLowerCase();
   if (!normalized) {
@@ -23838,15 +24171,27 @@ function normalizeHostId(value) {
 function trimTrailingSeparators(value) {
   return value.replace(/[\\/]+$/, "");
 }
+function expandHomePath(value) {
+  if (value === "~") {
+    return os.homedir();
+  }
+  if (value.startsWith("~/") || value.startsWith("~\\")) {
+    return path4.join(os.homedir(), value.slice(2));
+  }
+  if (value.startsWith("~")) {
+    throw new Error("BLUEPRINT_GLOBAL_HOME must use ~ or ~/ when using a home-relative path.");
+  }
+  return value;
+}
 function inferHostFromExtensionPath(extensionPath) {
   const normalizedPath = extensionPath?.trim();
   if (!normalizedPath) {
     return null;
   }
-  if (normalizedPath.includes(`${path3.sep}.tabnine${path3.sep}`)) {
+  if (normalizedPath.includes(`${path4.sep}.tabnine${path4.sep}`)) {
     return "tabnine";
   }
-  if (normalizedPath.includes(`${path3.sep}.gemini${path3.sep}`)) {
+  if (normalizedPath.includes(`${path4.sep}.gemini${path4.sep}`)) {
     return "gemini";
   }
   const slashNormalizedPath = normalizedPath.replaceAll("\\", "/");
@@ -23860,7 +24205,17 @@ function inferHostFromExtensionPath(extensionPath) {
 }
 function buildDefaultGlobalBlueprintDir(host) {
   const cliHomeDirName = host === "tabnine" ? ".tabnine" : ".gemini";
-  return `~/${cliHomeDirName}/blueprint`;
+  return path4.join(os.homedir(), cliHomeDirName, "blueprint");
+}
+function normalizeGlobalBlueprintDir(value) {
+  return trimTrailingSeparators(path4.resolve(expandHomePath(value)));
+}
+function buildRuntimeHostCacheKey(env) {
+  return JSON.stringify({
+    host: env.BLUEPRINT_HOST ?? null,
+    extensionPath: env.BLUEPRINT_EXTENSION_PATH ?? null,
+    globalHome: env.BLUEPRINT_GLOBAL_HOME ?? null
+  });
 }
 function buildRuntimeHost(env = process.env) {
   const explicitHost = normalizeHostId(env.BLUEPRINT_HOST);
@@ -23870,7 +24225,7 @@ function buildRuntimeHost(env = process.env) {
   const cliHomeDirName = host === "tabnine" ? ".tabnine" : ".gemini";
   const contextFileName = host === "tabnine" ? "TABNINE.md" : "GEMINI.md";
   const manifestFileName = host === "tabnine" ? "tabnine-extension.json" : "gemini-extension.json";
-  const globalBlueprintDir = trimTrailingSeparators(
+  const globalBlueprintDir = normalizeGlobalBlueprintDir(
     env.BLUEPRINT_GLOBAL_HOME?.trim() || buildDefaultGlobalBlueprintDir(host)
   );
   return {
@@ -23880,37 +24235,128 @@ function buildRuntimeHost(env = process.env) {
     manifestFileName,
     extensionPath,
     globalBlueprintDir,
-    defaultsPath: path3.join(globalBlueprintDir, "defaults.json"),
-    patchRegistryPath: path3.join(globalBlueprintDir, "patches"),
-    workspaceRegistryPath: path3.join(globalBlueprintDir, "workspaces.json"),
-    updatesDir: path3.join(globalBlueprintDir, "updates")
+    defaultsPath: path4.join(globalBlueprintDir, "defaults.json"),
+    patchRegistryPath: path4.join(globalBlueprintDir, "patches"),
+    workspaceRegistryPath: path4.join(globalBlueprintDir, "workspaces.json"),
+    updatesDir: path4.join(globalBlueprintDir, "updates")
   };
 }
 function resolveBlueprintRuntimeHost(env = process.env) {
   return buildRuntimeHost(env);
 }
 function getBlueprintRuntimeHost() {
-  cachedRuntimeHost ??= buildRuntimeHost();
+  const cacheKey = buildRuntimeHostCacheKey(process.env);
+  if (cachedRuntimeHost === null || cachedRuntimeHostKey !== cacheKey) {
+    cachedRuntimeHost = buildRuntimeHost();
+    cachedRuntimeHostKey = cacheKey;
+  }
   return cachedRuntimeHost;
 }
-var BLUEPRINT_HOST_IDS, cachedRuntimeHost;
+var BLUEPRINT_HOST_IDS, cachedRuntimeHost, cachedRuntimeHostKey;
 var init_runtime_host = __esm({
   "src/mcp/runtime-host.ts"() {
     "use strict";
     BLUEPRINT_HOST_IDS = ["gemini", "tabnine"];
     cachedRuntimeHost = null;
+    cachedRuntimeHostKey = null;
   }
 });
 
 // src/mcp/tools/config.ts
+import os2 from "node:os";
+import path5 from "node:path";
 function cloneConfig(config2) {
   return JSON.parse(JSON.stringify(config2));
 }
 function isPlainObject4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+function expandHomePath2(value) {
+  if (value === "~") {
+    return os2.homedir();
+  }
+  if (value.startsWith("~/") || value.startsWith("~\\")) {
+    return path5.join(os2.homedir(), value.slice(2));
+  }
+  return value;
+}
 function getDefaultUserConfigPath(defaultsPath) {
-  return defaultsPath ?? getBlueprintRuntimeHost().defaultsPath;
+  const runtimeHost = getBlueprintRuntimeHost();
+  if (!defaultsPath) {
+    return runtimeHost.defaultsPath;
+  }
+  const resolvedGlobalBlueprintDir = path5.resolve(runtimeHost.globalBlueprintDir);
+  const resolvedDefaultsPath = path5.resolve(expandHomePath2(defaultsPath));
+  try {
+    ensurePathWithinRootSync(resolvedGlobalBlueprintDir, resolvedDefaultsPath, {
+      label: "defaultsPath"
+    });
+  } catch {
+    throw new Error(
+      `defaultsPath must resolve inside the Blueprint host-global directory ${resolvedGlobalBlueprintDir}.`
+    );
+  }
+  return resolvedDefaultsPath;
+}
+function preflightProjectConfigDefaultsPath(defaultsPath) {
+  return getDefaultUserConfigPath(defaultsPath);
+}
+function parsePositiveIntegerEnv(name) {
+  const raw = process.env[name];
+  if (!raw) {
+    return null;
+  }
+  const value = Number.parseInt(raw, 10);
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+function configDefaultsLockRetryMs() {
+  return configDefaultsLockTimingForTest?.retryMs ?? parsePositiveIntegerEnv("BLUEPRINT_TEST_CONFIG_DEFAULTS_LOCK_RETRY_MS") ?? CONFIG_DEFAULTS_LOCK_RETRY_MS;
+}
+function configDefaultsLockStaleMs() {
+  return configDefaultsLockTimingForTest?.staleMs ?? parsePositiveIntegerEnv("BLUEPRINT_TEST_CONFIG_DEFAULTS_LOCK_STALE_MS") ?? CONFIG_DEFAULTS_LOCK_STALE_MS;
+}
+function configDefaultsLockHeartbeatMs() {
+  return configDefaultsLockTimingForTest?.heartbeatMs ?? Math.max(25, Math.floor(configDefaultsLockStaleMs() / 4));
+}
+function configDefaultsLockTiming() {
+  return {
+    retryMs: configDefaultsLockRetryMs(),
+    staleMs: configDefaultsLockStaleMs(),
+    heartbeatMs: configDefaultsLockHeartbeatMs()
+  };
+}
+function configDefaultsLockPath() {
+  const runtimeHost = getBlueprintRuntimeHost();
+  return path5.join(runtimeHost.globalBlueprintDir, "locks", "defaults-config.lock");
+}
+async function withConfigDefaultsLock(callback) {
+  const lockPath = configDefaultsLockPath();
+  const lockOptions = {
+    lockPath,
+    timing: configDefaultsLockTiming()
+  };
+  const runObservedCallback = async () => {
+    await configDefaultsLockCallbackObserverForTest?.("enter", lockPath);
+    try {
+      return await callback();
+    } finally {
+      await configDefaultsLockCallbackObserverForTest?.("exit", lockPath);
+    }
+  };
+  if (configDefaultsLockRecoveryHooksForTest) {
+    return withDirectoryLock(
+      { ...lockOptions, recoveryHooks: configDefaultsLockRecoveryHooksForTest },
+      runObservedCallback
+    );
+  }
+  return withDirectoryLock(lockOptions, runObservedCallback);
+}
+async function maybeDelayConfigSetBeforeWriteForTest() {
+  const delayMs = parsePositiveIntegerEnv("BLUEPRINT_TEST_CONFIG_SET_BEFORE_WRITE_DELAY_MS");
+  if (!delayMs) {
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 function getHardCodedConfig() {
   return {
@@ -23993,8 +24439,10 @@ function getHardCodedConfig() {
 function alignHostSpecificMaintenanceDefaults(config2, warnings) {
   const runtimeHost = getBlueprintRuntimeHost();
   const activeHostPatchRegistry = runtimeHost.patchRegistryPath;
-  const inactiveHostPatchRegistry = runtimeHost.host === "gemini" ? HOST_DEFAULT_PATCH_REGISTRIES.tabnine : HOST_DEFAULT_PATCH_REGISTRIES.gemini;
-  if (config2.maintenance.patch_registry === inactiveHostPatchRegistry) {
+  const hostDefaultPatchRegistries = Object.values(
+    HOST_DEFAULT_PATCH_REGISTRIES
+  );
+  if (hostDefaultPatchRegistries.includes(config2.maintenance.patch_registry)) {
     config2.maintenance.patch_registry = activeHostPatchRegistry;
     warnings.push(
       `Aligned maintenance.patch_registry to the active ${runtimeHost.host} host default.`
@@ -24366,7 +24814,7 @@ async function readDefaultsConfig(defaultsPath, options = {}) {
 async function composeConfig(projectRoot, defaultsPath, options = {}) {
   const warnings = [];
   const defaults = await readDefaultsConfig(defaultsPath, options);
-  const projectConfigRaw = await readProjectConfig(projectRoot);
+  const projectConfigRaw = options.skipProjectConfig === true ? null : await readProjectConfig(projectRoot);
   let projectConfig = null;
   let projectConfigLayer = null;
   let projectWarnings = [];
@@ -24484,24 +24932,81 @@ async function blueprintConfigGet(args = {}) {
 async function blueprintConfigSet(args = {}) {
   const scope = args.scope ?? "project";
   const patch = args.patch ?? {};
+  const repairMalformedProjectConfig = args.repairMalformedProjectConfig === true;
   if (!isPlainObject4(patch)) {
     throw new Error("Config patch must be a JSON object.");
   }
+  if (repairMalformedProjectConfig && scope !== "project") {
+    throw new Error("repairMalformedProjectConfig is only supported for project config writes.");
+  }
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const projectConfigRaw = scope === "project" ? await readProjectConfig(projectRoot) : null;
-  const baseResult = await blueprintConfigGet({
+  const configPath = scope === "project" ? resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH) : getDefaultUserConfigPath(args.defaultsPath);
+  if (scope === "project") {
+    return withBlueprintRepoLock(
+      projectRoot,
+      "config-project",
+      () => blueprintConfigSetLocked({
+        args,
+        scope,
+        patch,
+        repairMalformedProjectConfig,
+        projectRoot,
+        configPath
+      })
+    );
+  }
+  return withConfigDefaultsLock(
+    () => blueprintConfigSetLocked({
+      args,
+      scope,
+      patch,
+      repairMalformedProjectConfig,
+      projectRoot,
+      configPath
+    })
+  );
+}
+async function blueprintConfigSetLocked({
+  args,
+  scope,
+  patch,
+  repairMalformedProjectConfig,
+  projectRoot,
+  configPath
+}) {
+  let malformedProjectConfigWarning = null;
+  let projectConfigRaw = null;
+  if (scope === "project") {
+    try {
+      projectConfigRaw = await readProjectConfig(projectRoot);
+    } catch (error2) {
+      if (!repairMalformedProjectConfig) {
+        throw error2;
+      }
+      const message = error2 instanceof Error ? error2.message : String(error2);
+      malformedProjectConfigWarning = `Malformed ${BLUEPRINT_CONFIG_PATH} was replaced during explicit config repair: ${message}`;
+    }
+  }
+  const baseResult = malformedProjectConfigWarning === null ? await blueprintConfigGet({
     scope: scope === "project" ? "effective" : "defaults",
     cwd: projectRoot,
     defaultsPath: args.defaultsPath
-  });
+  }) : {
+    ...await composeConfig(projectRoot, args.defaultsPath, {
+      skipProjectConfig: true
+    }),
+    scope: "effective"
+  };
   const previousConfig = cloneConfig(baseResult.config);
-  const warnings = [...baseResult.warnings];
+  const warnings = [
+    ...baseResult.warnings,
+    ...malformedProjectConfigWarning ? [malformedProjectConfigWarning] : []
+  ];
   for (const key of flattenPatchKeys(patch)) {
     if (isReservedKey(scope, key)) {
       throw new Error(`Config key is not allowed in ${scope} scope: ${key}`);
     }
   }
-  const configPath = scope === "project" ? resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH) : getDefaultUserConfigPath(args.defaultsPath);
   if (scope === "project") {
     const projectLayerTarget = getHardCodedConfig();
     const appliedPaths = /* @__PURE__ */ new Set(["version"]);
@@ -24522,6 +25027,7 @@ async function blueprintConfigSet(args = {}) {
       projectLayerTarget,
       appliedPaths
     );
+    await maybeDelayConfigSetBeforeWriteForTest();
     await writeJsonFile(configPath, persistedProjectLayer);
     const nextResult = await blueprintConfigGet({
       scope: "effective",
@@ -24549,6 +25055,7 @@ async function blueprintConfigSet(args = {}) {
     scope,
     warnings
   );
+  await maybeDelayConfigSetBeforeWriteForTest();
   await writeJsonFile(configPath, nextConfig);
   const changedKeys = collectChangedKeys(
     previousConfig,
@@ -24588,40 +25095,43 @@ async function blueprintConfigSetProfile(args) {
   });
   return {
     profile: args.profile,
-    updatedKeys: ["model_profile"],
+    updatedKeys: result.updatedKeys,
     configPath: result.configPath
   };
 }
 async function seedProjectConfig(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const savedDefaultsPolicy = args.savedDefaultsPolicy ?? "apply";
-  const composed = await composeConfig(projectRoot, args.defaultsPath, {
-    sanitizeForProjectSeed: true,
-    savedDefaultsPolicy
+  return withBlueprintRepoLock(projectRoot, "config-project", async () => {
+    const composed = await composeConfig(projectRoot, args.defaultsPath, {
+      sanitizeForProjectSeed: true,
+      savedDefaultsPolicy
+    });
+    const projectConfigPath = resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH);
+    const relativeConfigPath = toRepoRelativePath(projectRoot, projectConfigPath);
+    await writeJsonFile(
+      projectConfigPath,
+      composed.config
+    );
+    return {
+      config: composed.config,
+      configPath: relativeConfigPath,
+      provenance: {
+        ...composed.provenance,
+        projectPath: relativeConfigPath,
+        projectApplied: true
+      },
+      warnings: composed.warnings
+    };
   });
-  const projectConfigPath = resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH);
-  const relativeConfigPath = toRepoRelativePath(projectRoot, projectConfigPath);
-  await writeJsonFile(
-    projectConfigPath,
-    composed.config
-  );
-  return {
-    config: composed.config,
-    configPath: relativeConfigPath,
-    provenance: {
-      ...composed.provenance,
-      projectPath: relativeConfigPath,
-      projectApplied: true
-    },
-    warnings: composed.warnings
-  };
 }
-var MODEL_PROFILES, PROGRESS_MODES, STRUCTURED_CONFIRMATION_MODES, USER_CHECKPOINT_MODES, TASK_TRACKER_MODES, EXTERNAL_SOURCE_MODES, HARD_CODED_CONFIG_VERSION, PROJECT_SEED_SAVED_DEFAULTS_DENYLIST, HOST_DEFAULT_PATCH_REGISTRIES, configGetInputSchema, configSetInputSchema, configSetProfileInputSchema, configToolDefinitions;
+var MODEL_PROFILES, PROGRESS_MODES, STRUCTURED_CONFIRMATION_MODES, USER_CHECKPOINT_MODES, TASK_TRACKER_MODES, EXTERNAL_SOURCE_MODES, HARD_CODED_CONFIG_VERSION, PROJECT_SEED_SAVED_DEFAULTS_DENYLIST, HOST_DEFAULT_PATCH_REGISTRIES, CONFIG_DEFAULTS_LOCK_RETRY_MS, CONFIG_DEFAULTS_LOCK_STALE_MS, configGetInputSchema, configSetInputSchema, configSetProfileInputSchema, configDefaultsLockTimingForTest, configDefaultsLockRecoveryHooksForTest, configDefaultsLockCallbackObserverForTest, configToolDefinitions;
 var init_config = __esm({
   "src/mcp/tools/config.ts"() {
     "use strict";
     init_v4();
     init_artifacts();
+    init_directory_lock();
     init_runtime_host();
     init_security();
     MODEL_PROFILES = ["quality", "balanced", "budget", "inherit"];
@@ -24640,6 +25150,8 @@ var init_config = __esm({
       gemini: "~/.gemini/blueprint/patches",
       tabnine: "~/.tabnine/blueprint/patches"
     };
+    CONFIG_DEFAULTS_LOCK_RETRY_MS = 50;
+    CONFIG_DEFAULTS_LOCK_STALE_MS = 6e4;
     configGetInputSchema = {
       scope: _enum(["project", "defaults", "effective"]).optional(),
       cwd: string2().optional(),
@@ -24649,6 +25161,7 @@ var init_config = __esm({
       scope: _enum(["project", "defaults"]).optional(),
       cwd: string2().optional(),
       defaultsPath: string2().optional(),
+      repairMalformedProjectConfig: boolean2().optional(),
       patch: record(string2(), unknown()).optional()
     };
     configSetProfileInputSchema = {
@@ -24656,6 +25169,9 @@ var init_config = __esm({
       defaultsPath: string2().optional(),
       profile: _enum(MODEL_PROFILES)
     };
+    configDefaultsLockTimingForTest = null;
+    configDefaultsLockRecoveryHooksForTest = null;
+    configDefaultsLockCallbackObserverForTest = null;
     configToolDefinitions = [
       {
         name: "blueprint_config_get",
@@ -24713,7 +25229,13 @@ function normalizeBlueprintInput(value) {
   return quoteMatch ? quoteMatch[2].trim() : value;
 }
 function normalizePhaseNumber(value) {
-  return normalizeBlueprintPhaseRef(normalizeBlueprintInput(value));
+  const normalized = normalizeBlueprintPhaseRef(normalizeBlueprintInput(value));
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) {
+    throw new Error(
+      `Blueprint phase references support whole-number phases and one decimal insertion level only: ${normalized}`
+    );
+  }
+  return normalized;
 }
 function basePhaseNumber(value) {
   return normalizePhaseNumber(value).split(".")[0] ?? normalizePhaseNumber(value);
@@ -24762,10 +25284,10 @@ function comparePhaseNumbers(left, right) {
   return 0;
 }
 function formatPhasePrefix(value) {
-  return formatBlueprintPhasePrefix(normalizeBlueprintInput(value));
+  return formatBlueprintPhasePrefix(normalizePhaseNumber(value));
 }
 function extractPhaseNumberToken(value) {
-  const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
+  const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)*)/);
   return match ? normalizePhaseNumber(match[1]) : null;
 }
 function extractExactPhaseNumberToken(value) {
@@ -24848,7 +25370,7 @@ function parseRoadmapPhaseTitle(value) {
 }
 function parseRoadmapPhaseLine(line) {
   const match = line.match(
-    /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
+    /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)*):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
   );
   if (!match) {
     return null;
@@ -24960,7 +25482,7 @@ function parseRoadmapDocument(raw) {
     const newlineIndex = block.indexOf("\n");
     const header = newlineIndex === -1 ? block.trim() : block.slice(0, newlineIndex).trim();
     const body = newlineIndex === -1 ? "" : block.slice(newlineIndex + 1);
-    const headerMatch = header.match(/^(\d+(?:\.\d+)?): (.+)$/);
+    const headerMatch = header.match(/^(\d+(?:\.\d+)*): (.+)$/);
     if (!headerMatch) {
       continue;
     }
@@ -25015,8 +25537,8 @@ var init_phase_roadmap_parser = __esm({
 });
 
 // src/mcp/tools/quality-gates.ts
-import fs from "node:fs/promises";
-import path4 from "node:path";
+import fs2 from "node:fs/promises";
+import path6 from "node:path";
 function normalizePhasePrefix(args) {
   return args.phasePrefix?.trim() || formatBlueprintPhasePrefix(args.phaseNumber);
 }
@@ -25083,7 +25605,7 @@ async function listPhaseArtifacts(args) {
   }
   try {
     const absolutePhaseRoot = resolveBlueprintPath(args.projectRoot, args.phaseRoot);
-    const entries = await fs.readdir(absolutePhaseRoot, { withFileTypes: true });
+    const entries = await fs2.readdir(absolutePhaseRoot, { withFileTypes: true });
     return entries.filter((entry) => entry.isFile()).map((entry) => ({
       path: `${args.phaseRoot}/${entry.name}`,
       kind: "other"
@@ -25099,12 +25621,17 @@ function findArtifactPath(args) {
     (artifact) => artifact.path.endsWith(`/${args.phasePrefix}${args.suffix}`)
   )?.path ?? (args.phaseRoot ? `${args.phaseRoot}/${args.phasePrefix}${args.suffix}` : null);
 }
+function findPhaseArtifactPath(args) {
+  return args.artifacts.find(
+    (artifact) => artifact.path === `${args.phasePrefix}${args.suffix}` || artifact.path.endsWith(`/${args.phasePrefix}${args.suffix}`)
+  )?.path ?? (args.phaseRoot ? `${args.phaseRoot}/${args.phasePrefix}${args.suffix}` : null);
+}
 async function readArtifactContent(args) {
   if (args.artifact.content !== void 0) {
     return args.artifact.content;
   }
   try {
-    return await fs.readFile(resolveBlueprintPath(args.projectRoot, args.artifact.path), "utf8");
+    return await fs2.readFile(resolveBlueprintPath(args.projectRoot, args.artifact.path), "utf8");
   } catch {
     return null;
   }
@@ -25114,7 +25641,7 @@ async function artifactExists(projectRoot, artifactPath) {
     return false;
   }
   try {
-    const stats = await fs.stat(resolveBlueprintPath(projectRoot, artifactPath));
+    const stats = await fs2.stat(resolveBlueprintPath(projectRoot, artifactPath));
     return stats.isFile();
   } catch {
     return false;
@@ -25147,7 +25674,7 @@ async function resolveExistingRepoFiles(args) {
       warnings.push(`Skipped wildcard quality-gate path from ${args.source}: ${candidate}`);
       continue;
     }
-    if (path4.isAbsolute(candidate)) {
+    if (path6.isAbsolute(candidate)) {
       warnings.push(`Skipped absolute quality-gate path from ${args.source}: ${candidate}`);
       continue;
     }
@@ -25165,7 +25692,7 @@ async function resolveExistingRepoFiles(args) {
     }
     let stats;
     try {
-      stats = await fs.stat(absolutePath);
+      stats = await fs2.stat(absolutePath);
     } catch {
       continue;
     }
@@ -25248,6 +25775,85 @@ function extractReviewFixStatus(content) {
     return status;
   }
   return null;
+}
+function extractSecurityStatus(content) {
+  const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
+  if (status === "COMPLETED" || status === "PARTIAL" || status === "BLOCKED" || status === "INCOMPLETE") {
+    return status;
+  }
+  return null;
+}
+function extractLabeledLineValue(content, label) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(
+    new RegExp(`^\\s*(?:[-*]\\s*)?${escapedLabel}:\\s*(.+?)\\s*$`, "im")
+  );
+  return match?.[1]?.trim() ?? null;
+}
+function extractAnyLabeledLineValue(content, labels) {
+  for (const label of labels) {
+    const value = extractLabeledLineValue(content, label);
+    if (value !== null) {
+      return value;
+    }
+  }
+  return null;
+}
+function normalizeSecuritySignal(value) {
+  return value.replace(/`/g, "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+}
+function isClosedSecuritySignal(value) {
+  const normalized = normalizeSecuritySignal(value);
+  return normalized.length === 0 || normalized === "none" || normalized === "n/a" || normalized === "na" || normalized === "closed" || normalized === "resolved" || normalized === "verified" || normalized === "accepted" || normalized === "complete" || normalized === "completed" || normalized === "pass" || normalized === "passed";
+}
+function isBlockingSecuritySignal(value) {
+  const normalized = normalizeSecuritySignal(value);
+  if (isClosedSecuritySignal(normalized)) {
+    return false;
+  }
+  return /\b(?:open|still-open|blocked|blocking|pending|fail|failed|failing)\b/i.test(
+    normalized
+  );
+}
+function tableHasBlockingSecurityStatus(args) {
+  const rows = extractMarkdownTableRows(extractMarkdownSection2(args.content, args.heading));
+  const headerRowIndex = rows.findIndex(
+    (row) => row.some((cell) => normalizeSecuritySignal(cell) === "status")
+  );
+  if (headerRowIndex === -1) {
+    return false;
+  }
+  const headerRow = rows[headerRowIndex] ?? [];
+  const statusColumn = headerRow.findIndex(
+    (cell) => normalizeSecuritySignal(cell) === "status"
+  );
+  if (statusColumn === -1) {
+    return false;
+  }
+  return rows.slice(headerRowIndex + 1).some((row) => isBlockingSecuritySignal(row[statusColumn]?.trim() ?? ""));
+}
+function hasBlockingSecurityState(content, nextSafeAction) {
+  const pendingOpenThreatStatus = extractAnyLabeledLineValue(content, [
+    "Pending-open-threat status",
+    "Pending open threat status"
+  ]);
+  if (pendingOpenThreatStatus !== null && isBlockingSecuritySignal(pendingOpenThreatStatus)) {
+    return true;
+  }
+  if (nextSafeAction !== null && /\b(?:blocked|pending-open-threat|still-open)\b/i.test(nextSafeAction)) {
+    return true;
+  }
+  return tableHasBlockingSecurityStatus({
+    content,
+    heading: "Threat Register"
+  }) || tableHasBlockingSecurityStatus({
+    content,
+    heading: "Findings"
+  });
+}
+function extractNextSafeActionText(content) {
+  const section = extractMarkdownSection2(content, "Next Safe Action");
+  return section.split(/\r?\n/).map((line) => line.replace(/^[-*+]\s+/, "").trim()).find((line) => line.length > 0) ?? extractArtifactMarker(content, "Next Safe Action");
 }
 function extractVisibleReviewTargetId(value) {
   const trimmed = value.trim();
@@ -25342,6 +25948,30 @@ function isLegalReviewFixNextSafeAction(args) {
       return args.nextSafeAction === "/blu-progress" || args.nextSafeAction === `/blu-execute-phase ${args.phaseNumber}`;
   }
 }
+function isLegalCompletedSecurityNextSafeAction(args) {
+  if (args.nextSafeAction === `/blu-validate-phase ${args.phaseNumber}`) {
+    return !args.hasVerification;
+  }
+  if (args.nextSafeAction === `/blu-verify-work ${args.phaseNumber}`) {
+    return args.hasVerification && (args.uatRoutingState.hasBlockingUat || args.uatRequired && !args.uatRoutingState.hasCompleteUat);
+  }
+  if (args.nextSafeAction === "/blu-progress") {
+    return args.hasVerification && !args.uatRoutingState.hasBlockingUat && (!args.uatRequired || args.uatRoutingState.hasCompleteUat);
+  }
+  return false;
+}
+function isLegalPartialSecurityNextSafeAction(args) {
+  if (args.uatRoutingState.hasBlockingUat) {
+    return args.nextSafeAction !== null && args.uatRoutingState.blockingNextSafeAction !== null && args.nextSafeAction === args.uatRoutingState.blockingNextSafeAction;
+  }
+  return args.nextSafeAction === "/blu-progress";
+}
+function normalizeSecurityNextSafeActionText(value) {
+  return value?.replace(/`/g, "").trim().replace(/\s+/g, " ") ?? null;
+}
+function isLegalBlockedSecurityNextSafeAction(nextSafeActionText) {
+  return normalizeSecurityNextSafeActionText(nextSafeActionText) === "Blocked: pending-open-threat";
+}
 function parseReviewFixRoutingState(args) {
   const status = extractReviewFixStatus(args.content);
   const completionState = extractArtifactMarker(args.content, "Completion State")?.toLowerCase() ?? null;
@@ -25370,13 +26000,12 @@ function parseReviewFixRoutingState(args) {
 }
 async function reconcileCompletedReviewFixDebt(args) {
   const addressedTargetIds = parseExplicitReviewFixAddressedIds(args.reviewFixContent);
-  if (addressedTargetIds.length === 0) {
-    args.warnings.push(
-      `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed; quality-gate routing will keep legacy debt-clearing behavior.`
-    );
-    return null;
-  }
   if (args.reviewPath === null) {
+    if (addressedTargetIds.length === 0) {
+      args.warnings.push(
+        `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed, but no source Review artifact is available; quality-gate routing will keep legacy debt-clearing behavior.`
+      );
+    }
     return null;
   }
   const reviewArtifact = args.artifacts.find((artifact) => artifact.path === args.reviewPath) ?? {
@@ -25388,14 +26017,32 @@ async function reconcileCompletedReviewFixDebt(args) {
     artifact: reviewArtifact
   });
   if (reviewContent === null) {
+    if (addressedTargetIds.length === 0) {
+      args.warnings.push(
+        `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed, but the source Review artifact could not be read; quality-gate routing will keep legacy debt-clearing behavior.`
+      );
+    }
     return null;
   }
   const actionableTargetIds = parseExplicitActionableReviewTargetIds(reviewContent);
   if (actionableTargetIds.length === 0) {
+    if (addressedTargetIds.length === 0) {
+      args.warnings.push(
+        `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed, but the source Review artifact has no parseable actionable target ids; quality-gate routing will keep legacy debt-clearing behavior.`
+      );
+    }
     return null;
   }
+  if (addressedTargetIds.length === 0) {
+    args.warnings.push(
+      `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed while the source Review artifact has ${actionableTargetIds.length} actionable saved review target id(s); quality-gate routing will keep remediation debt open. Missing: ${actionableTargetIds.join(", ")}.`
+    );
+    return false;
+  }
   const addressedTargetIdSet = new Set(addressedTargetIds);
-  const missingTargetIds = actionableTargetIds.filter((targetId) => !addressedTargetIdSet.has(targetId));
+  const missingTargetIds = actionableTargetIds.filter(
+    (targetId) => !addressedTargetIdSet.has(targetId)
+  );
   if (missingTargetIds.length === 0) {
     return true;
   }
@@ -25435,6 +26082,16 @@ function extractCommandName(action) {
 function isImplementedCommand(commandNames, commandName) {
   return commandNames.has(commandName) || commandNames.has(`/blu-${commandName}`);
 }
+function implementedRepairNextSafeAction(action, implementedCommandNames) {
+  if (action === null) {
+    return null;
+  }
+  const commandName = extractCommandName(action);
+  if (commandName === null || NON_REPAIR_ROUTING_COMMANDS.has(commandName) || !isImplementedCommand(implementedCommandNames, commandName)) {
+    return null;
+  }
+  return action;
+}
 function isStaleSecurePhaseAction(args) {
   return args.commandName === "secure-phase" && (!args.requiresSecurePhase || args.hasSecurity && args.missingGate !== "security");
 }
@@ -25470,7 +26127,7 @@ function savedReviewFollowUpCommandName(args) {
   return commandName;
 }
 function isReviewableConfigPath(relativePath) {
-  const basename = path4.posix.basename(relativePath);
+  const basename = path6.posix.basename(relativePath);
   if (REVIEWABLE_FILENAMES.has(basename)) {
     return true;
   }
@@ -25481,7 +26138,7 @@ function isReviewableRepoFile(relativePath) {
   if (normalized.length === 0 || normalized.startsWith(`${BLUEPRINT_DIR}/`) || normalized.startsWith("dist/")) {
     return false;
   }
-  const extension = path4.posix.extname(normalized);
+  const extension = path6.posix.extname(normalized);
   if (extension === ".md") {
     return false;
   }
@@ -25496,14 +26153,16 @@ async function resolveQualityGateSettings(projectRoot) {
     return {
       codeReviewEnabled: config2.config.workflow.code_review,
       securePhaseEnabled: config2.config.workflow.secure_phase,
+      uatRequired: config2.config.workflow.no_uat !== true,
       warnings: [...config2.warnings]
     };
   } catch {
     return {
       codeReviewEnabled: true,
       securePhaseEnabled: false,
+      uatRequired: true,
       warnings: [
-        "Blueprint quality-gate config could not be read; defaulting workflow.code_review to true and workflow.secure_phase to false."
+        "Blueprint quality-gate config could not be read; defaulting workflow.code_review to true, workflow.secure_phase to false, and workflow.no_uat to false."
       ]
     };
   }
@@ -25703,6 +26362,131 @@ async function readUsableReviewFixNextSafeAction(args) {
   }
   return routingState;
 }
+async function readSecurityUatRoutingState(args) {
+  if (args.uatPath === null) {
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: false,
+      blockingNextSafeAction: null
+    };
+  }
+  const uatArtifact = args.artifacts.find((artifact) => artifact.path === args.uatPath) ?? {
+    path: args.uatPath,
+    kind: "other"
+  };
+  const content = await readArtifactContent({
+    projectRoot: args.projectRoot,
+    artifact: uatArtifact
+  });
+  if (content === null) {
+    args.warnings.push(
+      `${args.uatPath}: could not read saved UAT evidence; completed Security routing will require /blu-verify-work before closeout.`
+    );
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: true,
+      blockingNextSafeAction: null
+    };
+  }
+  const nextSafeAction = extractReviewFixNextSafeAction(content);
+  const validation = validateUatArtifactContent(content, args.summaryPaths, {
+    requireReadyVerificationEvidence: true
+  });
+  if (!validation.valid) {
+    args.warnings.push(
+      `${args.uatPath}: saved UAT evidence is invalid; completed Security routing will require /blu-verify-work before closeout.`,
+      ...validation.issues.map((issue2) => `${args.uatPath}: ${issue2}`),
+      ...validation.warnings.map((warning) => `${args.uatPath}: ${warning}`)
+    );
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: true,
+      blockingNextSafeAction: nextSafeAction
+    };
+  }
+  const uatState = readUatArtifactState(content);
+  return {
+    hasCompleteUat: uatState.complete,
+    hasBlockingUat: !uatState.complete,
+    blockingNextSafeAction: uatState.complete ? null : nextSafeAction
+  };
+}
+async function readSecurityRoutingState(args) {
+  if (args.securityPath === null) {
+    return {
+      status: null,
+      completionState: null,
+      nextSafeAction: null,
+      gateSatisfied: false,
+      debtKind: null
+    };
+  }
+  const securityArtifact = args.artifacts.find((artifact) => artifact.path === args.securityPath) ?? {
+    path: args.securityPath,
+    kind: "security"
+  };
+  const content = await readArtifactContent({
+    projectRoot: args.projectRoot,
+    artifact: securityArtifact
+  });
+  if (content === null) {
+    args.warnings.push(
+      `${args.securityPath}: could not read Security artifact; quality-gate routing will keep secure-phase debt open.`
+    );
+    return {
+      status: null,
+      completionState: null,
+      nextSafeAction: null,
+      gateSatisfied: false,
+      debtKind: "incomplete"
+    };
+  }
+  const status = extractSecurityStatus(content);
+  const completionState = extractArtifactMarker(content, "Completion State")?.toLowerCase() ?? null;
+  const nextSafeAction = extractReviewFixNextSafeAction(content);
+  const nextSafeActionText = extractNextSafeActionText(content);
+  const hasBlockingState = hasBlockingSecurityState(content, nextSafeActionText);
+  const hasCompletedSecurityShape = status === "COMPLETED" && completionState === "complete";
+  const uatRoutingState = await readSecurityUatRoutingState({
+    projectRoot: args.projectRoot,
+    uatPath: args.uatPath,
+    artifacts: args.artifacts,
+    summaryPaths: args.summaryPaths,
+    warnings: args.warnings
+  });
+  const hasLegalCompletedNextSafeAction = isLegalCompletedSecurityNextSafeAction({
+    nextSafeAction,
+    phaseNumber: args.phaseNumber,
+    hasVerification: args.hasVerification,
+    uatRequired: args.uatRequired,
+    uatRoutingState
+  });
+  const hasLegalPartialNextSafeAction = isLegalPartialSecurityNextSafeAction({
+    nextSafeAction,
+    uatRoutingState
+  });
+  const hasLegalBlockedNextSafeAction = isLegalBlockedSecurityNextSafeAction(nextSafeActionText);
+  const hasLegalNextSafeAction = status === "COMPLETED" ? hasCompletedSecurityShape && hasLegalCompletedNextSafeAction : status === "PARTIAL" || status === "INCOMPLETE" ? hasLegalPartialNextSafeAction : status === "BLOCKED" ? hasLegalBlockedNextSafeAction : false;
+  if (hasCompletedSecurityShape && !hasLegalCompletedNextSafeAction) {
+    args.warnings.push(
+      `${args.securityPath}: completed Security artifact has a missing, illegal, or stale Next Safe Action; quality-gate routing will keep secure-phase debt open.`
+    );
+  }
+  if (status !== null && status !== "COMPLETED" && !hasLegalNextSafeAction) {
+    args.warnings.push(
+      `${args.securityPath}: non-complete Security artifact has a missing, illegal, or stale Next Safe Action; quality-gate routing will keep secure-phase debt open.`
+    );
+  }
+  const gateSatisfied = hasCompletedSecurityShape && !hasBlockingState && hasLegalCompletedNextSafeAction;
+  const routableNextSafeAction = status === "COMPLETED" ? hasLegalCompletedNextSafeAction ? nextSafeAction : null : status === "PARTIAL" || status === "INCOMPLETE" ? hasLegalPartialNextSafeAction ? nextSafeAction : null : null;
+  return {
+    status,
+    completionState,
+    nextSafeAction: routableNextSafeAction,
+    gateSatisfied,
+    debtKind: gateSatisfied ? null : hasBlockingState || status === "BLOCKED" ? "blocked" : "incomplete"
+  };
+}
 async function evaluatePhaseQualityGates(args) {
   const projectRoot = await ensureRepoRoot(args.projectRoot);
   const phaseNumber = normalizeBlueprintPhaseRef(args.phaseNumber);
@@ -25737,15 +26521,38 @@ async function evaluatePhaseQualityGates(args) {
     suffix: "-SECURITY.md",
     kind: "security"
   });
-  const [reviewExists, reviewFixExists, securityExists, qualityGateSettings] = await Promise.all([
+  const verificationPath = findPhaseArtifactPath({
+    artifacts,
+    phaseRoot,
+    phasePrefix: phasePrefix2,
+    suffix: "-VERIFICATION.md"
+  });
+  const uatPath = findPhaseArtifactPath({
+    artifacts,
+    phaseRoot,
+    phasePrefix: phasePrefix2,
+    suffix: "-UAT.md"
+  });
+  const [
+    reviewExists,
+    reviewFixExists,
+    securityExists,
+    verificationExists,
+    uatExists,
+    qualityGateSettings
+  ] = await Promise.all([
     artifactExists(projectRoot, reviewPath),
     artifactExists(projectRoot, reviewFixPath),
     artifactExists(projectRoot, securityPath),
+    artifactExists(projectRoot, verificationPath),
+    artifactExists(projectRoot, uatPath),
     resolveQualityGateSettings(projectRoot)
   ]);
   const hasReview = reviewExists || artifactDeclared(artifacts, reviewPath);
   const hasReviewFix = reviewFixExists || artifactDeclared(artifacts, reviewFixPath);
   const hasSecurity = securityExists || artifactDeclared(artifacts, securityPath);
+  const hasVerification = verificationExists || artifactDeclared(artifacts, verificationPath);
+  const hasUat = uatExists || artifactDeclared(artifacts, uatPath);
   warnings.push(...qualityGateSettings.warnings);
   const completedSummaries = await collectCompletedSummaries({
     projectRoot,
@@ -25774,6 +26581,23 @@ async function evaluatePhaseQualityGates(args) {
   const requiresSecurePhase = requiresCodeReview && qualityGateSettings.securePhaseEnabled;
   const requiresQualityGate = requiresCodeReview || requiresSecurePhase;
   const missingGate = requiresCodeReview && !hasReview ? "review" : requiresSecurePhase && hasReview && !hasSecurity ? "security" : null;
+  const securityRoutingState = hasSecurity ? await readSecurityRoutingState({
+    projectRoot,
+    securityPath,
+    artifacts,
+    phaseNumber,
+    hasVerification,
+    uatPath: hasUat ? uatPath : null,
+    uatRequired: qualityGateSettings.uatRequired,
+    summaryPaths: completedSummaries.summaries.map((summary) => summary.path),
+    warnings
+  }) : {
+    status: null,
+    completionState: null,
+    nextSafeAction: null,
+    gateSatisfied: false,
+    debtKind: null
+  };
   const reviewFixRoutingState = hasReviewFix ? await readUsableReviewFixNextSafeAction({
     projectRoot,
     reviewPath,
@@ -25814,6 +26638,7 @@ async function evaluatePhaseQualityGates(args) {
     missingGate,
     requiresSecurePhase
   });
+  const securityDebtKind = requiresSecurePhase && hasReview && hasSecurity && !securityRoutingState.gateSatisfied ? securityRoutingState.debtKind ?? "incomplete" : null;
   return {
     reviewPath: hasReview ? reviewPath : null,
     securityPath: hasSecurity ? securityPath : null,
@@ -25825,11 +26650,13 @@ async function evaluatePhaseQualityGates(args) {
     requiresCodeReview,
     requiresSecurePhase,
     requiresQualityGate,
-    gatesSatisfied: missingGate === null && reviewDebtKind === null,
+    gatesSatisfied: missingGate === null && reviewDebtKind === null && securityDebtKind === null,
     missingGate,
     warnings,
     reviewNextSafeAction,
-    reviewDebtKind
+    reviewDebtKind,
+    securityNextSafeAction: securityDebtKind === null ? null : securityRoutingState.nextSafeAction,
+    securityDebtKind
   };
 }
 function formatPhaseQualityGateDebtReason(args) {
@@ -25843,6 +26670,12 @@ function formatPhaseQualityGateDebtReason(args) {
   }
   if (args.missingGate === "security") {
     return `SECURITY evidence is missing for ${reviewableFileCount} reviewable file(s).`;
+  }
+  if (args.securityDebtKind === "blocked") {
+    return `Saved security evidence still has blocking threat debt for ${reviewableFileCount} reviewable file(s).`;
+  }
+  if (args.securityDebtKind === "incomplete") {
+    return `Saved security evidence is not complete for ${reviewableFileCount} reviewable file(s).`;
   }
   if (args.reviewDebtKind === "remediation") {
     return `Saved review remediation debt remains for ${reviewableFileCount} reviewable file(s).`;
@@ -25861,6 +26694,18 @@ function buildPhaseQualityGateNextAction(args) {
   }
   if (requiresSecurePhase && args.evaluation.missingGate === "security" && isImplementedCommand(args.implementedCommandNames, "secure-phase")) {
     return `Run /blu-secure-phase ${phaseNumber} to satisfy the phase security gate.`;
+  }
+  if (requiresSecurePhase && args.evaluation.securityDebtKind !== null) {
+    const securityNextSafeAction = implementedRepairNextSafeAction(
+      args.evaluation.securityNextSafeAction,
+      args.implementedCommandNames
+    );
+    if (securityNextSafeAction !== null) {
+      return `Run ${securityNextSafeAction}.`;
+    }
+    if (isImplementedCommand(args.implementedCommandNames, "secure-phase")) {
+      return `Run /blu-secure-phase ${phaseNumber} to complete the phase security gate.`;
+    }
   }
   const reviewNextSafeAction = args.evaluation.reviewNextSafeAction;
   if (reviewNextSafeAction) {
@@ -25882,7 +26727,7 @@ function buildPhaseQualityGateNextAction(args) {
   }
   return null;
 }
-var REVIEWABLE_EXTENSIONS, REVIEWABLE_FILENAMES, REVIEWABLE_ROOT_PREFIXES, PATH_TOKEN_PATTERN, VISIBLE_REVIEW_TARGET_ID_PATTERN, CANONICAL_CODE_REVIEW_FINDING_PATTERN;
+var REVIEWABLE_EXTENSIONS, REVIEWABLE_FILENAMES, REVIEWABLE_ROOT_PREFIXES, PATH_TOKEN_PATTERN, VISIBLE_REVIEW_TARGET_ID_PATTERN, CANONICAL_CODE_REVIEW_FINDING_PATTERN, NON_REPAIR_ROUTING_COMMANDS;
 var init_quality_gates = __esm({
   "src/mcp/tools/quality-gates.ts"() {
     "use strict";
@@ -25966,6 +26811,20 @@ var init_quality_gates = __esm({
     PATH_TOKEN_PATTERN = /\/?[A-Za-z0-9._~@$+%-]+(?:\/[A-Za-z0-9._~@$+%-]+)+|\/?[A-Za-z0-9._~@$+%-]+\.[A-Za-z0-9]+/g;
     VISIBLE_REVIEW_TARGET_ID_PATTERN = /`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?/i;
     CANONICAL_CODE_REVIEW_FINDING_PATTERN = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
+    NON_REPAIR_ROUTING_COMMANDS = /* @__PURE__ */ new Set([
+      "progress",
+      "audit-milestone",
+      "complete-milestone",
+      "milestone-summary",
+      "new-milestone",
+      "cleanup",
+      "ship",
+      "pr-branch",
+      "new-workspace",
+      "remove-workspace",
+      "undo",
+      "reapply-patches"
+    ]);
   }
 });
 
@@ -26125,6 +26984,76 @@ var init_phase_no_ui_signals = __esm({
   }
 });
 
+// src/mcp/tools/phase-topology-lock.ts
+function phaseRoadmapEntryFingerprint(phase) {
+  if (!phase) {
+    return null;
+  }
+  return {
+    phaseNumber: phase.phaseNumber,
+    phasePrefix: phase.phasePrefix,
+    phaseName: phase.phaseName,
+    completed: phase.completed,
+    summary: phase.summary,
+    goal: phase.goal,
+    successCriteria: phase.successCriteria,
+    requirements: [...phase.requirements]
+  };
+}
+function phaseTopologyFingerprintFromLocation(location, matchedPhase) {
+  return {
+    phaseNumber: location.phaseNumber,
+    phasePrefix: location.phasePrefix,
+    phaseName: location.phaseName,
+    phaseDir: location.phaseDir,
+    roadmapEntry: phaseRoadmapEntryFingerprint(matchedPhase)
+  };
+}
+function roadmapEntryFingerprintsMatch(expected, actual) {
+  if (expected === null || actual === null) {
+    return expected === actual;
+  }
+  return expected.phaseNumber === actual.phaseNumber && expected.phasePrefix === actual.phasePrefix && expected.phaseName === actual.phaseName && expected.completed === actual.completed && expected.summary === actual.summary && expected.goal === actual.goal && expected.successCriteria === actual.successCriteria && expected.requirements.length === actual.requirements.length && expected.requirements.every((requirement, index) => requirement === actual.requirements[index]);
+}
+function phaseTopologyFingerprintsMatch(expected, actual) {
+  return expected.phaseNumber === actual.phaseNumber && expected.phasePrefix === actual.phasePrefix && expected.phaseName === actual.phaseName && expected.phaseDir === actual.phaseDir && roadmapEntryFingerprintsMatch(expected.roadmapEntry, actual.roadmapEntry);
+}
+function formatStalePhaseTopologyMessage(args) {
+  return [
+    `${args.operation} rejected stale phase topology for Phase ${args.expected.phaseNumber}.`,
+    `Expected ${formatPhaseTopologyFingerprint(args.expected)}.`,
+    `Found ${formatPhaseTopologyFingerprint(args.actual)}.`
+  ].join(" ");
+}
+function formatPhaseTopologyFingerprint(fingerprint) {
+  return [
+    `phaseNumber=${fingerprint.phaseNumber}`,
+    `phasePrefix=${fingerprint.phasePrefix}`,
+    `phaseDir=${fingerprint.phaseDir}`,
+    `phaseName=${fingerprint.phaseName ?? "unknown"}`,
+    `roadmapEntry=${formatRoadmapEntryFingerprint(fingerprint.roadmapEntry)}`
+  ].join(", ");
+}
+function formatRoadmapEntryFingerprint(fingerprint) {
+  if (!fingerprint) {
+    return "missing";
+  }
+  return [
+    `completed=${fingerprint.completed}`,
+    `summary=${fingerprint.summary ?? "none"}`,
+    `goal=${fingerprint.goal ?? "none"}`,
+    `successCriteria=${fingerprint.successCriteria ?? "none"}`,
+    `requirements=[${fingerprint.requirements.join(", ")}]`
+  ].join("; ");
+}
+var PHASE_TOPOLOGY_LOCK_NAME;
+var init_phase_topology_lock = __esm({
+  "src/mcp/tools/phase-topology-lock.ts"() {
+    "use strict";
+    PHASE_TOPOLOGY_LOCK_NAME = "phase-topology";
+  }
+});
+
 // src/mcp/tools/state.ts
 var state_exports = {};
 __export(state_exports, {
@@ -26135,9 +27064,11 @@ __export(state_exports, {
   blueprintStateUpdate: () => blueprintStateUpdate,
   extractBlueprintCommand: () => extractBlueprintCommand2,
   loadBlueprintState: () => loadBlueprintState,
-  stateToolDefinitions: () => stateToolDefinitions
+  prepareBlueprintStateUpdate: () => prepareBlueprintStateUpdate,
+  stateToolDefinitions: () => stateToolDefinitions,
+  writePreparedBlueprintStateUpdate: () => writePreparedBlueprintStateUpdate
 });
-import { promises as fs2 } from "node:fs";
+import { promises as fs3 } from "node:fs";
 function roadmapDetailStatusIsComplete(status) {
   if (status === null) {
     return null;
@@ -26206,6 +27137,9 @@ function normalizeLines(values) {
 function normalizeParagraph(value, fallback = "None recorded.") {
   const normalized = value?.trim().replace(/\r\n/g, "\n");
   return normalized && normalized.length > 0 ? normalized : fallback;
+}
+function isNodeErrorCode(error2, code) {
+  return typeof error2 === "object" && error2 !== null && "code" in error2 && error2.code === code;
 }
 function parseFrontmatter2(raw) {
   const match = raw.match(/^---\n([\s\S]*?)\n---\n?/);
@@ -26329,7 +27263,7 @@ async function loadPauseHandoffReport(projectRoot) {
       warnings: []
     };
   }
-  const raw = await fs2.readFile(absolutePath, "utf8");
+  const raw = await fs3.readFile(absolutePath, "utf8");
   return {
     found: true,
     path: PAUSE_HANDOFF_REPORT_PATH,
@@ -26513,24 +27447,76 @@ ${roadmapEvolutionNotes}
 function parseStateDocument(raw) {
   const { body } = stripStateFrontmatter(raw);
   const getLineValue = (label) => {
-    const match = body.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
+    const match = body.match(new RegExp(`^- ${label}:[ \\t]*(.*)$`, "m"));
     return match ? match[1].trim() : null;
   };
+  const requiredLabels = [
+    "Project status",
+    "Current milestone",
+    "Current phase",
+    "Active command",
+    "Next action",
+    "Last updated"
+  ];
+  const values = Object.fromEntries(
+    requiredLabels.map((label) => [label, getLineValue(label)])
+  );
+  const missingLabels = requiredLabels.filter(
+    (label) => values[label] === null || label !== "Current phase" && values[label]?.length === 0
+  );
+  if (missingLabels.length > 0) {
+    throw new Error(
+      `${BLUEPRINT_STATE_PATH} is missing required state fields: ${missingLabels.join(", ")}.`
+    );
+  }
   const blockersSection = extractMarkdownSection4(body, "Blockers");
   const roadmapEvolutionNotesSection = extractMarkdownSection4(body, "Roadmap Evolution Notes");
   const blockers = blockersSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line && line !== "none");
   const roadmapEvolutionNotes = roadmapEvolutionNotesSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line !== "none");
-  const currentPhaseValue = getLineValue("Current phase");
+  const currentPhaseValue = values["Current phase"] ?? "";
+  const normalizedCurrentPhase = normalizeSelectedPhase(currentPhaseValue);
+  if (normalizedCurrentPhase === null && currentPhaseValue.length > 0) {
+    throw new Error(
+      `${BLUEPRINT_STATE_PATH} has an invalid Current phase value: ${currentPhaseValue}.`
+    );
+  }
   return {
-    projectStatus: getLineValue("Project status") ?? DEFAULT_STATE.projectStatus,
-    currentMilestone: getLineValue("Current milestone") ?? DEFAULT_STATE.currentMilestone,
-    currentPhase: currentPhaseValue === null ? DEFAULT_STATE.currentPhase : normalizeSelectedPhase(currentPhaseValue) ?? "",
-    activeCommand: getLineValue("Active command") ?? DEFAULT_STATE.activeCommand,
-    nextAction: getLineValue("Next action") ?? DEFAULT_STATE.nextAction,
-    lastUpdated: getLineValue("Last updated") ?? DEFAULT_STATE.lastUpdated,
+    projectStatus: values["Project status"] ?? DEFAULT_STATE.projectStatus,
+    currentMilestone: values["Current milestone"] ?? DEFAULT_STATE.currentMilestone,
+    currentPhase: normalizedCurrentPhase ?? "",
+    activeCommand: values["Active command"] ?? DEFAULT_STATE.activeCommand,
+    nextAction: values["Next action"] ?? DEFAULT_STATE.nextAction,
+    lastUpdated: values["Last updated"] ?? DEFAULT_STATE.lastUpdated,
     blockers,
     roadmapEvolutionNotes
   };
+}
+async function readBlueprintStateFile(projectRoot) {
+  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  try {
+    const raw = await fs3.readFile(statePath, "utf8");
+    return {
+      state: parseStateDocument(raw),
+      status: "loaded",
+      warnings: []
+    };
+  } catch (error2) {
+    if (isNodeErrorCode(error2, "ENOENT")) {
+      return {
+        state: { ...DEFAULT_STATE },
+        status: "missing",
+        warnings: []
+      };
+    }
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return {
+      state: { ...DEFAULT_STATE },
+      status: "malformed",
+      warnings: [
+        `${BLUEPRINT_STATE_PATH} is present but malformed or unreadable: ${message}`
+      ]
+    };
+  }
 }
 function normalizePhaseNumber2(value) {
   return normalizeBlueprintPhaseRef(value);
@@ -26561,11 +27547,17 @@ function normalizeSelectedPhase(value) {
   }
 }
 function extractNextActionPhaseSelection(nextAction) {
-  const match = nextAction.match(/(\/blu-[a-z0-9-]+)(?:\s+(\d+(?:\.\d+)?))?/i);
+  const selection = extractBlueprintCommandSelections(nextAction)[0];
   return {
-    command: match?.[1] ?? null,
-    currentPhase: normalizeSelectedPhase(match?.[2])
+    command: selection?.command ?? null,
+    currentPhase: selection?.currentPhase ?? null
   };
+}
+function extractBlueprintCommandSelections(value) {
+  return [...value.matchAll(/(\/blu-[a-z0-9-]+)(?:\s+(\d+(?:\.\d+)?))?/gi)].map((match) => ({
+    command: (match[1] ?? "").toLowerCase(),
+    currentPhase: normalizeSelectedPhase(match[2])
+  })).filter((selection) => selection.command.length > 0);
 }
 function isDerivedPhaseDirectoryBlocker(blocker) {
   return /^Current phase \d+(?:\.\d+)? (?:is missing a matching directory|has multiple matching directories) under \.blueprint\/phases\//.test(
@@ -26629,6 +27621,93 @@ async function assertCurrentPhaseContextPathExists(args) {
     );
   }
 }
+async function assertStateNextActionCanBeStored(args) {
+  const nextActionSelections = extractBlueprintCommandSelections(args.nextAction);
+  if (nextActionSelections.length === 0) {
+    return;
+  }
+  const implementedCommands = await getImplementedCommandNames();
+  const nonImplementedCommands = [
+    ...new Set(
+      nextActionSelections.map((selection) => selection.command).filter((command) => !implementedCommands.has(command))
+    )
+  ];
+  if (nonImplementedCommands.length > 0) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because next action references ${nonImplementedCommands.join(", ")}, which ${nonImplementedCommands.length === 1 ? "is not an implemented Blueprint command" : "are not implemented Blueprint commands"}.`
+    );
+  }
+  if (nextActionSelections.length > 1) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because next action references multiple Blueprint commands (${nextActionSelections.map((selection) => selection.command).join(", ")}). Store one implemented next action.`
+    );
+  }
+  const [nextActionSelection] = nextActionSelections;
+  if (!nextActionSelection) {
+    return;
+  }
+  if (!implementedCommands.has(nextActionSelection.command)) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because next action references ${nextActionSelection.command}, which is not an implemented Blueprint command.`
+    );
+  }
+  if (nextActionSelection.currentPhase === null) {
+    return;
+  }
+  if (args.currentPhase === null) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because next action points to ${nextActionSelection.command} ${nextActionSelection.currentPhase} without a stored current phase.`
+    );
+  }
+  if (nextActionSelection.currentPhase !== args.currentPhase) {
+    const canStoreCrossPhaseRepairRoute = args.allowCrossPhaseRepairRoutes === true && CROSS_PHASE_REPAIR_ROUTING_COMMANDS.has(nextActionSelection.command) && comparePhaseNumbers2(nextActionSelection.currentPhase, args.currentPhase) <= 0 && await isCompletedRoadmapPhaseWithDirectory(
+      args.projectRoot,
+      nextActionSelection.currentPhase
+    );
+    if (canStoreCrossPhaseRepairRoute) {
+      return;
+    }
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because next action points to ${nextActionSelection.command} ${nextActionSelection.currentPhase}.`
+    );
+  }
+  await assertCurrentPhaseContextPathExists({
+    projectRoot: args.projectRoot,
+    currentPhase: args.currentPhase,
+    nextAction: args.nextAction
+  });
+}
+async function assertStateActiveCommandCanBeStored(activeCommand2) {
+  const activeCommandSelections = extractBlueprintCommandSelections(activeCommand2);
+  if (activeCommandSelections.length === 0) {
+    return;
+  }
+  const implementedCommands = await getImplementedCommandNames();
+  const nonImplementedCommands = [
+    ...new Set(
+      activeCommandSelections.map((selection) => selection.command).filter((command) => !implementedCommands.has(command))
+    )
+  ];
+  if (nonImplementedCommands.length > 0) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because active command references ${nonImplementedCommands.join(", ")}, which ${nonImplementedCommands.length === 1 ? "is not an implemented Blueprint command" : "are not implemented Blueprint commands"}.`
+    );
+  }
+  if (activeCommandSelections.length > 1) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} because active command references multiple Blueprint commands (${activeCommandSelections.map((selection) => selection.command).join(", ")}). Store one implemented active command.`
+    );
+  }
+}
+async function isCompletedRoadmapPhaseWithDirectory(projectRoot, phaseNumber) {
+  const roadmapSignals = await readRoadmapSignals(projectRoot);
+  if (!roadmapSignals.allPhasesComplete) {
+    return false;
+  }
+  return roadmapSignals.phases.some(
+    (phase) => phase.completed && normalizePhaseNumber2(phase.phaseNumber) === normalizePhaseNumber2(phaseNumber)
+  ) && await phaseDirectoryExists(projectRoot, phaseNumber);
+}
 function formatPhasePrefix2(value) {
   return formatBlueprintPhasePrefix(value);
 }
@@ -26680,7 +27759,7 @@ async function inspectPhasePlanRoutingReadiness(args) {
   const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   let roadmapRequirementIds = [];
   try {
-    const roadmap = parseRoadmapDocument(await fs2.readFile(roadmapPath, "utf8"));
+    const roadmap = parseRoadmapDocument(await fs3.readFile(roadmapPath, "utf8"));
     roadmapRequirementIds = roadmap.phases.find((phase) => normalizePhaseNumber2(phase.phaseNumber) === args.currentPhase)?.requirements ?? [];
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
@@ -26697,7 +27776,7 @@ async function inspectPhasePlanRoutingReadiness(args) {
   const planMetadata = /* @__PURE__ */ new Map();
   for (const planPath of args.planPaths) {
     try {
-      const raw = await fs2.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
+      const raw = await fs3.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, args.currentPhase);
       const planId2 = normalizeRoutingPlanId(validation.metadata.planId ?? "");
       for (const issue2 of validation.issues) {
@@ -26793,7 +27872,7 @@ function phaseArtifactPathsForDirectory(artifacts, phaseDir2) {
   const prefix = `${BLUEPRINT_DIR}/phases/${phaseDir2}/`;
   return artifacts.filter((artifact) => artifact.startsWith(prefix));
 }
-function findPhaseArtifactPath(artifacts, phasePrefix2, suffix) {
+function findPhaseArtifactPath2(artifacts, phasePrefix2, suffix) {
   const expectedSuffix = `/${phasePrefix2}${suffix}`;
   for (const artifact of artifacts) {
     if (artifact.endsWith(expectedSuffix)) {
@@ -26849,7 +27928,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     if (!artifactPath) {
       continue;
     }
-    const content = await fs2.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const content = await fs3.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
     const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths, {
       noUat: options.noUat === true
     }) : validateUatArtifactContent(content, summaryPaths, {
@@ -26905,7 +27984,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
 }
 async function listImmediateDirectories(rootPath) {
   try {
-    const entries = await fs2.readdir(rootPath, { withFileTypes: true });
+    const entries = await fs3.readdir(rootPath, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
   } catch {
     return [];
@@ -26913,6 +27992,69 @@ async function listImmediateDirectories(rootPath) {
 }
 function extractPhaseNumberFromDirectory(phaseDir2) {
   return phaseDir2.match(/^(\d+(?:\.\d+)?)/)?.[1] ?? null;
+}
+async function resolvePreparedStateRoutingFreshness(projectRoot, currentPhase2) {
+  if (currentPhase2 === null) {
+    return null;
+  }
+  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  let rawRoadmap;
+  try {
+    rawRoadmap = await fs3.readFile(roadmapPath, "utf8");
+  } catch {
+    return null;
+  }
+  const roadmap = parseRoadmapDocument(rawRoadmap);
+  const normalizedCurrentPhase = normalizePhaseNumber2(currentPhase2);
+  const matchedPhase = roadmap.phases.find(
+    (phase) => normalizePhaseNumber2(phase.phaseNumber) === normalizedCurrentPhase
+  ) ?? null;
+  if (!matchedPhase) {
+    return null;
+  }
+  const phaseRoot = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/phases`);
+  const matchingPhaseDirs = (await listImmediateDirectories(phaseRoot)).filter((phaseDir2) => {
+    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir2);
+    return extractedPhase !== null && normalizePhaseNumber2(extractedPhase) === normalizedCurrentPhase;
+  });
+  if (matchingPhaseDirs.length !== 1) {
+    return null;
+  }
+  return {
+    currentPhase: normalizedCurrentPhase,
+    topology: phaseTopologyFingerprintFromLocation(
+      {
+        phaseNumber: matchedPhase.phaseNumber,
+        phasePrefix: matchedPhase.phasePrefix,
+        phaseName: matchedPhase.phaseName,
+        phaseDir: `${BLUEPRINT_DIR}/phases/${matchingPhaseDirs[0]}`
+      },
+      matchedPhase
+    )
+  };
+}
+async function assertPreparedStateRoutingFreshness(prepared) {
+  if (!prepared.routingFreshness) {
+    return;
+  }
+  const actual = await resolvePreparedStateRoutingFreshness(
+    prepared.projectRoot,
+    prepared.routingFreshness.currentPhase
+  );
+  if (!actual) {
+    throw new Error(
+      `Prepared STATE.md update rejected stale phase topology for Phase ${prepared.routingFreshness.currentPhase}. Expected a matching ROADMAP entry and exactly one phase directory.`
+    );
+  }
+  if (!phaseTopologyFingerprintsMatch(prepared.routingFreshness.topology, actual.topology)) {
+    throw new Error(
+      formatStalePhaseTopologyMessage({
+        operation: "Prepared STATE.md update",
+        expected: prepared.routingFreshness.topology,
+        actual: actual.topology
+      })
+    );
+  }
 }
 async function getImplementedCommandNames() {
   if (!implementedCommandNamesPromise) {
@@ -26966,6 +28108,16 @@ function implementedReviewNextSafeAction(reviewNextSafeAction, implementedComman
   }
   return reviewNextSafeAction;
 }
+function implementedRepairNextSafeAction2(nextSafeAction, implementedCommands) {
+  if (!nextSafeAction) {
+    return null;
+  }
+  const nextCommand = nextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+  if (nextCommand === null || NON_REPAIR_ROUTING_COMMANDS2.has(nextCommand) || !implementedCommands.has(nextCommand)) {
+    return null;
+  }
+  return nextSafeAction;
+}
 function implementedBlockingUatNextSafeAction(uatNextSafeAction, implementedCommands) {
   if (!uatNextSafeAction) {
     return null;
@@ -26993,8 +28145,14 @@ function resolvePhaseQualityGateNextAction(args) {
   if (args.evaluation.requiresCodeReview && savedReviewRepairAction !== null) {
     return savedReviewRepairAction;
   }
-  if ((args.evaluation.gatesSatisfied || !gateFlags.requiresQualityGate) && args.hasReviewableUiSpec && !args.hasUiReview && args.implementedCommands.has(blueprintDirectCommand("ui-review"))) {
-    return `Run ${blueprintDirectCommand("ui-review")} ${normalizeBlueprintPhaseRef(args.phaseNumber)} to audit the shipped UI work before phase closeout`;
+  if ((args.evaluation.gatesSatisfied || !gateFlags.requiresQualityGate) && args.hasReviewableUiSpec && !args.uiReviewGateSatisfied) {
+    const savedUiReviewAction = args.hasUiReview ? implementedRepairNextSafeAction2(args.uiReviewNextSafeAction, args.implementedCommands) : null;
+    if (savedUiReviewAction !== null) {
+      return savedUiReviewAction;
+    }
+    if (args.implementedCommands.has(blueprintDirectCommand("ui-review"))) {
+      return `Run ${blueprintDirectCommand("ui-review")} ${normalizeBlueprintPhaseRef(args.phaseNumber)} to audit the shipped UI work before phase closeout`;
+    }
   }
   return null;
 }
@@ -27004,7 +28162,7 @@ function formatPhaseQualityGateWarning(args) {
 }
 async function uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings) {
   try {
-    const raw = await fs2.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
+    const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
     return !isExplicitUiSkipRationale(raw);
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
@@ -27025,7 +28183,7 @@ async function inspectUiSpecReadiness(projectRoot, uiSpecPath) {
     return emptyUiSpecReadiness();
   }
   try {
-    const raw = await fs2.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
+    const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
     const validation = validatePhaseArtifactContent(raw, "ui-spec");
     const warnings = [
       ...validation.issues.map((issue2) => `${uiSpecPath}: ${issue2}`),
@@ -27078,6 +28236,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasUsableUiSpec: false,
       noUiSkipRationaleSuggested: false,
       hasUiReview: false,
+      uiReviewGateSatisfied: false,
+      uiReviewNextSafeAction: null,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -27156,6 +28316,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasUsableUiSpec: false,
       noUiSkipRationaleSuggested: false,
       hasUiReview: false,
+      uiReviewGateSatisfied: false,
+      uiReviewNextSafeAction: null,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -27204,6 +28366,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasUsableUiSpec: false,
       noUiSkipRationaleSuggested: false,
       hasUiReview: false,
+      uiReviewGateSatisfied: false,
+      uiReviewNextSafeAction: null,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -27240,6 +28404,11 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   let noUiSkipRationaleSuggested = false;
   let hasReviewableUiSpec = false;
   const hasUiReview = phaseArtifacts.includes(uiReviewPath);
+  const uiReviewRoutingState = await readUiReviewRoutingState({
+    projectRoot,
+    uiReviewPath: hasUiReview ? uiReviewPath : null,
+    warnings
+  });
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
@@ -27284,7 +28453,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   let contextUsableForNoUiBypass = false;
   if (hasContext) {
     try {
-      const raw = await fs2.readFile(resolveBlueprintPath(projectRoot, contextPath), "utf8");
+      const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, contextPath), "utf8");
       contextContent = raw;
       contextNeedsAuthoring = isBootstrapStarterContext(raw);
       contextUsableForNoUiBypass = validatePhaseArtifactContent(raw, "context").valid && !contextNeedsAuthoring;
@@ -27300,7 +28469,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   }
   if (hasResearch) {
     try {
-      const raw = await fs2.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
+      const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
       const validation = validateResearchArtifactContent(raw);
       researchValid = validation.valid;
       for (const issue2 of validation.issues) {
@@ -27331,7 +28500,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   }
   for (const planPath of planPaths) {
     try {
-      const raw = await fs2.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+      const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, normalizedPhase);
       for (const issue2 of validation.issues) {
         warnings.push(`${planPath}: ${issue2}`);
@@ -27370,7 +28539,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     evaluation: qualityGateEvaluation,
     implementedCommands: await getImplementedCommandNames(),
     hasReviewableUiSpec,
-    hasUiReview
+    hasUiReview,
+    uiReviewGateSatisfied: uiReviewRoutingState.gateSatisfied,
+    uiReviewNextSafeAction: uiReviewRoutingState.nextSafeAction
   });
   const qualityGateFlags = readPhaseQualityGateFlags(qualityGateEvaluation);
   if (qualityGateFlags.requiresQualityGate && !qualityGateEvaluation.gatesSatisfied) {
@@ -27409,6 +28580,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     hasUsableUiSpec,
     noUiSkipRationaleSuggested,
     hasUiReview,
+    uiReviewGateSatisfied: uiReviewRoutingState.gateSatisfied,
+    uiReviewNextSafeAction: uiReviewRoutingState.nextSafeAction,
     hasReview: qualityGateEvaluation.hasReview,
     hasSecurity: qualityGateEvaluation.hasSecurity,
     hasVerification,
@@ -27439,7 +28612,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
 async function readRoadmapSignals(projectRoot) {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   try {
-    const raw = await fs2.readFile(roadmapPath, "utf8");
+    const raw = await fs3.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
     const checkboxPhases = [...raw.matchAll(
       /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?)(?:\*\*)?\s*(?::|-)\s+/gm
@@ -27452,18 +28625,47 @@ async function readRoadmapSignals(projectRoot) {
       readRoadmapPhaseDetailSignals(raw)
     );
     const currentPhase2 = phases.find((phase) => !phase.completed)?.phaseNumber ?? phases.at(-1)?.phaseNumber ?? null;
+    const currentMilestone = milestoneMatch?.[1]?.trim() ?? null;
+    const warnings = [
+      ...currentMilestone === null ? [
+        `${BLUEPRINT_DIR}/ROADMAP.md is present but has no parseable active milestone; route through ${blueprintDirectCommand("health")} before trusting lifecycle state.`
+      ] : [],
+      ...phases.length === 0 ? [
+        `${BLUEPRINT_DIR}/ROADMAP.md is present but has no parseable phases; route through ${blueprintDirectCommand("health")} before trusting lifecycle state.`
+      ] : []
+    ];
     return {
-      currentMilestone: milestoneMatch?.[1]?.trim() ?? null,
+      currentMilestone,
       currentPhase: currentPhase2,
       allPhasesComplete: phases.length > 0 && phases.every((phase) => phase.completed),
-      phases
+      phases,
+      missing: false,
+      malformed: warnings.length > 0,
+      warnings
     };
-  } catch {
+  } catch (error2) {
+    if (isNodeErrorCode(error2, "ENOENT")) {
+      return {
+        currentMilestone: null,
+        currentPhase: null,
+        allPhasesComplete: false,
+        phases: [],
+        missing: true,
+        malformed: false,
+        warnings: []
+      };
+    }
+    const message = error2 instanceof Error ? error2.message : String(error2);
     return {
       currentMilestone: null,
       currentPhase: null,
       allPhasesComplete: false,
-      phases: []
+      phases: [],
+      missing: false,
+      malformed: true,
+      warnings: [
+        `${BLUEPRINT_DIR}/ROADMAP.md could not be read: ${message}; route through ${blueprintDirectCommand("health")} before trusting lifecycle state.`
+      ]
     };
   }
 }
@@ -27490,9 +28692,19 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, opt
     const phasePrefix2 = formatBlueprintPhasePrefix(phase.phaseNumber);
     const phaseDir2 = extractPhaseArtifactDirectory(phaseArtifacts, phasePrefix2);
     const phaseScopedArtifacts = phaseArtifactPathsForDirectory(phaseArtifacts, phaseDir2);
-    const uiSpecPath = findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix2, "-UI-SPEC.md");
+    const uiSpecPath = findPhaseArtifactPath2(phaseScopedArtifacts, phasePrefix2, "-UI-SPEC.md");
     const hasReviewableUiSpec = uiSpecPath === null ? false : await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
-    const hasUiReview = findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix2, "-UI-REVIEW.md") !== null;
+    const uiReviewPath = findPhaseArtifactPath2(
+      phaseScopedArtifacts,
+      phasePrefix2,
+      "-UI-REVIEW.md"
+    );
+    const hasUiReview = uiReviewPath !== null;
+    const uiReviewRoutingState = await readUiReviewRoutingState({
+      projectRoot,
+      uiReviewPath,
+      warnings
+    });
     const {
       summaryPaths,
       pendingPlanIds,
@@ -27560,7 +28772,9 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, opt
       evaluation: qualityGateEvaluation,
       implementedCommands,
       hasReviewableUiSpec,
-      hasUiReview
+      hasUiReview,
+      uiReviewGateSatisfied: uiReviewRoutingState.gateSatisfied,
+      uiReviewNextSafeAction: uiReviewRoutingState.nextSafeAction
     });
     const qualityGateFlags = readPhaseQualityGateFlags(qualityGateEvaluation);
     warnings.push(...qualityGateEvaluation.warnings);
@@ -27680,6 +28894,49 @@ function extractBlueprintCommand2(line, exactMilestoneArgument) {
 function extractNextSafeActionCommand(content) {
   return extractMarkdownSectionLines(content, "Next Safe Action").map((line) => extractBlueprintCommand2(line)).find((command) => command !== null) ?? null;
 }
+function extractArtifactMarker2(content, marker) {
+  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(
+    new RegExp(`^\\s*\\*\\*${escapedMarker}:?\\*\\*\\s*:?\\s*(.+?)\\s*$`, "im")
+  );
+  return match?.[1]?.trim() ?? null;
+}
+function extractUiReviewVerdict(content) {
+  const verdict = extractArtifactMarker2(content, "Verdict")?.toUpperCase() ?? null;
+  if (verdict === "PASS" || verdict === "FOLLOW_UP" || verdict === "BLOCKED") {
+    return verdict;
+  }
+  return null;
+}
+async function readUiReviewRoutingState(args) {
+  if (args.uiReviewPath === null) {
+    return {
+      verdict: null,
+      nextSafeAction: null,
+      gateSatisfied: false
+    };
+  }
+  try {
+    const raw = await fs3.readFile(resolveBlueprintPath(args.projectRoot, args.uiReviewPath), "utf8");
+    const verdict = extractUiReviewVerdict(raw);
+    const nextSafeAction = extractNextSafeActionCommand(raw);
+    return {
+      verdict,
+      nextSafeAction,
+      gateSatisfied: verdict === "PASS"
+    };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    args.warnings.push(
+      `${args.uiReviewPath}: ${message}; state routing will keep UI-review debt open.`
+    );
+    return {
+      verdict: null,
+      nextSafeAction: null,
+      gateSatisfied: false
+    };
+  }
+}
 function hasDeferredTestGap(content) {
   const gapRows = extractMarkdownTableRows(
     extractMarkdownSectionLines(content, "Gap Classification").join("\n")
@@ -27720,7 +28977,7 @@ async function inspectMilestoneAuditReportStatus(args) {
     return emptyMilestoneAuditReportStatus();
   }
   try {
-    const raw = await fs2.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
+    const raw = await fs3.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
     const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
     const requirementGapRows = parseMilestoneAuditGapSection(
       extractMarkdownSection4(raw, "Requirement Gaps")
@@ -27951,24 +29208,26 @@ async function deriveNextAction(args) {
   }
   return args.currentPhase ? `${blueprintRunDirectCommand("progress")} to review Phase ${args.currentPhase} and the next safe action` : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
 }
-async function buildSyncedState(projectRoot, patch = {}) {
+async function buildSyncedState(projectRoot, patch = {}, options = {}) {
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
-  const existingState = await loadBlueprintState(projectRoot);
+  const existingStateRead = await readBlueprintStateFile(projectRoot);
+  const existingState = existingStateRead.state;
   const pauseHandoff = await loadPauseHandoffReport(projectRoot);
   const roadmapSignals = await readRoadmapSignals(projectRoot);
-  const warnings = [];
+  const warnings = [...existingStateRead.warnings];
   if (!inspection.blueprintRootExists) {
     throw new Error(
       `Cannot sync Blueprint state before .blueprint/ exists. ${blueprintRunDirectCommand("new-project")} instead.`
     );
   }
-  if (!await blueprintPathExists(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH))) {
+  if (existingStateRead.status === "missing") {
     warnings.push("STATE.md was missing and has been reconstructed from surviving artifacts.");
   }
-  if (!await blueprintPathExists(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`))) {
+  if (roadmapSignals.missing) {
     warnings.push("ROADMAP.md is missing; state sync fell back to the last known milestone and phase.");
   }
+  warnings.push(...roadmapSignals.warnings);
   const projectStatus = inspection.readiness;
   const requestedCurrentPhase = normalizeSelectedPhase(patch.currentPhase);
   const requestedCurrentPhaseExists = requestedCurrentPhase !== null && await phaseDirectoryExists(projectRoot, requestedCurrentPhase);
@@ -27991,6 +29250,7 @@ async function buildSyncedState(projectRoot, patch = {}) {
     uiSafetyGateEnabled: true,
     uatRequired: true
   };
+  let configReadWarning = null;
   try {
     const effectiveConfig = await blueprintConfigGet({
       scope: "effective",
@@ -28002,7 +29262,11 @@ async function buildSyncedState(projectRoot, patch = {}) {
       uiSafetyGateEnabled: effectiveConfig.config.workflow.ui_safety_gate,
       uatRequired: effectiveConfig.config.workflow.no_uat !== true
     };
-  } catch {
+    warnings.push(...effectiveConfig.warnings);
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    configReadWarning = `Blueprint config could not be read: ${message}`;
+    warnings.push(configReadWarning);
   }
   const milestoneEvidence = await inspectMilestoneEvidence(
     projectRoot,
@@ -28053,8 +29317,19 @@ async function buildSyncedState(projectRoot, patch = {}) {
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
+  const diagnosticBlockers = [
+    ...existingStateRead.status === "malformed" ? [
+      `Malformed ${BLUEPRINT_STATE_PATH}; run ${blueprintDirectCommand("health")} to inspect and repair state before continuing.`
+    ] : [],
+    ...roadmapSignals.malformed ? [
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md; run ${blueprintDirectCommand("health")} to repair roadmap signals before continuing.`
+    ] : [],
+    ...configReadWarning !== null ? [
+      `Malformed ${BLUEPRINT_DIR}/config.json; run ${blueprintDirectCommand("health")} to repair project configuration before continuing.`
+    ] : []
+  ];
   const nonStructuralBlockers = existingState.blockers.filter(
-    (blocker) => !blocker.startsWith("Missing .blueprint/") && !blocker.startsWith(PAUSE_HANDOFF_BLOCKER_PREFIX) && !isDerivedPhaseDirectoryBlocker(blocker)
+    (blocker) => !blocker.startsWith("Missing .blueprint/") && !blocker.startsWith(`Malformed ${BLUEPRINT_STATE_PATH};`) && !blocker.startsWith(`Malformed ${BLUEPRINT_DIR}/ROADMAP.md;`) && !blocker.startsWith(`Malformed ${BLUEPRINT_DIR}/config.json;`) && !blocker.startsWith(PAUSE_HANDOFF_BLOCKER_PREFIX) && !isDerivedPhaseDirectoryBlocker(blocker)
   );
   const currentRoadmapPhase = currentPhase2 === null ? null : roadmapSignals.phases.find(
     (phase) => normalizePhaseNumber2(phase.phaseNumber) === normalizePhaseNumber2(currentPhase2)
@@ -28074,11 +29349,16 @@ async function buildSyncedState(projectRoot, patch = {}) {
   };
   const blockers = projectStatus === "partial" ? [
     .../* @__PURE__ */ new Set([
+      ...diagnosticBlockers,
       ...nonStructuralBlockers,
       ...structuralBlockers,
       ...currentPhaseArtifacts.blockers
     ])
-  ] : [.../* @__PURE__ */ new Set([...nonStructuralBlockers, ...currentPhaseArtifacts.blockers])];
+  ] : [.../* @__PURE__ */ new Set([
+    ...diagnosticBlockers,
+    ...nonStructuralBlockers,
+    ...currentPhaseArtifacts.blockers
+  ])];
   const activePauseHandoff = projectStatus === "initialized" && isPauseHandoffActive(pauseHandoff.handoff, existingState);
   if (activePauseHandoff && pauseHandoff.path) {
     blockers.push(`${PAUSE_HANDOFF_BLOCKER_PREFIX}${pauseHandoff.path}.`);
@@ -28090,7 +29370,7 @@ async function buildSyncedState(projectRoot, patch = {}) {
     projectStatus,
     currentMilestone,
     currentPhase: currentPhase2,
-    activeCommand: projectStatus === "partial" ? blueprintDirectCommand("health") : activePauseHandoff ? PAUSE_WORK_COMMAND : existingState.activeCommand,
+    activeCommand: projectStatus === "partial" || diagnosticBlockers.length > 0 ? blueprintDirectCommand("health") : activePauseHandoff ? PAUSE_WORK_COMMAND : existingState.activeCommand,
     nextAction: activePauseHandoff && pauseHandoff.handoff ? buildPauseHandoffNextAction(currentPhase2, pauseHandoff.handoff) : await deriveNextAction({
       projectStatus,
       blockers,
@@ -28107,7 +29387,7 @@ async function buildSyncedState(projectRoot, patch = {}) {
     }),
     blockers,
     roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
-    lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
+    lastUpdated: options.stampLastUpdated ?? true ? (/* @__PURE__ */ new Date()).toISOString() : existingState.lastUpdated
   };
   return {
     state,
@@ -28115,6 +29395,26 @@ async function buildSyncedState(projectRoot, patch = {}) {
     warnings,
     milestoneAuditReport
   };
+}
+function hasStateSyncSourceArtifacts(inspection) {
+  return inspection.core.present.length > 0 || inspection.phases.length > 0 || inspection.reports.length > 0 || inspection.codebase.present.length > 0;
+}
+async function assertBlueprintStateSyncReady(projectRoot) {
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  if (!inspection.blueprintRootExists || !hasStateSyncSourceArtifacts(inspection)) {
+    throw new Error(
+      `Cannot sync Blueprint state before .blueprint/ exists. ${blueprintRunDirectCommand("new-project")} instead.`
+    );
+  }
+}
+async function assertBlueprintStateUpdateReady(projectRoot) {
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  if (inspection.readiness === "uninitialized" || inspection.readiness === "mapping-incomplete" || inspection.readiness === "mapped-only") {
+    const nextAction = inspection.readiness === "mapping-incomplete" ? blueprintRunDirectCommand("map-codebase") : blueprintRunDirectCommand("new-project");
+    throw new Error(
+      `Cannot update Blueprint state before core .blueprint/ project artifacts exist. ${nextAction} instead.`
+    );
+  }
 }
 async function blueprintPauseHandoffGet(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -28164,7 +29464,7 @@ async function blueprintPauseHandoffWrite(args) {
   const exists = await blueprintPathExists(absolutePath);
   const warnings = [];
   if (exists) {
-    const existingContent = await fs2.readFile(absolutePath, "utf8");
+    const existingContent = await fs3.readFile(absolutePath, "utf8");
     const existingHandoff = parsePauseHandoff(existingContent);
     if (JSON.stringify(comparablePauseHandoffRecord(existingHandoff)) === JSON.stringify(comparablePauseHandoffRecord(handoff))) {
       warnings.push("Preserved existing pause handoff because the content was unchanged.");
@@ -28204,13 +29504,8 @@ async function blueprintPauseHandoffWrite(args) {
 }
 async function loadBlueprintState(cwd) {
   const projectRoot = await ensureRepoRoot(cwd);
-  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
-  try {
-    const raw = await fs2.readFile(statePath, "utf8");
-    return parseStateDocument(raw);
-  } catch {
-    return { ...DEFAULT_STATE };
-  }
+  const stateRead = await readBlueprintStateFile(projectRoot);
+  return stateRead.state;
 }
 async function blueprintStateLoad(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -28221,9 +29516,10 @@ async function blueprintStateLoad(args = {}) {
     codebaseMapped: bootstrapDiagnostics.brownfield.codebaseMapped
   };
   const readOnlyBootstrapState = inspection.readiness === "uninitialized" || inspection.readiness === "mapping-incomplete" || inspection.readiness === "mapped-only";
-  const syncedState = readOnlyBootstrapState ? null : await buildSyncedState(projectRoot);
+  const readOnlyStateRead = readOnlyBootstrapState ? await readBlueprintStateFile(projectRoot) : null;
+  const syncedState = readOnlyBootstrapState ? null : await buildSyncedState(projectRoot, {}, { stampLastUpdated: false });
   const state = readOnlyBootstrapState ? {
-    ...await loadBlueprintState(projectRoot),
+    ...readOnlyStateRead.state,
     projectStatus: inspection.readiness,
     currentPhase: "",
     activeCommand: inspection.readiness === "mapping-incomplete" ? blueprintDirectCommand("map-codebase") : inspection.readiness === "mapped-only" ? blueprintDirectCommand("new-project") : DEFAULT_STATE.activeCommand,
@@ -28265,15 +29561,17 @@ async function blueprintStateLoad(args = {}) {
       }
     })
   } : syncedState.state;
-  const currentPhase2 = readOnlyBootstrapState ? null : state.currentPhase;
+  const currentPhase2 = readOnlyBootstrapState || state.currentPhase.length === 0 ? null : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
   const metadata = readOnlyBootstrapState ? await buildStateMetadataForProject(projectRoot, state) : syncedState.metadata;
   const milestoneAuditReport = readOnlyBootstrapState ? emptyMilestoneAuditReportStatus() : syncedState.milestoneAuditReport;
+  const warnings = readOnlyBootstrapState ? readOnlyStateRead.warnings : syncedState.warnings;
   return {
     state,
     metadata,
     blockers,
+    ...warnings.length > 0 ? { warnings } : {},
     derivedStatus: {
       projectStatus: inspection.readiness,
       currentPhase: currentPhase2,
@@ -28283,7 +29581,7 @@ async function blueprintStateLoad(args = {}) {
     }
   };
 }
-async function blueprintStateUpdate(args = {}) {
+async function prepareBlueprintStateUpdate(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
   const useSyncedBase = args.base === "synced";
@@ -28307,9 +29605,10 @@ async function blueprintStateUpdate(args = {}) {
     currentPhase: normalizedPatch.currentPhase
   };
   const routePatchChangesSync = routePatch.activeCommand !== void 0 || routePatch.currentPhase !== void 0;
+  const storedStateRead = useSyncedBase ? null : await readBlueprintStateFile(projectRoot);
   const syncedBase = useSyncedBase ? await buildSyncedState(projectRoot) : null;
   const synced = useSyncedBase && routePatchChangesSync ? await buildSyncedState(projectRoot, routePatch) : syncedBase;
-  const currentState = synced?.state ?? syncedBase?.state ?? await loadBlueprintState(projectRoot);
+  const currentState = synced?.state ?? syncedBase?.state ?? storedStateRead.state;
   const comparisonState = syncedBase?.state ?? currentState;
   const sanitizedPatch = useSyncedBase && normalizedPatch.currentPhase !== void 0 && normalizedPatch.nextAction === void 0 && currentState.currentPhase !== normalizedPatch.currentPhase ? {
     ...normalizedPatch,
@@ -28323,13 +29622,13 @@ async function blueprintStateUpdate(args = {}) {
     lastUpdated: sanitizedPatch.lastUpdated ?? (/* @__PURE__ */ new Date()).toISOString()
   };
   const normalizedNextStateCurrentPhase = normalizeSelectedPhase(nextState.currentPhase);
-  if (normalizedNextStateCurrentPhase !== null) {
-    await assertCurrentPhaseContextPathExists({
-      projectRoot,
-      currentPhase: normalizedNextStateCurrentPhase,
-      nextAction: nextState.nextAction
-    });
-  }
+  await assertStateNextActionCanBeStored({
+    projectRoot,
+    currentPhase: normalizedNextStateCurrentPhase,
+    nextAction: nextState.nextAction,
+    allowCrossPhaseRepairRoutes: useSyncedBase && normalizedPatch.nextAction === void 0
+  });
+  await assertStateActiveCommandCanBeStored(nextState.activeCommand);
   const updatedFields = [
     .../* @__PURE__ */ new Set([
       ...Object.keys(sanitizedPatch),
@@ -28339,38 +29638,94 @@ async function blueprintStateUpdate(args = {}) {
     const field = key;
     return JSON.stringify(comparisonState[field]) !== JSON.stringify(nextState[field]);
   });
-  const warnings = [...synced?.warnings ?? []];
+  const warnings = [
+    ...storedStateRead?.warnings ?? [],
+    ...synced?.warnings ?? []
+  ];
   const metadata = await buildStateMetadataForProject(projectRoot, nextState);
+  const routingFreshness = await resolvePreparedStateRoutingFreshness(
+    projectRoot,
+    normalizedNextStateCurrentPhase
+  );
+  return {
+    updated: updatedFields.length > 0,
+    updatedFields,
+    projectRoot,
+    statePath: toRepoRelativePath(projectRoot, statePath),
+    warnings,
+    absoluteStatePath: statePath,
+    content: renderStateDocument(nextState, metadata),
+    routingFreshness
+  };
+}
+async function writePreparedBlueprintStateUpdateUnlocked(prepared) {
+  const warnings = [...prepared.warnings];
   warnings.push(
-    ...await writeTextFile(statePath, renderStateDocument(nextState, metadata), {
+    ...await writeTextFile(prepared.absoluteStatePath, prepared.content, {
       label: BLUEPRINT_STATE_PATH
     })
   );
   return {
-    updatedFields,
-    statePath: toRepoRelativePath(projectRoot, statePath),
+    updated: prepared.updated,
+    updatedFields: prepared.updatedFields,
+    statePath: prepared.statePath,
     warnings
   };
 }
+async function writePreparedBlueprintStateUpdate(prepared) {
+  return withBlueprintRepoLock(
+    prepared.projectRoot,
+    PHASE_TOPOLOGY_LOCK_NAME,
+    async () => withBlueprintRepoLock(prepared.projectRoot, "state", async () => {
+      await assertPreparedStateRoutingFreshness(prepared);
+      return writePreparedBlueprintStateUpdateUnlocked(prepared);
+    })
+  );
+}
+async function blueprintStateUpdate(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  await assertBlueprintStateUpdateReady(projectRoot);
+  return withBlueprintRepoLock(
+    projectRoot,
+    PHASE_TOPOLOGY_LOCK_NAME,
+    async () => withBlueprintRepoLock(projectRoot, "state", async () => {
+      await assertBlueprintStateUpdateReady(projectRoot);
+      const prepared = await prepareBlueprintStateUpdate({ ...args, cwd: projectRoot });
+      await assertPreparedStateRoutingFreshness(prepared);
+      return writePreparedBlueprintStateUpdateUnlocked(prepared);
+    })
+  );
+}
 async function blueprintStateSync(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
-  const currentState = await loadBlueprintState(projectRoot);
-  const synced = await buildSyncedState(projectRoot);
-  const nextState = synced.state;
-  const syncedFields = Object.keys(nextState).filter(
-    (field) => JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field])
-  );
-  await writeTextFile(statePath, renderStateDocument(nextState, synced.metadata), {
-    label: BLUEPRINT_STATE_PATH
+  await assertBlueprintStateSyncReady(projectRoot);
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    return withBlueprintRepoLock(projectRoot, "state", async () => {
+      await assertBlueprintStateSyncReady(projectRoot);
+      const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+      const currentState = await loadBlueprintState(projectRoot);
+      const synced = await buildSyncedState(projectRoot);
+      const nextState = synced.state;
+      const syncedFields = Object.keys(nextState).filter(
+        (field) => JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field])
+      );
+      const writeWarnings = await writeTextFile(
+        statePath,
+        renderStateDocument(nextState, synced.metadata),
+        {
+          label: BLUEPRINT_STATE_PATH
+        }
+      );
+      return {
+        synced: syncedFields.length > 0,
+        syncedFields,
+        warnings: [...synced.warnings, ...writeWarnings],
+        statePath: toRepoRelativePath(projectRoot, statePath)
+      };
+    });
   });
-  return {
-    syncedFields,
-    warnings: synced.warnings,
-    statePath: toRepoRelativePath(projectRoot, statePath)
-  };
 }
-var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADING, PAUSE_REMAINING_WORK_HEADING, PAUSE_DECISIONS_HEADING, PAUSE_BLOCKERS_HEADING, PAUSE_HUMAN_ACTIONS_HEADING, PAUSE_MODIFIED_FILES_HEADING, PAUSE_BLUEPRINT_SNAPSHOT_HEADING, PAUSE_NEXT_ACTION_HEADING, PAUSE_CONTEXT_NOTES_HEADING, DEFAULT_STATE, BLUEPRINT_STATE_METADATA_VERSION, PAUSE_HANDOFF_REPORT_PATH, PAUSE_WORK_COMMAND, RESUME_WORK_COMMAND, PAUSE_HANDOFF_BLOCKER_PREFIX, PATCH_PHASE_OVERRIDE_COMMANDS, PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, BLOCKING_UAT_REPAIR_COMMANDS, stateUpdateInputSchema, stateLoadInputSchema, pauseHandoffGetInputSchema, pauseHandoffWriteInputSchema, stateSyncInputSchema, implementedCommandNamesPromise, stateToolDefinitions;
+var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADING, PAUSE_REMAINING_WORK_HEADING, PAUSE_DECISIONS_HEADING, PAUSE_BLOCKERS_HEADING, PAUSE_HUMAN_ACTIONS_HEADING, PAUSE_MODIFIED_FILES_HEADING, PAUSE_BLUEPRINT_SNAPSHOT_HEADING, PAUSE_NEXT_ACTION_HEADING, PAUSE_CONTEXT_NOTES_HEADING, DEFAULT_STATE, BLUEPRINT_STATE_METADATA_VERSION, PAUSE_HANDOFF_REPORT_PATH, PAUSE_WORK_COMMAND, RESUME_WORK_COMMAND, PAUSE_HANDOFF_BLOCKER_PREFIX, PATCH_PHASE_OVERRIDE_COMMANDS, PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, BLOCKING_UAT_REPAIR_COMMANDS, CROSS_PHASE_REPAIR_ROUTING_COMMANDS, stateUpdateInputSchema, stateLoadInputSchema, pauseHandoffGetInputSchema, pauseHandoffWriteInputSchema, stateSyncInputSchema, implementedCommandNamesPromise, NON_REPAIR_ROUTING_COMMANDS2, stateToolDefinitions;
 var init_state = __esm({
   "src/mcp/tools/state.ts"() {
     "use strict";
@@ -28382,6 +29737,7 @@ var init_state = __esm({
     init_phase_roadmap_parser();
     init_phase_no_ui_signals();
     init_command_paths();
+    init_phase_topology_lock();
     init_security();
     PAUSE_WORK_CONTRACT = readArtifactContract("report.pause-work");
     [
@@ -28438,6 +29794,16 @@ var init_state = __esm({
       blueprintDirectCommand("audit-fix"),
       blueprintDirectCommand("add-tests")
     ]);
+    CROSS_PHASE_REPAIR_ROUTING_COMMANDS = /* @__PURE__ */ new Set([
+      blueprintDirectCommand("add-tests"),
+      blueprintDirectCommand("audit-fix"),
+      blueprintDirectCommand("code-review"),
+      blueprintDirectCommand("code-review-fix"),
+      blueprintDirectCommand("secure-phase"),
+      blueprintDirectCommand("ui-review"),
+      blueprintDirectCommand("validate-phase"),
+      blueprintDirectCommand("verify-work")
+    ]);
     stateUpdateInputSchema = {
       cwd: string2().optional(),
       base: _enum(["stored", "synced"]).optional(),
@@ -28475,6 +29841,20 @@ var init_state = __esm({
       cwd: string2().optional()
     };
     implementedCommandNamesPromise = null;
+    NON_REPAIR_ROUTING_COMMANDS2 = /* @__PURE__ */ new Set([
+      blueprintDirectCommand("progress"),
+      blueprintDirectCommand("audit-milestone"),
+      blueprintDirectCommand("complete-milestone"),
+      blueprintDirectCommand("milestone-summary"),
+      blueprintDirectCommand("new-milestone"),
+      blueprintDirectCommand("cleanup"),
+      blueprintDirectCommand("ship"),
+      blueprintDirectCommand("pr-branch"),
+      blueprintDirectCommand("new-workspace"),
+      blueprintDirectCommand("remove-workspace"),
+      blueprintDirectCommand("undo"),
+      blueprintDirectCommand("reapply-patches")
+    ]);
     stateToolDefinitions = [
       {
         name: "blueprint_state_load",
@@ -28696,6 +30076,7 @@ var init_phase_checkpoint_records = __esm({
 });
 
 // src/mcp/tools/phase-plan-identifiers.ts
+import path7 from "node:path";
 function normalizePlanId(value) {
   const normalizedInput = normalizeBlueprintInput(value).trim();
   if (/^0+$/.test(normalizedInput)) {
@@ -28705,7 +30086,16 @@ function normalizePlanId(value) {
 }
 function parsePlanArtifactPath(pathValue, phasePrefix2) {
   const match = pathValue.match(
-    new RegExp(`${phasePrefix2.replace(".", "\\.")}-(\\d+)-PLAN\\.md$`)
+    new RegExp(`${escapeForRegex(phasePrefix2)}-(\\d+)-PLAN\\.md$`)
+  );
+  return match ? normalizePlanId(match[1]) : null;
+}
+function parseCanonicalPlanArtifactPath(pathValue, located) {
+  if (path7.posix.dirname(pathValue) !== located.phaseDir) {
+    return null;
+  }
+  const match = path7.posix.basename(pathValue).match(
+    new RegExp(`^${escapeForRegex(located.phasePrefix)}-(\\d+)-PLAN\\.md$`)
   );
   return match ? normalizePlanId(match[1]) : null;
 }
@@ -28858,11 +30248,11 @@ var init_phase_plan_identifiers = __esm({
 });
 
 // src/mcp/tools/phase-locations.ts
-import { promises as fs3 } from "node:fs";
-import path5 from "node:path";
+import { promises as fs4 } from "node:fs";
+import path8 from "node:path";
 async function pathExists(targetPath) {
   try {
-    await fs3.access(targetPath);
+    await fs4.access(targetPath);
     return true;
   } catch {
     return false;
@@ -28871,7 +30261,7 @@ async function pathExists(targetPath) {
 async function materializePhaseDirectory(projectRoot, phaseDir2) {
   const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir2);
   try {
-    const stats = await fs3.stat(phaseDirPath);
+    const stats = await fs4.stat(phaseDirPath);
     if (!stats.isDirectory()) {
       throw new Error(
         `Phase directory path exists but is not a directory: ${phaseDir2}. Resolve the drift before mutating the roadmap.`
@@ -28888,7 +30278,7 @@ async function materializePhaseDirectory(projectRoot, phaseDir2) {
       throw error2;
     }
   }
-  await fs3.mkdir(phaseDirPath, { recursive: true });
+  await fs4.mkdir(phaseDirPath, { recursive: true });
   return {
     phaseDirPath,
     created: true,
@@ -28899,10 +30289,10 @@ async function listPhaseArtifacts2(rootPath, projectRoot) {
   if (!await pathExists(rootPath)) {
     return [];
   }
-  const entries = await fs3.readdir(rootPath, { withFileTypes: true });
+  const entries = await fs4.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path5.join(rootPath, entry.name);
+    const absolutePath = path8.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listPhaseArtifacts2(absolutePath, projectRoot));
       continue;
@@ -28919,7 +30309,7 @@ async function findPhaseDirectory(projectRoot, phaseNumber) {
       reason: "missing"
     };
   }
-  const entries = await fs3.readdir(phasesRoot, { withFileTypes: true });
+  const entries = await fs4.readdir(phasesRoot, { withFileTypes: true });
   const target = normalizePhaseNumber(phaseNumber);
   const matches = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).filter((directoryName) => {
     const prefix = extractPhaseNumberToken(directoryName);
@@ -28938,7 +30328,7 @@ async function findPhaseDirectory(projectRoot, phaseNumber) {
     };
   }
   return {
-    phaseDir: toRepoRelativePath(projectRoot, path5.join(phasesRoot, matches[0])),
+    phaseDir: toRepoRelativePath(projectRoot, path8.join(phasesRoot, matches[0])),
     reason: null
   };
 }
@@ -28949,7 +30339,7 @@ async function readRoadmap(projectRoot) {
       `Missing prerequisite artifact: ${BLUEPRINT_DIR}/ROADMAP.md. Restore it or run /blu-new-project before using phase discovery commands.`
     );
   }
-  const raw = await fs3.readFile(roadmapPath, "utf8");
+  const raw = await fs4.readFile(roadmapPath, "utf8");
   const parsed = parseRoadmapDocument(raw);
   return {
     path: `${BLUEPRINT_DIR}/ROADMAP.md`,
@@ -28962,7 +30352,7 @@ async function readMarkdownDocument(projectRoot, relativePath) {
   if (!await pathExists(absolutePath)) {
     return null;
   }
-  return await fs3.readFile(absolutePath, "utf8");
+  return await fs4.readFile(absolutePath, "utf8");
 }
 async function resolveRequestedPhase(projectRoot, requestedPhase, phases) {
   const explicit = requestedPhase === void 0 ? void 0 : normalizeBlueprintInput(requestedPhase).trim();
@@ -28992,12 +30382,17 @@ async function resolveRequestedPhase(projectRoot, requestedPhase, phases) {
 function buildArtifactPath(phaseDir2, phasePrefix2, suffix) {
   return `${phaseDir2}/${phasePrefix2}${suffix}`;
 }
-function findArtifact(artifacts, suffix) {
-  return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
-}
 function findPhaseSpecArtifact(artifacts, phaseDir2, phasePrefix2) {
   const expectedPath = buildArtifactPath(phaseDir2, phasePrefix2, "-SPEC.md");
   return artifacts.find((artifact) => artifact === expectedPath) ?? null;
+}
+function findPhaseArtifact(artifacts, located, artifact) {
+  const expectedPath = artifactPathFor(located, artifact);
+  return artifacts.find((candidate) => candidate === expectedPath) ?? null;
+}
+function findPhaseValidationArtifact(artifacts, located, artifact) {
+  const expectedPath = validationArtifactPathFor(located, artifact);
+  return artifacts.find((candidate) => candidate === expectedPath) ?? null;
 }
 function artifactPathFor(located, artifact) {
   return buildArtifactPath(
@@ -29651,11 +31046,11 @@ var init_phase_schema_paths = __esm({
 });
 
 // src/mcp/tools/phase-execution-surfaces.ts
-import path6 from "node:path";
+import path9 from "node:path";
 function normalizeExecutionSurfacePath(value) {
   const normalized = value.replaceAll("\\", "/").trim();
   const withoutDotPrefix = normalized.replace(/^\.\//, "");
-  const collapsed = path6.posix.normalize(withoutDotPrefix);
+  const collapsed = path9.posix.normalize(withoutDotPrefix);
   if (collapsed === ".") {
     return withoutDotPrefix.replace(/\/+$/u, "");
   }
@@ -31311,11 +32706,12 @@ __export(phase_exports, {
   blueprintRoadmapRead: () => blueprintRoadmapRead,
   blueprintRoadmapRemovePhase: () => blueprintRoadmapRemovePhase,
   buildBlueprintPhaseDirectoryPath: () => buildBlueprintPhaseDirectoryPath,
-  phaseToolDefinitions: () => phaseToolDefinitions
+  phaseToolDefinitions: () => phaseToolDefinitions,
+  resolvePhaseTopologySnapshot: () => resolvePhaseTopologySnapshot
 });
 import { createHash } from "node:crypto";
-import { promises as fs4 } from "node:fs";
-import path7 from "node:path";
+import { promises as fs5 } from "node:fs";
+import path10 from "node:path";
 function buildBlueprintPhaseDirectoryPath(phaseNumber, phaseName) {
   const phasePrefix2 = formatPhasePrefix(phaseNumber);
   const normalizedPhaseName = normalizePhaseDescription(phaseName);
@@ -31366,7 +32762,7 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
     phase.phaseName,
     auditBackedDetails.sourceReportPath
   ) : null;
-  const originalRequirements = requirementRepair ? await fs4.readFile(requirementsAbsolutePath, "utf8") : null;
+  const originalRequirements = requirementRepair ? await fs5.readFile(requirementsAbsolutePath, "utf8") : null;
   const preparedRequirements = requirementRepair ? prepareTextForPersistence(requirementRepair.content, {
     label: requirementsPath
   }) : null;
@@ -31394,7 +32790,7 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
       }).catch(() => void 0);
     }
     if (phaseDirState.created) {
-      await fs4.rm(phaseDirState.phaseDirPath, {
+      await fs5.rm(phaseDirState.phaseDirPath, {
         recursive: true,
         force: true
       }).catch(() => void 0);
@@ -31508,6 +32904,14 @@ function requireRoadmapPhaseMetadata(options) {
       `Phase successCriteria must include 2-5 concrete criteria. Re-run ${options.command} with successCriteria containing 2-5 items.`
     );
   }
+}
+function requireConfirmedRoadmapMutation(options) {
+  if (options.confirmed === true) {
+    return;
+  }
+  throw new Error(
+    `${options.command} blocked: confirmed: true is required after the ${options.gate} ask_user approval before ${options.mutation}. Safe default: stop without writing.`
+  );
 }
 function buildRoadmapPhaseListBlock(options) {
   const requirements = normalizeRoadmapDetailList(options.requirementIds);
@@ -31718,7 +33122,7 @@ async function readRequirementTable(projectRoot, options) {
   if (!await pathExists(requirementsPath)) {
     throw new Error(options.missingFileMessage);
   }
-  const rawRequirements = await fs4.readFile(requirementsPath, "utf8");
+  const rawRequirements = await fs5.readFile(requirementsPath, "utf8");
   const requirementsSectionMatch = rawRequirements.match(REQUIREMENTS_TABLE_SECTION_PATTERN);
   if (!requirementsSectionMatch) {
     throw new Error(options.malformedMessage);
@@ -32097,7 +33501,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     if (!phaseArtifacts.includes(artifactPath)) {
       continue;
     }
-    const content = await fs4.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
     const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths, {
       noUat: options.noUat === true
     }) : validateUatArtifactContent(content, summaryPaths, {
@@ -32150,7 +33554,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     );
   }
   const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true && !hasBlockingUat) && (!requiresQualityGate || qualityGateEvaluation.gatesSatisfied);
-  const rawRoadmap = await fs4.readFile(roadmapPath, "utf8");
+  const rawRoadmap = await fs5.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
     resolved.phaseNumber,
@@ -32202,7 +33606,7 @@ async function readBacklogPromotionCandidates(projectRoot) {
       warnings: ["No backlog index exists yet. Run /blu-add-backlog before reviewing backlog items."]
     };
   }
-  const rawBacklog = await fs4.readFile(backlogPath, "utf8");
+  const rawBacklog = await fs5.readFile(backlogPath, "utf8");
   const parsedBacklog = parseCaptureIndexDocument(rawBacklog, "backlog");
   const warnings = parsedBacklog.malformed ? [
     `Recovered non-canonical backlog index content while reading ${BLUEPRINT_BACKLOG_INDEX_PATH}.`
@@ -32369,7 +33773,7 @@ async function readMappedCodebaseContext(projectRoot) {
     }
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     try {
-      const raw = await fs4.readFile(absolutePath, "utf8");
+      const raw = await fs5.readFile(absolutePath, "utf8");
       const summary = summarizeSavedArtifact(raw);
       artifacts.push(artifact);
       digest.push({
@@ -32427,7 +33831,7 @@ async function evaluatePhaseArtifactUsability(projectRoot, artifactPath, artifac
   }
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   try {
-    const raw = await fs4.readFile(absolutePath, "utf8");
+    const raw = await fs5.readFile(absolutePath, "utf8");
     const validation = validatePhaseArtifactContent(raw, artifact);
     const bootstrapStarter = artifact === "context" && isBootstrapStarterContext(raw);
     const issues = [...validation.issues];
@@ -32617,7 +34021,7 @@ function buildRemovePhaseRecovery(targetPhaseNumber, roadmap) {
   return recovery;
 }
 function fallbackPhaseName(phaseDir2) {
-  return slugToTitle(path7.basename(phaseDir2).replace(/^\d+(?:\.\d+)?-/, ""));
+  return slugToTitle(path10.basename(phaseDir2).replace(/^\d+(?:\.\d+)?-/, ""));
 }
 function toResolvedPhaseLocation(located) {
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
@@ -32690,7 +34094,7 @@ async function readPhaseRoadmapRequirements(projectRoot, phaseNumber) {
   if (!await pathExists(roadmapPath)) {
     return [];
   }
-  const roadmap = parseRoadmapDocument(await fs4.readFile(roadmapPath, "utf8"));
+  const roadmap = parseRoadmapDocument(await fs5.readFile(roadmapPath, "utf8"));
   const matchedPhase = roadmap.phases.find(
     (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizePhaseNumber(phaseNumber)
   );
@@ -32700,7 +34104,7 @@ async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @
   const phaseRoot = resolveBlueprintPath(projectRoot, resolved.phaseDir);
   const planPaths = /* @__PURE__ */ new Set();
   if (await pathExists(phaseRoot)) {
-    const entries = await fs4.readdir(phaseRoot, { withFileTypes: true });
+    const entries = await fs5.readdir(phaseRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith("-PLAN.md")) {
         continue;
@@ -32721,7 +34125,7 @@ async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @
       nonCanonicalPlanPaths.push(planPath);
       continue;
     }
-    const content = overrides.get(planPath) ?? await fs4.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = overrides.get(planPath) ?? await fs5.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
     plans.push({
       path: planPath,
@@ -33246,7 +34650,7 @@ async function loadPhaseSummaryInventory(args) {
       warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath2}`);
       continue;
     }
-    const content = await fs4.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
     const linkedPlanPath = extractSummaryPlanReference(content);
     const strictValidation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: knownPlanPaths.get(planId2) ?? null
@@ -33461,7 +34865,7 @@ async function collectValidatedSummaryPaths(projectRoot, summaries) {
   const summaryPaths = [];
   const warnings = [];
   for (const summary of summaries) {
-    const content = await fs4.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: summary.linkedPlanPath
     });
@@ -33625,7 +35029,7 @@ async function readReadinessPath(args) {
       raw: null
     };
   }
-  const raw = await fs4.readFile(absolutePath, "utf8");
+  const raw = await fs5.readFile(absolutePath, "utf8");
   const rawSizeBytes = Buffer.byteLength(raw, "utf8");
   const hash2 = hashString(raw);
   const summary = summarizeSavedArtifact(raw);
@@ -33785,11 +35189,17 @@ function isPhasePlanEvidenceArtifact(artifactPath, targetPath) {
   }
   return normalized.startsWith(`${BLUEPRINT_PHASES_PATH}/`) && normalized.endsWith(".md");
 }
+function isCanonicalPhasePlanArtifactPath(artifactPath, resolved) {
+  return parseCanonicalPlanArtifactPath(artifactPath, resolved) !== null;
+}
+function isCanonicalPhaseSummaryArtifactPath(artifactPath, resolved) {
+  return path10.posix.dirname(artifactPath) === resolved.phaseDir && parseSummaryArtifactPath(artifactPath, resolved.phasePrefix) !== null;
+}
 function isCanonicalPhaseSpecArtifactPath(artifactPath, resolved) {
   return artifactPath === artifactPathFor(resolved, "spec");
 }
 function isNoncanonicalPhaseSpecLookalikePath(artifactPath, resolved) {
-  const basename = path7.posix.basename(artifactPath);
+  const basename = path10.posix.basename(artifactPath);
   const canonicalSpecFileName = `${resolved.phasePrefix}-SPEC.md`;
   const uiSpecFileName = `${resolved.phasePrefix}-UI-SPEC.md`;
   if (isCanonicalPhaseSpecArtifactPath(artifactPath, resolved)) {
@@ -33799,6 +35209,18 @@ function isNoncanonicalPhaseSpecLookalikePath(artifactPath, resolved) {
     return false;
   }
   return basename === canonicalSpecFileName || basename.startsWith(`${resolved.phasePrefix}-`) && basename.endsWith("-SPEC.md");
+}
+function isCanonicalPhaseEvidenceArtifactPath(artifactPath, resolved) {
+  if (isCanonicalPhasePlanArtifactPath(artifactPath, resolved)) {
+    return true;
+  }
+  if (isCanonicalPhaseSummaryArtifactPath(artifactPath, resolved)) {
+    return true;
+  }
+  return artifactPath === artifactPathFor(resolved, "context") || artifactPath === artifactPathFor(resolved, "discussion-log") || artifactPath === artifactPathFor(resolved, "research") || artifactPath === artifactPathFor(resolved, "spec") || artifactPath === artifactPathFor(resolved, "ui-spec") || artifactPath === validationArtifactPathFor(resolved, "verification") || artifactPath === validationArtifactPathFor(resolved, "uat") || artifactPath === buildArtifactPath(resolved.phaseDir, resolved.phasePrefix, "-REVIEW.md");
+}
+function canonicalPhaseReadinessInventory(artifacts, resolved) {
+  return artifacts.filter((artifact) => isCanonicalPhaseEvidenceArtifactPath(artifact, resolved)).sort((left, right) => left.localeCompare(right));
 }
 function isPhasePlanAcceptanceCriterionVerifiable(value) {
   return /\b(?:test|tests|grep|rg|command|file-read|artifact-validation|validate|validation|typecheck|build)\b/i.test(
@@ -33850,10 +35272,13 @@ async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, tar
     if (!isPhasePlanEvidenceArtifact(artifact, targetPath)) {
       return false;
     }
+    if (!isCanonicalPhaseEvidenceArtifactPath(artifact, resolved)) {
+      return false;
+    }
     if (isNoncanonicalPhaseSpecLookalikePath(artifact, resolved)) {
       return false;
     }
-    if (path7.posix.basename(artifact) === canonicalSpecFileName) {
+    if (path10.posix.basename(artifact) === canonicalSpecFileName) {
       return canonicalSpecPath !== null && isCanonicalPhaseSpecArtifactPath(artifact, resolved);
     }
     return true;
@@ -34704,7 +36129,7 @@ async function collectValidationAuthoringSummaryEvidence(projectRoot, summaries,
   const evidence = [];
   const warnings = [];
   for (const summary of completedSummaryRecords(summaries, completedPlanIds)) {
-    const content = await fs4.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: summary.linkedPlanPath
     });
@@ -35085,6 +36510,18 @@ async function blueprintPhaseValidationRender(args) {
 function isScaffoldGeneratedPhaseArtifact(content) {
   return isScaffoldGeneratedArtifact(content);
 }
+function assertFreshPhaseTopology(args) {
+  const actual = phaseTopologyFingerprintFromLocation(args.resolved, args.matchedPhase);
+  if (!phaseTopologyFingerprintsMatch(args.expected, actual)) {
+    throw new Error(
+      formatStalePhaseTopologyMessage({
+        operation: args.operation,
+        expected: args.expected,
+        actual
+      })
+    );
+  }
+}
 async function resolveLocatedPhaseForMutation(args) {
   const snapshot = await resolvePhaseRuntimeSnapshot(args);
   const resolved = snapshot.resolved;
@@ -35099,6 +36536,33 @@ async function resolveLocatedPhaseForMutation(args) {
     matchedPhase: snapshot.matchedPhase
   };
 }
+async function resolvePhaseTopologySnapshot(args) {
+  const snapshot = await resolveLocatedPhaseForMutation(args);
+  return {
+    projectRoot: snapshot.projectRoot,
+    phaseNumber: snapshot.resolved.phaseNumber,
+    phasePrefix: snapshot.resolved.phasePrefix,
+    phaseName: snapshot.resolved.phaseName,
+    phaseDir: snapshot.resolved.phaseDir,
+    artifacts: snapshot.artifacts,
+    fingerprint: phaseTopologyFingerprintFromLocation(
+      snapshot.resolved,
+      snapshot.matchedPhase
+    )
+  };
+}
+async function withFreshPhaseTopologyForMutation(projectRoot, args, expected, operation, task) {
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const latest = await resolveLocatedPhaseForMutation({ ...args, cwd: projectRoot });
+    assertFreshPhaseTopology({
+      operation,
+      expected,
+      resolved: latest.resolved,
+      matchedPhase: latest.matchedPhase
+    });
+    return task(latest);
+  });
+}
 async function resolvePlannedContextScaffoldPhase(args) {
   if (args.artifact !== "context") {
     return null;
@@ -35112,16 +36576,17 @@ async function resolvePlannedContextScaffoldPhase(args) {
     matchedPhase.phaseNumber,
     matchedPhase.phaseName
   );
-  const phaseDirState = await materializePhaseDirectory(snapshot.projectRoot, phaseDir2);
+  const resolved = {
+    phaseNumber: matchedPhase.phaseNumber,
+    phasePrefix: matchedPhase.phasePrefix,
+    phaseName: matchedPhase.phaseName,
+    phaseDir: phaseDir2
+  };
   return {
     projectRoot: snapshot.projectRoot,
-    resolved: {
-      phaseNumber: matchedPhase.phaseNumber,
-      phasePrefix: matchedPhase.phasePrefix,
-      phaseName: matchedPhase.phaseName,
-      phaseDir: phaseDir2
-    },
-    warnings: phaseDirState.warnings
+    resolved,
+    matchedPhase,
+    expectedTopology: phaseTopologyFingerprintFromLocation(resolved, matchedPhase)
   };
 }
 async function resolveLocatedPhaseForRead(args) {
@@ -35202,13 +36667,25 @@ async function blueprintRoadmapAddPhase(args) {
     goal: effectiveGoal,
     successCriteria: effectiveSuccessCriteria
   });
-  return withBlueprintRepoLock(projectRoot, "roadmap-add-phase", async () => {
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
     const roadmap = await readRoadmap(projectRoot);
     const existingAuditBackedPhase = findMatchingAuditBackedPhase(
       roadmap.phases,
       normalizedDescription,
       auditBackedDetails
     );
+    const phaseNumber = computeNextWholePhaseNumber(roadmap.phases);
+    if (!existingAuditBackedPhase && args.expectedPhaseNumber && normalizePhaseNumber(args.expectedPhaseNumber) !== phaseNumber) {
+      throw new Error(
+        `Confirmed next phase ${normalizePhaseNumber(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
+      );
+    }
+    requireConfirmedRoadmapMutation({
+      command: "/blu-add-phase",
+      confirmed: args.confirmed,
+      gate: "phase-number-confirmation",
+      mutation: existingAuditBackedPhase ? `reusing audit-backed Phase ${existingAuditBackedPhase.phaseNumber}` : `creating Phase ${phaseNumber}`
+    });
     if (existingAuditBackedPhase && (!args.expectedPhaseNumber || normalizePhaseNumber(args.expectedPhaseNumber) === existingAuditBackedPhase.phaseNumber)) {
       return reuseAuditBackedPhase(
         projectRoot,
@@ -35217,7 +36694,6 @@ async function blueprintRoadmapAddPhase(args) {
         auditBackedDetails
       );
     }
-    const phaseNumber = computeNextWholePhaseNumber(roadmap.phases);
     if (args.expectedPhaseNumber && normalizePhaseNumber(args.expectedPhaseNumber) !== phaseNumber) {
       throw new Error(
         `Confirmed next phase ${normalizePhaseNumber(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
@@ -35234,7 +36710,7 @@ async function blueprintRoadmapAddPhase(args) {
     const slug = slugifyPhaseName(normalizedDescription);
     const phaseDir2 = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-    const rawRoadmap = await fs4.readFile(roadmapPath, "utf8");
+    const rawRoadmap = await fs5.readFile(roadmapPath, "utf8");
     const requirementRepair = auditBackedDetails?.repairRequirementIds?.length ? await repairRequirementsTraceability(
       projectRoot,
       auditBackedDetails.repairRequirementIds,
@@ -35282,7 +36758,7 @@ async function blueprintRoadmapAddPhase(args) {
     const preparedRequirements = requirementRepair ? prepareTextForPersistence(requirementRepair.content, {
       label: requirementsPath
     }) : null;
-    const originalRequirements = requirementRepair ? await fs4.readFile(requirementsAbsolutePath, "utf8") : null;
+    const originalRequirements = requirementRepair ? await fs5.readFile(requirementsAbsolutePath, "utf8") : null;
     warnings.push(...preparedRoadmap.warnings);
     warnings.push(...preparedRequirements?.warnings ?? []);
     const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir2);
@@ -35315,7 +36791,7 @@ async function blueprintRoadmapAddPhase(args) {
         }).catch(() => void 0);
       }
       if (materializedPhaseDir.created) {
-        await fs4.rm(materializedPhaseDir.phaseDirPath, {
+        await fs5.rm(materializedPhaseDir.phaseDirPath, {
           recursive: true,
           force: true
         }).catch(() => void 0);
@@ -35377,7 +36853,7 @@ async function blueprintRoadmapInsertPhase(args) {
     goal: effectiveGoal,
     successCriteria: effectiveSuccessCriteria
   });
-  return withBlueprintRepoLock(projectRoot, "roadmap-insert-phase", async () => {
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
     const roadmap = await readRoadmap(projectRoot);
     const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === afterPhaseNumber);
     if (!targetPhase) {
@@ -35402,6 +36878,12 @@ async function blueprintRoadmapInsertPhase(args) {
         existingDecimalDirectory.reason === "ambiguous" ? `Phase ${phaseNumber} already has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting it into the roadmap.` : `Phase ${phaseNumber} already has a conflicting directory under ${BLUEPRINT_PHASES_PATH}: ${existingDecimalDirectory.phaseDir}. Resolve the drift before inserting it into the roadmap.`
       );
     }
+    requireConfirmedRoadmapMutation({
+      command: "/blu-insert-phase",
+      confirmed: args.confirmed,
+      gate: "phase-insert-confirmation",
+      mutation: `inserting Phase ${phaseNumber} after Phase ${afterPhaseNumber}`
+    });
     const groupPhases = roadmap.phases.filter(
       (phase) => basePhaseNumber(phase.phaseNumber) === afterPhaseNumber
     );
@@ -35415,7 +36897,7 @@ async function blueprintRoadmapInsertPhase(args) {
       );
     }
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-    const rawRoadmap = await fs4.readFile(roadmapPath, "utf8");
+    const rawRoadmap = await fs5.readFile(roadmapPath, "utf8");
     const insertedPhaseLines = insertPhaseLineToRoadmap(
       rawRoadmap,
       insertionAnchor,
@@ -35453,7 +36935,7 @@ async function blueprintRoadmapInsertPhase(args) {
     const preparedRequirements = prepareTextForPersistence(requirementMapping.content, {
       label: requirementsPath
     });
-    const originalRequirements = await fs4.readFile(requirementsAbsolutePath, "utf8");
+    const originalRequirements = await fs5.readFile(requirementsAbsolutePath, "utf8");
     const warnings = [...preparedRoadmap.warnings];
     warnings.push(...preparedRequirements.warnings);
     const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir2);
@@ -35478,7 +36960,7 @@ async function blueprintRoadmapInsertPhase(args) {
         enforcePromptBoundary: false
       }).catch(() => void 0);
       if (materializedPhaseDir.created) {
-        await fs4.rm(materializedPhaseDir.phaseDirPath, {
+        await fs5.rm(materializedPhaseDir.phaseDirPath, {
           recursive: true,
           force: true
         }).catch(() => void 0);
@@ -35509,33 +36991,159 @@ function renameLeadingPhaseToken(entryName, phaseNumber, replacementPrefix) {
   }
   return `${replacementPrefix}${match[2]}`;
 }
-async function renamePhaseArtifactsInPlace(projectRoot, rootDirectoryPath, oldPhaseNumber, newPhasePrefix) {
-  const renamedArtifacts = [];
-  const entries = await fs4.readdir(rootDirectoryPath, { withFileTypes: true });
+async function assertExistingPhaseTopologyDirectory(directoryPath, repoRelativeDirectory) {
+  let stats;
+  try {
+    stats = await fs5.stat(directoryPath);
+  } catch (error2) {
+    const code = error2.code;
+    if (code === "ENOENT") {
+      throw new Error(
+        `Phase topology source directory is missing before mutation: ${repoRelativeDirectory}. Resolve the drift before mutating the roadmap.`
+      );
+    }
+    throw error2;
+  }
+  if (!stats.isDirectory()) {
+    throw new Error(
+      `Phase topology source path is not a directory before mutation: ${repoRelativeDirectory}. Resolve the drift before mutating the roadmap.`
+    );
+  }
+}
+async function assertPhaseTopologyDestinationAvailable(destinationPath, repoRelativeDestination) {
+  if (await pathExists(destinationPath)) {
+    throw new Error(
+      `Phase topology destination already exists before mutation: ${repoRelativeDestination}. Resolve the collision before mutating the roadmap.`
+    );
+  }
+}
+async function collectPhaseArtifactRenamePlans(options) {
+  const sourceRelativePath = options.sourceRelativePath ?? "";
+  const executionRelativePath = options.executionRelativePath ?? "";
+  const scanDirectoryPath = sourceRelativePath ? path10.join(options.sourceRootPath, sourceRelativePath) : options.sourceRootPath;
+  const entries = await fs5.readdir(scanDirectoryPath, { withFileTypes: true });
+  const plans = [];
   for (const entry of entries) {
-    const currentPath = path7.join(rootDirectoryPath, entry.name);
-    const renamedEntry = renameLeadingPhaseToken(entry.name, oldPhaseNumber, newPhasePrefix);
-    const nextPath = renamedEntry ? path7.join(rootDirectoryPath, renamedEntry) : currentPath;
+    const originalRelativePath = sourceRelativePath ? path10.join(sourceRelativePath, entry.name) : entry.name;
+    const executionFromRelativePath = executionRelativePath ? path10.join(executionRelativePath, entry.name) : entry.name;
+    const renamedEntry = renameLeadingPhaseToken(
+      entry.name,
+      options.oldPhaseNumber,
+      options.newPhasePrefix
+    );
+    const executionToRelativePath = executionRelativePath ? path10.join(executionRelativePath, renamedEntry ?? entry.name) : renamedEntry ?? entry.name;
     if (renamedEntry) {
-      await fs4.rename(currentPath, nextPath);
-      renamedArtifacts.push({
-        from: toRepoRelativePath(projectRoot, currentPath),
-        to: toRepoRelativePath(projectRoot, nextPath)
+      const fromPath = path10.join(options.destinationRootPath, executionFromRelativePath);
+      const toPath = path10.join(options.destinationRootPath, executionToRelativePath);
+      plans.push({
+        fromPath,
+        toPath,
+        originalPath: path10.join(options.sourceRootPath, originalRelativePath),
+        originalDestinationPath: path10.join(options.sourceRootPath, executionToRelativePath),
+        from: toRepoRelativePath(options.projectRoot, fromPath),
+        to: toRepoRelativePath(options.projectRoot, toPath)
       });
     }
-    const stats = await fs4.stat(nextPath);
-    if (stats.isDirectory()) {
-      renamedArtifacts.push(
-        ...await renamePhaseArtifactsInPlace(
-          projectRoot,
-          nextPath,
-          oldPhaseNumber,
-          newPhasePrefix
-        )
+    if (entry.isDirectory()) {
+      plans.push(
+        ...await collectPhaseArtifactRenamePlans({
+          ...options,
+          sourceRelativePath: originalRelativePath,
+          executionRelativePath: executionToRelativePath
+        })
       );
     }
   }
+  return plans;
+}
+async function preflightPhaseArtifactRenamePlans(plans) {
+  const destinationPaths = /* @__PURE__ */ new Set();
+  for (const plan of plans) {
+    const normalizedDestinationPath = path10.resolve(plan.toPath);
+    if (destinationPaths.has(normalizedDestinationPath)) {
+      throw new Error(
+        `Phase artifact rename plan has a duplicate destination before mutation: ${plan.to}.`
+      );
+    }
+    destinationPaths.add(normalizedDestinationPath);
+    if (path10.resolve(plan.originalDestinationPath) !== path10.resolve(plan.originalPath) && await pathExists(plan.originalDestinationPath)) {
+      throw new Error(
+        `Phase artifact destination already exists before mutation: ${plan.to}. Resolve the collision before mutating the roadmap.`
+      );
+    }
+  }
+}
+async function renameWithPhaseTopologyRollback(fromPath, toPath, journal) {
+  await fs5.rename(fromPath, toPath);
+  journal.push({ fromPath, toPath });
+}
+async function rollbackPhaseTopologyMoves(journal) {
+  const failures = [];
+  for (const entry of [...journal].reverse()) {
+    if (!await pathExists(entry.toPath)) {
+      continue;
+    }
+    if (await pathExists(entry.fromPath)) {
+      failures.push(
+        `Could not roll back ${entry.toPath} because ${entry.fromPath} already exists.`
+      );
+      continue;
+    }
+    const failureCountBeforeMkdir = failures.length;
+    await fs5.mkdir(path10.dirname(entry.fromPath), { recursive: true }).catch((error2) => {
+      failures.push(
+        `Could not recreate rollback parent ${path10.dirname(entry.fromPath)}: ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+    });
+    if (failures.length > failureCountBeforeMkdir) {
+      continue;
+    }
+    try {
+      await fs5.rename(entry.toPath, entry.fromPath);
+    } catch (error2) {
+      failures.push(
+        `Could not roll back ${entry.toPath} to ${entry.fromPath}: ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+    }
+  }
+  return failures;
+}
+async function applyPhaseArtifactRenamePlans(plans, journal) {
+  const renamedArtifacts = [];
+  for (const plan of plans) {
+    await renameWithPhaseTopologyRollback(plan.fromPath, plan.toPath, journal);
+    renamedArtifacts.push({
+      from: plan.from,
+      to: plan.to
+    });
+  }
   return renamedArtifacts;
+}
+async function renamePhaseArtifactsInPlace(projectRoot, rootDirectoryPath, oldPhaseNumber, newPhasePrefix) {
+  const plans = await collectPhaseArtifactRenamePlans({
+    projectRoot,
+    sourceRootPath: rootDirectoryPath,
+    destinationRootPath: rootDirectoryPath,
+    oldPhaseNumber,
+    newPhasePrefix
+  });
+  const journal = [];
+  await preflightPhaseArtifactRenamePlans(plans);
+  try {
+    return await applyPhaseArtifactRenamePlans(plans, journal);
+  } catch (error2) {
+    const rollbackFailures = await rollbackPhaseTopologyMoves(journal);
+    if (rollbackFailures.length > 0) {
+      throw new Error(
+        [
+          error2 instanceof Error ? error2.message : String(error2),
+          "Rollback failures:",
+          ...rollbackFailures
+        ].join("\n")
+      );
+    }
+    throw error2;
+  }
 }
 function findPhaseRenumberTargets(phases, targetPhaseNumber) {
   const targetIndex = phases.findIndex((phase) => phase.phaseNumber === targetPhaseNumber);
@@ -35544,165 +37152,287 @@ function findPhaseRenumberTargets(phases, targetPhaseNumber) {
       `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
     );
   }
+  const [targetBase, targetDecimal] = targetPhaseNumber.split(".");
   const renumberTargets = [];
+  const isDecimalRemoval = targetDecimal !== void 0;
   for (let index = targetIndex + 1; index < phases.length; index += 1) {
+    const candidatePhase = phases[index];
+    if (!candidatePhase) {
+      continue;
+    }
+    if (isDecimalRemoval) {
+      const [candidateBase, candidateDecimal] = candidatePhase.phaseNumber.split(".");
+      if (candidateBase !== targetBase || candidateDecimal === void 0) {
+        break;
+      }
+    }
     renumberTargets.push({
-      previousPhase: phases[index],
+      previousPhase: candidatePhase,
       newPhaseNumber: index === targetIndex + 1 ? targetPhaseNumber : phases[index - 1]?.phaseNumber ?? targetPhaseNumber
     });
   }
   return renumberTargets;
 }
+function findWholePhaseDecimalChildren(phases, targetPhaseNumber) {
+  if (!isIntegerPhaseNumber(targetPhaseNumber)) {
+    return [];
+  }
+  const targetIndex = phases.findIndex((phase) => phase.phaseNumber === targetPhaseNumber);
+  if (targetIndex === -1) {
+    return [];
+  }
+  return phases.slice(targetIndex + 1).filter((phase) => {
+    const [phaseBase, phaseDecimal] = phase.phaseNumber.split(".");
+    return phaseBase === targetPhaseNumber && phaseDecimal !== void 0;
+  });
+}
+function phaseTopologyTransactionRootPath(projectRoot, operation, phaseNumber) {
+  const safePhaseNumber = phaseNumber.replace(/[^0-9.]/g, "_");
+  return resolveBlueprintPath(
+    projectRoot,
+    `${BLUEPRINT_DIR}/locks/${PHASE_TOPOLOGY_LOCK_NAME}-${operation}-${safePhaseNumber}-${process.pid}-${Date.now()}-${process.hrtime.bigint()}.txn`
+  );
+}
 async function blueprintRoadmapRemovePhase(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
   const targetPhaseNumber = extractPhaseNumberToken(args.phase ?? "");
   if (!targetPhaseNumber) {
     throw new Error(
       "Phase number required. Re-run /blu-remove-phase with a phase number such as 7."
     );
   }
-  const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === targetPhaseNumber);
-  if (!targetPhase) {
-    const recovery = buildRemovePhaseRecovery(targetPhaseNumber, roadmap);
-    throw new Error(
-      [
-        `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`,
-        "Recovery:",
-        ...recovery.map((entry) => `- ${entry}`)
-      ].join("\n")
-    );
-  }
-  const currentState = await loadBlueprintState(projectRoot);
-  const currentPhaseNumber = extractPhaseNumberToken(currentState.currentPhase);
-  if (!currentPhaseNumber) {
-    throw new Error(
-      `Cannot validate future-phase removal because ${BLUEPRINT_DIR}/STATE.md does not contain a usable current phase.`
-    );
-  }
-  if (comparePhaseNumbers(targetPhaseNumber, currentPhaseNumber) <= 0) {
-    throw new Error(
-      `Cannot remove Phase ${targetPhaseNumber}. Only future phases can be removed; current phase is ${currentPhaseNumber}.`
-    );
-  }
-  const targetPhaseDirectory = await findPhaseDirectory(projectRoot, targetPhaseNumber);
-  if (!targetPhaseDirectory.phaseDir) {
-    throw new Error(
-      targetPhaseDirectory.reason === "ambiguous" ? `Phase ${targetPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.` : `Phase ${targetPhaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.`
-    );
-  }
-  const targetPhaseDirPath = resolveBlueprintPath(projectRoot, targetPhaseDirectory.phaseDir);
-  const removedArtifacts = await listPhaseArtifacts2(targetPhaseDirPath, projectRoot);
-  const executionArtifacts = removedArtifacts.filter(
-    (artifactPath) => /-SUMMARY\.md$/i.test(artifactPath) || /-VERIFICATION\.md$/i.test(artifactPath) || /-UAT\.md$/i.test(artifactPath)
-  );
-  const warnings = [];
-  if (executionArtifacts.length > 0) {
-    if (!args.force) {
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const roadmap = await readRoadmap(projectRoot);
+    const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === targetPhaseNumber);
+    if (!targetPhase) {
+      const recovery = buildRemovePhaseRecovery(targetPhaseNumber, roadmap);
       throw new Error(
-        `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Re-run /blu-remove-phase with explicit force confirmation if you intend to remove it anyway.`
+        [
+          `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`,
+          "Recovery:",
+          ...recovery.map((entry) => `- ${entry}`)
+        ].join("\n")
       );
     }
-    warnings.push(
-      `Phase ${targetPhaseNumber} was removed with execution evidence (${executionArtifacts.join(", ")}) because explicit force confirmation was provided.`
-    );
-  }
-  const renumberTargets = findPhaseRenumberTargets(roadmap.phases, targetPhaseNumber);
-  const renumberMap = new Map(
-    renumberTargets.map(({ previousPhase, newPhaseNumber }) => [
-      previousPhase.phaseNumber,
-      newPhaseNumber
-    ])
-  );
-  const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-  const rawRoadmap = await fs4.readFile(roadmapPath, "utf8");
-  const removedPhaseLine = removePhaseLineFromRoadmap(rawRoadmap, targetPhaseNumber);
-  if (!removedPhaseLine.removed) {
-    throw new Error(
-      `Phase ${targetPhaseNumber} could not be removed from the roadmap phases list.`
-    );
-  }
-  const removedPhaseDetails = removePhaseDetailsFromRoadmap(
-    removedPhaseLine.content,
-    targetPhaseNumber
-  );
-  if (!removedPhaseDetails.removed) {
-    warnings.push(
-      `Phase ${targetPhaseNumber} did not have a matching entry under the roadmap's "## Phase Details" section.`
-    );
-  }
-  const updatedRoadmap = rewriteRoadmapPhaseReferences(
-    removedPhaseDetails.content,
-    renumberMap
-  );
-  const renumberedPhases = [];
-  const preparedRenumberTargets = [];
-  for (const { previousPhase, newPhaseNumber } of renumberTargets) {
-    const locatedPhaseDirectory = await findPhaseDirectory(projectRoot, previousPhase.phaseNumber);
-    if (!locatedPhaseDirectory.phaseDir) {
+    const currentState = await loadBlueprintState(projectRoot);
+    const currentPhaseNumber = extractPhaseNumberToken(currentState.currentPhase);
+    if (!currentPhaseNumber) {
       throw new Error(
-        locatedPhaseDirectory.reason === "ambiguous" ? `Phase ${previousPhase.phaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.` : `Phase ${previousPhase.phaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.`
+        `Cannot validate future-phase removal because ${BLUEPRINT_DIR}/STATE.md does not contain a usable current phase.`
       );
     }
-    preparedRenumberTargets.push({
-      previousPhase,
-      newPhaseNumber,
-      previousPhaseDir: locatedPhaseDirectory.phaseDir
+    if (comparePhaseNumbers(targetPhaseNumber, currentPhaseNumber) <= 0) {
+      throw new Error(
+        `Cannot remove Phase ${targetPhaseNumber}. Only future phases can be removed; current phase is ${currentPhaseNumber}.`
+      );
+    }
+    const targetPhaseDirectory = await findPhaseDirectory(projectRoot, targetPhaseNumber);
+    if (!targetPhaseDirectory.phaseDir) {
+      throw new Error(
+        targetPhaseDirectory.reason === "ambiguous" ? `Phase ${targetPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.` : `Phase ${targetPhaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.`
+      );
+    }
+    const targetPhaseDirPath = resolveBlueprintPath(projectRoot, targetPhaseDirectory.phaseDir);
+    await assertExistingPhaseTopologyDirectory(
+      targetPhaseDirPath,
+      targetPhaseDirectory.phaseDir
+    );
+    const removedArtifacts = await listPhaseArtifacts2(targetPhaseDirPath, projectRoot);
+    const executionArtifacts = removedArtifacts.filter(
+      (artifactPath) => /-SUMMARY\.md$/i.test(artifactPath) || /-VERIFICATION\.md$/i.test(artifactPath) || /-UAT\.md$/i.test(artifactPath)
+    );
+    const warnings = [];
+    requireConfirmedRoadmapMutation({
+      command: "/blu-remove-phase",
+      confirmed: args.confirmed,
+      gate: "remove-phase-confirmation",
+      mutation: `removing Phase ${targetPhaseNumber}`
     });
-  }
-  await fs4.rm(targetPhaseDirPath, { recursive: true, force: true });
-  for (const { previousPhase, newPhaseNumber, previousPhaseDir } of preparedRenumberTargets) {
-    const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
-    const previousDirectoryName = path7.basename(previousPhaseDirPath);
-    const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
-    const renamedDirectoryName = renameLeadingPhaseToken(
-      previousDirectoryName,
-      previousPhase.phaseNumber,
-      newPhasePrefix
-    );
-    if (!renamedDirectoryName) {
-      throw new Error(
-        `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
+    if (executionArtifacts.length > 0) {
+      if (!args.force) {
+        throw new Error(
+          `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Re-run /blu-remove-phase with explicit force confirmation if you intend to remove it anyway.`
+        );
+      }
+      warnings.push(
+        `Phase ${targetPhaseNumber} was removed with execution evidence (${executionArtifacts.join(", ")}) because explicit force confirmation was provided.`
       );
     }
-    const newPhaseDirPath = path7.join(path7.dirname(previousPhaseDirPath), renamedDirectoryName);
-    await fs4.rename(previousPhaseDirPath, newPhaseDirPath);
-    const renamedArtifacts = await renamePhaseArtifactsInPlace(
+    const decimalChildPhases = findWholePhaseDecimalChildren(
+      roadmap.phases,
+      targetPhaseNumber
+    );
+    if (decimalChildPhases.length > 0) {
+      throw new Error(
+        [
+          `Cannot remove whole Phase ${targetPhaseNumber} because it has decimal child phases: ${decimalChildPhases.map((phase) => phase.phaseNumber).join(", ")}.`,
+          "Whole-phase removal with decimal child phases is currently unsupported because it would corrupt later phase identity during renumbering.",
+          "Remove or resolve the child phases first, then re-run /blu-remove-phase."
+        ].join(" ")
+      );
+    }
+    const renumberTargets = findPhaseRenumberTargets(roadmap.phases, targetPhaseNumber);
+    const renumberMap = new Map(
+      renumberTargets.map(({ previousPhase, newPhaseNumber }) => [
+        previousPhase.phaseNumber,
+        newPhaseNumber
+      ])
+    );
+    const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
+    const rawRoadmap = await fs5.readFile(roadmapPath, "utf8");
+    const removedPhaseLine = removePhaseLineFromRoadmap(rawRoadmap, targetPhaseNumber);
+    if (!removedPhaseLine.removed) {
+      throw new Error(
+        `Phase ${targetPhaseNumber} could not be removed from the roadmap phases list.`
+      );
+    }
+    const removedPhaseDetails = removePhaseDetailsFromRoadmap(
+      removedPhaseLine.content,
+      targetPhaseNumber
+    );
+    if (!removedPhaseDetails.removed) {
+      warnings.push(
+        `Phase ${targetPhaseNumber} did not have a matching entry under the roadmap's "## Phase Details" section.`
+      );
+    }
+    const updatedRoadmap = rewriteRoadmapPhaseReferences(
+      removedPhaseDetails.content,
+      renumberMap
+    );
+    const renumberedPhases = [];
+    const preparedRenumberTargets = [];
+    for (const { previousPhase, newPhaseNumber } of renumberTargets) {
+      const locatedPhaseDirectory = await findPhaseDirectory(projectRoot, previousPhase.phaseNumber);
+      if (!locatedPhaseDirectory.phaseDir) {
+        throw new Error(
+          locatedPhaseDirectory.reason === "ambiguous" ? `Phase ${previousPhase.phaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.` : `Phase ${previousPhase.phaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.`
+        );
+      }
+      const previousPhaseDir = locatedPhaseDirectory.phaseDir;
+      const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
+      const previousDirectoryName = path10.basename(previousPhaseDirPath);
+      const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
+      const renamedDirectoryName = renameLeadingPhaseToken(
+        previousDirectoryName,
+        previousPhase.phaseNumber,
+        newPhasePrefix
+      );
+      if (!renamedDirectoryName) {
+        throw new Error(
+          `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
+        );
+      }
+      const newPhaseDirPath = path10.join(path10.dirname(previousPhaseDirPath), renamedDirectoryName);
+      const newPhaseDir = toRepoRelativePath(projectRoot, newPhaseDirPath);
+      await assertExistingPhaseTopologyDirectory(previousPhaseDirPath, previousPhaseDir);
+      if (path10.resolve(newPhaseDirPath) !== path10.resolve(targetPhaseDirPath)) {
+        await assertPhaseTopologyDestinationAvailable(newPhaseDirPath, newPhaseDir);
+      }
+      const artifactRenamePlans = await collectPhaseArtifactRenamePlans({
+        projectRoot,
+        sourceRootPath: previousPhaseDirPath,
+        destinationRootPath: newPhaseDirPath,
+        oldPhaseNumber: previousPhase.phaseNumber,
+        newPhasePrefix
+      });
+      await preflightPhaseArtifactRenamePlans(artifactRenamePlans);
+      preparedRenumberTargets.push({
+        previousPhase,
+        newPhaseNumber,
+        newPhasePrefix,
+        previousPhaseDir,
+        newPhaseDir,
+        previousPhaseDirPath,
+        newPhaseDirPath,
+        artifactRenamePlans
+      });
+    }
+    const transactionRootPath = phaseTopologyTransactionRootPath(
       projectRoot,
-      newPhaseDirPath,
-      previousPhase.phaseNumber,
-      newPhasePrefix
+      "remove",
+      targetPhaseNumber
     );
-    renumberedPhases.push({
-      previousPhaseNumber: previousPhase.phaseNumber,
-      newPhaseNumber,
-      previousPhasePrefix: previousPhase.phasePrefix,
-      newPhasePrefix,
-      phaseName: previousPhase.phaseName,
-      previousPhaseDir,
-      newPhaseDir: toRepoRelativePath(projectRoot, newPhaseDirPath),
-      renamedArtifacts
-    });
-  }
-  warnings.push(
-    ...await writeTextFile(roadmapPath, updatedRoadmap, {
-      label: roadmap.path
-    })
-  );
-  return {
-    removedPhase: {
-      phaseNumber: targetPhase.phaseNumber,
-      phasePrefix: targetPhase.phasePrefix,
-      phaseName: targetPhase.phaseName,
-      phaseDir: targetPhaseDirectory.phaseDir,
-      removedArtifacts
-    },
-    renumberedPhases,
-    roadmapPath: roadmap.path,
-    milestone: roadmap.milestone,
-    written: true,
-    warnings
-  };
+    const transactionRootRelativePath = toRepoRelativePath(projectRoot, transactionRootPath);
+    const tombstonePhaseDirPath = path10.join(
+      transactionRootPath,
+      path10.basename(targetPhaseDirPath)
+    );
+    const journal = [];
+    let committed = false;
+    await assertPhaseTopologyDestinationAvailable(
+      transactionRootPath,
+      transactionRootRelativePath
+    );
+    try {
+      await fs5.mkdir(transactionRootPath, { recursive: true });
+      await renameWithPhaseTopologyRollback(
+        targetPhaseDirPath,
+        tombstonePhaseDirPath,
+        journal
+      );
+      for (const plan of preparedRenumberTargets) {
+        await renameWithPhaseTopologyRollback(
+          plan.previousPhaseDirPath,
+          plan.newPhaseDirPath,
+          journal
+        );
+        const renamedArtifacts = await applyPhaseArtifactRenamePlans(
+          plan.artifactRenamePlans,
+          journal
+        );
+        renumberedPhases.push({
+          previousPhaseNumber: plan.previousPhase.phaseNumber,
+          newPhaseNumber: plan.newPhaseNumber,
+          previousPhasePrefix: plan.previousPhase.phasePrefix,
+          newPhasePrefix: plan.newPhasePrefix,
+          phaseName: plan.previousPhase.phaseName,
+          previousPhaseDir: plan.previousPhaseDir,
+          newPhaseDir: plan.newPhaseDir,
+          renamedArtifacts
+        });
+      }
+      warnings.push(
+        ...await writeTextFile(roadmapPath, updatedRoadmap, {
+          label: roadmap.path
+        })
+      );
+      committed = true;
+    } catch (error2) {
+      const rollbackFailures = await rollbackPhaseTopologyMoves(journal);
+      if (rollbackFailures.length === 0) {
+        await fs5.rm(transactionRootPath, { recursive: true, force: true }).catch(() => void 0);
+        throw error2;
+      }
+      throw new Error(
+        [
+          error2 instanceof Error ? error2.message : String(error2),
+          "Rollback failures:",
+          ...rollbackFailures
+        ].join("\n")
+      );
+    }
+    if (committed) {
+      await fs5.rm(transactionRootPath, { recursive: true, force: true }).catch((error2) => {
+        warnings.push(
+          `Phase ${targetPhaseNumber} was removed, but cleanup of transaction tombstone ${transactionRootRelativePath} failed: ${error2 instanceof Error ? error2.message : String(error2)}`
+        );
+      });
+    }
+    return {
+      removedPhase: {
+        phaseNumber: targetPhase.phaseNumber,
+        phasePrefix: targetPhase.phasePrefix,
+        phaseName: targetPhase.phaseName,
+        phaseDir: targetPhaseDirectory.phaseDir,
+        removedArtifacts
+      },
+      renumberedPhases,
+      roadmapPath: roadmap.path,
+      milestone: roadmap.milestone,
+      written: true,
+      warnings
+    };
+  });
 }
 async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phasePrefix2, phaseName) {
   const warnings = [];
@@ -35718,7 +37448,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
     if (reservedDirectory.phaseDir) {
       const reservedPhaseDirPath = resolveBlueprintPath(projectRoot, reservedDirectory.phaseDir);
       const renamedDirectoryName = renameLeadingPhaseToken(
-        path7.basename(reservedPhaseDirPath),
+        path10.basename(reservedPhaseDirPath),
         item.reservedPhase,
         phasePrefix2
       );
@@ -35727,8 +37457,8 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
           `Reserved phase directory ${reservedDirectory.phaseDir} does not start with ${item.reservedPhase}.`
         );
       }
-      const promotedPhaseDirPath = path7.join(
-        path7.dirname(reservedPhaseDirPath),
+      const promotedPhaseDirPath = path10.join(
+        path10.dirname(reservedPhaseDirPath),
         renamedDirectoryName
       );
       if (promotedPhaseDirPath !== reservedPhaseDirPath && await pathExists(promotedPhaseDirPath)) {
@@ -35736,15 +37466,34 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
           `Promoted phase directory already exists for backlog item ${item.backlogId}: ${toRepoRelativePath(projectRoot, promotedPhaseDirPath)}.`
         );
       }
-      if (promotedPhaseDirPath !== reservedPhaseDirPath) {
-        await fs4.rename(reservedPhaseDirPath, promotedPhaseDirPath);
+      const journal = [];
+      try {
+        if (promotedPhaseDirPath !== reservedPhaseDirPath) {
+          await renameWithPhaseTopologyRollback(
+            reservedPhaseDirPath,
+            promotedPhaseDirPath,
+            journal
+          );
+        }
+        await renamePhaseArtifactsInPlace(
+          projectRoot,
+          promotedPhaseDirPath,
+          item.reservedPhase,
+          phasePrefix2
+        );
+      } catch (error2) {
+        const rollbackFailures = await rollbackPhaseTopologyMoves(journal);
+        if (rollbackFailures.length > 0) {
+          throw new Error(
+            [
+              error2 instanceof Error ? error2.message : String(error2),
+              "Rollback failures:",
+              ...rollbackFailures
+            ].join("\n")
+          );
+        }
+        throw error2;
       }
-      await renamePhaseArtifactsInPlace(
-        projectRoot,
-        promotedPhaseDirPath,
-        item.reservedPhase,
-        phasePrefix2
-      );
       return {
         phaseDir: toRepoRelativePath(projectRoot, promotedPhaseDirPath),
         createdPhaseDir: true,
@@ -35765,7 +37514,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
       warnings
     };
   }
-  await fs4.mkdir(desiredPhaseDirPath, { recursive: true });
+  await fs5.mkdir(desiredPhaseDirPath, { recursive: true });
   return {
     phaseDir: desiredPhaseDir,
     createdPhaseDir: true,
@@ -35843,79 +37592,81 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
       warnings
     };
   }
-  const roadmap = await readRoadmap(projectRoot);
-  const roadmapAbsolutePath = resolveBlueprintPath(projectRoot, roadmap.path);
-  let roadmapBody = await fs4.readFile(roadmapAbsolutePath, "utf8");
-  const roadmapPhases = [...roadmap.phases];
-  const promotedItems = [];
-  const createdPhaseDirs = [];
-  for (const item of selectedItems) {
-    const phaseNumber = nextIntegerPhaseNumber(roadmapPhases);
-    const phasePrefix2 = formatPhasePrefix(phaseNumber);
-    const phaseName = normalizePhaseDescription(item.description);
-    const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
-    const phaseDirectory = await materializePromotedBacklogPhaseDirectory(
-      projectRoot,
-      item,
-      phasePrefix2,
-      phaseName
-    );
-    roadmapBody = appendPhaseDetailsToRoadmap(
-      appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName, {
-        goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
-        successCriteria: [
-          `Backlog item ${item.backlogId} has an authored phase context.`,
-          `The promoted phase can move through planning with explicit scope decisions.`
-        ]
-      }),
-      phaseNumber,
-      phaseName,
-      {
-        dependsOnPhaseNumber,
-        goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
-        successCriteria: `Backlog item ${item.backlogId} has an authored phase context.; The promoted phase can move through planning with explicit scope decisions.`
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const roadmap = await readRoadmap(projectRoot);
+    const roadmapAbsolutePath = resolveBlueprintPath(projectRoot, roadmap.path);
+    let roadmapBody = await fs5.readFile(roadmapAbsolutePath, "utf8");
+    const roadmapPhases = [...roadmap.phases];
+    const promotedItems = [];
+    const createdPhaseDirs = [];
+    for (const item of selectedItems) {
+      const phaseNumber = nextIntegerPhaseNumber(roadmapPhases);
+      const phasePrefix2 = formatPhasePrefix(phaseNumber);
+      const phaseName = normalizePhaseDescription(item.description);
+      const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
+      const phaseDirectory = await materializePromotedBacklogPhaseDirectory(
+        projectRoot,
+        item,
+        phasePrefix2,
+        phaseName
+      );
+      roadmapBody = appendPhaseDetailsToRoadmap(
+        appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName, {
+          goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
+          successCriteria: [
+            `Backlog item ${item.backlogId} has an authored phase context.`,
+            `The promoted phase can move through planning with explicit scope decisions.`
+          ]
+        }),
+        phaseNumber,
+        phaseName,
+        {
+          dependsOnPhaseNumber,
+          goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
+          successCriteria: `Backlog item ${item.backlogId} has an authored phase context.; The promoted phase can move through planning with explicit scope decisions.`
+        }
+      );
+      roadmapPhases.push({
+        phaseNumber,
+        phasePrefix: phasePrefix2,
+        phaseName,
+        completed: false,
+        summary: null,
+        goal: null,
+        successCriteria: null,
+        requirements: []
+      });
+      promotedItems.push({
+        backlogId: item.backlogId,
+        phaseNumber,
+        phasePrefix: phasePrefix2,
+        phaseName,
+        reservedPhase: item.reservedPhase,
+        phaseDir: phaseDirectory.phaseDir,
+        createdPhaseDir: phaseDirectory.createdPhaseDir,
+        reusedReservedPhaseDir: phaseDirectory.reusedReservedPhaseDir
+      });
+      if (phaseDirectory.createdPhaseDir) {
+        createdPhaseDirs.push(phaseDirectory.phaseDir);
       }
-    );
-    roadmapPhases.push({
-      phaseNumber,
-      phasePrefix: phasePrefix2,
-      phaseName,
-      completed: false,
-      summary: null,
-      goal: null,
-      successCriteria: null,
-      requirements: []
-    });
-    promotedItems.push({
-      backlogId: item.backlogId,
-      phaseNumber,
-      phasePrefix: phasePrefix2,
-      phaseName,
-      reservedPhase: item.reservedPhase,
-      phaseDir: phaseDirectory.phaseDir,
-      createdPhaseDir: phaseDirectory.createdPhaseDir,
-      reusedReservedPhaseDir: phaseDirectory.reusedReservedPhaseDir
-    });
-    if (phaseDirectory.createdPhaseDir) {
-      createdPhaseDirs.push(phaseDirectory.phaseDir);
+      warnings.push(...phaseDirectory.warnings);
     }
-    warnings.push(...phaseDirectory.warnings);
-  }
-  warnings.push(
-    ...await writeTextFile(roadmapAbsolutePath, roadmapBody, {
-      label: roadmapPath
-    })
-  );
-  return {
-    status: "updated",
-    backlogPath,
-    roadmapPath,
-    backlogItems: backlog.backlogItems,
-    selectedBacklogIds: selectedItems.map((item) => item.backlogId),
-    promotedItems,
-    createdPhaseDirs,
-    warnings
-  };
+    warnings.push(
+      ...await writeTextFile(roadmapAbsolutePath, roadmapBody, {
+        label: roadmapPath
+      })
+    );
+    return {
+      status: "updated",
+      backlogPath,
+      roadmapPath,
+      backlogItems: backlog.backlogItems,
+      selectedBacklogIds: selectedItems.map((item) => item.backlogId),
+      promotedItems,
+      createdPhaseDirs,
+      warnings
+    };
+  });
 }
 async function blueprintPhaseLocate(args = {}) {
   return (await resolvePhaseRuntimeSnapshot(args)).located;
@@ -36118,9 +37869,20 @@ async function buildPhaseContext(projectRoot, args = {}) {
     };
   }
   const artifacts = located.artifacts;
+  const locatedPath = {
+    phaseDir: located.phaseDir,
+    phasePrefix: located.phasePrefix
+  };
   const contextPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-CONTEXT.md");
   const researchPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-RESEARCH.md");
   const uiSpecPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-UI-SPEC.md");
+  const contextArtifact = findPhaseArtifact(artifacts, locatedPath, "context");
+  const discussionLogArtifact = findPhaseArtifact(artifacts, locatedPath, "discussion-log");
+  const researchArtifact = findPhaseArtifact(artifacts, locatedPath, "research");
+  const specArtifact = findPhaseArtifact(artifacts, locatedPath, "spec");
+  const uiSpecArtifact = findPhaseArtifact(artifacts, locatedPath, "ui-spec");
+  const verificationArtifact = findPhaseValidationArtifact(artifacts, locatedPath, "verification");
+  const uatArtifact = findPhaseValidationArtifact(artifacts, locatedPath, "uat");
   return {
     phaseSelection,
     phase: {
@@ -36136,14 +37898,14 @@ async function buildPhaseContext(projectRoot, args = {}) {
       },
       artifacts: {
         all: artifacts,
-        context: findArtifact(artifacts, "-CONTEXT.md"),
-        discussionLog: findArtifact(artifacts, "-DISCUSSION-LOG.md"),
-        research: findArtifact(artifacts, "-RESEARCH.md"),
-        spec: findPhaseSpecArtifact(artifacts, located.phaseDir, located.phasePrefix),
-        uiSpec: findArtifact(artifacts, "-UI-SPEC.md"),
-        verification: findArtifact(artifacts, "-VERIFICATION.md"),
-        uat: findArtifact(artifacts, "-UAT.md"),
-        plans: artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")),
+        context: contextArtifact,
+        discussionLog: discussionLogArtifact,
+        research: researchArtifact,
+        spec: specArtifact,
+        uiSpec: uiSpecArtifact,
+        verification: verificationArtifact,
+        uat: uatArtifact,
+        plans: artifacts.filter((artifact) => isCanonicalPhasePlanArtifactPath(artifact, locatedPath)),
         summaries: artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"))
       }
     },
@@ -36167,7 +37929,7 @@ async function buildPhaseContext(projectRoot, args = {}) {
       (artifact) => !artifacts.includes(artifact)
     ),
     warnings: [
-      ...!findArtifact(artifacts, "-CONTEXT.md") ? ["Research quality will be limited until XX-CONTEXT.md exists."] : [],
+      ...!contextArtifact ? ["Research quality will be limited until XX-CONTEXT.md exists."] : [],
       ...codebase.warnings,
       ...matchedPhase && matchedPhase.requirements.length === 0 ? ["Phase requirements are missing from ROADMAP.md for this phase."] : []
     ]
@@ -36198,7 +37960,7 @@ async function buildPhaseResearchStatusFromContext(projectRoot, context) {
   if (researchPath) {
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
-      const raw = await fs4.readFile(absolutePath, "utf8");
+      const raw = await fs5.readFile(absolutePath, "utf8");
       const validation = validatePhaseArtifactContent(
         canonicalizeResearchHeadingLines(normalizeTextContent(raw)),
         "research"
@@ -36323,30 +38085,93 @@ async function blueprintPhaseArtifactRead(args) {
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    content: await fs4.readFile(absolutePath, "utf8"),
+    content: await fs5.readFile(absolutePath, "utf8"),
     reason: null
   };
 }
 async function blueprintPhaseArtifactScaffold(args) {
   const plannedContextScaffold = await resolvePlannedContextScaffoldPhase(args);
-  const { projectRoot, resolved } = plannedContextScaffold ?? await resolveLocatedPhaseForMutation(args);
-  const artifactPath = artifactPathFor(resolved, args.artifact);
-  const scaffoldResult = await blueprintArtifactScaffold({
-    cwd: projectRoot,
-    artifacts: [artifactPath],
-    overwrite: args.overwrite
-  });
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    artifact: args.artifact,
-    path: artifactPath,
-    createdFiles: scaffoldResult.createdFiles,
-    reusedFiles: scaffoldResult.reusedFiles,
-    warnings: [...plannedContextScaffold?.warnings ?? [], ...scaffoldResult.warnings]
-  };
+  if (plannedContextScaffold) {
+    const { projectRoot: projectRoot2, expectedTopology: expectedTopology2 } = plannedContextScaffold;
+    return withBlueprintRepoLock(projectRoot2, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+      const latest = await resolvePlannedContextScaffoldPhase({ ...args, cwd: projectRoot2 });
+      if (!latest) {
+        throw new Error(
+          "Phase artifact scaffold rejected stale planned phase topology before materializing context."
+        );
+      }
+      assertFreshPhaseTopology({
+        operation: "Phase artifact scaffold",
+        expected: expectedTopology2,
+        resolved: latest.resolved,
+        matchedPhase: latest.matchedPhase
+      });
+      const phaseDirState = await materializePhaseDirectory(projectRoot2, latest.resolved.phaseDir);
+      const artifactPath = artifactPathFor(latest.resolved, args.artifact);
+      try {
+        const scaffoldResult = await withBlueprintRepoLock(projectRoot2, "phase-artifact-write", async () => {
+          return blueprintArtifactScaffold({
+            cwd: projectRoot2,
+            artifacts: [artifactPath],
+            overwrite: args.overwrite
+          });
+        });
+        return {
+          phaseNumber: latest.resolved.phaseNumber,
+          phasePrefix: latest.resolved.phasePrefix,
+          phaseName: latest.resolved.phaseName,
+          phaseDir: latest.resolved.phaseDir,
+          artifact: args.artifact,
+          path: artifactPath,
+          createdFiles: scaffoldResult.createdFiles,
+          reusedFiles: scaffoldResult.reusedFiles,
+          warnings: [...phaseDirState.warnings, ...scaffoldResult.warnings]
+        };
+      } catch (error2) {
+        if (phaseDirState.created) {
+          try {
+            await fs5.rm(phaseDirState.phaseDirPath, { recursive: true, force: true });
+          } catch (rollbackError) {
+            const reason = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+            const original = error2 instanceof Error ? error2.message : String(error2);
+            throw new Error(
+              `Phase artifact scaffold failed and rollback of ${latest.resolved.phaseDir} also failed: ${reason}. Original error: ${original}`
+            );
+          }
+        }
+        throw error2;
+      }
+    });
+  }
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase artifact scaffold",
+    async ({ resolved: resolved2 }) => {
+      const artifactPath = artifactPathFor(resolved2, args.artifact);
+      const scaffoldResult = await withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
+        return blueprintArtifactScaffold({
+          cwd: projectRoot,
+          artifacts: [artifactPath],
+          overwrite: args.overwrite
+        });
+      });
+      return {
+        phaseNumber: resolved2.phaseNumber,
+        phasePrefix: resolved2.phasePrefix,
+        phaseName: resolved2.phaseName,
+        phaseDir: resolved2.phaseDir,
+        artifact: args.artifact,
+        path: artifactPath,
+        createdFiles: scaffoldResult.createdFiles,
+        reusedFiles: scaffoldResult.reusedFiles,
+        warnings: scaffoldResult.warnings
+      };
+    }
+  );
 }
 function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
   const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "warning");
@@ -36428,9 +38253,9 @@ ${normalizeTextContent(skipRationale)}
 `;
 }
 async function blueprintPhaseArtifactWrite(args) {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   const artifactPath = artifactPathFor(resolved, args.artifact);
-  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
   if (hasContent === hasModel) {
@@ -36528,107 +38353,216 @@ async function blueprintPhaseArtifactWrite(args) {
   if (args.artifact === "research") {
     normalizedContent = canonicalizeResearchHeadingLines(normalizedContent);
   }
-  const exists = await pathExists(absolutePath);
-  const warnings = [];
   const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
-  if (exists) {
-    const existingContent = await fs4.readFile(absolutePath, "utf8");
-    const existingValidation = validatePhaseArtifactContent(
-      args.artifact === "research" ? canonicalizeResearchHeadingLines(normalizeTextContent(existingContent)) : existingContent,
-      args.artifact
-    );
-    if (existingContent === normalizedContent) {
-      if (!validation.valid) {
-        return invalidPhaseArtifactWriteResult({
-          resolved,
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase artifact write",
+    async ({ resolved: resolved2 }) => {
+      const artifactPath2 = artifactPathFor(resolved2, args.artifact);
+      const absolutePath = resolveBlueprintPath(projectRoot, artifactPath2);
+      return withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
+        const exists = await pathExists(absolutePath);
+        const warnings = [];
+        if (exists) {
+          const existingContent = await fs5.readFile(absolutePath, "utf8");
+          const existingValidation = validatePhaseArtifactContent(
+            args.artifact === "research" ? canonicalizeResearchHeadingLines(normalizeTextContent(existingContent)) : existingContent,
+            args.artifact
+          );
+          if (existingContent === normalizedContent) {
+            if (!validation.valid) {
+              return invalidPhaseArtifactWriteResult({
+                resolved: resolved2,
+                artifact: args.artifact,
+                path: artifactPath2,
+                validation,
+                warnings
+              });
+            }
+            warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+            return {
+              phaseNumber: resolved2.phaseNumber,
+              phasePrefix: resolved2.phasePrefix,
+              phaseName: resolved2.phaseName,
+              phaseDir: resolved2.phaseDir,
+              artifact: args.artifact,
+              path: artifactPath2,
+              written: false,
+              created: false,
+              overwritten: false,
+              status: "reused",
+              validation: {
+                valid: validation.valid,
+                issues: validation.issues,
+                warnings: validation.warnings,
+                suggestedRepairs: [],
+                diagnostics: validation.diagnostics
+              },
+              warnings: [...warnings, ...validation.warnings]
+            };
+          }
+          if (!(args.overwrite ?? false) && !isScaffoldGeneratedPhaseArtifact(existingContent)) {
+            throw new Error(
+              `${artifactPath2} already exists. Re-run only after explicit overwrite confirmation.`
+            );
+          }
+          if (!(args.overwrite ?? false) && !existingValidation.valid) {
+            warnings.push(`Replacing the existing scaffold ${args.artifact} artifact with authored content.`);
+          } else if (!(args.overwrite ?? false)) {
+            throw new Error(
+              `${artifactPath2} already exists. Re-run only after explicit overwrite confirmation.`
+            );
+          }
+        }
+        if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
+          return invalidPhaseArtifactWriteResult({
+            resolved: resolved2,
+            artifact: args.artifact,
+            path: artifactPath2,
+            validation,
+            warnings
+          });
+        }
+        warnings.push(
+          ...await writeTextFile(absolutePath, normalizedContent, {
+            label: artifactPath2
+          })
+        );
+        if (exists) {
+          warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath2}`);
+        }
+        return {
+          phaseNumber: resolved2.phaseNumber,
+          phasePrefix: resolved2.phasePrefix,
+          phaseName: resolved2.phaseName,
+          phaseDir: resolved2.phaseDir,
           artifact: args.artifact,
-          path: artifactPath,
-          validation,
-          warnings
-        });
-      }
-      warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        artifact: args.artifact,
-        path: artifactPath,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "reused",
-        validation: {
-          valid: validation.valid,
-          issues: validation.issues,
-          warnings: validation.warnings,
-          suggestedRepairs: [],
-          diagnostics: validation.diagnostics
-        },
-        warnings: [...warnings, ...validation.warnings]
-      };
+          path: artifactPath2,
+          written: true,
+          created: !exists,
+          overwritten: exists,
+          status: exists ? "updated" : "created",
+          validation: {
+            valid: validation.valid,
+            issues: validation.issues,
+            warnings: validation.warnings,
+            suggestedRepairs: [],
+            diagnostics: validation.diagnostics
+          },
+          warnings: [...warnings, ...validation.warnings]
+        };
+      });
     }
-    if (!(args.overwrite ?? false) && !isScaffoldGeneratedPhaseArtifact(existingContent)) {
-      throw new Error(
-        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
-      );
-    }
-    if (!(args.overwrite ?? false) && !existingValidation.valid) {
-      warnings.push(`Replacing the existing scaffold ${args.artifact} artifact with authored content.`);
-    } else if (!(args.overwrite ?? false)) {
-      throw new Error(
-        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
-      );
-    }
-  }
-  if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
-    return invalidPhaseArtifactWriteResult({
-      resolved,
-      artifact: args.artifact,
-      path: artifactPath,
-      validation,
-      warnings
-    });
-  }
-  warnings.push(
-    ...await writeTextFile(absolutePath, normalizedContent, {
-      label: artifactPath
-    })
   );
-  if (exists) {
-    warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
-  }
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    artifact: args.artifact,
-    path: artifactPath,
-    written: true,
-    created: !exists,
-    overwritten: exists,
-    status: exists ? "updated" : "created",
-    validation: {
-      valid: validation.valid,
-      issues: validation.issues,
-      warnings: validation.warnings,
-      suggestedRepairs: [],
-      diagnostics: validation.diagnostics
-    },
-    warnings: [...warnings, ...validation.warnings]
-  };
 }
 async function blueprintPhaseUiSkipWrite(args) {
-  const { resolved } = await resolveLocatedPhaseForMutation(args);
-  return blueprintPhaseArtifactWrite({
-    cwd: args.cwd,
-    phase: resolved.phaseNumber,
-    artifact: "ui-spec",
-    content: renderExplicitUiSkipArtifact(resolved, args.skipRationale),
-    overwrite: args.overwrite
-  });
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase UI skip write",
+    async ({ resolved: resolved2 }) => {
+      const artifactPath = artifactPathFor(resolved2, "ui-spec");
+      const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+      const normalizedContent = normalizeTextContent(
+        renderExplicitUiSkipArtifact(resolved2, args.skipRationale)
+      );
+      const validation = validatePhaseArtifactContent(normalizedContent, "ui-spec");
+      return withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
+        const exists = await pathExists(absolutePath);
+        const warnings = [];
+        if (exists) {
+          const existingContent = await fs5.readFile(absolutePath, "utf8");
+          const existingValidation = validatePhaseArtifactContent(existingContent, "ui-spec");
+          if (existingContent === normalizedContent) {
+            if (!validation.valid) {
+              return invalidPhaseArtifactWriteResult({
+                resolved: resolved2,
+                artifact: "ui-spec",
+                path: artifactPath,
+                validation,
+                warnings
+              });
+            }
+            warnings.push("Preserved existing ui-spec artifact because the content was unchanged.");
+            return {
+              phaseNumber: resolved2.phaseNumber,
+              phasePrefix: resolved2.phasePrefix,
+              phaseName: resolved2.phaseName,
+              phaseDir: resolved2.phaseDir,
+              artifact: "ui-spec",
+              path: artifactPath,
+              written: false,
+              created: false,
+              overwritten: false,
+              status: "reused",
+              validation: {
+                valid: validation.valid,
+                issues: validation.issues,
+                warnings: validation.warnings,
+                suggestedRepairs: [],
+                diagnostics: validation.diagnostics
+              },
+              warnings: [...warnings, ...validation.warnings]
+            };
+          }
+          if (!(args.overwrite ?? false) && !isScaffoldGeneratedPhaseArtifact(existingContent)) {
+            throw new Error(
+              `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+            );
+          }
+          if (!(args.overwrite ?? false) && !existingValidation.valid) {
+            warnings.push("Replacing the existing scaffold ui-spec artifact with authored content.");
+          } else if (!(args.overwrite ?? false)) {
+            throw new Error(
+              `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+            );
+          }
+        }
+        if (!validation.valid) {
+          return invalidPhaseArtifactWriteResult({
+            resolved: resolved2,
+            artifact: "ui-spec",
+            path: artifactPath,
+            validation,
+            warnings
+          });
+        }
+        warnings.push(
+          ...await writeTextFile(absolutePath, normalizedContent, {
+            label: artifactPath
+          })
+        );
+        if (exists) {
+          warnings.push(`Replaced existing ui-spec artifact: ${artifactPath}`);
+        }
+        return {
+          phaseNumber: resolved2.phaseNumber,
+          phasePrefix: resolved2.phasePrefix,
+          phaseName: resolved2.phaseName,
+          phaseDir: resolved2.phaseDir,
+          artifact: "ui-spec",
+          path: artifactPath,
+          written: true,
+          created: !exists,
+          overwritten: exists,
+          status: exists ? "updated" : "created",
+          validation: {
+            valid: validation.valid,
+            issues: validation.issues,
+            warnings: validation.warnings,
+            suggestedRepairs: [],
+            diagnostics: validation.diagnostics
+          },
+          warnings: [...warnings, ...validation.warnings]
+        };
+      });
+    }
+  );
 }
 async function blueprintPhaseValidationRead(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -36678,7 +38612,7 @@ async function blueprintPhaseValidationRead(args) {
       reason: `${artifactPath} does not exist yet.`
     };
   }
-  const content = await fs4.readFile(absolutePath, "utf8");
+  const content = await fs5.readFile(absolutePath, "utf8");
   const summaryIndex = await blueprintPhaseSummaryIndex({
     cwd: projectRoot,
     phase: resolved.phaseNumber
@@ -36722,9 +38656,9 @@ async function blueprintPhaseValidationRead(args) {
   };
 }
 async function blueprintPhaseValidationWrite(args) {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   const artifactPath = validationArtifactPathFor(resolved, args.artifact);
-  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
   if (hasContent === hasModel) {
@@ -36765,202 +38699,212 @@ async function blueprintPhaseValidationWrite(args) {
       warnings: []
     };
   }
-  const summaryIndex = await blueprintPhaseSummaryIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  if (!summaryIndex.phaseFound) {
-    throw new Error(
-      `Phase ${resolved.phaseNumber} could not be resolved for validation persistence.`
-    );
-  }
-  const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
+  return withFreshPhaseTopologyForMutation(
     projectRoot,
-    completedSummaryRecords(summaryIndex.summaries, new Set(summaryIndex.completedPlans))
-  );
-  const noUat = await readWorkflowNoUat(projectRoot);
-  const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
-  const shouldSurfaceWarnings = args.artifact !== "verification" || noUat;
-  const warnings = shouldSurfaceWarnings ? [...summaryWarnings] : [];
-  if (summaryPaths.length === 0) {
-    throw new Error(
-      `Phase ${resolved.phaseNumber} does not have any valid execution summaries yet. Run /blu-execute-phase ${resolved.phaseNumber} after fixing summary artifacts before writing ${artifactLabel} artifacts.`
-    );
-  }
-  let normalizedContent;
-  if (hasModel) {
-    const modelValidation = await blueprintPhaseValidationValidateModel({
-      cwd: projectRoot,
-      phase: resolved.phaseNumber,
-      artifact: args.artifact,
-      model: args.model
-    });
-    if (!modelValidation.valid || !modelValidation.renderPreview) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        artifact: args.artifact,
-        path: artifactPath,
-        summaryPaths,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        issues: modelValidation.diagnostics.map(formatPhaseValidationDiagnostic),
-        warnings: shouldSurfaceWarnings ? [...warnings, ...modelValidation.warnings] : []
-      };
-    }
-    normalizedContent = normalizeTextContent(modelValidation.renderPreview);
-  } else {
-    normalizedContent = normalizeTextContent(args.content ?? "");
-  }
-  const exists = await pathExists(absolutePath);
-  const completedSummaryPaths = summaryPaths;
-  const validationSummaryPaths = completedSummaryPaths;
-  const validation = normalizedContent.trim().length === 0 ? {
-    valid: false,
-    issues: [`${args.artifact} content must not be empty.`],
-    warnings: []
-  } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths, { noUat }) : validateUatArtifactContent(normalizedContent, validationSummaryPaths, {
-    requireReadyVerificationEvidence: true
-  });
-  if (args.artifact === "uat") {
-    const verificationPath = validationArtifactPathFor(resolved, "verification");
-    const verificationAbsolutePath = resolveBlueprintPath(projectRoot, verificationPath);
-    if (!await pathExists(verificationAbsolutePath)) {
-      throw new Error(
-        `Phase ${resolved.phaseNumber} must be validated before UAT. Run /blu-validate-phase ${resolved.phaseNumber} first.`
+    args,
+    expectedTopology,
+    "Phase validation write",
+    async ({ resolved: resolved2 }) => {
+      const artifactPath2 = validationArtifactPathFor(resolved2, args.artifact);
+      const absolutePath = resolveBlueprintPath(projectRoot, artifactPath2);
+      const summaryIndex = await blueprintPhaseSummaryIndex({
+        cwd: projectRoot,
+        phase: resolved2.phaseNumber
+      });
+      if (!summaryIndex.phaseFound) {
+        throw new Error(
+          `Phase ${resolved2.phaseNumber} could not be resolved for validation persistence.`
+        );
+      }
+      const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
+        projectRoot,
+        completedSummaryRecords(summaryIndex.summaries, new Set(summaryIndex.completedPlans))
       );
-    }
-    const verificationContent = await fs4.readFile(verificationAbsolutePath, "utf8");
-    const verificationValidation = validateVerificationArtifactContent(
-      verificationContent,
-      completedSummaryPaths,
-      { noUat }
-    );
-    if (!verificationValidation.valid) {
-      throw new Error(
-        `Phase ${resolved.phaseNumber} must have a valid VERIFICATION artifact before UAT. Repair the verification evidence before writing ${artifactLabel} artifacts.`
-      );
-    }
-    if (!isVerificationArtifactReadyForUat(verificationContent)) {
-      throw new Error(
-        `Phase ${resolved.phaseNumber} must have a VERIFICATION artifact that is ready for UAT before writing ${artifactLabel} artifacts. Repair the verification evidence before writing ${artifactLabel} artifacts.`
-      );
-    }
-  }
-  if (exists) {
-    const existingContent = await fs4.readFile(absolutePath, "utf8");
-    const existingReferencedSummaryPaths = collectReferencedValidatedSummaryPaths(
-      existingContent,
-      summaryIndex.summaries,
-      new Set(summaryIndex.completedPlans)
-    );
-    const existingValidation = args.artifact === "verification" ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths, {
-      noUat
-    }) : validateUatArtifactContent(existingContent, validationSummaryPaths, {
-      requireReadyVerificationEvidence: true
-    });
-    const existingUatState = args.artifact === "uat" ? readUatArtifactState(existingContent) : null;
-    const nextUatState = args.artifact === "uat" ? readUatArtifactState(normalizedContent) : null;
-    if (existingContent === normalizedContent) {
+      const noUat = await readWorkflowNoUat(projectRoot);
+      const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
+      const shouldSurfaceWarnings = args.artifact !== "verification" || noUat;
+      const warnings = shouldSurfaceWarnings ? [...summaryWarnings] : [];
+      if (summaryPaths.length === 0) {
+        throw new Error(
+          `Phase ${resolved2.phaseNumber} does not have any valid execution summaries yet. Run /blu-execute-phase ${resolved2.phaseNumber} after fixing summary artifacts before writing ${artifactLabel} artifacts.`
+        );
+      }
+      let normalizedContent;
+      if (hasModel) {
+        const modelValidation = await blueprintPhaseValidationValidateModel({
+          cwd: projectRoot,
+          phase: resolved2.phaseNumber,
+          artifact: args.artifact,
+          model: args.model
+        });
+        if (!modelValidation.valid || !modelValidation.renderPreview) {
+          return {
+            phaseNumber: resolved2.phaseNumber,
+            phasePrefix: resolved2.phasePrefix,
+            phaseName: resolved2.phaseName,
+            phaseDir: resolved2.phaseDir,
+            artifact: args.artifact,
+            path: artifactPath2,
+            summaryPaths,
+            written: false,
+            created: false,
+            overwritten: false,
+            status: "invalid",
+            issues: modelValidation.diagnostics.map(formatPhaseValidationDiagnostic),
+            warnings: shouldSurfaceWarnings ? [...warnings, ...modelValidation.warnings] : []
+          };
+        }
+        normalizedContent = normalizeTextContent(modelValidation.renderPreview);
+      } else {
+        normalizedContent = normalizeTextContent(args.content ?? "");
+      }
+      const exists = await pathExists(absolutePath);
+      const completedSummaryPaths = summaryPaths;
+      const validationSummaryPaths = completedSummaryPaths;
+      const validation = normalizedContent.trim().length === 0 ? {
+        valid: false,
+        issues: [`${args.artifact} content must not be empty.`],
+        warnings: []
+      } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths, { noUat }) : validateUatArtifactContent(normalizedContent, validationSummaryPaths, {
+        requireReadyVerificationEvidence: true
+      });
+      if (args.artifact === "uat") {
+        const verificationPath = validationArtifactPathFor(resolved2, "verification");
+        const verificationAbsolutePath = resolveBlueprintPath(projectRoot, verificationPath);
+        if (!await pathExists(verificationAbsolutePath)) {
+          throw new Error(
+            `Phase ${resolved2.phaseNumber} must be validated before UAT. Run /blu-validate-phase ${resolved2.phaseNumber} first.`
+          );
+        }
+        const verificationContent = await fs5.readFile(verificationAbsolutePath, "utf8");
+        const verificationValidation = validateVerificationArtifactContent(
+          verificationContent,
+          completedSummaryPaths,
+          { noUat }
+        );
+        if (!verificationValidation.valid) {
+          throw new Error(
+            `Phase ${resolved2.phaseNumber} must have a valid VERIFICATION artifact before UAT. Repair the verification evidence before writing ${artifactLabel} artifacts.`
+          );
+        }
+        if (!isVerificationArtifactReadyForUat(verificationContent)) {
+          throw new Error(
+            `Phase ${resolved2.phaseNumber} must have a VERIFICATION artifact that is ready for UAT before writing ${artifactLabel} artifacts. Repair the verification evidence before writing ${artifactLabel} artifacts.`
+          );
+        }
+      }
+      if (exists) {
+        const existingContent = await fs5.readFile(absolutePath, "utf8");
+        const existingReferencedSummaryPaths = collectReferencedValidatedSummaryPaths(
+          existingContent,
+          summaryIndex.summaries,
+          new Set(summaryIndex.completedPlans)
+        );
+        const existingValidation = args.artifact === "verification" ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths, {
+          noUat
+        }) : validateUatArtifactContent(existingContent, validationSummaryPaths, {
+          requireReadyVerificationEvidence: true
+        });
+        const existingUatState = args.artifact === "uat" ? readUatArtifactState(existingContent) : null;
+        const nextUatState = args.artifact === "uat" ? readUatArtifactState(normalizedContent) : null;
+        if (existingContent === normalizedContent) {
+          if (!validation.valid) {
+            return {
+              phaseNumber: resolved2.phaseNumber,
+              phasePrefix: resolved2.phasePrefix,
+              phaseName: resolved2.phaseName,
+              phaseDir: resolved2.phaseDir,
+              artifact: args.artifact,
+              path: artifactPath2,
+              summaryPaths: validationSummaryPaths,
+              written: false,
+              created: false,
+              overwritten: false,
+              status: "invalid",
+              issues: validation.issues,
+              warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
+            };
+          }
+          if (shouldSurfaceWarnings) {
+            warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+          }
+          if (args.artifact === "uat" || args.artifact === "verification" && noUat) {
+            warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved2, { noUat }));
+          }
+          return {
+            phaseNumber: resolved2.phaseNumber,
+            phasePrefix: resolved2.phasePrefix,
+            phaseName: resolved2.phaseName,
+            phaseDir: resolved2.phaseDir,
+            artifact: args.artifact,
+            path: artifactPath2,
+            summaryPaths: validationSummaryPaths,
+            written: false,
+            created: false,
+            overwritten: false,
+            status: "reused",
+            issues: validation.issues,
+            warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
+          };
+        }
+        const resumableUatContinuation = args.artifact === "uat" && existingValidation.valid && existingUatState !== null && !existingUatState.complete && nextUatState !== null && !nextUatState.complete && nextUatState.resumeState !== "NEW";
+        if (!(args.overwrite ?? false) && !resumableUatContinuation) {
+          throw new Error(
+            `${artifactPath2} already exists. Re-run only after explicit overwrite confirmation.`
+          );
+        }
+        if (resumableUatContinuation) {
+          warnings.push(
+            `Continuing the existing incomplete UAT artifact at ${artifactPath2} without the replace path because the saved pass remains resumable.`
+          );
+        }
+      }
       if (!validation.valid) {
         return {
-          phaseNumber: resolved.phaseNumber,
-          phasePrefix: resolved.phasePrefix,
-          phaseName: resolved.phaseName,
-          phaseDir: resolved.phaseDir,
+          phaseNumber: resolved2.phaseNumber,
+          phasePrefix: resolved2.phasePrefix,
+          phaseName: resolved2.phaseName,
+          phaseDir: resolved2.phaseDir,
           artifact: args.artifact,
-          path: artifactPath,
+          path: artifactPath2,
           summaryPaths: validationSummaryPaths,
           written: false,
           created: false,
           overwritten: false,
           status: "invalid",
           issues: validation.issues,
-          warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
+          warnings: [...warnings, ...validation.warnings]
         };
       }
+      const persistenceWarnings = await writeTextFile(absolutePath, normalizedContent, {
+        label: artifactPath2
+      });
       if (shouldSurfaceWarnings) {
-        warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+        warnings.push(...persistenceWarnings);
+      }
+      if (exists && shouldSurfaceWarnings) {
+        warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath2}`);
       }
       if (args.artifact === "uat" || args.artifact === "verification" && noUat) {
-        warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved, { noUat }));
+        warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved2, { noUat }));
       }
       return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
+        phaseNumber: resolved2.phaseNumber,
+        phasePrefix: resolved2.phasePrefix,
+        phaseName: resolved2.phaseName,
+        phaseDir: resolved2.phaseDir,
         artifact: args.artifact,
-        path: artifactPath,
+        path: artifactPath2,
         summaryPaths: validationSummaryPaths,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "reused",
+        written: true,
+        created: !exists,
+        overwritten: exists,
+        status: exists ? "updated" : "created",
         issues: validation.issues,
         warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
       };
     }
-    const resumableUatContinuation = args.artifact === "uat" && existingValidation.valid && existingUatState !== null && !existingUatState.complete && nextUatState !== null && !nextUatState.complete && nextUatState.resumeState !== "NEW";
-    if (!(args.overwrite ?? false) && !resumableUatContinuation) {
-      throw new Error(
-        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
-      );
-    }
-    if (resumableUatContinuation) {
-      warnings.push(
-        `Continuing the existing incomplete UAT artifact at ${artifactPath} without the replace path because the saved pass remains resumable.`
-      );
-    }
-  }
-  if (!validation.valid) {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      artifact: args.artifact,
-      path: artifactPath,
-      summaryPaths: validationSummaryPaths,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      issues: validation.issues,
-      warnings: [...warnings, ...validation.warnings]
-    };
-  }
-  const persistenceWarnings = await writeTextFile(absolutePath, normalizedContent, {
-    label: artifactPath
-  });
-  if (shouldSurfaceWarnings) {
-    warnings.push(...persistenceWarnings);
-  }
-  if (exists && shouldSurfaceWarnings) {
-    warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
-  }
-  if (args.artifact === "uat" || args.artifact === "verification" && noUat) {
-    warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved, { noUat }));
-  }
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    artifact: args.artifact,
-    path: artifactPath,
-    summaryPaths: validationSummaryPaths,
-    written: true,
-    created: !exists,
-    overwritten: exists,
-    status: exists ? "updated" : "created",
-    issues: validation.issues,
-    warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
-  };
+  );
 }
 async function buildPhasePlanIndexFromResolved(input) {
   const { projectRoot, resolved } = input;
@@ -36971,13 +38915,15 @@ async function buildPhasePlanIndexFromResolved(input) {
   const knownPlanIds = /* @__PURE__ */ new Set();
   const gapClosurePlans = /* @__PURE__ */ new Set();
   for (const planPath of planPaths) {
-    const planId2 = parsePlanArtifactPath(planPath, resolved.phasePrefix);
+    const planId2 = parseCanonicalPlanArtifactPath(planPath, resolved);
     if (!planId2) {
-      warnings.push(`Ignoring non-canonical plan artifact name: ${planPath}`);
+      if (path10.posix.dirname(planPath) === resolved.phaseDir) {
+        warnings.push(`Ignoring non-canonical plan artifact name: ${planPath}`);
+      }
       continue;
     }
     knownPlanIds.add(planId2);
-    const content = await fs4.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record2 = toPhasePlanRecord(planId2, planPath, content, resolved.phaseNumber);
     const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record2.dependsOn);
     if (dependencyIssues.length > 0) {
@@ -37094,7 +39040,7 @@ async function readPhasePlanFromResolved(args) {
       reason: `${pathValue} does not exist yet.`
     };
   }
-  const content = await fs4.readFile(absolutePath, "utf8");
+  const content = await fs5.readFile(absolutePath, "utf8");
   const record2 = toPhasePlanRecord(planId2, pathValue, content, resolved.phaseNumber);
   const dependencyIssues = collectInvalidPlanDependencyIssues(pathValue, record2.dependsOn);
   return {
@@ -37265,7 +39211,7 @@ async function blueprintPhasePlanReadiness(args = {}) {
       buildReadinessHashEntry({
         pathValue: resolved.phaseDir,
         kind: "phase.artifact.inventory",
-        value: snapshot.artifacts
+        value: canonicalPhaseReadinessInventory(snapshot.artifacts, resolved)
       })
     );
     planIndex = await buildPhasePlanIndexFromResolved({
@@ -37403,9 +39349,7 @@ async function blueprintPhasePlanReadiness(args = {}) {
       validationEvidence.content = validationReads.map((read) => read.body.content).filter((value) => Boolean(value)).join("\n\n");
     }
   }
-  const reviewPath = context.phase?.artifacts.all.find(
-    (artifact) => artifact.endsWith("-REVIEW.md") && !artifact.endsWith("-UI-REVIEW.md")
-  ) ?? null;
+  const reviewPath = expectedArtifactPaths?.review && context.phase?.artifacts.all.includes(expectedArtifactPaths.review) ? expectedArtifactPaths.review : null;
   if (expectedArtifactPaths?.review && !reviewPath) {
     const missingRead = await readReadinessPath({
       projectRoot,
@@ -37611,86 +39555,66 @@ async function blueprintPhasePlanValidateModel(args) {
   return trimPhasePlanStandaloneValidateModelResult(enhancedValidation);
 }
 async function blueprintPhasePlanWrite(args) {
-  const { projectRoot, resolved: initialResolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved: initialResolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(initialResolved, matchedPhase);
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
   const modelOnly = args.authoringMode === "model-only";
   const strictValidation = (args.validationMode ?? "strict") === "strict";
   const shouldReturnPlanSetValidation = args.returnPlanSetValidation ?? hasModel;
-  return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
-    let freshness;
-    const lockedSnapshot = await resolvePhaseRuntimeSnapshot({
-      cwd: projectRoot,
-      phase: initialResolved.phaseNumber
-    });
-    const resolved = lockedSnapshot.resolved;
-    if (!resolved) {
-      throw new Error(lockedSnapshot.located.reason ?? "Phase could not be resolved for plan writing.");
-    }
-    const existingIndex = await buildPhasePlanIndexFromResolved({
-      projectRoot,
-      resolved,
-      artifacts: lockedSnapshot.artifacts
-    });
-    const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(
-      ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
-    ) + 1;
-    const planId2 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
-    const pathValue = planPathFor(resolved, planId2);
-    const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
-    if (hasContent === hasModel) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        planId: planId2,
-        path: pathValue,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        validation: {
-          valid: false,
-          issues: ["Phase plan writes must supply exactly one of content or model."],
-          warnings: []
-        },
-        warnings: []
-      };
-    }
-    if (modelOnly && hasContent) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        planId: planId2,
-        path: pathValue,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        validation: {
-          valid: false,
-          issues: [
-            "Phase plan model-only writes must supply the validated structured model, not Markdown content."
-          ],
-          warnings: []
-        },
-        warnings: []
-      };
-    }
-    if (args.expectedReadSet && args.expectedReadSet.length > 0) {
-      const readiness = await blueprintPhasePlanReadiness({
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase plan write",
+    async ({ resolved: latestResolved }) => withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
+      let freshness;
+      const lockedSnapshot = await resolvePhaseRuntimeSnapshot({
         cwd: projectRoot,
-        phase: resolved.phaseNumber,
-        planId: planId2,
-        readMode: "hashes-only",
-        includeSavedPlanBodies: "target",
-        previousReadSet: args.expectedReadSet
+        phase: latestResolved.phaseNumber
       });
-      freshness = readiness.freshness;
-      if (!readiness.freshness.fresh) {
+      const resolved = lockedSnapshot.resolved;
+      if (!resolved) {
+        throw new Error(lockedSnapshot.located.reason ?? "Phase could not be resolved for plan writing.");
+      }
+      assertFreshPhaseTopology({
+        operation: "Phase plan write",
+        expected: expectedTopology,
+        resolved,
+        matchedPhase: lockedSnapshot.matchedPhase
+      });
+      const existingIndex = await buildPhasePlanIndexFromResolved({
+        projectRoot,
+        resolved,
+        artifacts: lockedSnapshot.artifacts
+      });
+      const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(
+        ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
+      ) + 1;
+      const planId2 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
+      const pathValue = planPathFor(resolved, planId2);
+      const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+      if (hasContent === hasModel) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId: planId2,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          validation: {
+            valid: false,
+            issues: ["Phase plan writes must supply exactly one of content or model."],
+            warnings: []
+          },
+          warnings: []
+        };
+      }
+      if (modelOnly && hasContent) {
         return {
           phaseNumber: resolved.phaseNumber,
           phasePrefix: resolved.phasePrefix,
@@ -37705,29 +39629,112 @@ async function blueprintPhasePlanWrite(args) {
           validation: {
             valid: false,
             issues: [
-              `Read-set freshness check failed for: ${readiness.freshness.stalePaths.join(", ")}.`
+              "Phase plan model-only writes must supply the validated structured model, not Markdown content."
             ],
-            warnings: readiness.warnings
+            warnings: []
           },
-          completionReady: false,
-          incrementalCheckpoint: false,
-          freshness: readiness.freshness,
-          warnings: readiness.warnings
+          warnings: []
         };
       }
-    }
-    let normalizedContent;
-    let modelCoverageIssues = [];
-    let modelWarnings = [];
-    let modelValidation = null;
-    if (hasModel) {
-      const authoringContext = await buildPhasePlanAuthoringContextData({
-        snapshot: lockedSnapshot,
-        planId: planId2
+      if (args.expectedReadSet && args.expectedReadSet.length > 0) {
+        const readiness = await blueprintPhasePlanReadiness({
+          cwd: projectRoot,
+          phase: resolved.phaseNumber,
+          planId: planId2,
+          readMode: "hashes-only",
+          includeSavedPlanBodies: "target",
+          previousReadSet: args.expectedReadSet
+        });
+        freshness = readiness.freshness;
+        if (!readiness.freshness.fresh) {
+          return {
+            phaseNumber: resolved.phaseNumber,
+            phasePrefix: resolved.phasePrefix,
+            phaseName: resolved.phaseName,
+            phaseDir: resolved.phaseDir,
+            planId: planId2,
+            path: pathValue,
+            written: false,
+            created: false,
+            overwritten: false,
+            status: "invalid",
+            validation: {
+              valid: false,
+              issues: [
+                `Read-set freshness check failed for: ${readiness.freshness.stalePaths.join(", ")}.`
+              ],
+              warnings: readiness.warnings
+            },
+            completionReady: false,
+            incrementalCheckpoint: false,
+            freshness: readiness.freshness,
+            warnings: readiness.warnings
+          };
+        }
+      }
+      let normalizedContent;
+      let modelCoverageIssues = [];
+      let modelWarnings = [];
+      let modelValidation = null;
+      if (hasModel) {
+        const authoringContext = await buildPhasePlanAuthoringContextData({
+          snapshot: lockedSnapshot,
+          planId: planId2
+        });
+        const modelRender = await phasePlanModelToContent(args.model, authoringContext);
+        modelValidation = trimPhasePlanWriteModelValidation(modelRender.validation);
+        if (!modelRender.content) {
+          return {
+            phaseNumber: resolved.phaseNumber,
+            phasePrefix: resolved.phasePrefix,
+            phaseName: resolved.phaseName,
+            phaseDir: resolved.phaseDir,
+            planId: planId2,
+            path: pathValue,
+            written: false,
+            created: false,
+            overwritten: false,
+            status: "invalid",
+            validation: {
+              valid: false,
+              issues: modelRender.issues,
+              warnings: modelRender.warnings
+            },
+            modelValidation,
+            warnings: modelRender.warnings
+          };
+        }
+        normalizedContent = normalizeTextContent(modelRender.content);
+        modelCoverageIssues = modelRender.issues;
+        modelWarnings = modelRender.warnings;
+      } else {
+        normalizedContent = normalizeTextContent(args.content ?? "");
+      }
+      const contentForValidation = !hasModel && args.planId === void 0 ? reconcileAutoAssignedPlanContent(normalizedContent, planId2) : normalizedContent;
+      const preparedContent = prepareTextForPersistence(contentForValidation, {
+        label: pathValue
       });
-      const modelRender = await phasePlanModelToContent(args.model, authoringContext);
-      modelValidation = trimPhasePlanWriteModelValidation(modelRender.validation);
-      if (!modelRender.content) {
+      const validation = validatePlanArtifactContent(preparedContent.content, resolved.phaseNumber, {
+        strict: strictValidation
+      });
+      const contentValidationIssues = partitionPhasePlanMarkdownValidationIssues(validation.issues);
+      const dependencyIssues = collectInvalidPlanDependencyIssues(
+        pathValue,
+        validation.metadata.dependsOn
+      );
+      const normalizedFrontmatterPlanId = validation.metadata.planId && /^\d+$/.test(validation.metadata.planId) ? normalizePlanId(validation.metadata.planId) : null;
+      const validationIssues = [
+        ...modelCoverageIssues,
+        ...contentValidationIssues.blockingIssues,
+        ...dependencyIssues
+      ];
+      const warnings = [
+        ...modelWarnings,
+        ...preparedContent.warnings,
+        ...contentValidationIssues.warningIssues,
+        ...validation.warnings
+      ];
+      if (dependencyIssues.length > 0 && strictValidation) {
         return {
           phaseNumber: resolved.phaseNumber,
           phasePrefix: resolved.phasePrefix,
@@ -37741,165 +39748,14 @@ async function blueprintPhasePlanWrite(args) {
           status: "invalid",
           validation: {
             valid: false,
-            issues: modelRender.issues,
-            warnings: modelRender.warnings
+            issues: validationIssues,
+            warnings
           },
-          modelValidation,
-          warnings: modelRender.warnings
+          warnings: dependencyIssues
         };
       }
-      normalizedContent = normalizeTextContent(modelRender.content);
-      modelCoverageIssues = modelRender.issues;
-      modelWarnings = modelRender.warnings;
-    } else {
-      normalizedContent = normalizeTextContent(args.content ?? "");
-    }
-    const contentForValidation = !hasModel && args.planId === void 0 ? reconcileAutoAssignedPlanContent(normalizedContent, planId2) : normalizedContent;
-    const preparedContent = prepareTextForPersistence(contentForValidation, {
-      label: pathValue
-    });
-    const validation = validatePlanArtifactContent(preparedContent.content, resolved.phaseNumber, {
-      strict: strictValidation
-    });
-    const contentValidationIssues = partitionPhasePlanMarkdownValidationIssues(validation.issues);
-    const dependencyIssues = collectInvalidPlanDependencyIssues(
-      pathValue,
-      validation.metadata.dependsOn
-    );
-    const normalizedFrontmatterPlanId = validation.metadata.planId && /^\d+$/.test(validation.metadata.planId) ? normalizePlanId(validation.metadata.planId) : null;
-    const validationIssues = [
-      ...modelCoverageIssues,
-      ...contentValidationIssues.blockingIssues,
-      ...dependencyIssues
-    ];
-    const warnings = [
-      ...modelWarnings,
-      ...preparedContent.warnings,
-      ...contentValidationIssues.warningIssues,
-      ...validation.warnings
-    ];
-    if (dependencyIssues.length > 0 && strictValidation) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        planId: planId2,
-        path: pathValue,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        validation: {
-          valid: false,
-          issues: validationIssues,
-          warnings
-        },
-        warnings: dependencyIssues
-      };
-    }
-    if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId2) {
-      const issue2 = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId2}".`;
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        planId: planId2,
-        path: pathValue,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        validation: {
-          valid: false,
-          issues: [...contentValidationIssues.blockingIssues, issue2],
-          warnings
-        },
-        warnings: []
-      };
-    }
-    if (modelCoverageIssues.length > 0) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        planId: planId2,
-        path: pathValue,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        validation: {
-          valid: false,
-          issues: validationIssues,
-          warnings
-        },
-        modelValidation,
-        warnings
-      };
-    }
-    if (contentValidationIssues.blockingIssues.length > 0 && strictValidation) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        planId: planId2,
-        path: pathValue,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        validation: {
-          valid: false,
-          issues: validationIssues,
-          warnings
-        },
-        warnings
-      };
-    }
-    const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
-      overrides: /* @__PURE__ */ new Map([[pathValue, preparedContent.content]]),
-      roadmapCoverageSeverity: "warning"
-    });
-    const blockingIssues = selectRelevantPlanValidationIssues(
-      prospectiveValidation,
-      pathValue,
-      planId2
-    );
-    if (blockingIssues.length > 0 && strictValidation) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        planId: planId2,
-        path: pathValue,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        validation: {
-          valid: false,
-          issues: blockingIssues,
-          warnings: prospectiveValidation.warnings
-        },
-        ...phasePlanWriteCompletionFields({
-          prospectiveValidation,
-          includeSummary: shouldReturnPlanSetValidation,
-          saved: false
-        }),
-        warnings: [...warnings, ...prospectiveValidation.warnings]
-      };
-    }
-    const exists = await pathExists(absolutePath);
-    const normalizePersistedText = (value) => value.replace(/\r\n/g, "\n").replace(/^---\n([\s\S]*?)\n---\n+/, "---\n$1\n---\n").trimEnd();
-    if (exists) {
-      const existingContent = await fs4.readFile(absolutePath, "utf8");
-      if (normalizePersistedText(existingContent) === normalizePersistedText(preparedContent.content)) {
-        warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
+      if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId2) {
+        const issue2 = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId2}".`;
         return {
           phaseNumber: resolved.phaseNumber,
           phasePrefix: resolved.phasePrefix,
@@ -37910,74 +39766,175 @@ async function blueprintPhasePlanWrite(args) {
           written: false,
           created: false,
           overwritten: false,
-          status: "reused",
+          status: "invalid",
           validation: {
-            valid: blockingIssues.length === 0,
-            issues: blockingIssues,
-            warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
+            valid: false,
+            issues: [...contentValidationIssues.blockingIssues, issue2],
+            warnings
+          },
+          warnings: []
+        };
+      }
+      if (modelCoverageIssues.length > 0) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId: planId2,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          validation: {
+            valid: false,
+            issues: validationIssues,
+            warnings
           },
           modelValidation,
+          warnings
+        };
+      }
+      if (contentValidationIssues.blockingIssues.length > 0 && strictValidation) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId: planId2,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          validation: {
+            valid: false,
+            issues: validationIssues,
+            warnings
+          },
+          warnings
+        };
+      }
+      const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
+        overrides: /* @__PURE__ */ new Map([[pathValue, preparedContent.content]]),
+        roadmapCoverageSeverity: "warning"
+      });
+      const blockingIssues = selectRelevantPlanValidationIssues(
+        prospectiveValidation,
+        pathValue,
+        planId2
+      );
+      if (blockingIssues.length > 0 && strictValidation) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId: planId2,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          validation: {
+            valid: false,
+            issues: blockingIssues,
+            warnings: prospectiveValidation.warnings
+          },
           ...phasePlanWriteCompletionFields({
             prospectiveValidation,
             includeSummary: shouldReturnPlanSetValidation,
-            saved: true
+            saved: false
           }),
-          ...freshness ? { freshness } : {},
-          ...args.returnNextAuthoringContext ? {
-            nextAuthoringContext: await blueprintPhasePlanAuthoringContext({
-              cwd: projectRoot,
-              phase: resolved.phaseNumber
-            })
-          } : {},
           warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
-      if (!(args.overwrite ?? false)) {
-        throw new Error(
-          `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
-        );
+      const exists = await pathExists(absolutePath);
+      const normalizePersistedText = (value) => value.replace(/\r\n/g, "\n").replace(/^---\n([\s\S]*?)\n---\n+/, "---\n$1\n---\n").trimEnd();
+      if (exists) {
+        const existingContent = await fs5.readFile(absolutePath, "utf8");
+        if (normalizePersistedText(existingContent) === normalizePersistedText(preparedContent.content)) {
+          warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
+          return {
+            phaseNumber: resolved.phaseNumber,
+            phasePrefix: resolved.phasePrefix,
+            phaseName: resolved.phaseName,
+            phaseDir: resolved.phaseDir,
+            planId: planId2,
+            path: pathValue,
+            written: false,
+            created: false,
+            overwritten: false,
+            status: "reused",
+            validation: {
+              valid: blockingIssues.length === 0,
+              issues: blockingIssues,
+              warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
+            },
+            modelValidation,
+            ...phasePlanWriteCompletionFields({
+              prospectiveValidation,
+              includeSummary: shouldReturnPlanSetValidation,
+              saved: true
+            }),
+            ...freshness ? { freshness } : {},
+            ...args.returnNextAuthoringContext ? {
+              nextAuthoringContext: await blueprintPhasePlanAuthoringContext({
+                cwd: projectRoot,
+                phase: resolved.phaseNumber
+              })
+            } : {},
+            warnings: [...warnings, ...prospectiveValidation.warnings]
+          };
+        }
+        if (!(args.overwrite ?? false)) {
+          throw new Error(
+            `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
+          );
+        }
       }
-    }
-    warnings.push(
-      ...await writeTextFile(absolutePath, preparedContent.content, {
-        label: pathValue
-      })
-    );
-    if (exists) {
-      warnings.push(`Replaced existing plan artifact: ${pathValue}`);
-    }
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId: planId2,
-      path: pathValue,
-      written: true,
-      created: !exists,
-      overwritten: exists,
-      status: exists ? "updated" : "created",
-      validation: {
-        valid: blockingIssues.length === 0,
-        issues: blockingIssues,
-        warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
-      },
-      modelValidation,
-      ...phasePlanWriteCompletionFields({
-        prospectiveValidation,
-        includeSummary: shouldReturnPlanSetValidation,
-        saved: true
-      }),
-      ...freshness ? { freshness } : {},
-      ...args.returnNextAuthoringContext ? {
-        nextAuthoringContext: await blueprintPhasePlanAuthoringContext({
-          cwd: projectRoot,
-          phase: resolved.phaseNumber
+      warnings.push(
+        ...await writeTextFile(absolutePath, preparedContent.content, {
+          label: pathValue
         })
-      } : {},
-      warnings: [...warnings, ...prospectiveValidation.warnings]
-    };
-  });
+      );
+      if (exists) {
+        warnings.push(`Replaced existing plan artifact: ${pathValue}`);
+      }
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId: planId2,
+        path: pathValue,
+        written: true,
+        created: !exists,
+        overwritten: exists,
+        status: exists ? "updated" : "created",
+        validation: {
+          valid: blockingIssues.length === 0,
+          issues: blockingIssues,
+          warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
+        },
+        modelValidation,
+        ...phasePlanWriteCompletionFields({
+          prospectiveValidation,
+          includeSummary: shouldReturnPlanSetValidation,
+          saved: true
+        }),
+        ...freshness ? { freshness } : {},
+        ...args.returnNextAuthoringContext ? {
+          nextAuthoringContext: await blueprintPhasePlanAuthoringContext({
+            cwd: projectRoot,
+            phase: resolved.phaseNumber
+          })
+        } : {},
+        warnings: [...warnings, ...prospectiveValidation.warnings]
+      };
+    })
+  );
 }
 async function blueprintPhaseSummaryIndex(args = {}) {
   const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
@@ -38003,12 +39960,14 @@ async function blueprintPhaseSummaryIndex(args = {}) {
 }
 async function resolvePhaseSummaryAuthoringData(args) {
   const planId2 = normalizePlanId(args.planId);
-  const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved, matchedPhase } = snapshot;
   if (!resolved) {
     return {
       projectRoot,
       located,
       resolved: null,
+      matchedPhase,
       planId: planId2,
       summaryPath: null,
       planRead: null,
@@ -38042,6 +40001,7 @@ async function resolvePhaseSummaryAuthoringData(args) {
     projectRoot,
     located,
     resolved,
+    matchedPhase,
     planId: planId2,
     summaryPath: summaryPathFor(resolved, planId2),
     planRead,
@@ -38765,6 +40725,7 @@ async function blueprintPhaseSummaryWrite(args) {
   }
   const { projectRoot, resolved } = data;
   const {
+    matchedPhase,
     planId: planId2,
     summaryPath: summaryPath2,
     planRead,
@@ -38776,6 +40737,7 @@ async function blueprintPhaseSummaryWrite(args) {
     missingDependencyPlans
   } = data;
   const pathValue = summaryPath2 ?? summaryPathFor(resolved, planId2);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   const prerequisites = buildPhaseSummaryAuthoringPrerequisites({
     resolved,
     planId: planId2,
@@ -38810,6 +40772,8 @@ async function blueprintPhaseSummaryWrite(args) {
       warnings: plan.validation?.warnings ?? []
     };
   }
+  const linkedPlanPath = plan.path ?? prerequisites.linkedPlanPath;
+  const expectedLinkedPlanHash = plan.content === null ? null : hashString(plan.content);
   if (missingDependencyPlans.length > 0) {
     return {
       phaseNumber: resolved.phaseNumber,
@@ -38818,18 +40782,17 @@ async function blueprintPhaseSummaryWrite(args) {
       phaseDir: resolved.phaseDir,
       planId: planId2,
       path: pathValue,
-      linkedPlanPath: plan.path,
+      linkedPlanPath,
       written: false,
       created: false,
       overwritten: false,
       status: "invalid",
       issues: [
-        `${plan.path}: linked plan is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}`
+        `${linkedPlanPath}: linked plan is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}`
       ],
       warnings: plan.validation?.warnings ?? []
     };
   }
-  const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
   if (hasContent === hasModel) {
@@ -38840,7 +40803,7 @@ async function blueprintPhaseSummaryWrite(args) {
       phaseDir: resolved.phaseDir,
       planId: planId2,
       path: pathValue,
-      linkedPlanPath: plan.path,
+      linkedPlanPath,
       written: false,
       created: false,
       overwritten: false,
@@ -38865,7 +40828,7 @@ async function blueprintPhaseSummaryWrite(args) {
         phaseDir: resolved.phaseDir,
         planId: planId2,
         path: pathValue,
-        linkedPlanPath: plan.path,
+        linkedPlanPath,
         written: false,
         created: false,
         overwritten: false,
@@ -38899,7 +40862,7 @@ async function blueprintPhaseSummaryWrite(args) {
         phaseDir: resolved.phaseDir,
         planId: planId2,
         path: pathValue,
-        linkedPlanPath: plan.path,
+        linkedPlanPath,
         written: false,
         created: false,
         overwritten: false,
@@ -38927,7 +40890,7 @@ async function blueprintPhaseSummaryWrite(args) {
         model: normalizedModel,
         resolved,
         planId: planId2,
-        linkedPlanPath: plan.path,
+        linkedPlanPath,
         summaryPath: pathValue
       })
     );
@@ -38946,7 +40909,7 @@ async function blueprintPhaseSummaryWrite(args) {
   }
   if (summaryStatus === "COMPLETED" && prerequisites.unsatisfiedDependencyPlans.length > 0) {
     writeModeIssues.push(
-      `${plan.path}: depends on incomplete execution plan(s): ${prerequisites.unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Readiness, Completion State, Next Safe Action, Verification, Gap / Repair Routes, and Follow-Ups to match, and keep the dependency blocker explicit until those dependency summaries exist.`
+      `${linkedPlanPath}: depends on incomplete execution plan(s): ${prerequisites.unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Readiness, Completion State, Next Safe Action, Verification, Gap / Repair Routes, and Follow-Ups to match, and keep the dependency blocker explicit until those dependency summaries exist.`
     );
   }
   if (writeModeIssues.length > 0) {
@@ -38957,7 +40920,7 @@ async function blueprintPhaseSummaryWrite(args) {
       phaseDir: resolved.phaseDir,
       planId: planId2,
       path: pathValue,
-      linkedPlanPath: plan.path,
+      linkedPlanPath,
       written: false,
       created: false,
       overwritten: false,
@@ -38971,7 +40934,7 @@ async function blueprintPhaseSummaryWrite(args) {
     };
   }
   const strictValidation = validateStrictSummaryArtifactContent(normalizedContent, {
-    linkedPlanPath: plan.path,
+    linkedPlanPath,
     requirePlanMarker: true
   });
   const completedRoute = completedRouteAfterSelectedCompletion({
@@ -38998,7 +40961,6 @@ async function blueprintPhaseSummaryWrite(args) {
   };
   const issues = normalizedContent.trim().length === 0 ? ["Execution summary content must not be empty."] : validation.issues;
   const warnings = [...validation.warnings];
-  const exists = await pathExists(absolutePath);
   if (!validation.valid) {
     return {
       phaseNumber: resolved.phaseNumber,
@@ -39007,7 +40969,7 @@ async function blueprintPhaseSummaryWrite(args) {
       phaseDir: resolved.phaseDir,
       planId: planId2,
       path: pathValue,
-      linkedPlanPath: plan.path,
+      linkedPlanPath,
       written: false,
       created: false,
       overwritten: false,
@@ -39016,55 +40978,91 @@ async function blueprintPhaseSummaryWrite(args) {
       warnings: [...modelWarnings, ...warnings]
     };
   }
-  if (exists) {
-    const existingContent = await fs4.readFile(absolutePath, "utf8");
-    if (existingContent === normalizedContent) {
-      warnings.push(`Preserved existing summary artifact because the content was unchanged.`);
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase summary write",
+    async ({ resolved: resolved2 }) => withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
+      const lockedPlan = await readPhasePlanFromResolved({
+        projectRoot,
+        resolved: resolved2,
+        planId: planId2
+      });
+      const lockedPlanHash = lockedPlan.content === null ? null : hashString(lockedPlan.content);
+      if (!lockedPlan.found || !lockedPlan.path || lockedPlan.path !== linkedPlanPath || lockedPlanHash !== expectedLinkedPlanHash) {
+        return {
+          phaseNumber: resolved2.phaseNumber,
+          phasePrefix: resolved2.phasePrefix,
+          phaseName: resolved2.phaseName,
+          phaseDir: resolved2.phaseDir,
+          planId: planId2,
+          path: summaryPathFor(resolved2, planId2),
+          linkedPlanPath,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          issues: [
+            `${linkedPlanPath}: linked plan changed since summary authoring context was read. Re-read blueprint_phase_summary_authoring_context and retry before writing the summary.`
+          ],
+          warnings: [...modelWarnings, ...warnings]
+        };
+      }
+      const lockedPathValue = summaryPathFor(resolved2, planId2);
+      const absolutePath = resolveBlueprintPath(projectRoot, lockedPathValue);
+      const exists = await pathExists(absolutePath);
+      if (exists) {
+        const existingContent = await fs5.readFile(absolutePath, "utf8");
+        if (existingContent === normalizedContent) {
+          warnings.push(`Preserved existing summary artifact because the content was unchanged.`);
+          return {
+            phaseNumber: resolved2.phaseNumber,
+            phasePrefix: resolved2.phasePrefix,
+            phaseName: resolved2.phaseName,
+            phaseDir: resolved2.phaseDir,
+            planId: planId2,
+            path: lockedPathValue,
+            linkedPlanPath,
+            written: false,
+            created: false,
+            overwritten: false,
+            status: "reused",
+            issues,
+            warnings: [...modelWarnings, ...warnings]
+          };
+        }
+        if (!(args.overwrite ?? false)) {
+          throw new Error(
+            `${lockedPathValue} already exists. Re-run only after explicit overwrite confirmation.`
+          );
+        }
+      }
+      warnings.push(
+        ...await writeTextFile(absolutePath, normalizedContent, {
+          label: lockedPathValue
+        })
+      );
+      if (exists) {
+        warnings.push(`Replaced existing summary artifact: ${lockedPathValue}`);
+      }
       return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
+        phaseNumber: resolved2.phaseNumber,
+        phasePrefix: resolved2.phasePrefix,
+        phaseName: resolved2.phaseName,
+        phaseDir: resolved2.phaseDir,
         planId: planId2,
-        path: pathValue,
-        linkedPlanPath: plan.path,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "reused",
+        path: lockedPathValue,
+        linkedPlanPath,
+        written: true,
+        created: !exists,
+        overwritten: exists,
+        status: exists ? "updated" : "created",
         issues,
         warnings: [...modelWarnings, ...warnings]
       };
-    }
-    if (!(args.overwrite ?? false)) {
-      throw new Error(
-        `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
-      );
-    }
-  }
-  warnings.push(
-    ...await writeTextFile(absolutePath, normalizedContent, {
-      label: pathValue
     })
   );
-  if (exists) {
-    warnings.push(`Replaced existing summary artifact: ${pathValue}`);
-  }
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    planId: planId2,
-    path: pathValue,
-    linkedPlanPath: plan.path,
-    written: true,
-    created: !exists,
-    overwritten: exists,
-    status: exists ? "updated" : "created",
-    issues,
-    warnings: [...modelWarnings, ...warnings]
-  };
 }
 async function blueprintPhaseCheckpointGet(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -39107,7 +41105,7 @@ async function blueprintPhaseCheckpointGet(args = {}) {
     };
   }
   const parsed = ensureCheckpointObject(
-    safeJsonParseObject(await fs4.readFile(absolutePath, "utf8"), {
+    safeJsonParseObject(await fs5.readFile(absolutePath, "utf8"), {
       label: checkpointPath,
       maxBytes: 256 * 1024
     }),
@@ -39136,66 +41134,74 @@ async function blueprintPhaseCheckpointGet(args = {}) {
   };
 }
 async function blueprintPhaseCheckpointPut(args) {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const checkpointPath = checkpointPathFor(resolved);
-  const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
-  const nextCheckpoint = ensureCheckpointForPersistence(args.checkpoint, checkpointPath);
-  const nextRaw = `${JSON.stringify(nextCheckpoint, null, 2)}
+  const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase checkpoint put",
+    async ({ resolved: resolved2 }) => withBlueprintRepoLock(projectRoot, "phase-checkpoint", async () => {
+      const checkpointPath = checkpointPathFor(resolved2);
+      const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
+      const nextCheckpoint = ensureCheckpointForPersistence(args.checkpoint, checkpointPath);
+      const nextRaw = `${JSON.stringify(nextCheckpoint, null, 2)}
 `;
-  const warnings = [];
-  if (await pathExists(absolutePath)) {
-    const existingRaw = await fs4.readFile(absolutePath, "utf8");
-    if (existingRaw === nextRaw) {
-      warnings.push(`Preserved existing phase checkpoint because the content was unchanged.`);
+      const warnings = [];
+      if (await pathExists(absolutePath)) {
+        const existingRaw = await fs5.readFile(absolutePath, "utf8");
+        if (existingRaw === nextRaw) {
+          warnings.push(`Preserved existing phase checkpoint because the content was unchanged.`);
+          return {
+            phaseNumber: resolved2.phaseNumber,
+            phasePrefix: resolved2.phasePrefix,
+            phaseName: resolved2.phaseName,
+            phaseDir: resolved2.phaseDir,
+            path: checkpointPath,
+            updated: false,
+            warnings
+          };
+        }
+        const existingCheckpoint = ensureCheckpointObject(
+          safeJsonParseObject(existingRaw, {
+            label: checkpointPath,
+            maxBytes: 256 * 1024
+          }),
+          checkpointPath
+        );
+        const ownershipSafety = evaluateCheckpointResumeSafety(
+          existingCheckpoint,
+          checkpointPath,
+          args.checkpoint.ownerCommand,
+          args.checkpoint.mode
+        );
+        if (!ownershipSafety.safeToResume) {
+          throw new Error(
+            checkpointOwnershipBlockerReason(
+              checkpointPath,
+              ownershipSafety.warnings,
+              "overwrite"
+            )
+          );
+        }
+        warnings.push(...ownershipSafety.warnings);
+      }
+      await writeJsonFile(absolutePath, nextCheckpoint);
       return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
+        phaseNumber: resolved2.phaseNumber,
+        phasePrefix: resolved2.phasePrefix,
+        phaseName: resolved2.phaseName,
+        phaseDir: resolved2.phaseDir,
         path: checkpointPath,
-        updated: false,
+        updated: true,
         warnings
       };
-    }
-    const existingCheckpoint = ensureCheckpointObject(
-      safeJsonParseObject(existingRaw, {
-        label: checkpointPath,
-        maxBytes: 256 * 1024
-      }),
-      checkpointPath
-    );
-    const ownershipSafety = evaluateCheckpointResumeSafety(
-      existingCheckpoint,
-      checkpointPath,
-      args.checkpoint.ownerCommand,
-      args.checkpoint.mode
-    );
-    if (!ownershipSafety.safeToResume) {
-      throw new Error(
-        checkpointOwnershipBlockerReason(
-          checkpointPath,
-          ownershipSafety.warnings,
-          "overwrite"
-        )
-      );
-    }
-    warnings.push(...ownershipSafety.warnings);
-  }
-  await writeJsonFile(absolutePath, nextCheckpoint);
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    path: checkpointPath,
-    updated: true,
-    warnings
-  };
+    })
+  );
 }
 async function blueprintPhaseCheckpointDelete(args = {}) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved, matchedPhase } = snapshot;
   if (!resolved) {
     return {
       phaseFound: false,
@@ -39208,28 +41214,9 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
       reason: located.reason
     };
   }
-  const checkpointPath = checkpointPathFor(resolved);
-  const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
-  if (!await pathExists(absolutePath)) {
-    return {
-      phaseFound: true,
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      path: checkpointPath,
-      deleted: false,
-      reason: `${checkpointPath} did not exist.`
-    };
-  }
-  const parsed = ensureCheckpointObject(
-    safeJsonParseObject(await fs4.readFile(absolutePath, "utf8"), {
-      label: checkpointPath,
-      maxBytes: 256 * 1024
-    }),
-    checkpointPath
-  );
+  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   if (!args.expectedOwnerCommand && !args.expectedMode) {
+    const checkpointPath = checkpointPathFor(resolved);
     return {
       phaseFound: true,
       phaseNumber: resolved.phaseNumber,
@@ -39241,43 +41228,70 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
       reason: `Refusing to delete ${checkpointPath} without expectedOwnerCommand or expectedMode; shared checkpoint deletes must provide an ownership guard.`
     };
   }
-  if (args.expectedOwnerCommand || args.expectedMode) {
-    const expectedOwnerCommand = args.expectedOwnerCommand ?? checkpointExpectedOwnerFromMode(args.expectedMode ?? null);
-    const expectedMode = args.expectedMode ?? (expectedOwnerCommand ? PHASE_CHECKPOINT_OWNER_MODES[expectedOwnerCommand] : void 0);
-    const ownershipSafety = evaluateCheckpointResumeSafety(
-      parsed,
-      checkpointPath,
-      expectedOwnerCommand ?? void 0,
-      expectedMode
-    );
-    if (!ownershipSafety.safeToResume) {
+  return withFreshPhaseTopologyForMutation(
+    projectRoot,
+    args,
+    expectedTopology,
+    "Phase checkpoint delete",
+    async ({ resolved: resolved2 }) => withBlueprintRepoLock(projectRoot, "phase-checkpoint", async () => {
+      const checkpointPath = checkpointPathFor(resolved2);
+      const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
+      if (!await pathExists(absolutePath)) {
+        return {
+          phaseFound: true,
+          phaseNumber: resolved2.phaseNumber,
+          phasePrefix: resolved2.phasePrefix,
+          phaseName: resolved2.phaseName,
+          phaseDir: resolved2.phaseDir,
+          path: checkpointPath,
+          deleted: false,
+          reason: `${checkpointPath} did not exist.`
+        };
+      }
+      const parsed = ensureCheckpointObject(
+        safeJsonParseObject(await fs5.readFile(absolutePath, "utf8"), {
+          label: checkpointPath,
+          maxBytes: 256 * 1024
+        }),
+        checkpointPath
+      );
+      const expectedOwnerCommand = args.expectedOwnerCommand ?? checkpointExpectedOwnerFromMode(args.expectedMode ?? null);
+      const expectedMode = args.expectedMode ?? (expectedOwnerCommand ? PHASE_CHECKPOINT_OWNER_MODES[expectedOwnerCommand] : void 0);
+      const ownershipSafety = evaluateCheckpointResumeSafety(
+        parsed,
+        checkpointPath,
+        expectedOwnerCommand ?? void 0,
+        expectedMode
+      );
+      if (!ownershipSafety.safeToResume) {
+        return {
+          phaseFound: true,
+          phaseNumber: resolved2.phaseNumber,
+          phasePrefix: resolved2.phasePrefix,
+          phaseName: resolved2.phaseName,
+          phaseDir: resolved2.phaseDir,
+          path: checkpointPath,
+          deleted: false,
+          reason: checkpointOwnershipBlockerReason(
+            checkpointPath,
+            ownershipSafety.warnings,
+            "delete"
+          )
+        };
+      }
+      await fs5.rm(absolutePath, { force: true });
       return {
         phaseFound: true,
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
+        phaseNumber: resolved2.phaseNumber,
+        phasePrefix: resolved2.phasePrefix,
+        phaseName: resolved2.phaseName,
+        phaseDir: resolved2.phaseDir,
         path: checkpointPath,
-        deleted: false,
-        reason: checkpointOwnershipBlockerReason(
-          checkpointPath,
-          ownershipSafety.warnings,
-          "delete"
-        )
+        deleted: true,
+        reason: null
       };
-    }
-  }
-  await fs4.rm(absolutePath, { force: true });
-  return {
-    phaseFound: true,
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    path: checkpointPath,
-    deleted: true,
-    reason: null
-  };
+    })
+  );
 }
 var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseUiSkipWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanReadinessInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, REQUIREMENTS_TABLE_SECTION_PATTERN, phaseToolDefinitions;
 var init_phase = __esm({
@@ -39297,6 +41311,7 @@ var init_phase = __esm({
     init_phase_markdown();
     init_phase_plan_identifiers();
     init_phase_locations();
+    init_phase_topology_lock();
     init_phase_json_helpers();
     init_phase_validation_schemas();
     init_phase_plan_schemas();
@@ -39320,6 +41335,7 @@ var init_phase = __esm({
       cwd: string2().optional(),
       description: string2(),
       expectedPhaseNumber: string2().optional(),
+      confirmed: boolean2().optional(),
       goal: string2().optional(),
       requirementIds: array(string2()).optional(),
       successCriteria: array(string2()).optional(),
@@ -39347,6 +41363,7 @@ var init_phase = __esm({
       cwd: string2().optional(),
       after: union([string2(), number2()]),
       description: string2(),
+      confirmed: boolean2().optional(),
       goal: string2().optional(),
       requirementIds: array(string2()).min(1),
       successCriteria: array(string2()).optional()
@@ -39354,6 +41371,7 @@ var init_phase = __esm({
     roadmapRemovePhaseInputSchema = {
       cwd: string2().optional(),
       phase: union([string2(), number2()]),
+      confirmed: boolean2().optional(),
       force: boolean2().optional()
     };
     roadmapPromoteBacklogInputSchema = {
@@ -39815,9 +41833,28 @@ var init_phase = __esm({
 
 // src/mcp/tools/artifacts.ts
 import { execFile } from "node:child_process";
-import { promises as fs5 } from "node:fs";
-import path8 from "node:path";
+import { promises as fs6 } from "node:fs";
+import path11 from "node:path";
 import { promisify } from "node:util";
+function normalizeBlueprintArtifactPathForClassification(relativePath) {
+  return relativePath.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
+function isOperationalOnlyBlueprintArtifact(relativePath) {
+  const artifact = normalizeBlueprintArtifactPathForClassification(relativePath);
+  const blueprintPrefix = `${BLUEPRINT_DIR}/`;
+  if (artifact === `${BLUEPRINT_DIR}/mcp-write-failures.ndjson`) {
+    return true;
+  }
+  if (!artifact.startsWith(blueprintPrefix)) {
+    return false;
+  }
+  const blueprintLocalPath = artifact.slice(blueprintPrefix.length);
+  if (blueprintLocalPath === "locks" || blueprintLocalPath.startsWith("locks/")) {
+    return true;
+  }
+  const artifactName = path11.posix.basename(artifact);
+  return /^\.?.+\.\d+\.\d+\.[a-z0-9]+\.tmp$/i.test(artifactName) || /^.+\.tmp-\d+-\d+$/i.test(artifactName);
+}
 function isScaffoldGeneratedArtifact(content) {
   return content.includes(SCAFFOLD_GENERATED_MARKER);
 }
@@ -39838,22 +41875,22 @@ function isDocumentationLikeFile(entryName) {
   if (normalized === "license" || normalized.startsWith("license.")) {
     return true;
   }
-  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path8.extname(normalized));
+  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path11.extname(normalized));
 }
 function isImplementationLikeFile(entryName) {
   if (isBootstrapStarterFile(entryName) || isDocumentationLikeFile(entryName)) {
     return false;
   }
-  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path8.extname(entryName).toLowerCase());
+  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path11.extname(entryName).toLowerCase());
 }
 async function directoryHasImplementationEvidence(directoryPath) {
-  const entries = await fs5.readdir(directoryPath, { withFileTypes: true });
+  const entries = await fs6.readdir(directoryPath, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.isDirectory()) {
       if (entry.name.startsWith(".") || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
         continue;
       }
-      if (await directoryHasImplementationEvidence(path8.join(directoryPath, entry.name))) {
+      if (await directoryHasImplementationEvidence(path11.join(directoryPath, entry.name))) {
         return true;
       }
       continue;
@@ -39865,7 +41902,7 @@ async function directoryHasImplementationEvidence(directoryPath) {
   return false;
 }
 async function assessRootBootstrapShape(projectRoot) {
-  const entries = await fs5.readdir(projectRoot, { withFileTypes: true });
+  const entries = await fs6.readdir(projectRoot, { withFileTypes: true });
   const substantiveEntries = entries.filter(
     (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
   );
@@ -39888,7 +41925,7 @@ async function assessRootBootstrapShape(projectRoot) {
       if (!entry.isDirectory() || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
         continue;
       }
-      if (await directoryHasImplementationEvidence(path8.join(projectRoot, entry.name))) {
+      if (await directoryHasImplementationEvidence(path11.join(projectRoot, entry.name))) {
         hasImplementationEvidence = true;
         break;
       }
@@ -40678,7 +42715,7 @@ function milestoneReportPrefix(reportName2) {
 }
 async function readActiveMilestone(projectRoot) {
   try {
-    const roadmap = await fs5.readFile(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`), "utf8");
+    const roadmap = await fs6.readFile(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`), "utf8");
     return roadmap.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
   } catch {
     return null;
@@ -40764,20 +42801,20 @@ function isPlainObject5(value) {
 }
 async function pathExists2(targetPath) {
   try {
-    await fs5.access(targetPath);
+    await fs6.access(targetPath);
     return true;
   } catch {
     return false;
   }
 }
 function toPosixPath(relativePath) {
-  return relativePath.split(path8.sep).join("/");
+  return relativePath.split(path11.sep).join("/");
 }
 function getProjectRoot(cwd) {
-  return path8.resolve(cwd ?? process.cwd());
+  return path11.resolve(cwd ?? process.cwd());
 }
 function getBlueprintRoot(cwd) {
-  return path8.join(getProjectRoot(cwd), BLUEPRINT_DIR);
+  return path11.join(getProjectRoot(cwd), BLUEPRINT_DIR);
 }
 async function blueprintPathExists(targetPath) {
   return pathExists2(targetPath);
@@ -40799,7 +42836,7 @@ async function resolveGitTopLevel(projectRoot) {
 }
 async function ensureRepoRoot(cwd) {
   const projectRoot = getProjectRoot(cwd);
-  const gitPath = path8.join(projectRoot, ".git");
+  const gitPath = path11.join(projectRoot, ".git");
   if (!await pathExists2(gitPath)) {
     throw new Error(
       "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
@@ -40807,8 +42844,8 @@ async function ensureRepoRoot(cwd) {
   }
   const gitTopLevel = await resolveGitTopLevel(projectRoot);
   const [resolvedProjectRoot, resolvedGitTopLevel] = await Promise.all([
-    fs5.realpath(projectRoot),
-    fs5.realpath(gitTopLevel)
+    fs6.realpath(projectRoot),
+    fs6.realpath(gitTopLevel)
   ]);
   if (resolvedProjectRoot !== resolvedGitTopLevel) {
     throw new Error(
@@ -40818,7 +42855,7 @@ async function ensureRepoRoot(cwd) {
   return projectRoot;
 }
 function toRepoRelativePath(projectRoot, absolutePath) {
-  return toPosixPath(path8.relative(projectRoot, absolutePath));
+  return toPosixPath(path11.relative(projectRoot, absolutePath));
 }
 function resolveRepoRelativePath(projectRoot, relativePath) {
   try {
@@ -40834,7 +42871,7 @@ function resolveRepoRelativePath(projectRoot, relativePath) {
 }
 function resolveBlueprintPath(projectRoot, relativePath) {
   assertNoNullBytes(relativePath, "Blueprint path");
-  if (path8.isAbsolute(relativePath)) {
+  if (path11.isAbsolute(relativePath)) {
     throw new Error(`Blueprint paths must be repo-relative, not absolute: ${relativePath}`);
   }
   if (!relativePath.startsWith(`${BLUEPRINT_DIR}/`)) {
@@ -40853,74 +42890,397 @@ function resolveBlueprintPath(projectRoot, relativePath) {
   return absolutePath;
 }
 async function ensureParentDirectory2(targetPath) {
-  await fs5.mkdir(path8.dirname(targetPath), { recursive: true });
+  await fs6.mkdir(path11.dirname(targetPath), { recursive: true });
+}
+function activeJsonFileSystem() {
+  return jsonFileSystemForTest ?? defaultJsonFileSystem;
+}
+function tempSiblingPath(filePath) {
+  return path11.join(
+    path11.dirname(filePath),
+    `.${path11.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  );
+}
+function blueprintRepoLockNameSegment(value) {
+  const normalized = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96);
+  return normalized.length > 0 ? normalized : "unnamed";
+}
+function positiveTimingOverride(value, fallback) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return fallback;
+  }
+  return Math.floor(value);
+}
+function blueprintRepoLockRetryMs() {
+  return positiveTimingOverride(
+    repoLockTimingForTest?.retryMs,
+    BLUEPRINT_REPO_LOCK_RETRY_MS
+  );
+}
+function blueprintRepoLockStaleMs() {
+  return positiveTimingOverride(
+    repoLockTimingForTest?.staleMs,
+    BLUEPRINT_REPO_LOCK_STALE_MS
+  );
+}
+function blueprintRepoLockHeartbeatMs() {
+  return positiveTimingOverride(
+    repoLockTimingForTest?.heartbeatMs,
+    Math.max(25, Math.floor(blueprintRepoLockStaleMs() / 4))
+  );
 }
 async function readJsonIfPresent(filePath) {
   if (!await pathExists2(filePath)) {
     return null;
   }
-  const raw = await fs5.readFile(filePath, "utf8");
+  const raw = await fs6.readFile(filePath, "utf8");
   return safeJsonParseObject(raw, { label: filePath });
 }
 async function writeJsonFile(filePath, value) {
   await ensureParentDirectory2(filePath);
-  await fs5.writeFile(filePath, `${JSON.stringify(value, null, 2)}
+  const fileSystem = activeJsonFileSystem();
+  const tempPath = tempSiblingPath(filePath);
+  try {
+    await fileSystem.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
+    await fileSystem.rename(tempPath, filePath);
+  } catch (error2) {
+    await fileSystem.rm(tempPath, { force: true }).catch(() => void 0);
+    throw error2;
+  }
 }
 async function writeTextFile(filePath, value, options = {}) {
   const prepared = options.enforcePromptBoundary === false ? {
     content: value.replace(/\r\n/g, "\n"),
     warnings: []
   } : prepareTextForPersistence(value, {
-    label: options.label ?? path8.basename(filePath)
+    label: options.label ?? path11.basename(filePath)
   });
   await ensureParentDirectory2(filePath);
-  const tempPath = path8.join(
-    path8.dirname(filePath),
-    `.${path8.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
-  );
+  const tempPath = tempSiblingPath(filePath);
   try {
-    await fs5.writeFile(tempPath, prepared.content, "utf8");
-    await fs5.rename(tempPath, filePath);
+    await fs6.writeFile(tempPath, prepared.content, "utf8");
+    await fs6.rename(tempPath, filePath);
   } catch (error2) {
-    await fs5.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs6.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
   return prepared.warnings;
 }
+function blueprintRepoLockOwnerPath(lockPath) {
+  return path11.join(lockPath, BLUEPRINT_REPO_LOCK_OWNER_FILE);
+}
+function blueprintRepoLockLeasePath(lockPath) {
+  return path11.join(lockPath, BLUEPRINT_REPO_LOCK_LEASE_FILE);
+}
+function blueprintRepoLockRecoveryPath(lockPath) {
+  return `${lockPath}.recovery`;
+}
+function blueprintRepoLockRecoveryGuardOwnerPath(recoveryPath, token) {
+  return path11.join(recoveryPath, `${BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+}
+function blueprintRepoLockQuarantinePath(lockPath) {
+  return path11.join(
+    path11.dirname(lockPath),
+    `.${path11.basename(lockPath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.stale`
+  );
+}
+async function writeBlueprintRepoLockFile(filePath, contents) {
+  await fs6.writeFile(filePath, `${contents}
+`, "utf8");
+}
+async function readBlueprintRepoLockOwner(lockHandle) {
+  return readBlueprintRepoLockOwnerAtPath(lockHandle.ownerPath);
+}
+async function readBlueprintRepoLockOwnerAtPath(ownerPath) {
+  try {
+    return (await fs6.readFile(ownerPath, "utf8")).trim();
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
+async function refreshBlueprintRepoLockLease(lockHandle) {
+  const ownerToken = await readBlueprintRepoLockOwner(lockHandle);
+  if (ownerToken !== lockHandle.token) {
+    return false;
+  }
+  await writeBlueprintRepoLockFile(lockHandle.leasePath, lockHandle.token);
+  return true;
+}
+async function getBlueprintRepoLockPathAgeMs(targetPath) {
+  try {
+    const stats = await fs6.stat(targetPath);
+    return Date.now() - stats.mtimeMs;
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
+async function getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath) {
+  let entries;
+  try {
+    entries = await fs6.readdir(recoveryPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+  let newestOwnerMtimeMs = null;
+  for (const entry of entries) {
+    if (!entry.startsWith(BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX)) {
+      continue;
+    }
+    try {
+      const stats = await fs6.stat(path11.join(recoveryPath, entry));
+      newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
+    } catch (error2) {
+      if (error2.code !== "ENOENT") {
+        throw error2;
+      }
+    }
+  }
+  if (newestOwnerMtimeMs !== null) {
+    return Date.now() - newestOwnerMtimeMs;
+  }
+  return getBlueprintRepoLockPathAgeMs(recoveryPath);
+}
+async function getBlueprintRepoLockAgeMs(lockPath) {
+  const leasePath = blueprintRepoLockLeasePath(lockPath);
+  try {
+    const stats = await fs6.stat(leasePath);
+    return Date.now() - stats.mtimeMs;
+  } catch (error2) {
+    if (error2.code !== "ENOENT") {
+      throw error2;
+    }
+  }
+  return getBlueprintRepoLockPathAgeMs(lockPath);
+}
+async function readBlueprintRepoLockOwnerForPath(lockPath) {
+  return readBlueprintRepoLockOwnerAtPath(blueprintRepoLockOwnerPath(lockPath));
+}
+async function createBlueprintRepoLockRecoveryGuardHandle(lockPath, recoveryPath) {
+  const token = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const recoveryGuard = {
+    lockPath,
+    recoveryPath,
+    ownerPath: blueprintRepoLockRecoveryGuardOwnerPath(recoveryPath, token),
+    token
+  };
+  try {
+    await writeBlueprintRepoLockFile(recoveryGuard.ownerPath, token);
+  } catch (error2) {
+    await fs6.rmdir(recoveryPath).catch(() => void 0);
+    throw error2;
+  }
+  return recoveryGuard;
+}
+async function refreshOwnedBlueprintRepoLockRecoveryGuard(recoveryGuard) {
+  let stats;
+  try {
+    stats = await fs6.stat(recoveryGuard.ownerPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return false;
+    }
+    throw error2;
+  }
+  if (Date.now() - stats.mtimeMs > blueprintRepoLockStaleMs()) {
+    return false;
+  }
+  try {
+    const now = /* @__PURE__ */ new Date();
+    await fs6.utimes(recoveryGuard.ownerPath, now, now);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return false;
+    }
+    throw error2;
+  }
+  return true;
+}
+async function releaseBlueprintRepoLockRecoveryGuard(recoveryGuard) {
+  if (!await refreshOwnedBlueprintRepoLockRecoveryGuard(recoveryGuard)) {
+    return;
+  }
+  try {
+    await fs6.unlink(recoveryGuard.ownerPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return;
+    }
+    throw error2;
+  }
+  await fs6.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
+}
+async function createBlueprintRepoLockHandle(lockPath) {
+  const token = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const lockHandle = {
+    lockPath,
+    ownerPath: blueprintRepoLockOwnerPath(lockPath),
+    leasePath: blueprintRepoLockLeasePath(lockPath),
+    token
+  };
+  try {
+    await writeBlueprintRepoLockFile(lockHandle.ownerPath, token);
+    await writeBlueprintRepoLockFile(lockHandle.leasePath, token);
+  } catch (error2) {
+    await fs6.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    throw error2;
+  }
+  return lockHandle;
+}
+async function reclaimStaleBlueprintRepoLockRecoveryGuard(recoveryPath) {
+  const ageMs = await getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath);
+  if (ageMs === null) {
+    return true;
+  }
+  if (ageMs <= blueprintRepoLockStaleMs()) {
+    return false;
+  }
+  const quarantinePath = blueprintRepoLockQuarantinePath(recoveryPath);
+  try {
+    await fs6.rename(recoveryPath, quarantinePath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return true;
+    }
+    throw error2;
+  }
+  await fs6.rm(quarantinePath, { recursive: true, force: true });
+  return true;
+}
+async function tryAcquireBlueprintRepoLockRecoveryGuard(lockPath) {
+  const recoveryPath = blueprintRepoLockRecoveryPath(lockPath);
+  for (; ; ) {
+    try {
+      await fs6.mkdir(recoveryPath);
+      return createBlueprintRepoLockRecoveryGuardHandle(lockPath, recoveryPath);
+    } catch (error2) {
+      if (error2.code !== "EEXIST") {
+        throw error2;
+      }
+      if (await reclaimStaleBlueprintRepoLockRecoveryGuard(recoveryPath)) {
+        continue;
+      }
+      return null;
+    }
+  }
+}
+async function recoverStaleBlueprintRepoLock(lockPath) {
+  const recoveryGuard = await tryAcquireBlueprintRepoLockRecoveryGuard(lockPath);
+  if (recoveryGuard === null) {
+    return false;
+  }
+  try {
+    const ageMs = await getBlueprintRepoLockAgeMs(lockPath);
+    if (ageMs === null) {
+      return true;
+    }
+    if (ageMs <= blueprintRepoLockStaleMs()) {
+      return false;
+    }
+    const observedOwner = await readBlueprintRepoLockOwnerForPath(lockPath);
+    await repoLockRecoveryHooksForTest?.beforeStaleLockQuarantine?.(lockPath);
+    if (!await refreshOwnedBlueprintRepoLockRecoveryGuard(recoveryGuard)) {
+      return false;
+    }
+    const currentAgeMs = await getBlueprintRepoLockAgeMs(lockPath);
+    if (currentAgeMs === null) {
+      return true;
+    }
+    if (currentAgeMs <= blueprintRepoLockStaleMs()) {
+      return false;
+    }
+    const currentOwner = await readBlueprintRepoLockOwnerForPath(lockPath);
+    if (currentOwner !== observedOwner) {
+      return false;
+    }
+    const quarantinePath = blueprintRepoLockQuarantinePath(lockPath);
+    try {
+      await fs6.rename(lockPath, quarantinePath);
+    } catch (error2) {
+      if (error2.code === "ENOENT") {
+        return true;
+      }
+      throw error2;
+    }
+    await fs6.rm(quarantinePath, { recursive: true, force: true });
+    return true;
+  } finally {
+    await releaseBlueprintRepoLockRecoveryGuard(recoveryGuard).catch(() => void 0);
+    await repoLockRecoveryHooksForTest?.afterRecoveryGuardRelease?.(lockPath);
+  }
+}
 async function acquireBlueprintRepoLock(lockPath) {
-  const retryDelayMs = 50;
-  const staleAfterMs = 6e4;
+  const retryDelayMs = blueprintRepoLockRetryMs();
   await ensureParentDirectory2(lockPath);
   for (; ; ) {
     try {
-      await fs5.mkdir(lockPath);
-      return;
+      await fs6.mkdir(lockPath);
+      return createBlueprintRepoLockHandle(lockPath);
     } catch (error2) {
       const lockError = error2;
       if (lockError.code !== "EEXIST") {
         throw error2;
       }
       try {
-        const stats = await fs5.stat(lockPath);
-        if (Date.now() - stats.mtimeMs > staleAfterMs) {
-          await fs5.rm(lockPath, { recursive: true, force: true });
+        const ageMs = await getBlueprintRepoLockAgeMs(lockPath);
+        if (ageMs !== null && ageMs > blueprintRepoLockStaleMs()) {
+          await repoLockRecoveryHooksForTest?.beforeStaleRecoveryClaim?.(lockPath);
+          if (await recoverStaleBlueprintRepoLock(lockPath)) {
+            continue;
+          }
+        }
+      } catch (statError) {
+        if (statError.code === "ENOENT") {
           continue;
         }
-      } catch {
-        continue;
+        throw statError;
       }
       await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
     }
   }
 }
+function startBlueprintRepoLockHeartbeat(lockHandle) {
+  const timer = setInterval(() => {
+    void refreshBlueprintRepoLockLease(lockHandle).then((refreshed) => {
+      if (!refreshed) {
+        clearInterval(timer);
+      }
+    }).catch(() => {
+      clearInterval(timer);
+    });
+  }, blueprintRepoLockHeartbeatMs());
+  timer.unref?.();
+  return () => {
+    clearInterval(timer);
+  };
+}
+async function releaseBlueprintRepoLock(lockHandle) {
+  const ownerToken = await readBlueprintRepoLockOwner(lockHandle);
+  if (ownerToken !== lockHandle.token) {
+    return;
+  }
+  await fs6.rm(lockHandle.ownerPath, { force: true }).catch(() => void 0);
+  await fs6.rm(lockHandle.leasePath, { force: true }).catch(() => void 0);
+  await fs6.rmdir(lockHandle.lockPath).catch(() => void 0);
+}
 async function withBlueprintRepoLock(projectRoot, lockName, task) {
   const lockPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/locks/${lockName}.lock`);
-  await acquireBlueprintRepoLock(lockPath);
+  const lockHandle = await acquireBlueprintRepoLock(lockPath);
+  const stopHeartbeat = startBlueprintRepoLockHeartbeat(lockHandle);
   try {
     return await task();
   } finally {
-    await fs5.rm(lockPath, { recursive: true, force: true });
+    stopHeartbeat();
+    await releaseBlueprintRepoLock(lockHandle);
   }
 }
 function extractMarkdownSection5(markdown, heading) {
@@ -41834,7 +44194,7 @@ function isRepoRelativePlanPath(value) {
   if (rawValue.length === 0) {
     return false;
   }
-  if (path8.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
+  if (path11.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
     return false;
   }
   const normalized = normalizePlanPathForValidation(rawValue);
@@ -45054,7 +47414,7 @@ function validateSummaryPlanReference(content, options = {}) {
       issues.push("Summary artifact must reference a matching plan artifact.");
     } else {
       const expectedPlanPath = options.linkedPlanPath;
-      const expectedPlanFile = path8.basename(expectedPlanPath);
+      const expectedPlanFile = path11.basename(expectedPlanPath);
       if (summaryPlanReference !== expectedPlanPath && summaryPlanReference !== expectedPlanFile) {
         warnings.push(
           `Summary artifact Plan marker ${summaryPlanReference} does not match linked plan path ${expectedPlanPath}; canonical filename linkage will be used.`
@@ -45207,10 +47567,10 @@ async function listRelativeFiles(rootPath, projectRoot) {
   if (!await pathExists2(rootPath)) {
     return [];
   }
-  const entries = await fs5.readdir(rootPath, { withFileTypes: true });
+  const entries = await fs6.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path8.join(rootPath, entry.name);
+    const absolutePath = path11.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listRelativeFiles(absolutePath, projectRoot));
       continue;
@@ -45223,7 +47583,7 @@ async function listImmediateDirectories2(rootPath) {
   if (!await pathExists2(rootPath)) {
     return [];
   }
-  const entries = await fs5.readdir(rootPath, { withFileTypes: true });
+  const entries = await fs6.readdir(rootPath, { withFileTypes: true });
   return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
 }
 async function inspectBlueprintArtifacts(projectRoot) {
@@ -45233,7 +47593,7 @@ async function inspectBlueprintArtifacts(projectRoot) {
   const rootShape = await assessRootBootstrapShape(projectRoot);
   const blueprintFiles = blueprintRootExists ? await listRelativeFiles(blueprintRoot, projectRoot) : [];
   const workflowArtifactFiles = blueprintFiles.filter(
-    (artifact) => !OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS.has(artifact)
+    (artifact) => !isOperationalOnlyBlueprintArtifact(artifact)
   );
   const corePresent = [];
   const coreMissing = [];
@@ -45263,7 +47623,7 @@ async function inspectBlueprintArtifacts(projectRoot) {
     if (await pathExists2(artifactPath)) {
       codebasePresent.push(artifact);
       const contractId = resolveCodebaseArtifactPathContractId(artifact);
-      const raw = await fs5.readFile(artifactPath, "utf8");
+      const raw = await fs6.readFile(artifactPath, "utf8");
       const validation = validateCodebaseArtifactContent(raw, contractId);
       if (validation.valid) {
         codebaseValid.push(artifact);
@@ -45459,7 +47819,7 @@ async function inspectBootstrapArtifacts(projectRoot) {
     if (!await pathExists2(absolutePath)) {
       continue;
     }
-    const raw = await fs5.readFile(absolutePath, "utf8");
+    const raw = await fs6.readFile(absolutePath, "utf8");
     contents.set(artifact, raw);
     if (BOOTSTRAP_PLACEHOLDER_SIGNALS[artifact]?.some((signal) => raw.includes(signal))) {
       placeholderArtifacts.push(artifact);
@@ -45516,7 +47876,7 @@ function inferProjectName(projectRoot, requestedName) {
   if (trimmed) {
     return trimmed;
   }
-  return path8.basename(projectRoot);
+  return path11.basename(projectRoot);
 }
 function emptyCarryForwardBootstrapReceipt() {
   return {
@@ -45540,7 +47900,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
   if (!args.bootstrapSeed || requestedContextArtifact === null || !await pathExists2(roadmapPath)) {
     return receipt;
   }
-  const roadmap = parseRoadmapDocument(await fs5.readFile(roadmapPath, "utf8"));
+  const roadmap = parseRoadmapDocument(await fs6.readFile(roadmapPath, "utf8"));
   const firstPhaseNumber = computeNextWholePhaseNumber(roadmap.phases);
   const firstPhasePrefix = formatPhasePrefix3(firstPhaseNumber);
   const firstPhaseTitle = args.bootstrapSeed.roadmapPhases?.[0]?.title?.trim() || requestedContextArtifact.phaseName;
@@ -45568,7 +47928,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
     const directoryPhaseNumber = phaseDir2.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
     return directoryPhaseNumber !== void 0 && normalizePhaseNumber3(directoryPhaseNumber) === firstPhaseNumber;
   });
-  const computedPhaseDirName = path8.basename(firstPhaseDir);
+  const computedPhaseDirName = path11.basename(firstPhaseDir);
   if (matchingPhaseDirs.length > 1) {
     throw new Error(
       `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs.map((phaseDir2) => `${BLUEPRINT_PHASES_PATH}/${phaseDir2}`).join(", ")}.`
@@ -45581,7 +47941,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
   }
   const firstContextAbsolutePath = resolveBlueprintPath(args.projectRoot, firstContextPath);
   if (await pathExists2(firstContextAbsolutePath)) {
-    const existingContext = await fs5.readFile(firstContextAbsolutePath, "utf8");
+    const existingContext = await fs6.readFile(firstContextAbsolutePath, "utf8");
     if (!args.overwrite && !isScaffoldGeneratedArtifact(existingContext) && !isBootstrapStarterContext(existingContext)) {
       throw new Error(
         `Carry-forward scaffold is blocked because ${firstContextPath} already contains user-authored context. Re-run with explicit overwrite approval before replacing the saved phase context.`
@@ -45620,7 +47980,7 @@ async function blueprintArtifactScaffold(args = {}) {
     bootstrapSeed: args.bootstrapSeed,
     bootstrapAssessment: bootstrapDiagnostics.brownfield
   };
-  await fs5.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
+  await fs6.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
   for (const artifact of artifacts) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const exists = await pathExists2(absolutePath);
@@ -45629,7 +47989,7 @@ async function blueprintArtifactScaffold(args = {}) {
       if (exists) {
         reusedFiles.push(artifact);
       } else {
-        await fs5.mkdir(absolutePath, { recursive: true });
+        await fs6.mkdir(absolutePath, { recursive: true });
         createdFiles.push(artifact);
       }
       continue;
@@ -45700,6 +48060,22 @@ async function blueprintArtifactList(args = {}) {
   };
 }
 async function blueprintArtifactMutateIndex(args) {
+  const action = args.action ?? "append";
+  if (action === "list") {
+    return blueprintArtifactMutateIndexUnlocked(args);
+  }
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  if (inspection.readiness === "uninitialized" || inspection.readiness === "mapping-incomplete" || inspection.readiness === "mapped-only") {
+    return blueprintArtifactMutateIndexUnlocked({ ...args, cwd: projectRoot });
+  }
+  return withBlueprintRepoLock(
+    projectRoot,
+    `capture-index-${blueprintRepoLockNameSegment(args.target)}`,
+    () => blueprintArtifactMutateIndexUnlocked({ ...args, cwd: projectRoot })
+  );
+}
+async function blueprintArtifactMutateIndexUnlocked(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const config2 = CAPTURE_INDEX_CONFIG[args.target];
@@ -45728,7 +48104,7 @@ async function blueprintArtifactMutateIndex(args) {
   }
   const absolutePath = resolveBlueprintPath(projectRoot, targetPath);
   const exists = await pathExists2(absolutePath);
-  const raw = exists ? await fs5.readFile(absolutePath, "utf8") : "";
+  const raw = exists ? await fs6.readFile(absolutePath, "utf8") : "";
   const parsed = parseCaptureIndexDocument(raw, args.target);
   if (parsed.malformed) {
     warnings.push(
@@ -46169,7 +48545,7 @@ async function isActiveDiscussPhaseDraft(projectRoot, inspection) {
     return false;
   }
   try {
-    const raw = await fs5.readFile(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH), "utf8");
+    const raw = await fs6.readFile(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH), "utf8");
     const activeCommand2 = readStateLineValue(raw, "Active command");
     return activeCommand2 === blueprintDirectCommand("discuss-phase");
   } catch {
@@ -46382,7 +48758,7 @@ async function blueprintArtifactValidate(args = {}) {
         continue;
       }
       const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-      const raw = await fs5.readFile(absolutePath, "utf8");
+      const raw = await fs6.readFile(absolutePath, "utf8");
       if (target.kind === "context" && isLegacyPhaseContextShell(raw)) {
         continue;
       }
@@ -46421,7 +48797,7 @@ async function blueprintArtifactValidate(args = {}) {
     if (!await pathExists2(absolutePath)) {
       continue;
     }
-    const raw = await fs5.readFile(absolutePath, "utf8");
+    const raw = await fs6.readFile(absolutePath, "utf8");
     bootstrapContents.set(artifact, raw);
     const validation = artifact.endsWith("PROJECT.md") ? validateBootstrapProjectArtifact(raw, { allowLegacyShell: allowLegacyBootstrapShell }) : artifact.endsWith("REQUIREMENTS.md") ? validateBootstrapRequirementsArtifact(raw, {
       allowLegacyShell: allowLegacyBootstrapShell
@@ -46461,7 +48837,7 @@ async function blueprintArtifactValidate(args = {}) {
   }
   for (const artifact of inspection.phases.filter((value) => value.endsWith("-VERIFICATION.md"))) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-    const raw = await fs5.readFile(absolutePath, "utf8");
+    const raw = await fs6.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
     const validation = validateVerificationArtifactContent(raw, summaryPaths, { noUat });
     for (const issue2 of validation.issues) {
@@ -46478,7 +48854,7 @@ async function blueprintArtifactValidate(args = {}) {
   }
   for (const artifact of inspection.phases.filter((value) => value.endsWith("-UAT.md"))) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-    const raw = await fs5.readFile(absolutePath, "utf8");
+    const raw = await fs6.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
     const validation = validateUatArtifactContent(raw, summaryPaths, {
       requireReadyVerificationEvidence: true
@@ -46499,7 +48875,7 @@ async function blueprintArtifactValidate(args = {}) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const phaseMatch = artifact.match(/\/(\d+(?:\.\d+)?)-\d+-PLAN\.md$/);
     const expectedPhase = phaseMatch?.[1];
-    const raw = await fs5.readFile(absolutePath, "utf8");
+    const raw = await fs6.readFile(absolutePath, "utf8");
     const validation = validatePlanArtifactContent(raw, expectedPhase);
     for (const issue2 of validation.issues) {
       issues.push(`${artifact}: ${issue2}`);
@@ -46517,7 +48893,7 @@ async function blueprintArtifactValidate(args = {}) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const linkedPlanPath = artifact.replace(/-SUMMARY\.md$/, "-PLAN.md");
     const linkedPlanExists = await pathExists2(resolveBlueprintPath(projectRoot, linkedPlanPath));
-    const raw = await fs5.readFile(absolutePath, "utf8");
+    const raw = await fs6.readFile(absolutePath, "utf8");
     const validation = validateStrictSummaryArtifactContent(raw, {
       linkedPlanPath: linkedPlanExists ? linkedPlanPath : null
     });
@@ -46828,11 +49204,11 @@ async function buildArtifactDigestSections(projectRoot, artifactPaths) {
   const digest = [];
   for (const artifactPath of artifactPaths) {
     const absolutePath = resolveRepoRelativePath(projectRoot, artifactPath);
-    const raw = await fs5.readFile(absolutePath, "utf8");
+    const raw = await fs6.readFile(absolutePath, "utf8");
     const summary = summarizeArtifactContent(raw);
     digest.push({
       artifact: artifactPath,
-      title: summary.title.length > 0 ? summary.title : path8.basename(artifactPath, path8.extname(artifactPath)),
+      title: summary.title.length > 0 ? summary.title : path11.basename(artifactPath, path11.extname(artifactPath)),
       summary: summary.summary,
       evidence: [artifactPath]
     });
@@ -47354,11 +49730,11 @@ function addTestsReportTargetedCommandCounts(model) {
 }
 function parseAddTestsReportPhase(reportName2) {
   const normalized = normalizeReportSlug(reportName2);
-  const match = normalized.match(/^add-tests-(\d+(?:\.\d+)?)$/);
-  return match ? normalizePhaseNumber3(match[1]) : null;
+  const match = normalized.match(/^add-tests-(\d+(?:-\d+)?)$/);
+  return match ? normalizePhaseNumber3(match[1].replace("-", ".")) : null;
 }
 function canonicalAddTestsReportName(phaseNumber) {
-  return `add-tests-${phaseNumber}`;
+  return normalizeReportSlug(`add-tests-${phaseNumber}`);
 }
 async function resolvePhaseBackedReportPhase(projectRoot, phaseNumber) {
   if (!phaseNumber) {
@@ -47401,7 +49777,7 @@ async function collectValidAddTestsValidationEvidencePaths(args) {
   const warnings = [];
   const noUat = await readWorkflowNoUat2(args.projectRoot);
   for (const artifactPath of args.phaseFiles.filter((entry) => entry.endsWith("-VERIFICATION.md") || entry.endsWith("-UAT.md")).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs6.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = artifactPath.endsWith("-VERIFICATION.md") ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat }) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
@@ -47428,7 +49804,7 @@ function normalizeSummaryLinkedPlanPath(summaryPath2, planReference) {
     return planReference;
   }
   if (!planReference.includes("/") && /-PLAN\.md$/.test(planReference)) {
-    return `${path8.posix.dirname(summaryPath2)}/${planReference}`;
+    return `${path11.posix.dirname(summaryPath2)}/${planReference}`;
   }
   return planReference;
 }
@@ -47455,7 +49831,7 @@ async function resolveAddTestsSummaryLinkedPlan(args) {
 async function collectValidAddTestsReviewPath(args) {
   const warnings = [];
   for (const artifactPath of args.phaseFiles.filter((entry) => isNormalReviewArtifactPath(entry)).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs6.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = validateReviewArtifactContent(raw, "code-review");
     if (validation.valid) {
       return { path: artifactPath, warnings };
@@ -47497,13 +49873,13 @@ async function collectAddTestsReportContext(projectRoot, reportName2) {
     };
   }
   const phaseDirAbs = resolveBlueprintPath(projectRoot, phase.phaseDir);
-  const entries = await fs5.readdir(phaseDirAbs).catch(() => []);
+  const entries = await fs6.readdir(phaseDirAbs).catch(() => []);
   const phaseFiles = entries.map((entry) => `${phase.phaseDir}/${entry}`);
   const planPaths = phaseFiles.filter((entry) => /-\d{2,}-PLAN\.md$/.test(entry)).sort((left, right) => left.localeCompare(right));
   const completedSummaries = [];
   const dependencyPlanMap = /* @__PURE__ */ new Map();
   for (const summaryPath2 of phaseFiles.filter((entry) => /-\d{2,}-SUMMARY\.md$/.test(entry)).sort((left, right) => left.localeCompare(right))) {
-    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const content = await fs6.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
     const { linkedPlanPath, linkedPlanExists } = await resolveAddTestsSummaryLinkedPlan({
       projectRoot,
       summaryPath: summaryPath2,
@@ -47580,14 +49956,70 @@ async function collectAddTestsReportContext(projectRoot, reportName2) {
 }
 function parseAuditFixReportPhase(reportName2) {
   const normalized = normalizeReportSlug(reportName2);
-  const match = normalized.match(/^audit-fix-(\d+(?:\.\d+)?)$/);
-  return match ? normalizePhaseNumber3(match[1]) : null;
+  const match = normalized.match(/^audit-fix-(\d+(?:-\d+)?)$/);
+  return match ? normalizePhaseNumber3(match[1].replace("-", ".")) : null;
 }
 function canonicalAuditFixReportName(phaseNumber) {
-  return `audit-fix-${phaseNumber}`;
+  return normalizeReportSlug(`audit-fix-${phaseNumber}`);
 }
 async function resolveAuditFixReportPhase(projectRoot, reportName2) {
   return resolvePhaseBackedReportPhase(projectRoot, parseAuditFixReportPhase(reportName2));
+}
+function phaseBackedReportPhaseNumber(contractId, reportName2) {
+  if (contractId === "report.add-tests") {
+    return parseAddTestsReportPhase(reportName2);
+  }
+  if (contractId === "report.audit-fix") {
+    return parseAuditFixReportPhase(reportName2);
+  }
+  return null;
+}
+async function capturePhaseBackedReportTopologySnapshot(args) {
+  const phaseNumber = phaseBackedReportPhaseNumber(args.contractId, args.reportName);
+  if (!phaseNumber) {
+    return null;
+  }
+  try {
+    return await resolvePhaseTopologySnapshot({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    });
+  } catch {
+    return null;
+  }
+}
+async function withFreshPhaseBackedReportTopology(args) {
+  const expected = args.expected;
+  if (!expected) {
+    return args.task();
+  }
+  return withBlueprintRepoLock(args.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    let latest;
+    try {
+      latest = await resolvePhaseTopologySnapshot({
+        cwd: args.projectRoot,
+        phase: expected.phaseNumber
+      });
+    } catch (error2) {
+      const detail = error2 instanceof Error ? ` ${error2.message}` : "";
+      throw new Error(
+        `${args.contractId ?? "Artifact report"} write for ${args.reportName} rejected stale phase topology for Phase ${expected.phaseNumber}.${detail}`
+      );
+    }
+    if (!phaseTopologyFingerprintsMatch(
+      expected.fingerprint,
+      latest.fingerprint
+    )) {
+      throw new Error(
+        formatStalePhaseTopologyMessage({
+          operation: `${args.contractId ?? "Artifact report"} write for ${args.reportName}`,
+          expected: expected.fingerprint,
+          actual: latest.fingerprint
+        })
+      );
+    }
+    return args.task();
+  });
 }
 function isNormalReviewArtifactPath(artifactPath) {
   return artifactPath.endsWith("-REVIEW.md") && !artifactPath.endsWith("-GOD-REVIEW.md");
@@ -47637,7 +50069,7 @@ async function validateAuditFixScopeFiles(args) {
       continue;
     }
     try {
-      const stats = await fs5.stat(absolutePath);
+      const stats = await fs6.stat(absolutePath);
       if (!stats.isFile()) {
         warnings.push(
           `Audit-fix scope file ${file2} is no longer a regular file; keeping it in scope because blueprint_review_scope captured the pre-fix path.`
@@ -47758,7 +50190,7 @@ async function collectValidAuditFixArtifactPath(args) {
   for (const artifactPath of args.phaseFiles.filter(
     (entry) => args.suffix === "-REVIEW.md" ? isNormalReviewArtifactPath(entry) : entry.endsWith(args.suffix)
   ).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs6.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = args.suffix === "-REVIEW.md" ? validateReviewArtifactContent(raw, "code-review") : args.suffix === "-SECURITY.md" ? validateReviewArtifactContent(raw, "security") : args.suffix === "-VERIFICATION.md" ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat }) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
@@ -47777,7 +50209,7 @@ async function collectAuditFixSelectedEvidencePaths(args) {
   const warnings = [];
   const blockers = [];
   const phaseDirAbs = resolveBlueprintPath(args.projectRoot, args.phaseDir);
-  const entries = await fs5.readdir(phaseDirAbs).catch(() => []);
+  const entries = await fs6.readdir(phaseDirAbs).catch(() => []);
   const phaseFiles = entries.map((entry) => `${args.phaseDir}/${entry}`);
   const review = await collectValidAuditFixArtifactPath({
     projectRoot: args.projectRoot,
@@ -50164,6 +52596,18 @@ function reportModelWriteIssues(reportName2) {
 async function blueprintArtifactReportWrite(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
+  if (inspection.readiness === "uninitialized" || inspection.readiness === "mapping-incomplete" || inspection.readiness === "mapped-only") {
+    return blueprintArtifactReportWriteUnlocked({ ...args, cwd: projectRoot });
+  }
+  return withBlueprintRepoLock(
+    projectRoot,
+    `artifact-report-${blueprintRepoLockNameSegment(args.reportName)}`,
+    () => blueprintArtifactReportWriteUnlocked({ ...args, cwd: projectRoot })
+  );
+}
+async function blueprintArtifactReportWriteUnlocked(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
   if (inspection.readiness === "uninitialized") {
     throw new Error(
       "Blueprint report writes require an initialized or partial Blueprint project with a .blueprint/ directory."
@@ -50236,6 +52680,11 @@ async function blueprintArtifactReportWrite(args) {
         reportModelWriteIssues(args.reportName).filter((issue2) => issue2.length > 0)
       );
     }
+    const phaseTopologySnapshot = await capturePhaseBackedReportTopologySnapshot({
+      projectRoot,
+      reportName: args.reportName,
+      contractId
+    });
     const modelValidation = await blueprintArtifactReportValidateModel({
       cwd: projectRoot,
       reportName: args.reportName,
@@ -50253,60 +52702,68 @@ async function blueprintArtifactReportWrite(args) {
     const renderPreview = modelValidation.renderPreview.endsWith("\n") ? modelValidation.renderPreview : `${modelValidation.renderPreview}
 `;
     const contentForStatus = (status) => contractId === "report.audit-fix" ? withAuditFixReportWriteStatus(renderPreview, status, pathValue) : contractId === "report.add-tests" ? withAddTestsReportWriteStatus(renderPreview, status, pathValue) : renderPreview;
-    const exists2 = await pathExists2(absolutePath);
     const warnings2 = [...modelValidation.warnings];
-    if (exists2) {
-      const existingContent = await fs5.readFile(absolutePath, "utf8");
-      const reusableContents = ["created", "updated", "reused"].map(contentForStatus);
-      if (reusableContents.includes(existingContent)) {
-        warnings2.push("Preserved existing report because the model-rendered content was unchanged.");
+    return withFreshPhaseBackedReportTopology({
+      projectRoot,
+      reportName: args.reportName,
+      contractId,
+      expected: phaseTopologySnapshot,
+      task: async () => {
+        const exists2 = await pathExists2(absolutePath);
+        if (exists2) {
+          const existingContent = await fs6.readFile(absolutePath, "utf8");
+          const reusableContents = ["created", "updated", "reused"].map(contentForStatus);
+          if (reusableContents.includes(existingContent)) {
+            warnings2.push("Preserved existing report because the model-rendered content was unchanged.");
+            return {
+              path: pathValue,
+              written: false,
+              created: false,
+              overwritten: false,
+              status: "reused",
+              issues: [],
+              warnings: warnings2
+            };
+          }
+          if (!(args.overwrite ?? false)) {
+            throw new Error(
+              `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
+            );
+          }
+        }
+        const normalizedContent2 = contentForStatus(exists2 ? "updated" : "created");
+        const renderedValidation = validateReportArtifactContent(normalizedContent2, args.reportName);
+        if (!renderedValidation.valid) {
+          return artifactReportWriteInvalidResult(
+            pathValue,
+            renderedValidation.issues,
+            [...warnings2, ...renderedValidation.warnings],
+            reportMarkdownWriteDiagnostics({
+              pathValue,
+              reportName: args.reportName,
+              issues: renderedValidation.issues
+            })
+          );
+        }
+        warnings2.push(
+          ...await writeTextFile(absolutePath, normalizedContent2, {
+            label: pathValue
+          })
+        );
+        if (exists2) {
+          warnings2.push(`Replaced existing report: ${pathValue}`);
+        }
         return {
           path: pathValue,
-          written: false,
-          created: false,
-          overwritten: false,
-          status: "reused",
+          written: true,
+          created: !exists2,
+          overwritten: exists2,
+          status: exists2 ? "updated" : "created",
           issues: [],
           warnings: warnings2
         };
       }
-      if (!(args.overwrite ?? false)) {
-        throw new Error(
-          `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
-        );
-      }
-    }
-    const normalizedContent2 = contentForStatus(exists2 ? "updated" : "created");
-    const renderedValidation = validateReportArtifactContent(normalizedContent2, args.reportName);
-    if (!renderedValidation.valid) {
-      return artifactReportWriteInvalidResult(
-        pathValue,
-        renderedValidation.issues,
-        [...warnings2, ...renderedValidation.warnings],
-        reportMarkdownWriteDiagnostics({
-          pathValue,
-          reportName: args.reportName,
-          issues: renderedValidation.issues
-        })
-      );
-    }
-    warnings2.push(
-      ...await writeTextFile(absolutePath, normalizedContent2, {
-        label: pathValue
-      })
-    );
-    if (exists2) {
-      warnings2.push(`Replaced existing report: ${pathValue}`);
-    }
-    return {
-      path: pathValue,
-      written: true,
-      created: !exists2,
-      overwritten: exists2,
-      status: exists2 ? "updated" : "created",
-      issues: [],
-      warnings: warnings2
-    };
+    });
   }
   const content = args.content ?? "";
   const normalizedContent = content.endsWith("\n") ? content : `${content}
@@ -50338,7 +52795,7 @@ async function blueprintArtifactReportWrite(args) {
     );
   }
   if (exists) {
-    const existingContent = await fs5.readFile(absolutePath, "utf8");
+    const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
       warnings.push("Preserved existing report because the content was unchanged.");
       return {
@@ -50444,7 +52901,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     };
   }
   if (exists) {
-    const existingContent = await fs5.readFile(absolutePath, "utf8");
+    const existingContent = await fs6.readFile(absolutePath, "utf8");
     const existingValidation = validateCodebaseArtifactContent(existingContent, args.artifactId);
     if (existingContent === normalizedContent) {
       warnings.push("Preserved existing codebase artifact because the content was unchanged.");
@@ -50491,7 +52948,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -50505,6 +52962,7 @@ var init_artifacts = __esm({
     init_phase_roadmap_parser();
     init_phase_numbering();
     init_phase();
+    init_phase_topology_lock();
     execFileAsync = promisify(execFile);
     BLUEPRINT_DIR = ".blueprint";
     BLUEPRINT_STATE_PATH = `${BLUEPRINT_DIR}/STATE.md`;
@@ -50543,9 +53001,11 @@ var init_artifacts = __esm({
     ];
     SCAFFOLD_GENERATED_MARKER = "*Generated by `blueprint_artifact_scaffold`*";
     BOOTSTRAP_STARTER_CONTEXT_MARKER = "*Bootstrap starter context: replace through `/blu-discuss-phase`*";
-    OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS = /* @__PURE__ */ new Set([
-      `${BLUEPRINT_DIR}/mcp-write-failures.ndjson`
-    ]);
+    BLUEPRINT_REPO_LOCK_OWNER_FILE = "owner";
+    BLUEPRINT_REPO_LOCK_LEASE_FILE = "lease";
+    BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX = "owner.";
+    BLUEPRINT_REPO_LOCK_RETRY_MS = 50;
+    BLUEPRINT_REPO_LOCK_STALE_MS = 6e4;
     CODEBASE_ARTIFACT_CONTRACT_IDS = [
       "codebase.stack",
       "codebase.architecture",
@@ -50906,6 +53366,14 @@ var init_artifacts = __esm({
       "milestone-complete-",
       "milestone-summary-"
     ];
+    defaultJsonFileSystem = {
+      writeFile: (filePath, contents, encoding) => fs6.writeFile(filePath, contents, encoding),
+      rename: (oldPath, newPath) => fs6.rename(oldPath, newPath),
+      rm: (filePath, options) => fs6.rm(filePath, options)
+    };
+    jsonFileSystemForTest = null;
+    repoLockTimingForTest = null;
+    repoLockRecoveryHooksForTest = null;
     RESEARCH_ISO_DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/;
     RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN = /https?:\/\/|doi\.org\/|\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i;
     RESEARCH_STRUCTURED_DOI_PATTERN = /\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/i;
@@ -51159,17 +53627,17 @@ var init_artifacts = __esm({
 // src/mcp/tools/workspace.ts
 import { execFile as execFile2 } from "node:child_process";
 import { createHash as createHash2 } from "node:crypto";
-import { promises as fs6 } from "node:fs";
-import os from "node:os";
-import path9 from "node:path";
+import { promises as fs7 } from "node:fs";
+import os3 from "node:os";
+import path12 from "node:path";
 import { promisify as promisify2 } from "node:util";
-function expandHomePath(value) {
+function expandHomePath3(value) {
   const trimmed = value.trim();
   if (trimmed === "~") {
-    return os.homedir();
+    return os3.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path9.join(os.homedir(), trimmed.slice(2));
+    return path12.join(os3.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -51200,7 +53668,7 @@ function slugifyRepoName(value) {
 }
 async function pathExists3(targetPath) {
   try {
-    await fs6.access(targetPath);
+    await fs7.access(targetPath);
     return true;
   } catch {
     return false;
@@ -51208,9 +53676,9 @@ async function pathExists3(targetPath) {
 }
 async function canonicalizePath(candidatePath) {
   try {
-    return await fs6.realpath(candidatePath);
+    return await fs7.realpath(candidatePath);
   } catch {
-    return path9.resolve(candidatePath);
+    return path12.resolve(candidatePath);
   }
 }
 function normalizeTextForComparison(value) {
@@ -51254,7 +53722,7 @@ async function readCurrentStateSnapshot(projectRoot) {
   if (!await pathExists3(statePath)) {
     return null;
   }
-  const raw = await fs6.readFile(statePath, "utf8");
+  const raw = await fs7.readFile(statePath, "utf8");
   return parseStateSnapshot(raw);
 }
 async function readRequiredCurrentStateSnapshot(projectRoot) {
@@ -51414,9 +53882,14 @@ function renderWorkstreamsIndex(workstreams) {
 }
 async function writeFileAtomically(filePath, content) {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  await fs6.mkdir(path9.dirname(filePath), { recursive: true });
-  await fs6.writeFile(tempPath, content, "utf8");
-  await fs6.rename(tempPath, filePath);
+  try {
+    await fs7.mkdir(path12.dirname(filePath), { recursive: true });
+    await fs7.writeFile(tempPath, content, "utf8");
+    await fs7.rename(tempPath, filePath);
+  } catch (error2) {
+    await fs7.rm(tempPath, { force: true }).catch(() => void 0);
+    throw error2;
+  }
 }
 async function writeJsonAtomically(filePath, value) {
   await writeFileAtomically(filePath, `${JSON.stringify(value, null, 2)}
@@ -51435,7 +53908,7 @@ async function snapshotFiles(paths) {
       return {
         path: targetPath,
         existed: true,
-        content: await fs6.readFile(targetPath, "utf8")
+        content: await fs7.readFile(targetPath, "utf8")
       };
     })
   );
@@ -51451,17 +53924,56 @@ async function snapshotDirectories(paths) {
 async function restoreFileSnapshots(snapshots) {
   for (const snapshot of snapshots) {
     if (!snapshot.existed) {
-      await fs6.rm(snapshot.path, { force: true }).catch(() => void 0);
+      await fs7.rm(snapshot.path, { force: true }).catch(() => void 0);
       continue;
     }
-    await fs6.mkdir(path9.dirname(snapshot.path), { recursive: true });
-    await fs6.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
+    await fs7.mkdir(path12.dirname(snapshot.path), { recursive: true });
+    await fs7.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
   }
+}
+async function snapshotRepoFiles(repoRoot, relativePaths) {
+  const snapshots = [];
+  for (const relativePath of [...new Set(relativePaths)]) {
+    const targetPath = path12.resolve(repoRoot, relativePath);
+    ensurePathWithinRootSync(repoRoot, targetPath, {
+      label: "Patch replay tracked file"
+    });
+    if (!await pathExists3(targetPath)) {
+      snapshots.push({
+        path: targetPath,
+        relativePath,
+        existed: false,
+        content: null
+      });
+      continue;
+    }
+    snapshots.push({
+      path: targetPath,
+      relativePath,
+      existed: true,
+      content: await fs7.readFile(targetPath)
+    });
+  }
+  return snapshots;
+}
+async function restoreRepoFileSnapshots(snapshots) {
+  const restoredFiles = [];
+  for (const snapshot of snapshots) {
+    if (!snapshot.existed) {
+      await fs7.rm(snapshot.path, { force: true }).catch(() => void 0);
+      restoredFiles.push(snapshot.relativePath);
+      continue;
+    }
+    await fs7.mkdir(path12.dirname(snapshot.path), { recursive: true });
+    await fs7.writeFile(snapshot.path, snapshot.content ?? Buffer.alloc(0));
+    restoredFiles.push(snapshot.relativePath);
+  }
+  return restoredFiles;
 }
 async function restoreDirectorySnapshots(snapshots) {
   const missingDirectories = snapshots.filter((snapshot) => !snapshot.existed).sort((left, right) => right.path.length - left.path.length);
   for (const snapshot of missingDirectories) {
-    await fs6.rm(snapshot.path, { recursive: true, force: true }).catch(() => void 0);
+    await fs7.rm(snapshot.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function workstreamsRootAbsolute(projectRoot) {
@@ -51471,7 +53983,7 @@ function workstreamsIndexAbsolute(projectRoot) {
   return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
 }
 function workstreamStateAbsolute(projectRoot, slug) {
-  return path9.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+  return path12.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
 }
 function workstreamSummary(projectRoot, entry) {
   return {
@@ -51512,7 +54024,7 @@ function buildResumeStatePatch(snapshot) {
   };
 }
 async function loadWorkstreamStore(projectRoot) {
-  const blueprintRoot = path9.join(projectRoot, BLUEPRINT_DIR);
+  const blueprintRoot = path12.join(projectRoot, BLUEPRINT_DIR);
   const rootPath = workstreamsRootAbsolute(projectRoot);
   const indexPath = workstreamsIndexAbsolute(projectRoot);
   if (!await pathExists3(blueprintRoot)) {
@@ -51530,7 +54042,7 @@ async function loadWorkstreamStore(projectRoot) {
   }
   let entries;
   try {
-    entries = await fs6.readdir(rootPath, {
+    entries = await fs7.readdir(rootPath, {
       encoding: "utf8",
       withFileTypes: true
     });
@@ -51557,11 +54069,11 @@ async function loadWorkstreamStore(projectRoot) {
       if (!entry.isDirectory()) {
         continue;
       }
-      const statePath = path9.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      const statePath = path12.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
       if (!await pathExists3(statePath)) {
         throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
       }
-      const raw = await fs6.readFile(statePath, "utf8");
+      const raw = await fs7.readFile(statePath, "utf8");
       const parsed = safeJsonParseObject(raw, {
         label: statePath
       });
@@ -51578,7 +54090,7 @@ async function loadWorkstreamStore(projectRoot) {
       throw new Error("The workstream index is missing while workstream state files exist.");
     }
     if (indexExists) {
-      const actualIndex = await fs6.readFile(indexPath, "utf8");
+      const actualIndex = await fs7.readFile(indexPath, "utf8");
       if (normalizeTextForComparison(actualIndex) !== normalizeTextForComparison(expectedIndex)) {
         throw new Error("The workstream index is stale relative to the canonical state files.");
       }
@@ -51651,6 +54163,26 @@ function buildMissingCurrentStateSnapshotResult(store, operation, projectRoot, r
     statePatch: null
   });
 }
+function activeWorkstreamMatchesExpected(active, expectedActiveWorkstream) {
+  if (!expectedActiveWorkstream) {
+    return true;
+  }
+  if (!active) {
+    return false;
+  }
+  const normalizedExpected = expectedActiveWorkstream.trim().toLowerCase();
+  if (active.name.toLowerCase() === normalizedExpected || active.slug === normalizedExpected) {
+    return true;
+  }
+  try {
+    return active.slug === slugifyWorkstreamName(expectedActiveWorkstream);
+  } catch {
+    return false;
+  }
+}
+function activeWorkstreamDescription(active) {
+  return active ? `${active.name} (${active.slug})` : "none";
+}
 function findWorkstreamEntry(workstreams, requested) {
   const normalizedName = requested.trim().toLowerCase();
   let requestedSlug = null;
@@ -51669,7 +54201,7 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(projectRoot),
-    ...uniqueSlugs.map((slug) => path9.dirname(workstreamStateAbsolute(projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path12.dirname(workstreamStateAbsolute(projectRoot, slug)))
   ]);
   try {
     for (const slug of uniqueSlugs) {
@@ -51694,6 +54226,33 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
     ),
     indexRelativePath
   ];
+}
+async function persistWorkstreamStateWithPreparedStateUpdate(args) {
+  const uniqueSlugs = [...new Set(args.affectedSlugs)];
+  const indexPath = workstreamsIndexAbsolute(args.projectRoot);
+  const statePath = resolveBlueprintPath(args.projectRoot, BLUEPRINT_STATE_PATH);
+  const statePaths = uniqueSlugs.map((slug) => workstreamStateAbsolute(args.projectRoot, slug));
+  const snapshots = await snapshotFiles([statePath, indexPath, ...statePaths]);
+  const directorySnapshots = await snapshotDirectories([
+    workstreamsRootAbsolute(args.projectRoot),
+    ...uniqueSlugs.map((slug) => path12.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
+  ]);
+  try {
+    const affectedPaths = await persistWorkstreamState(
+      args.projectRoot,
+      args.workstreams,
+      uniqueSlugs
+    );
+    const stateResult = await writePreparedBlueprintStateUpdate(args.preparedStateUpdate);
+    return {
+      affectedPaths: [.../* @__PURE__ */ new Set([...affectedPaths, stateResult.statePath])],
+      stateWarnings: stateResult.warnings
+    };
+  } catch (error2) {
+    await restoreFileSnapshots(snapshots);
+    await restoreDirectorySnapshots(directorySnapshots);
+    throw error2;
+  }
 }
 async function runGit(args, options = {}) {
   try {
@@ -51726,14 +54285,27 @@ function maybeFailWorkspaceRegistryWrite(registryPath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesRegistry = injectedFailure === "1" || path9.resolve(injectedFailure) === path9.resolve(registryPath);
+  const matchesRegistry = injectedFailure === "1" || path12.resolve(injectedFailure) === path12.resolve(registryPath);
   if (!matchesRegistry) {
     return;
   }
   delete process.env.BLUEPRINT_TEST_FAIL_WORKSPACE_REGISTRY_WRITE_ONCE;
   throw new Error(`Injected workspace registry write failure for ${registryPath}`);
 }
-function parsePositiveIntegerEnv(name) {
+function maybeFailPatchRegistryWrite(registryPath) {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_PATCH_REGISTRY_WRITE_ONCE;
+  if (!injectedFailure) {
+    return;
+  }
+  const indexPath = patchIndexPath(registryPath);
+  const matchesRegistry = injectedFailure === "1" || path12.resolve(injectedFailure) === path12.resolve(registryPath) || path12.resolve(injectedFailure) === path12.resolve(indexPath);
+  if (!matchesRegistry) {
+    return;
+  }
+  delete process.env.BLUEPRINT_TEST_FAIL_PATCH_REGISTRY_WRITE_ONCE;
+  throw new Error(`Injected patch registry write failure for ${registryPath}`);
+}
+function parsePositiveIntegerEnv2(name) {
   const raw = process.env[name];
   if (!raw) {
     return null;
@@ -51742,18 +54314,46 @@ function parsePositiveIntegerEnv(name) {
   return Number.isInteger(value) && value > 0 ? value : null;
 }
 function workspaceRegistryLockRetryMs() {
-  return parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_RETRY_MS") ?? WORKSPACE_REGISTRY_LOCK_RETRY_MS;
+  return parsePositiveIntegerEnv2("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_RETRY_MS") ?? WORKSPACE_REGISTRY_LOCK_RETRY_MS;
 }
 function workspaceRegistryLockStaleMs() {
-  return parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_STALE_MS") ?? WORKSPACE_REGISTRY_LOCK_STALE_MS;
+  return parsePositiveIntegerEnv2("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_STALE_MS") ?? WORKSPACE_REGISTRY_LOCK_STALE_MS;
 }
 function workspaceRegistryLockHeartbeatMs() {
-  return parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_HEARTBEAT_MS") ?? Math.max(25, Math.floor(workspaceRegistryLockStaleMs() / 4));
+  return parsePositiveIntegerEnv2("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_HEARTBEAT_MS") ?? Math.max(25, Math.floor(workspaceRegistryLockStaleMs() / 4));
 }
 async function maybeDelayWorkspaceRemoveForTest() {
-  const delayMs = parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REMOVE_DELAY_MS");
+  const delayMs = parsePositiveIntegerEnv2("BLUEPRINT_TEST_WORKSPACE_REMOVE_DELAY_MS");
   if (!delayMs) {
     return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+async function maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath) {
+  const injectedTarget = process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
+  if (!injectedTarget || path12.resolve(injectedTarget) !== path12.resolve(workspacePath)) {
+    return;
+  }
+  delete process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
+  await fs7.mkdir(workspacePath, { recursive: true });
+  await fs7.writeFile(path12.join(workspacePath, "foreign-content.txt"), "preserve\n", "utf8");
+}
+async function maybeDelayPatchRecordBeforeIndexForTest() {
+  const delayMs = parsePositiveIntegerEnv2("BLUEPRINT_TEST_PATCH_RECORD_BEFORE_INDEX_DELAY_MS");
+  if (!delayMs) {
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+async function maybeDelayPatchRecordAfterPatchWriteForTest() {
+  const delayMs = parsePositiveIntegerEnv2("BLUEPRINT_TEST_PATCH_RECORD_AFTER_PATCH_WRITE_DELAY_MS");
+  if (!delayMs) {
+    return;
+  }
+  const markerPath = process.env.BLUEPRINT_TEST_PATCH_RECORD_AFTER_PATCH_WRITE_MARKER;
+  if (markerPath) {
+    await fs7.mkdir(path12.dirname(markerPath), { recursive: true });
+    await fs7.writeFile(markerPath, "patch-written\n", "utf8");
   }
   await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
@@ -51791,6 +54391,19 @@ async function gitWorkingTreeClean(repoPath, pathspecs = []) {
   });
   return result.success && result.stdout.length === 0;
 }
+async function gitStatusShortPaths(repoPath) {
+  const result = await runGit(["-C", repoPath, "status", "--short"], {
+    allowFailure: true
+  });
+  if (!result.success || result.stdout.trim().length === 0) {
+    return [];
+  }
+  return result.stdout.split("\n").map((line) => line.trimEnd()).filter((line) => line.length > 0).map((line) => {
+    const statusPath = line.length > 3 ? line.slice(3) : line;
+    const renameTarget = statusPath.split(" -> ").at(-1);
+    return renameTarget ?? statusPath;
+  });
+}
 async function gitWorkingTreeCleanForWorkstreamTransition(repoPath) {
   const result = await runGit(
     [
@@ -51802,6 +54415,7 @@ async function gitWorkingTreeCleanForWorkstreamTransition(repoPath) {
       "--",
       ".",
       `:(exclude)${WORKSTREAMS_ROOT_PATH}/**`,
+      `:(exclude)${BLUEPRINT_DIR}/locks/**`,
       `:(exclude)${BLUEPRINT_STATE_PATH}`
     ],
     {
@@ -51868,7 +54482,7 @@ async function readWorkspaceRegistryDocument(registryPath) {
       workspaces: []
     };
   }
-  const raw = await fs6.readFile(registryPath, "utf8");
+  const raw = await fs7.readFile(registryPath, "utf8");
   return parseWorkspaceRegistryDocument(raw, registryPath);
 }
 function normalizeRegistryEntry(value) {
@@ -51916,36 +54530,36 @@ function normalizeWorkspaceRepoMember(value, fallbackStrategy) {
   };
 }
 async function writeWorkspaceRegistryDocument(registryPath, document) {
-  const directory = path9.dirname(registryPath);
-  const tempPath = path9.join(
+  const directory = path12.dirname(registryPath);
+  const tempPath = path12.join(
     directory,
-    `${path9.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
+    `${path12.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
-  await fs6.mkdir(directory, { recursive: true });
-  await fs6.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
+  await fs7.mkdir(directory, { recursive: true });
+  await fs7.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
 `, "utf8");
   try {
     maybeFailWorkspaceRegistryWrite(registryPath);
   } catch (error2) {
-    await fs6.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs7.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
   if (!await pathExists3(registryPath)) {
-    await fs6.rename(tempPath, registryPath);
+    await fs7.rename(tempPath, registryPath);
     return;
   }
-  const backupPath = path9.join(
+  const backupPath = path12.join(
     directory,
-    `${path9.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
+    `${path12.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
   );
   let restoredOriginal = false;
   try {
-    await fs6.copyFile(registryPath, backupPath);
-    await fs6.rename(tempPath, registryPath);
+    await fs7.copyFile(registryPath, backupPath);
+    await fs7.rename(tempPath, registryPath);
   } catch (error2) {
-    await fs6.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs7.rm(tempPath, { force: true }).catch(() => void 0);
     if (!await pathExists3(registryPath) && await pathExists3(backupPath)) {
-      await fs6.copyFile(backupPath, registryPath).then(() => {
+      await fs7.copyFile(backupPath, registryPath).then(() => {
         restoredOriginal = true;
       }).catch(() => void 0);
     }
@@ -51954,27 +54568,39 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     }
     throw error2;
   }
-  await fs6.rm(backupPath, { force: true }).catch(() => void 0);
+  await fs7.rm(backupPath, { force: true }).catch(() => void 0);
 }
 function workspaceRegistryLockOwnerPath(lockPath) {
-  return path9.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
+  return path12.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
 }
 function workspaceRegistryLockLeasePath(lockPath) {
-  return path9.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+  return path12.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+}
+function workspaceRegistryLockRecoveryPath(lockPath) {
+  return `${lockPath}.recovery`;
+}
+function workspaceRegistryLockRecoveryGuardOwnerPath(recoveryPath, token) {
+  return path12.join(recoveryPath, `${WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+}
+function workspaceRegistryLockQuarantinePath(targetPath) {
+  return `${targetPath}.reclaimed-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 async function writeWorkspaceRegistryLockFile(filePath, contents) {
-  await fs6.writeFile(filePath, `${contents}
+  await fs7.writeFile(filePath, `${contents}
 `, "utf8");
 }
-async function readWorkspaceRegistryLockOwner(lockHandle) {
+async function readWorkspaceRegistryLockOwnerAtPath(lockPath) {
   try {
-    return (await fs6.readFile(lockHandle.ownerPath, "utf8")).trim();
+    return (await fs7.readFile(workspaceRegistryLockOwnerPath(lockPath), "utf8")).trim();
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
     }
     throw error2;
   }
+}
+async function readWorkspaceRegistryLockOwner(lockHandle) {
+  return readWorkspaceRegistryLockOwnerAtPath(lockHandle.lockPath);
 }
 async function refreshWorkspaceRegistryLockLease(lockHandle) {
   const ownerToken = await readWorkspaceRegistryLockOwner(lockHandle);
@@ -51984,24 +54610,188 @@ async function refreshWorkspaceRegistryLockLease(lockHandle) {
   await writeWorkspaceRegistryLockFile(lockHandle.leasePath, lockHandle.token);
   return true;
 }
-async function getWorkspaceRegistryLockAgeMs(lockPath) {
-  const leasePath = workspaceRegistryLockLeasePath(lockPath);
+async function getWorkspaceRegistryLockPathAgeMs(targetPath) {
   try {
-    const stats = await fs6.stat(leasePath);
-    return Date.now() - stats.mtimeMs;
-  } catch (error2) {
-    if (error2.code !== "ENOENT") {
-      throw error2;
-    }
-  }
-  try {
-    const stats = await fs6.stat(lockPath);
+    const stats = await fs7.stat(targetPath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
     }
     throw error2;
+  }
+}
+async function getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath) {
+  let entries;
+  try {
+    entries = await fs7.readdir(recoveryPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+  let newestOwnerMtimeMs = null;
+  for (const entry of entries) {
+    if (!entry.startsWith(WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX)) {
+      continue;
+    }
+    try {
+      const stats = await fs7.stat(path12.join(recoveryPath, entry));
+      newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
+    } catch (error2) {
+      if (error2.code !== "ENOENT") {
+        throw error2;
+      }
+    }
+  }
+  if (newestOwnerMtimeMs !== null) {
+    return Date.now() - newestOwnerMtimeMs;
+  }
+  return getWorkspaceRegistryLockPathAgeMs(recoveryPath);
+}
+async function getWorkspaceRegistryLockAgeMs(lockPath) {
+  const leasePath = workspaceRegistryLockLeasePath(lockPath);
+  const leaseAgeMs = await getWorkspaceRegistryLockPathAgeMs(leasePath);
+  if (leaseAgeMs !== null) {
+    return leaseAgeMs;
+  }
+  return getWorkspaceRegistryLockPathAgeMs(lockPath);
+}
+async function createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recoveryPath) {
+  const token = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const recoveryGuard = {
+    lockPath,
+    recoveryPath,
+    ownerPath: workspaceRegistryLockRecoveryGuardOwnerPath(recoveryPath, token),
+    token
+  };
+  try {
+    await writeWorkspaceRegistryLockFile(recoveryGuard.ownerPath, token);
+  } catch (error2) {
+    await fs7.rmdir(recoveryPath).catch(() => void 0);
+    throw error2;
+  }
+  return recoveryGuard;
+}
+async function refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard) {
+  let stats;
+  try {
+    stats = await fs7.stat(recoveryGuard.ownerPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return false;
+    }
+    throw error2;
+  }
+  if (Date.now() - stats.mtimeMs > workspaceRegistryLockStaleMs()) {
+    return false;
+  }
+  try {
+    const now = /* @__PURE__ */ new Date();
+    await fs7.utimes(recoveryGuard.ownerPath, now, now);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return false;
+    }
+    throw error2;
+  }
+  return true;
+}
+async function releaseWorkspaceRegistryLockRecoveryGuard(recoveryGuard) {
+  if (!await refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard)) {
+    return;
+  }
+  try {
+    await fs7.unlink(recoveryGuard.ownerPath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return;
+    }
+    throw error2;
+  }
+  await fs7.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
+}
+async function reclaimStaleWorkspaceRegistryLockRecoveryGuard(recoveryPath) {
+  const ageMs = await getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath);
+  if (ageMs === null) {
+    return true;
+  }
+  if (ageMs <= workspaceRegistryLockStaleMs()) {
+    return false;
+  }
+  const quarantinePath = workspaceRegistryLockQuarantinePath(recoveryPath);
+  try {
+    await fs7.rename(recoveryPath, quarantinePath);
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return true;
+    }
+    throw error2;
+  }
+  await fs7.rm(quarantinePath, { recursive: true, force: true });
+  return true;
+}
+async function tryAcquireWorkspaceRegistryLockRecoveryGuard(lockPath) {
+  const recoveryPath = workspaceRegistryLockRecoveryPath(lockPath);
+  for (; ; ) {
+    try {
+      await fs7.mkdir(recoveryPath);
+      return createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recoveryPath);
+    } catch (error2) {
+      if (error2.code !== "EEXIST") {
+        throw error2;
+      }
+      if (await reclaimStaleWorkspaceRegistryLockRecoveryGuard(recoveryPath)) {
+        continue;
+      }
+      return null;
+    }
+  }
+}
+async function recoverStaleWorkspaceRegistryLock(lockPath) {
+  const recoveryGuard = await tryAcquireWorkspaceRegistryLockRecoveryGuard(lockPath);
+  if (recoveryGuard === null) {
+    return false;
+  }
+  try {
+    const observedAgeMs = await getWorkspaceRegistryLockAgeMs(lockPath);
+    if (observedAgeMs === null) {
+      return true;
+    }
+    if (observedAgeMs <= workspaceRegistryLockStaleMs()) {
+      return false;
+    }
+    const observedOwner = await readWorkspaceRegistryLockOwnerAtPath(lockPath);
+    await workspaceRegistryLockRecoveryHooksForTest?.beforeStaleLockQuarantine?.(lockPath);
+    if (!await refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard)) {
+      return false;
+    }
+    const currentAgeMs = await getWorkspaceRegistryLockAgeMs(lockPath);
+    if (currentAgeMs === null) {
+      return true;
+    }
+    if (currentAgeMs <= workspaceRegistryLockStaleMs()) {
+      return false;
+    }
+    const currentOwner = await readWorkspaceRegistryLockOwnerAtPath(lockPath);
+    if (currentOwner !== observedOwner) {
+      return false;
+    }
+    const quarantinePath = workspaceRegistryLockQuarantinePath(lockPath);
+    try {
+      await fs7.rename(lockPath, quarantinePath);
+    } catch (error2) {
+      if (error2.code === "ENOENT") {
+        return true;
+      }
+      throw error2;
+    }
+    await fs7.rm(quarantinePath, { recursive: true, force: true });
+    return true;
+  } finally {
+    await releaseWorkspaceRegistryLockRecoveryGuard(recoveryGuard).catch(() => void 0);
+    await workspaceRegistryLockRecoveryHooksForTest?.afterRecoveryGuardRelease?.(lockPath);
   }
 }
 async function createWorkspaceRegistryLockHandle(lockPath) {
@@ -52016,17 +54806,28 @@ async function createWorkspaceRegistryLockHandle(lockPath) {
     await writeWorkspaceRegistryLockFile(lockHandle.ownerPath, token);
     await writeWorkspaceRegistryLockFile(lockHandle.leasePath, token);
   } catch (error2) {
-    await fs6.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    await fs7.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   return lockHandle;
 }
 async function acquireWorkspaceRegistryLock(lockPath) {
-  await fs6.mkdir(path9.dirname(lockPath), { recursive: true });
+  await fs7.mkdir(path12.dirname(lockPath), { recursive: true });
   for (; ; ) {
     try {
-      await fs6.mkdir(lockPath);
-      return createWorkspaceRegistryLockHandle(lockPath);
+      await fs7.mkdir(lockPath);
+      const lockHandle = await createWorkspaceRegistryLockHandle(lockPath);
+      if (await pathExists3(workspaceRegistryLockRecoveryPath(lockPath))) {
+        if (await reclaimStaleWorkspaceRegistryLockRecoveryGuard(
+          workspaceRegistryLockRecoveryPath(lockPath)
+        )) {
+          return lockHandle;
+        }
+        await releaseWorkspaceRegistryLock(lockHandle);
+        await new Promise((resolve) => setTimeout(resolve, workspaceRegistryLockRetryMs()));
+        continue;
+      }
+      return lockHandle;
     } catch (error2) {
       const lockError = error2;
       if (lockError.code !== "EEXIST") {
@@ -52035,8 +54836,10 @@ async function acquireWorkspaceRegistryLock(lockPath) {
       try {
         const ageMs = await getWorkspaceRegistryLockAgeMs(lockPath);
         if (ageMs !== null && ageMs > workspaceRegistryLockStaleMs()) {
-          await fs6.rm(lockPath, { recursive: true, force: true });
-          continue;
+          await workspaceRegistryLockRecoveryHooksForTest?.beforeStaleRecoveryClaim?.(lockPath);
+          if (await recoverStaleWorkspaceRegistryLock(lockPath)) {
+            continue;
+          }
         }
       } catch (statError) {
         if (statError.code === "ENOENT") {
@@ -52067,10 +54870,32 @@ async function releaseWorkspaceRegistryLock(lockHandle) {
   if (ownerToken !== lockHandle.token) {
     return;
   }
-  await fs6.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
+  await fs7.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
 }
 async function withWorkspaceRegistryLock(registryPath, callback) {
   const lockPath = `${registryPath}.lock`;
+  const lockHandle = await acquireWorkspaceRegistryLock(lockPath);
+  const stopHeartbeat = startWorkspaceRegistryLockHeartbeat(lockHandle);
+  try {
+    return await callback();
+  } finally {
+    stopHeartbeat();
+    await releaseWorkspaceRegistryLock(lockHandle);
+  }
+}
+async function withPatchRegistryLock(registryPath, callback) {
+  const lockPath = `${registryPath}.lock`;
+  const lockHandle = await acquireWorkspaceRegistryLock(lockPath);
+  const stopHeartbeat = startWorkspaceRegistryLockHeartbeat(lockHandle);
+  try {
+    return await callback();
+  } finally {
+    stopHeartbeat();
+    await releaseWorkspaceRegistryLock(lockHandle);
+  }
+}
+async function withWorkstreamTransitionLock(projectRoot, callback) {
+  const lockPath = resolveBlueprintPath(projectRoot, WORKSTREAM_TRANSITION_LOCK_PATH);
   const lockHandle = await acquireWorkspaceRegistryLock(lockPath);
   const stopHeartbeat = startWorkspaceRegistryLockHeartbeat(lockHandle);
   try {
@@ -52100,29 +54925,56 @@ function normalizeRecordedPatchId(value, indexPath) {
   }
 }
 function patchIndexPath(registryPath) {
-  return path9.join(registryPath, "index.json");
+  return path12.join(registryPath, "index.json");
 }
 function patchManifestPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.json`);
+  return path12.join(registryPath, `${patchId}.json`);
 }
 function patchContentPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.patch`);
+  return path12.join(registryPath, `${patchId}.patch`);
 }
 function patchAuditPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.audit.ndjson`);
+  return path12.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
   return createHash2("sha256").update(value).digest("hex");
+}
+async function fileContentHash(filePath) {
+  try {
+    return sha256(await fs7.readFile(filePath));
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
+async function capturePatchRecordGenerationFingerprint(args) {
+  const [patchFileHash, manifestFileHash, auditFileHash, indexFileHash] = await Promise.all([
+    fileContentHash(patchContentPath(args.registryPath, args.patchId)),
+    fileContentHash(patchManifestPath(args.registryPath, args.patchId)),
+    fileContentHash(patchAuditPath(args.registryPath, args.patchId)),
+    fileContentHash(patchIndexPath(args.registryPath))
+  ]);
+  return {
+    patchFileHash,
+    manifestFileHash,
+    auditFileHash,
+    indexFileHash
+  };
+}
+function patchRecordGenerationFingerprintsMatch(left, right) {
+  return left.patchFileHash === right.patchFileHash && left.manifestFileHash === right.manifestFileHash && left.auditFileHash === right.auditFileHash && left.indexFileHash === right.indexFileHash;
 }
 function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
   for (const trackedFile of trackedFiles) {
     assertNoNullBytes(trackedFile, "Patch tracked file");
-    const candidatePath = path9.isAbsolute(trackedFile) ? path9.resolve(trackedFile) : path9.resolve(repoRoot, trackedFile);
+    const candidatePath = path12.isAbsolute(trackedFile) ? path12.resolve(trackedFile) : path12.resolve(repoRoot, trackedFile);
     ensurePathWithinRootSync(repoRoot, candidatePath, {
       label: "Patch tracked file"
     });
-    const relativePath = path9.relative(repoRoot, candidatePath).replaceAll(path9.sep, "/");
+    const relativePath = path12.relative(repoRoot, candidatePath).replaceAll(path12.sep, "/");
     if (!relativePath || relativePath === ".") {
       throw new Error("Patch tracked file must resolve to a file path inside the repo.");
     }
@@ -52194,7 +55046,7 @@ async function readPatchRegistryDocument(registryPath) {
       patches: []
     };
   }
-  const raw = await fs6.readFile(indexPath, "utf8");
+  const raw = await fs7.readFile(indexPath, "utf8");
   const parsed = safeJsonParseObject(raw, {
     label: indexPath
   });
@@ -52206,29 +55058,45 @@ async function readPatchRegistryDocument(registryPath) {
   const patchIds = (parsed.patches ?? []).map(
     (patchId) => normalizeRecordedPatchId(patchId, indexPath)
   );
+  const parsedRecord = parsed;
+  const version2 = parsedRecord.version;
+  if (typeof version2 !== "number" || !Number.isInteger(version2)) {
+    throw new Error(
+      `Patch registry is malformed at ${indexPath}; version must be ${PATCH_REGISTRY_VERSION}.`
+    );
+  }
+  if (version2 !== PATCH_REGISTRY_VERSION) {
+    throw new Error(
+      `Patch registry version is unsupported at ${indexPath}: ${version2}.`
+    );
+  }
   return {
-    version: typeof parsed.version === "number" ? parsed.version : PATCH_REGISTRY_VERSION,
+    version: version2,
     patches: [...new Set(patchIds)]
   };
 }
 async function writePatchRegistryDocument(registryPath, document) {
-  await fs6.mkdir(registryPath, { recursive: true });
-  await writeJsonFile(patchIndexPath(registryPath), document);
+  await fs7.mkdir(registryPath, { recursive: true });
+  maybeFailPatchRegistryWrite(registryPath);
+  await writeJsonAtomically(
+    patchIndexPath(registryPath),
+    document
+  );
 }
 async function readPatchManifest(registryPath, patchId) {
   const manifestPath = patchManifestPath(registryPath, patchId);
   if (!await pathExists3(manifestPath)) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
-  const raw = await fs6.readFile(manifestPath, "utf8");
+  const raw = await fs7.readFile(manifestPath, "utf8");
   const parsed = safeJsonParseObject(raw, {
     label: manifestPath
   });
   return normalizePatchManifest(parsed, patchId);
 }
 async function appendPatchAuditEntry(registryPath, patchId, entry) {
-  await fs6.mkdir(registryPath, { recursive: true });
-  await fs6.appendFile(
+  await fs7.mkdir(registryPath, { recursive: true });
+  await fs7.appendFile(
     patchAuditPath(registryPath, patchId),
     `${JSON.stringify(entry)}
 `,
@@ -52245,7 +55113,7 @@ async function loadPatchContent(registryPath, patchId, manifest) {
   if (!await pathExists3(contentPath)) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
-  const patch = await fs6.readFile(contentPath, "utf8");
+  const patch = await fs7.readFile(contentPath, "utf8");
   if (sha256(patch) !== manifest.patchHash) {
     throw new Error(
       `Patch registry is malformed for ${patchId}; recorded patch content does not match its manifest.`
@@ -52253,14 +55121,64 @@ async function loadPatchContent(registryPath, patchId, manifest) {
   }
   return patch;
 }
+async function capturePatchRecordRollbackSnapshot(args) {
+  const [patchFile, manifestFile, auditFile] = await snapshotFiles([
+    patchContentPath(args.registryPath, args.patchId),
+    patchManifestPath(args.registryPath, args.patchId),
+    patchAuditPath(args.registryPath, args.patchId)
+  ]);
+  return {
+    registryPath: args.registryPath,
+    patchId: args.patchId,
+    wasIndexed: args.registry.patches.includes(args.patchId),
+    registryPatches: args.registry.patches,
+    patchFile,
+    manifestFile,
+    auditFile
+  };
+}
+async function rollbackPatchRecordToSnapshot(snapshot) {
+  await withPatchRegistryLock(snapshot.registryPath, async () => {
+    const currentFingerprint = await capturePatchRecordGenerationFingerprint({
+      registryPath: snapshot.registryPath,
+      patchId: snapshot.patchId
+    });
+    if (!patchRecordGenerationFingerprintsMatch(
+      currentFingerprint,
+      snapshot.expectedPostWriteFingerprint
+    )) {
+      throw new Error(
+        `Patch registry rollback refused for ${snapshot.patchId}; record changed after failed PlanRun persistence.`
+      );
+    }
+    await restoreFileSnapshots([
+      snapshot.patchFile,
+      snapshot.manifestFile,
+      snapshot.auditFile
+    ]);
+    const currentRegistry = await readPatchRegistryDocument(snapshot.registryPath);
+    const currentPatches = currentRegistry.patches.filter(
+      (patchId) => patchId !== snapshot.patchId
+    );
+    const snapshotPatchSet = new Set(snapshot.registryPatches);
+    const concurrentPatches = currentPatches.filter(
+      (patchId) => !snapshotPatchSet.has(patchId)
+    );
+    const patches = snapshot.wasIndexed ? [...snapshot.registryPatches, ...concurrentPatches] : currentPatches;
+    await writePatchRegistryDocument(snapshot.registryPath, {
+      version: currentRegistry.version,
+      patches
+    });
+  });
+}
 function assertNotInstalledExtensionTarget(repoRoot) {
   const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
   if (!extensionPath) {
     return;
   }
-  const resolvedRepoRoot = path9.resolve(repoRoot);
-  const resolvedExtensionPath = path9.resolve(extensionPath);
-  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path9.sep}`)) {
+  const resolvedRepoRoot = path12.resolve(repoRoot);
+  const resolvedExtensionPath = path12.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path12.sep}`)) {
     throw new Error(
       `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
     );
@@ -52280,7 +55198,7 @@ async function buildPatchCompatibilityStatus(manifest, repoRoot) {
   }
   const runtimeHost = resolveBlueprintRuntimeHost();
   const reasons = [];
-  const repoName = path9.basename(repoRoot);
+  const repoName = path12.basename(repoRoot);
   if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
     reasons.push(
       `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
@@ -52334,21 +55252,21 @@ async function resolveDefaultWorkspaceRoot(cwd) {
     });
     const configuredRoot = config2.config.maintenance.workspace_root?.trim();
     if (configuredRoot) {
-      return expandHomePath(configuredRoot);
+      return expandHomePath3(configuredRoot);
     }
   } catch (error2) {
     if (!(error2 instanceof Error && error2.message === "Blueprint commands must run from the repository root; no .git entry was found in the current directory.")) {
       throw error2;
     }
   }
-  return path9.join(os.homedir(), "blueprint-workspaces");
+  return path12.join(os3.homedir(), "blueprint-workspaces");
 }
 async function resolveWorkspacePath(args) {
   if (args.path) {
-    return path9.resolve(expandHomePath(args.path));
+    return path12.resolve(expandHomePath3(args.path));
   }
   const workspaceRoot = await resolveDefaultWorkspaceRoot(args.cwd);
-  return path9.join(workspaceRoot, normalizeWorkspaceName(args.name));
+  return path12.join(workspaceRoot, normalizeWorkspaceName(args.name));
 }
 async function validateWorkspaceBranchName(branch) {
   const trimmed = branch.trim();
@@ -52378,18 +55296,18 @@ async function resolveSourceRepos(repoInputs, cwd) {
   const seen = /* @__PURE__ */ new Set();
   for (const repoInput of repoInputs) {
     assertNoNullBytes(repoInput, "Workspace repo");
-    const candidatePath = path9.resolve(cwd ?? process.cwd(), expandHomePath(repoInput));
+    const candidatePath = path12.resolve(cwd ?? process.cwd(), expandHomePath3(repoInput));
     const sourcePath = await resolveGitRepoRoot(candidatePath);
     if (seen.has(sourcePath)) {
       continue;
     }
     seen.add(sourcePath);
     resolved.push({
-      name: slugifyRepoName(path9.basename(sourcePath)),
+      name: slugifyRepoName(path12.basename(sourcePath)),
       sourcePath,
       defaultBranch: await gitCurrentBranch(sourcePath),
       head: await gitHeadSha(sourcePath),
-      blueprintProject: await pathExists3(path9.join(sourcePath, ".blueprint"))
+      blueprintProject: await pathExists3(path12.join(sourcePath, ".blueprint"))
     });
   }
   if (resolved.length === 0) {
@@ -52411,10 +55329,10 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
 }
 function resolveWorkspaceTargetPath(value, cwd) {
   assertNoNullBytes(value, "Workspace path");
-  return path9.resolve(cwd ?? process.cwd(), expandHomePath(value));
+  return path12.resolve(cwd ?? process.cwd(), expandHomePath3(value));
 }
 function buildWorkspaceManifestPath(workspacePath) {
-  return path9.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+  return path12.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
 function assertNotInstalledExtensionPath(candidatePath, label) {
   const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
@@ -52423,7 +55341,7 @@ function assertNotInstalledExtensionPath(candidatePath, label) {
   }
   if (isPathWithinRootSync(extensionPath, candidatePath)) {
     throw new Error(
-      `${label} must not target the installed extension directory: ${path9.resolve(extensionPath)}`
+      `${label} must not target the installed extension directory: ${path12.resolve(extensionPath)}`
     );
   }
 }
@@ -52431,7 +55349,7 @@ async function rollbackPartialWorktreeAdd(sourceRepoPath, memberPath, createdSou
   await runGit(["-C", sourceRepoPath, "worktree", "remove", "--force", memberPath], {
     allowFailure: true
   });
-  await fs6.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
+  await fs7.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
   if (createdSourceBranch) {
     await runGit(
       ["-C", sourceRepoPath, "branch", "--delete", "--force", createdSourceBranch],
@@ -52450,7 +55368,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
     duplicateIndex += 1;
   }
   usedTargetNames.add(candidateName);
-  const memberPath = path9.join(workspacePath, candidateName);
+  const memberPath = path12.join(workspacePath, candidateName);
   if (strategy === "worktree") {
     const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
     const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
@@ -52563,7 +55481,7 @@ async function rollbackCreatedMembers(createdMembers) {
       }
     } catch {
     }
-    await fs6.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+    await fs7.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
@@ -52573,7 +55491,7 @@ function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
   }
   if (workspacePath) {
     const exactMatches = nameMatches.filter(
-      (workspace) => path9.resolve(workspace.path) === workspacePath
+      (workspace) => path12.resolve(workspace.path) === workspacePath
     );
     if (exactMatches.length > 1) {
       throw new Error(
@@ -52602,17 +55520,17 @@ async function ensurePathRemoved(targetPath, label) {
   }
 }
 function workspaceEntriesMatch(registryEntry, manifestEntry) {
-  if (registryEntry.name !== manifestEntry.name || path9.resolve(registryEntry.path) !== path9.resolve(manifestEntry.path) || path9.resolve(registryEntry.manifestPath) !== path9.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
+  if (registryEntry.name !== manifestEntry.name || path12.resolve(registryEntry.path) !== path12.resolve(manifestEntry.path) || path12.resolve(registryEntry.manifestPath) !== path12.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
     return false;
   }
   return registryEntry.repos.every((member, index) => {
     const manifestMember = manifestEntry.repos[index];
-    return manifestMember !== void 0 && member.name === manifestMember.name && path9.resolve(member.sourcePath) === path9.resolve(manifestMember.sourcePath) && path9.resolve(member.path) === path9.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
+    return manifestMember !== void 0 && member.name === manifestMember.name && path12.resolve(member.sourcePath) === path12.resolve(manifestMember.sourcePath) && path12.resolve(member.path) === path12.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
   });
 }
 async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryPath) {
   try {
-    const raw = await fs6.readFile(manifestPath, "utf8");
+    const raw = await fs7.readFile(manifestPath, "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: manifestPath
     });
@@ -52625,9 +55543,9 @@ async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryP
   }
 }
 async function verifyWorkspaceRemovalEntry(entry, registryPath) {
-  const workspacePath = path9.resolve(entry.path);
-  const manifestPath = path9.resolve(entry.manifestPath);
-  const expectedManifestPath = path9.resolve(buildWorkspaceManifestPath(workspacePath));
+  const workspacePath = path12.resolve(entry.path);
+  const manifestPath = path12.resolve(entry.manifestPath);
+  const expectedManifestPath = path12.resolve(buildWorkspaceManifestPath(workspacePath));
   assertNotInstalledExtensionPath(workspacePath, "Workspace removal target");
   if (manifestPath !== expectedManifestPath) {
     throw new Error(
@@ -52651,7 +55569,7 @@ async function verifyWorkspaceRemovalEntry(entry, registryPath) {
     );
   }
   for (const member of entry.repos) {
-    const memberPath = path9.resolve(member.path);
+    const memberPath = path12.resolve(member.path);
     ensurePathWithinRootSync(workspacePath, memberPath, {
       label: "Workspace repo member"
     });
@@ -52706,7 +55624,7 @@ async function removeWorkspaceMember(member) {
       );
     }
   }
-  await fs6.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+  await fs7.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   await ensurePathRemoved(member.path, "Workspace repo member");
 }
 async function listGitWorktreePaths(repoPath) {
@@ -52778,7 +55696,7 @@ async function rollbackWorkspaceRemoval({
 }) {
   const rollbackErrors = [];
   if (rollbackWorkspacePath && await pathExists3(rollbackWorkspacePath) && !await pathExists3(entry.path)) {
-    await fs6.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
+    await fs7.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
       const reason = error2 instanceof Error ? error2.message : String(error2);
       rollbackErrors.push(
         `unable to restore workspace root ${entry.path} from ${rollbackWorkspacePath}: ${reason}`
@@ -52803,7 +55721,7 @@ async function rollbackWorkspaceRemoval({
   }
 }
 async function blueprintWorkspaceRegistryGet(_args = {}) {
-  const registryPath = expandHomePath(
+  const registryPath = expandHomePath3(
     resolveBlueprintRuntimeHost().workspaceRegistryPath
   );
   const registry2 = await readWorkspaceRegistryDocument(registryPath);
@@ -52816,7 +55734,7 @@ async function blueprintWorkspaceCreate(args) {
   const normalizedName = normalizeWorkspaceName(args.name);
   const requestedBranch = args.branch ? await validateWorkspaceBranchName(args.branch) : null;
   const strategy = args.strategy ?? "worktree";
-  const registryPath = expandHomePath(
+  const registryPath = expandHomePath3(
     resolveBlueprintRuntimeHost().workspaceRegistryPath
   );
   const workspacePath = await resolveWorkspacePath({
@@ -52827,7 +55745,6 @@ async function blueprintWorkspaceCreate(args) {
   const manifestPath = buildWorkspaceManifestPath(workspacePath);
   assertNotInstalledExtensionPath(workspacePath, "Workspace path");
   ensureWorkspaceTargetIsSafe(workspacePath, sourceRepos);
-  await ensureWorkspaceTargetDoesNotExist(workspacePath);
   for (const sourceRepo of sourceRepos) {
     assertNotInstalledExtensionPath(sourceRepo.sourcePath, "Workspace source repo");
     if (!await gitWorkingTreeClean(sourceRepo.sourcePath, args.cleanStatusPathspecs)) {
@@ -52839,7 +55756,7 @@ async function blueprintWorkspaceCreate(args) {
   return withWorkspaceRegistryLock(registryPath, async () => {
     const registry2 = await readWorkspaceRegistryDocument(registryPath);
     if (registry2.workspaces.some(
-      (workspace) => workspace.name === normalizedName || path9.resolve(workspace.path) === path9.resolve(workspacePath)
+      (workspace) => workspace.name === normalizedName || path12.resolve(workspace.path) === path12.resolve(workspacePath)
     )) {
       throw new Error(
         `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
@@ -52848,9 +55765,13 @@ async function blueprintWorkspaceCreate(args) {
     const createdMembers = [];
     const usedTargetNames = /* @__PURE__ */ new Set();
     const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+    let createdWorkspaceRoot = false;
     try {
-      await fs6.mkdir(path9.dirname(workspacePath), { recursive: true });
-      await fs6.mkdir(workspacePath, { recursive: false });
+      await fs7.mkdir(path12.dirname(workspacePath), { recursive: true });
+      await ensureWorkspaceTargetDoesNotExist(workspacePath);
+      await maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath);
+      await fs7.mkdir(workspacePath, { recursive: false });
+      createdWorkspaceRoot = true;
       for (const sourceRepo of sourceRepos) {
         const createdMember = await createWorkspaceMember(
           workspacePath,
@@ -52884,7 +55805,9 @@ async function blueprintWorkspaceCreate(args) {
       };
     } catch (error2) {
       await rollbackCreatedMembers(createdMembers);
-      await fs6.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
+      if (createdWorkspaceRoot) {
+        await fs7.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
+      }
       if (error2 instanceof Error) {
         throw error2;
       }
@@ -52895,7 +55818,7 @@ async function blueprintWorkspaceCreate(args) {
 async function blueprintWorkspaceRemove(args) {
   const normalizedName = normalizeWorkspaceName(args.name);
   const requestedWorkspacePath = args.path ? resolveWorkspaceTargetPath(args.path, args.cwd) : null;
-  const registryPath = expandHomePath(
+  const registryPath = expandHomePath3(
     resolveBlueprintRuntimeHost().workspaceRegistryPath
   );
   return withWorkspaceRegistryLock(registryPath, async () => {
@@ -52922,11 +55845,11 @@ async function blueprintWorkspaceRemove(args) {
         await removeWorkspaceMember(member);
       }
       rollbackWorkspacePath = workspaceRemovalRollbackPath(entry.path);
-      await fs6.rename(entry.path, rollbackWorkspacePath);
+      await fs7.rename(entry.path, rollbackWorkspacePath);
       await maybeDelayWorkspaceRemoveForTest();
       await ensurePathRemoved(entry.path, "Workspace root");
       await writeWorkspaceRegistryDocument(registryPath, nextRegistryDocument);
-      await fs6.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
+      await fs7.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
       await ensurePathRemoved(rollbackWorkspacePath, "Workspace removal rollback root");
       return {
         removedPath: entry.path,
@@ -52961,6 +55884,15 @@ async function blueprintWorkstreamList(args = {}) {
 }
 async function blueprintWorkstreamMutate(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
+  if (!await pathExists3(path12.join(projectRoot, BLUEPRINT_DIR))) {
+    return blueprintWorkstreamMutateLocked(projectRoot, args);
+  }
+  return withWorkstreamTransitionLock(
+    projectRoot,
+    () => blueprintWorkstreamMutateLocked(projectRoot, args)
+  );
+}
+async function blueprintWorkstreamMutateLocked(projectRoot, args) {
   const store = await loadWorkstreamStore(projectRoot);
   if (store.status !== "ready") {
     return buildMutationResult(store, {
@@ -53047,6 +55979,31 @@ async function blueprintWorkstreamMutate(args) {
   }
   const currentActive = workstreams.find((entry) => entry.status === "active") ?? null;
   const targetIsActive = currentActive?.slug === target.slug;
+  const confirmationWaitingState = operation === "switch" && target.status !== "completed" && !targetIsActive ? "workstream-switch-confirmation" : operation === "complete" && targetIsActive ? "workstream-archive-confirmation" : null;
+  if (confirmationWaitingState) {
+    if (!activeWorkstreamMatchesExpected(currentActive, args.expectedActiveWorkstream)) {
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: confirmationWaitingState,
+        nextAction: `Rerun ${WORKSTREAMS_COMMAND} after previewing the current active workstream, then confirm the ${operation} request again.`,
+        reason: `Active workstream changed since the confirmation preview. Expected ${args.expectedActiveWorkstream}; found ${activeWorkstreamDescription(currentActive)}.`,
+        statePatch: null
+      });
+    }
+    if (args.confirmed !== true) {
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: confirmationWaitingState,
+        nextAction: `Preview ${target.slug} and the current active workstream, ask for explicit confirmation, then retry ${operation} with confirmed: true.`,
+        reason: operation === "switch" ? `Switching from ${activeWorkstreamDescription(currentActive)} to ${target.name} (${target.slug}) requires explicit confirmation.` : `Completing the active workstream ${target.name} (${target.slug}) requires explicit archive confirmation.`,
+        statePatch: null
+      });
+    }
+  }
   const requiresCleanTree = operation === "switch" ? !targetIsActive : operation === "resume" ? true : targetIsActive;
   if (requiresCleanTree && !await gitWorkingTreeCleanForWorkstreamTransition(projectRoot)) {
     return buildMutationResult(store, {
@@ -53136,6 +56093,25 @@ async function blueprintWorkstreamMutate(args) {
         statePatch: null
       });
     }
+    const resumeStatePatch = buildResumeStatePatch(target.stateSnapshot);
+    let preparedStateUpdate;
+    try {
+      preparedStateUpdate = await prepareBlueprintStateUpdate({
+        cwd: projectRoot,
+        patch: resumeStatePatch ?? {}
+      });
+    } catch (error2) {
+      const reason = error2 instanceof Error ? error2.message : String(error2);
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: "missing-resume-snapshot",
+        nextAction: `Repair or recreate the saved STATE.md snapshot for ${target.slug} before retrying resume.`,
+        reason: `Saved STATE.md snapshot for workstream ${target.name} cannot be restored: ${reason}`,
+        statePatch: null
+      });
+    }
     let currentSnapshot = null;
     if (currentActive && currentActive.slug !== target.slug) {
       const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
@@ -53164,18 +56140,28 @@ async function blueprintWorkstreamMutate(args) {
       workstreams,
       active: target
     };
-    const affectedPaths2 = await persistWorkstreamState(projectRoot, workstreams, [
+    const affectedSlugs = [
       ...currentActive && currentActive.slug !== target.slug ? [currentActive.slug] : [],
       target.slug
-    ]);
-    return buildMutationResult(reloadedStore2, {
+    ];
+    const { affectedPaths: affectedPaths2, stateWarnings } = await persistWorkstreamStateWithPreparedStateUpdate({
+      projectRoot,
+      workstreams,
+      affectedSlugs,
+      preparedStateUpdate
+    });
+    const resumeStore = {
+      ...reloadedStore2,
+      warnings: [...reloadedStore2.warnings, ...stateWarnings]
+    };
+    return buildMutationResult(resumeStore, {
       status: targetIsActive ? "reused" : "updated",
       operation,
       affectedPaths: affectedPaths2,
       waitingState: null,
-      nextAction: `Apply the returned state patch through blueprint_state_update, then continue work on ${target.slug}.`,
+      nextAction: `Continue work on ${target.slug}; ${BLUEPRINT_STATE_PATH} was restored from its saved snapshot.`,
       reason: null,
-      statePatch: buildResumeStatePatch(target.stateSnapshot)
+      statePatch: resumeStatePatch
     });
   }
   if (target.status === "completed") {
@@ -53222,141 +56208,215 @@ async function blueprintWorkstreamMutate(args) {
   });
 }
 async function blueprintPatchList(args = {}) {
-  const registryPath = expandHomePath(resolveBlueprintRuntimeHost().patchRegistryPath);
-  const registry2 = await readPatchRegistryDocument(registryPath);
+  const registryPath = expandHomePath3(resolveBlueprintRuntimeHost().patchRegistryPath);
   const repoRoot = args.cwd ? await resolveGitRepoRoot(args.cwd) : null;
   const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
-  const patchIds = selectedPatchIds(registry2, requestedPatchIds);
-  const patches = await Promise.all(
-    patchIds.map(async (patchId) => {
-      const manifest = await readPatchManifest(registryPath, patchId);
-      await loadPatchContent(registryPath, patchId, manifest);
-      return {
-        patchId,
-        label: manifest.label,
-        createdAt: manifest.createdAt,
-        sourceVersion: manifest.sourceVersion,
-        trackedFiles: manifest.trackedFiles,
-        manifestPath: patchManifestPath(registryPath, patchId),
-        patchPath: patchContentPath(registryPath, patchId),
-        auditPath: patchAuditPath(registryPath, patchId),
-        lastAppliedAt: manifest.lastAppliedAt,
-        lastOutcome: manifest.lastOutcome,
-        compatibility: await buildPatchCompatibilityStatus(manifest, repoRoot)
-      };
-    })
-  );
-  return {
-    registryPath,
-    patches
-  };
-}
-async function blueprintPatchRecord(args) {
-  const repoRoot = await resolvePatchReplayTarget(args.cwd);
-  const runtimeHost = resolveBlueprintRuntimeHost();
-  const registryPath = expandHomePath(runtimeHost.patchRegistryPath);
-  const patchId = normalizePatchId(args.patchId);
-  const trackedFiles = normalizeTrackedFiles(repoRoot, args.trackedFiles);
-  const registry2 = await readPatchRegistryDocument(registryPath);
-  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
-  const patchPath = patchContentPath(registryPath, patchId);
-  const manifestPath = patchManifestPath(registryPath, patchId);
-  const auditPath = patchAuditPath(registryPath, patchId);
-  const existingManifest = await pathExists3(manifestPath) ? await readPatchManifest(registryPath, patchId) : null;
-  const updatingStoredPatch = existingManifest !== null;
-  const hasNewPatchContent = typeof args.patch === "string" && args.patch.length > 0;
-  const patch = hasNewPatchContent ? args.patch : existingManifest ? await loadPatchContent(registryPath, patchId, existingManifest) : null;
-  if (!patch) {
-    throw new Error(`Patch content is required when creating a new registry entry: ${patchId}`);
-  }
-  assertNoNullBytes(patch, "Patch content");
-  const normalizedPatch = patch.endsWith("\n") ? patch : `${patch}
-`;
-  const patchHash = sha256(normalizedPatch);
-  let repoRemote;
-  let sourceVersion;
-  let compatibility;
-  if (updatingStoredPatch && !hasNewPatchContent && existingManifest) {
-    repoRemote = existingManifest.repoRemote;
-    sourceVersion = existingManifest.sourceVersion;
-    compatibility = existingManifest.compatibility;
-  } else {
-    repoRemote = await gitRemoteUrl(repoRoot);
-    sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
-    compatibility = {
-      host: args.compatibility?.host ?? runtimeHost.host,
-      repoRootName: args.compatibility?.repoRootName ?? path9.basename(repoRoot),
-      remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
+  const registryLockPath = `${registryPath}.lock`;
+  if (!await pathExists3(registryPath) && !await pathExists3(patchIndexPath(registryPath)) && !await pathExists3(registryLockPath)) {
+    selectedPatchIds(
+      {
+        version: PATCH_REGISTRY_VERSION,
+        patches: []
+      },
+      requestedPatchIds
+    );
+    return {
+      registryPath,
+      patches: []
     };
   }
-  const manifest = {
-    version: PATCH_MANIFEST_VERSION,
-    patchId,
-    label: args.label?.trim() || null,
-    createdAt: existingManifest?.createdAt ?? createdAt,
-    sourceVersion,
-    repoRootName: path9.basename(repoRoot),
-    repoRemote,
-    patchFile: path9.basename(patchPath),
-    patchHash,
-    trackedFiles,
-    compatibility,
-    lastAppliedAt: args.audit?.outcome === "applied" ? createdAt : existingManifest?.lastAppliedAt ?? null,
-    lastOutcome: args.audit?.outcome ?? existingManifest?.lastOutcome ?? "recorded"
-  };
-  await fs6.mkdir(registryPath, { recursive: true });
-  await fs6.writeFile(patchPath, normalizedPatch, "utf8");
-  await writeJsonFile(manifestPath, manifest);
-  if (!registry2.patches.includes(patchId)) {
-    await writePatchRegistryDocument(registryPath, {
-      version: registry2.version || PATCH_REGISTRY_VERSION,
-      patches: [...registry2.patches, patchId]
-    });
-  }
-  const auditEntry = {
-    version: PATCH_AUDIT_VERSION,
-    timestamp: createdAt,
-    action: args.audit?.action ?? "record",
-    outcome: args.audit?.outcome ?? "recorded",
-    cwd: path9.resolve(args.cwd ?? process.cwd()),
-    repoRoot,
-    targetHead: args.audit?.targetHead ?? sourceVersion,
-    trackedFiles,
-    conflicts: args.audit?.conflicts ?? [],
-    warnings: args.audit?.warnings ?? [],
-    dryRun: args.audit?.dryRun ?? false
-  };
-  await appendPatchAuditEntry(registryPath, patchId, auditEntry);
-  return {
-    patchId,
-    registryPath,
-    manifestPath,
-    patchPath,
-    auditPath,
-    trackedFiles,
-    updated: existingManifest !== null
-  };
+  return withPatchRegistryLock(registryPath, async () => {
+    const registry2 = await readPatchRegistryDocument(registryPath);
+    const patchIds = selectedPatchIds(registry2, requestedPatchIds);
+    const patches = await Promise.all(
+      patchIds.map(async (patchId) => {
+        const manifest = await readPatchManifest(registryPath, patchId);
+        await loadPatchContent(registryPath, patchId, manifest);
+        return {
+          patchId,
+          label: manifest.label,
+          createdAt: manifest.createdAt,
+          sourceVersion: manifest.sourceVersion,
+          trackedFiles: manifest.trackedFiles,
+          manifestPath: patchManifestPath(registryPath, patchId),
+          patchPath: patchContentPath(registryPath, patchId),
+          auditPath: patchAuditPath(registryPath, patchId),
+          lastAppliedAt: manifest.lastAppliedAt,
+          lastOutcome: manifest.lastOutcome,
+          compatibility: await buildPatchCompatibilityStatus(manifest, repoRoot)
+        };
+      })
+    );
+    return {
+      registryPath,
+      patches
+    };
+  });
+}
+async function blueprintPatchRecord(args, options = {}) {
+  const repoRoot = await resolvePatchReplayTarget(args.cwd);
+  const runtimeHost = resolveBlueprintRuntimeHost();
+  const registryPath = expandHomePath3(runtimeHost.patchRegistryPath);
+  const patchId = normalizePatchId(args.patchId);
+  const trackedFiles = normalizeTrackedFiles(repoRoot, args.trackedFiles);
+  return withPatchRegistryLock(registryPath, async () => {
+    const registry2 = await readPatchRegistryDocument(registryPath);
+    const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+    const patchPath = patchContentPath(registryPath, patchId);
+    const manifestPath = patchManifestPath(registryPath, patchId);
+    const auditPath = patchAuditPath(registryPath, patchId);
+    const existingManifest = await pathExists3(manifestPath) ? await readPatchManifest(registryPath, patchId) : null;
+    const updatingStoredPatch = existingManifest !== null;
+    const hasNewPatchContent = typeof args.patch === "string" && args.patch.length > 0;
+    const patch = hasNewPatchContent ? args.patch : existingManifest ? await loadPatchContent(registryPath, patchId, existingManifest) : null;
+    if (!patch) {
+      throw new Error(`Patch content is required when creating a new registry entry: ${patchId}`);
+    }
+    assertNoNullBytes(patch, "Patch content");
+    const normalizedPatch = patch.endsWith("\n") ? patch : `${patch}
+`;
+    const patchHash = sha256(normalizedPatch);
+    let repoRemote;
+    let sourceVersion;
+    let compatibility;
+    if (updatingStoredPatch && !hasNewPatchContent && existingManifest) {
+      repoRemote = existingManifest.repoRemote;
+      sourceVersion = existingManifest.sourceVersion;
+      compatibility = existingManifest.compatibility;
+    } else {
+      repoRemote = await gitRemoteUrl(repoRoot);
+      sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
+      compatibility = {
+        host: args.compatibility?.host ?? runtimeHost.host,
+        repoRootName: args.compatibility?.repoRootName ?? path12.basename(repoRoot),
+        remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
+      };
+    }
+    const manifest = {
+      version: PATCH_MANIFEST_VERSION,
+      patchId,
+      label: args.label?.trim() || null,
+      createdAt: existingManifest?.createdAt ?? createdAt,
+      sourceVersion,
+      repoRootName: path12.basename(repoRoot),
+      repoRemote,
+      patchFile: path12.basename(patchPath),
+      patchHash,
+      trackedFiles,
+      compatibility,
+      lastAppliedAt: args.audit?.outcome === "applied" ? createdAt : existingManifest?.lastAppliedAt ?? null,
+      lastOutcome: args.audit?.outcome ?? existingManifest?.lastOutcome ?? "recorded"
+    };
+    const snapshots = await snapshotFiles([
+      patchPath,
+      manifestPath,
+      auditPath,
+      patchIndexPath(registryPath)
+    ]);
+    const rollbackSnapshotBaseline = options.captureRollbackSnapshot ? await capturePatchRecordRollbackSnapshot({
+      registryPath,
+      patchId,
+      registry: registry2
+    }) : null;
+    let rollbackSnapshot = null;
+    try {
+      await fs7.mkdir(registryPath, { recursive: true });
+      await writeFileAtomically(patchPath, normalizedPatch);
+      await maybeDelayPatchRecordAfterPatchWriteForTest();
+      await writeJsonFile(manifestPath, manifest);
+      if (!registry2.patches.includes(patchId)) {
+        await maybeDelayPatchRecordBeforeIndexForTest();
+        await writePatchRegistryDocument(registryPath, {
+          version: PATCH_REGISTRY_VERSION,
+          patches: [...registry2.patches, patchId]
+        });
+      }
+      const auditEntry = {
+        version: PATCH_AUDIT_VERSION,
+        timestamp: createdAt,
+        action: args.audit?.action ?? "record",
+        outcome: args.audit?.outcome ?? "recorded",
+        cwd: path12.resolve(args.cwd ?? process.cwd()),
+        repoRoot,
+        targetHead: args.audit?.targetHead ?? sourceVersion,
+        trackedFiles,
+        conflicts: args.audit?.conflicts ?? [],
+        warnings: args.audit?.warnings ?? [],
+        dryRun: args.audit?.dryRun ?? false
+      };
+      await appendPatchAuditEntry(registryPath, patchId, auditEntry);
+      if (rollbackSnapshotBaseline) {
+        rollbackSnapshot = {
+          ...rollbackSnapshotBaseline,
+          expectedPostWriteFingerprint: await capturePatchRecordGenerationFingerprint({
+            registryPath,
+            patchId
+          })
+        };
+      }
+    } catch (error2) {
+      await restoreFileSnapshots(snapshots);
+      throw error2;
+    }
+    const result = {
+      patchId,
+      registryPath,
+      manifestPath,
+      patchPath,
+      auditPath,
+      trackedFiles,
+      updated: existingManifest !== null
+    };
+    if (rollbackSnapshot) {
+      return {
+        ...result,
+        rollbackSnapshot
+      };
+    }
+    return result;
+  });
 }
 async function blueprintPatchReapply(args = {}) {
   const repoRoot = await resolvePatchReplayTarget(args.cwd);
-  const registryPath = expandHomePath(resolveBlueprintRuntimeHost().patchRegistryPath);
-  const registry2 = await readPatchRegistryDocument(registryPath);
+  const registryPath = expandHomePath3(resolveBlueprintRuntimeHost().patchRegistryPath);
   const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
-  const patchIds = await selectedPatchIdsForReplay(
-    registryPath,
-    registry2,
-    repoRoot,
-    requestedPatchIds
-  );
+  const replaySnapshot = await withPatchRegistryLock(registryPath, async () => {
+    const registry2 = await readPatchRegistryDocument(registryPath);
+    const patchIds2 = await selectedPatchIdsForReplay(
+      registryPath,
+      registry2,
+      repoRoot,
+      requestedPatchIds
+    );
+    const snapshots = [];
+    for (const patchId of patchIds2) {
+      const manifest = await readPatchManifest(registryPath, patchId);
+      const compatibility = await buildPatchCompatibilityStatus(manifest, repoRoot);
+      if (compatibility.status === "mismatch") {
+        throw new Error(
+          `Patch compatibility mismatch for ${patchId}: ${compatibility.reasons.join(" ")}`
+        );
+      }
+      snapshots.push({
+        patchId,
+        manifest,
+        patch: await loadPatchContent(registryPath, patchId, manifest)
+      });
+    }
+    return snapshots;
+  });
+  const patchIds = replaySnapshot.map((snapshot) => snapshot.patchId);
   const dirtyTree = !await gitWorkingTreeClean(repoRoot);
   const targetHead = await gitHeadSha(repoRoot);
+  const preview = args.dryRun ?? false;
   if (patchIds.length === 0) {
     return {
+      status: preview ? "preview" : "skipped",
       registryPath,
       appliedPatches: [],
       skippedPatches: [],
       conflicts: [],
-      preview: args.dryRun ?? false,
+      preview,
       targetHead
     };
   }
@@ -53364,90 +56424,122 @@ async function blueprintPatchReapply(args = {}) {
     throw new Error(`Patch replay requires a clean working tree: ${repoRoot}`);
   }
   const conflicts = [];
-  const patchFiles = [];
-  for (const patchId of patchIds) {
-    const manifest = await readPatchManifest(registryPath, patchId);
-    const compatibility = await buildPatchCompatibilityStatus(manifest, repoRoot);
-    if (compatibility.status === "mismatch") {
-      throw new Error(
-        `Patch compatibility mismatch for ${patchId}: ${compatibility.reasons.join(" ")}`
-      );
-    }
-    await loadPatchContent(registryPath, patchId, manifest);
-    patchFiles.push(patchContentPath(registryPath, patchId));
-  }
-  const checkResult = await runGit(
-    ["-C", repoRoot, "apply", "--check", "--verbose", ...patchFiles],
-    { allowFailure: true }
-  );
-  if (!checkResult.success) {
-    for (const patchId of patchIds) {
-      const patchFile = patchContentPath(registryPath, patchId);
-      const patchCheck = await runGit(
-        ["-C", repoRoot, "apply", "--check", "--verbose", patchFile],
-        { allowFailure: true }
-      );
-      if (!patchCheck.success) {
-        conflicts.push({
-          patchId,
-          message: patchCheck.stderr || patchCheck.stdout || "Patch did not apply cleanly."
-        });
+  const tempDir = await fs7.mkdtemp(path12.join(os3.tmpdir(), "blueprint-patch-reapply-"));
+  try {
+    const patchFiles = await Promise.all(
+      replaySnapshot.map(async (snapshot, index) => {
+        const patchFile = path12.join(tempDir, `${index}-${snapshot.patchId}.patch`);
+        await fs7.writeFile(patchFile, snapshot.patch, "utf8");
+        return patchFile;
+      })
+    );
+    const checkResult = await runGit(
+      ["-C", repoRoot, "apply", "--check", "--verbose", ...patchFiles],
+      { allowFailure: true }
+    );
+    if (!checkResult.success) {
+      for (const [index, snapshot] of replaySnapshot.entries()) {
+        const patchCheck = await runGit(
+          ["-C", repoRoot, "apply", "--check", "--verbose", patchFiles[index] ?? ""],
+          { allowFailure: true }
+        );
+        if (!patchCheck.success) {
+          conflicts.push({
+            patchId: snapshot.patchId,
+            message: patchCheck.stderr || patchCheck.stdout || "Patch did not apply cleanly."
+          });
+        }
       }
+      return {
+        status: "blocked",
+        registryPath,
+        appliedPatches: [],
+        skippedPatches: patchIds,
+        conflicts,
+        preview,
+        targetHead
+      };
+    }
+    if (preview) {
+      return {
+        status: "preview",
+        registryPath,
+        appliedPatches: [],
+        skippedPatches: [],
+        conflicts: [],
+        preview: true,
+        targetHead
+      };
+    }
+    const affectedFiles = replaySnapshot.flatMap((snapshot) => snapshot.manifest.trackedFiles);
+    const preApplySnapshots = await snapshotRepoFiles(repoRoot, affectedFiles);
+    const applyResult = await runGit(
+      ["-C", repoRoot, "apply", "--verbose", "--whitespace=nowarn", ...patchFiles],
+      { allowFailure: true }
+    );
+    if (!applyResult.success) {
+      const baseMessage = applyResult.stderr || applyResult.stdout || "Patch replay failed.";
+      const dirtyFilesBeforeRollback = await gitStatusShortPaths(repoRoot);
+      let rollback;
+      let message = baseMessage;
+      let status = "failed";
+      if (dirtyFilesBeforeRollback.length > 0) {
+        let restoredFiles = [];
+        let rollbackError;
+        try {
+          restoredFiles = await restoreRepoFileSnapshots(preApplySnapshots);
+        } catch (error2) {
+          rollbackError = error2;
+        }
+        const dirtyFiles = await gitStatusShortPaths(repoRoot);
+        const succeeded = !rollbackError && dirtyFiles.length === 0;
+        status = succeeded ? "failed" : "partial";
+        rollback = {
+          attempted: true,
+          succeeded,
+          restoredFiles,
+          dirtyFiles,
+          message: succeeded ? "Patch replay changed the worktree before git apply failed; affected files were restored." : `Patch replay changed the worktree before git apply failed, and rollback did not fully clean the tree.${rollbackError instanceof Error ? ` ${rollbackError.message}` : ""}`
+        };
+        message = succeeded ? `${baseMessage} Worktree changes from the failed patch replay were rolled back.` : `${baseMessage} Worktree may be partially mutated; inspect dirty files before retrying.`;
+      }
+      return {
+        status,
+        registryPath,
+        appliedPatches: [],
+        skippedPatches: patchIds,
+        conflicts: [
+          {
+            patchId: patchIds.join(","),
+            message
+          }
+        ],
+        preview: false,
+        targetHead,
+        ...rollback ? { rollback } : {}
+      };
     }
     return {
+      status: "applied",
       registryPath,
-      appliedPatches: [],
-      skippedPatches: patchIds,
-      conflicts,
-      preview: args.dryRun ?? false,
-      targetHead
-    };
-  }
-  if (args.dryRun) {
-    return {
-      registryPath,
-      appliedPatches: [],
+      appliedPatches: patchIds,
       skippedPatches: [],
       conflicts: [],
-      preview: true,
-      targetHead
-    };
-  }
-  const applyResult = await runGit(
-    ["-C", repoRoot, "apply", "--verbose", "--whitespace=nowarn", ...patchFiles],
-    { allowFailure: true }
-  );
-  if (!applyResult.success) {
-    return {
-      registryPath,
-      appliedPatches: [],
-      skippedPatches: patchIds,
-      conflicts: [
-        {
-          patchId: patchIds.join(","),
-          message: applyResult.stderr || applyResult.stdout || "Patch replay failed."
-        }
-      ],
       preview: false,
       targetHead
     };
+  } finally {
+    await fs7.rm(tempDir, { recursive: true, force: true }).catch(() => void 0);
   }
-  return {
-    registryPath,
-    appliedPatches: patchIds,
-    skippedPatches: [],
-    conflicts: [],
-    preview: false,
-    targetHead
-  };
 }
-var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
+var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, WORKSTREAM_TRANSITION_LOCK_PATH, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceRegistryLockRecoveryHooksForTest, workspaceToolDefinitions;
 var init_workspace = __esm({
   "src/mcp/tools/workspace.ts"() {
     "use strict";
     init_v4();
     init_artifacts();
     init_config();
+    init_state();
     init_runtime_host();
     init_security();
     execFileAsync2 = promisify2(execFile2);
@@ -53463,6 +56555,7 @@ var init_workspace = __esm({
     WORKSPACE_REGISTRY_LOCK_STALE_MS = 6e4;
     WORKSPACE_REGISTRY_LOCK_OWNER_FILE = "owner";
     WORKSPACE_REGISTRY_LOCK_LEASE_FILE = "lease";
+    WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX = "owner.";
     WORKSTREAMS_ROOT_PATH = `${BLUEPRINT_DIR}/workstreams`;
     WORKSTREAMS_INDEX_PATH = `${WORKSTREAMS_ROOT_PATH}/WORKSTREAMS.md`;
     WORKSTREAM_STATE_FILENAME = "state.json";
@@ -53471,6 +56564,7 @@ var init_workspace = __esm({
     WORKSTREAM_OPERATIONS = ["create", "switch", "resume", "complete"];
     WORKSTREAMS_COMMAND = "/blu-workstreams";
     PROGRESS_COMMAND = "/blu-progress";
+    WORKSTREAM_TRANSITION_LOCK_PATH = `${BLUEPRINT_DIR}/locks/workstreams.lock`;
     workspaceRegistryGetInputSchema = {
       cwd: string2().optional()
     };
@@ -53493,7 +56587,9 @@ var init_workspace = __esm({
     workstreamMutateInputSchema = {
       cwd: string2().optional(),
       operation: _enum(WORKSTREAM_OPERATIONS),
-      workstream: string2().trim().min(1)
+      workstream: string2().trim().min(1),
+      confirmed: boolean2().optional(),
+      expectedActiveWorkstream: string2().trim().min(1).optional()
     };
     patchListInputSchema = {
       cwd: string2().optional(),
@@ -53525,6 +56621,7 @@ var init_workspace = __esm({
       patchIds: array(string2().trim().min(1)).optional(),
       dryRun: boolean2().optional()
     };
+    workspaceRegistryLockRecoveryHooksForTest = null;
     workspaceToolDefinitions = [
       {
         name: "blueprint_workspace_registry_get",
@@ -53580,9 +56677,9 @@ var init_workspace = __esm({
 
 // src/mcp/tools/plan-run.ts
 import { execFile as execFile3 } from "node:child_process";
-import { promises as fs7 } from "node:fs";
-import os2 from "node:os";
-import path10 from "node:path";
+import { promises as fs8 } from "node:fs";
+import os4 from "node:os";
+import path13 from "node:path";
 import { promisify as promisify3 } from "node:util";
 function normalizePlanRunPhase(value) {
   return normalizePhaseNumber(value);
@@ -53609,7 +56706,7 @@ function planRunRelativeRootPath(phase, planId2) {
 }
 function resolvePlanRunPath(projectRoot, relativePath) {
   const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
-  const planRunsRoot = path10.join(projectRoot, PLAN_RUNS_ROOT_PATH);
+  const planRunsRoot = path13.join(projectRoot, PLAN_RUNS_ROOT_PATH);
   return ensurePathWithinRootSync(planRunsRoot, absolutePath, {
     label: "PlanRun path"
   });
@@ -53707,7 +56804,7 @@ function uniqueSortedStrings2(values) {
 }
 function normalizeRepoRelativePlanRunPath(projectRoot, value, label) {
   const absolutePath = resolveRepoRelativePath(projectRoot, value);
-  return path10.relative(projectRoot, absolutePath).split(path10.sep).join("/");
+  return path13.relative(projectRoot, absolutePath).split(path13.sep).join("/");
 }
 function normalizeRepoRelativePlanRunPaths(projectRoot, values, label) {
   return uniqueSortedStrings2(
@@ -53730,7 +56827,7 @@ function normalizePersistedRepoRelativePlanRunPaths(projectRoot, values, label) 
 function normalizeBlueprintArtifactPath(projectRoot, value, label) {
   const normalized = normalizeRequiredStringValue(value, label);
   const absolutePath = resolveBlueprintPath(projectRoot, normalized);
-  return path10.relative(projectRoot, absolutePath).split(path10.sep).join("/");
+  return path13.relative(projectRoot, absolutePath).split(path13.sep).join("/");
 }
 function normalizeNullableBlueprintArtifactPath(projectRoot, value, label) {
   if (value === null) {
@@ -53750,21 +56847,21 @@ function normalizeOptionalFilesystemPath(projectRoot, value, label) {
   if (!normalized) {
     return null;
   }
-  return path10.resolve(projectRoot, normalized);
+  return path13.resolve(projectRoot, normalized);
 }
 function normalizePersistedFilesystemPath(projectRoot, value, label) {
   if (value === null) {
     return null;
   }
-  return path10.resolve(projectRoot, normalizeRequiredStringValue(value, label));
+  return path13.resolve(projectRoot, normalizeRequiredStringValue(value, label));
 }
-function expandHomePath2(value) {
+function expandHomePath4(value) {
   const trimmed = value.trim();
   if (trimmed === "~") {
-    return os2.homedir();
+    return os4.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path10.join(os2.homedir(), trimmed.slice(2));
+    return path13.join(os4.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -54060,9 +57157,9 @@ async function resolvePlanRunDiffProjectRoot(args) {
 }
 async function realpathOrResolve(targetPath) {
   try {
-    return await fs7.realpath(targetPath);
+    return await fs8.realpath(targetPath);
   } catch {
-    return path10.resolve(targetPath);
+    return path13.resolve(targetPath);
   }
 }
 async function gitCommonDir(projectRoot) {
@@ -54076,7 +57173,7 @@ async function gitCommonDir(projectRoot) {
     };
   }
   const rawCommonDir = result.stdout.trim();
-  const commonDir = path10.isAbsolute(rawCommonDir) ? rawCommonDir : path10.resolve(projectRoot, rawCommonDir);
+  const commonDir = path13.isAbsolute(rawCommonDir) ? rawCommonDir : path13.resolve(projectRoot, rawCommonDir);
   return {
     path: await realpathOrResolve(commonDir),
     warning: null
@@ -54256,7 +57353,7 @@ function countTextLines(content) {
   return content.endsWith("\n") ? content.slice(0, -1).split("\n").length : content.split("\n").length;
 }
 async function readUntrackedFileForDiff(projectRoot, filePath) {
-  const fileBuffer = await fs7.readFile(path10.join(projectRoot, filePath));
+  const fileBuffer = await fs8.readFile(path13.join(projectRoot, filePath));
   if (fileBuffer.includes(0)) {
     return {
       kind: "binary",
@@ -54648,7 +57745,7 @@ function normalizePlanRunRecord(value, expected) {
   if (!Array.isArray(record2.verification)) {
     throw new Error(`${expected.label}.verification must be an array.`);
   }
-  const sourceRepoRoot = path10.resolve(
+  const sourceRepoRoot = path13.resolve(
     normalizeRequiredStringValue(source.repoRoot, `${expected.label}.source.repoRoot`)
   );
   if (sourceRepoRoot !== expected.projectRoot) {
@@ -54781,7 +57878,7 @@ function normalizePlanRunRecord(value, expected) {
 }
 async function readJsonObjectIfPresent(filePath, label) {
   try {
-    return safeJsonParseObject(await fs7.readFile(filePath, "utf8"), { label });
+    return safeJsonParseObject(await fs8.readFile(filePath, "utf8"), { label });
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -54789,18 +57886,72 @@ async function readJsonObjectIfPresent(filePath, label) {
     throw error2;
   }
 }
+function maybeFailPlanRunRecordWrite(filePath) {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE;
+  if (!injectedFailure) {
+    return;
+  }
+  const matchesPath = injectedFailure === "1" || path13.resolve(injectedFailure) === path13.resolve(filePath);
+  if (!matchesPath) {
+    return;
+  }
+  delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE;
+  throw new Error(`Injected PlanRun record write failure for ${filePath}`);
+}
+function parsePositivePlanRunTestIntegerEnv(name) {
+  const raw = process.env[name];
+  if (!raw) {
+    return null;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+async function waitForPlanRunTestPath(filePath, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      await fs8.access(filePath);
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+  throw new Error(`Timed out waiting for PlanRun test release file: ${filePath}`);
+}
+async function maybeDelayPlanRunPatchRollbackForTest() {
+  const markerPath = process.env.BLUEPRINT_TEST_PLAN_RUN_PATCH_ROLLBACK_MARKER;
+  const releasePath = process.env.BLUEPRINT_TEST_PLAN_RUN_PATCH_ROLLBACK_RELEASE;
+  const delayMs = parsePositivePlanRunTestIntegerEnv(
+    "BLUEPRINT_TEST_PLAN_RUN_PATCH_ROLLBACK_DELAY_MS"
+  );
+  if (!markerPath && !releasePath && !delayMs) {
+    return;
+  }
+  if (markerPath) {
+    await fs8.mkdir(path13.dirname(markerPath), { recursive: true });
+    await fs8.writeFile(markerPath, "rollback-pending\n", "utf8");
+  }
+  if (releasePath) {
+    await waitForPlanRunTestPath(releasePath, delayMs ?? 5e3);
+    return;
+  }
+  if (delayMs) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+}
 async function writeAtomicJsonFile(filePath, value) {
   await ensureParentDirectory2(filePath);
-  const tempPath = path10.join(
-    path10.dirname(filePath),
-    `.${path10.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  maybeFailPlanRunRecordWrite(filePath);
+  const tempPath = path13.join(
+    path13.dirname(filePath),
+    `.${path13.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
   );
   try {
-    await fs7.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
+    await fs8.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
-    await fs7.rename(tempPath, filePath);
+    await fs8.rename(tempPath, filePath);
   } catch (error2) {
-    await fs7.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs8.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -55450,46 +58601,66 @@ async function blueprintPlanRunPatchRecord(args) {
       warnings: recordedBlockedRun.warnings
     });
   }
-  const patchRecord = await blueprintPatchRecord({
-    cwd: diffProjectRoot.projectRoot,
-    patchId,
-    patch: diff.patch,
-    trackedFiles: changedFilePaths,
-    label: `Plan run ${phase}/${planId2}`,
-    sourceVersion: diffBaseHead,
-    compatibility: {
-      repoRootName: path10.basename(projectRoot)
+  const patchRecord = await blueprintPatchRecord(
+    {
+      cwd: diffProjectRoot.projectRoot,
+      patchId,
+      patch: diff.patch,
+      trackedFiles: changedFilePaths,
+      label: `Plan run ${phase}/${planId2}`,
+      sourceVersion: diffBaseHead,
+      compatibility: {
+        repoRootName: path13.basename(projectRoot)
+      },
+      audit: {
+        action: "record",
+        outcome: "recorded",
+        targetHead: diff.currentHead,
+        warnings: diff.warnings
+      }
     },
-    audit: {
-      action: "record",
-      outcome: "recorded",
-      targetHead: diff.currentHead,
-      warnings: diff.warnings
+    {
+      captureRollbackSnapshot: true
     }
-  });
-  const recordedRun = await blueprintPlanRunRecord({
-    cwd: projectRoot,
-    runId: run.runId,
-    phase,
-    planId: planId2,
-    status: "IMPLEMENTED",
-    worktreePath: run.worktree.path ?? void 0,
-    branchName: run.worktree.branchName ?? void 0,
-    baseHead: diffBaseHead,
-    currentHead: diff.currentHead ?? void 0,
-    changedFiles: changedFilePaths,
-    unauthorizedChangedFiles: [],
-    commandsRun: args.commandsRun,
-    verification: args.verification,
-    patch: {
-      patchId: patchRecord.patchId,
-      recorded: true,
-      registryPath: patchRecord.registryPath,
-      patchPath: patchRecord.patchPath
-    },
-    notes: args.notes,
-    warnings: [...args.warnings ?? [], ...diff.warnings]
-  });
+  );
+  let recordedRun;
+  try {
+    recordedRun = await blueprintPlanRunRecord({
+      cwd: projectRoot,
+      runId: run.runId,
+      phase,
+      planId: planId2,
+      status: "IMPLEMENTED",
+      worktreePath: run.worktree.path ?? void 0,
+      branchName: run.worktree.branchName ?? void 0,
+      baseHead: diffBaseHead,
+      currentHead: diff.currentHead ?? void 0,
+      changedFiles: changedFilePaths,
+      unauthorizedChangedFiles: [],
+      commandsRun: args.commandsRun,
+      verification: args.verification,
+      patch: {
+        patchId: patchRecord.patchId,
+        recorded: true,
+        registryPath: patchRecord.registryPath,
+        patchPath: patchRecord.patchPath
+      },
+      notes: args.notes,
+      warnings: [...args.warnings ?? [], ...diff.warnings]
+    });
+  } catch (error2) {
+    try {
+      await maybeDelayPlanRunPatchRollbackForTest();
+      await rollbackPatchRecordToSnapshot(patchRecord.rollbackSnapshot);
+    } catch (rollbackError) {
+      const originalMessage = error2 instanceof Error ? error2.message : String(error2);
+      const rollbackMessage = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+      throw new Error(
+        `PlanRun metadata persistence failed after patch registry write, and patch registry rollback also failed. Original error: ${originalMessage}. Rollback error: ${rollbackMessage}`
+      );
+    }
+    throw error2;
+  }
   return {
     status: "recorded",
     phase,
@@ -55595,9 +58766,9 @@ async function blueprintPlanRunPrepare(args) {
   const workspaceName = normalizePlanRunWorkspaceName(
     args.workspaceName ?? `phase-${phase}-plan-${planId2}-${slug}`
   );
-  const workspacePath = path10.resolve(
-    expandHomePath2(
-      args.workspacePath ?? path10.join(configResult.config.maintenance.workspace_root, workspaceName)
+  const workspacePath = path13.resolve(
+    expandHomePath4(
+      args.workspacePath ?? path13.join(configResult.config.maintenance.workspace_root, workspaceName)
     )
   );
   const strategy = configResult.config.workflow.use_worktrees ? "worktree" : "same-tree";
@@ -55868,10 +59039,791 @@ var init_plan_run = __esm({
   }
 });
 
+// src/mcp/tools/cleanup.ts
+import { execFile as execFile4 } from "node:child_process";
+import { promises as fs9 } from "node:fs";
+import path14 from "node:path";
+import { promisify as promisify4 } from "node:util";
+function activeCleanupArchiveFileSystem() {
+  return cleanupArchiveFileSystemForTest ?? defaultCleanupArchiveFileSystem;
+}
+async function pathExists4(targetPath) {
+  try {
+    await fs9.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function gitStatusShort2(projectRoot) {
+  try {
+    const { stdout } = await execFileAsync4("git", [
+      "-C",
+      projectRoot,
+      "status",
+      "--short",
+      "--untracked-files=all",
+      "--",
+      ".",
+      `:(exclude)${BLUEPRINT_DIR}/locks/**`
+    ]);
+    return stdout.trim().split(/\r?\n/u).map((line) => line.trimEnd()).filter((line) => line.length > 0);
+  } catch (error2) {
+    return [`git status failed: ${errorMessage(error2)}`];
+  }
+}
+function errorMessage(error2) {
+  return error2 instanceof Error ? error2.message : String(error2);
+}
+function normalizePhaseNumber4(phaseNumber) {
+  if (!phaseNumber) {
+    return null;
+  }
+  return phaseNumber.split(".")[0] ?? phaseNumber;
+}
+function uniqueSorted2(values) {
+  return [...new Set(values)].sort();
+}
+function escapeRegExp2(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function listLines(values) {
+  return values.length > 0 ? values.map((value) => `- ${value}`).join("\n") : "- none";
+}
+function protectedEntryLines(entries) {
+  return entries.length > 0 ? entries.map((entry) => `- ${entry.path} (${entry.reason})`).join("\n") : "- none";
+}
+function repoRelativePath(projectRoot, absolutePath) {
+  return toRepoRelativePath(projectRoot, absolutePath);
+}
+function normalizeBlueprintRepoPath(projectRoot, inputPath, label) {
+  const absolutePath = resolveBlueprintPath(projectRoot, inputPath);
+  return repoRelativePath(projectRoot, absolutePath);
+}
+function normalizePhaseDirectoryInput(projectRoot, inputPath, label) {
+  const normalized = normalizeBlueprintRepoPath(projectRoot, inputPath, label);
+  const segments = normalized.split("/");
+  if (!normalized.startsWith(`${BLUEPRINT_PHASES_PATH}/`) || segments.length !== 3 || segments.some((segment) => segment.length === 0)) {
+    throw new Error(`${label} must be an immediate phase directory under ${BLUEPRINT_PHASES_PATH}.`);
+  }
+  return normalized;
+}
+function normalizeArchiveDestination(projectRoot, inputPath) {
+  const normalized = normalizeBlueprintRepoPath(projectRoot, inputPath, "Archive destination");
+  if (normalized !== `${BLUEPRINT_DIR}/archive` && !normalized.startsWith(`${BLUEPRINT_DIR}/archive/`)) {
+    throw new Error(
+      `Archive destination must stay under ${BLUEPRINT_DIR}/archive, received ${inputPath}.`
+    );
+  }
+  return normalized;
+}
+function arraysEqual(left, right) {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((value, index) => value === right[index]);
+}
+function mismatchReason(label, expected, actual) {
+  return `${label} changed since preview. Expected [${expected.join(", ") || "none"}], actual [${actual.join(", ") || "none"}]. Re-run preview before confirming cleanup.`;
+}
+function buildCleanupArchiveResult(args) {
+  const protectedPhaseDirs = (args.protectedEntries ?? []).map((entry) => entry.path);
+  const keptPhaseDirs = uniqueSorted2([
+    ...protectedPhaseDirs,
+    ...args.failedPhaseDirs ?? [],
+    ...args.skippedPhaseDirs ?? []
+  ]);
+  return {
+    status: args.status,
+    projectRoot: args.projectRoot,
+    mode: args.mode,
+    operation: args.operation,
+    archiveDestination: args.archiveDestination,
+    archiveDestinationExists: args.archiveDestinationExists ?? false,
+    archiveDestinationCreated: args.archiveDestinationCreated ?? false,
+    selectedPhaseDirs: args.selectedPhaseDirs ?? [],
+    protectedEntries: args.protectedEntries ?? [],
+    archivedPhaseDirs: args.archivedPhaseDirs ?? [],
+    failedPhaseDirs: args.failedPhaseDirs ?? [],
+    skippedPhaseDirs: args.skippedPhaseDirs ?? [],
+    keptPhaseDirs,
+    digestInputs: args.digestInputs ?? [],
+    reportPath: args.reportPath ?? null,
+    reportWritten: args.reportWritten ?? false,
+    waitingState: args.waitingState ?? null,
+    reason: args.reason ?? null,
+    issues: args.issues ?? [],
+    warnings: args.warnings ?? [],
+    nextAction: CLEANUP_NEXT_ACTION
+  };
+}
+async function listPhaseDirectories(projectRoot) {
+  const phasesRoot = resolveBlueprintPath(projectRoot, BLUEPRINT_PHASES_PATH);
+  if (!await pathExists4(phasesRoot)) {
+    throw new Error(`Missing ${BLUEPRINT_PHASES_PATH}.`);
+  }
+  const entries = await fs9.readdir(phasesRoot, { withFileTypes: true });
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => path14.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
+}
+async function listPhaseArtifactPaths(projectRoot, phaseDir2) {
+  const absolutePhaseDir = resolveBlueprintPath(projectRoot, phaseDir2);
+  const entries = await fs9.readdir(absolutePhaseDir, { withFileTypes: true });
+  return entries.filter((entry) => entry.isFile()).map((entry) => path14.posix.join(phaseDir2, entry.name)).sort();
+}
+function milestoneFromSummaryReportPath(reportPath) {
+  const match = path14.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
+  return match?.[1] ?? null;
+}
+async function completedMilestoneEvidenceForPhase(projectRoot, phaseDir2, reportPaths, activeMilestone) {
+  const matches = [];
+  for (const reportPath of reportPaths.filter(
+    (value) => path14.posix.basename(value).startsWith("milestone-summary-")
+  )) {
+    const evidenceMilestone = milestoneFromSummaryReportPath(reportPath);
+    if (!evidenceMilestone || evidenceMilestone === activeMilestone) {
+      continue;
+    }
+    const reportContent = await fs9.readFile(resolveBlueprintPath(projectRoot, reportPath), "utf8");
+    const archivalEvidencePattern = new RegExp(
+      `${escapeRegExp2(phaseDir2)}[^\\n]*safe to archive`,
+      "i"
+    );
+    if (archivalEvidencePattern.test(reportContent)) {
+      matches.push(reportPath);
+    }
+  }
+  return matches.sort();
+}
+async function protectedArtifactPaths(projectRoot, protectedEntries) {
+  const artifactPaths = [];
+  for (const entry of protectedEntries) {
+    artifactPaths.push(...await listPhaseArtifactPaths(projectRoot, entry.path));
+  }
+  return uniqueSorted2(artifactPaths);
+}
+async function computeCleanupArchiveScope(projectRoot) {
+  const blockers = [];
+  const warnings = [];
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  if (inspection.readiness !== "initialized") {
+    return {
+      selectedPhaseDirs: [],
+      protectedEntries: [],
+      digestInputs: [],
+      blockers: [
+        {
+          waitingState: null,
+          reason: "Blueprint cleanup requires an initialized project. Run /blu-new-project first."
+        }
+      ],
+      warnings: ["Blueprint cleanup requires initialized core project artifacts."]
+    };
+  }
+  const stateResult = await blueprintStateLoad({ cwd: projectRoot });
+  const roadmap = await blueprintRoadmapRead({ cwd: projectRoot });
+  warnings.push(...roadmap.warnings);
+  let phaseDirs;
+  try {
+    phaseDirs = await listPhaseDirectories(projectRoot);
+  } catch (error2) {
+    return {
+      selectedPhaseDirs: [],
+      protectedEntries: [],
+      digestInputs: [],
+      blockers: [
+        {
+          waitingState: "missing-phase-root",
+          reason: errorMessage(error2)
+        }
+      ],
+      warnings
+    };
+  }
+  const artifactList = await blueprintArtifactList({ cwd: projectRoot });
+  const currentPhaseNumber = normalizePhaseNumber4(stateResult.derivedStatus.currentPhase);
+  const protectedEntryMap = /* @__PURE__ */ new Map();
+  const selectedPhaseDirs = [];
+  const selectedEvidencePaths = [];
+  const protectPhase = (phaseDir2, reason) => {
+    if (!protectedEntryMap.has(phaseDir2)) {
+      protectedEntryMap.set(phaseDir2, { path: phaseDir2, reason });
+    }
+  };
+  const currentPhaseDir = currentPhaseNumber ? roadmap.phases.find(
+    (phase) => normalizePhaseNumber4(phase.phaseNumber) === currentPhaseNumber
+  )?.phaseDir ?? null : null;
+  if (currentPhaseNumber && !currentPhaseDir) {
+    blockers.push({
+      waitingState: "inconsistent-phase-layout",
+      reason: `Current phase ${currentPhaseNumber} does not have exactly one directory under ${BLUEPRINT_PHASES_PATH}.`
+    });
+  }
+  const activeRoadmapDirs = new Set(
+    roadmap.phases.flatMap((phase) => phase.phaseDir ? [phase.phaseDir] : [])
+  );
+  for (const phaseDir2 of phaseDirs) {
+    if (phaseDir2 === currentPhaseDir) {
+      protectPhase(phaseDir2, "current phase");
+      continue;
+    }
+    if (activeRoadmapDirs.has(phaseDir2)) {
+      protectPhase(phaseDir2, "active roadmap");
+    }
+  }
+  for (const phaseDir2 of phaseDirs) {
+    if (protectedEntryMap.has(phaseDir2)) {
+      continue;
+    }
+    const phaseArtifacts = await listPhaseArtifactPaths(projectRoot, phaseDir2);
+    const milestoneEvidence = await completedMilestoneEvidenceForPhase(
+      projectRoot,
+      phaseDir2,
+      artifactList.reports,
+      roadmap.milestone
+    );
+    if (phaseArtifacts.length === 0 || milestoneEvidence.length === 0) {
+      protectPhase(phaseDir2, "missing milestone closeout evidence");
+      continue;
+    }
+    selectedPhaseDirs.push(phaseDir2);
+    selectedEvidencePaths.push(...phaseArtifacts, ...milestoneEvidence);
+  }
+  const protectedEntries = [...protectedEntryMap.values()].sort(
+    (left, right) => left.path.localeCompare(right.path)
+  );
+  const digestArtifactPaths = uniqueSorted2([
+    `${BLUEPRINT_DIR}/ROADMAP.md`,
+    `${BLUEPRINT_DIR}/STATE.md`,
+    ...selectedEvidencePaths,
+    ...await protectedArtifactPaths(projectRoot, protectedEntries)
+  ]);
+  const digest = await blueprintArtifactSummaryDigest({
+    cwd: projectRoot,
+    artifactPaths: digestArtifactPaths
+  });
+  return {
+    selectedPhaseDirs: uniqueSorted2(selectedPhaseDirs),
+    protectedEntries,
+    digestInputs: digest.inputsUsed,
+    blockers,
+    warnings
+  };
+}
+async function archivePhaseDirectory(args) {
+  const sourcePath = resolveBlueprintPath(args.projectRoot, args.sourcePhaseDir);
+  const destinationPath = resolveBlueprintPath(args.projectRoot, args.destinationPhaseDir);
+  if (args.operation === "move") {
+    await args.fileSystem.rename(sourcePath, destinationPath);
+    return;
+  }
+  await args.fileSystem.cp(sourcePath, destinationPath, {
+    recursive: true,
+    errorOnExist: true,
+    force: false
+  });
+  await args.fileSystem.rm(sourcePath, { recursive: true, force: true });
+}
+async function executeCleanupArchiveMutation(args) {
+  const fileSystem = activeCleanupArchiveFileSystem();
+  const archiveDestinationPath = resolveBlueprintPath(args.projectRoot, args.archiveDestination);
+  const archiveDestinationCreated = !await pathExists4(archiveDestinationPath);
+  if (archiveDestinationCreated) {
+    await fileSystem.mkdir(archiveDestinationPath, { recursive: true });
+  }
+  const archivedPhaseDirs = [];
+  const failedPhaseDirs = [];
+  const skippedPhaseDirs = [];
+  const failureReasons = {};
+  for (const phaseDir2 of args.selectedPhaseDirs) {
+    const destinationPhaseDir = path14.posix.join(args.archiveDestination, path14.posix.basename(phaseDir2));
+    try {
+      await archivePhaseDirectory({
+        projectRoot: args.projectRoot,
+        operation: args.operation,
+        sourcePhaseDir: phaseDir2,
+        destinationPhaseDir,
+        fileSystem
+      });
+      archivedPhaseDirs.push(phaseDir2);
+    } catch (error2) {
+      failedPhaseDirs.push(phaseDir2);
+      failureReasons[phaseDir2] = errorMessage(error2);
+      const remaining = args.selectedPhaseDirs.slice(args.selectedPhaseDirs.indexOf(phaseDir2) + 1);
+      skippedPhaseDirs.push(...remaining);
+      break;
+    }
+  }
+  return {
+    archivedPhaseDirs,
+    failedPhaseDirs,
+    skippedPhaseDirs,
+    failureReasons,
+    archiveDestinationCreated
+  };
+}
+function renderCleanupArchiveReport(args) {
+  const keptPhaseDirs = uniqueSorted2([
+    ...args.protectedEntries.map((entry) => entry.path),
+    ...args.outcome.failedPhaseDirs,
+    ...args.outcome.skippedPhaseDirs
+  ]);
+  const failureLines = args.outcome.failedPhaseDirs.length > 0 ? args.outcome.failedPhaseDirs.map((phaseDir2) => `- ${phaseDir2}: ${args.outcome.failureReasons[phaseDir2] ?? "archive failed"}`).join("\n") : "- none";
+  return `# Cleanup Report
+
+## Selected Phase Directories
+
+${listLines(args.selectedPhaseDirs)}
+
+## Protected Exclusions
+
+${protectedEntryLines(args.protectedEntries)}
+
+## Archive Destination
+
+- ${args.archiveDestination}
+
+## Mutation Outcome
+
+- Status: ${args.status}
+- Operation: ${args.operation}
+- Destination created: ${args.outcome.archiveDestinationCreated ? "yes" : "no"}
+- Archived phase directories:
+${listLines(args.outcome.archivedPhaseDirs)}
+- Failed phase directories:
+${failureLines}
+- Skipped phase directories:
+${listLines(args.outcome.skippedPhaseDirs)}
+- Kept phase directories:
+${listLines(keptPhaseDirs)}
+
+## Next Safe Action
+
+- ${CLEANUP_NEXT_ACTION}
+`;
+}
+async function writeCleanupArchiveReport(args) {
+  const reportPath = buildBlueprintReportPath(CLEANUP_LATEST_REPORT_NAME);
+  const absoluteReportPath = resolveBlueprintPath(args.projectRoot, reportPath);
+  await ensureParentDirectory2(absoluteReportPath);
+  const warnings = await writeTextFile(
+    absoluteReportPath,
+    renderCleanupArchiveReport(args),
+    { label: reportPath }
+  );
+  return { reportPath, warnings };
+}
+function cleanupArchiveStatusForOutcome(outcome) {
+  if (outcome.failedPhaseDirs.length === 0) {
+    return "archived";
+  }
+  return outcome.archivedPhaseDirs.length > 0 ? "partial" : "failed";
+}
+async function rejectDestinationCollisions(args) {
+  const collisions = [];
+  for (const phaseDir2 of args.selectedPhaseDirs) {
+    const destinationPhaseDir = path14.posix.join(args.archiveDestination, path14.posix.basename(phaseDir2));
+    if (await pathExists4(resolveBlueprintPath(args.projectRoot, destinationPhaseDir))) {
+      collisions.push(destinationPhaseDir);
+    }
+  }
+  return collisions.sort();
+}
+async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
+  const mode = args.mode ?? "preview";
+  const operation = args.operation ?? "move";
+  let archiveDestination;
+  let expectedSelectedPhaseDirs = null;
+  let expectedProtectedPhaseDirs = null;
+  try {
+    archiveDestination = normalizeArchiveDestination(
+      projectRoot,
+      args.archiveDestination ?? CLEANUP_ARCHIVE_DEFAULT_DESTINATION
+    );
+    expectedSelectedPhaseDirs = args.expectedSelectedPhaseDirs ? uniqueSorted2(
+      args.expectedSelectedPhaseDirs.map(
+        (phaseDir2, index) => normalizePhaseDirectoryInput(projectRoot, phaseDir2, `expectedSelectedPhaseDirs[${index}]`)
+      )
+    ) : null;
+    expectedProtectedPhaseDirs = args.expectedProtectedPhaseDirs ? uniqueSorted2(
+      args.expectedProtectedPhaseDirs.map(
+        (phaseDir2, index) => normalizePhaseDirectoryInput(projectRoot, phaseDir2, `expectedProtectedPhaseDirs[${index}]`)
+      )
+    ) : null;
+  } catch (error2) {
+    return buildCleanupArchiveResult({
+      status: "invalid",
+      projectRoot,
+      mode,
+      operation,
+      archiveDestination: args.archiveDestination ?? CLEANUP_ARCHIVE_DEFAULT_DESTINATION,
+      reason: errorMessage(error2),
+      issues: [errorMessage(error2)]
+    });
+  }
+  const run = async () => {
+    const scope = await computeCleanupArchiveScope(projectRoot);
+    const archiveDestinationPath = resolveBlueprintPath(projectRoot, archiveDestination);
+    const archiveDestinationExists = await pathExists4(archiveDestinationPath);
+    const reportPath = buildBlueprintReportPath(CLEANUP_LATEST_REPORT_NAME);
+    const reportExists = await pathExists4(resolveBlueprintPath(projectRoot, reportPath));
+    if (scope.blockers.length > 0) {
+      const firstBlocker = scope.blockers[0];
+      const status2 = firstBlocker?.reason.includes("initialized project") ? "project_missing" : "blocked";
+      return buildCleanupArchiveResult({
+        status: status2,
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        waitingState: firstBlocker?.waitingState ?? null,
+        reason: firstBlocker?.reason ?? "Cleanup archive is blocked.",
+        issues: scope.blockers.map((blocker) => blocker.reason),
+        warnings: scope.warnings
+      });
+    }
+    const protectedPhaseDirs = scope.protectedEntries.map((entry) => entry.path);
+    if (mode === "commit" && (!expectedSelectedPhaseDirs || !expectedProtectedPhaseDirs)) {
+      const missingFields = [];
+      if (!expectedSelectedPhaseDirs) {
+        missingFields.push("expectedSelectedPhaseDirs");
+      }
+      if (!expectedProtectedPhaseDirs) {
+        missingFields.push("expectedProtectedPhaseDirs");
+      }
+      const reason2 = `Cleanup archive commit requires preview expectation ${missingFields.length === 1 ? "field" : "fields"} ${missingFields.join(" and ")}. Re-run preview before confirming cleanup.`;
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        waitingState: "stale-cleanup-preview",
+        reason: reason2,
+        issues: [reason2],
+        warnings: scope.warnings
+      });
+    }
+    if (mode === "commit" && expectedSelectedPhaseDirs && !arraysEqual(expectedSelectedPhaseDirs, scope.selectedPhaseDirs)) {
+      const reason2 = mismatchReason(
+        "Selected phase directories",
+        expectedSelectedPhaseDirs,
+        scope.selectedPhaseDirs
+      );
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        waitingState: "stale-cleanup-preview",
+        reason: reason2,
+        issues: [reason2],
+        warnings: scope.warnings
+      });
+    }
+    if (mode === "commit" && expectedProtectedPhaseDirs && !arraysEqual(expectedProtectedPhaseDirs, protectedPhaseDirs)) {
+      const reason2 = mismatchReason(
+        "Protected phase directories",
+        expectedProtectedPhaseDirs,
+        protectedPhaseDirs
+      );
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        waitingState: "stale-cleanup-preview",
+        reason: reason2,
+        issues: [reason2],
+        warnings: scope.warnings
+      });
+    }
+    if (mode === "preview") {
+      return buildCleanupArchiveResult({
+        status: "ready",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        reportPath,
+        warnings: scope.warnings
+      });
+    }
+    if (scope.selectedPhaseDirs.length === 0) {
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        reportPath,
+        waitingState: "no-cleanup-candidates",
+        reason: "Cleanup archive found no evidence-backed historical phase directories to archive.",
+        issues: ["No cleanup candidates were selected."],
+        warnings: scope.warnings
+      });
+    }
+    if (args.confirmed !== true) {
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        reportPath,
+        waitingState: "cleanup-confirmation",
+        reason: "Cleanup archive commit requires explicit cleanup confirmation.",
+        issues: ["Explicit cleanup confirmation is required before phase directories are archived."],
+        warnings: scope.warnings
+      });
+    }
+    if (!archiveDestinationExists && args.approveDestinationCreation !== true) {
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        reportPath,
+        waitingState: "archive-destination-confirmation",
+        reason: `Archive destination ${archiveDestination} does not exist and creation was not approved.`,
+        issues: [`Approve creating ${archiveDestination} before committing cleanup.`],
+        warnings: scope.warnings
+      });
+    }
+    if (reportExists && args.overwriteReport !== true) {
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        reportPath,
+        waitingState: "report-overwrite-confirmation",
+        reason: `${reportPath} already exists. Re-run only after explicit overwrite confirmation.`,
+        issues: [`${reportPath} already exists and overwriteReport was not true.`],
+        warnings: scope.warnings
+      });
+    }
+    const destinationCollisions = await rejectDestinationCollisions({
+      projectRoot,
+      archiveDestination,
+      selectedPhaseDirs: scope.selectedPhaseDirs
+    });
+    if (destinationCollisions.length > 0) {
+      const reason2 = `Archive destination already contains selected phase director${destinationCollisions.length === 1 ? "y" : "ies"}: ${destinationCollisions.join(", ")}.`;
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        reportPath,
+        waitingState: "archive-destination-collision",
+        reason: reason2,
+        issues: [reason2],
+        warnings: scope.warnings
+      });
+    }
+    const dirtyGitStatus = await gitStatusShort2(projectRoot);
+    if (dirtyGitStatus.length > 0) {
+      const reason2 = "Cleanup archive commit requires a clean working tree before report persistence or archive mutation.";
+      return buildCleanupArchiveResult({
+        status: "blocked",
+        projectRoot,
+        mode,
+        operation,
+        archiveDestination,
+        archiveDestinationExists,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        digestInputs: scope.digestInputs,
+        reportPath,
+        waitingState: "dirty-working-tree",
+        reason: reason2,
+        issues: [reason2, ...dirtyGitStatus],
+        warnings: scope.warnings
+      });
+    }
+    let outcome;
+    try {
+      outcome = await executeCleanupArchiveMutation({
+        projectRoot,
+        operation,
+        archiveDestination,
+        selectedPhaseDirs: scope.selectedPhaseDirs
+      });
+    } catch (error2) {
+      const reason2 = errorMessage(error2);
+      outcome = {
+        archivedPhaseDirs: [],
+        failedPhaseDirs: scope.selectedPhaseDirs,
+        skippedPhaseDirs: [],
+        failureReasons: Object.fromEntries(
+          scope.selectedPhaseDirs.map((phaseDir2) => [phaseDir2, reason2])
+        ),
+        archiveDestinationCreated: false
+      };
+    }
+    const status = cleanupArchiveStatusForOutcome(outcome);
+    const reportWarnings = [];
+    let reportWritten = false;
+    let reportWriteReason = null;
+    try {
+      const reportResult = await writeCleanupArchiveReport({
+        projectRoot,
+        status,
+        operation,
+        archiveDestination,
+        selectedPhaseDirs: scope.selectedPhaseDirs,
+        protectedEntries: scope.protectedEntries,
+        outcome
+      });
+      reportWritten = true;
+      reportWarnings.push(...reportResult.warnings);
+    } catch (error2) {
+      reportWriteReason = `Cleanup archive ${status}, but ${reportPath} could not be written: ${errorMessage(error2)}`;
+    }
+    const failureReasons = outcome.failedPhaseDirs.map((phaseDir2) => `${phaseDir2}: ${outcome.failureReasons[phaseDir2] ?? "archive failed"}`).join("; ");
+    const reason = reportWriteReason ?? (outcome.failedPhaseDirs.length > 0 ? `Cleanup archive ${status}; failed phase directories: ${failureReasons}.` : null);
+    const issues = [
+      ...outcome.failedPhaseDirs.map(
+        (phaseDir2) => `${phaseDir2}: ${outcome.failureReasons[phaseDir2] ?? "archive failed"}`
+      ),
+      ...reportWriteReason ? [reportWriteReason] : []
+    ];
+    return buildCleanupArchiveResult({
+      status,
+      projectRoot,
+      mode,
+      operation,
+      archiveDestination,
+      archiveDestinationExists: true,
+      archiveDestinationCreated: outcome.archiveDestinationCreated,
+      selectedPhaseDirs: scope.selectedPhaseDirs,
+      protectedEntries: scope.protectedEntries,
+      archivedPhaseDirs: outcome.archivedPhaseDirs,
+      failedPhaseDirs: outcome.failedPhaseDirs,
+      skippedPhaseDirs: outcome.skippedPhaseDirs,
+      digestInputs: scope.digestInputs,
+      reportPath,
+      reportWritten,
+      reason,
+      issues,
+      warnings: [...scope.warnings, ...reportWarnings]
+    });
+  };
+  if (mode === "preview") {
+    return run();
+  }
+  return withBlueprintRepoLock(projectRoot, "cleanup-archive", run);
+}
+async function blueprintCleanupArchive(rawArgs = {}) {
+  const parsed = object2(cleanupArchiveInputSchema).safeParse(rawArgs);
+  const fallbackMode = "preview";
+  const fallbackOperation = "move";
+  const fallbackDestination = CLEANUP_ARCHIVE_DEFAULT_DESTINATION;
+  if (!parsed.success) {
+    const reason = parsed.error.issues.map((issue2) => issue2.message).join("; ");
+    return buildCleanupArchiveResult({
+      status: "invalid",
+      projectRoot: null,
+      mode: fallbackMode,
+      operation: fallbackOperation,
+      archiveDestination: fallbackDestination,
+      reason,
+      issues: [reason]
+    });
+  }
+  const projectRoot = await ensureRepoRoot(parsed.data.cwd);
+  return blueprintCleanupArchiveWithProjectRoot(parsed.data, projectRoot);
+}
+var CLEANUP_ARCHIVE_DEFAULT_DESTINATION, CLEANUP_LATEST_REPORT_NAME, CLEANUP_NEXT_ACTION, execFileAsync4, cleanupArchiveInputSchema, defaultCleanupArchiveFileSystem, cleanupArchiveFileSystemForTest, cleanupToolDefinitions;
+var init_cleanup = __esm({
+  "src/mcp/tools/cleanup.ts"() {
+    "use strict";
+    init_v4();
+    init_artifacts();
+    init_phase();
+    init_state();
+    CLEANUP_ARCHIVE_DEFAULT_DESTINATION = `${BLUEPRINT_DIR}/archive/v1`;
+    CLEANUP_LATEST_REPORT_NAME = "cleanup-latest";
+    CLEANUP_NEXT_ACTION = "/blu-progress";
+    execFileAsync4 = promisify4(execFile4);
+    cleanupArchiveInputSchema = {
+      cwd: string2().optional(),
+      mode: _enum(["preview", "commit"]).optional(),
+      archiveDestination: string2().optional(),
+      operation: _enum(["move", "copy-delete"]).optional(),
+      confirmed: boolean2().optional(),
+      approveDestinationCreation: boolean2().optional(),
+      overwriteReport: boolean2().optional(),
+      expectedSelectedPhaseDirs: array(string2()).optional(),
+      expectedProtectedPhaseDirs: array(string2()).optional()
+    };
+    defaultCleanupArchiveFileSystem = {
+      mkdir: (targetPath, options) => fs9.mkdir(targetPath, options),
+      rename: (sourcePath, destinationPath) => fs9.rename(sourcePath, destinationPath),
+      cp: (sourcePath, destinationPath, options) => fs9.cp(sourcePath, destinationPath, options),
+      rm: (targetPath, options) => fs9.rm(targetPath, options)
+    };
+    cleanupArchiveFileSystemForTest = null;
+    cleanupToolDefinitions = [
+      {
+        name: "blueprint_cleanup_archive",
+        description: "Preview or commit protected cleanup archival for completed Blueprint phase directories, with runtime-enforced exclusions, evidence checks, and final cleanup-latest reporting.",
+        inputSchema: cleanupArchiveInputSchema,
+        handler: async (args) => blueprintCleanupArchive(args)
+      }
+    ];
+  }
+});
+
 // src/mcp/tools/review.ts
 import { createHash as createHash3 } from "node:crypto";
-import { promises as fs8 } from "node:fs";
-import path11 from "node:path";
+import { promises as fs10 } from "node:fs";
+import path15 from "node:path";
 function createAjvValidator2() {
   return new import__3.Ajv2020({
     allErrors: true,
@@ -56287,7 +60239,7 @@ async function buildAllowedPeerReviewNextActions(args) {
 async function collectPeerReviewEvidenceArtifacts(args) {
   const repoEvidenceArtifacts = [];
   for (const artifactPath of PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS) {
-    if (await pathExists4(resolveBlueprintPath(args.projectRoot, artifactPath))) {
+    if (await pathExists5(resolveBlueprintPath(args.projectRoot, artifactPath))) {
       repoEvidenceArtifacts.push(artifactPath);
     }
   }
@@ -56435,7 +60387,7 @@ async function buildPeerReviewAuthoringContext(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path11.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path15.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -56913,7 +60865,7 @@ async function buildReviewFixAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path11.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path15.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -57127,7 +61079,7 @@ async function inspectUatRoutingState(args) {
     };
   }
   try {
-    const content = await fs8.readFile(
+    const content = await fs10.readFile(
       resolveBlueprintPath(args.projectRoot, args.artifactPath),
       "utf8"
     );
@@ -57596,16 +61548,16 @@ async function buildSecurityAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path11.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path15.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
   const artifacts = {
     plans: located.artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right)),
     summaries: located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right)),
-    verification: findPhaseArtifact(located.artifacts, "-VERIFICATION.md"),
-    uat: findPhaseArtifact(located.artifacts, "-UAT.md"),
-    existingSecurity: findPhaseArtifact(located.artifacts, "-SECURITY.md")
+    verification: findPhaseArtifact2(located.artifacts, "-VERIFICATION.md"),
+    uat: findPhaseArtifact2(located.artifacts, "-UAT.md"),
+    existingSecurity: findPhaseArtifact2(located.artifacts, "-SECURITY.md")
   };
   const [planIndex, summaryIndex, executionTargets] = await Promise.all([
     blueprintPhasePlanIndex({
@@ -57957,7 +61909,7 @@ async function buildUiReviewAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path11.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path15.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -58101,9 +62053,9 @@ async function buildUiReviewAuthoringContext(args) {
     ])
   };
 }
-async function pathExists4(targetPath) {
+async function pathExists5(targetPath) {
   try {
-    await fs8.access(targetPath);
+    await fs10.access(targetPath);
     return true;
   } catch {
     return false;
@@ -60227,7 +64179,7 @@ function parseCodeReviewLocation(location) {
   };
 }
 async function countFileLines(filePath) {
-  const content = await fs8.readFile(filePath, "utf8");
+  const content = await fs10.readFile(filePath, "utf8");
   const contentWithoutTerminalNewline = content.replace(/(?:\r\n|\r|\n)$/, "");
   if (contentWithoutTerminalNewline.length === 0) {
     return content.length === 0 ? 0 : 1;
@@ -60402,7 +64354,7 @@ async function addFindingLocationDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs8.stat(absolutePath);
+      const stats = await fs10.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -60950,7 +64902,7 @@ async function addReviewFixChangedFileDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs8.stat(absolutePath);
+      const stats = await fs10.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -61583,7 +65535,7 @@ async function addUiReviewRepoCitationDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs8.stat(absolutePath);
+      const stats = await fs10.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -61677,7 +65629,7 @@ function parsePlanIdForSuffix2(pathValue, phasePrefix2, suffix) {
 function isNormalReviewArtifactPath2(artifactPath) {
   return artifactPath.endsWith("-REVIEW.md") && !artifactPath.endsWith("-GOD-REVIEW.md");
 }
-function findPhaseArtifact(artifacts, suffix) {
+function findPhaseArtifact2(artifacts, suffix) {
   if (suffix === "-REVIEW.md") {
     return artifacts.find((artifact) => isNormalReviewArtifactPath2(artifact)) ?? null;
   }
@@ -61686,7 +65638,7 @@ function findPhaseArtifact(artifacts, suffix) {
 async function readRepoFileIfPresent(projectRoot, relativePath) {
   try {
     const absolutePath = resolveRepoRelativePath(projectRoot, relativePath);
-    return await fs8.readFile(absolutePath, "utf8");
+    return await fs10.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -61702,7 +65654,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     if (requestedPath.length === 0) {
       continue;
     }
-    if (path11.isAbsolute(requestedPath)) {
+    if (path15.isAbsolute(requestedPath)) {
       warnings.push(
         `Invalid ${sourceLabel} path: ${requestedPath} (absolute filesystem paths are not allowed).`
       );
@@ -61736,7 +65688,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     }
     let stats;
     try {
-      stats = await fs8.stat(absolutePath);
+      stats = await fs10.stat(absolutePath);
     } catch {
       warnings.push(`Invalid ${sourceLabel} path: ${relativePath} (file does not exist).`);
       rejected = true;
@@ -61814,7 +65766,7 @@ async function deriveReviewFilesFromSummaries(projectRoot, located, warnings) {
         }
         let stats;
         try {
-          stats = await fs8.stat(absolutePath);
+          stats = await fs10.stat(absolutePath);
         } catch {
           warnings.push(
             `Skipped missing repo path from ${summaryPath2} review scope: ${relativePath}`
@@ -61902,7 +65854,7 @@ async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
       }
       let stats;
       try {
-        stats = await fs8.stat(absolutePath);
+        stats = await fs10.stat(absolutePath);
       } catch {
         warnings.push(
           `Skipped missing repo path from ${planPath} review scope: ${relativePath}`
@@ -62012,10 +65964,10 @@ async function blueprintReviewScope(args) {
   const artifacts = {
     plans: located.artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right)),
     summaries: located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right)),
-    verification: findPhaseArtifact(located.artifacts, "-VERIFICATION.md"),
-    uat: findPhaseArtifact(located.artifacts, "-UAT.md"),
-    existingReview: findPhaseArtifact(located.artifacts, "-REVIEW.md"),
-    security: findPhaseArtifact(located.artifacts, "-SECURITY.md")
+    verification: findPhaseArtifact2(located.artifacts, "-VERIFICATION.md"),
+    uat: findPhaseArtifact2(located.artifacts, "-UAT.md"),
+    existingReview: findPhaseArtifact2(located.artifacts, "-REVIEW.md"),
+    security: findPhaseArtifact2(located.artifacts, "-SECURITY.md")
   };
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     return {
@@ -62044,7 +65996,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path11.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path15.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -62078,7 +66030,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path11.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path15.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -62146,7 +66098,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path11.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path15.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -62170,7 +66122,7 @@ async function blueprintReviewScope(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path11.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path15.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -62688,16 +66640,52 @@ async function resolveCodeReviewRecordValidationFiles(args) {
   }
   return args.recordArgs.scopeFiles;
 }
+function assertFreshReviewPhaseTopology(args) {
+  if (!phaseTopologyFingerprintsMatch(args.expected, args.actual)) {
+    throw new Error(
+      formatStalePhaseTopologyMessage({
+        operation: "Review record write",
+        expected: args.expected,
+        actual: args.actual
+      })
+    );
+  }
+}
 async function blueprintReviewRecord(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate({
+  const expectedSnapshot = await resolvePhaseTopologySnapshot({
     cwd: projectRoot,
     phase: args.phase
   });
-  if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
-    throw new Error(
-      located.reason ?? "Phase could not be resolved for review persistence."
+  const expectedTopology = expectedSnapshot.fingerprint;
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const locked = await resolvePhaseTopologySnapshot({
+      cwd: projectRoot,
+      phase: args.phase
+    });
+    assertFreshReviewPhaseTopology({
+      expected: expectedTopology,
+      actual: locked.fingerprint
+    });
+    const reportPath = `${locked.phaseDir}/${locked.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES[args.artifact]}`;
+    return withBlueprintRepoLock(
+      projectRoot,
+      `review-record-${blueprintRepoLockNameSegment(reportPath)}`,
+      () => blueprintReviewRecordUnlocked({ ...args, cwd: projectRoot }, expectedTopology)
     );
+  });
+}
+async function blueprintReviewRecordUnlocked(args, expectedTopology) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await resolvePhaseTopologySnapshot({
+    cwd: projectRoot,
+    phase: args.phase
+  });
+  if (expectedTopology) {
+    assertFreshReviewPhaseTopology({
+      expected: expectedTopology,
+      actual: located.fingerprint
+    });
   }
   const reportPath = `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES[args.artifact]}`;
   const hasContent = args.content !== void 0;
@@ -62839,8 +66827,8 @@ async function blueprintReviewRecord(args) {
   const parsedCounts = collectReviewCounts(normalizedContent, args.artifact);
   const { counts, followUps } = modelCountsOverride ?? parsedCounts;
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
-  const exists = await pathExists4(absolutePath);
-  const existingContent = exists ? await fs8.readFile(absolutePath, "utf8") : null;
+  const exists = await pathExists5(absolutePath);
+  const existingContent = exists ? await fs10.readFile(absolutePath, "utf8") : null;
   warnings.push(...prepared.warnings);
   const validation = validateReviewArtifactContent(normalizedContent, args.artifact);
   const evidenceCoverageIssues = args.artifact === "code-review" ? validateCodeReviewEvidenceCoverage(
@@ -62999,7 +66987,7 @@ async function blueprintReviewLoadFindings(args) {
       ]
     };
   }
-  const artifactPath = artifact === "code-review" ? findPhaseArtifact(located.artifacts, REVIEW_ARTIFACT_SUFFIXES[artifact]) : located.artifacts.find(
+  const artifactPath = artifact === "code-review" ? findPhaseArtifact2(located.artifacts, REVIEW_ARTIFACT_SUFFIXES[artifact]) : located.artifacts.find(
     (candidate) => candidate.endsWith(REVIEW_ARTIFACT_SUFFIXES[artifact])
   ) ?? null;
   if (!artifactPath) {
@@ -63020,7 +67008,7 @@ async function blueprintReviewLoadFindings(args) {
       warnings: located.warnings
     };
   }
-  const content = await fs8.readFile(
+  const content = await fs10.readFile(
     resolveBlueprintPath(projectRoot, artifactPath),
     "utf8"
   );
@@ -63058,6 +67046,7 @@ var init_review = __esm({
     init_artifacts();
     init_config();
     init_phase();
+    init_phase_topology_lock();
     REVIEW_ARTIFACT_SUFFIXES = {
       "code-review": "-REVIEW.md",
       "peer-review": "-REVIEWS.md",
@@ -63223,21 +67212,45 @@ var init_review = __esm({
 });
 
 // src/mcp/tools/update.ts
-import { execFile as execFile4 } from "node:child_process";
-import { promises as fs9 } from "node:fs";
-import os3 from "node:os";
-import path12 from "node:path";
-import { promisify as promisify4 } from "node:util";
+import { execFile as execFile5 } from "node:child_process";
+import { randomUUID as randomUUID2 } from "node:crypto";
+import { promises as fs11 } from "node:fs";
+import os5 from "node:os";
+import path16 from "node:path";
+import { promisify as promisify5 } from "node:util";
+function positiveTimingOverride2(value, fallback) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return fallback;
+  }
+  return Math.floor(value);
+}
+function updatePlanLockTiming() {
+  const staleMs = positiveTimingOverride2(
+    updatePlanLockTimingForTest?.staleMs,
+    UPDATE_PLAN_LOCK_STALE_MS
+  );
+  return {
+    retryMs: positiveTimingOverride2(
+      updatePlanLockTimingForTest?.retryMs,
+      UPDATE_PLAN_LOCK_RETRY_MS
+    ),
+    staleMs,
+    heartbeatMs: positiveTimingOverride2(
+      updatePlanLockTimingForTest?.heartbeatMs,
+      Math.max(25, Math.floor(staleMs / 4))
+    )
+  };
+}
 function defaultUpdatePlanMode(host) {
   return host === "gemini" ? "ask_user" : "manual";
 }
-function expandHomePath3(value) {
+function expandHomePath5(value) {
   const trimmed = value.trim();
   if (trimmed === "~") {
-    return os3.homedir();
+    return os5.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path12.join(os3.homedir(), trimmed.slice(2));
+    return path16.join(os5.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -63247,9 +67260,9 @@ function isNonEmptyString(value) {
 function normalizeOptionalString(value) {
   return isNonEmptyString(value) ? value.trim() : null;
 }
-async function pathExists5(targetPath) {
+async function pathExists6(targetPath) {
   try {
-    await fs9.access(targetPath);
+    await fs11.access(targetPath);
     return true;
   } catch {
     return false;
@@ -63258,7 +67271,7 @@ async function pathExists5(targetPath) {
 async function runGit3(args, options = {}) {
   const timeoutMs = options.timeoutMs ?? GIT_COMMAND_TIMEOUT_MS;
   try {
-    const { stdout, stderr } = await execFileAsync4("git", args, {
+    const { stdout, stderr } = await execFileAsync5("git", args, {
       cwd: options.cwd,
       timeout: timeoutMs,
       env: {
@@ -63289,14 +67302,14 @@ async function runGit3(args, options = {}) {
   }
 }
 async function readJsonObject(filePath) {
-  if (!await pathExists5(filePath)) {
+  if (!await pathExists6(filePath)) {
     return {
       value: null,
       warning: null
     };
   }
   try {
-    const raw = await fs9.readFile(filePath, "utf8");
+    const raw = await fs11.readFile(filePath, "utf8");
     return {
       value: safeJsonParseObject(raw, { label: filePath }),
       warning: null
@@ -63320,19 +67333,19 @@ async function resolveInstalledVersion(extensionPath, manifestFileName) {
       warnings
     };
   }
-  const normalizedExtensionPath = path12.resolve(extensionPath);
-  if (!await pathExists5(normalizedExtensionPath)) {
+  const normalizedExtensionPath = path16.resolve(extensionPath);
+  if (!await pathExists6(normalizedExtensionPath)) {
     warnings.push(`Configured extension path does not exist: ${normalizedExtensionPath}`);
     return {
       extensionPathState: "missing",
-      extensionManifestPath: path12.join(normalizedExtensionPath, manifestFileName),
+      extensionManifestPath: path16.join(normalizedExtensionPath, manifestFileName),
       installedVersion: null,
       warnings
     };
   }
-  const extensionManifestPath = path12.join(normalizedExtensionPath, manifestFileName);
+  const extensionManifestPath = path16.join(normalizedExtensionPath, manifestFileName);
   const manifestResult = await readJsonObject(extensionManifestPath);
-  const packageJsonResult = await readJsonObject(path12.join(normalizedExtensionPath, "package.json"));
+  const packageJsonResult = await readJsonObject(path16.join(normalizedExtensionPath, "package.json"));
   const manifest = manifestResult.value;
   const packageJson = packageJsonResult.value;
   if (manifestResult.warning) {
@@ -63590,7 +67603,7 @@ function compareSemver(left, right) {
 async function resolveUpdateCheck(args = {}, env = process.env) {
   const cwd = normalizeOptionalString(args.cwd) ?? process.cwd();
   const runtimeHost = resolveBlueprintRuntimeHost(env);
-  const extensionPath = runtimeHost.extensionPath ? path12.resolve(expandHomePath3(runtimeHost.extensionPath)) : null;
+  const extensionPath = runtimeHost.extensionPath ? path16.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
   const warnings = [];
   if (extensionPath) {
     assertNoNullBytes(extensionPath, "Blueprint extension path");
@@ -63802,25 +67815,75 @@ function serializeUpdatePlan(generatedAt, plan) {
   };
 }
 async function removeIfExists(targetPath) {
-  await fs9.rm(targetPath, { force: true });
+  await fs11.rm(targetPath, { force: true });
+}
+async function removeIfExistsSafely(targetPath, label) {
+  try {
+    await removeIfExists(targetPath);
+    return null;
+  } catch (error2) {
+    return error2 instanceof Error ? `Failed to remove ${label} ${targetPath}: ${error2.message}` : `Failed to remove ${label} ${targetPath}.`;
+  }
+}
+function createUpdatePlanNonce() {
+  return `${process.pid}-${Date.now()}-${randomUUID2()}`;
+}
+async function withUpdatePlanLock(updatesDir, callback) {
+  const lockPath = path16.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
+  const lockOptions = {
+    lockPath,
+    timing: updatePlanLockTiming()
+  };
+  const runObservedCallback = async () => {
+    await updatePlanLockCallbackObserverForTest?.("enter", lockPath);
+    try {
+      return await callback();
+    } finally {
+      await updatePlanLockCallbackObserverForTest?.("exit", lockPath);
+    }
+  };
+  if (updatePlanLockRecoveryHooksForTest) {
+    return withDirectoryLock(
+      { ...lockOptions, recoveryHooks: updatePlanLockRecoveryHooksForTest },
+      runObservedCallback
+    );
+  }
+  return withDirectoryLock(lockOptions, runObservedCallback);
 }
 async function restoreFromBackup(backupPath, targetPath) {
-  if (!await pathExists5(backupPath)) {
-    return null;
+  if (!await pathExists6(backupPath)) {
+    return {
+      backupExisted: false,
+      restored: false,
+      warning: null
+    };
   }
   try {
     await removeIfExists(targetPath);
-    await fs9.rename(backupPath, targetPath);
-    return null;
+    await fs11.rename(backupPath, targetPath);
+    return {
+      backupExisted: true,
+      restored: true,
+      warning: null
+    };
   } catch (error2) {
-    return error2 instanceof Error ? `Failed to restore ${targetPath} from backup: ${error2.message}` : `Failed to restore ${targetPath} from backup.`;
+    const warning = error2 instanceof Error ? `Failed to restore ${targetPath} from backup ${backupPath}: ${error2.message}. Backup left in place for manual recovery.` : `Failed to restore ${targetPath} from backup ${backupPath}. Backup left in place for manual recovery.`;
+    return {
+      backupExisted: true,
+      restored: false,
+      warning
+    };
   }
+}
+async function determineUpdatePlanStatus(metadataPath, checklistPath) {
+  const created = !(await pathExists6(metadataPath) || await pathExists6(checklistPath));
+  return created ? "created" : "updated";
 }
 async function persistUpdatePlanArtifacts(generatedAt, plan) {
   const warnings = [];
   const serializedPlan = serializeUpdatePlan(generatedAt, plan);
   const checklistMarkdown = renderChecklistMarkdown(generatedAt, plan);
-  const nonce = `${process.pid}-${Date.now()}`;
+  const nonce = createUpdatePlanNonce();
   const metadataTmpPath = `${plan.savedPaths.metadataPath}${UPDATE_ARTIFACT_TEMP_SUFFIX}-${nonce}`;
   const checklistTmpPath = `${plan.savedPaths.checklistPath}${UPDATE_ARTIFACT_TEMP_SUFFIX}-${nonce}`;
   const metadataBackupPath = `${plan.savedPaths.metadataPath}${UPDATE_ARTIFACT_BACKUP_SUFFIX}-${nonce}`;
@@ -63833,53 +67896,95 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
-      label: path12.basename(plan.savedPaths.checklistPath)
+      label: path16.basename(plan.savedPaths.checklistPath)
     });
-    if (await pathExists5(plan.savedPaths.metadataPath)) {
-      await fs9.rename(plan.savedPaths.metadataPath, metadataBackupPath);
+    if (await pathExists6(plan.savedPaths.metadataPath)) {
+      await fs11.rename(plan.savedPaths.metadataPath, metadataBackupPath);
       metadataBackupCreated = true;
     }
-    if (await pathExists5(plan.savedPaths.checklistPath)) {
-      await fs9.rename(plan.savedPaths.checklistPath, checklistBackupPath);
+    if (await pathExists6(plan.savedPaths.checklistPath)) {
+      await fs11.rename(plan.savedPaths.checklistPath, checklistBackupPath);
       checklistBackupCreated = true;
     }
-    await fs9.rename(metadataTmpPath, plan.savedPaths.metadataPath);
+    await fs11.rename(metadataTmpPath, plan.savedPaths.metadataPath);
     metadataPromoted = true;
-    await fs9.rename(checklistTmpPath, plan.savedPaths.checklistPath);
+    await fs11.rename(checklistTmpPath, plan.savedPaths.checklistPath);
     checklistPromoted = true;
-    await removeIfExists(metadataBackupPath);
-    await removeIfExists(checklistBackupPath);
-    return warnings;
+    for (const [backupPath, label] of [
+      [metadataBackupPath, "update metadata backup"],
+      [checklistBackupPath, "update checklist backup"]
+    ]) {
+      const cleanupWarning = await removeIfExistsSafely(backupPath, label);
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
+    }
+    return {
+      persistenceStatus: "saved",
+      warnings
+    };
   } catch (error2) {
     const reason = error2 instanceof Error ? error2.message : "unknown write failure";
     warnings.push(
       `Unable to persist Blueprint update artifacts under ${plan.savedPaths.updatesDir}: ${reason}. Returning manual steps without saved files.`
     );
-    await removeIfExists(metadataTmpPath);
-    await removeIfExists(checklistTmpPath);
+    for (const [tempPath, label] of [
+      [metadataTmpPath, "update metadata temp file"],
+      [checklistTmpPath, "update checklist temp file"]
+    ]) {
+      const cleanupWarning = await removeIfExistsSafely(tempPath, label);
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
+    }
     if (metadataPromoted && !metadataBackupCreated) {
-      await removeIfExists(plan.savedPaths.metadataPath);
+      const cleanupWarning = await removeIfExistsSafely(
+        plan.savedPaths.metadataPath,
+        "partially promoted update metadata"
+      );
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
     }
     if (checklistPromoted && !checklistBackupCreated) {
-      await removeIfExists(plan.savedPaths.checklistPath);
+      const cleanupWarning = await removeIfExistsSafely(
+        plan.savedPaths.checklistPath,
+        "partially promoted update checklist"
+      );
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
     }
-    const metadataRestoreWarning = await restoreFromBackup(
+    const metadataRestore = await restoreFromBackup(
       metadataBackupPath,
       plan.savedPaths.metadataPath
     );
-    const checklistRestoreWarning = await restoreFromBackup(
+    const checklistRestore = await restoreFromBackup(
       checklistBackupPath,
       plan.savedPaths.checklistPath
     );
-    if (metadataRestoreWarning) {
-      warnings.push(metadataRestoreWarning);
+    if (metadataRestore.warning) {
+      warnings.push(metadataRestore.warning);
     }
-    if (checklistRestoreWarning) {
-      warnings.push(checklistRestoreWarning);
+    if (checklistRestore.warning) {
+      warnings.push(checklistRestore.warning);
     }
-    await removeIfExists(metadataBackupPath);
-    await removeIfExists(checklistBackupPath);
-    return warnings;
+    for (const [backupPath, label, restore] of [
+      [metadataBackupPath, "update metadata backup", metadataRestore],
+      [checklistBackupPath, "update checklist backup", checklistRestore]
+    ]) {
+      if (restore.warning) {
+        continue;
+      }
+      const cleanupWarning = await removeIfExistsSafely(backupPath, label);
+      if (cleanupWarning) {
+        warnings.push(cleanupWarning);
+      }
+    }
+    return {
+      persistenceStatus: "not_saved",
+      warnings
+    };
   }
 }
 async function blueprintUpdateCheck(args = {}, env = process.env) {
@@ -63889,11 +67994,9 @@ async function blueprintUpdatePlan(args = {}, env = process.env) {
   const runtimeHost = resolveBlueprintRuntimeHost(env);
   const mode = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
   const check2 = await resolveUpdateCheck(args, env);
-  const updatesDir = path12.resolve(expandHomePath3(runtimeHost.updatesDir));
-  const metadataPath = path12.join(updatesDir, UPDATE_PLAN_FILE);
-  const checklistPath = path12.join(updatesDir, UPDATE_CHECKLIST_FILE);
-  const created = !(await pathExists5(metadataPath) || await pathExists5(checklistPath));
-  const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const updatesDir = path16.resolve(expandHomePath5(runtimeHost.updatesDir));
+  const metadataPath = path16.join(updatesDir, UPDATE_PLAN_FILE);
+  const checklistPath = path16.join(updatesDir, UPDATE_CHECKLIST_FILE);
   const savedPaths = {
     updatesDir,
     metadataPath,
@@ -63901,33 +68004,59 @@ async function blueprintUpdatePlan(args = {}, env = process.env) {
   };
   const steps = buildUpdateSteps(check2, mode, savedPaths);
   const notes = buildUpdateNotes(check2, mode);
-  const plan = {
+  const buildPlan = (status) => ({
     ...check2,
+    warnings: [...check2.warnings],
     mode,
     steps,
     notes,
     requiresRestart: true,
     savedPaths,
+    intendedPath: metadataPath,
     path: metadataPath,
-    status: created ? "created" : "updated"
-  };
-  const persistenceWarnings = await persistUpdatePlanArtifacts(generatedAt, plan);
-  plan.warnings.push(...persistenceWarnings);
-  return plan;
+    status,
+    persistenceStatus: "saved"
+  });
+  try {
+    return await withUpdatePlanLock(updatesDir, async () => {
+      const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      const plan = buildPlan(await determineUpdatePlanStatus(metadataPath, checklistPath));
+      const persistenceResult = await persistUpdatePlanArtifacts(generatedAt, plan);
+      plan.persistenceStatus = persistenceResult.persistenceStatus;
+      if (persistenceResult.persistenceStatus === "not_saved") {
+        plan.path = null;
+      }
+      plan.warnings.push(...persistenceResult.warnings);
+      return plan;
+    });
+  } catch (error2) {
+    const reason = error2 instanceof Error ? error2.message : "unknown persistence failure";
+    const plan = buildPlan(await determineUpdatePlanStatus(metadataPath, checklistPath));
+    plan.persistenceStatus = "not_saved";
+    plan.path = null;
+    plan.warnings.push(
+      `Unable to persist Blueprint update artifacts under ${updatesDir}: ${reason}. Returning manual steps without saved files.`
+    );
+    return plan;
+  }
 }
-var execFileAsync4, UPDATE_PLAN_FILE, UPDATE_CHECKLIST_FILE, UPDATE_ARTIFACT_TEMP_SUFFIX, UPDATE_ARTIFACT_BACKUP_SUFFIX, GIT_COMMAND_TIMEOUT_MS, HTTP_LOOKUP_TIMEOUT_MS, UPDATE_PLAN_MODES, updateCheckInputSchema, updatePlanInputSchema, updateToolDefinitions;
+var execFileAsync5, UPDATE_PLAN_FILE, UPDATE_CHECKLIST_FILE, UPDATE_ARTIFACT_TEMP_SUFFIX, UPDATE_ARTIFACT_BACKUP_SUFFIX, UPDATE_PLAN_LOCK_DIR, UPDATE_PLAN_LOCK_RETRY_MS, UPDATE_PLAN_LOCK_STALE_MS, GIT_COMMAND_TIMEOUT_MS, HTTP_LOOKUP_TIMEOUT_MS, UPDATE_PLAN_MODES, updateCheckInputSchema, updatePlanInputSchema, updatePlanLockTimingForTest, updatePlanLockRecoveryHooksForTest, updatePlanLockCallbackObserverForTest, updateToolDefinitions;
 var init_update = __esm({
   "src/mcp/tools/update.ts"() {
     "use strict";
     init_v4();
     init_artifacts();
+    init_directory_lock();
     init_runtime_host();
     init_security();
-    execFileAsync4 = promisify4(execFile4);
+    execFileAsync5 = promisify5(execFile5);
     UPDATE_PLAN_FILE = "update-plan-latest.json";
     UPDATE_CHECKLIST_FILE = "update-plan-latest.md";
     UPDATE_ARTIFACT_TEMP_SUFFIX = ".tmp";
     UPDATE_ARTIFACT_BACKUP_SUFFIX = ".bak";
+    UPDATE_PLAN_LOCK_DIR = "update-plan-latest.lock";
+    UPDATE_PLAN_LOCK_RETRY_MS = 50;
+    UPDATE_PLAN_LOCK_STALE_MS = 6e4;
     GIT_COMMAND_TIMEOUT_MS = 5e3;
     HTTP_LOOKUP_TIMEOUT_MS = 5e3;
     UPDATE_PLAN_MODES = ["ask_user", "manual"];
@@ -63938,6 +68067,9 @@ var init_update = __esm({
       cwd: string2().optional(),
       mode: _enum(UPDATE_PLAN_MODES).optional()
     };
+    updatePlanLockTimingForTest = null;
+    updatePlanLockRecoveryHooksForTest = null;
+    updatePlanLockCallbackObserverForTest = null;
     updateToolDefinitions = [
       {
         name: "blueprint_update_check",
@@ -63956,12 +68088,12 @@ var init_update = __esm({
 });
 
 // src/mcp/tools/impact.ts
-import { execFile as execFile5 } from "node:child_process";
+import { execFile as execFile6 } from "node:child_process";
 import { createHash as createHash4 } from "node:crypto";
-import { promises as fs10 } from "node:fs";
-import os4 from "node:os";
-import path13 from "node:path";
-import { promisify as promisify5 } from "node:util";
+import { promises as fs12 } from "node:fs";
+import os6 from "node:os";
+import path17 from "node:path";
+import { promisify as promisify6 } from "node:util";
 function stableHash(value) {
   return createHash4("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
 }
@@ -64035,7 +68167,7 @@ function hasPathSegment(filePath, segment) {
   return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
 }
 function hasConfigName(filePath) {
-  const basename = path13.posix.basename(filePath);
+  const basename = path17.posix.basename(filePath);
   return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
 }
 function isGeneratedPath(filePath) {
@@ -64045,7 +68177,7 @@ function isTestPath(filePath) {
   return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 function isDocsPath(filePath) {
-  const extension = path13.posix.extname(filePath).toLowerCase();
+  const extension = path17.posix.extname(filePath).toLowerCase();
   return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
 }
 function areaForSurface(surface) {
@@ -64090,8 +68222,8 @@ function areaForSurface(surface) {
 }
 function classifyImpactFile(filePath) {
   const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const basename = path13.posix.basename(normalizedPath);
-  const extension = path13.posix.extname(normalizedPath).toLowerCase();
+  const basename = path17.posix.basename(normalizedPath);
+  const extension = path17.posix.extname(normalizedPath).toLowerCase();
   const rules = [];
   if (SECRET_PATH_PATTERN.test(normalizedPath)) {
     addSurfaceRule(
@@ -64254,11 +68386,11 @@ function buildSurfaceSummary(records) {
     };
   });
 }
-function uniqueSorted2(values) {
+function uniqueSorted3(values) {
   return [...new Set(values.filter((value) => value.trim().length > 0))].sort();
 }
 function allRegisteredRuntimeToolNames() {
-  return uniqueSorted2([
+  return uniqueSorted3([
     ...PROJECT_RUNTIME_TOOL_NAMES,
     ...configToolDefinitions.map((definition) => definition.name),
     ...stateToolDefinitions.map((definition) => definition.name),
@@ -64284,13 +68416,13 @@ function sortEvidenceRecords(records) {
     if (!existing) {
       deduped.set(record2.id, {
         ...record2,
-        paths: uniqueSorted2(record2.paths)
+        paths: uniqueSorted3(record2.paths)
       });
       continue;
     }
     deduped.set(record2.id, {
       ...existing,
-      paths: uniqueSorted2([...existing.paths, ...record2.paths])
+      paths: uniqueSorted3([...existing.paths, ...record2.paths])
     });
   }
   return [...deduped.values()].sort((left, right) => left.id.localeCompare(right.id));
@@ -64302,16 +68434,16 @@ function sortUnknownRecords(records) {
     if (!existing) {
       deduped.set(record2.id, {
         ...record2,
-        impactedFiles: uniqueSorted2(record2.impactedFiles),
-        evidenceRefs: uniqueSorted2(record2.evidenceRefs)
+        impactedFiles: uniqueSorted3(record2.impactedFiles),
+        evidenceRefs: uniqueSorted3(record2.evidenceRefs)
       });
       continue;
     }
     deduped.set(record2.id, {
       ...existing,
       severity: moreSevere(existing.severity, record2.severity),
-      impactedFiles: uniqueSorted2([...existing.impactedFiles, ...record2.impactedFiles]),
-      evidenceRefs: uniqueSorted2([...existing.evidenceRefs, ...record2.evidenceRefs])
+      impactedFiles: uniqueSorted3([...existing.impactedFiles, ...record2.impactedFiles]),
+      evidenceRefs: uniqueSorted3([...existing.evidenceRefs, ...record2.evidenceRefs])
     });
   }
   return [...deduped.values()].sort((left, right) => left.id.localeCompare(right.id));
@@ -64335,11 +68467,11 @@ function sortFindings(records) {
     if (!existing) {
       deduped.set(record2.id, {
         ...record2,
-        impactedFiles: uniqueSorted2(record2.impactedFiles),
-        impactedAreas: uniqueSorted2(record2.impactedAreas),
-        owners: uniqueSorted2(record2.owners),
-        requiredActions: uniqueSorted2(record2.requiredActions),
-        evidenceRefs: uniqueSorted2(record2.evidenceRefs)
+        impactedFiles: uniqueSorted3(record2.impactedFiles),
+        impactedAreas: uniqueSorted3(record2.impactedAreas),
+        owners: uniqueSorted3(record2.owners),
+        requiredActions: uniqueSorted3(record2.requiredActions),
+        evidenceRefs: uniqueSorted3(record2.evidenceRefs)
       });
       continue;
     }
@@ -64348,11 +68480,11 @@ function sortFindings(records) {
       severity: moreSevere(existing.severity, record2.severity),
       status: higherImpactStatus(existing.status, record2.status),
       confidence: Math.max(existing.confidence, record2.confidence),
-      impactedFiles: uniqueSorted2([...existing.impactedFiles, ...record2.impactedFiles]),
-      impactedAreas: uniqueSorted2([...existing.impactedAreas, ...record2.impactedAreas]),
-      owners: uniqueSorted2([...existing.owners, ...record2.owners]),
-      requiredActions: uniqueSorted2([...existing.requiredActions, ...record2.requiredActions]),
-      evidenceRefs: uniqueSorted2([...existing.evidenceRefs, ...record2.evidenceRefs])
+      impactedFiles: uniqueSorted3([...existing.impactedFiles, ...record2.impactedFiles]),
+      impactedAreas: uniqueSorted3([...existing.impactedAreas, ...record2.impactedAreas]),
+      owners: uniqueSorted3([...existing.owners, ...record2.owners]),
+      requiredActions: uniqueSorted3([...existing.requiredActions, ...record2.requiredActions]),
+      evidenceRefs: uniqueSorted3([...existing.evidenceRefs, ...record2.evidenceRefs])
     });
   }
   return [...deduped.values()].sort(
@@ -64366,21 +68498,21 @@ function sortObligations(records) {
     if (!existing) {
       deduped.set(record2.id, {
         ...record2,
-        impactedFiles: uniqueSorted2(record2.impactedFiles),
+        impactedFiles: uniqueSorted3(record2.impactedFiles),
         sourceSurfaces: [...new Set(record2.sourceSurfaces)].sort(compareImpactSurfaces),
-        requiredActions: uniqueSorted2(record2.requiredActions),
-        evidenceRefs: uniqueSorted2(record2.evidenceRefs)
+        requiredActions: uniqueSorted3(record2.requiredActions),
+        evidenceRefs: uniqueSorted3(record2.evidenceRefs)
       });
       continue;
     }
     deduped.set(record2.id, {
       ...existing,
-      impactedFiles: uniqueSorted2([...existing.impactedFiles, ...record2.impactedFiles]),
+      impactedFiles: uniqueSorted3([...existing.impactedFiles, ...record2.impactedFiles]),
       sourceSurfaces: [.../* @__PURE__ */ new Set([...existing.sourceSurfaces, ...record2.sourceSurfaces])].sort(
         compareImpactSurfaces
       ),
-      requiredActions: uniqueSorted2([...existing.requiredActions, ...record2.requiredActions]),
-      evidenceRefs: uniqueSorted2([...existing.evidenceRefs, ...record2.evidenceRefs])
+      requiredActions: uniqueSorted3([...existing.requiredActions, ...record2.requiredActions]),
+      evidenceRefs: uniqueSorted3([...existing.evidenceRefs, ...record2.evidenceRefs])
     });
   }
   return [...deduped.values()].sort(
@@ -64392,7 +68524,7 @@ function addEvidence(records, record2) {
   records.push({
     id,
     ...record2,
-    paths: uniqueSorted2(record2.paths)
+    paths: uniqueSorted3(record2.paths)
   });
   return id;
 }
@@ -64547,7 +68679,7 @@ function buildConfidenceScore(options) {
   return {
     score: roundedScore,
     level: confidenceLevelForScore(roundedScore),
-    reasons: uniqueSorted2([...drivers, ...reducers])
+    reasons: uniqueSorted3([...drivers, ...reducers])
   };
 }
 function hasBreakingContractSignal(findings, _obligations, unknowns) {
@@ -64605,8 +68737,8 @@ function buildImpactStatus(options) {
   }
   return {
     status,
-    drivers: uniqueSorted2(drivers),
-    reducers: uniqueSorted2(reducers)
+    drivers: uniqueSorted3(drivers),
+    reducers: uniqueSorted3(reducers)
   };
 }
 function buildImpactRisk(options) {
@@ -64642,23 +68774,23 @@ function buildImpactRisk(options) {
   }
   return {
     level,
-    reasons: uniqueSorted2(reasons)
+    reasons: uniqueSorted3(reasons)
   };
 }
 function requiredReviewersFromOwnership(ownership) {
-  return uniqueSorted2(
+  return uniqueSorted3(
     ownership.matches.flatMap(
       (match) => match.owners.length > 0 ? match.owners : match.fallbackReviewers
     )
   );
 }
 function requiredTestsFromObligations(obligations) {
-  return uniqueSorted2(
+  return uniqueSorted3(
     obligations.filter((obligation) => obligation.category === "tests").flatMap((obligation) => obligation.requiredActions)
   );
 }
 function requiredActionsFromSignals(findings, obligations, unknowns) {
-  return uniqueSorted2([
+  return uniqueSorted3([
     ...findings.flatMap((finding) => finding.requiredActions),
     ...obligations.flatMap((obligation) => obligation.requiredActions),
     ...unknowns.map((unknown2) => unknown2.resolution)
@@ -64721,8 +68853,8 @@ function scoreImpactAnalysis(options) {
       confidenceLevel: confidence.level,
       maxSeverity,
       blocking: statusResult.status === "BLOCK",
-      drivers: uniqueSorted2([...statusResult.drivers, ...risk.reasons]),
-      reducers: uniqueSorted2(statusResult.reducers),
+      drivers: uniqueSorted3([...statusResult.drivers, ...risk.reasons]),
+      reducers: uniqueSorted3(statusResult.reducers),
       policy: {
         blockOnCritical: options.config.risk.blockOnCritical,
         blockOnBreakingContract: options.config.risk.blockOnBreakingContract,
@@ -64744,7 +68876,7 @@ function scoreImpactAnalysis(options) {
     warningFindings: options.findings.filter((finding) => finding.status === "WARN")
   };
 }
-function escapeRegExp2(value) {
+function escapeRegExp3(value) {
   return value.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
 }
 function globPatternToRegExp(pattern) {
@@ -64761,7 +68893,7 @@ function globPatternToRegExp(pattern) {
     } else if (character === "?") {
       expression += "[^/]";
     } else {
-      expression += escapeRegExp2(character ?? "");
+      expression += escapeRegExp3(character ?? "");
     }
   }
   if (normalized.endsWith("/")) {
@@ -64777,7 +68909,7 @@ function matchesRepoPattern(filePath, pattern) {
     return false;
   }
   if (!normalizedPattern.includes("/")) {
-    return globPatternToRegExp(normalizedPattern).test(path13.posix.basename(normalizedPath));
+    return globPatternToRegExp(normalizedPattern).test(path17.posix.basename(normalizedPath));
   }
   return globPatternToRegExp(normalizedPattern).test(normalizedPath);
 }
@@ -64812,19 +68944,19 @@ function isReverseDependencyRelevant(record2) {
 function cloneConfig2(config2) {
   return JSON.parse(JSON.stringify(config2));
 }
-function expandHomePath4(value) {
+function expandHomePath6(value) {
   const trimmed = value.trim();
   if (trimmed === "~") {
-    return os4.homedir();
+    return os6.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path13.join(os4.homedir(), trimmed.slice(2));
+    return path17.join(os6.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
-async function pathExists6(targetPath) {
+async function pathExists7(targetPath) {
   try {
-    await fs10.access(targetPath);
+    await fs12.access(targetPath);
     return true;
   } catch {
     return false;
@@ -64835,7 +68967,7 @@ function resolveContainedInputPath(projectRoot, inputPath, label) {
   if (trimmed.length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  const candidatePath = path13.isAbsolute(trimmed) ? trimmed : path13.resolve(projectRoot, trimmed);
+  const candidatePath = path17.isAbsolute(trimmed) ? trimmed : path17.resolve(projectRoot, trimmed);
   return ensurePathWithinRootSync(projectRoot, candidatePath, { label });
 }
 function toRepoRelativeInputPath(projectRoot, inputPath, label) {
@@ -64900,15 +69032,15 @@ function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
 }
 function getImpactDefaultsPath() {
   const runtimeHost = resolveBlueprintRuntimeHost();
-  return path13.resolve(
-    expandHomePath4(
-      path13.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
+  return path17.resolve(
+    expandHomePath6(
+      path17.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
     )
   );
 }
 function isUnsafeRepoPattern(value) {
   const normalized = value.trim().replaceAll("\\", "/");
-  return normalized.length === 0 || normalized.includes("\0") || path13.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
+  return normalized.length === 0 || normalized.includes("\0") || path17.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
 }
 function validateConfigPathArrays(config2) {
   const errors = [];
@@ -65076,11 +69208,11 @@ function mergeConfigLayer(target, source) {
   }
 }
 async function readConfigLayer(filePath, label, warnings, errors) {
-  if (!await pathExists6(filePath)) {
+  if (!await pathExists7(filePath)) {
     return null;
   }
   try {
-    return safeJsonParseObject(await fs10.readFile(filePath, "utf8"), { label });
+    return safeJsonParseObject(await fs12.readFile(filePath, "utf8"), { label });
   } catch (error2) {
     errors.push(error2 instanceof Error ? error2.message : `${label} could not be read.`);
     return null;
@@ -65132,7 +69264,7 @@ function parseCodeownersRules(raw, sourcePath) {
       source: "codeowners",
       sourcePath,
       pattern,
-      owners: uniqueSorted2(owners),
+      owners: uniqueSorted3(owners),
       sensitive: false,
       line: lineIndex + 1,
       order: rules.length
@@ -65153,7 +69285,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
   const evidence = [];
   const unknowns = [];
   const findings = [];
-  const configuredSources = uniqueSorted2(config2.ownership.sources);
+  const configuredSources = uniqueSorted3(config2.ownership.sources);
   const sourcesUsed = [];
   const metadataFallbackReviewers = [];
   const metadataPaths = [];
@@ -65168,11 +69300,11 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       source,
       "Impact ownership CODEOWNERS source"
     );
-    if (!await pathExists6(absolutePath)) {
+    if (!await pathExists7(absolutePath)) {
       continue;
     }
     codeownersPath = toRepoRelativePath(projectRoot, absolutePath);
-    const parsedRules = parseCodeownersRules(await fs10.readFile(absolutePath, "utf8"), codeownersPath);
+    const parsedRules = parseCodeownersRules(await fs12.readFile(absolutePath, "utf8"), codeownersPath);
     rules.push(...parsedRules);
     sourcesUsed.push(codeownersPath);
     addEvidence(evidence, {
@@ -65191,12 +69323,12 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       source,
       "Impact ownership metadata source"
     );
-    if (!await pathExists6(absolutePath)) {
+    if (!await pathExists7(absolutePath)) {
       continue;
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     try {
-      const parsed = safeJsonParseObject(await fs10.readFile(absolutePath, "utf8"), {
+      const parsed = safeJsonParseObject(await fs12.readFile(absolutePath, "utf8"), {
         label: `Impact ownership metadata ${relativePath}`
       });
       const metadataResult = ownershipMetadataSchema.safeParse(parsed);
@@ -65213,7 +69345,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
           source: "metadata",
           sourcePath: relativePath,
           pattern: rule.pattern,
-          owners: uniqueSorted2(rule.owners),
+          owners: uniqueSorted3(rule.owners),
           sensitive: rule.sensitive,
           line: null,
           order: startIndex + index
@@ -65253,8 +69385,8 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       });
     }
   }
-  const effectiveMetadataFallback = uniqueSorted2(metadataFallbackReviewers);
-  const configuredFallback = uniqueSorted2(config2.ownership.fallbackReviewers);
+  const effectiveMetadataFallback = uniqueSorted3(metadataFallbackReviewers);
+  const configuredFallback = uniqueSorted3(config2.ownership.fallbackReviewers);
   const orderedFallbackReviewers = configuredFallback.length > 0 ? configuredFallback : effectiveMetadataFallback;
   const matches = [];
   const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
@@ -65266,7 +69398,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
     const matchedRules = [...codeownersRule ? [codeownersRule] : [], ...metadataRules].sort(
       (left, right) => left.order - right.order
     );
-    const explicitOwners = uniqueSorted2(matchedRules.flatMap((rule) => rule.owners));
+    const explicitOwners = uniqueSorted3(matchedRules.flatMap((rule) => rule.owners));
     const fallbackReviewers = explicitOwners.length === 0 ? orderedFallbackReviewers : [];
     const owners = explicitOwners.length > 0 ? explicitOwners : fallbackReviewers;
     const surface = surfaceByPath.get(file2);
@@ -65331,7 +69463,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       coverage: {
         status: coverageStatus,
         sourcesConfigured: configuredSources,
-        sourcesUsed: uniqueSorted2(sourcesUsed),
+        sourcesUsed: uniqueSorted3(sourcesUsed),
         fallbackReviewers: orderedFallbackReviewers,
         filesWithOwners,
         filesMissingOwners,
@@ -65356,7 +69488,7 @@ function addDependencyNode(nodes, node) {
   nodes.set(node.id, {
     ...existing,
     path: existing.path ?? node.path,
-    source: uniqueSorted2([...existing.source.split(","), node.source]).join(",")
+    source: uniqueSorted3([...existing.source.split(","), node.source]).join(",")
   });
 }
 function addDependencyEdge(edges, edge) {
@@ -65366,7 +69498,7 @@ function addDependencyEdge(edges, edge) {
   }
 }
 function dependencyNamesFromPackageJson(parsed) {
-  return uniqueSorted2(
+  return uniqueSorted3(
     ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].flatMap(
       (key) => isPlainObject7(parsed[key]) ? Object.keys(parsed[key]) : []
     )
@@ -65385,10 +69517,10 @@ function packageJsonWorkspaces(parsed) {
   return [];
 }
 async function readJsonObjectIfPresent2(filePath, label) {
-  if (!await pathExists6(filePath)) {
+  if (!await pathExists7(filePath)) {
     return null;
   }
-  return safeJsonParseObject(await fs10.readFile(filePath, "utf8"), { label });
+  return safeJsonParseObject(await fs12.readFile(filePath, "utf8"), { label });
 }
 async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns) {
   const directories = [];
@@ -65398,25 +69530,25 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
       continue;
     }
     const root = normalizedPattern.split("/")[0];
-    const absoluteRoot = path13.join(projectRoot, root);
-    if (!await pathExists6(absoluteRoot)) {
+    const absoluteRoot = path17.join(projectRoot, root);
+    if (!await pathExists7(absoluteRoot)) {
       continue;
     }
-    const entries = await fs10.readdir(absoluteRoot, { withFileTypes: true });
+    const entries = await fs12.readdir(absoluteRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name.startsWith(".")) {
         continue;
       }
       const relativePath = `${root}/${entry.name}`;
-      if (await pathExists6(path13.join(projectRoot, relativePath, "package.json"))) {
+      if (await pathExists7(path17.join(projectRoot, relativePath, "package.json"))) {
         directories.push(relativePath);
       }
     }
   }
-  return uniqueSorted2(directories);
+  return uniqueSorted3(directories);
 }
 async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
-  const packagePath = path13.join(projectRoot, "package.json");
+  const packagePath = path17.join(projectRoot, "package.json");
   const parsed = await readJsonObjectIfPresent2(packagePath, "Impact package.json");
   const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
   if (!parsed) {
@@ -65453,7 +69585,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   for (const workspacePath of workspaceDirectories) {
     try {
       const workspacePackage = await readJsonObjectIfPresent2(
-        path13.join(projectRoot, workspacePath, "package.json"),
+        path17.join(projectRoot, workspacePath, "package.json"),
         `Impact workspace package ${workspacePath}/package.json`
       );
       if (!workspacePackage) {
@@ -65483,7 +69615,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   }
   for (const workspacePath of workspaceDirectories) {
     const workspacePackage = await readJsonObjectIfPresent2(
-      path13.join(projectRoot, workspacePath, "package.json"),
+      path17.join(projectRoot, workspacePath, "package.json"),
       `Impact workspace package ${workspacePath}/package.json`
     );
     if (!workspacePackage) {
@@ -65517,12 +69649,12 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   return { used: true, packageNameByWorkspacePath };
 }
 async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
-  const lockPath = path13.join(projectRoot, "package-lock.json");
-  if (!await pathExists6(lockPath)) {
+  const lockPath = path17.join(projectRoot, "package-lock.json");
+  if (!await pathExists7(lockPath)) {
     return false;
   }
   try {
-    const parsed = safeJsonParseObject(await fs10.readFile(lockPath, "utf8"), {
+    const parsed = safeJsonParseObject(await fs12.readFile(lockPath, "utf8"), {
       label: "Impact package-lock.json"
     });
     const packages = isPlainObject7(parsed.packages) ? Object.entries(parsed.packages) : [];
@@ -65571,7 +69703,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
   const results = /* @__PURE__ */ new Set();
   const queue = [];
   for (const root of roots) {
-    if (await pathExists6(path13.join(projectRoot, root))) {
+    if (await pathExists7(path17.join(projectRoot, root))) {
       queue.push({ relativePath: root, depth: 0 });
     }
   }
@@ -65580,8 +69712,8 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
     if (!current || current.depth > 8) {
       continue;
     }
-    const absolutePath = path13.join(projectRoot, current.relativePath);
-    const entries = await fs10.readdir(absolutePath, { withFileTypes: true });
+    const absolutePath = path17.join(projectRoot, current.relativePath);
+    const entries = await fs12.readdir(absolutePath, { withFileTypes: true });
     for (const entry of entries) {
       if (results.size >= 600) {
         break;
@@ -65595,13 +69727,13 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
           continue;
         }
         queue.push({ relativePath, depth: current.depth + 1 });
-      } else if (SOURCE_FILE_EXTENSIONS.has(path13.posix.extname(relativePath).toLowerCase())) {
+      } else if (SOURCE_FILE_EXTENSIONS.has(path17.posix.extname(relativePath).toLowerCase())) {
         results.add(relativePath);
       }
     }
   }
   for (const file2 of changedFiles) {
-    if (SOURCE_FILE_EXTENSIONS.has(path13.posix.extname(file2).toLowerCase())) {
+    if (SOURCE_FILE_EXTENSIONS.has(path17.posix.extname(file2).toLowerCase())) {
       results.add(file2);
     }
   }
@@ -65611,7 +69743,7 @@ function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPath
   if (!specifier.startsWith(".")) {
     return null;
   }
-  const base = path13.posix.normalize(path13.posix.join(path13.posix.dirname(importerPath), specifier));
+  const base = path17.posix.normalize(path17.posix.join(path17.posix.dirname(importerPath), specifier));
   const candidates = [
     base,
     `${base}.ts`,
@@ -65657,8 +69789,8 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
       skippedSecretCount += 1;
       continue;
     }
-    const absolutePath = path13.join(projectRoot, file2);
-    if (!await pathExists6(absolutePath)) {
+    const absolutePath = path17.join(projectRoot, file2);
+    if (!await pathExists7(absolutePath)) {
       continue;
     }
     const fileNodeId = `file:${file2}`;
@@ -65677,7 +69809,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
         source: TS_IMPORT_SCAN_SOURCE
       });
     }
-    const rawSource = await fs10.readFile(absolutePath, "utf8");
+    const rawSource = await fs12.readFile(absolutePath, "utf8");
     scannedCount += 1;
     for (const specifier of extractImportSpecifiers(rawSource)) {
       const targetPath = resolveImportSpecifierToRepoPath(file2, specifier, sourceFileSet);
@@ -65728,12 +69860,12 @@ async function loadCustomDependencyGraphs(projectRoot, config2, nodes, edges, ev
       graphPath,
       "Impact dependency graph source"
     );
-    if (!await pathExists6(absolutePath)) {
+    if (!await pathExists7(absolutePath)) {
       continue;
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     try {
-      const parsed = safeJsonParseObject(await fs10.readFile(absolutePath, "utf8"), {
+      const parsed = safeJsonParseObject(await fs12.readFile(absolutePath, "utf8"), {
         label: `Impact dependency graph ${relativePath}`
       });
       const graphResult = dependencyGraphMetadataSchema.safeParse(parsed);
@@ -65818,7 +69950,7 @@ function buildReverseDependentsByPath(files, nodes, edges) {
   const reverseDependentsByPath = {};
   for (const file2 of files) {
     const matchingNodeIds = nodes.filter((node) => nodeMatchesChangedFile(node, file2)).map((node) => node.id);
-    const dependents = uniqueSorted2(
+    const dependents = uniqueSorted3(
       matchingNodeIds.flatMap((nodeId) => [...incoming.get(nodeId) ?? /* @__PURE__ */ new Set()])
     );
     reverseDependentsByPath[file2] = dependents;
@@ -65840,7 +69972,7 @@ function buildDependencyCoverage(files, surfaces, sourcesConfigured, sourcesUsed
     (file2) => (reverseDependentsByPath[file2]?.length ?? 0) > 0
   );
   const filesUncovered = relevantFiles.filter((file2) => !filesCovered.includes(file2));
-  const gaps = uniqueSorted2([
+  const gaps = uniqueSorted3([
     ...filesUncovered.map((file2) => `No dependency node covered ${file2}.`),
     ...relevantFiles.filter((file2) => !reverseCovered.includes(file2)).map((file2) => `Reverse dependency coverage is absent for ${file2}.`)
   ]);
@@ -65871,7 +70003,7 @@ async function loadDependencyAnalysis(projectRoot, files, surfaces, config2, war
   const edgesByKey = /* @__PURE__ */ new Map();
   const evidence = [];
   const unknowns = [];
-  const sourcesConfigured = uniqueSorted2(config2.dependencyGraph.sources);
+  const sourcesConfigured = uniqueSorted3(config2.dependencyGraph.sources);
   const sourcesUsed = [];
   const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
   if (config2.dependencyGraph.sources.includes(PACKAGE_JSON_SOURCE)) {
@@ -65934,7 +70066,7 @@ async function loadDependencyAnalysis(projectRoot, files, surfaces, config2, war
     files,
     surfaces,
     sourcesConfigured,
-    uniqueSorted2(sourcesUsed),
+    uniqueSorted3(sourcesUsed),
     nodes,
     reverseDependentsByPath
   );
@@ -66216,7 +70348,7 @@ function collectCommandSubstratePaths(commandName, entry) {
     pathFromBlockedBy(blockedBy, "Missing primary skill: "),
     expectedSkillPath(entry)
   ].filter((value) => value !== null);
-  return uniqueSorted2(candidates.flatMap((value) => {
+  return uniqueSorted3(candidates.flatMap((value) => {
     const normalized = stripPathFragment(value);
     return normalized === value ? [value] : [value, normalized];
   }));
@@ -66292,11 +70424,11 @@ function analyzeImplementedCommandSubstrate(files, catalog, runtime, findings, e
     const blockedBy = extractBlockedBy(entry);
     const manifestPath = stringValue(entry.manifestPath) ?? pathFromBlockedBy(blockedBy, "Missing command manifest: ") ?? expectedCommandManifestPath(commandName);
     const skillPath = stringValue(entry.skillPath) ?? pathFromBlockedBy(blockedBy, "Missing primary skill: ") ?? expectedSkillPath(entry);
-    const missingRequiredToolsFromBlockedBy = uniqueSorted2(
+    const missingRequiredToolsFromBlockedBy = uniqueSorted3(
       blockedBy.filter((item) => item.startsWith("Missing required MCP tool: ")).map((item) => item.slice("Missing required MCP tool: ".length).trim())
     );
     const missingRequiredToolsFromRuntime = runtimeToolNames && extractRequiredTools(entry).length > 0 ? extractRequiredTools(entry).filter((toolName) => !runtimeToolNames.has(toolName)) : [];
-    const missingRequiredTools = uniqueSorted2([
+    const missingRequiredTools = uniqueSorted3([
       ...missingRequiredToolsFromBlockedBy,
       ...missingRequiredToolsFromRuntime,
       ...entry.requiredToolsSatisfied === false && missingRequiredToolsFromBlockedBy.length === 0 && missingRequiredToolsFromRuntime.length === 0 ? ["unknown-required-tool"] : []
@@ -66489,7 +70621,7 @@ function addSurfaceObligations(surfaces, obligations, evidence) {
     category: "build",
     title: "Runtime source changes require generated dist review",
     severity: "HIGH",
-    impactedFiles: uniqueSorted2([...runtimeCatalogFiles, ...mcpFiles]),
+    impactedFiles: uniqueSorted3([...runtimeCatalogFiles, ...mcpFiles]),
     sourceSurfaces: ["command-catalog", "mcp-server", "mcp-tool", "mcp-resource"],
     requiredActions: ["Run the build and verify dist output provenance for runtime source changes."],
     evidenceKind: "build"
@@ -66646,7 +70778,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
   const missingMcpRuntimeBundleCoverage = compiledRuntimeOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
-  if (hasRuntimeOrExtension && !await pathExists6(path13.join(projectRoot, "dist/mcp/server.js"))) {
+  if (hasRuntimeOrExtension && !await pathExists7(path17.join(projectRoot, "dist/mcp/server.js"))) {
     const evidenceRef = addEvidence(evidence, {
       kind: "build",
       source: "dist-entrypoint",
@@ -66752,7 +70884,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
       category: "build",
       title: "Generated output provenance must be verified",
       severity: "HIGH",
-      impactedFiles: uniqueSorted2([...runtimeOrExtensionFiles, ...distFiles]),
+      impactedFiles: uniqueSorted3([...runtimeOrExtensionFiles, ...distFiles]),
       sourceSurfaces: ["generated"],
       requiredActions: [
         "Verify dist/** output was generated from the intended source and extension runtime inputs."
@@ -66821,7 +70953,7 @@ async function analyzeContractAndObligations(projectRoot, files, surfaces, provi
 }
 async function runGit4(projectRoot, args, options = {}) {
   try {
-    const { stdout, stderr } = await execFileAsync5("git", args, {
+    const { stdout, stderr } = await execFileAsync6("git", args, {
       cwd: projectRoot,
       timeout: GIT_COMMAND_TIMEOUT_MS2,
       env: {
@@ -67129,7 +71261,7 @@ async function loadSeededScopeArgs(projectRoot, args) {
     return args;
   }
   const seedPath = resolveContainedInputPath(projectRoot, args.seedFile, "Impact seed file");
-  const parsed = safeJsonParseObject(await fs10.readFile(seedPath, "utf8"), {
+  const parsed = safeJsonParseObject(await fs12.readFile(seedPath, "utf8"), {
     label: "Impact seed file"
   });
   const seedResult = impactScopeSeedSchema.safeParse(parsed);
@@ -67155,7 +71287,7 @@ async function blueprintImpactConfigGet(args = {}) {
   const errors = [];
   const layersApplied = ["built-in"];
   const defaultsPath = getImpactDefaultsPath();
-  const projectConfigPath = path13.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
+  const projectConfigPath = path17.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
   let appliedDefaultsPath = null;
   let appliedProjectPath = null;
   let appliedInvocationPath = null;
@@ -67308,7 +71440,7 @@ async function resolveDiffFileScope(projectRoot, args, mode, description, warnin
     );
   }
   const diffPath = resolveContainedInputPath(projectRoot, args.diffFile, "Impact diff file");
-  const rawDiff = await fs10.readFile(diffPath, "utf8");
+  const rawDiff = await fs12.readFile(diffPath, "utf8");
   const files = parseDiffFilePaths(rawDiff).map((file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact diff path")).sort();
   const stats = parseDiffFileStats(rawDiff);
   const diffFileRelativePath = toRepoRelativePath(projectRoot, diffPath);
@@ -67575,8 +71707,8 @@ async function blueprintImpactScopeResolve(args = {}) {
   return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
 }
 async function readPackageMetadata(projectRoot) {
-  const packageJsonPath = path13.join(projectRoot, "package.json");
-  if (!await pathExists6(packageJsonPath)) {
+  const packageJsonPath = path17.join(projectRoot, "package.json");
+  if (!await pathExists7(packageJsonPath)) {
     return {
       loaded: false,
       name: null,
@@ -67588,7 +71720,7 @@ async function readPackageMetadata(projectRoot) {
     };
   }
   try {
-    const parsed = safeJsonParseObject(await fs10.readFile(packageJsonPath, "utf8"), {
+    const parsed = safeJsonParseObject(await fs12.readFile(packageJsonPath, "utf8"), {
       label: "package.json"
     });
     const scripts = isPlainObject7(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
@@ -67618,7 +71750,7 @@ async function readPackageMetadata(projectRoot) {
 async function listExistingTopLevelPaths(projectRoot, candidates) {
   const existing = [];
   for (const candidate of candidates) {
-    if (await pathExists6(path13.join(projectRoot, candidate))) {
+    if (await pathExists7(path17.join(projectRoot, candidate))) {
       existing.push(candidate);
     }
   }
@@ -68283,7 +72415,7 @@ function canonicalizeImpactReport(report) {
   };
 }
 function normalizeExpectedFilePath(value) {
-  return path13.posix.normalize(value.trim().replaceAll("\\", "/"));
+  return path17.posix.normalize(value.trim().replaceAll("\\", "/"));
 }
 function normalizeExpectedEvidencePathsById(expectedPathsById) {
   if (expectedPathsById === void 0) {
@@ -68506,13 +72638,13 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
   }
   if (!isPlainObject7(rawReport)) {
     errors.push("Impact report payload must be a JSON object.");
-    return { impactId, report: null, errors: uniqueSorted2(errors), warnings };
+    return { impactId, report: null, errors: uniqueSorted3(errors), warnings };
   }
   const baseSchema = reportImpactBaseSchema();
   const baseErrors = validateImpactReportAgainstSchema(rawReport, baseSchema);
   if (baseErrors.length > 0) {
     errors.push(...baseErrors);
-    return { impactId, report: null, errors: uniqueSorted2(errors), warnings };
+    return { impactId, report: null, errors: uniqueSorted3(errors), warnings };
   }
   const report = canonicalizeImpactReport(rawReport);
   const taskErrors = validateImpactReportAgainstSchema(
@@ -68531,7 +72663,7 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
   );
   if (taskErrors.length > 0) {
     errors.push(...taskErrors);
-    return { impactId, report: null, errors: uniqueSorted2(errors), warnings };
+    return { impactId, report: null, errors: uniqueSorted3(errors), warnings };
   }
   if (requestedImpactId && requestedImpactId !== report.impactId) {
     errors.push(
@@ -68545,8 +72677,8 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
   return {
     impactId: report.impactId,
     report,
-    errors: uniqueSorted2(errors),
-    warnings: uniqueSorted2(warnings)
+    errors: uniqueSorted3(errors),
+    warnings: uniqueSorted3(warnings)
   };
 }
 function validateImpactReportQuality(report, projectRoot) {
@@ -68567,8 +72699,8 @@ function validateImpactReportQuality(report, projectRoot) {
   const markdown = renderImpactMarkdown(report);
   validateRenderedImpactMarkdown(markdown, errors, warnings);
   return {
-    errors: uniqueSorted2(errors),
-    warnings: uniqueSorted2(warnings)
+    errors: uniqueSorted3(errors),
+    warnings: uniqueSorted3(warnings)
   };
 }
 function validateReportRepoRelativePath(projectRoot, value, label, errors) {
@@ -68582,17 +72714,17 @@ function validateReportRepoRelativePath(projectRoot, value, label, errors) {
     errors.push(`${label} must not contain null bytes.`);
     return;
   }
-  if (path13.isAbsolute(trimmed) || path13.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
+  if (path17.isAbsolute(trimmed) || path17.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
     errors.push(`${label} must be repo-relative, not absolute: ${value}`);
     return;
   }
-  const normalizedPath = path13.posix.normalize(slashNormalized);
+  const normalizedPath = path17.posix.normalize(slashNormalized);
   if (normalizedPath === ".." || normalizedPath.startsWith("../")) {
     errors.push(`${label} escapes the repository: ${value}`);
     return;
   }
   try {
-    ensurePathWithinRootSync(projectRoot, path13.resolve(projectRoot, normalizedPath), {
+    ensurePathWithinRootSync(projectRoot, path17.resolve(projectRoot, normalizedPath), {
       label
     });
   } catch (error2) {
@@ -68613,7 +72745,7 @@ function shouldValidateReportScopeSource(scope) {
   }
   const trimmed = scope.source.trim();
   const slashNormalized = trimmed.replaceAll("\\", "/");
-  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path13.isAbsolute(trimmed) || path13.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
+  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path17.isAbsolute(trimmed) || path17.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
 }
 function validateReportScopeSource(projectRoot, scope, errors) {
   if (!shouldValidateReportScopeSource(scope)) {
@@ -69288,34 +73420,37 @@ function renderImpactHumanText(report, verbosity) {
   return `${lines.join("\n")}
 `;
 }
-function ensureImpactBundleDir(projectRoot, impactId) {
-  const impactRoot = ensurePathWithinRootSync(projectRoot, path13.join(projectRoot, IMPACT_REPORT_ROOT), {
+function ensureImpactReportRoot(projectRoot) {
+  return ensurePathWithinRootSync(projectRoot, path17.join(projectRoot, IMPACT_REPORT_ROOT), {
     label: "impact report root"
   });
-  const impactDir = ensurePathWithinRootSync(impactRoot, path13.join(impactRoot, impactId), {
+}
+function ensureImpactBundleDir(projectRoot, impactId) {
+  const impactRoot = ensureImpactReportRoot(projectRoot);
+  const impactDir = ensurePathWithinRootSync(impactRoot, path17.join(impactRoot, impactId), {
     label: "impact report directory"
   });
   ensurePathWithinRootSync(projectRoot, impactDir, { label: "impact report directory" });
   return impactDir;
 }
 async function compareImpactBundle(projectRoot, impactDir, files) {
-  const existing = await pathExists6(impactDir);
+  const existing = await pathExists7(impactDir);
   if (!existing) {
     return { existing: false, identical: false };
   }
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path13.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path17.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
-    if (!await pathExists6(filePath)) {
+    if (!await pathExists7(filePath)) {
       return { existing: true, identical: false };
     }
-    if (await fs10.readFile(filePath, "utf8") !== content) {
+    if (await fs12.readFile(filePath, "utf8") !== content) {
       return { existing: true, identical: false };
     }
   }
-  const existingEntries = await fs10.readdir(impactDir, { withFileTypes: true });
+  const existingEntries = await fs12.readdir(impactDir, { withFileTypes: true });
   for (const entry of existingEntries) {
     if (!IMPACT_ALLOWED_BUNDLE_FILES.has(entry.name) || !files.has(entry.name)) {
       return { existing: true, identical: false };
@@ -69323,41 +73458,92 @@ async function compareImpactBundle(projectRoot, impactDir, files) {
   }
   return { existing: true, identical: true };
 }
-async function pruneImpactStaleBundleFiles(projectRoot, impactDir, files) {
-  if (!await pathExists6(impactDir)) {
-    return;
-  }
-  const entries = await fs10.readdir(impactDir, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!files.has(entry.name)) {
-      const stalePath = ensurePathWithinRootSync(impactDir, path13.join(impactDir, entry.name), {
-        label: "stale impact report file"
+function uniqueImpactBundleWorkDir(impactRoot, impactId, purpose) {
+  const suffix = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return ensurePathWithinRootSync(
+    impactRoot,
+    path17.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
+    { label: `impact report ${purpose} directory` }
+  );
+}
+function persistenceErrorMessage(error2) {
+  return error2 instanceof Error ? error2.message : String(error2);
+}
+async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files) {
+  const stagingDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "staging");
+  try {
+    await fs12.mkdir(stagingDir);
+    for (const [fileName, content] of files) {
+      const filePath = ensurePathWithinRootSync(stagingDir, path17.join(stagingDir, fileName), {
+        label: "staged impact report file"
       });
-      ensurePathWithinRootSync(projectRoot, stalePath, { label: "stale impact report file" });
-      await fs10.rm(stalePath, { recursive: entry.isDirectory(), force: true });
+      ensurePathWithinRootSync(projectRoot, filePath, { label: "staged impact report file" });
+      await fs12.writeFile(filePath, content, "utf8");
     }
+    const stagedComparison = await compareImpactBundle(projectRoot, stagingDir, files);
+    if (!stagedComparison.existing || !stagedComparison.identical) {
+      throw new Error("Staged impact report bundle did not match the expected file set.");
+    }
+    return stagingDir;
+  } catch (error2) {
+    await fs12.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+    throw error2;
   }
 }
-async function writeImpactBundleFilesAtomically(projectRoot, impactDir, files) {
-  for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path13.join(impactDir, fileName), {
-      label: "impact report file"
-    });
-    ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
-    const tempPath = `${filePath}.tmp-${process.pid}-${stableHash({ fileName, content })}`;
-    await fs10.writeFile(tempPath, content, "utf8");
-    await fs10.rename(tempPath, filePath);
+async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impactId) {
+  const warnings = [];
+  const backupDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "backup");
+  const hadExistingBundle = await pathExists7(impactDir);
+  let backupCreated = false;
+  let promoted = false;
+  try {
+    if (hadExistingBundle) {
+      await fs12.rename(impactDir, backupDir);
+      backupCreated = true;
+    }
+    await fs12.rename(stagingDir, impactDir);
+    promoted = true;
+  } catch (error2) {
+    if (backupCreated && !promoted) {
+      await fs12.rm(impactDir, { recursive: true, force: true }).catch(() => void 0);
+      try {
+        await fs12.rename(backupDir, impactDir);
+      } catch (restoreError) {
+        await fs12.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+        throw new Error(
+          `Impact report bundle replacement failed and the previous bundle could not be restored. Replacement error: ${persistenceErrorMessage(error2)}. Restore error: ${persistenceErrorMessage(restoreError)}.`
+        );
+      }
+    }
+    await fs12.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+    throw error2;
   }
+  if (backupCreated) {
+    try {
+      await fs12.rm(backupDir, { recursive: true, force: true });
+    } catch (error2) {
+      warnings.push(
+        `Impact report bundle was replaced, but cleanup of the previous staged backup failed: ${persistenceErrorMessage(error2)}`
+      );
+    }
+  }
+  return warnings;
+}
+async function replaceImpactBundleTransactionally(projectRoot, impactId, impactDir, files) {
+  const impactRoot = ensureImpactReportRoot(projectRoot);
+  await fs12.mkdir(impactRoot, { recursive: true });
+  const stagingDir = await stageImpactBundleFiles(projectRoot, impactRoot, impactId, files);
+  return promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impactId);
 }
 async function readSavedImpactReport(projectRoot, impactId) {
   const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const reportPath = ensurePathWithinRootSync(impactDir, path13.join(impactDir, "impact.json"), {
+  const reportPath = ensurePathWithinRootSync(impactDir, path17.join(impactDir, "impact.json"), {
     label: "saved impact report"
   });
-  if (!await pathExists6(reportPath)) {
+  if (!await pathExists7(reportPath)) {
     throw new Error(`${IMPACT_REPORT_ROOT}/${impactId}/impact.json does not exist.`);
   }
-  return safeJsonParseObject(await fs10.readFile(reportPath, "utf8"), {
+  return safeJsonParseObject(await fs12.readFile(reportPath, "utf8"), {
     label: `${IMPACT_REPORT_ROOT}/${impactId}/impact.json`
   });
 }
@@ -69401,44 +73587,63 @@ async function blueprintImpactReportWrite(args = {}) {
   const bundle = buildImpactReportBundle(parsed.report, {
     writeEvidenceLog: args.writeEvidenceLog
   });
-  const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const comparison = await compareImpactBundle(projectRoot, impactDir, bundle.files);
-  if (comparison.existing && comparison.identical) {
-    return {
-      status: "reused",
-      impactId,
-      impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
-      paths,
-      written: false,
-      errors: [],
-      warnings: parsed.warnings
-    };
-  }
-  if (comparison.existing && !args.overwrite) {
-    return {
-      status: "invalid",
-      impactId,
-      impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
-      paths,
-      written: false,
-      errors: [
-        `Impact report bundle ${IMPACT_REPORT_ROOT}/${impactId} already exists with different content; pass overwrite=true to replace it.`
-      ],
-      warnings: parsed.warnings
-    };
-  }
-  await fs10.mkdir(impactDir, { recursive: true });
-  await pruneImpactStaleBundleFiles(projectRoot, impactDir, bundle.files);
-  await writeImpactBundleFilesAtomically(projectRoot, impactDir, bundle.files);
-  return {
-    status: comparison.existing ? "overwritten" : "written",
-    impactId,
-    impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
-    paths,
-    written: true,
-    errors: [],
-    warnings: parsed.warnings
-  };
+  return withBlueprintRepoLock(projectRoot, `impact-report-${impactId}`, async () => {
+    const impactDir = ensureImpactBundleDir(projectRoot, impactId);
+    const comparison = await compareImpactBundle(projectRoot, impactDir, bundle.files);
+    if (comparison.existing && comparison.identical) {
+      return {
+        status: "reused",
+        impactId,
+        impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+        paths,
+        written: false,
+        errors: [],
+        warnings: parsed.warnings
+      };
+    }
+    if (comparison.existing && !args.overwrite) {
+      return {
+        status: "invalid",
+        impactId,
+        impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+        paths,
+        written: false,
+        errors: [
+          `Impact report bundle ${IMPACT_REPORT_ROOT}/${impactId} already exists with different content; pass overwrite=true to replace it.`
+        ],
+        warnings: parsed.warnings
+      };
+    }
+    try {
+      const persistenceWarnings = await replaceImpactBundleTransactionally(
+        projectRoot,
+        impactId,
+        impactDir,
+        bundle.files
+      );
+      return {
+        status: comparison.existing ? "overwritten" : "written",
+        impactId,
+        impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+        paths,
+        written: true,
+        errors: [],
+        warnings: [...parsed.warnings, ...persistenceWarnings]
+      };
+    } catch (error2) {
+      return {
+        status: "invalid",
+        impactId,
+        impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+        paths,
+        written: false,
+        errors: [
+          `Impact report bundle ${IMPACT_REPORT_ROOT}/${impactId} could not be written transactionally: ${persistenceErrorMessage(error2)}`
+        ],
+        warnings: parsed.warnings
+      };
+    }
+  });
 }
 async function blueprintImpactOutputRender(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -69460,7 +73665,7 @@ async function blueprintImpactOutputRender(args = {}) {
     warnings: parsed.warnings
   };
 }
-var import__4, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync5, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
+var import__4, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync6, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
 var init_impact = __esm({
   "src/mcp/tools/impact.ts"() {
     "use strict";
@@ -69517,7 +73722,7 @@ var init_impact = __esm({
       "reporting"
     ];
     BUILT_IN_BASE_BRANCHES = ["main", "master"];
-    execFileAsync5 = promisify5(execFile5);
+    execFileAsync6 = promisify6(execFile6);
     IMPACT_SURFACE_PRIORITY = {
       "secret-sensitive": 1,
       "env-config": 2,
@@ -70145,8 +74350,8 @@ __export(project_exports, {
   blueprintRuntimeOwnedCommandCatalog: () => blueprintRuntimeOwnedCommandCatalog,
   projectToolDefinitions: () => projectToolDefinitions
 });
-import { promises as fs11 } from "node:fs";
-import path14 from "node:path";
+import { promises as fs13 } from "node:fs";
+import path18 from "node:path";
 function bundledUrl(relativePath) {
   const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
   return new URL(`${rootDepth}${relativePath}`, import.meta.url);
@@ -70215,9 +74420,9 @@ ${SCAFFOLD_GENERATED_MARKER}
 ${BOOTSTRAP_STARTER_CONTEXT_MARKER}
 `;
 }
-async function pathExists7(targetPath) {
+async function pathExists8(targetPath) {
   try {
-    await fs11.access(targetPath);
+    await fs13.access(targetPath);
     return true;
   } catch {
     return false;
@@ -70225,7 +74430,7 @@ async function pathExists7(targetPath) {
 }
 async function readPackageProjectName(projectRoot) {
   try {
-    const raw = await fs11.readFile(path14.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs13.readFile(path18.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -70237,7 +74442,7 @@ async function readPackageProjectName(projectRoot) {
 }
 async function readPackageDescription(projectRoot) {
   try {
-    const raw = await fs11.readFile(path14.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs13.readFile(path18.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -70252,13 +74457,13 @@ async function inferProjectName2(projectRoot, requestedName) {
   if (explicit) {
     return explicit;
   }
-  return await readPackageProjectName(projectRoot) ?? path14.basename(projectRoot);
+  return await readPackageProjectName(projectRoot) ?? path18.basename(projectRoot);
 }
 async function readRepoSummary(projectRoot) {
   const readmePaths = ["README.md", "README"];
   for (const candidate of readmePaths) {
     try {
-      const raw = await fs11.readFile(path14.join(projectRoot, candidate), "utf8");
+      const raw = await fs13.readFile(path18.join(projectRoot, candidate), "utf8");
       const summary = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith("#"));
       if (summary) {
         return summary;
@@ -70596,7 +74801,7 @@ async function buildCommandCatalogEntry(parsedRow) {
   const catalogFacts = runtimeMetadata?.catalog ?? parsedRow;
   const specPath = runtimeMetadata?.sourceId ?? null;
   const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
-  const manifestExists = await pathExists7(bundledUrl(manifestPath));
+  const manifestExists = await pathExists8(bundledUrl(manifestPath));
   const missingRuntimeInputs = [];
   const requiredTools = runtimeMetadata ? [...runtimeMetadata.requiredTools] : [];
   const optionalAgents = runtimeMetadata ? [...runtimeMetadata.optionalAgents] : [];
@@ -70604,7 +74809,7 @@ async function buildCommandCatalogEntry(parsedRow) {
   const blockedBy = [];
   const skillResolution = await resolveBlueprintSkillPath(
     catalogFacts.primarySkill,
-    async (skillPath) => pathExists7(bundledUrl(skillPath))
+    async (skillPath) => pathExists8(bundledUrl(skillPath))
   );
   const skillExists = skillResolution.resolvedPath !== null;
   if (!manifestExists) {
@@ -70614,7 +74819,7 @@ async function buildCommandCatalogEntry(parsedRow) {
     blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
   }
   for (const inputPath of runtimeMetadata?.requiredInputPaths ?? []) {
-    if (!await pathExists7(bundledUrl(inputPath))) {
+    if (!await pathExists8(bundledUrl(inputPath))) {
       missingRuntimeInputs.push(inputPath);
       blockedBy.push(`Missing runtime input: ${inputPath}`);
     }
@@ -70628,7 +74833,7 @@ async function buildCommandCatalogEntry(parsedRow) {
   availableOptionalAgents.push(
     ...await resolveAvailableOptionalAgents(optionalAgents, async (relativePath) => {
       try {
-        return await fs11.readFile(bundledUrl(relativePath), "utf8");
+        return await fs13.readFile(bundledUrl(relativePath), "utf8");
       } catch {
         return null;
       }
@@ -70716,10 +74921,10 @@ async function buildRuntimeOwnedFallbackCommandCatalog() {
 }
 async function buildDoclessFallbackCommandCatalogEntry(parsedRow) {
   const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
-  const manifestExists = await pathExists7(bundledUrl(manifestPath));
+  const manifestExists = await pathExists8(bundledUrl(manifestPath));
   const skillResolution = await resolveBlueprintSkillPath(
     parsedRow.primarySkill,
-    async (skillPath) => pathExists7(bundledUrl(skillPath))
+    async (skillPath) => pathExists8(bundledUrl(skillPath))
   );
   const skillExists = skillResolution.resolvedPath !== null;
   const blockedBy = [];
@@ -70835,6 +75040,7 @@ async function blueprintProjectInit(args = {}) {
       diagnostics: preWriteDiagnostics
     });
   }
+  preflightProjectConfigDefaultsPath(args.defaultsPath);
   const initialPhase = bootstrapSeed.roadmapPhases[0]?.phase ? normalizeBlueprintPhaseRef(
     bootstrapSeed.roadmapPhases[0].phase,
     "Initial roadmap phase"
@@ -70985,13 +75191,14 @@ async function blueprintProjectStatus(args = {}) {
     bootstrap,
     health: {
       missingArtifacts: inspection.core.missing,
-      warnings: [
+      warnings: [.../* @__PURE__ */ new Set([
         ...configWarnings,
+        ...stateResult.warnings ?? [],
         ...bootstrapDiagnostics.placeholderArtifacts.map(
           (artifact) => `Bootstrap artifact still looks like a placeholder: ${artifact}`
         ),
         ...bootstrapDiagnostics.traceabilityWarnings
-      ]
+      ])]
     }
   };
 }
@@ -71006,6 +75213,7 @@ var init_project = __esm({
     init_phase();
     init_plan_run();
     init_state();
+    init_cleanup();
     init_review();
     init_impact();
     init_update();
@@ -71085,6 +75293,7 @@ var init_project = __esm({
       ...planRunToolDefinitions.map((definition) => definition.name),
       ...reviewToolDefinitions.map((definition) => definition.name),
       ...artifactToolDefinitions.map((definition) => definition.name),
+      ...cleanupToolDefinitions.map((definition) => definition.name),
       ...impactToolDefinitions.map((definition) => definition.name),
       ...updateToolDefinitions.map((definition) => definition.name),
       ...workspaceToolDefinitions.map((definition) => definition.name)
@@ -71476,8 +75685,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path18, errorMaps, issueData } = params;
-  const fullPath = [...path18, ...issueData.path || []];
+  const { data, path: path22, errorMaps, issueData } = params;
+  const fullPath = [...path22, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -71489,15 +75698,15 @@ var makeIssue = (params) => {
       message: issueData.message
     };
   }
-  let errorMessage = "";
+  let errorMessage2 = "";
   const maps = errorMaps.filter((m) => !!m).slice().reverse();
   for (const map2 of maps) {
-    errorMessage = map2(fullIssue, { data, defaultError: errorMessage }).message;
+    errorMessage2 = map2(fullIssue, { data, defaultError: errorMessage2 }).message;
   }
   return {
     ...issueData,
     path: fullPath,
-    message: errorMessage
+    message: errorMessage2
   };
 };
 function addIssueToContext(ctx, issueData) {
@@ -71592,11 +75801,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path18, key) {
+  constructor(parent, value, path22, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path18;
+    this._path = path22;
     this._key = key;
   }
   get path() {
@@ -76796,19 +81005,19 @@ var getRefs = (options) => {
 };
 
 // node_modules/zod-to-json-schema/dist/esm/errorMessages.js
-function addErrorMessage(res, key, errorMessage, refs) {
+function addErrorMessage(res, key, errorMessage2, refs) {
   if (!refs?.errorMessages)
     return;
-  if (errorMessage) {
+  if (errorMessage2) {
     res.errorMessage = {
       ...res.errorMessage,
-      [key]: errorMessage
+      [key]: errorMessage2
     };
   }
 }
-function setResponseValueAndErrors(res, key, value, errorMessage, refs) {
+function setResponseValueAndErrors(res, key, value, errorMessage2, refs) {
   res[key] = value;
-  addErrorMessage(res, key, errorMessage, refs);
+  addErrorMessage(res, key, errorMessage2, refs);
 }
 
 // node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
@@ -78119,8 +82328,8 @@ var Protocol = class {
                   if (queuedMessage.type === "response") {
                     resolver(message);
                   } else {
-                    const errorMessage = message;
-                    const error2 = new McpError(errorMessage.error.code, errorMessage.error.message, errorMessage.error.data);
+                    const errorMessage2 = message;
+                    const error2 = new McpError(errorMessage2.error.code, errorMessage2.error.message, errorMessage2.error.data);
                     resolver(error2);
                   }
                 } else {
@@ -79420,23 +83629,23 @@ var Server = class extends Protocol {
       const wrappedHandler = async (request, extra) => {
         const validatedRequest = safeParse2(CallToolRequestSchema, request);
         if (!validatedRequest.success) {
-          const errorMessage = validatedRequest.error instanceof Error ? validatedRequest.error.message : String(validatedRequest.error);
-          throw new McpError(ErrorCode.InvalidParams, `Invalid tools/call request: ${errorMessage}`);
+          const errorMessage2 = validatedRequest.error instanceof Error ? validatedRequest.error.message : String(validatedRequest.error);
+          throw new McpError(ErrorCode.InvalidParams, `Invalid tools/call request: ${errorMessage2}`);
         }
         const { params } = validatedRequest.data;
         const result = await Promise.resolve(handler(request, extra));
         if (params.task) {
           const taskValidationResult = safeParse2(CreateTaskResultSchema, result);
           if (!taskValidationResult.success) {
-            const errorMessage = taskValidationResult.error instanceof Error ? taskValidationResult.error.message : String(taskValidationResult.error);
-            throw new McpError(ErrorCode.InvalidParams, `Invalid task creation result: ${errorMessage}`);
+            const errorMessage2 = taskValidationResult.error instanceof Error ? taskValidationResult.error.message : String(taskValidationResult.error);
+            throw new McpError(ErrorCode.InvalidParams, `Invalid task creation result: ${errorMessage2}`);
           }
           return taskValidationResult.data;
         }
         const validationResult = safeParse2(CallToolResultSchema, result);
         if (!validationResult.success) {
-          const errorMessage = validationResult.error instanceof Error ? validationResult.error.message : String(validationResult.error);
-          throw new McpError(ErrorCode.InvalidParams, `Invalid tools/call result: ${errorMessage}`);
+          const errorMessage2 = validationResult.error instanceof Error ? validationResult.error.message : String(validationResult.error);
+          throw new McpError(ErrorCode.InvalidParams, `Invalid tools/call result: ${errorMessage2}`);
         }
         return validationResult.data;
       };
@@ -80152,12 +84361,12 @@ var McpServer = class {
    * @param errorMessage - The error message.
    * @returns The tool error result.
    */
-  createToolError(errorMessage) {
+  createToolError(errorMessage2) {
     return {
       content: [
         {
           type: "text",
-          text: errorMessage
+          text: errorMessage2
         }
       ],
       isError: true
@@ -80175,8 +84384,8 @@ var McpServer = class {
     const parseResult = await safeParseAsync2(schemaToParse, args);
     if (!parseResult.success) {
       const error2 = "error" in parseResult ? parseResult.error : "Unknown error";
-      const errorMessage = getParseErrorMessage(error2);
-      throw new McpError(ErrorCode.InvalidParams, `Input validation error: Invalid arguments for tool ${toolName}: ${errorMessage}`);
+      const errorMessage2 = getParseErrorMessage(error2);
+      throw new McpError(ErrorCode.InvalidParams, `Input validation error: Invalid arguments for tool ${toolName}: ${errorMessage2}`);
     }
     return parseResult.data;
   }
@@ -80200,8 +84409,8 @@ var McpServer = class {
     const parseResult = await safeParseAsync2(outputObj, result.structuredContent);
     if (!parseResult.success) {
       const error2 = "error" in parseResult ? parseResult.error : "Unknown error";
-      const errorMessage = getParseErrorMessage(error2);
-      throw new McpError(ErrorCode.InvalidParams, `Output validation error: Invalid structured content for tool ${toolName}: ${errorMessage}`);
+      const errorMessage2 = getParseErrorMessage(error2);
+      throw new McpError(ErrorCode.InvalidParams, `Output validation error: Invalid structured content for tool ${toolName}: ${errorMessage2}`);
     }
   }
   /**
@@ -80413,8 +84622,8 @@ var McpServer = class {
         const parseResult = await safeParseAsync2(argsObj, request.params.arguments);
         if (!parseResult.success) {
           const error2 = "error" in parseResult ? parseResult.error : "Unknown error";
-          const errorMessage = getParseErrorMessage(error2);
-          throw new McpError(ErrorCode.InvalidParams, `Invalid arguments for prompt ${request.params.name}: ${errorMessage}`);
+          const errorMessage2 = getParseErrorMessage(error2);
+          throw new McpError(ErrorCode.InvalidParams, `Invalid arguments for prompt ${request.params.name}: ${errorMessage2}`);
         }
         const args = parseResult.data;
         const cb = prompt.callback;
@@ -80934,7 +85143,7 @@ var StdioServerTransport = class {
 };
 
 // src/mcp/command-resources.ts
-import { promises as fs12 } from "node:fs";
+import { promises as fs14 } from "node:fs";
 init_command_runtime_metadata();
 
 // src/mcp/skill-metadata.ts
@@ -81155,7 +85364,7 @@ async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath
       preferredPath ?? null,
       blueprintDiscoverableSkillPath(skillName),
       blueprintLegacySkillPath(skillName)
-    ].filter((path18) => typeof path18 === "string" && path18.length > 0)
+    ].filter((path22) => typeof path22 === "string" && path22.length > 0)
   );
   for (const candidatePath of candidatePaths) {
     const content = await readRelativePath(candidatePath);
@@ -81180,7 +85389,7 @@ function bundledUrl2(relativePath) {
 }
 async function readBundledFile(relativePath) {
   try {
-    return await fs12.readFile(bundledUrl2(relativePath), "utf8");
+    return await fs14.readFile(bundledUrl2(relativePath), "utf8");
   } catch {
     return null;
   }
@@ -81333,7 +85542,7 @@ function registerBlueprintCommandResources(server) {
 }
 
 // src/mcp/response-sanitizer.ts
-import path15 from "node:path";
+import path19 from "node:path";
 
 // src/mcp/tool-result-utils.ts
 function getString(result, key) {
@@ -81465,7 +85674,7 @@ function trimUpdatePlanPublicFields(result) {
   const updatesDir = typeof savedPaths?.updatesDir === "string" ? savedPaths.updatesDir : null;
   const metadataPath = typeof savedPaths?.metadataPath === "string" ? savedPaths.metadataPath : null;
   const checklistPath = typeof savedPaths?.checklistPath === "string" ? savedPaths.checklistPath : null;
-  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path15.dirname(metadataPath) === updatesDir && path15.dirname(checklistPath) === updatesDir;
+  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path19.dirname(metadataPath) === updatesDir && path19.dirname(checklistPath) === updatesDir;
   if (shouldTrimUpdatesDir && savedPaths !== null) {
     const { updatesDir: _updatesDir, ...trimmedSavedPaths } = savedPaths;
     trimmedResult = {
@@ -82263,19 +86472,21 @@ function createToolResponseContent(toolName, result) {
 
 // src/mcp/tool-definitions.ts
 init_artifacts();
+init_cleanup();
 init_config();
 
 // src/mcp/tools/god-review.ts
 init_v4();
-init_artifacts();
 init_phase();
+init_phase_topology_lock();
+init_artifacts();
 init_review();
-import { execFile as execFile6 } from "node:child_process";
+import { execFile as execFile7 } from "node:child_process";
 import { createHash as createHash5, randomBytes } from "node:crypto";
-import { promises as fs13 } from "node:fs";
-import path16 from "node:path";
-import { promisify as promisify6 } from "node:util";
-var execFileAsync6 = promisify6(execFile6);
+import { promises as fs15 } from "node:fs";
+import path20 from "node:path";
+import { promisify as promisify7 } from "node:util";
+var execFileAsync7 = promisify7(execFile7);
 var GOD_REVIEW_FLAG = "--feels-like-god";
 var GOD_REVIEW_REFUSAL = [
   "God mode only wakes during special `occassions`.",
@@ -82396,6 +86607,23 @@ var godReviewScopeFingerprintSchema = object2({
   fileSetHash: string2(),
   prNumber: number2().int().positive().nullable()
 });
+var godReviewPhaseRoadmapEntryFingerprintSchema = object2({
+  phaseNumber: string2(),
+  phasePrefix: string2(),
+  phaseName: string2(),
+  completed: boolean2(),
+  summary: string2().nullable(),
+  goal: string2().nullable(),
+  successCriteria: string2().nullable(),
+  requirements: array(string2()).readonly()
+});
+var godReviewPhaseTopologyFingerprintSchema = object2({
+  phaseNumber: string2(),
+  phasePrefix: string2(),
+  phaseName: string2().nullable(),
+  phaseDir: string2(),
+  roadmapEntry: godReviewPhaseRoadmapEntryFingerprintSchema.nullable()
+});
 var godReviewGroupStateSchema = object2({
   id: _enum(GOD_REVIEW_GROUP_ID_VALUES),
   prefix: _enum(GOD_REVIEW_GROUP_PREFIX_VALUES),
@@ -82418,6 +86646,7 @@ var godReviewSessionSchema = object2({
   files: array(string2()),
   skippedFiles: array(string2()),
   scopeFingerprint: godReviewScopeFingerprintSchema,
+  phaseTopologyFingerprint: godReviewPhaseTopologyFingerprintSchema.optional(),
   groups: array(godReviewGroupStateSchema),
   nextGroupId: _enum(GOD_REVIEW_GROUP_ID_VALUES).nullable(),
   cleanup: object2({
@@ -82450,7 +86679,7 @@ var godReviewSessionSchema = object2({
 });
 var godReviewStartInputSchema = {
   cwd: string2().optional(),
-  activeCommand: _enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  activeCommand: literal("/blu-code-review"),
   rawInvocation: string2(),
   scopeKind: godReviewScopeKindSchema.optional(),
   phase: union([string2(), number2()]).optional(),
@@ -82461,7 +86690,7 @@ var godReviewStartInputSchema = {
 var godReviewStartArgsSchema = object2(godReviewStartInputSchema);
 var godReviewNextInputSchema = {
   cwd: string2().optional(),
-  activeCommand: _enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  activeCommand: literal("/blu-code-review"),
   rawInvocation: string2(),
   phase: union([string2(), number2()]).optional(),
   runId: string2().optional(),
@@ -82481,7 +86710,7 @@ var godReviewAppendFindingInputSchema = object2({
 });
 var godReviewAppendInputSchema = {
   cwd: string2().optional(),
-  activeCommand: _enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  activeCommand: literal("/blu-code-review"),
   rawInvocation: string2(),
   phase: union([string2(), number2()]).optional(),
   runId: string2().optional(),
@@ -82586,7 +86815,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Path must not be empty." };
   }
-  if (path16.isAbsolute(requestedPath)) {
+  if (path20.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -82599,7 +86828,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.endsWith("/")) {
     return { valid: false, path: null, reason: "Directories are not allowed." };
   }
-  const normalizedPath = path16.posix.normalize(requestedPath);
+  const normalizedPath = path20.posix.normalize(requestedPath);
   if (normalizedPath === "." || normalizedPath === ".." || normalizedPath.startsWith("../")) {
     return {
       valid: false,
@@ -82632,7 +86861,7 @@ function hashGodReviewFileSet(args) {
 async function hashGodReviewResolvedFileSet(args) {
   const contentHashes = await Promise.all(
     stableUniqueSorted(args.files).map(async (file2) => {
-      const content = await fs13.readFile(resolveRepoRelativePath(args.projectRoot, file2));
+      const content = await fs15.readFile(resolveRepoRelativePath(args.projectRoot, file2));
       return {
         path: file2,
         hash: `sha256:${createHash5("sha256").update(content).digest("hex")}`
@@ -82678,7 +86907,7 @@ function isGeneratedReportReportPath(value) {
   return /^\.blueprint\/reports\/god-review-[A-Za-z0-9._-]+\.md$/.test(value);
 }
 function normalizeSessionOwnedPath(value) {
-  return path16.posix.normalize(normalizePathSeparators(value.trim()));
+  return path20.posix.normalize(normalizePathSeparators(value.trim()));
 }
 function validateGodReviewSessionPaths(session) {
   const issues = [];
@@ -82756,9 +86985,9 @@ function generateGodReviewRunId(args) {
   const entropy = randomBytes(3).toString("hex");
   return `god-${day}-${scopeHash}-${entropy}`;
 }
-async function pathExists8(absolutePath) {
+async function pathExists9(absolutePath) {
   try {
-    await fs13.access(absolutePath);
+    await fs15.access(absolutePath);
     return true;
   } catch {
     return false;
@@ -82766,14 +86995,14 @@ async function pathExists8(absolutePath) {
 }
 async function readTextIfPresent(absolutePath) {
   try {
-    return await fs13.readFile(absolutePath, "utf8");
+    return await fs15.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
 }
 async function runExternalCommand(command, args, cwd) {
   try {
-    const { stdout } = await execFileAsync6(command, args, {
+    const { stdout } = await execFileAsync7(command, args, {
       cwd,
       encoding: "utf8",
       maxBuffer: 20 * 1024 * 1024
@@ -82797,6 +87026,7 @@ async function resolveExistingRepoFiles2(args) {
   const resolvedFiles = /* @__PURE__ */ new Set();
   const warnings = [];
   const skippedFiles = [];
+  const deletedFiles = new Set(args.allowDeletedFiles ?? []);
   for (const rawFile of args.files) {
     const normalized = normalizeGodReviewRepoRelativeFilePath(rawFile);
     if (!normalized.valid) {
@@ -82818,8 +87048,12 @@ async function resolveExistingRepoFiles2(args) {
     }
     let stats;
     try {
-      stats = await fs13.stat(absolutePath);
+      stats = await fs15.stat(absolutePath);
     } catch {
+      if (deletedFiles.has(normalized.path)) {
+        resolvedFiles.add(normalized.path);
+        continue;
+      }
       skippedFiles.push(normalized.path);
       warnings.push(
         `Invalid ${args.sourceLabel} path: ${normalized.path} (file does not exist).`
@@ -82845,6 +87079,43 @@ async function resolveExistingRepoFiles2(args) {
     reason: files.length === 0 ? `No valid repo files were resolved for ${args.sourceLabel}.` : skippedFiles.length > 0 ? `One or more ${args.sourceLabel} paths were invalid.` : null
   };
 }
+function parseGitNameStatusDeletedFiles(output) {
+  return stableUniqueSorted(
+    output.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).flatMap((line) => {
+      const [status, ...paths] = line.split(/\t+/);
+      return status === "D" && paths[0] ? [paths[0]] : [];
+    })
+  );
+}
+function parseUnifiedDiffDeletedFiles(diff) {
+  const deletedFiles = [];
+  const lines = diff.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = lines[index].match(/^diff --git a\/(.+) b\/(.+)$/);
+    if (!header) {
+      continue;
+    }
+    let deleted = false;
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      if (/^diff --git /.test(lines[cursor])) {
+        break;
+      }
+      if (/^deleted file mode /.test(lines[cursor])) {
+        deleted = true;
+        break;
+      }
+    }
+    if (deleted) {
+      deletedFiles.push(header[1]);
+    }
+  }
+  return stableUniqueSorted(deletedFiles);
+}
+function filterCurrentDiffCandidateFiles(files) {
+  return files.filter(
+    (file2) => file2 !== ".blueprint" && !file2.startsWith(".blueprint/")
+  );
+}
 async function hashCurrentDiff(projectRoot, files) {
   const [diff, untrackedPayloads] = await Promise.all([
     runExternalCommand("git", ["diff", "--binary", "HEAD", "--"], projectRoot),
@@ -82861,7 +87132,7 @@ async function hashCurrentDiff(projectRoot, files) {
         if (trackedStatus === "tracked") {
           return null;
         }
-        const content = await fs13.readFile(
+        const content = await fs15.readFile(
           resolveRepoRelativePath(projectRoot, file2),
           "utf8"
         );
@@ -82881,20 +87152,104 @@ function nextGodReviewCommand(args) {
 }
 async function writeGodReviewSessionArtifacts(args) {
   const createdPaths = [];
-  for (const [relativePath, content] of [
-    [args.session.sessionPath, `${JSON.stringify(args.session, null, 2)}
-`],
-    [args.session.reportPath, args.reportHeader],
-    [args.session.humanStatePath, args.humanState]
+  for (const relativePath of [
+    args.session.sessionPath,
+    args.session.reportPath,
+    args.session.humanStatePath
   ]) {
     const absolutePath = resolveBlueprintPath(args.projectRoot, relativePath);
-    await fs13.mkdir(path16.dirname(absolutePath), { recursive: true });
-    if (!await pathExists8(absolutePath)) {
+    if (!await pathExists9(absolutePath)) {
       createdPaths.push(relativePath);
     }
-    await fs13.writeFile(absolutePath, content, "utf8");
   }
+  await writeTextFile(
+    resolveBlueprintPath(args.projectRoot, args.session.reportPath),
+    args.reportHeader,
+    { label: args.session.reportPath }
+  );
+  await writeTextFile(
+    resolveBlueprintPath(args.projectRoot, args.session.humanStatePath),
+    args.humanState,
+    { label: args.session.humanStatePath }
+  );
+  await writeJsonFile(
+    resolveBlueprintPath(args.projectRoot, args.session.sessionPath),
+    args.session
+  );
   return createdPaths;
+}
+var beforeGodReviewPersistenceBundleWriteForTest = null;
+async function beforeGodReviewPersistenceBundleWrite(args) {
+  await beforeGodReviewPersistenceBundleWriteForTest?.(args);
+}
+async function restoreGodReviewBundleFile(args) {
+  if (args.previousContent === null) {
+    await fs15.rm(args.absolutePath, { force: true }).catch(() => void 0);
+    return;
+  }
+  await writeTextFile(args.absolutePath, args.previousContent, {
+    label: args.relativePath,
+    enforcePromptBoundary: false
+  });
+}
+async function writeGodReviewPersistenceBundle(args) {
+  const reportAbsolutePath = resolveBlueprintPath(args.projectRoot, args.reportPath);
+  const sessionAbsolutePath = resolveBlueprintPath(args.projectRoot, args.sessionPath);
+  const humanStateAbsolutePath = resolveBlueprintPath(args.projectRoot, args.humanStatePath);
+  const [previousReport, previousSession, previousHumanState] = await Promise.all([
+    readTextIfPresent(reportAbsolutePath),
+    readTextIfPresent(sessionAbsolutePath),
+    readTextIfPresent(humanStateAbsolutePath)
+  ]);
+  try {
+    await beforeGodReviewPersistenceBundleWrite({
+      step: "report",
+      relativePath: args.reportPath
+    });
+    await writeTextFile(reportAbsolutePath, args.reportContent, {
+      label: args.reportPath
+    });
+    await beforeGodReviewPersistenceBundleWrite({
+      step: "session",
+      relativePath: args.sessionPath
+    });
+    await writeJsonFile(
+      sessionAbsolutePath,
+      args.session
+    );
+    await beforeGodReviewPersistenceBundleWrite({
+      step: "human-state",
+      relativePath: args.humanStatePath
+    });
+    await writeTextFile(humanStateAbsolutePath, args.humanStateContent, {
+      label: args.humanStatePath
+    });
+  } catch (error2) {
+    try {
+      await restoreGodReviewBundleFile({
+        absolutePath: humanStateAbsolutePath,
+        relativePath: args.humanStatePath,
+        previousContent: previousHumanState
+      });
+      await restoreGodReviewBundleFile({
+        absolutePath: sessionAbsolutePath,
+        relativePath: args.sessionPath,
+        previousContent: previousSession
+      });
+      await restoreGodReviewBundleFile({
+        absolutePath: reportAbsolutePath,
+        relativePath: args.reportPath,
+        previousContent: previousReport
+      });
+    } catch (rollbackError) {
+      const originalMessage = error2 instanceof Error ? error2.message : String(error2);
+      const rollbackMessage = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+      throw new Error(
+        `God-review persistence failed and rollback failed. Original error: ${originalMessage}. Rollback error: ${rollbackMessage}.`
+      );
+    }
+    throw error2;
+  }
 }
 function startResultFromSession(args) {
   return {
@@ -82915,6 +87270,7 @@ function startResultFromSession(args) {
     nextCommand: args.nextCommand,
     written: args.written,
     createdPaths: args.createdPaths,
+    staleReasons: [],
     warnings: args.warnings
   };
 }
@@ -82937,6 +87293,30 @@ function invalidStartResult(args) {
     nextCommand: null,
     written: false,
     createdPaths: [],
+    staleReasons: [],
+    warnings: args.warnings ?? []
+  };
+}
+function staleStartResult(args) {
+  return {
+    status: "stale",
+    activated: true,
+    reason: args.reason,
+    runId: null,
+    scopeKind: null,
+    phase: null,
+    sessionPath: null,
+    humanStatePath: null,
+    reportPath: null,
+    files: [],
+    skippedFiles: [],
+    scopeFingerprint: null,
+    groups: [],
+    nextGroupId: null,
+    nextCommand: null,
+    written: false,
+    createdPaths: [],
+    staleReasons: args.staleReasons ?? [args.reason],
     warnings: args.warnings ?? []
   };
 }
@@ -83033,21 +87413,6 @@ function invalidCleanupResult(args) {
     warnings: args.warnings ?? []
   };
 }
-function determineScopeKind(args) {
-  if (args.scopeKind) {
-    return args.scopeKind;
-  }
-  if (args.prNumber !== void 0) {
-    return "pr";
-  }
-  if ((args.files ?? []).length > 0) {
-    return "explicit-files";
-  }
-  if (/\s--current-diff(?=$|\s)/.test(args.rawInvocation)) {
-    return "current-diff";
-  }
-  return "phase";
-}
 function parsePhaseFromInvocation(rawInvocation) {
   const tokens = rawInvocation.trim().split(/\s+/).slice(1);
   for (let index = 0; index < tokens.length; index += 1) {
@@ -83102,12 +87467,199 @@ function parseFlagValues(rawInvocation, flag) {
 function hasInvocationFlag(rawInvocation, flag) {
   return new RegExp(`(^|\\s)${flag}(?=$|\\s)`).test(rawInvocation);
 }
+function splitRawFileFlagValue(value) {
+  return value.split(",").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+}
+function parseRawFileScope(rawInvocation) {
+  const tokens = rawInvocation.trim().split(/\s+/).slice(1);
+  const files = [];
+  let present = false;
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === "--files" || token === "--file") {
+      present = true;
+      index += 1;
+      while (index < tokens.length && !tokens[index].startsWith("--")) {
+        files.push(...splitRawFileFlagValue(tokens[index]));
+        index += 1;
+      }
+      index -= 1;
+      continue;
+    }
+    if (token.startsWith("--files=") || token.startsWith("--file=")) {
+      present = true;
+      files.push(...splitRawFileFlagValue(token.slice(token.indexOf("=") + 1)));
+    }
+  }
+  if (present && files.length === 0) {
+    return {
+      present,
+      files: [],
+      reason: "Raw --files god-review scope must name at least one file."
+    };
+  }
+  return {
+    present,
+    files: stableUniqueSorted(files),
+    reason: null
+  };
+}
+function parseRawPrNumber(rawInvocation) {
+  const tokens = rawInvocation.trim().split(/\s+/);
+  const values = [];
+  let present = false;
+  let missingValue = false;
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === "--pr") {
+      present = true;
+      const value = tokens[index + 1];
+      if (value && !value.startsWith("--")) {
+        values.push(value);
+        index += 1;
+      } else {
+        missingValue = true;
+      }
+      continue;
+    }
+    if (token.startsWith("--pr=")) {
+      present = true;
+      const value = token.slice("--pr=".length);
+      if (value.length > 0) {
+        values.push(value);
+      } else {
+        missingValue = true;
+      }
+    }
+  }
+  if (!present) {
+    return {
+      present: false,
+      prNumber: void 0,
+      reason: null
+    };
+  }
+  if (missingValue) {
+    return {
+      present: true,
+      prNumber: void 0,
+      reason: "Raw --pr god-review scope must name a positive integer."
+    };
+  }
+  const uniqueValues = stableUniqueSorted(values);
+  if (uniqueValues.length > 1) {
+    return {
+      present: true,
+      prNumber: void 0,
+      reason: "Raw --pr god-review scope was supplied more than once with conflicting values."
+    };
+  }
+  const rawPrNumber = uniqueValues[0];
+  if (!/^\d+$/.test(rawPrNumber)) {
+    return {
+      present: true,
+      prNumber: void 0,
+      reason: `Raw --pr god-review scope must be a positive integer, received ${rawPrNumber}.`
+    };
+  }
+  const prNumber = Number(rawPrNumber);
+  if (!Number.isSafeInteger(prNumber) || prNumber <= 0) {
+    return {
+      present: true,
+      prNumber: void 0,
+      reason: `Raw --pr god-review scope must be a positive integer, received ${rawPrNumber}.`
+    };
+  }
+  return {
+    present: true,
+    prNumber,
+    reason: null
+  };
+}
+function sameStringSet(left, right) {
+  const normalizedLeft = stableUniqueSorted(left);
+  const normalizedRight = stableUniqueSorted(right);
+  return normalizedLeft.length === normalizedRight.length && normalizedLeft.every((value, index) => value === normalizedRight[index]);
+}
+function resolveStartScopeInputs(args) {
+  const rawPr = parseRawPrNumber(args.rawInvocation);
+  if (rawPr.reason !== null) {
+    return { valid: false, reason: rawPr.reason };
+  }
+  const rawFiles = parseRawFileScope(args.rawInvocation);
+  if (rawFiles.reason !== null) {
+    return { valid: false, reason: rawFiles.reason };
+  }
+  const rawCurrentDiff = hasInvocationFlag(args.rawInvocation, "--current-diff");
+  const structuredFiles = stableUniqueSorted(args.files ?? []);
+  const structuredFilesPresent = structuredFiles.length > 0;
+  if (args.prNumber !== void 0 && rawPr.present && rawPr.prNumber !== args.prNumber) {
+    return {
+      valid: false,
+      reason: "Structured prNumber conflicts with raw --pr god-review scope."
+    };
+  }
+  if (structuredFilesPresent && rawFiles.present && !sameStringSet(structuredFiles, rawFiles.files)) {
+    return {
+      valid: false,
+      reason: "Structured files conflict with raw --files god-review scope."
+    };
+  }
+  const prNumber = args.prNumber ?? rawPr.prNumber;
+  const files = structuredFilesPresent ? structuredFiles : rawFiles.present ? rawFiles.files : void 0;
+  const hasPrScope = prNumber !== void 0;
+  const hasFileScope = (files ?? []).length > 0;
+  const hasCurrentDiffScope = rawCurrentDiff || args.scopeKind === "current-diff";
+  if (args.scopeKind !== void 0) {
+    if (args.scopeKind !== "pr" && hasPrScope) {
+      return {
+        valid: false,
+        reason: `Raw or structured PR scope conflicts with requested ${args.scopeKind} god-review scope.`
+      };
+    }
+    if (args.scopeKind !== "explicit-files" && hasFileScope) {
+      return {
+        valid: false,
+        reason: `Raw or structured file scope conflicts with requested ${args.scopeKind} god-review scope.`
+      };
+    }
+    if (args.scopeKind !== "current-diff" && rawCurrentDiff) {
+      return {
+        valid: false,
+        reason: `Raw --current-diff scope conflicts with requested ${args.scopeKind} god-review scope.`
+      };
+    }
+    return {
+      valid: true,
+      scopeKind: args.scopeKind,
+      prNumber,
+      files
+    };
+  }
+  const inferredScopeKinds = [
+    hasPrScope ? "pr" : null,
+    hasFileScope ? "explicit-files" : null,
+    hasCurrentDiffScope ? "current-diff" : null
+  ].filter((scopeKind) => scopeKind !== null);
+  if (inferredScopeKinds.length > 1) {
+    return {
+      valid: false,
+      reason: "God-review start received conflicting scope selectors; use only one of --pr, --files, --current-diff, or phase scope."
+    };
+  }
+  return {
+    valid: true,
+    scopeKind: inferredScopeKinds[0] ?? "phase",
+    prNumber,
+    files
+  };
+}
 function normalizeGodReviewSessionPath(rawPath) {
   const requestedPath = normalizePathSeparators(rawPath.trim());
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Session path must not be empty." };
   }
-  if (path16.isAbsolute(requestedPath)) {
+  if (path20.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -83117,7 +87669,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path16.posix.normalize(requestedPath);
+  const normalizedPath = path20.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -83146,7 +87698,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Report path must not be empty." };
   }
-  if (path16.isAbsolute(requestedPath)) {
+  if (path20.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -83156,7 +87708,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path16.posix.normalize(requestedPath);
+  const normalizedPath = path20.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -83169,6 +87721,13 @@ function normalizeGodReviewReportPath(rawPath) {
       valid: false,
       path: null,
       reason: "God-review report path must point to a Markdown file."
+    };
+  }
+  if (!isGeneratedPhaseReportPath(normalizedPath) && !isGeneratedReportReportPath(normalizedPath)) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review report path must be a generated hidden god-review report path."
     };
   }
   return { valid: true, path: normalizedPath };
@@ -83259,20 +87818,46 @@ async function resolveGodReviewReportReference(args, projectRoot) {
         warnings: []
       };
     }
-    const explicitSessionPath = args.sessionPath;
-    const runId = args.runId;
+    const explicitSessionPath = args.sessionPath ?? parseFlagValue(args.rawInvocation, "--session");
+    const runId = args.runId ?? parseFlagValue(args.rawInvocation, "--run-id");
     if (explicitSessionPath) {
       const normalizedSessionPath = normalizeGodReviewSessionPath(explicitSessionPath);
-      return normalizedSessionPath.valid ? {
+      if (!normalizedSessionPath.valid) {
+        return {
+          valid: false,
+          reason: normalizedSessionPath.reason,
+          reportPath: normalized.path,
+          sessionPath: null,
+          warnings: []
+        };
+      }
+      const loaded2 = await loadGodReviewSession({
+        projectRoot,
+        sessionPath: normalizedSessionPath.path
+      });
+      if (!loaded2.valid) {
+        return {
+          valid: false,
+          reason: loaded2.reason,
+          reportPath: normalized.path,
+          sessionPath: normalizedSessionPath.path,
+          warnings: loaded2.warnings
+        };
+      }
+      if (loaded2.session.reportPath !== normalized.path) {
+        return {
+          valid: false,
+          reason: "Explicit god-review report path must match the report recorded by the saved session.",
+          reportPath: normalized.path,
+          sessionPath: normalizedSessionPath.path,
+          warnings: []
+        };
+      }
+      return {
         valid: true,
         reportPath: normalized.path,
-        sessionPath: normalizedSessionPath.path
-      } : {
-        valid: false,
-        reason: normalizedSessionPath.reason,
-        reportPath: normalized.path,
-        sessionPath: null,
-        warnings: []
+        sessionPath: normalizedSessionPath.path,
+        session: loaded2.session
       };
     }
     if (runId) {
@@ -83285,13 +87870,53 @@ async function resolveGodReviewReportReference(args, projectRoot) {
           warnings: []
         };
       }
+      const expectedReportPath = buildGodReviewReportPaths({ runId }).reportPath;
+      const expectedSessionPath = buildGodReviewReportPaths({ runId }).sessionPath;
+      if (normalized.path !== expectedReportPath) {
+        return {
+          valid: false,
+          reason: "Explicit god-review report path must match the generated report path for the supplied runId.",
+          reportPath: normalized.path,
+          sessionPath: expectedSessionPath,
+          warnings: []
+        };
+      }
+      const loaded2 = await loadGodReviewSession({
+        projectRoot,
+        sessionPath: expectedSessionPath
+      });
+      if (!loaded2.valid) {
+        return {
+          valid: false,
+          reason: loaded2.reason,
+          reportPath: normalized.path,
+          sessionPath: expectedSessionPath,
+          warnings: loaded2.warnings
+        };
+      }
+      if (loaded2.session.reportPath !== normalized.path) {
+        return {
+          valid: false,
+          reason: "Explicit god-review report path must match the report recorded by the saved session.",
+          reportPath: normalized.path,
+          sessionPath: expectedSessionPath,
+          warnings: []
+        };
+      }
       return {
         valid: true,
         reportPath: normalized.path,
-        sessionPath: buildGodReviewReportPaths({ runId }).sessionPath
+        sessionPath: expectedSessionPath,
+        session: loaded2.session
       };
     }
-    return { valid: true, reportPath: normalized.path, sessionPath: null };
+    return {
+      valid: false,
+      reason: "Generated god-review reportPath loads require a saved session identity; pass --session or --run-id so Blueprint can verify the durable session and scope fingerprint.",
+      reportPath: normalized.path,
+      sessionPath: null,
+      warnings: []
+    };
   }
   const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
   if (!sessionPath.valid) {
@@ -83319,7 +87944,8 @@ async function resolveGodReviewReportReference(args, projectRoot) {
   return {
     valid: true,
     reportPath: loaded.session.reportPath,
-    sessionPath: loaded.session.sessionPath
+    sessionPath: loaded.session.sessionPath,
+    session: loaded.session
   };
 }
 function compareGodReviewFingerprints(args) {
@@ -83332,6 +87958,87 @@ function compareGodReviewFingerprints(args) {
     }
   }
   return staleReasons;
+}
+function compareGodReviewStartScopeToSession(args) {
+  const reasons = [];
+  if (args.saved.activeCommand !== args.activeCommand) {
+    reasons.push(
+      `activeCommand changed from ${args.saved.activeCommand} to ${args.activeCommand}`
+    );
+  }
+  if (args.saved.scopeKind !== args.requested.scopeKind) {
+    reasons.push(
+      `scopeKind changed from ${args.saved.scopeKind} to ${args.requested.scopeKind}`
+    );
+  }
+  if (String(args.saved.phase ?? "") !== String(args.requested.phase ?? "")) {
+    reasons.push(
+      `phase changed from ${args.saved.phase ?? "null"} to ${args.requested.phase ?? "null"}`
+    );
+  }
+  if (!sameStringSet(args.saved.files, args.requested.files)) {
+    reasons.push("files changed from the saved god-review session scope");
+  }
+  if (!sameStringSet(args.saved.skippedFiles, args.requested.skippedFiles)) {
+    reasons.push("skippedFiles changed from the saved god-review session scope");
+  }
+  reasons.push(
+    ...compareGodReviewFingerprints({
+      saved: args.saved.scopeFingerprint,
+      current: args.requested.fingerprint
+    })
+  );
+  if (args.saved.scopeKind === "phase") {
+    if (!args.saved.phaseTopologyFingerprint) {
+      reasons.push(
+        "saved phase-scoped god-review session is missing captured phase topology"
+      );
+    } else if (!args.requested.phaseTopologyFingerprint || !phaseTopologyFingerprintsMatch(
+      args.saved.phaseTopologyFingerprint,
+      args.requested.phaseTopologyFingerprint
+    )) {
+      reasons.push(
+        formatStalePhaseTopologyMessage({
+          operation: "God-review session reuse",
+          expected: args.saved.phaseTopologyFingerprint,
+          actual: args.requested.phaseTopologyFingerprint ?? args.saved.phaseTopologyFingerprint
+        })
+      );
+    }
+  }
+  return stableUniqueSorted(reasons);
+}
+async function phaseTopologyStaleReasonsForGodReviewSession(args) {
+  if (args.session.scopeKind !== "phase") {
+    return [];
+  }
+  const expected = args.session.phaseTopologyFingerprint;
+  if (!expected) {
+    return [
+      "Saved phase-scoped god-review session is missing captured phase topology; start a fresh hidden review instead of continuing this legacy session."
+    ];
+  }
+  try {
+    const current = await resolvePhaseTopologySnapshot({
+      cwd: args.projectRoot,
+      phase: args.session.phase
+    });
+    if (phaseTopologyFingerprintsMatch(expected, current.fingerprint)) {
+      return [];
+    }
+    return [
+      formatStalePhaseTopologyMessage({
+        operation: args.operation,
+        expected,
+        actual: current.fingerprint
+      })
+    ];
+  } catch (error2) {
+    const detail = error2 instanceof Error ? ` ${error2.message}` : "";
+    return [
+      `${args.operation} rejected stale phase topology for Phase ${expected.phaseNumber}.${detail}`
+    ];
+  }
 }
 async function fingerprintStoredFileSet(args) {
   const resolvedFiles = await resolveExistingRepoFiles2({
@@ -83367,19 +88074,23 @@ async function fingerprintStoredFileSet(args) {
   };
 }
 async function fingerprintCurrentDiffForSession(args) {
-  const [changed, untracked] = await Promise.all([
+  const [changed, nameStatus, untracked] = await Promise.all([
     runExternalCommand("git", ["diff", "--name-only", "HEAD", "--"], args.projectRoot),
+    runExternalCommand("git", ["diff", "--name-status", "HEAD", "--"], args.projectRoot),
     runExternalCommand(
       "git",
       ["ls-files", "--others", "--exclude-standard"],
       args.projectRoot
     )
   ]);
-  const currentFiles = [...changed.split("\n"), ...untracked.split("\n")].map((value) => value.trim()).filter((value) => value.length > 0);
+  const currentFiles = filterCurrentDiffCandidateFiles(
+    [...changed.split("\n"), ...untracked.split("\n")].map((value) => value.trim()).filter((value) => value.length > 0)
+  );
   const resolvedFiles = await resolveExistingRepoFiles2({
     projectRoot: args.projectRoot,
     files: currentFiles,
-    sourceLabel: "current-diff god-review scope"
+    sourceLabel: "current-diff god-review scope",
+    allowDeletedFiles: parseGitNameStatusDeletedFiles(nameStatus)
   });
   const headSha = await currentGitHead(args.projectRoot);
   const fingerprint = {
@@ -83424,7 +88135,8 @@ async function fingerprintPrForSession(args) {
   const resolvedFiles = await resolveExistingRepoFiles2({
     projectRoot: args.projectRoot,
     files,
-    sourceLabel: "PR god-review scope"
+    sourceLabel: "PR god-review scope",
+    allowDeletedFiles: parseUnifiedDiffDeletedFiles(diff)
   });
   let prView;
   try {
@@ -83457,7 +88169,22 @@ async function fingerprintPrForSession(args) {
 }
 async function computeCurrentFingerprintForSession(args) {
   switch (args.session.scopeKind) {
-    case "phase":
+    case "phase": {
+      const stored = await fingerprintStoredFileSet(args);
+      const topologyStaleReasons = await phaseTopologyStaleReasonsForGodReviewSession({
+        projectRoot: args.projectRoot,
+        session: args.session,
+        operation: "God-review session continuation"
+      });
+      return {
+        fingerprint: stored.fingerprint,
+        staleReasons: stableUniqueSorted([
+          ...stored.staleReasons,
+          ...topologyStaleReasons
+        ]),
+        warnings: stored.warnings
+      };
+    }
     case "explicit-files":
       return fingerprintStoredFileSet(args);
     case "current-diff":
@@ -83623,6 +88350,27 @@ function attachRemediationState(args) {
       stale: latestAttempt?.status === "stale"
     };
   });
+}
+function requiresDefaultTerminalRemediation(finding) {
+  return finding.disposition === "follow-up" && finding.fixEligibility === "eligible" && (finding.severity === "high" || finding.severity === "medium");
+}
+function collectUnterminalDefaultEligibleFindingIds(args) {
+  return args.findings.filter(requiresDefaultTerminalRemediation).filter(
+    (finding) => !args.remediations.some(
+      (remediation) => remediation.findingId === finding.id && remediation.status !== null
+    )
+  ).map((finding) => finding.id).sort((left, right) => left.localeCompare(right));
+}
+function evaluateTerminalRemediationCoverage(report) {
+  const parsedReport = parseGodReviewReportShell(report);
+  const findings = attachRemediationState(parsedReport);
+  return {
+    remainingFindingIds: collectUnterminalDefaultEligibleFindingIds({
+      findings,
+      remediations: parsedReport.remediations
+    }),
+    warnings: parsedReport.warnings
+  };
 }
 function invalidFixSelection(args) {
   return {
@@ -83796,7 +88544,7 @@ async function validateGodReviewFixTargetEvidence(args) {
     }
     let stats;
     try {
-      stats = await fs13.stat(absolutePath);
+      stats = await fs15.stat(absolutePath);
     } catch {
       staleReasons.push(`${args.target.id} references missing file ${parsedReference.path}.`);
       continue;
@@ -83805,7 +88553,7 @@ async function validateGodReviewFixTargetEvidence(args) {
       staleReasons.push(`${args.target.id} references non-file path ${parsedReference.path}.`);
       continue;
     }
-    const fileText = await fs13.readFile(absolutePath, "utf8");
+    const fileText = await fs15.readFile(absolutePath, "utf8");
     readableFileTexts.set(parsedReference.path, fileText);
     if (parsedReference.line !== null) {
       const lineCount = fileText.split("\n").length;
@@ -84064,6 +88812,10 @@ async function resolvePhaseScope(args) {
     phaseDir: scoped.phase.phaseDir,
     phasePrefix: scoped.phase.phasePrefix
   });
+  const topologySnapshot = await resolvePhaseTopologySnapshot({
+    cwd: args.projectRoot,
+    phase: scoped.phase.phaseNumber
+  });
   return {
     scopeKind: "phase",
     phase: scoped.phase.phaseNumber,
@@ -84080,6 +88832,7 @@ async function resolvePhaseScope(args) {
       }),
       prNumber: null
     },
+    phaseTopologyFingerprint: topologySnapshot.fingerprint,
     warnings: [...scoped.warnings, ...resolvedFiles.warnings]
   };
 }
@@ -84130,19 +88883,23 @@ async function resolveCurrentDiffScope(args) {
       reason: "runId may contain only letters, numbers, dots, underscores, and dashes."
     });
   }
-  const [changed, untracked] = await Promise.all([
+  const [changed, nameStatus, untracked] = await Promise.all([
     runExternalCommand("git", ["diff", "--name-only", "HEAD", "--"], args.projectRoot),
+    runExternalCommand("git", ["diff", "--name-status", "HEAD", "--"], args.projectRoot),
     runExternalCommand(
       "git",
       ["ls-files", "--others", "--exclude-standard"],
       args.projectRoot
     )
   ]);
-  const changedFiles = [...changed.split("\n"), ...untracked.split("\n")].map((value) => value.trim()).filter((value) => value.length > 0);
+  const changedFiles = filterCurrentDiffCandidateFiles(
+    [...changed.split("\n"), ...untracked.split("\n")].map((value) => value.trim()).filter((value) => value.length > 0)
+  );
   const resolvedFiles = await resolveExistingRepoFiles2({
     projectRoot: args.projectRoot,
     files: changedFiles,
-    sourceLabel: "current-diff god-review scope"
+    sourceLabel: "current-diff god-review scope",
+    allowDeletedFiles: parseGitNameStatusDeletedFiles(nameStatus)
   });
   if (!resolvedFiles.valid) {
     return invalidStartResult({
@@ -84194,7 +88951,8 @@ async function resolvePrScope(args) {
   const resolvedFiles = await resolveExistingRepoFiles2({
     projectRoot: args.projectRoot,
     files,
-    sourceLabel: "PR god-review scope"
+    sourceLabel: "PR god-review scope",
+    allowDeletedFiles: parseUnifiedDiffDeletedFiles(diff)
   });
   if (!resolvedFiles.valid) {
     return invalidStartResult({
@@ -84231,8 +88989,13 @@ async function resolvePrScope(args) {
   };
 }
 async function resolveGodReviewScope(args, projectRoot) {
-  const scopeKind = determineScopeKind(args);
-  switch (scopeKind) {
+  const startScope = resolveStartScopeInputs(args);
+  if (!startScope.valid) {
+    return invalidStartResult({
+      reason: startScope.reason
+    });
+  }
+  switch (startScope.scopeKind) {
     case "phase":
       return resolvePhaseScope({
         projectRoot,
@@ -84242,7 +89005,7 @@ async function resolveGodReviewScope(args, projectRoot) {
     case "explicit-files":
       return resolveExplicitFilesScope({
         projectRoot,
-        files: args.files,
+        files: startScope.files,
         runId: args.runId
       });
     case "current-diff":
@@ -84253,10 +89016,150 @@ async function resolveGodReviewScope(args, projectRoot) {
     case "pr":
       return resolvePrScope({
         projectRoot,
-        prNumber: args.prNumber,
+        prNumber: startScope.prNumber,
         runId: args.runId
       });
   }
+}
+function isGodReviewStartResult(value) {
+  return "status" in value;
+}
+function staleStartResultForPhaseScope(args) {
+  if (args.initialScope.scopeKind !== "phase" || args.latestScope.scopeKind !== "phase" || !args.initialScope.phaseTopologyFingerprint || !args.latestScope.phaseTopologyFingerprint || phaseTopologyFingerprintsMatch(
+    args.initialScope.phaseTopologyFingerprint,
+    args.latestScope.phaseTopologyFingerprint
+  )) {
+    return null;
+  }
+  const reason = formatStalePhaseTopologyMessage({
+    operation: "God-review start",
+    expected: args.initialScope.phaseTopologyFingerprint,
+    actual: args.latestScope.phaseTopologyFingerprint
+  });
+  return staleStartResult({
+    reason,
+    staleReasons: [reason],
+    warnings: stableUniqueSorted([...args.initialScope.warnings, ...args.latestScope.warnings])
+  });
+}
+async function startGodReviewSessionWithResolvedScope(args) {
+  return withBlueprintRepoLock(args.projectRoot, "god-review-session", async () => {
+    const sessionPath = resolveBlueprintPath(
+      args.projectRoot,
+      args.resolvedScope.paths.sessionPath
+    );
+    const existingSessionRaw = await readTextIfPresent(sessionPath);
+    if (existingSessionRaw !== null) {
+      let existingSessionJson;
+      try {
+        existingSessionJson = JSON.parse(existingSessionRaw);
+      } catch {
+        return invalidStartResult({
+          reason: `${args.resolvedScope.paths.sessionPath} is not valid JSON.`
+        });
+      }
+      const existingSession = godReviewSessionSchema.safeParse(existingSessionJson);
+      if (!existingSession.success) {
+        return invalidStartResult({
+          reason: `${args.resolvedScope.paths.sessionPath} is not a valid god-review session.`,
+          warnings: existingSession.error.issues.map((issue2) => issue2.message)
+        });
+      }
+      const scopeMismatchReasons = compareGodReviewStartScopeToSession({
+        requested: args.resolvedScope,
+        saved: existingSession.data,
+        activeCommand: args.activation.activeCommand
+      });
+      if (scopeMismatchReasons.length > 0) {
+        return invalidStartResult({
+          reason: "Existing god-review session does not match the requested scope. Use the saved session's continuation command or start a new hidden review run id.",
+          warnings: [...args.resolvedScope.warnings, ...scopeMismatchReasons]
+        });
+      }
+      return startResultFromSession({
+        status: "reused",
+        session: existingSession.data,
+        nextCommand: nextGodReviewCommand({
+          activeCommand: existingSession.data.activeCommand,
+          scopeKind: existingSession.data.scopeKind,
+          phase: existingSession.data.phase ?? null,
+          runId: existingSession.data.runId
+        }),
+        written: false,
+        createdPaths: [],
+        warnings: args.resolvedScope.warnings,
+        reason: "Existing god-review session reused."
+      });
+    }
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path20.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
+    const groups = buildInitialGodReviewGroups();
+    const nextGroupId = groups[0]?.id ?? null;
+    const session = {
+      schemaVersion: 1,
+      runId,
+      parentRunId: null,
+      status: "in-progress",
+      createdAt: now,
+      updatedAt: now,
+      activeCommand: args.activation.activeCommand,
+      scopeKind: args.resolvedScope.scopeKind,
+      ...args.resolvedScope.scopeKind === "phase" ? { phase: args.resolvedScope.phase ?? void 0 } : {},
+      sessionPath: args.resolvedScope.paths.sessionPath,
+      humanStatePath: args.resolvedScope.paths.humanStatePath,
+      reportPath: args.resolvedScope.paths.reportPath,
+      files: args.resolvedScope.files,
+      skippedFiles: args.resolvedScope.skippedFiles,
+      scopeFingerprint: args.resolvedScope.fingerprint,
+      ...args.resolvedScope.phaseTopologyFingerprint ? { phaseTopologyFingerprint: args.resolvedScope.phaseTopologyFingerprint } : {},
+      groups,
+      nextGroupId,
+      cleanup: {
+        reviewTerminal: false,
+        godFixTerminal: false,
+        eligible: false
+      }
+    };
+    const nextCommand = nextGodReviewCommand({
+      activeCommand: args.activation.activeCommand,
+      scopeKind: session.scopeKind,
+      phase: session.phase ?? null,
+      runId: session.runId
+    });
+    const reportHeader = renderGodReviewReportHeader({
+      runId: session.runId,
+      status: session.status,
+      scopeKind: session.scopeKind,
+      sessionPath: session.sessionPath,
+      scopeFingerprintSummary: session.scopeFingerprint.fileSetHash
+    });
+    const humanState = renderGodReviewHumanState({
+      runId: session.runId,
+      scopeKind: session.scopeKind,
+      fileCount: session.files.length,
+      currentGroupId: null,
+      nextGroupId,
+      reviewTerminal: false,
+      godFixTerminal: false,
+      stale: false,
+      nextCommand
+    });
+    const createdPaths = await writeGodReviewSessionArtifacts({
+      projectRoot: args.projectRoot,
+      session,
+      reportHeader,
+      humanState
+    });
+    return startResultFromSession({
+      status: "started",
+      session,
+      nextCommand,
+      written: true,
+      createdPaths,
+      warnings: args.resolvedScope.warnings,
+      reason: null
+    });
+  });
 }
 function renderGodReviewReportHeader(args) {
   return [
@@ -84318,113 +89221,44 @@ async function blueprintGodReviewStart(rawArgs) {
       nextCommand: null,
       written: false,
       createdPaths: [],
+      staleReasons: [],
       warnings: []
     };
   }
   const projectRoot = await ensureRepoRoot(args.cwd);
   const resolvedScope = await resolveGodReviewScope(args, projectRoot);
-  if ("status" in resolvedScope) {
+  if (isGodReviewStartResult(resolvedScope)) {
     return resolvedScope;
   }
-  const sessionPath = resolveBlueprintPath(projectRoot, resolvedScope.paths.sessionPath);
-  const existingSessionRaw = await readTextIfPresent(sessionPath);
-  if (existingSessionRaw !== null) {
-    let existingSessionJson;
-    try {
-      existingSessionJson = JSON.parse(existingSessionRaw);
-    } catch {
-      return invalidStartResult({
-        reason: `${resolvedScope.paths.sessionPath} is not valid JSON.`
-      });
-    }
-    const existingSession = godReviewSessionSchema.safeParse(existingSessionJson);
-    if (!existingSession.success) {
-      return invalidStartResult({
-        reason: `${resolvedScope.paths.sessionPath} is not a valid god-review session.`,
-        warnings: existingSession.error.issues.map((issue2) => issue2.message)
-      });
-    }
-    return startResultFromSession({
-      status: "reused",
-      session: existingSession.data,
-      nextCommand: nextGodReviewCommand({
-        activeCommand: existingSession.data.activeCommand,
-        scopeKind: existingSession.data.scopeKind,
-        phase: existingSession.data.phase ?? null,
-        runId: existingSession.data.runId
-      }),
-      written: false,
-      createdPaths: [],
-      warnings: resolvedScope.warnings,
-      reason: "Existing god-review session reused."
+  if (resolvedScope.scopeKind !== "phase") {
+    return startGodReviewSessionWithResolvedScope({
+      projectRoot,
+      activation,
+      resolvedScope
     });
   }
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  const runId = resolvedScope.scopeKind === "phase" ? `god-${String(resolvedScope.phase)}` : path16.basename(resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
-  const groups = buildInitialGodReviewGroups();
-  const nextGroupId = groups[0]?.id ?? null;
-  const session = {
-    schemaVersion: 1,
-    runId,
-    parentRunId: null,
-    status: "in-progress",
-    createdAt: now,
-    updatedAt: now,
-    activeCommand: activation.activeCommand,
-    scopeKind: resolvedScope.scopeKind,
-    ...resolvedScope.scopeKind === "phase" ? { phase: resolvedScope.phase ?? void 0 } : {},
-    sessionPath: resolvedScope.paths.sessionPath,
-    humanStatePath: resolvedScope.paths.humanStatePath,
-    reportPath: resolvedScope.paths.reportPath,
-    files: resolvedScope.files,
-    skippedFiles: resolvedScope.skippedFiles,
-    scopeFingerprint: resolvedScope.fingerprint,
-    groups,
-    nextGroupId,
-    cleanup: {
-      reviewTerminal: false,
-      godFixTerminal: false,
-      eligible: false
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const latestScope = await resolveGodReviewScope(args, projectRoot);
+    if (isGodReviewStartResult(latestScope)) {
+      const reason = latestScope.reason ?? "God-review start rejected stale phase topology before writing hidden review state.";
+      return staleStartResult({
+        reason,
+        staleReasons: [reason],
+        warnings: latestScope.warnings
+      });
     }
-  };
-  const nextCommand = nextGodReviewCommand({
-    activeCommand: activation.activeCommand,
-    scopeKind: session.scopeKind,
-    phase: session.phase ?? null,
-    runId: session.runId
-  });
-  const reportHeader = renderGodReviewReportHeader({
-    runId: session.runId,
-    status: session.status,
-    scopeKind: session.scopeKind,
-    sessionPath: session.sessionPath,
-    scopeFingerprintSummary: session.scopeFingerprint.fileSetHash
-  });
-  const humanState = renderGodReviewHumanState({
-    runId: session.runId,
-    scopeKind: session.scopeKind,
-    fileCount: session.files.length,
-    currentGroupId: null,
-    nextGroupId,
-    reviewTerminal: false,
-    godFixTerminal: false,
-    stale: false,
-    nextCommand
-  });
-  const createdPaths = await writeGodReviewSessionArtifacts({
-    projectRoot,
-    session,
-    reportHeader,
-    humanState
-  });
-  return startResultFromSession({
-    status: "started",
-    session,
-    nextCommand,
-    written: true,
-    createdPaths,
-    warnings: resolvedScope.warnings,
-    reason: null
+    const staleResult = staleStartResultForPhaseScope({
+      initialScope: resolvedScope,
+      latestScope
+    });
+    if (staleResult) {
+      return staleResult;
+    }
+    return startGodReviewSessionWithResolvedScope({
+      projectRoot,
+      activation,
+      resolvedScope: latestScope
+    });
   });
 }
 async function blueprintGodReviewNext(rawArgs) {
@@ -84583,124 +89417,118 @@ async function blueprintGodReviewAppend(rawArgs) {
       reason: sessionPath.reason
     });
   }
-  const loaded = await loadGodReviewSession({
-    projectRoot,
-    sessionPath: sessionPath.path
-  });
-  if (!loaded.valid) {
-    return invalidAppendResult({
-      reason: loaded.reason,
-      warnings: loaded.warnings
+  return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
+    const loaded = await loadGodReviewSession({
+      projectRoot,
+      sessionPath: sessionPath.path
     });
-  }
-  const session = loaded.session;
-  const fingerprint = await computeCurrentFingerprintForSession({
-    projectRoot,
-    session
-  });
-  const nextCommand = nextGodReviewCommand({
-    activeCommand: session.activeCommand,
-    scopeKind: session.scopeKind,
-    phase: session.phase ?? null,
-    runId: session.runId
-  });
-  if (fingerprint.staleReasons.length > 0) {
-    return {
-      status: "stale",
-      activated: true,
-      reason: "God-review scope fingerprint changed. Start a new hidden review run instead of appending to this session.",
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      groupId: args.groupId,
-      groupStatus: null,
-      findingIds: [],
-      findings: [],
-      nextGroupId: session.nextGroupId,
-      nextCommand,
-      written: false,
-      staleReasons: fingerprint.staleReasons,
-      warnings: fingerprint.warnings
-    };
-  }
-  if (session.nextGroupId !== args.groupId) {
-    return invalidAppendResult({
-      reason: `God-review groups must be appended in session order. Next group is ${session.nextGroupId ?? "none"}, not ${args.groupId}.`
-    });
-  }
-  const sessionGroup = session.groups.find((group) => group.id === args.groupId);
-  const groupDefinition = GOD_REVIEW_GROUPS.find((group) => group.id === args.groupId);
-  if (!sessionGroup || !groupDefinition) {
-    return invalidAppendResult({
-      reason: `Unknown god-review group: ${args.groupId}.`
-    });
-  }
-  if (sessionGroup.status !== "pending" && sessionGroup.status !== "in-progress") {
-    return invalidAppendResult({
-      reason: `${args.groupId} has already been appended and will not be rewritten.`
-    });
-  }
-  const normalizedFindings = normalizeAppendFindings({
-    prefix: sessionGroup.prefix,
-    existingFindingIds: sessionGroup.findingIds,
-    findings: args.findings ?? []
-  });
-  if (!normalizedFindings.valid) {
-    return invalidAppendResult({
-      reason: normalizedFindings.reason,
-      warnings: normalizedFindings.warnings
-    });
-  }
-  const findingIds = normalizedFindings.findings.map((finding) => finding.id);
-  const nextGroups = session.groups.map(
-    (group) => group.id === args.groupId ? {
-      ...group,
-      status: args.status,
-      findingIds
-    } : group
-  );
-  const nextGroupId = args.status === "blocked" ? null : nextGroupIdAfterAppend(nextGroups);
-  const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-  const nextStatus = args.status === "blocked" ? "blocked" : nextGroupId === null ? "completed" : "in-progress";
-  const updatedSession = {
-    ...session,
-    status: nextStatus,
-    updatedAt,
-    groups: nextGroups,
-    nextGroupId,
-    cleanup: {
-      ...session.cleanup,
-      reviewTerminal: nextStatus === "completed" || nextStatus === "blocked"
+    if (!loaded.valid) {
+      return invalidAppendResult({
+        reason: loaded.reason,
+        warnings: loaded.warnings
+      });
     }
-  };
-  const updatedNextCommand = nextGodReviewCommand({
-    activeCommand: updatedSession.activeCommand,
-    scopeKind: updatedSession.scopeKind,
-    phase: updatedSession.phase ?? null,
-    runId: updatedSession.runId
-  });
-  const reportPath = resolveBlueprintPath(projectRoot, updatedSession.reportPath);
-  const sessionFilePath = resolveBlueprintPath(projectRoot, updatedSession.sessionPath);
-  const humanStatePath = resolveBlueprintPath(projectRoot, updatedSession.humanStatePath);
-  await fs13.appendFile(
-    reportPath,
-    renderGodReviewGroupSection({
+    const session = loaded.session;
+    const fingerprint = await computeCurrentFingerprintForSession({
+      projectRoot,
+      session
+    });
+    const nextCommand = nextGodReviewCommand({
+      activeCommand: session.activeCommand,
+      scopeKind: session.scopeKind,
+      phase: session.phase ?? null,
+      runId: session.runId
+    });
+    if (fingerprint.staleReasons.length > 0) {
+      return {
+        status: "stale",
+        activated: true,
+        reason: "God-review scope fingerprint changed. Start a new hidden review run instead of appending to this session.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        groupId: args.groupId,
+        groupStatus: null,
+        findingIds: [],
+        findings: [],
+        nextGroupId: session.nextGroupId,
+        nextCommand,
+        written: false,
+        staleReasons: fingerprint.staleReasons,
+        warnings: fingerprint.warnings
+      };
+    }
+    if (session.nextGroupId !== args.groupId) {
+      return invalidAppendResult({
+        reason: `God-review groups must be appended in session order. Next group is ${session.nextGroupId ?? "none"}, not ${args.groupId}.`
+      });
+    }
+    const sessionGroup = session.groups.find((group) => group.id === args.groupId);
+    const groupDefinition = GOD_REVIEW_GROUPS.find((group) => group.id === args.groupId);
+    if (!sessionGroup || !groupDefinition) {
+      return invalidAppendResult({
+        reason: `Unknown god-review group: ${args.groupId}.`
+      });
+    }
+    if (sessionGroup.status !== "pending" && sessionGroup.status !== "in-progress") {
+      return invalidAppendResult({
+        reason: `${args.groupId} has already been appended and will not be rewritten.`
+      });
+    }
+    const normalizedFindings = normalizeAppendFindings({
+      prefix: sessionGroup.prefix,
+      existingFindingIds: sessionGroup.findingIds,
+      findings: args.findings ?? []
+    });
+    if (!normalizedFindings.valid) {
+      return invalidAppendResult({
+        reason: normalizedFindings.reason,
+        warnings: normalizedFindings.warnings
+      });
+    }
+    const findingIds = normalizedFindings.findings.map((finding) => finding.id);
+    const nextGroups = session.groups.map(
+      (group) => group.id === args.groupId ? {
+        ...group,
+        status: args.status,
+        findingIds
+      } : group
+    );
+    const nextGroupId = args.status === "blocked" ? null : nextGroupIdAfterAppend(nextGroups);
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const nextStatus = args.status === "blocked" ? "blocked" : nextGroupId === null ? "completed" : "in-progress";
+    const updatedSession = {
+      ...session,
+      status: nextStatus,
+      updatedAt,
+      groups: nextGroups,
+      nextGroupId,
+      cleanup: {
+        ...session.cleanup,
+        reviewTerminal: nextStatus === "completed" || nextStatus === "blocked"
+      }
+    };
+    const updatedNextCommand = nextGodReviewCommand({
+      activeCommand: updatedSession.activeCommand,
+      scopeKind: updatedSession.scopeKind,
+      phase: updatedSession.phase ?? null,
+      runId: updatedSession.runId
+    });
+    const reportPath = resolveBlueprintPath(projectRoot, updatedSession.reportPath);
+    const reportBeforeAppend = await readTextIfPresent(reportPath);
+    if (reportBeforeAppend === null) {
+      return invalidAppendResult({
+        reason: `${updatedSession.reportPath} does not exist. Start a fresh hidden review before appending this group.`,
+        warnings: fingerprint.warnings
+      });
+    }
+    const reportContent = `${reportBeforeAppend}${renderGodReviewGroupSection({
       group: groupDefinition,
       status: args.status,
       findings: normalizedFindings.findings
-    }),
-    "utf8"
-  );
-  await fs13.writeFile(
-    sessionFilePath,
-    `${JSON.stringify(updatedSession, null, 2)}
-`,
-    "utf8"
-  );
-  await fs13.writeFile(
-    humanStatePath,
-    renderGodReviewHumanState({
+    })}`;
+    const humanStateContent = renderGodReviewHumanState({
       runId: updatedSession.runId,
       scopeKind: updatedSession.scopeKind,
       fileCount: updatedSession.files.length,
@@ -84710,27 +89538,35 @@ async function blueprintGodReviewAppend(rawArgs) {
       godFixTerminal: updatedSession.cleanup.godFixTerminal,
       stale: false,
       nextCommand: updatedNextCommand
-    }),
-    "utf8"
-  );
-  return {
-    status: "appended",
-    activated: true,
-    reason: null,
-    runId: updatedSession.runId,
-    sessionPath: updatedSession.sessionPath,
-    humanStatePath: updatedSession.humanStatePath,
-    reportPath: updatedSession.reportPath,
-    groupId: args.groupId,
-    groupStatus: args.status,
-    findingIds,
-    findings: normalizedFindings.findings,
-    nextGroupId,
-    nextCommand: updatedNextCommand,
-    written: true,
-    staleReasons: [],
-    warnings: fingerprint.warnings
-  };
+    });
+    await writeGodReviewPersistenceBundle({
+      projectRoot,
+      reportPath: updatedSession.reportPath,
+      reportContent,
+      sessionPath: updatedSession.sessionPath,
+      session: updatedSession,
+      humanStatePath: updatedSession.humanStatePath,
+      humanStateContent
+    });
+    return {
+      status: "appended",
+      activated: true,
+      reason: null,
+      runId: updatedSession.runId,
+      sessionPath: updatedSession.sessionPath,
+      humanStatePath: updatedSession.humanStatePath,
+      reportPath: updatedSession.reportPath,
+      groupId: args.groupId,
+      groupStatus: args.status,
+      findingIds,
+      findings: normalizedFindings.findings,
+      nextGroupId,
+      nextCommand: updatedNextCommand,
+      written: true,
+      staleReasons: [],
+      warnings: fingerprint.warnings
+    };
+  });
 }
 async function blueprintGodReviewLoadFindings(rawArgs) {
   const parsed = godReviewLoadFindingsArgsSchema.safeParse(rawArgs);
@@ -84784,6 +89620,18 @@ async function blueprintGodReviewLoadFindings(rawArgs) {
       selection: null,
       warnings: []
     };
+  }
+  const fingerprint = await computeCurrentFingerprintForSession({
+    projectRoot,
+    session: reference.session
+  });
+  if (fingerprint.staleReasons.length > 0) {
+    return invalidLoadFindingsResult({
+      reason: "God-review scope fingerprint changed. Start a new hidden review before loading saved findings.",
+      reportPath: reference.reportPath,
+      sessionPath: reference.sessionPath,
+      warnings: [...fingerprint.warnings, ...fingerprint.staleReasons]
+    });
   }
   const parsedReport = parseGodReviewReportShell(report);
   const duplicateIds = collectDuplicateFindingIds(parsedReport.findings);
@@ -84860,213 +89708,232 @@ async function blueprintGodReviewRecordFix(rawArgs) {
       remediationStatus: args.status
     });
   }
-  const loaded = await loadGodReviewSession({
-    projectRoot,
-    sessionPath: sessionPath.path
-  });
-  if (!loaded.valid) {
-    return invalidRecordFixResult({
-      reason: loaded.reason,
-      sessionPath: sessionPath.path,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status,
-      warnings: loaded.warnings
+  return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
+    const loaded = await loadGodReviewSession({
+      projectRoot,
+      sessionPath: sessionPath.path
     });
-  }
-  const session = loaded.session;
-  const reportPath = args.reportPath ?? session.reportPath;
-  const normalizedReportPath = normalizeGodReviewReportPath(reportPath);
-  if (!normalizedReportPath.valid) {
-    return invalidRecordFixResult({
-      reason: normalizedReportPath.reason,
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status
-    });
-  }
-  if (normalizedReportPath.path !== session.reportPath) {
-    return invalidRecordFixResult({
-      reason: "blueprint_god_review_record_fix must append to the durable report recorded by the saved god-review session.",
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: normalizedReportPath.path,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status
-    });
-  }
-  const reportAbsolutePath = resolveBlueprintPath(projectRoot, session.reportPath);
-  const report = await readTextIfPresent(reportAbsolutePath);
-  if (report === null) {
-    return invalidRecordFixResult({
-      reason: `${session.reportPath} does not exist.`,
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status
-    });
-  }
-  const parsedReport = parseGodReviewReportShell(report);
-  const duplicateIds = collectDuplicateFindingIds(parsedReport.findings);
-  if (duplicateIds.length > 0) {
-    return invalidRecordFixResult({
-      reason: `Duplicate god-review finding IDs are not allowed: ${duplicateIds.join(", ")}.`,
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status,
-      warnings: parsedReport.warnings
-    });
-  }
-  const findings = attachRemediationState(parsedReport);
-  const finding = findings.find((candidate) => candidate.id === args.findingId);
-  if (!finding) {
-    return invalidRecordFixResult({
-      reason: `Selected god-review finding ID does not exist: ${args.findingId}.`,
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status,
-      warnings: parsedReport.warnings
-    });
-  }
-  const selection = await resolveGodReviewFixSelection({
-    projectRoot,
-    loadArgs: buildRecordFixSelectionArgs({
-      recordArgs: args,
+    if (!loaded.valid) {
+      return invalidRecordFixResult({
+        reason: loaded.reason,
+        sessionPath: sessionPath.path,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status,
+        warnings: loaded.warnings
+      });
+    }
+    const session = loaded.session;
+    const topologyStaleReasons = await phaseTopologyStaleReasonsForGodReviewSession({
+      projectRoot,
       session,
-      finding
-    }),
-    sessionPath: session.sessionPath,
-    findings
-  });
-  const selectedTarget = selection?.targets.find((target) => target.id === args.findingId);
-  if (selection?.status === "stale" && args.status !== "stale") {
-    return {
-      status: "stale",
-      activated: true,
-      reason: "God-review selection is stale. Record a no-edit stale remediation entry or start a fresh hidden review.",
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      remediationId: null,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status,
-      filesChanged: args.filesChanged ?? [],
-      terminal: false,
-      cleanupEligible: session.cleanup.eligible,
-      written: false,
-      staleReasons: selection.staleReasons,
-      warnings: [...parsedReport.warnings, ...selection.staleReasons]
-    };
-  }
-  if (args.status === "fixed" && (selection === null || selection.status !== "ready" || !selectedTarget)) {
-    return invalidRecordFixResult({
-      reason: selection?.reason ?? "Fixed god-review remediation entries require an edit-ready private selection target.",
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status,
-      staleReasons: selection?.staleReasons ?? [],
-      warnings: parsedReport.warnings
+      operation: "God-review record-fix"
     });
-  }
-  if (args.status !== "fixed" && selection?.status === "invalid" && args.selectedBy !== "explicit-id") {
-    return invalidRecordFixResult({
-      reason: selection.reason ?? "God-review remediation selection was invalid.",
-      runId: session.runId,
+    if (topologyStaleReasons.length > 0) {
+      return {
+        status: "stale",
+        activated: true,
+        reason: "God-review phase topology changed. Start a new hidden review before recording fixes for this session.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        remediationId: null,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status,
+        filesChanged: args.filesChanged ?? [],
+        terminal: false,
+        cleanupEligible: session.cleanup.eligible,
+        written: false,
+        staleReasons: topologyStaleReasons,
+        warnings: topologyStaleReasons
+      };
+    }
+    const reportPath = args.reportPath ?? session.reportPath;
+    const normalizedReportPath = normalizeGodReviewReportPath(reportPath);
+    if (!normalizedReportPath.valid) {
+      return invalidRecordFixResult({
+        reason: normalizedReportPath.reason,
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status
+      });
+    }
+    if (normalizedReportPath.path !== session.reportPath) {
+      return invalidRecordFixResult({
+        reason: "blueprint_god_review_record_fix must append to the durable report recorded by the saved god-review session.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: normalizedReportPath.path,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status
+      });
+    }
+    const reportAbsolutePath = resolveBlueprintPath(projectRoot, session.reportPath);
+    const report = await readTextIfPresent(reportAbsolutePath);
+    if (report === null) {
+      return invalidRecordFixResult({
+        reason: `${session.reportPath} does not exist.`,
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status
+      });
+    }
+    const parsedReport = parseGodReviewReportShell(report);
+    const duplicateIds = collectDuplicateFindingIds(parsedReport.findings);
+    if (duplicateIds.length > 0) {
+      return invalidRecordFixResult({
+        reason: `Duplicate god-review finding IDs are not allowed: ${duplicateIds.join(", ")}.`,
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status,
+        warnings: parsedReport.warnings
+      });
+    }
+    const findings = attachRemediationState(parsedReport);
+    const finding = findings.find((candidate) => candidate.id === args.findingId);
+    if (!finding) {
+      return invalidRecordFixResult({
+        reason: `Selected god-review finding ID does not exist: ${args.findingId}.`,
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status,
+        warnings: parsedReport.warnings
+      });
+    }
+    const selection = await resolveGodReviewFixSelection({
+      projectRoot,
+      loadArgs: buildRecordFixSelectionArgs({
+        recordArgs: args,
+        session,
+        finding
+      }),
       sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      findingId: args.findingId,
-      selectedBy: args.selectedBy,
-      remediationStatus: args.status,
-      staleReasons: selection.staleReasons,
-      warnings: [...parsedReport.warnings, ...selection.staleReasons]
+      findings
     });
-  }
-  const changedFiles = await normalizeRemediationChangedFiles({
-    projectRoot,
-    status: args.status,
-    filesChanged: args.filesChanged
-  });
-  if (!changedFiles.valid) {
-    return invalidRecordFixResult({
-      reason: changedFiles.reason,
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
+    const selectedTarget = selection?.targets.find((target) => target.id === args.findingId);
+    if (selection?.status === "stale" && args.status !== "stale") {
+      return {
+        status: "stale",
+        activated: true,
+        reason: "God-review selection is stale. Record a no-edit stale remediation entry or start a fresh hidden review.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        remediationId: null,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status,
+        filesChanged: args.filesChanged ?? [],
+        terminal: false,
+        cleanupEligible: session.cleanup.eligible,
+        written: false,
+        staleReasons: selection.staleReasons,
+        warnings: [...parsedReport.warnings, ...selection.staleReasons]
+      };
+    }
+    if (args.status === "fixed" && (selection === null || selection.status !== "ready" || !selectedTarget)) {
+      return invalidRecordFixResult({
+        reason: selection?.reason ?? "Fixed god-review remediation entries require an edit-ready private selection target.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status,
+        staleReasons: selection?.staleReasons ?? [],
+        warnings: parsedReport.warnings
+      });
+    }
+    if (args.status !== "fixed" && selection?.status === "invalid" && args.selectedBy !== "explicit-id") {
+      return invalidRecordFixResult({
+        reason: selection.reason ?? "God-review remediation selection was invalid.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status,
+        staleReasons: selection.staleReasons,
+        warnings: [...parsedReport.warnings, ...selection.staleReasons]
+      });
+    }
+    const changedFiles = await normalizeRemediationChangedFiles({
+      projectRoot,
+      status: args.status,
+      filesChanged: args.filesChanged
+    });
+    if (!changedFiles.valid) {
+      return invalidRecordFixResult({
+        reason: changedFiles.reason,
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        findingId: args.findingId,
+        selectedBy: args.selectedBy,
+        remediationStatus: args.status,
+        filesChanged: changedFiles.filesChanged,
+        warnings: [...parsedReport.warnings, ...changedFiles.warnings]
+      });
+    }
+    const remediationId = nextGodReviewRemediationId(parsedReport.remediations);
+    const entry = renderGodReviewRemediationEntry({
+      remediationId,
       findingId: args.findingId,
+      status: args.status,
       selectedBy: args.selectedBy,
-      remediationStatus: args.status,
       filesChanged: changedFiles.filesChanged,
-      warnings: [...parsedReport.warnings, ...changedFiles.warnings]
+      verification: args.verification,
+      evidence: args.status === "stale" && (args.evidence === void 0 || args.evidence.trim() === "") ? selection?.staleReasons.join("; ") : args.evidence,
+      followUp: args.followUp
     });
-  }
-  const remediationId = nextGodReviewRemediationId(parsedReport.remediations);
-  const entry = renderGodReviewRemediationEntry({
-    remediationId,
-    findingId: args.findingId,
-    status: args.status,
-    selectedBy: args.selectedBy,
-    filesChanged: changedFiles.filesChanged,
-    verification: args.verification,
-    evidence: args.status === "stale" && (args.evidence === void 0 || args.evidence.trim() === "") ? selection?.staleReasons.join("; ") : args.evidence,
-    followUp: args.followUp
-  });
-  const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-  const terminal = args.terminal === true;
-  const cleanup = {
-    ...session.cleanup,
-    godFixTerminal: session.cleanup.godFixTerminal || terminal
-  };
-  cleanup.eligible = cleanup.reviewTerminal && cleanup.godFixTerminal;
-  const updatedSession = {
-    ...session,
-    updatedAt,
-    cleanup
-  };
-  const nextCommand = terminal ? "hidden fix terminal" : nextGodReviewCommand({
-    activeCommand: "/blu-code-review-fix",
-    scopeKind: session.scopeKind,
-    phase: session.phase ?? null,
-    runId: session.runId
-  });
-  await fs13.appendFile(
-    reportAbsolutePath,
-    appendRemediationLogPayload({ report, entry }),
-    "utf8"
-  );
-  await fs13.writeFile(
-    resolveBlueprintPath(projectRoot, updatedSession.sessionPath),
-    `${JSON.stringify(updatedSession, null, 2)}
-`,
-    "utf8"
-  );
-  await fs13.writeFile(
-    resolveBlueprintPath(projectRoot, updatedSession.humanStatePath),
-    renderGodReviewHumanState({
+    const remediationPayload = appendRemediationLogPayload({ report, entry });
+    const reportAfterEntry = `${report}${remediationPayload}`;
+    const terminalCoverage = evaluateTerminalRemediationCoverage(reportAfterEntry);
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const terminalRequested = args.terminal === true;
+    const terminalBlocked = terminalCoverage.remainingFindingIds.length > 0 && (terminalRequested || session.cleanup.godFixTerminal);
+    const godFixTerminal = terminalBlocked ? false : session.cleanup.godFixTerminal || terminalRequested;
+    const cleanup = {
+      ...session.cleanup,
+      godFixTerminal
+    };
+    cleanup.eligible = cleanup.reviewTerminal && cleanup.godFixTerminal;
+    const updatedSession = {
+      ...session,
+      updatedAt,
+      cleanup
+    };
+    const nextCommand = cleanup.godFixTerminal ? "hidden fix terminal" : nextGodReviewCommand({
+      activeCommand: "/blu-code-review-fix",
+      scopeKind: session.scopeKind,
+      phase: session.phase ?? null,
+      runId: session.runId
+    });
+    const humanStateContent = renderGodReviewHumanState({
       runId: updatedSession.runId,
       scopeKind: updatedSession.scopeKind,
       fileCount: updatedSession.files.length,
@@ -85076,28 +89943,42 @@ async function blueprintGodReviewRecordFix(rawArgs) {
       godFixTerminal: updatedSession.cleanup.godFixTerminal,
       stale: args.status === "stale",
       nextCommand
-    }),
-    "utf8"
-  );
-  return {
-    status: "recorded",
-    activated: true,
-    reason: null,
-    runId: updatedSession.runId,
-    sessionPath: updatedSession.sessionPath,
-    humanStatePath: updatedSession.humanStatePath,
-    reportPath: updatedSession.reportPath,
-    remediationId,
-    findingId: args.findingId,
-    selectedBy: args.selectedBy,
-    remediationStatus: args.status,
-    filesChanged: changedFiles.filesChanged,
-    terminal: updatedSession.cleanup.godFixTerminal,
-    cleanupEligible: updatedSession.cleanup.eligible,
-    written: true,
-    staleReasons: args.status === "stale" ? selection?.staleReasons ?? [] : [],
-    warnings: parsedReport.warnings
-  };
+    });
+    await writeGodReviewPersistenceBundle({
+      projectRoot,
+      reportPath: updatedSession.reportPath,
+      reportContent: reportAfterEntry,
+      sessionPath: updatedSession.sessionPath,
+      session: updatedSession,
+      humanStatePath: updatedSession.humanStatePath,
+      humanStateContent
+    });
+    return {
+      status: "recorded",
+      activated: true,
+      reason: null,
+      runId: updatedSession.runId,
+      sessionPath: updatedSession.sessionPath,
+      humanStatePath: updatedSession.humanStatePath,
+      reportPath: updatedSession.reportPath,
+      remediationId,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      filesChanged: changedFiles.filesChanged,
+      terminal: updatedSession.cleanup.godFixTerminal,
+      cleanupEligible: updatedSession.cleanup.eligible,
+      written: true,
+      staleReasons: args.status === "stale" ? selection?.staleReasons ?? [] : [],
+      warnings: [
+        ...parsedReport.warnings,
+        ...terminalCoverage.warnings,
+        ...terminalBlocked ? [
+          `Hidden fix terminal was not recorded because eligible findings still lack terminal remediation: ${terminalCoverage.remainingFindingIds.join(", ")}.`
+        ] : []
+      ]
+    };
+  });
 }
 async function noEligibleHiddenFixTerminal(args) {
   const parsedReport = parseGodReviewReportShell(args.report);
@@ -85178,60 +90059,113 @@ async function blueprintGodReviewCleanup(rawArgs) {
       reason: sessionPath.reason
     });
   }
-  const loaded = await loadGodReviewSession({
-    projectRoot,
-    sessionPath: sessionPath.path
-  });
-  if (!loaded.valid) {
-    return invalidCleanupResult({
-      reason: loaded.reason,
-      sessionPath: sessionPath.path,
-      warnings: loaded.warnings
-    });
-  }
-  const session = loaded.session;
-  const reportPath = resolveBlueprintPath(projectRoot, session.reportPath);
-  const report = await readTextIfPresent(reportPath);
-  if (report === null) {
-    return invalidCleanupResult({
-      reason: `${session.reportPath} does not exist. Cleanup preserves the durable god-review report, so the report must exist before cleanup.`,
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      preservedPaths: [],
-      cleanupEligible: false,
-      reviewTerminal: session.cleanup.reviewTerminal,
-      godFixTerminal: session.cleanup.godFixTerminal
-    });
-  }
-  if (!session.cleanup.reviewTerminal) {
-    return invalidCleanupResult({
-      status: "blocked",
-      reason: "God-review cleanup is blocked until the hidden review is terminal.",
-      runId: session.runId,
-      sessionPath: session.sessionPath,
-      humanStatePath: session.humanStatePath,
-      reportPath: session.reportPath,
-      preservedPaths: [session.reportPath],
-      cleanupEligible: false,
-      reviewTerminal: false,
-      godFixTerminal: session.cleanup.godFixTerminal
-    });
-  }
-  let godFixTerminal = session.cleanup.godFixTerminal;
-  let warnings = [];
-  if (!godFixTerminal && args.noEligibleFindingsTerminal === true) {
-    const noEligible = await noEligibleHiddenFixTerminal({
+  return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
+    const loaded = await loadGodReviewSession({
       projectRoot,
-      cleanupArgs: args,
-      session,
-      report
+      sessionPath: sessionPath.path
     });
-    if (!noEligible.terminal) {
+    if (!loaded.valid) {
+      return invalidCleanupResult({
+        reason: loaded.reason,
+        sessionPath: sessionPath.path,
+        warnings: loaded.warnings
+      });
+    }
+    const session = loaded.session;
+    const topologyStaleReasons = await phaseTopologyStaleReasonsForGodReviewSession({
+      projectRoot,
+      session,
+      operation: "God-review cleanup"
+    });
+    if (topologyStaleReasons.length > 0) {
+      return invalidCleanupResult({
+        reason: "God-review phase topology changed. Start a new hidden review before cleaning up this session.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        preservedPaths: [session.reportPath],
+        cleanupEligible: false,
+        reviewTerminal: session.cleanup.reviewTerminal,
+        godFixTerminal: session.cleanup.godFixTerminal,
+        warnings: topologyStaleReasons
+      });
+    }
+    const reportPath = resolveBlueprintPath(projectRoot, session.reportPath);
+    const report = await readTextIfPresent(reportPath);
+    if (report === null) {
+      return invalidCleanupResult({
+        reason: `${session.reportPath} does not exist. Cleanup preserves the durable god-review report, so the report must exist before cleanup.`,
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        preservedPaths: [],
+        cleanupEligible: false,
+        reviewTerminal: session.cleanup.reviewTerminal,
+        godFixTerminal: session.cleanup.godFixTerminal
+      });
+    }
+    if (!session.cleanup.reviewTerminal) {
       return invalidCleanupResult({
         status: "blocked",
-        reason: noEligible.reason,
+        reason: "God-review cleanup is blocked until the hidden review is terminal.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        preservedPaths: [session.reportPath],
+        cleanupEligible: false,
+        reviewTerminal: false,
+        godFixTerminal: session.cleanup.godFixTerminal
+      });
+    }
+    let godFixTerminal = session.cleanup.godFixTerminal;
+    let warnings = [];
+    if (!godFixTerminal && args.noEligibleFindingsTerminal === true) {
+      const noEligible = await noEligibleHiddenFixTerminal({
+        projectRoot,
+        cleanupArgs: args,
+        session,
+        report
+      });
+      if (!noEligible.terminal) {
+        return invalidCleanupResult({
+          status: "blocked",
+          reason: noEligible.reason,
+          runId: session.runId,
+          sessionPath: session.sessionPath,
+          humanStatePath: session.humanStatePath,
+          reportPath: session.reportPath,
+          preservedPaths: [session.reportPath],
+          cleanupEligible: false,
+          reviewTerminal: true,
+          godFixTerminal: false,
+          warnings: noEligible.warnings
+        });
+      }
+      godFixTerminal = true;
+      warnings = noEligible.warnings;
+    }
+    if (!godFixTerminal) {
+      return invalidCleanupResult({
+        status: "blocked",
+        reason: "God-review cleanup is blocked until hidden fix mode reaches a terminal result.",
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        preservedPaths: [session.reportPath],
+        cleanupEligible: false,
+        reviewTerminal: true,
+        godFixTerminal: false
+      });
+    }
+    const terminalCoverage = evaluateTerminalRemediationCoverage(report);
+    if (terminalCoverage.remainingFindingIds.length > 0) {
+      return invalidCleanupResult({
+        status: "blocked",
+        reason: `God-review cleanup is blocked because eligible findings still lack terminal remediation: ${terminalCoverage.remainingFindingIds.join(", ")}.`,
         runId: session.runId,
         sessionPath: session.sessionPath,
         humanStatePath: session.humanStatePath,
@@ -85240,53 +90174,37 @@ async function blueprintGodReviewCleanup(rawArgs) {
         cleanupEligible: false,
         reviewTerminal: true,
         godFixTerminal: false,
-        warnings: noEligible.warnings
+        warnings: [...warnings, ...terminalCoverage.warnings]
       });
     }
-    godFixTerminal = true;
-    warnings = noEligible.warnings;
-  }
-  if (!godFixTerminal) {
-    return invalidCleanupResult({
-      status: "blocked",
-      reason: "God-review cleanup is blocked until hidden fix mode reaches a terminal result.",
+    const sessionAbsolutePath = resolveBlueprintPath(projectRoot, session.sessionPath);
+    const humanStateAbsolutePath = resolveBlueprintPath(projectRoot, session.humanStatePath);
+    const deletedPaths = [];
+    for (const [relativePath, absolutePath] of [
+      [session.sessionPath, sessionAbsolutePath],
+      [session.humanStatePath, humanStateAbsolutePath]
+    ]) {
+      if (await pathExists9(absolutePath)) {
+        await fs15.rm(absolutePath, { force: true });
+        deletedPaths.push(relativePath);
+      }
+    }
+    return {
+      status: "cleaned",
+      activated: true,
+      reason: null,
       runId: session.runId,
       sessionPath: session.sessionPath,
       humanStatePath: session.humanStatePath,
       reportPath: session.reportPath,
+      deletedPaths,
       preservedPaths: [session.reportPath],
-      cleanupEligible: false,
+      cleanupEligible: true,
       reviewTerminal: true,
-      godFixTerminal: false
-    });
-  }
-  const sessionAbsolutePath = resolveBlueprintPath(projectRoot, session.sessionPath);
-  const humanStateAbsolutePath = resolveBlueprintPath(projectRoot, session.humanStatePath);
-  const deletedPaths = [];
-  for (const [relativePath, absolutePath] of [
-    [session.sessionPath, sessionAbsolutePath],
-    [session.humanStatePath, humanStateAbsolutePath]
-  ]) {
-    if (await pathExists8(absolutePath)) {
-      await fs13.rm(absolutePath, { force: true });
-      deletedPaths.push(relativePath);
-    }
-  }
-  return {
-    status: "cleaned",
-    activated: true,
-    reason: null,
-    runId: session.runId,
-    sessionPath: session.sessionPath,
-    humanStatePath: session.humanStatePath,
-    reportPath: session.reportPath,
-    deletedPaths,
-    preservedPaths: [session.reportPath],
-    cleanupEligible: true,
-    reviewTerminal: true,
-    godFixTerminal: true,
-    warnings
-  };
+      godFixTerminal: true,
+      warnings
+    };
+  });
 }
 function parseBulletValue(lines, label) {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -85434,7 +90352,7 @@ init_impact();
 
 // src/mcp/tools/lightweight.ts
 init_v4();
-import { promises as fs14 } from "node:fs";
+import { promises as fs16 } from "node:fs";
 
 // src/mcp/lightweight-classifier.ts
 var VAGUE_TASK_PATTERNS = [
@@ -85750,22 +90668,52 @@ function toClassifierFlags(flags = []) {
   };
 }
 function projectHealthStatus(status) {
-  if (status.status === "uninitialized") {
-    return "uninitialized";
+  if (status.status !== "initialized") {
+    return status.status;
   }
-  if (status.status === "partial") {
-    return "partial";
-  }
-  if (!status.initialized) {
+  if (status.health.missingArtifacts.length > 0 || routesToCommand(status.nextAction, "/blu-health")) {
     return "unhealthy";
   }
-  const blockingWarnings = status.health.warnings.filter(
-    (warning) => !/validated and ready for reuse|ready for reuse/i.test(warning)
-  );
-  return status.health.missingArtifacts.length === 0 && blockingWarnings.length === 0 ? "healthy" : "unhealthy";
+  return "healthy";
+}
+function routesToCommand(nextAction, command) {
+  return nextAction?.includes(command) ?? false;
+}
+function hasImplementedRoute(implementedRoutes, command) {
+  return implementedRoutes.includes(command);
 }
 function routeAction(route) {
   return route === "fast" || route === "quick" ? `/blu-${route}` : `/blu-${route}`;
+}
+function routeGateIfImplemented(implementedRoutes, command) {
+  if (!hasImplementedRoute(implementedRoutes, command)) {
+    return hasImplementedRoute(implementedRoutes, "/blu-progress") ? "route-progress" : "route-health";
+  }
+  if (command === "/blu-map-codebase") {
+    return "route-map-codebase";
+  }
+  if (command === "/blu-new-project") {
+    return "route-new-project";
+  }
+  return "route-health";
+}
+function deriveHealthGate(args) {
+  if (!args.status.initialized && routesToCommand(args.status.nextAction, "/blu-map-codebase")) {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-map-codebase");
+  }
+  if (args.health === "partial" || args.health === "unhealthy") {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-health");
+  }
+  if (args.health === "mapping-incomplete") {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-map-codebase");
+  }
+  if (args.health === "mapped-only") {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-new-project");
+  }
+  if (args.health === "uninitialized" && (args.mode === "quick" || args.classification.route !== "fast")) {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-new-project");
+  }
+  return "pass";
 }
 function deriveGatedClassification(args) {
   if (args.healthGate === "route-health") {
@@ -85784,6 +90732,22 @@ function deriveGatedClassification(args) {
       ]
     };
   }
+  if (args.healthGate === "route-map-codebase") {
+    return {
+      ...args.classification,
+      route: "map-codebase",
+      confidence: "high",
+      allowedWrites: [],
+      requiredGates: [
+        .../* @__PURE__ */ new Set([...args.classification.requiredGates, "project-mapping"])
+      ],
+      validationBudget: "route",
+      reasons: [
+        "Blueprint codebase mapping is incomplete; route to map-codebase before Blueprint persistence.",
+        ...args.classification.reasons
+      ]
+    };
+  }
   if (args.healthGate === "route-new-project") {
     return {
       ...args.classification,
@@ -85795,7 +90759,23 @@ function deriveGatedClassification(args) {
       ],
       validationBudget: "route",
       reasons: [
-        "Blueprint is uninitialized; route to new-project before Blueprint persistence.",
+        "Blueprint project bootstrap is incomplete; route to new-project before Blueprint persistence.",
+        ...args.classification.reasons
+      ]
+    };
+  }
+  if (args.healthGate === "route-progress") {
+    return {
+      ...args.classification,
+      route: "progress",
+      confidence: "high",
+      allowedWrites: [],
+      requiredGates: [
+        .../* @__PURE__ */ new Set([...args.classification.requiredGates, "implemented-route"])
+      ],
+      validationBudget: "route",
+      reasons: [
+        "The specific project-status route is unavailable; route to progress for implemented next-step guidance.",
         ...args.classification.reasons
       ]
     };
@@ -85824,6 +90804,12 @@ function deriveNextSafeAction(args) {
   if (args.healthGate === "route-new-project") {
     return "/blu-new-project";
   }
+  if (args.healthGate === "route-map-codebase") {
+    return "/blu-map-codebase";
+  }
+  if (args.healthGate === "route-progress") {
+    return "/blu-progress";
+  }
   if (args.classification.route === "clarify") {
     return `/blu-${args.mode}`;
   }
@@ -85847,7 +90833,7 @@ async function quickRunReportStatus(projectRoot) {
   const reportPath = buildBlueprintReportPath("quick-run-latest");
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   try {
-    const stats = await fs14.stat(absolutePath);
+    const stats = await fs16.stat(absolutePath);
     return {
       name: "quick-run-latest",
       exists: true,
@@ -85872,15 +90858,21 @@ async function blueprintLightweightPreflight(args) {
   });
   const status = await blueprintProjectStatus({ cwd: projectRoot });
   const health = projectHealthStatus(status);
-  const healthGate = health === "partial" || health === "unhealthy" ? "route-health" : health === "uninitialized" && (args.mode === "quick" || baseClassification.route !== "fast") ? "route-new-project" : "pass";
+  const catalog = await blueprintCommandCatalog();
+  const implementedRoutes = Object.values(catalog.commands).filter((entry) => entry.implemented).map((entry) => entry.command).sort();
+  const healthGate = deriveHealthGate({
+    mode: args.mode,
+    classification: baseClassification,
+    health,
+    status,
+    implementedRoutes
+  });
   const classification = deriveGatedClassification({
     mode: args.mode,
     classification: baseClassification,
     healthGate,
     health
   });
-  const catalog = await blueprintCommandCatalog();
-  const implementedRoutes = Object.values(catalog.commands).filter((entry) => entry.implemented).map((entry) => entry.command).sort();
   const warnings = [...status.health.warnings];
   let effectiveConfig;
   if (args.mode === "quick") {
@@ -85963,6 +90955,7 @@ var TOOL_DEFINITIONS = [
   ...reviewToolDefinitions,
   ...godReviewToolDefinitions,
   ...artifactToolDefinitions,
+  ...cleanupToolDefinitions,
   ...impactToolDefinitions,
   ...updateToolDefinitions,
   ...workspaceToolDefinitions
@@ -86007,8 +91000,8 @@ var blueprintToolNames = TOOL_DEFINITIONS.map(
 
 // src/mcp/write-failure-log.ts
 init_artifacts();
-import { promises as fs15 } from "node:fs";
-import path17 from "node:path";
+import { promises as fs17 } from "node:fs";
+import path21 from "node:path";
 var BLUEPRINT_DIR2 = ".blueprint";
 var MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
 var LOG_SCHEMA_VERSION = 1;
@@ -86088,9 +91081,9 @@ function toLoggedError(error2) {
 async function appendFailureEntry(cwd, entry) {
   try {
     const projectRoot = await ensureRepoRoot(cwd);
-    const absoluteLogPath = path17.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
-    await fs15.mkdir(path17.dirname(absoluteLogPath), { recursive: true });
-    await fs15.appendFile(
+    const absoluteLogPath = path21.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+    await fs17.mkdir(path21.dirname(absoluteLogPath), { recursive: true });
+    await fs17.appendFile(
       absoluteLogPath,
       `${JSON.stringify({
         ...entry,
@@ -86141,6 +91134,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_roadmap_promote_backlog",
   "blueprint_phase_artifact_scaffold",
   "blueprint_phase_artifact_write",
+  "blueprint_phase_ui_skip_write",
   "blueprint_phase_plan_write",
   "blueprint_phase_summary_write",
   "blueprint_phase_validation_write",
@@ -86153,6 +91147,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_codebase_artifact_write",
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
+  "blueprint_cleanup_archive",
   "blueprint_review_record",
   "blueprint_god_review_start",
   "blueprint_god_review_append",
@@ -86172,6 +91167,10 @@ var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
   "not_found",
   "blocked",
   "rejected",
+  "stale",
+  "refused",
+  "partial",
+  "failed",
   "error"
 ]);
 function isMutationTool(toolName) {
@@ -86180,6 +91179,18 @@ function isMutationTool(toolName) {
 function shouldLogMutationFailure(toolName, result) {
   if (!isMutationTool(toolName)) {
     return false;
+  }
+  if (toolName === "blueprint_patch_reapply" && getBoolean(result, "preview") === true) {
+    return false;
+  }
+  if (toolName === "blueprint_update_plan" && getString(result, "persistenceStatus") === "not_saved") {
+    return true;
+  }
+  if (toolName === "blueprint_cleanup_archive" && getString(result, "mode") === "commit" && getString(result, "reportPath") && getBoolean(result, "reportWritten") === false) {
+    return true;
+  }
+  if (toolName === "blueprint_patch_reapply" && ((getArrayCount(result, "conflicts") ?? 0) > 0 || (getArrayCount(result, "skippedPatches") ?? 0) > 0)) {
+    return true;
   }
   const status = getString(result, "status");
   if (status && MUTATION_FAILURE_STATUSES.has(status)) {
@@ -86288,6 +91299,7 @@ var SUMMARY_COUNT_KEYS = [
 ];
 var DIAGNOSTIC_SUMMARY_LIMIT = 3;
 var MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1500;
+var NON_SUCCESS_SUMMARY_STATUSES = new Set(MUTATION_FAILURE_STATUSES);
 function findSummaryPath(result) {
   for (const key of SUMMARY_PATH_KEYS) {
     const value = getString(result, key);
@@ -86422,9 +91434,153 @@ function buildCountSummary(result) {
   }
   return fragments;
 }
-function buildMutationFlags(result) {
+function buildUpdatePlanNotSavedCountSummary(result) {
+  const fragments = [];
+  for (const [key, label] of [
+    ["steps", "steps"],
+    ["notes", "notes"],
+    ["warnings", "warnings"]
+  ]) {
+    const count = getArrayCount(result, key);
+    if (count && count > 0) {
+      fragments.push(`${count} ${label}`);
+    }
+  }
+  return fragments;
+}
+function formatPositiveCount(result, key, label) {
+  const count = getArrayCount(result, key);
+  return count && count > 0 ? `${count} ${label}` : null;
+}
+function buildPatchReapplySummary(result) {
+  const status = getString(result, "status");
+  const preview = getBoolean(result, "preview") === true;
+  const conflictCount = getArrayCount(result, "conflicts") ?? 0;
+  const skippedCount = getArrayCount(result, "skippedPatches") ?? 0;
+  const rollback = asRecord2(result.rollback);
+  const rollbackAttempted = rollback ? getBoolean(rollback, "attempted") === true : false;
+  const rollbackSucceeded = rollback ? getBoolean(rollback, "succeeded") === true : false;
+  const details = [
+    status ? `status: ${status}` : null,
+    formatPositiveCount(result, "appliedPatches", "applied patches"),
+    formatPositiveCount(result, "skippedPatches", "skipped patches"),
+    rollbackAttempted ? `rollback ${rollbackSucceeded ? "succeeded" : "incomplete"}` : null,
+    formatPositiveCount(result, "conflicts", "conflicts")
+  ].filter((detail) => detail !== null);
+  const suffix = details.length > 0 ? ` (${details.join(", ")})` : "";
+  if (status === "partial") {
+    return `Patch replay failed after partially mutating the working tree${suffix}.`;
+  }
+  if (status === "failed" && rollbackAttempted && rollbackSucceeded) {
+    return `Patch replay failed after mutation and rolled back affected files${suffix}.`;
+  }
+  if (conflictCount > 0 || skippedCount > 0 || status === "blocked" || status === "failed") {
+    return preview ? `Patch replay preview did not apply recorded patches${suffix}.` : `Did not reapply recorded patches${suffix}.`;
+  }
+  if (preview || status === "preview") {
+    return `Previewed recorded patches${suffix}.`;
+  }
+  if (status === "skipped") {
+    return `Skipped patch reapply${suffix}.`;
+  }
+  return `Reapplied recorded patches${suffix}.`;
+}
+function buildCleanupReportNotWrittenSummary(result) {
+  const status = getString(result, "status");
+  const reportPath = getString(result, "reportPath");
+  const reason = getString(result, "reason");
+  const details = [
+    status ? `status: ${status}` : null,
+    formatPositiveCount(result, "archivedPhaseDirs", "archived phase directories"),
+    formatPositiveCount(result, "failedPhaseDirs", "failed phase directories"),
+    formatPositiveCount(result, "skippedPhaseDirs", "skipped phase directories"),
+    formatPositiveCount(result, "keptPhaseDirs", "kept phase directories"),
+    formatPositiveCount(result, "issues", "issues")
+  ].filter((detail) => detail !== null);
+  const location = reportPath ? ` at \`${reportPath}\`` : "";
+  const detailSuffix = details.length > 0 ? ` (${details.join(", ")})` : "";
+  const reasonSuffix = reason ? ` Reason: ${cleanSentenceFragment(reason)}.` : "";
+  return `Cleanup archive report was not written${location}${detailSuffix}.${reasonSuffix}`;
+}
+function getNonSuccessSummaryVerb(status, preferredVerb) {
+  if (status === "invalid" && preferredVerb) {
+    return preferredVerb;
+  }
+  switch (status) {
+    case "invalid":
+      return "Invalid";
+    case "project_missing":
+      return "Project missing";
+    case "not_found":
+      return "Not found";
+    case "blocked":
+      return "Blocked";
+    case "refused":
+      return "Refused";
+    case "rejected":
+      return "Rejected";
+    case "failed":
+    case "error":
+      return "Failed";
+    case "partial":
+      return "Partially completed";
+    case "stale":
+    default:
+      return "Did not complete";
+  }
+}
+function buildNonSuccessStatusSummary(toolName, subject, status, result, preferredVerb) {
+  const reason = getString(result, "reason");
+  const waitingState = getString(result, "waitingState");
+  const path22 = findSummaryPath(result);
+  const content = getString(result, "content");
+  const mutationFlags = buildMutationFlags(toolName, result);
+  const countSummary = buildCountSummary(result);
+  const details = [];
+  if (path22) {
+    details.push(`at \`${path22}\``);
+  }
+  if (content) {
+    details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
+  }
+  if (mutationFlags.length > 0) {
+    details.push(`(${mutationFlags.join(", ")})`);
+  }
+  details.push(`status: ${status}`);
+  if (waitingState) {
+    details.push(`waitingState: ${waitingState}`);
+  }
+  if (reason) {
+    details.push(`reason: ${cleanSentenceFragment(reason)}`);
+  }
+  if (countSummary.length > 0) {
+    details.push(`(${countSummary.join(", ")})`);
+  }
+  const detailSuffix = details.length > 0 ? ` ${details.join(" ")}` : "";
+  const diagnosticSuffix = buildDiagnosticSuffix(status, result);
+  return `${getNonSuccessSummaryVerb(status, preferredVerb)} ${subject}${detailSuffix}.${diagnosticSuffix}`;
+}
+function buildStateNoopSummary(toolName, result) {
+  const updated = getBoolean(result, "updated");
+  const synced = getBoolean(result, "synced");
+  const updatedFieldCount = getArrayCount(result, "updatedFields");
+  const syncedFieldCount = getArrayCount(result, "syncedFields");
+  const path22 = findSummaryPath(result);
+  const location = path22 ? ` at \`${path22}\`` : "";
+  if (toolName === "blueprint_state_update" && (updated === false || updatedFieldCount === 0)) {
+    return `No state changes${location}.`;
+  }
+  if (toolName === "blueprint_state_sync" && (synced === false || syncedFieldCount === 0)) {
+    return `State already synchronized${location}.`;
+  }
+  return null;
+}
+function buildMutationFlags(toolName, result) {
   const flags = [];
   for (const key of ["created", "written", "updated", "deleted", "overwritten"]) {
+    if (toolName === "blueprint_state_update" && key === "updated") {
+      continue;
+    }
     if (getBoolean(result, key)) {
       flags.push(key);
     }
@@ -86494,15 +91650,40 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path18 = findSummaryPath(result);
+  const path22 = findSummaryPath(result);
   const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
   const content = getString(result, "content");
   const status = getString(result, "status");
-  const mutationFlags = buildMutationFlags(result);
+  const mutationFlags = buildMutationFlags(toolName, result);
   const countSummary = buildCountSummary(result);
-  const operationVerb = summarizeMutationOutcome(toolName, result) ?? getOperationVerb(toolName);
+  const mutationOutcomeVerb = summarizeMutationOutcome(toolName, result);
+  const operationVerb = mutationOutcomeVerb ?? getOperationVerb(toolName);
+  if (toolName === "blueprint_patch_reapply") {
+    return buildPatchReapplySummary(result);
+  }
+  const stateNoopSummary = buildStateNoopSummary(toolName, result);
+  if (stateNoopSummary !== null) {
+    return stateNoopSummary;
+  }
+  if (toolName === "blueprint_update_plan" && getString(result, "persistenceStatus") === "not_saved") {
+    const savedPaths = asRecord2(result.savedPaths);
+    const intendedPath = getString(result, "intendedPath") ?? (savedPaths ? getString(savedPaths, "metadataPath") : null);
+    const notSavedCountSummary = buildUpdatePlanNotSavedCountSummary(result);
+    const notSavedDetails = [
+      intendedPath ? `intended path \`${intendedPath}\`` : null,
+      notSavedCountSummary.length > 0 ? `(${notSavedCountSummary.join(", ")})` : null
+    ].filter((detail) => detail !== null);
+    const notSavedSuffix = notSavedDetails.length > 0 ? `; ${notSavedDetails.join(" ")}` : "";
+    return `Did not save ${subject}${notSavedSuffix}.`;
+  }
+  if (status && NON_SUCCESS_SUMMARY_STATUSES.has(status)) {
+    return buildNonSuccessStatusSummary(toolName, subject, status, result, mutationOutcomeVerb);
+  }
+  if (toolName === "blueprint_cleanup_archive" && getString(result, "mode") === "commit" && getString(result, "reportPath") && getBoolean(result, "reportWritten") === false) {
+    return buildCleanupReportNotWrittenSummary(result);
+  }
   if (phaseFound === false) {
     return reason ? `Phase lookup failed for ${subject}: ${cleanSentenceFragment(reason)}.` : `Phase lookup failed for ${subject}.`;
   }
@@ -86510,8 +91691,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path18) {
-    details.push(`at \`${path18}\``);
+  if (path22) {
+    details.push(`at \`${path22}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);

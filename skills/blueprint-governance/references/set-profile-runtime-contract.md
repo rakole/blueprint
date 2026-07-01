@@ -26,6 +26,7 @@ Switch the active project-local Blueprint model profile. Valid requested profile
 ## Routing And Completion Criteria
 
 - Confirm the old-to-new profile change.
+- If `updatedKeys` is empty, report the request as an idempotent no-op because the profile was already active.
 - Report `updatedKeys` and `configPath` from `mcp_blueprint_blueprint_config_set_profile`.
 - Explicitly state that saved defaults were not modified.
 

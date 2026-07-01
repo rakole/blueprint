@@ -37,13 +37,15 @@ export type PhaseQualityGateEvaluation = {
     warnings: string[];
     reviewNextSafeAction: string | null;
     reviewDebtKind: "remediation" | "follow-up" | null;
+    securityNextSafeAction: string | null;
+    securityDebtKind: "incomplete" | "blocked" | null;
 };
 export type PhaseQualityGateRoutingArgs = {
     implementedCommandNames: Set<string>;
     phaseNumber: string;
-    evaluation: Pick<PhaseQualityGateEvaluation, "missingGate" | "requiresCodeReview" | "gatesSatisfied" | "hasSecurity" | "reviewNextSafeAction" | "reviewDebtKind"> & Partial<Pick<PhaseQualityGateEvaluation, "requiresQualityGate" | "requiresSecurePhase">>;
+    evaluation: Pick<PhaseQualityGateEvaluation, "missingGate" | "requiresCodeReview" | "gatesSatisfied" | "hasSecurity" | "reviewNextSafeAction" | "reviewDebtKind" | "securityNextSafeAction" | "securityDebtKind"> & Partial<Pick<PhaseQualityGateEvaluation, "requiresQualityGate" | "requiresSecurePhase">>;
 };
 export declare function isReviewableRepoFile(relativePath: string): boolean;
 export declare function evaluatePhaseQualityGates(args: PhaseQualityGateEvaluationArgs): Promise<PhaseQualityGateEvaluation>;
-export declare function formatPhaseQualityGateDebtReason(args: Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "reviewDebtKind"> | Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "requiresQualityGate" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "reviewDebtKind">): string | null;
+export declare function formatPhaseQualityGateDebtReason(args: Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "reviewDebtKind" | "securityDebtKind"> | Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "requiresQualityGate" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "reviewDebtKind" | "securityDebtKind">): string | null;
 export declare function buildPhaseQualityGateNextAction(args: PhaseQualityGateRoutingArgs): string | null;

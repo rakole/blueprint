@@ -48,7 +48,9 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 
 ### Execute
 
-- Call `mcp_blueprint_blueprint_roadmap_add_phase` only after confirmation.
+- Call `mcp_blueprint_blueprint_roadmap_add_phase` only after confirmation,
+  with `confirmed: true` bound to the approved `phase-number-confirmation`
+  receipt.
 - Pass the confirmed description and the confirmed phase number in
   `expectedPhaseNumber`.
 - Pass the confirmed durable requirement IDs in `requirementIds`, the confirmed
@@ -135,6 +137,9 @@ Use `expectedPhaseNumber` as the stale-confirmation guard. If
 `blueprint_roadmap_add_phase` rejects because the live next phase no longer
 matches the confirmed number, report `stale-phase-number`, re-read the roadmap,
 show the new computed number, and ask for confirmation again before retrying.
+If it rejects because `confirmed: true` is missing, return to the preview and
+`ask_user` gate before retrying; do not append or repair audit-backed state from
+an unconfirmed receipt.
 Do not silently continue with the new number.
 
 ## No-Subagent Fallback
@@ -199,7 +204,7 @@ confirmation gate, and the parent command must still own all MCP calls.
 - The objective and 2-5 success criteria were confirmed and passed as `goal`
   and `successCriteria`.
 - `mcp_blueprint_blueprint_roadmap_add_phase` succeeded with
-  `expectedPhaseNumber`.
+  `confirmed: true` and `expectedPhaseNumber`.
 - `${phaseDir}/${phasePrefix}-CONTEXT.md` was created or reused through
   `mcp_blueprint_blueprint_artifact_scaffold`.
 - `mcp_blueprint_blueprint_state_update` routed the repo to

@@ -26,9 +26,21 @@ type LightweightPreflightArgs = {
   flags?: string[];
 };
 
+type LightweightPreflightRoute =
+  | ScopeClassification["route"]
+  | "map-codebase"
+  | "progress";
+
+type LightweightPreflightClassification = Omit<ScopeClassification, "route"> & {
+  route: LightweightPreflightRoute;
+};
+
 type LightweightPreflightProjectStatus = {
   initialized: boolean;
-  health: "healthy" | "partial" | "uninitialized" | "unhealthy";
+  health:
+    | "healthy"
+    | "unhealthy"
+    | Exclude<Awaited<ReturnType<typeof blueprintProjectStatus>>["status"], "initialized">;
   currentPhase?: string | null;
   currentMilestone?: string | null;
   nextAction?: string | null;
@@ -46,7 +58,7 @@ type LightweightPreflightEffectiveConfig = {
 
 type LightweightPreflightResult = {
   mode: LightweightMode;
-  classification: ScopeClassification;
+  classification: LightweightPreflightClassification;
   projectStatus: LightweightPreflightProjectStatus;
   effectiveConfig?: LightweightPreflightEffectiveConfig;
   implementedRoutes: string[];
@@ -57,7 +69,12 @@ type LightweightPreflightResult = {
     updatedAt?: string;
   };
   gates: {
-    healthGate: "pass" | "route-health" | "route-new-project";
+    healthGate:
+      | "pass"
+      | "route-health"
+      | "route-new-project"
+      | "route-map-codebase"
+      | "route-progress";
     overwriteGate?: "none" | "requires-confirmation" | "force-bypassed";
     clarityGate: "pass" | "requires-clarification";
   };
@@ -93,31 +110,86 @@ function toClassifierFlags(flags: string[] = []) {
 function projectHealthStatus(
   status: Awaited<ReturnType<typeof blueprintProjectStatus>>,
 ): LightweightPreflightProjectStatus["health"] {
-  if (status.status === "uninitialized") {
-    return "uninitialized";
+  if (status.status !== "initialized") {
+    return status.status;
   }
 
-  if (status.status === "partial") {
-    return "partial";
-  }
-
-  if (!status.initialized) {
+  if (
+    status.health.missingArtifacts.length > 0 ||
+    routesToCommand(status.nextAction, "/blu-health")
+  ) {
     return "unhealthy";
   }
 
-  const blockingWarnings = status.health.warnings.filter(
-    (warning) => !/validated and ready for reuse|ready for reuse/i.test(warning),
-  );
-
-  return status.health.missingArtifacts.length === 0 && blockingWarnings.length === 0
-    ? "healthy"
-    : "unhealthy";
+  return "healthy";
 }
 
-function routeAction(route: ScopeClassification["route"]): string {
+function routesToCommand(nextAction: string | null | undefined, command: string): boolean {
+  return nextAction?.includes(command) ?? false;
+}
+
+function hasImplementedRoute(implementedRoutes: string[], command: string): boolean {
+  return implementedRoutes.includes(command);
+}
+
+function routeAction(route: LightweightPreflightRoute): string {
   return route === "fast" || route === "quick"
     ? `/blu-${route}`
     : `/blu-${route}`;
+}
+
+function routeGateIfImplemented(
+  implementedRoutes: string[],
+  command: "/blu-health" | "/blu-map-codebase" | "/blu-new-project",
+): LightweightPreflightResult["gates"]["healthGate"] {
+  if (!hasImplementedRoute(implementedRoutes, command)) {
+    return hasImplementedRoute(implementedRoutes, "/blu-progress")
+      ? "route-progress"
+      : "route-health";
+  }
+
+  if (command === "/blu-map-codebase") {
+    return "route-map-codebase";
+  }
+
+  if (command === "/blu-new-project") {
+    return "route-new-project";
+  }
+
+  return "route-health";
+}
+
+function deriveHealthGate(args: {
+  mode: LightweightMode;
+  classification: ScopeClassification;
+  health: LightweightPreflightProjectStatus["health"];
+  status: Awaited<ReturnType<typeof blueprintProjectStatus>>;
+  implementedRoutes: string[];
+}): LightweightPreflightResult["gates"]["healthGate"] {
+  if (!args.status.initialized && routesToCommand(args.status.nextAction, "/blu-map-codebase")) {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-map-codebase");
+  }
+
+  if (args.health === "partial" || args.health === "unhealthy") {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-health");
+  }
+
+  if (args.health === "mapping-incomplete") {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-map-codebase");
+  }
+
+  if (args.health === "mapped-only") {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-new-project");
+  }
+
+  if (
+    args.health === "uninitialized" &&
+    (args.mode === "quick" || args.classification.route !== "fast")
+  ) {
+    return routeGateIfImplemented(args.implementedRoutes, "/blu-new-project");
+  }
+
+  return "pass";
 }
 
 function deriveGatedClassification(args: {
@@ -125,7 +197,7 @@ function deriveGatedClassification(args: {
   classification: ScopeClassification;
   healthGate: LightweightPreflightResult["gates"]["healthGate"];
   health: LightweightPreflightProjectStatus["health"];
-}): ScopeClassification {
+}): LightweightPreflightClassification {
   if (args.healthGate === "route-health") {
     return {
       ...args.classification,
@@ -143,6 +215,23 @@ function deriveGatedClassification(args: {
     };
   }
 
+  if (args.healthGate === "route-map-codebase") {
+    return {
+      ...args.classification,
+      route: "map-codebase",
+      confidence: "high",
+      allowedWrites: [],
+      requiredGates: [
+        ...new Set([...args.classification.requiredGates, "project-mapping"]),
+      ],
+      validationBudget: "route",
+      reasons: [
+        "Blueprint codebase mapping is incomplete; route to map-codebase before Blueprint persistence.",
+        ...args.classification.reasons,
+      ],
+    };
+  }
+
   if (args.healthGate === "route-new-project") {
     return {
       ...args.classification,
@@ -154,7 +243,24 @@ function deriveGatedClassification(args: {
       ],
       validationBudget: "route",
       reasons: [
-        "Blueprint is uninitialized; route to new-project before Blueprint persistence.",
+        "Blueprint project bootstrap is incomplete; route to new-project before Blueprint persistence.",
+        ...args.classification.reasons,
+      ],
+    };
+  }
+
+  if (args.healthGate === "route-progress") {
+    return {
+      ...args.classification,
+      route: "progress",
+      confidence: "high",
+      allowedWrites: [],
+      requiredGates: [
+        ...new Set([...args.classification.requiredGates, "implemented-route"]),
+      ],
+      validationBudget: "route",
+      reasons: [
+        "The specific project-status route is unavailable; route to progress for implemented next-step guidance.",
         ...args.classification.reasons,
       ],
     };
@@ -185,7 +291,7 @@ function deriveGatedClassification(args: {
 
 function deriveNextSafeAction(args: {
   mode: LightweightMode;
-  classification: ScopeClassification;
+  classification: LightweightPreflightClassification;
   healthGate: LightweightPreflightResult["gates"]["healthGate"];
   overwriteGate?: LightweightPreflightResult["gates"]["overwriteGate"];
 }): string {
@@ -195,6 +301,14 @@ function deriveNextSafeAction(args: {
 
   if (args.healthGate === "route-new-project") {
     return "/blu-new-project";
+  }
+
+  if (args.healthGate === "route-map-codebase") {
+    return "/blu-map-codebase";
+  }
+
+  if (args.healthGate === "route-progress") {
+    return "/blu-progress";
   }
 
   if (args.classification.route === "clarify") {
@@ -261,24 +375,24 @@ export async function blueprintLightweightPreflight(
   });
   const status = await blueprintProjectStatus({ cwd: projectRoot });
   const health = projectHealthStatus(status);
-  const healthGate =
-    health === "partial" || health === "unhealthy"
-      ? "route-health"
-      : health === "uninitialized" &&
-          (args.mode === "quick" || baseClassification.route !== "fast")
-        ? "route-new-project"
-        : "pass";
+  const catalog = await blueprintCommandCatalog();
+  const implementedRoutes = Object.values(catalog.commands)
+    .filter((entry) => entry.implemented)
+    .map((entry) => entry.command)
+    .sort();
+  const healthGate = deriveHealthGate({
+    mode: args.mode,
+    classification: baseClassification,
+    health,
+    status,
+    implementedRoutes,
+  });
   const classification = deriveGatedClassification({
     mode: args.mode,
     classification: baseClassification,
     healthGate,
     health,
   });
-  const catalog = await blueprintCommandCatalog();
-  const implementedRoutes = Object.values(catalog.commands)
-    .filter((entry) => entry.implemented)
-    .map((entry) => entry.command)
-    .sort();
   const warnings = [...status.health.warnings];
   let effectiveConfig: LightweightPreflightEffectiveConfig | undefined;
 

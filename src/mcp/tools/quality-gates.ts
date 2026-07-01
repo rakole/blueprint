@@ -4,11 +4,14 @@ import path from "node:path";
 import {
   BLUEPRINT_DIR,
   ensureRepoRoot,
+  extractMarkdownTableRows,
   extractSummaryStatus,
+  readUatArtifactState,
   resolveBlueprintPath,
   resolveRepoRelativePath,
   toRepoRelativePath,
-  validatePlanArtifactContent
+  validatePlanArtifactContent,
+  validateUatArtifactContent
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
 import {
@@ -72,6 +75,8 @@ export type PhaseQualityGateEvaluation = {
   warnings: string[];
   reviewNextSafeAction: string | null;
   reviewDebtKind: "remediation" | "follow-up" | null;
+  securityNextSafeAction: string | null;
+  securityDebtKind: "incomplete" | "blocked" | null;
 };
 
 export type PhaseQualityGateRoutingArgs = {
@@ -85,6 +90,8 @@ export type PhaseQualityGateRoutingArgs = {
     | "hasSecurity"
     | "reviewNextSafeAction"
     | "reviewDebtKind"
+    | "securityNextSafeAction"
+    | "securityDebtKind"
   > &
     Partial<Pick<PhaseQualityGateEvaluation, "requiresQualityGate" | "requiresSecurePhase">>;
 };
@@ -113,6 +120,22 @@ type ReviewFixArtifactRoutingState = {
   usesLatestReviewFixState: boolean;
   usableRoutingAction: boolean;
   leavesRemediationDebt: boolean;
+};
+
+type SecurityArtifactStatus = "COMPLETED" | "PARTIAL" | "BLOCKED" | "INCOMPLETE";
+
+type SecurityArtifactRoutingState = {
+  status: SecurityArtifactStatus | null;
+  completionState: string | null;
+  nextSafeAction: string | null;
+  gateSatisfied: boolean;
+  debtKind: "incomplete" | "blocked" | null;
+};
+
+type SecurityUatRoutingState = {
+  hasCompleteUat: boolean;
+  hasBlockingUat: boolean;
+  blockingNextSafeAction: string | null;
 };
 
 const REVIEWABLE_EXTENSIONS = new Set([
@@ -325,6 +348,22 @@ function findArtifactPath(args: {
     args.artifacts.find((artifact) => artifact.kind === args.kind)?.path ??
     args.artifacts.find((artifact) =>
       artifact.path.endsWith(`/${args.phasePrefix}${args.suffix}`)
+    )?.path ??
+    (args.phaseRoot ? `${args.phaseRoot}/${args.phasePrefix}${args.suffix}` : null)
+  );
+}
+
+function findPhaseArtifactPath(args: {
+  artifacts: NormalizedArtifact[];
+  phaseRoot: string | null;
+  phasePrefix: string;
+  suffix: "-VERIFICATION.md" | "-UAT.md";
+}): string | null {
+  return (
+    args.artifacts.find(
+      (artifact) =>
+        artifact.path === `${args.phasePrefix}${args.suffix}` ||
+        artifact.path.endsWith(`/${args.phasePrefix}${args.suffix}`)
     )?.path ??
     (args.phaseRoot ? `${args.phaseRoot}/${args.phasePrefix}${args.suffix}` : null)
   );
@@ -556,11 +595,161 @@ function extractReviewFixNextSafeAction(content: string): string | null {
 function extractReviewFixStatus(content: string): ReviewFixArtifactStatus | null {
   const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
 
-  if (status === "COMPLETED" || status === "PARTIAL" || status === "BLOCKED") {
+  if (
+    status === "COMPLETED" ||
+    status === "PARTIAL" ||
+    status === "BLOCKED"
+  ) {
     return status;
   }
 
   return null;
+}
+
+function extractSecurityStatus(content: string): SecurityArtifactStatus | null {
+  const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
+
+  if (
+    status === "COMPLETED" ||
+    status === "PARTIAL" ||
+    status === "BLOCKED" ||
+    status === "INCOMPLETE"
+  ) {
+    return status;
+  }
+
+  return null;
+}
+
+function extractLabeledLineValue(content: string, label: string): string | null {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(
+    new RegExp(`^\\s*(?:[-*]\\s*)?${escapedLabel}:\\s*(.+?)\\s*$`, "im")
+  );
+
+  return match?.[1]?.trim() ?? null;
+}
+
+function extractAnyLabeledLineValue(content: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const value = extractLabeledLineValue(content, label);
+
+    if (value !== null) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function normalizeSecuritySignal(value: string): string {
+  return value
+    .replace(/`/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
+}
+
+function isClosedSecuritySignal(value: string): boolean {
+  const normalized = normalizeSecuritySignal(value);
+
+  return (
+    normalized.length === 0 ||
+    normalized === "none" ||
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized === "closed" ||
+    normalized === "resolved" ||
+    normalized === "verified" ||
+    normalized === "accepted" ||
+    normalized === "complete" ||
+    normalized === "completed" ||
+    normalized === "pass" ||
+    normalized === "passed"
+  );
+}
+
+function isBlockingSecuritySignal(value: string): boolean {
+  const normalized = normalizeSecuritySignal(value);
+
+  if (isClosedSecuritySignal(normalized)) {
+    return false;
+  }
+
+  return /\b(?:open|still-open|blocked|blocking|pending|fail|failed|failing)\b/i.test(
+    normalized
+  );
+}
+
+function tableHasBlockingSecurityStatus(args: {
+  content: string;
+  heading: string;
+}): boolean {
+  const rows = extractMarkdownTableRows(extractMarkdownSection(args.content, args.heading));
+  const headerRowIndex = rows.findIndex((row) =>
+    row.some((cell) => normalizeSecuritySignal(cell) === "status")
+  );
+
+  if (headerRowIndex === -1) {
+    return false;
+  }
+
+  const headerRow = rows[headerRowIndex] ?? [];
+  const statusColumn = headerRow.findIndex(
+    (cell) => normalizeSecuritySignal(cell) === "status"
+  );
+
+  if (statusColumn === -1) {
+    return false;
+  }
+
+  return rows
+    .slice(headerRowIndex + 1)
+    .some((row) => isBlockingSecuritySignal(row[statusColumn]?.trim() ?? ""));
+}
+
+function hasBlockingSecurityState(content: string, nextSafeAction: string | null): boolean {
+  const pendingOpenThreatStatus = extractAnyLabeledLineValue(content, [
+    "Pending-open-threat status",
+    "Pending open threat status"
+  ]);
+
+  if (
+    pendingOpenThreatStatus !== null &&
+    isBlockingSecuritySignal(pendingOpenThreatStatus)
+  ) {
+    return true;
+  }
+
+  if (
+    nextSafeAction !== null &&
+    /\b(?:blocked|pending-open-threat|still-open)\b/i.test(nextSafeAction)
+  ) {
+    return true;
+  }
+
+  return (
+    tableHasBlockingSecurityStatus({
+      content,
+      heading: "Threat Register"
+    }) ||
+    tableHasBlockingSecurityStatus({
+      content,
+      heading: "Findings"
+    })
+  );
+}
+
+function extractNextSafeActionText(content: string): string | null {
+  const section = extractMarkdownSection(content, "Next Safe Action");
+
+  return (
+    section
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^[-*+]\s+/, "").trim())
+      .find((line) => line.length > 0) ??
+    extractArtifactMarker(content, "Next Safe Action")
+  );
 }
 
 function extractVisibleReviewTargetId(value: string): string | null {
@@ -727,6 +916,59 @@ function isLegalReviewFixNextSafeAction(args: {
   }
 }
 
+function isLegalCompletedSecurityNextSafeAction(args: {
+  nextSafeAction: string | null;
+  phaseNumber: string;
+  hasVerification: boolean;
+  uatRequired: boolean;
+  uatRoutingState: SecurityUatRoutingState;
+}): boolean {
+  if (args.nextSafeAction === `/blu-validate-phase ${args.phaseNumber}`) {
+    return !args.hasVerification;
+  }
+
+  if (args.nextSafeAction === `/blu-verify-work ${args.phaseNumber}`) {
+    return (
+      args.hasVerification &&
+      (args.uatRoutingState.hasBlockingUat ||
+        (args.uatRequired && !args.uatRoutingState.hasCompleteUat))
+    );
+  }
+
+  if (args.nextSafeAction === "/blu-progress") {
+    return (
+      args.hasVerification &&
+      !args.uatRoutingState.hasBlockingUat &&
+      (!args.uatRequired || args.uatRoutingState.hasCompleteUat)
+    );
+  }
+
+  return false;
+}
+
+function isLegalPartialSecurityNextSafeAction(args: {
+  nextSafeAction: string | null;
+  uatRoutingState: SecurityUatRoutingState;
+}): boolean {
+  if (args.uatRoutingState.hasBlockingUat) {
+    return (
+      args.nextSafeAction !== null &&
+      args.uatRoutingState.blockingNextSafeAction !== null &&
+      args.nextSafeAction === args.uatRoutingState.blockingNextSafeAction
+    );
+  }
+
+  return args.nextSafeAction === "/blu-progress";
+}
+
+function normalizeSecurityNextSafeActionText(value: string | null): string | null {
+  return value?.replace(/`/g, "").trim().replace(/\s+/g, " ") ?? null;
+}
+
+function isLegalBlockedSecurityNextSafeAction(nextSafeActionText: string | null): boolean {
+  return normalizeSecurityNextSafeActionText(nextSafeActionText) === "Blocked: pending-open-threat";
+}
+
 function parseReviewFixRoutingState(args: {
   content: string;
   phaseNumber: string;
@@ -773,14 +1015,13 @@ async function reconcileCompletedReviewFixDebt(args: {
 }): Promise<boolean | null> {
   const addressedTargetIds = parseExplicitReviewFixAddressedIds(args.reviewFixContent);
 
-  if (addressedTargetIds.length === 0) {
-    args.warnings.push(
-      `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed; quality-gate routing will keep legacy debt-clearing behavior.`
-    );
-    return null;
-  }
-
   if (args.reviewPath === null) {
+    if (addressedTargetIds.length === 0) {
+      args.warnings.push(
+        `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed, but no source Review artifact is available; quality-gate routing will keep legacy debt-clearing behavior.`
+      );
+    }
+
     return null;
   }
 
@@ -796,17 +1037,38 @@ async function reconcileCompletedReviewFixDebt(args: {
   });
 
   if (reviewContent === null) {
+    if (addressedTargetIds.length === 0) {
+      args.warnings.push(
+        `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed, but the source Review artifact could not be read; quality-gate routing will keep legacy debt-clearing behavior.`
+      );
+    }
+
     return null;
   }
 
   const actionableTargetIds = parseExplicitActionableReviewTargetIds(reviewContent);
 
   if (actionableTargetIds.length === 0) {
+    if (addressedTargetIds.length === 0) {
+      args.warnings.push(
+        `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed, but the source Review artifact has no parseable actionable target ids; quality-gate routing will keep legacy debt-clearing behavior.`
+      );
+    }
+
     return null;
   }
 
+  if (addressedTargetIds.length === 0) {
+    args.warnings.push(
+      `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed while the source Review artifact has ${actionableTargetIds.length} actionable saved review target id(s); quality-gate routing will keep remediation debt open. Missing: ${actionableTargetIds.join(", ")}.`
+    );
+    return false;
+  }
+
   const addressedTargetIdSet = new Set(addressedTargetIds);
-  const missingTargetIds = actionableTargetIds.filter((targetId) => !addressedTargetIdSet.has(targetId));
+  const missingTargetIds = actionableTargetIds.filter(
+    (targetId) => !addressedTargetIdSet.has(targetId)
+  );
 
   if (missingTargetIds.length === 0) {
     return true;
@@ -875,6 +1137,42 @@ function extractCommandName(action: string): string | null {
 
 function isImplementedCommand(commandNames: Set<string>, commandName: string): boolean {
   return commandNames.has(commandName) || commandNames.has(`/blu-${commandName}`);
+}
+
+const NON_REPAIR_ROUTING_COMMANDS = new Set([
+  "progress",
+  "audit-milestone",
+  "complete-milestone",
+  "milestone-summary",
+  "new-milestone",
+  "cleanup",
+  "ship",
+  "pr-branch",
+  "new-workspace",
+  "remove-workspace",
+  "undo",
+  "reapply-patches"
+]);
+
+function implementedRepairNextSafeAction(
+  action: string | null,
+  implementedCommandNames: Set<string>
+): string | null {
+  if (action === null) {
+    return null;
+  }
+
+  const commandName = extractCommandName(action);
+
+  if (
+    commandName === null ||
+    NON_REPAIR_ROUTING_COMMANDS.has(commandName) ||
+    !isImplementedCommand(implementedCommandNames, commandName)
+  ) {
+    return null;
+  }
+
+  return action;
 }
 
 function isStaleSecurePhaseAction(args: {
@@ -984,6 +1282,7 @@ export function isReviewableRepoFile(relativePath: string): boolean {
 async function resolveQualityGateSettings(projectRoot: string): Promise<{
   codeReviewEnabled: boolean;
   securePhaseEnabled: boolean;
+  uatRequired: boolean;
   warnings: string[];
 }> {
   try {
@@ -995,14 +1294,16 @@ async function resolveQualityGateSettings(projectRoot: string): Promise<{
     return {
       codeReviewEnabled: config.config.workflow.code_review,
       securePhaseEnabled: config.config.workflow.secure_phase,
+      uatRequired: config.config.workflow.no_uat !== true,
       warnings: [...config.warnings]
     };
   } catch {
     return {
       codeReviewEnabled: true,
       securePhaseEnabled: false,
+      uatRequired: true,
       warnings: [
-        "Blueprint quality-gate config could not be read; defaulting workflow.code_review to true and workflow.secure_phase to false."
+        "Blueprint quality-gate config could not be read; defaulting workflow.code_review to true, workflow.secure_phase to false, and workflow.no_uat to false."
       ]
     };
   }
@@ -1282,6 +1583,205 @@ async function readUsableReviewFixNextSafeAction(args: {
   return routingState;
 }
 
+async function readSecurityUatRoutingState(args: {
+  projectRoot: string;
+  uatPath: string | null;
+  artifacts: NormalizedArtifact[];
+  summaryPaths: string[];
+  warnings: string[];
+}): Promise<SecurityUatRoutingState> {
+  if (args.uatPath === null) {
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: false,
+      blockingNextSafeAction: null
+    };
+  }
+
+  const uatArtifact =
+    args.artifacts.find((artifact) => artifact.path === args.uatPath) ??
+    ({
+      path: args.uatPath,
+      kind: "other"
+    } satisfies NormalizedArtifact);
+  const content = await readArtifactContent({
+    projectRoot: args.projectRoot,
+    artifact: uatArtifact
+  });
+
+  if (content === null) {
+    args.warnings.push(
+      `${args.uatPath}: could not read saved UAT evidence; completed Security routing will require /blu-verify-work before closeout.`
+    );
+
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: true,
+      blockingNextSafeAction: null
+    };
+  }
+
+  const nextSafeAction = extractReviewFixNextSafeAction(content);
+
+  const validation = validateUatArtifactContent(content, args.summaryPaths, {
+    requireReadyVerificationEvidence: true
+  });
+
+  if (!validation.valid) {
+    args.warnings.push(
+      `${args.uatPath}: saved UAT evidence is invalid; completed Security routing will require /blu-verify-work before closeout.`,
+      ...validation.issues.map((issue) => `${args.uatPath}: ${issue}`),
+      ...validation.warnings.map((warning) => `${args.uatPath}: ${warning}`)
+    );
+
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: true,
+      blockingNextSafeAction: nextSafeAction
+    };
+  }
+
+  const uatState = readUatArtifactState(content);
+
+  return {
+    hasCompleteUat: uatState.complete,
+    hasBlockingUat: !uatState.complete,
+    blockingNextSafeAction: uatState.complete ? null : nextSafeAction
+  };
+}
+
+async function readSecurityRoutingState(args: {
+  projectRoot: string;
+  securityPath: string | null;
+  artifacts: NormalizedArtifact[];
+  phaseNumber: string;
+  hasVerification: boolean;
+  uatPath: string | null;
+  uatRequired: boolean;
+  summaryPaths: string[];
+  warnings: string[];
+}): Promise<SecurityArtifactRoutingState> {
+  if (args.securityPath === null) {
+    return {
+      status: null,
+      completionState: null,
+      nextSafeAction: null,
+      gateSatisfied: false,
+      debtKind: null
+    };
+  }
+
+  const securityArtifact =
+    args.artifacts.find((artifact) => artifact.path === args.securityPath) ??
+    ({
+      path: args.securityPath,
+      kind: "security"
+    } satisfies NormalizedArtifact);
+  const content = await readArtifactContent({
+    projectRoot: args.projectRoot,
+    artifact: securityArtifact
+  });
+
+  if (content === null) {
+    args.warnings.push(
+      `${args.securityPath}: could not read Security artifact; quality-gate routing will keep secure-phase debt open.`
+    );
+
+    return {
+      status: null,
+      completionState: null,
+      nextSafeAction: null,
+      gateSatisfied: false,
+      debtKind: "incomplete"
+    };
+  }
+
+  const status = extractSecurityStatus(content);
+  const completionState =
+    extractArtifactMarker(content, "Completion State")?.toLowerCase() ?? null;
+  const nextSafeAction = extractReviewFixNextSafeAction(content);
+  const nextSafeActionText = extractNextSafeActionText(content);
+  const hasBlockingState = hasBlockingSecurityState(content, nextSafeActionText);
+  const hasCompletedSecurityShape =
+    status === "COMPLETED" && completionState === "complete";
+  const uatRoutingState = await readSecurityUatRoutingState({
+    projectRoot: args.projectRoot,
+    uatPath: args.uatPath,
+    artifacts: args.artifacts,
+    summaryPaths: args.summaryPaths,
+    warnings: args.warnings
+  });
+  const hasLegalCompletedNextSafeAction =
+    isLegalCompletedSecurityNextSafeAction({
+      nextSafeAction,
+      phaseNumber: args.phaseNumber,
+      hasVerification: args.hasVerification,
+      uatRequired: args.uatRequired,
+      uatRoutingState
+    });
+  const hasLegalPartialNextSafeAction =
+    isLegalPartialSecurityNextSafeAction({
+      nextSafeAction,
+      uatRoutingState
+    });
+  const hasLegalBlockedNextSafeAction =
+    isLegalBlockedSecurityNextSafeAction(nextSafeActionText);
+  const hasLegalNextSafeAction =
+    status === "COMPLETED"
+      ? hasCompletedSecurityShape && hasLegalCompletedNextSafeAction
+      : status === "PARTIAL" || status === "INCOMPLETE"
+        ? hasLegalPartialNextSafeAction
+        : status === "BLOCKED"
+          ? hasLegalBlockedNextSafeAction
+          : false;
+
+  if (
+    hasCompletedSecurityShape &&
+    !hasLegalCompletedNextSafeAction
+  ) {
+    args.warnings.push(
+      `${args.securityPath}: completed Security artifact has a missing, illegal, or stale Next Safe Action; quality-gate routing will keep secure-phase debt open.`
+    );
+  }
+
+  if (
+    status !== null &&
+    status !== "COMPLETED" &&
+    !hasLegalNextSafeAction
+  ) {
+    args.warnings.push(
+      `${args.securityPath}: non-complete Security artifact has a missing, illegal, or stale Next Safe Action; quality-gate routing will keep secure-phase debt open.`
+    );
+  }
+
+  const gateSatisfied =
+    hasCompletedSecurityShape &&
+    !hasBlockingState &&
+    hasLegalCompletedNextSafeAction;
+  const routableNextSafeAction =
+    status === "COMPLETED"
+      ? hasLegalCompletedNextSafeAction
+        ? nextSafeAction
+        : null
+      : status === "PARTIAL" || status === "INCOMPLETE"
+        ? hasLegalPartialNextSafeAction
+          ? nextSafeAction
+          : null
+        : null;
+
+  return {
+    status,
+    completionState,
+    nextSafeAction: routableNextSafeAction,
+    gateSatisfied,
+    debtKind: gateSatisfied
+      ? null
+      : hasBlockingState || status === "BLOCKED"
+        ? "blocked"
+        : "incomplete"
+  };
+}
+
 export async function evaluatePhaseQualityGates(
   args: PhaseQualityGateEvaluationArgs
 ): Promise<PhaseQualityGateEvaluation> {
@@ -1318,15 +1818,39 @@ export async function evaluatePhaseQualityGates(
     suffix: "-SECURITY.md",
     kind: "security"
   });
-  const [reviewExists, reviewFixExists, securityExists, qualityGateSettings] = await Promise.all([
+  const verificationPath = findPhaseArtifactPath({
+    artifacts,
+    phaseRoot,
+    phasePrefix,
+    suffix: "-VERIFICATION.md"
+  });
+  const uatPath = findPhaseArtifactPath({
+    artifacts,
+    phaseRoot,
+    phasePrefix,
+    suffix: "-UAT.md"
+  });
+  const [
+    reviewExists,
+    reviewFixExists,
+    securityExists,
+    verificationExists,
+    uatExists,
+    qualityGateSettings
+  ] = await Promise.all([
     artifactExists(projectRoot, reviewPath),
     artifactExists(projectRoot, reviewFixPath),
     artifactExists(projectRoot, securityPath),
+    artifactExists(projectRoot, verificationPath),
+    artifactExists(projectRoot, uatPath),
     resolveQualityGateSettings(projectRoot)
   ]);
   const hasReview = reviewExists || artifactDeclared(artifacts, reviewPath);
   const hasReviewFix = reviewFixExists || artifactDeclared(artifacts, reviewFixPath);
   const hasSecurity = securityExists || artifactDeclared(artifacts, securityPath);
+  const hasVerification =
+    verificationExists || artifactDeclared(artifacts, verificationPath);
+  const hasUat = uatExists || artifactDeclared(artifacts, uatPath);
   warnings.push(...qualityGateSettings.warnings);
 
   const completedSummaries = await collectCompletedSummaries({
@@ -1364,6 +1888,25 @@ export async function evaluatePhaseQualityGates(
       : requiresSecurePhase && hasReview && !hasSecurity
         ? "security"
         : null;
+  const securityRoutingState = hasSecurity
+    ? await readSecurityRoutingState({
+        projectRoot,
+        securityPath,
+        artifacts,
+        phaseNumber,
+        hasVerification,
+        uatPath: hasUat ? uatPath : null,
+        uatRequired: qualityGateSettings.uatRequired,
+        summaryPaths: completedSummaries.summaries.map((summary) => summary.path),
+        warnings
+      })
+    : {
+        status: null,
+        completionState: null,
+        nextSafeAction: null,
+        gateSatisfied: false,
+        debtKind: null
+      };
   const reviewFixRoutingState = hasReviewFix
     ? await readUsableReviewFixNextSafeAction({
         projectRoot,
@@ -1412,6 +1955,13 @@ export async function evaluatePhaseQualityGates(
     missingGate,
     requiresSecurePhase
   });
+  const securityDebtKind =
+    requiresSecurePhase &&
+    hasReview &&
+    hasSecurity &&
+    !securityRoutingState.gateSatisfied
+      ? securityRoutingState.debtKind ?? "incomplete"
+      : null;
 
   return {
     reviewPath: hasReview ? reviewPath : null,
@@ -1424,11 +1974,15 @@ export async function evaluatePhaseQualityGates(
     requiresCodeReview,
     requiresSecurePhase,
     requiresQualityGate,
-    gatesSatisfied: missingGate === null && reviewDebtKind === null,
+    gatesSatisfied:
+      missingGate === null && reviewDebtKind === null && securityDebtKind === null,
     missingGate,
     warnings,
     reviewNextSafeAction,
-    reviewDebtKind
+    reviewDebtKind,
+    securityNextSafeAction:
+      securityDebtKind === null ? null : securityRoutingState.nextSafeAction,
+    securityDebtKind
   };
 }
 
@@ -1441,6 +1995,7 @@ export function formatPhaseQualityGateDebtReason(
         | "reviewableFiles"
         | "reviewNextSafeAction"
         | "reviewDebtKind"
+        | "securityDebtKind"
       >
     | Pick<
         PhaseQualityGateEvaluation,
@@ -1450,6 +2005,7 @@ export function formatPhaseQualityGateDebtReason(
         | "reviewableFiles"
         | "reviewNextSafeAction"
         | "reviewDebtKind"
+        | "securityDebtKind"
       >
 ): string | null {
   const requiresQualityGate =
@@ -1468,6 +2024,14 @@ export function formatPhaseQualityGateDebtReason(
 
   if (args.missingGate === "security") {
     return `SECURITY evidence is missing for ${reviewableFileCount} reviewable file(s).`;
+  }
+
+  if (args.securityDebtKind === "blocked") {
+    return `Saved security evidence still has blocking threat debt for ${reviewableFileCount} reviewable file(s).`;
+  }
+
+  if (args.securityDebtKind === "incomplete") {
+    return `Saved security evidence is not complete for ${reviewableFileCount} reviewable file(s).`;
   }
 
   if (args.reviewDebtKind === "remediation") {
@@ -1504,6 +2068,21 @@ export function buildPhaseQualityGateNextAction(
     isImplementedCommand(args.implementedCommandNames, "secure-phase")
   ) {
     return `Run /blu-secure-phase ${phaseNumber} to satisfy the phase security gate.`;
+  }
+
+  if (requiresSecurePhase && args.evaluation.securityDebtKind !== null) {
+    const securityNextSafeAction = implementedRepairNextSafeAction(
+      args.evaluation.securityNextSafeAction,
+      args.implementedCommandNames
+    );
+
+    if (securityNextSafeAction !== null) {
+      return `Run ${securityNextSafeAction}.`;
+    }
+
+    if (isImplementedCommand(args.implementedCommandNames, "secure-phase")) {
+      return `Run /blu-secure-phase ${phaseNumber} to complete the phase security gate.`;
+    }
   }
 
   const reviewNextSafeAction = args.evaluation.reviewNextSafeAction;

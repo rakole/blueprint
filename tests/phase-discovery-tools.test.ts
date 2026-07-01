@@ -722,6 +722,69 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
   assert.match(context.warnings.join("\n"), /Mapped codebase summaries are available/i);
 });
 
+test("phase lifecycle gates ignore nested archive context research and UI spec lookalikes", async (t) => {
+  const repoPath = await createPhaseRepo();
+  const archiveDir = path.join(repoPath, ".blueprint/phases/03-phase-discovery/archive");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(archiveDir, { recursive: true });
+  await writeFile(
+    path.join(archiveDir, "03-CONTEXT.md"),
+    neutralContextContentWithoutUiSignals(),
+    "utf8"
+  );
+  await writeFile(
+    path.join(archiveDir, "03-DISCUSSION-LOG.md"),
+    "# Phase 03: Phase Discovery - Discussion Log\n\nArchived discussion notes.\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(archiveDir, "03-RESEARCH.md"),
+    validResearchContent("Archived research should not satisfy the current phase gate."),
+    "utf8"
+  );
+  await writeFile(
+    path.join(archiveDir, "03-UI-SPEC.md"),
+    `# Phase 03: Phase Discovery - UI Spec
+
+## Outcome Mode
+
+- Explicit skip rationale
+
+## Rationale
+
+- Archived UI evidence should not satisfy the current phase gate.
+`,
+    "utf8"
+  );
+
+  const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.ok(
+    context.phase?.artifacts.all.includes(
+      ".blueprint/phases/03-phase-discovery/archive/03-CONTEXT.md"
+    )
+  );
+  assert.equal(context.phase?.artifacts.context, null);
+  assert.equal(context.phase?.artifacts.discussionLog, null);
+  assert.equal(context.phase?.artifacts.research, null);
+  assert.equal(context.phase?.artifacts.uiSpec, null);
+  assert.ok(
+    context.missingArtifacts.includes(".blueprint/phases/03-phase-discovery/03-CONTEXT.md")
+  );
+  assert.equal(status.hasContext, false);
+  assert.equal(status.hasResearch, false);
+  assert.equal(status.hasUiSpec, false);
+  assert.equal(status.planningReadiness.readyForPlanPhase, false);
+  assert.equal(
+    status.planningReadiness.nextSafeAction,
+    "Run /blu-discuss-phase 3 to rebuild the current phase context"
+  );
+});
+
 test("phase context phaseSelection matches phase locate for state-derived selection", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -948,6 +1011,18 @@ test("phase locate resolves integer requests against legacy whole-number decimal
   assert.equal(located.phaseNumber, "1");
   assert.equal(located.phasePrefix, "01");
   assert.equal(located.phaseDir, ".blueprint/phases/01-legacy-bootstrap");
+});
+
+test("phase locate rejects multi-segment phase refs instead of truncating to a supported phase", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    blueprintPhaseLocate({ cwd: repoPath, phase: "3.1.2" }),
+    /one decimal insertion level/i
+  );
 });
 
 test("phase research status reflects context, research, and UI-spec presence", async (t) => {
@@ -1596,6 +1671,46 @@ test("checkpoint writes refuse to overwrite a foreign shared checkpoint", async 
     }),
     /Refusing to overwrite .*belongs to \/blu-discuss-phase, not \/blu-research-phase/i
   );
+});
+
+test("concurrent checkpoint puts serialize owner checks under the repo lock", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const results = await Promise.allSettled([
+    blueprintPhaseCheckpointPut({
+      cwd: repoPath,
+      phase: 3,
+      checkpoint: discussCheckpoint([
+        {
+          areaId: "scope-boundaries",
+          title: "Scope boundaries",
+          state: "questioning"
+        }
+      ])
+    }),
+    blueprintPhaseCheckpointPut({
+      cwd: repoPath,
+      phase: 3,
+      checkpoint: researchCheckpoint()
+    })
+  ]);
+  const fulfilled = results.filter(
+    (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof blueprintPhaseCheckpointPut>>> =>
+      result.status === "fulfilled"
+  );
+  const rejected = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected"
+  );
+  const checkpoint = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 });
+
+  assert.equal(fulfilled.length, 1, JSON.stringify(results, null, 2));
+  assert.equal(rejected.length, 1, JSON.stringify(results, null, 2));
+  assert.match(String(rejected[0]?.reason), /Refusing to overwrite .*belongs to \/blu-/i);
+  assert.equal(checkpoint.found, true);
+  assert.ok(["/blu-discuss-phase", "/blu-research-phase"].includes(checkpoint.ownerCommand ?? ""));
 });
 
 test("checkpoint delete refuses to remove a foreign shared checkpoint when owner or mode is expected", async (t) => {

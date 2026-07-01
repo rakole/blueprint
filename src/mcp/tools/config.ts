@@ -1,3 +1,6 @@
+import os from "node:os";
+import path from "node:path";
+
 import * as z from "zod/v4";
 
 import {
@@ -7,10 +10,19 @@ import {
   readJsonIfPresent,
   resolveBlueprintPath,
   toRepoRelativePath,
+  withBlueprintRepoLock,
   writeJsonFile
 } from "./artifacts.js";
+import {
+  type DirectoryLockRecoveryHooksForTest,
+  type DirectoryLockTiming,
+  withDirectoryLock
+} from "../directory-lock.js";
 import { getBlueprintRuntimeHost } from "../runtime-host.js";
-import { validateFieldNameSegment } from "../../shared/security.js";
+import {
+  ensurePathWithinRootSync,
+  validateFieldNameSegment
+} from "../../shared/security.js";
 
 type ConfigScope = "project" | "defaults" | "effective";
 type ModelProfile = "quality" | "balanced" | "budget" | "inherit";
@@ -117,6 +129,7 @@ type ConfigSetArgs = {
   scope?: Exclude<ConfigScope, "effective">;
   cwd?: string;
   defaultsPath?: string;
+  repairMalformedProjectConfig?: boolean;
   patch?: Record<string, unknown>;
 };
 
@@ -151,7 +164,7 @@ type ConfigSetResult = {
 
 type ConfigSetProfileResult = {
   profile: ModelProfile;
-  updatedKeys: ["model_profile"];
+  updatedKeys: string[];
   configPath: string;
 };
 
@@ -178,6 +191,19 @@ const HOST_DEFAULT_PATCH_REGISTRIES = {
   gemini: "~/.gemini/blueprint/patches",
   tabnine: "~/.tabnine/blueprint/patches"
 } as const;
+const CONFIG_DEFAULTS_LOCK_RETRY_MS = 50;
+const CONFIG_DEFAULTS_LOCK_STALE_MS = 60_000;
+
+type ConfigDefaultsLockTimingForTest = {
+  retryMs?: number;
+  staleMs?: number;
+  heartbeatMs?: number;
+};
+
+type ConfigDefaultsLockCallbackObserverForTest = (
+  event: "enter" | "exit",
+  lockPath: string
+) => Promise<void> | void;
 
 const configGetInputSchema = {
   scope: z.enum(["project", "defaults", "effective"]).optional(),
@@ -189,6 +215,7 @@ const configSetInputSchema = {
   scope: z.enum(["project", "defaults"]).optional(),
   cwd: z.string().optional(),
   defaultsPath: z.string().optional(),
+  repairMalformedProjectConfig: z.boolean().optional(),
   patch: z.record(z.string(), z.unknown()).optional()
 };
 
@@ -196,6 +223,47 @@ const configSetProfileInputSchema = {
   cwd: z.string().optional(),
   defaultsPath: z.string().optional(),
   profile: z.enum(MODEL_PROFILES)
+};
+
+let configDefaultsLockTimingForTest: ConfigDefaultsLockTimingForTest | null = null;
+let configDefaultsLockRecoveryHooksForTest: DirectoryLockRecoveryHooksForTest | null = null;
+let configDefaultsLockCallbackObserverForTest:
+  | ConfigDefaultsLockCallbackObserverForTest
+  | null = null;
+
+export const configToolTestHooks: {
+  setConfigDefaultsLockTimingForTest(timing: ConfigDefaultsLockTimingForTest): () => void;
+  setConfigDefaultsLockRecoveryHooksForTest(
+    hooks: DirectoryLockRecoveryHooksForTest
+  ): () => void;
+  setConfigDefaultsLockCallbackObserverForTest(
+    observer: ConfigDefaultsLockCallbackObserverForTest
+  ): () => void;
+} = {
+  setConfigDefaultsLockTimingForTest(timing) {
+    const previous = configDefaultsLockTimingForTest;
+    configDefaultsLockTimingForTest = { ...timing };
+
+    return () => {
+      configDefaultsLockTimingForTest = previous;
+    };
+  },
+  setConfigDefaultsLockRecoveryHooksForTest(hooks) {
+    const previous = configDefaultsLockRecoveryHooksForTest;
+    configDefaultsLockRecoveryHooksForTest = { ...hooks };
+
+    return () => {
+      configDefaultsLockRecoveryHooksForTest = previous;
+    };
+  },
+  setConfigDefaultsLockCallbackObserverForTest(observer) {
+    const previous = configDefaultsLockCallbackObserverForTest;
+    configDefaultsLockCallbackObserverForTest = observer;
+
+    return () => {
+      configDefaultsLockCallbackObserverForTest = previous;
+    };
+  }
 };
 
 function cloneConfig(config: BlueprintConfig): BlueprintConfig {
@@ -206,8 +274,126 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function expandHomePath(value: string): string {
+  if (value === "~") {
+    return os.homedir();
+  }
+
+  if (value.startsWith("~/") || value.startsWith("~\\")) {
+    return path.join(os.homedir(), value.slice(2));
+  }
+
+  return value;
+}
+
 function getDefaultUserConfigPath(defaultsPath?: string): string {
-  return defaultsPath ?? getBlueprintRuntimeHost().defaultsPath;
+  const runtimeHost = getBlueprintRuntimeHost();
+
+  if (!defaultsPath) {
+    return runtimeHost.defaultsPath;
+  }
+
+  const resolvedGlobalBlueprintDir = path.resolve(runtimeHost.globalBlueprintDir);
+  const resolvedDefaultsPath = path.resolve(expandHomePath(defaultsPath));
+
+  try {
+    ensurePathWithinRootSync(resolvedGlobalBlueprintDir, resolvedDefaultsPath, {
+      label: "defaultsPath"
+    });
+  } catch {
+    throw new Error(
+      `defaultsPath must resolve inside the Blueprint host-global directory ${resolvedGlobalBlueprintDir}.`
+    );
+  }
+
+  return resolvedDefaultsPath;
+}
+
+export function preflightProjectConfigDefaultsPath(defaultsPath?: string): string {
+  return getDefaultUserConfigPath(defaultsPath);
+}
+
+function parsePositiveIntegerEnv(name: string): number | null {
+  const raw = process.env[name];
+
+  if (!raw) {
+    return null;
+  }
+
+  const value = Number.parseInt(raw, 10);
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function configDefaultsLockRetryMs(): number {
+  return (
+    configDefaultsLockTimingForTest?.retryMs ??
+    parsePositiveIntegerEnv("BLUEPRINT_TEST_CONFIG_DEFAULTS_LOCK_RETRY_MS") ??
+    CONFIG_DEFAULTS_LOCK_RETRY_MS
+  );
+}
+
+function configDefaultsLockStaleMs(): number {
+  return (
+    configDefaultsLockTimingForTest?.staleMs ??
+    parsePositiveIntegerEnv("BLUEPRINT_TEST_CONFIG_DEFAULTS_LOCK_STALE_MS") ??
+    CONFIG_DEFAULTS_LOCK_STALE_MS
+  );
+}
+
+function configDefaultsLockHeartbeatMs(): number {
+  return (
+    configDefaultsLockTimingForTest?.heartbeatMs ??
+    Math.max(25, Math.floor(configDefaultsLockStaleMs() / 4))
+  );
+}
+
+function configDefaultsLockTiming(): DirectoryLockTiming {
+  return {
+    retryMs: configDefaultsLockRetryMs(),
+    staleMs: configDefaultsLockStaleMs(),
+    heartbeatMs: configDefaultsLockHeartbeatMs()
+  };
+}
+
+function configDefaultsLockPath(): string {
+  const runtimeHost = getBlueprintRuntimeHost();
+  return path.join(runtimeHost.globalBlueprintDir, "locks", "defaults-config.lock");
+}
+
+async function withConfigDefaultsLock<T>(callback: () => Promise<T>): Promise<T> {
+  const lockPath = configDefaultsLockPath();
+  const lockOptions = {
+    lockPath,
+    timing: configDefaultsLockTiming()
+  };
+  const runObservedCallback = async () => {
+    await configDefaultsLockCallbackObserverForTest?.("enter", lockPath);
+
+    try {
+      return await callback();
+    } finally {
+      await configDefaultsLockCallbackObserverForTest?.("exit", lockPath);
+    }
+  };
+
+  if (configDefaultsLockRecoveryHooksForTest) {
+    return withDirectoryLock(
+      { ...lockOptions, recoveryHooks: configDefaultsLockRecoveryHooksForTest },
+      runObservedCallback
+    );
+  }
+
+  return withDirectoryLock(lockOptions, runObservedCallback);
+}
+
+async function maybeDelayConfigSetBeforeWriteForTest(): Promise<void> {
+  const delayMs = parsePositiveIntegerEnv("BLUEPRINT_TEST_CONFIG_SET_BEFORE_WRITE_DELAY_MS");
+
+  if (!delayMs) {
+    return;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 function getHardCodedConfig(): BlueprintConfig {
@@ -295,12 +481,11 @@ function alignHostSpecificMaintenanceDefaults(
 ): void {
   const runtimeHost = getBlueprintRuntimeHost();
   const activeHostPatchRegistry = runtimeHost.patchRegistryPath;
-  const inactiveHostPatchRegistry =
-    runtimeHost.host === "gemini"
-      ? HOST_DEFAULT_PATCH_REGISTRIES.tabnine
-      : HOST_DEFAULT_PATCH_REGISTRIES.gemini;
+  const hostDefaultPatchRegistries: readonly string[] = Object.values(
+    HOST_DEFAULT_PATCH_REGISTRIES
+  );
 
-  if (config.maintenance.patch_registry === inactiveHostPatchRegistry) {
+  if (hostDefaultPatchRegistries.includes(config.maintenance.patch_registry)) {
     config.maintenance.patch_registry = activeHostPatchRegistry;
     warnings.push(
       `Aligned maintenance.patch_registry to the active ${runtimeHost.host} host default.`
@@ -822,6 +1007,7 @@ async function composeConfig(
   options: {
     sanitizeForProjectSeed?: boolean;
     savedDefaultsPolicy?: SavedDefaultsPolicy;
+    skipProjectConfig?: boolean;
   } = {}
 ): Promise<{
   config: BlueprintConfig;
@@ -831,7 +1017,10 @@ async function composeConfig(
 }> {
   const warnings: string[] = [];
   const defaults = await readDefaultsConfig(defaultsPath, options);
-  const projectConfigRaw = await readProjectConfig(projectRoot);
+  const projectConfigRaw =
+    options.skipProjectConfig === true
+      ? null
+      : await readProjectConfig(projectRoot);
   let projectConfig: BlueprintConfig | null = null;
   let projectConfigLayer: Record<string, unknown> | null = null;
   let projectWarnings: string[] = [];
@@ -973,33 +1162,105 @@ export async function blueprintConfigGet(
 export async function blueprintConfigSet(
   args: ConfigSetArgs = {}
 ): Promise<ConfigSetResult> {
-  const scope = args.scope ?? "project";
+  const scope: Exclude<ConfigScope, "effective"> = args.scope ?? "project";
   const patch = args.patch ?? {};
+  const repairMalformedProjectConfig = args.repairMalformedProjectConfig === true;
 
   if (!isPlainObject(patch)) {
     throw new Error("Config patch must be a JSON object.");
   }
 
+  if (repairMalformedProjectConfig && scope !== "project") {
+    throw new Error("repairMalformedProjectConfig is only supported for project config writes.");
+  }
+
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const projectConfigRaw = scope === "project" ? await readProjectConfig(projectRoot) : null;
-  const baseResult = await blueprintConfigGet({
-    scope: scope === "project" ? "effective" : "defaults",
-    cwd: projectRoot,
-    defaultsPath: args.defaultsPath
-  });
+  const configPath =
+    scope === "project"
+      ? resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH)
+      : getDefaultUserConfigPath(args.defaultsPath);
+
+  if (scope === "project") {
+    return withBlueprintRepoLock(projectRoot, "config-project", () =>
+      blueprintConfigSetLocked({
+        args,
+        scope,
+        patch,
+        repairMalformedProjectConfig,
+        projectRoot,
+        configPath
+      })
+    );
+  }
+
+  return withConfigDefaultsLock(() =>
+    blueprintConfigSetLocked({
+      args,
+      scope,
+      patch,
+      repairMalformedProjectConfig,
+      projectRoot,
+      configPath
+    })
+  );
+}
+
+async function blueprintConfigSetLocked({
+  args,
+  scope,
+  patch,
+  repairMalformedProjectConfig,
+  projectRoot,
+  configPath
+}: {
+  args: ConfigSetArgs;
+  scope: Exclude<ConfigScope, "effective">;
+  patch: Record<string, unknown>;
+  repairMalformedProjectConfig: boolean;
+  projectRoot: string;
+  configPath: string;
+}): Promise<ConfigSetResult> {
+  let malformedProjectConfigWarning: string | null = null;
+  let projectConfigRaw: Record<string, unknown> | null = null;
+
+  if (scope === "project") {
+    try {
+      projectConfigRaw = await readProjectConfig(projectRoot);
+    } catch (error) {
+      if (!repairMalformedProjectConfig) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      malformedProjectConfigWarning =
+        `Malformed ${BLUEPRINT_CONFIG_PATH} was replaced during explicit config repair: ${message}`;
+    }
+  }
+
+  const baseResult =
+    malformedProjectConfigWarning === null
+      ? await blueprintConfigGet({
+          scope: scope === "project" ? "effective" : "defaults",
+          cwd: projectRoot,
+          defaultsPath: args.defaultsPath
+        })
+      : {
+          ...(await composeConfig(projectRoot, args.defaultsPath, {
+            skipProjectConfig: true
+          })),
+          scope: "effective" as const
+        };
   const previousConfig = cloneConfig(baseResult.config);
-  const warnings = [...baseResult.warnings];
+  const warnings = [
+    ...baseResult.warnings,
+    ...(malformedProjectConfigWarning ? [malformedProjectConfigWarning] : [])
+  ];
 
   for (const key of flattenPatchKeys(patch)) {
     if (isReservedKey(scope, key)) {
       throw new Error(`Config key is not allowed in ${scope} scope: ${key}`);
     }
   }
-
-  const configPath =
-    scope === "project"
-      ? resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH)
-      : getDefaultUserConfigPath(args.defaultsPath);
 
   if (scope === "project") {
     const projectLayerTarget = getHardCodedConfig() as unknown as Record<string, unknown>;
@@ -1024,6 +1285,7 @@ export async function blueprintConfigSet(
       projectLayerTarget as unknown as BlueprintConfig,
       appliedPaths
     );
+    await maybeDelayConfigSetBeforeWriteForTest();
     await writeJsonFile(configPath, persistedProjectLayer);
 
     const nextResult = await blueprintConfigGet({
@@ -1055,6 +1317,7 @@ export async function blueprintConfigSet(
     warnings
   );
 
+  await maybeDelayConfigSetBeforeWriteForTest();
   await writeJsonFile(configPath, nextConfig as unknown as Record<string, unknown>);
 
   const changedKeys = collectChangedKeys(
@@ -1102,7 +1365,7 @@ export async function blueprintConfigSetProfile(
 
   return {
     profile: args.profile,
-    updatedKeys: ["model_profile"],
+    updatedKeys: result.updatedKeys,
     configPath: result.configPath
   };
 }
@@ -1112,28 +1375,31 @@ export async function seedProjectConfig(
 ): Promise<SeedProjectConfigResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const savedDefaultsPolicy = args.savedDefaultsPolicy ?? "apply";
-  const composed = await composeConfig(projectRoot, args.defaultsPath, {
-    sanitizeForProjectSeed: true,
-    savedDefaultsPolicy
+
+  return withBlueprintRepoLock(projectRoot, "config-project", async () => {
+    const composed = await composeConfig(projectRoot, args.defaultsPath, {
+      sanitizeForProjectSeed: true,
+      savedDefaultsPolicy
+    });
+    const projectConfigPath = resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH);
+    const relativeConfigPath = toRepoRelativePath(projectRoot, projectConfigPath);
+
+    await writeJsonFile(
+      projectConfigPath,
+      composed.config as unknown as Record<string, unknown>
+    );
+
+    return {
+      config: composed.config,
+      configPath: relativeConfigPath,
+      provenance: {
+        ...composed.provenance,
+        projectPath: relativeConfigPath,
+        projectApplied: true
+      },
+      warnings: composed.warnings
+    };
   });
-  const projectConfigPath = resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH);
-  const relativeConfigPath = toRepoRelativePath(projectRoot, projectConfigPath);
-
-  await writeJsonFile(
-    projectConfigPath,
-    composed.config as unknown as Record<string, unknown>
-  );
-
-  return {
-    config: composed.config,
-    configPath: relativeConfigPath,
-    provenance: {
-      ...composed.provenance,
-      projectPath: relativeConfigPath,
-      projectApplied: true
-    },
-    warnings: composed.warnings
-  };
 }
 
 export const configToolDefinitions = [

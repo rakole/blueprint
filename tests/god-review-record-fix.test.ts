@@ -8,6 +8,7 @@ import {
   blueprintGodReviewLoadFindings,
   blueprintGodReviewRecordFix,
   blueprintGodReviewStart,
+  godReviewPersistenceTestHooks,
   godReviewSessionSchema
 } from "../src/mcp/tools/god-review.js";
 import {
@@ -137,7 +138,9 @@ test("blueprint_god_review_record_fix appends one remediation entry per attempt 
   });
   assert.equal(skipped.status, "recorded");
   assert.equal(skipped.remediationId, "GOD-FIX-002");
+  assert.equal(skipped.terminal, false);
   assert.equal(skipped.cleanupEligible, false);
+  assert.match(skipped.warnings.join("\n"), /GOD-COR-002/);
 
   const report = await readFile(path.join(repoPath, reportPath), "utf8");
   assert.equal((report.match(/^## Remediation Log$/gm) ?? []).length, 1);
@@ -164,8 +167,21 @@ test("blueprint_god_review_record_fix appends one remediation entry per attempt 
   const session = godReviewSessionSchema.parse(
     JSON.parse(await readFile(path.join(repoPath, sessionPath), "utf8"))
   );
-  assert.equal(session.cleanup.godFixTerminal, true);
+  assert.equal(session.cleanup.godFixTerminal, false);
   assert.equal(session.cleanup.eligible, false);
+});
+
+test("blueprint_god_review_record_fix rejects review-mode active command", async () => {
+  const result = await blueprintGodReviewRecordFix({
+    activeCommand: "/blu-code-review",
+    rawInvocation: "/blu-code-review --feels-like-god --run-id god-wrong-mode",
+    findingId: "GOD-COR-001",
+    status: "skipped",
+    selectedBy: "explicit-id"
+  } as never);
+
+  assert.equal(result.status, "invalid");
+  assert.equal(result.activated, false);
 });
 
 test("blueprint_god_review_record_fix represents no-edit statuses without claiming changed files", async () => {
@@ -220,6 +236,54 @@ test("blueprint_god_review_record_fix represents no-edit statuses without claimi
   assert.match(report, /### GOD-FIX-003: GOD-COR-002/);
   assert.doesNotMatch(report, /### GOD-FIX-004/);
   assert.equal((report.match(/- Files Changed: none/g) ?? []).length, 3);
+});
+
+test("blueprint_god_review_record_fix serializes concurrent remediation IDs", async () => {
+  const repoPath = await writeRecordRepo();
+  const { reportPath } = await startRecordReport(repoPath);
+
+  const attempts = await Promise.all([
+    blueprintGodReviewRecordFix({
+      cwd: repoPath,
+      activeCommand: "/blu-code-review-fix",
+      rawInvocation:
+        "/blu-code-review-fix --feels-like-god --run-id god-record --finding GOD-COR-001",
+      runId: "god-record",
+      findingId: "GOD-COR-001",
+      status: "skipped",
+      selectedBy: "explicit-id",
+      verification: "not run",
+      evidence: "Concurrent skip.",
+      followUp: "none"
+    }),
+    blueprintGodReviewRecordFix({
+      cwd: repoPath,
+      activeCommand: "/blu-code-review-fix",
+      rawInvocation:
+        "/blu-code-review-fix --feels-like-god --run-id god-record --finding GOD-COR-002",
+      runId: "god-record",
+      findingId: "GOD-COR-002",
+      status: "deferred",
+      selectedBy: "explicit-id",
+      verification: "not run",
+      evidence: "Concurrent defer.",
+      followUp: "none"
+    })
+  ]);
+
+  assert.deepEqual(
+    attempts.map((attempt) => attempt.status),
+    ["recorded", "recorded"]
+  );
+  assert.deepEqual(
+    attempts.map((attempt) => attempt.remediationId).sort(),
+    ["GOD-FIX-001", "GOD-FIX-002"]
+  );
+
+  const report = await readFile(path.join(repoPath, reportPath), "utf8");
+  assert.equal((report.match(/^### GOD-FIX-\d{3}:/gm) ?? []).length, 2);
+  assert.match(report, /### GOD-FIX-\d{3}: GOD-COR-001/);
+  assert.match(report, /### GOD-FIX-\d{3}: GOD-COR-002/);
 });
 
 test("blueprint_god_review_record_fix blocks stale edit records but allows no-edit stale evidence", async () => {
@@ -306,5 +370,64 @@ test("blueprint_god_review_record_fix keeps remediation inside the durable god-r
   assert.equal(await pathExists(path.join(repoPath, ".blueprint/reports/GOD-REVIEW-FIX.md")), false);
   assert.equal(await pathExists(path.join(repoPath, ".blueprint/reports/god-review-fix.md")), false);
   assert.equal(await pathExists(path.join(repoPath, ".blueprint/STATE.md")), false);
-  assert.match(await readFile(path.join(repoPath, humanStatePath), "utf8"), /Hidden fix terminal: yes/);
+  assert.match(await readFile(path.join(repoPath, humanStatePath), "utf8"), /Hidden fix terminal: no/);
+});
+
+test("blueprint_god_review_record_fix rolls back report and session when human state persistence fails", async (t) => {
+  const repoPath = await writeRecordRepo();
+  const { reportPath, sessionPath, humanStatePath } = await startRecordReport(repoPath);
+  const reportBefore = await readFile(path.join(repoPath, reportPath), "utf8");
+  const sessionBefore = await readFile(path.join(repoPath, sessionPath), "utf8");
+  const humanStateBefore = await readFile(path.join(repoPath, humanStatePath), "utf8");
+  let failHumanState = true;
+  const restoreHook = godReviewPersistenceTestHooks.setBeforeBundleWriteForTest(
+    ({ step }) => {
+      if (failHumanState && step === "human-state") {
+        failHumanState = false;
+        throw new Error("injected human-state persistence failure");
+      }
+    }
+  );
+  t.after(restoreHook);
+
+  await assert.rejects(
+    blueprintGodReviewRecordFix({
+      cwd: repoPath,
+      activeCommand: "/blu-code-review-fix",
+      rawInvocation:
+        "/blu-code-review-fix --feels-like-god --run-id god-record --finding GOD-COR-001",
+      runId: "god-record",
+      findingId: "GOD-COR-001",
+      status: "skipped",
+      selectedBy: "explicit-id",
+      verification: "not run",
+      evidence: "Injected failure before state publish.",
+      followUp: "retry"
+    }),
+    /injected human-state persistence failure/
+  );
+
+  assert.equal(await readFile(path.join(repoPath, reportPath), "utf8"), reportBefore);
+  assert.equal(await readFile(path.join(repoPath, sessionPath), "utf8"), sessionBefore);
+  assert.equal(await readFile(path.join(repoPath, humanStatePath), "utf8"), humanStateBefore);
+
+  const retry = await blueprintGodReviewRecordFix({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review-fix",
+    rawInvocation:
+      "/blu-code-review-fix --feels-like-god --run-id god-record --finding GOD-COR-001",
+    runId: "god-record",
+    findingId: "GOD-COR-001",
+    status: "skipped",
+    selectedBy: "explicit-id",
+    verification: "not run",
+    evidence: "Retry after injected failure.",
+    followUp: "none"
+  });
+
+  assert.equal(retry.status, "recorded");
+  assert.equal(retry.remediationId, "GOD-FIX-001");
+  const report = await readFile(path.join(repoPath, reportPath), "utf8");
+  assert.equal((report.match(/^### GOD-FIX-001:/gm) ?? []).length, 1);
+  assert.equal((report.match(/^### GOD-FIX-002:/gm) ?? []).length, 0);
 });

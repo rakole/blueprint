@@ -5,6 +5,7 @@ import { blueprintConfigGet } from "./config.js";
 import { type NumericInput } from "./phase-numbering.js";
 import { type PhaseCheckpointOwnerCommand, type PhaseCheckpointResumeMode, type PhaseCheckpointWriteRecord } from "./phase-checkpoint-records.js";
 import { type PhaseArtifactKind, type PhaseValidationArtifactKind } from "./phase-locations.js";
+import { type PhaseTopologyFingerprint } from "./phase-topology-lock.js";
 import { type PhaseExecutionTargetConflictSurface } from "./phase-execution-surfaces.js";
 import { type PhaseSummaryStructuredModel } from "./phase-summary-rendering.js";
 import { type PhaseSummaryDiagnosticCounts, type PhaseSummaryModelDiagnostic } from "./phase-summary-diagnostics.js";
@@ -38,6 +39,7 @@ type RoadmapAddPhaseArgs = {
     cwd?: string;
     description: string;
     expectedPhaseNumber?: string;
+    confirmed?: boolean;
     goal?: string;
     requirementIds?: string[];
     successCriteria?: string[];
@@ -47,6 +49,7 @@ type RoadmapInsertPhaseArgs = {
     cwd?: string;
     after: NumericInput;
     description: string;
+    confirmed?: boolean;
     goal?: string;
     requirementIds?: string[];
     successCriteria?: string[];
@@ -54,6 +57,7 @@ type RoadmapInsertPhaseArgs = {
 type RoadmapRemovePhaseArgs = {
     cwd?: string;
     phase: NumericInput;
+    confirmed?: boolean;
     force?: boolean;
 };
 type RoadmapPromoteBacklogArgs = {
@@ -61,7 +65,7 @@ type RoadmapPromoteBacklogArgs = {
     backlogIds?: string[];
     previewOnly?: boolean;
 };
-type PhaseLookupArgs = {
+export type PhaseLookupArgs = {
     cwd?: string;
     phase?: NumericInput;
 };
@@ -1045,6 +1049,16 @@ export declare function buildBlueprintPhaseDirectoryPath(phaseNumber: string | n
 export declare function blueprintPhaseValidationAuthoringContext(args: PhaseValidationAuthoringContextArgs): Promise<PhaseValidationAuthoringContextResult>;
 export declare function blueprintPhaseValidationValidateModel(args: PhaseValidationValidateModelArgs): Promise<PhaseValidationValidateModelResult>;
 export declare function blueprintPhaseValidationRender(args: PhaseValidationRenderArgs): Promise<PhaseValidationRenderResult>;
+export type PhaseTopologySnapshot = {
+    projectRoot: string;
+    phaseNumber: string;
+    phasePrefix: string;
+    phaseName: string;
+    phaseDir: string;
+    artifacts: string[];
+    fingerprint: PhaseTopologyFingerprint;
+};
+export declare function resolvePhaseTopologySnapshot(args: PhaseLookupArgs): Promise<PhaseTopologySnapshot>;
 export declare function blueprintRoadmapRead(args?: RoadmapReadArgs): Promise<RoadmapReadResult>;
 export declare function blueprintRoadmapAddPhase(args: RoadmapAddPhaseArgs): Promise<RoadmapAddPhaseResult>;
 export declare function blueprintRoadmapInsertPhase(args: RoadmapInsertPhaseArgs): Promise<RoadmapInsertPhaseResult>;
@@ -1089,6 +1103,7 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         description: z.ZodString;
         expectedPhaseNumber: z.ZodOptional<z.ZodString>;
+        confirmed: z.ZodOptional<z.ZodBoolean>;
         goal: z.ZodOptional<z.ZodString>;
         requirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
         successCriteria: z.ZodOptional<z.ZodArray<z.ZodString>>;
@@ -1121,6 +1136,7 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         after: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
         description: z.ZodString;
+        confirmed: z.ZodOptional<z.ZodBoolean>;
         goal: z.ZodOptional<z.ZodString>;
         requirementIds: z.ZodArray<z.ZodString>;
         successCriteria: z.ZodOptional<z.ZodArray<z.ZodString>>;
@@ -1132,6 +1148,7 @@ export declare const phaseToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
+        confirmed: z.ZodOptional<z.ZodBoolean>;
         force: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapRemovePhaseResult>;

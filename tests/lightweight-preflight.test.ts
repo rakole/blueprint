@@ -14,6 +14,7 @@ import { constants as fsConstants } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { blueprintCodebaseArtifactWrite } from "../src/mcp/tools/artifacts.js";
 import { blueprintLightweightPreflight } from "../src/mcp/tools/lightweight.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
@@ -60,6 +61,43 @@ async function createRepoFromFixture(fixtureName: string): Promise<string> {
   }
 
   return repoPath;
+}
+
+async function writeMappedCodebaseBundle(repoPath: string): Promise<void> {
+  const authoredBundle: Record<
+    | "codebase.stack"
+    | "codebase.architecture"
+    | "codebase.structure"
+    | "codebase.conventions"
+    | "codebase.testing"
+    | "codebase.integrations"
+    | "codebase.concerns",
+    string
+  > = {
+    "codebase.stack": "# Stack\n\nTypeScript runtime with MCP-facing tooling.\n",
+    "codebase.architecture":
+      "# Architecture\n\nMCP tools and command manifests anchor the runtime layout.\n",
+    "codebase.structure":
+      "# Structure\n\nBlueprint runtime code lives in src/, with tests under tests/.\n",
+    "codebase.conventions":
+      "# Conventions\n\nBlueprint keeps runtime tool names explicit and persistence inside MCP.\n",
+    "codebase.testing":
+      "# Testing\n\nThe repo uses node:test via tsx and fixture-backed integration coverage.\n",
+    "codebase.integrations":
+      "# Integrations\n\nThe runtime integrates through @modelcontextprotocol/sdk and related command surfaces.\n",
+    "codebase.concerns":
+      "# Concerns\n\nPlaceholder codebase docs should not be treated as authoritative mapped context.\n"
+  };
+
+  for (const [artifactId, content] of Object.entries(authoredBundle)) {
+    const result = await blueprintCodebaseArtifactWrite({
+      cwd: repoPath,
+      artifactId: artifactId as keyof typeof authoredBundle,
+      content
+    });
+
+    assert.notEqual(result.status, "invalid", JSON.stringify(result));
+  }
 }
 
 async function snapshotRepoTree(repoPath: string): Promise<string[]> {
@@ -203,6 +241,62 @@ test("partial project routes through health before mutation", async (t) => {
   assert.equal(result.nextSafeAction, "/blu-health");
 });
 
+test("mapping-incomplete preflight routes to map-codebase instead of health", async (t) => {
+  const repoPath = await createGitRepo("blueprint-lightweight-mapping-incomplete-");
+  t.after(async () => rm(path.dirname(repoPath), { recursive: true, force: true }));
+
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "mapping-incomplete-preflight", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "src/index.ts"), "export const value = 1;\n", "utf8");
+  await mkdir(path.join(repoPath, ".blueprint"), { recursive: true });
+
+  const result = await blueprintLightweightPreflight({
+    cwd: repoPath,
+    mode: "quick",
+    taskText: "Add the missing phase report summary"
+  });
+
+  assert.equal(result.projectStatus.initialized, false);
+  assert.equal(result.projectStatus.health, "mapping-incomplete");
+  assert.equal(result.gates.healthGate, "route-map-codebase");
+  assert.equal(result.classification.route, "map-codebase");
+  assert.equal(result.nextSafeAction, "/blu-map-codebase");
+  assert.ok(result.implementedRoutes.includes("/blu-map-codebase"));
+  assert.doesNotMatch(result.nextSafeAction, /\/blu-health/);
+});
+
+test("mapped-only preflight routes to new-project instead of health", async (t) => {
+  const repoPath = await createGitRepo("blueprint-lightweight-mapped-only-");
+  t.after(async () => rm(path.dirname(repoPath), { recursive: true, force: true }));
+
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "mapped-only-preflight", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "src/index.ts"), "export const value = 1;\n", "utf8");
+  await writeMappedCodebaseBundle(repoPath);
+
+  const result = await blueprintLightweightPreflight({
+    cwd: repoPath,
+    mode: "quick",
+    taskText: "Add the initial project plan"
+  });
+
+  assert.equal(result.projectStatus.initialized, false);
+  assert.equal(result.projectStatus.health, "mapped-only");
+  assert.equal(result.gates.healthGate, "route-new-project");
+  assert.equal(result.classification.route, "new-project");
+  assert.equal(result.nextSafeAction, "/blu-new-project");
+  assert.ok(result.implementedRoutes.includes("/blu-new-project"));
+  assert.doesNotMatch(result.nextSafeAction, /\/blu-health/);
+});
+
 test("uninitialized quick routes to new-project", async (t) => {
   const repoPath = await createRepoFromFixture("uninitialized-repo");
   t.after(async () => rm(path.dirname(repoPath), { recursive: true, force: true }));
@@ -236,6 +330,46 @@ test("uninitialized fast allows inline routing with a no-persistence warning", a
   assert.deepEqual(result.classification.allowedWrites, ["repo files"]);
   assert.ok(result.classification.requiredGates.includes("no-blueprint-persistence"));
   assert.match(result.warnings.join("\n"), /must not persist Blueprint state/i);
+});
+
+test("initialized warning-only preflight keeps warnings visible without routing health", async (t) => {
+  const repoPath = await createRepoFromFixture("legacy-config-repo");
+  t.after(async () => rm(path.dirname(repoPath), { recursive: true, force: true }));
+
+  const result = await blueprintLightweightPreflight({
+    cwd: repoPath,
+    mode: "fast",
+    taskText: "Fix typo in README heading"
+  });
+
+  assert.equal(result.projectStatus.initialized, true);
+  assert.equal(result.projectStatus.health, "healthy");
+  assert.equal(result.gates.healthGate, "pass");
+  assert.equal(result.classification.route, "fast");
+  assert.equal(result.nextSafeAction, "/blu-fast");
+  assert.match(result.warnings.join("\n"), /Migrated legacy config key commit_docs/);
+  assert.match(result.warnings.join("\n"), /workflow\.use_workspaces/);
+  assert.match(result.warnings.join("\n"), /no valid execution summaries/);
+});
+
+test("initialized malformed config preflight still routes through health", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  t.after(async () => rm(path.dirname(repoPath), { recursive: true, force: true }));
+
+  await writeFile(path.join(repoPath, ".blueprint/config.json"), "{ invalid json", "utf8");
+
+  const result = await blueprintLightweightPreflight({
+    cwd: repoPath,
+    mode: "fast",
+    taskText: "Fix typo in README heading"
+  });
+
+  assert.equal(result.projectStatus.initialized, true);
+  assert.equal(result.projectStatus.health, "unhealthy");
+  assert.equal(result.gates.healthGate, "route-health");
+  assert.equal(result.classification.route, "health");
+  assert.equal(result.nextSafeAction, "/blu-health");
+  assert.match(result.warnings.join("\n"), /Blueprint config could not be read/);
 });
 
 test("uninitialized fast reroutes non-trivial work directly to new-project", async (t) => {

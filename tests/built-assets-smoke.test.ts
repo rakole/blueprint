@@ -9,6 +9,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 import { blueprintToolNames, blueprintToolRegistry } from "../dist/mcp/server.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 import { withBuiltAssetLock } from "./helpers/built-assets.ts";
 
 const repoRoot = process.cwd();
@@ -140,6 +141,76 @@ async function createWorkspaceFixture(): Promise<string> {
   await mkdir(path.join(repoPath, "src"), { recursive: true });
   await writeFile(path.join(repoPath, "src/existing.ts"), "export const value = 1;\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+
+  return repoPath;
+}
+
+async function createRoadmapConfirmationFixture(): Promise<string> {
+  const repoPath = await createGitRepo("blueprint-built-roadmap-confirmation-");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/01-foundation"), {
+    recursive: true
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases/02-planning"), {
+    recursive: true
+  });
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Built Confirmation Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Keep the foundation traceable. | Pending | Phase 1 coverage. |
+| RQ-02 | Keep planning traceable. | Pending | Phase 2 coverage. |
+| RQ-03 | Add offline mode. | Pending | Reserved for appended phase. |
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Built Confirmation Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 1: Foundation** - Baseline initialization
+- [ ] **Phase 2: Planning** - Prepare the next roadmap slices
+
+## Phase Details
+
+### Phase 1: Foundation
+**Goal**: Baseline initialization.
+**Requirements**: RQ-01
+
+### Phase 2: Planning
+**Goal**: Prepare the next roadmap slices.
+**Requirements**: RQ-02
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 2
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-07-01T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
 
   return repoPath;
 }
@@ -353,5 +424,59 @@ test("built MCP command catalog resolves implemented commands from bundled asset
       assert.ok(entry.manifestPath, `${command} should resolve its command manifest`);
       assert.ok(entry.skillPath, `${command} should resolve its primary skill`);
     }
+  });
+});
+
+test("built roadmap mutation tools expose and enforce confirmation receipts", async (t) => {
+  await withBuiltAssetLock(async () => {
+    const repoPath = await createRoadmapConfirmationFixture();
+    t.after(async () => {
+      await rm(path.dirname(repoPath), { recursive: true, force: true });
+    });
+
+    for (const toolName of [
+      "blueprint_roadmap_add_phase",
+      "blueprint_roadmap_insert_phase",
+      "blueprint_roadmap_remove_phase"
+    ] as const) {
+      const definition = blueprintToolRegistry[toolName];
+
+      assert.ok(definition, `${toolName} should have a built registry entry`);
+      assert.equal(
+        definition.inputSchema.confirmed.safeParse(true).success,
+        true,
+        `${toolName} should expose a built confirmed boolean schema`
+      );
+      assert.equal(
+        definition.inputSchema.confirmed.safeParse("true").success,
+        false,
+        `${toolName} should not coerce confirmation receipts in the built schema`
+      );
+    }
+
+    await assert.rejects(
+      blueprintToolRegistry.blueprint_roadmap_add_phase.handler({
+        cwd: repoPath,
+        description: "Offline Mode",
+        expectedPhaseNumber: "3",
+        goal: "Deliver offline mode with durable roadmap traceability.",
+        requirementIds: ["RQ-03"],
+        successCriteria: [
+          "Offline mode scope is captured in phase context.",
+          "Offline mode planning can cite the roadmap requirement mapping."
+        ]
+      }),
+      /\/blu-add-phase blocked: confirmed: true is required after the phase-number-confirmation/
+    );
+
+    const roadmapAfter = await readFile(
+      path.join(repoPath, ".blueprint/ROADMAP.md"),
+      "utf8"
+    );
+    assert.doesNotMatch(
+      roadmapAfter,
+      /Offline Mode/,
+      "built unconfirmed roadmap append should reject before mutating ROADMAP"
+    );
   });
 });

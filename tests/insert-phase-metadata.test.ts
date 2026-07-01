@@ -82,6 +82,7 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
     "/blu-insert-phase",
     "insert-phase-runtime-contract.md",
     "blueprint_roadmap_insert_phase",
+    "with `confirmed: true` after approved `phase-insert-confirmation`",
     "confirmed durable `requirementIds` declared in `.blueprint/REQUIREMENTS.md`",
     "Reject `none yet`, placeholder text, blank values, or requirement IDs not declared in `.blueprint/REQUIREMENTS.md`",
     "already mapped to another roadmap phase",

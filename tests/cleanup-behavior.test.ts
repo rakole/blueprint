@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   access,
+  cp,
   mkdtemp,
   mkdir,
   readFile,
@@ -10,7 +11,7 @@ import {
   rm,
   writeFile
 } from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -19,9 +20,13 @@ import {
   blueprintArtifactReportWrite,
   blueprintArtifactSummaryDigest
 } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintCleanupArchive,
+  blueprintCleanupArchiveTestHooks
+} from "../src/mcp/tools/cleanup.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import { blueprintRoadmapRead } from "../src/mcp/tools/phase.js";
-import { createGitRepo } from "./helpers/git-fixtures.js";
+import { createGitRepo, runGit } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 
@@ -44,13 +49,19 @@ type CleanupRunOptions = {
 };
 
 type CleanupRunResult = {
-  status: "archived" | "blocked" | "fs_failed";
+  status: "archived" | "blocked" | "partial" | "failed" | "ready" | "invalid" | "project_missing";
   reason: string | null;
   selectedPhaseDirs: string[];
   protectedEntries: ProtectedEntry[];
+  archivedPhaseDirs: string[];
+  failedPhaseDirs: string[];
+  skippedPhaseDirs: string[];
+  keptPhaseDirs: string[];
   archiveDestination: string;
   digestInputs: string[];
   reportPath: string | null;
+  reportWritten: boolean;
+  issues: string[];
   events: string[];
 };
 
@@ -213,6 +224,11 @@ async function createCleanupBehaviorFixture(): Promise<string> {
 `
   );
 
+  await runGit(["config", "user.name", "Blueprint Tests"], repoPath);
+  await runGit(["config", "user.email", "blueprint-tests@example.com"], repoPath);
+  await runGit(["add", "."], repoPath);
+  await runGit(["commit", "-m", "baseline cleanup fixture"], repoPath);
+
   return repoPath;
 }
 
@@ -301,11 +317,11 @@ async function assertCleanupContractInvariants(): Promise<void> {
   );
   assert.match(
     command,
-    /After approval, persist the approved cleanup plan[\s\S]*After confirmation and report persistence, run only the approved filesystem operations\./
+    /Call `mcp_blueprint_blueprint_cleanup_archive` in `mode: "preview"`[\s\S]*call `mcp_blueprint_blueprint_cleanup_archive` in `mode: "commit"`/
   );
   assert.match(
     skill,
-    /Persist the approved cleanup plan through `blueprint_artifact_report_write` with the bare report name `cleanup-latest` before filesystem mutation begins/i
+    /Commit archival only through `blueprint_cleanup_archive` with `mode: "commit"`/i
   );
   assert.match(
     command,
@@ -313,30 +329,16 @@ async function assertCleanupContractInvariants(): Promise<void> {
   );
   assert.match(
     skill,
-    /If replacing `cleanup-latest` needs overwrite approval, keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i
+    /keep `report-overwrite-confirmation` visible until overwrite is explicitly approved/i
   );
   assert.match(
     command,
-    /If filesystem archival partially fails after report persistence, preserve the written cleanup report, keep already archived and failed directories explicit, and surface the partial failure honestly\./
+    /If filesystem archival partially fails, preserve the runtime-written cleanup report when `reportWritten` is true, keep already archived, failed, skipped, and kept directories explicit, and surface the partial failure honestly\./
   );
   assert.match(
     skill,
-    /If filesystem archival partially fails after report persistence, preserve the written cleanup report, keep already archived and failed directories explicit, and surface the partial failure honestly\./
+    /If filesystem archival partially fails, preserve the runtime-written cleanup report when `reportWritten` is true, keep already archived, failed, skipped, and kept directories explicit, and surface the partial failure honestly\./
   );
-}
-
-function assertReportWrittenBeforeFs(events: string[]): void {
-  const reportIndex = events.indexOf("report:write");
-  const firstFsIndex = events.findIndex((entry) => entry.startsWith("fs:"));
-
-  assert.notEqual(reportIndex, -1, `expected report:write event in ${events.join(", ")}`);
-
-  if (firstFsIndex !== -1) {
-    assert.ok(
-      reportIndex < firstFsIndex,
-      `expected report:write before filesystem mutation in ${events.join(", ")}`
-    );
-  }
 }
 
 async function listPhaseArtifactPaths(
@@ -417,172 +419,81 @@ async function runCleanupBehavior(
   const archiveDestination = options.archiveDestination ?? ".blueprint/archive/v1";
   const approveDestination = options.approveDestination ?? true;
   const overwriteReport = options.overwriteReport ?? true;
-  const fsArchiveOperation = options.fsArchiveOperation ?? rename;
   const events: string[] = [];
 
   await assertCleanupContractInvariants();
 
-  events.push("mcp:project-status");
-  const projectStatus = await blueprintProjectStatus({ cwd: options.cwd });
-  events.push("mcp:roadmap-read");
-  const roadmap = await blueprintRoadmapRead({ cwd: options.cwd });
-  events.push("mcp:artifact-list");
-  const artifactList = await blueprintArtifactList({ cwd: options.cwd });
-
-  assert.equal(projectStatus.initialized, true);
-  assert.equal(projectStatus.currentPhase, "5");
-  assert.equal(roadmap.milestone, "v2");
-
-  const currentPhaseNumber = normalizePhaseNumber(projectStatus.currentPhase);
-  const protectedEntryMap = new Map<string, ProtectedEntry>();
-  const selectedPhaseDirs: string[] = [];
-  const selectedEvidencePaths: string[] = [];
-
-  const protectPhase = (phaseDir: string, reason: string): void => {
-    protectedEntryMap.set(phaseDir, { path: phaseDir, reason });
-  };
-
-  const currentPhaseDir =
-    roadmap.phases.find((phase) => phase.phaseNumber === currentPhaseNumber)?.phaseDir ?? null;
-  const activeRoadmapDirs = new Set(
-    roadmap.phases.flatMap((phase) => (phase.phaseDir ? [phase.phaseDir] : []))
-  );
-  const phaseDirs = await listPhaseDirectories(options.cwd);
-
-  for (const phaseDir of phaseDirs) {
-    if (phaseDir === currentPhaseDir) {
-      protectPhase(phaseDir, "current phase");
-      continue;
-    }
-
-    if (activeRoadmapDirs.has(phaseDir)) {
-      protectPhase(phaseDir, "active roadmap");
-      continue;
-    }
-  }
-
-  for (const phaseDir of phaseDirs) {
-    if (protectedEntryMap.has(phaseDir)) {
-      continue;
-    }
-
-    const phaseArtifacts = await listPhaseArtifactPaths(options.cwd, phaseDir);
-    const milestoneEvidence = await completedMilestoneEvidenceForPhase(
-      options.cwd,
-      phaseDir,
-      artifactList.reports,
-      roadmap.milestone
-    );
-
-    if (phaseArtifacts.length === 0 || milestoneEvidence.length === 0) {
-      protectPhase(phaseDir, "missing milestone closeout evidence");
-      continue;
-    }
-
-    selectedPhaseDirs.push(phaseDir);
-    selectedEvidencePaths.push(...phaseArtifacts, ...milestoneEvidence);
-  }
-
-  const protectedEntries = [...protectedEntryMap.values()].sort((left, right) =>
-    left.path.localeCompare(right.path)
-  );
-  const digestArtifactPaths = uniqueSorted([
-    ".blueprint/ROADMAP.md",
-    ".blueprint/STATE.md",
-    ...selectedEvidencePaths,
-    ...(await protectedArtifactPaths(options.cwd, protectedEntries))
-  ]);
-
-  events.push("mcp:artifact-summary-digest");
-  const digest = await blueprintArtifactSummaryDigest({
+  events.push("mcp:cleanup-preview");
+  const preview = await blueprintCleanupArchive({
     cwd: options.cwd,
-    artifactPaths: digestArtifactPaths
+    mode: "preview",
+    archiveDestination,
+    operation: "move"
   });
 
-  const archiveDestinationPath = path.join(options.cwd, archiveDestination);
-  const archiveDestinationExists = await pathExists(archiveDestinationPath);
+  assert.equal(preview.status, "ready");
 
-  if (!archiveDestinationExists && !approveDestination) {
-    return {
-      status: "blocked",
-      reason: "archive-destination-confirmation",
-      selectedPhaseDirs: [...selectedPhaseDirs].sort(),
-      protectedEntries,
-      archiveDestination,
-      digestInputs: digest.inputsUsed,
-      reportPath: null,
-      events
-    };
-  }
-
-  events.push("report:attempt");
-
-  let reportPath: string;
+  const restoreFileSystem = options.fsArchiveOperation
+    ? blueprintCleanupArchiveTestHooks.setFileSystemForTest({
+        mkdir: (targetPath, mkdirOptions) => {
+          events.push(`fs:mkdir:${path.relative(options.cwd, targetPath)}`);
+          return mkdir(targetPath, mkdirOptions);
+        },
+        rename: (sourcePath, destinationPath) => {
+          const sourceRelativePath = path.relative(options.cwd, sourcePath);
+          events.push(`fs:rename:${sourceRelativePath}`);
+          return options.fsArchiveOperation
+            ? options.fsArchiveOperation(sourcePath, destinationPath)
+            : rename(sourcePath, destinationPath);
+        },
+        cp: (sourcePath, destinationPath, cpOptions) => {
+          const sourceRelativePath = path.relative(options.cwd, sourcePath);
+          events.push(`fs:cp:${sourceRelativePath}`);
+          return cp(sourcePath, destinationPath, cpOptions);
+        },
+        rm: (targetPath, rmOptions) => {
+          events.push(`fs:rm:${path.relative(options.cwd, targetPath)}`);
+          return rm(targetPath, rmOptions);
+        }
+      })
+    : null;
 
   try {
-    const reportResult = await blueprintArtifactReportWrite({
+    events.push("mcp:cleanup-commit");
+    const commit = await blueprintCleanupArchive({
       cwd: options.cwd,
-      reportName: "cleanup-latest",
-      content: cleanupReportContent(
-        [...selectedPhaseDirs].sort(),
-        protectedEntries,
-        archiveDestination
-      ),
-      overwrite: overwriteReport
+      mode: "commit",
+      archiveDestination,
+      operation: "move",
+      confirmed: true,
+      approveDestinationCreation: approveDestination,
+      overwriteReport,
+      expectedSelectedPhaseDirs: preview.selectedPhaseDirs,
+      expectedProtectedPhaseDirs: preview.protectedEntries.map((entry) => entry.path)
     });
-    reportPath = reportResult.path;
-    events.push("report:write");
-  } catch (error) {
-    return {
-      status: "blocked",
-      reason: error instanceof Error ? error.message : String(error),
-      selectedPhaseDirs: [...selectedPhaseDirs].sort(),
-      protectedEntries,
-      archiveDestination,
-      digestInputs: digest.inputsUsed,
-      reportPath: null,
-      events
-    };
-  }
-
-  try {
-    if (!archiveDestinationExists) {
-      events.push(`fs:mkdir:${archiveDestination}`);
-      await mkdir(archiveDestinationPath, { recursive: true });
-    }
-
-    for (const phaseDir of [...selectedPhaseDirs].sort()) {
-      const sourcePath = path.join(options.cwd, phaseDir);
-      const destinationPath = path.join(archiveDestinationPath, path.basename(phaseDir));
-      events.push(`fs:rename:${phaseDir}`);
-      await fsArchiveOperation(sourcePath, destinationPath);
-    }
 
     return {
-      status: "archived",
-      reason: null,
-      selectedPhaseDirs: [...selectedPhaseDirs].sort(),
-      protectedEntries,
+      status: commit.status,
+      reason: commit.reason ?? commit.waitingState,
+      selectedPhaseDirs: commit.selectedPhaseDirs,
+      protectedEntries: commit.protectedEntries,
+      archivedPhaseDirs: commit.archivedPhaseDirs,
+      failedPhaseDirs: commit.failedPhaseDirs,
+      skippedPhaseDirs: commit.skippedPhaseDirs,
+      keptPhaseDirs: commit.keptPhaseDirs,
       archiveDestination,
-      digestInputs: digest.inputsUsed,
-      reportPath,
+      digestInputs: commit.digestInputs,
+      reportPath: commit.reportPath,
+      reportWritten: commit.reportWritten,
+      issues: commit.issues,
       events
     };
-  } catch (error) {
-    return {
-      status: "fs_failed",
-      reason: error instanceof Error ? error.message : String(error),
-      selectedPhaseDirs: [...selectedPhaseDirs].sort(),
-      protectedEntries,
-      archiveDestination,
-      digestInputs: digest.inputsUsed,
-      reportPath,
-      events
-    };
+  } finally {
+    restoreFileSystem?.();
   }
 }
 
-test("cleanup archives only evidence-backed historical phases and persists cleanup-latest before mutation", async (t) => {
+test("cleanup archives only evidence-backed historical phases and writes cleanup-latest from actual outcome", async (t) => {
   const repoPath = await createCleanupBehaviorFixture();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -630,6 +541,8 @@ test("cleanup archives only evidence-backed historical phases and persists clean
   );
   assert.match(cleanupReport, /01-prior-milestone-alpha/);
   assert.match(cleanupReport, /02-prior-milestone-beta/);
+  assert.match(cleanupReport, /Status: archived/);
+  assert.doesNotMatch(cleanupReport, /Status: pending|- pending/);
   assert.match(cleanupReport, /03-missing-closeout/);
   assert.match(cleanupReport, /04-active-roadmap/);
   assert.match(cleanupReport, /05-current-maintenance/);
@@ -662,7 +575,6 @@ test("cleanup archives only evidence-backed historical phases and persists clean
     await pathExists(path.join(repoPath, ".blueprint/phases/05-current-maintenance")),
     true
   );
-  assertReportWrittenBeforeFs(result.events);
 });
 
 test("cleanup blocks on existing cleanup-latest without overwrite and preserves the previous report before filesystem mutation", async (t) => {
@@ -724,7 +636,7 @@ test("cleanup blocks before report persistence when the archive destination need
   });
 
   assert.equal(result.status, "blocked");
-  assert.equal(result.reason, "archive-destination-confirmation");
+  assert.match(result.reason ?? "", /archive destination .* does not exist/i);
   assert.equal(
     await pathExists(path.join(repoPath, ".blueprint/reports/cleanup-latest.md")),
     false
@@ -738,8 +650,306 @@ test("cleanup blocks before report persistence when the archive destination need
     await pathExists(path.join(repoPath, ".blueprint/phases/02-prior-milestone-beta")),
     true
   );
-  assert.equal(result.events.includes("report:write"), false);
   assert.equal(result.events.some((entry) => entry.startsWith("fs:")), false);
+});
+
+test("cleanup commit blocks a dirty working tree before report persistence and archive mutation", async (t) => {
+  const repoPath = await createCleanupBehaviorFixture();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const preview = await blueprintCleanupArchive({
+    cwd: repoPath,
+    mode: "preview",
+    archiveDestination: ".blueprint/archive/v1",
+    operation: "move"
+  });
+
+  assert.equal(preview.status, "ready");
+
+  await writeRepoFile(repoPath, "dirty.txt", "uncommitted local work\n");
+
+  const events: string[] = [];
+  const restoreFileSystem = blueprintCleanupArchiveTestHooks.setFileSystemForTest({
+    mkdir: async (targetPath, mkdirOptions) => {
+      events.push(`fs:mkdir:${path.relative(repoPath, targetPath)}`);
+      return mkdir(targetPath, mkdirOptions);
+    },
+    rename: async (sourcePath, destinationPath) => {
+      events.push(`fs:rename:${path.relative(repoPath, sourcePath)}`);
+      return rename(sourcePath, destinationPath);
+    },
+    cp: async (sourcePath, destinationPath, cpOptions) => {
+      events.push(`fs:cp:${path.relative(repoPath, sourcePath)}`);
+      return cp(sourcePath, destinationPath, cpOptions);
+    },
+    rm: async (targetPath, rmOptions) => {
+      events.push(`fs:rm:${path.relative(repoPath, targetPath)}`);
+      return rm(targetPath, rmOptions);
+    }
+  });
+
+  try {
+    const commit = await blueprintCleanupArchive({
+      cwd: repoPath,
+      mode: "commit",
+      archiveDestination: ".blueprint/archive/v1",
+      operation: "move",
+      confirmed: true,
+      approveDestinationCreation: true,
+      overwriteReport: true,
+      expectedSelectedPhaseDirs: preview.selectedPhaseDirs,
+      expectedProtectedPhaseDirs: preview.protectedEntries.map((entry) => entry.path)
+    });
+
+    assert.equal(commit.status, "blocked");
+    assert.equal(commit.waitingState, "dirty-working-tree");
+    assert.match(commit.reason ?? "", /clean working tree/i);
+    assert.match(commit.issues.join("\n"), /dirty\.txt/);
+    assert.equal(commit.reportWritten, false);
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/reports/cleanup-latest.md")),
+      false
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/phases/01-prior-milestone-alpha")),
+      true
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/phases/02-prior-milestone-beta")),
+      true
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-prior-milestone-alpha")),
+      false
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/archive/v1/02-prior-milestone-beta")),
+      false
+    );
+    assert.deepEqual(events, []);
+  } finally {
+    restoreFileSystem();
+  }
+});
+
+test("cleanup commit requires preview expectations before report persistence and archive mutation", async (t) => {
+  const repoPath = await createCleanupBehaviorFixture();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const preview = await blueprintCleanupArchive({
+    cwd: repoPath,
+    mode: "preview",
+    archiveDestination: ".blueprint/archive/v1",
+    operation: "move"
+  });
+
+  assert.equal(preview.status, "ready");
+
+  const events: string[] = [];
+  const restoreFileSystem = blueprintCleanupArchiveTestHooks.setFileSystemForTest({
+    mkdir: async (targetPath, mkdirOptions) => {
+      events.push(`fs:mkdir:${path.relative(repoPath, targetPath)}`);
+      return mkdir(targetPath, mkdirOptions);
+    },
+    rename: async (sourcePath, destinationPath) => {
+      events.push(`fs:rename:${path.relative(repoPath, sourcePath)}`);
+      return rename(sourcePath, destinationPath);
+    },
+    cp: async (sourcePath, destinationPath, cpOptions) => {
+      events.push(`fs:cp:${path.relative(repoPath, sourcePath)}`);
+      return cp(sourcePath, destinationPath, cpOptions);
+    },
+    rm: async (targetPath, rmOptions) => {
+      events.push(`fs:rm:${path.relative(repoPath, targetPath)}`);
+      return rm(targetPath, rmOptions);
+    }
+  });
+
+  try {
+    const commitArgs = {
+      cwd: repoPath,
+      mode: "commit",
+      archiveDestination: ".blueprint/archive/v1",
+      operation: "move",
+      confirmed: true,
+      approveDestinationCreation: true,
+      overwriteReport: true
+    } as const;
+
+    const results = [
+      await blueprintCleanupArchive(commitArgs),
+      await blueprintCleanupArchive({
+        ...commitArgs,
+        expectedSelectedPhaseDirs: preview.selectedPhaseDirs
+      }),
+      await blueprintCleanupArchive({
+        ...commitArgs,
+        expectedProtectedPhaseDirs: preview.protectedEntries.map((entry) => entry.path)
+      })
+    ];
+
+    for (const result of results) {
+      assert.equal(result.status, "blocked");
+      assert.equal(result.waitingState, "stale-cleanup-preview");
+      assert.match(result.reason ?? "", /requires preview expectation/i);
+      assert.equal(result.reportWritten, false);
+    }
+
+    assert.match(results[0]?.reason ?? "", /expectedSelectedPhaseDirs/);
+    assert.match(results[0]?.reason ?? "", /expectedProtectedPhaseDirs/);
+    assert.match(results[1]?.reason ?? "", /expectedProtectedPhaseDirs/);
+    assert.match(results[2]?.reason ?? "", /expectedSelectedPhaseDirs/);
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/reports/cleanup-latest.md")),
+      false
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/phases/01-prior-milestone-alpha")),
+      true
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/phases/02-prior-milestone-beta")),
+      true
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-prior-milestone-alpha")),
+      false
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/archive/v1/02-prior-milestone-beta")),
+      false
+    );
+    assert.deepEqual(events, []);
+  } finally {
+    restoreFileSystem();
+  }
+});
+
+test("cleanup preview ignores stale expectation arrays and does not mutate", async (t) => {
+  const repoPath = await createCleanupBehaviorFixture();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const events: string[] = [];
+  const restoreFileSystem = blueprintCleanupArchiveTestHooks.setFileSystemForTest({
+    mkdir: async (targetPath, mkdirOptions) => {
+      events.push(`fs:mkdir:${path.relative(repoPath, targetPath)}`);
+      return mkdir(targetPath, mkdirOptions);
+    },
+    rename: async (sourcePath, destinationPath) => {
+      events.push(`fs:rename:${path.relative(repoPath, sourcePath)}`);
+      return rename(sourcePath, destinationPath);
+    },
+    cp: async (sourcePath, destinationPath, cpOptions) => {
+      events.push(`fs:cp:${path.relative(repoPath, sourcePath)}`);
+      return cp(sourcePath, destinationPath, cpOptions);
+    },
+    rm: async (targetPath, rmOptions) => {
+      events.push(`fs:rm:${path.relative(repoPath, targetPath)}`);
+      return rm(targetPath, rmOptions);
+    }
+  });
+
+  try {
+    const preview = await blueprintCleanupArchive({
+      cwd: repoPath,
+      mode: "preview",
+      archiveDestination: ".blueprint/archive/v1",
+      operation: "move",
+      expectedSelectedPhaseDirs: [
+        ".blueprint/phases/01-prior-milestone-alpha",
+        ".blueprint/phases/05-current-maintenance"
+      ],
+      expectedProtectedPhaseDirs: [".blueprint/phases/03-missing-closeout"]
+    });
+
+    assert.equal(preview.status, "ready");
+    assert.equal(preview.mode, "preview");
+    assert.equal(preview.waitingState, null);
+    assert.deepEqual(preview.selectedPhaseDirs, [
+      ".blueprint/phases/01-prior-milestone-alpha",
+      ".blueprint/phases/02-prior-milestone-beta"
+    ]);
+    assert.deepEqual(
+      preview.protectedEntries.map((entry) => entry.path),
+      [
+        ".blueprint/phases/03-missing-closeout",
+        ".blueprint/phases/04-active-roadmap",
+        ".blueprint/phases/05-current-maintenance"
+      ]
+    );
+    assert.equal(preview.reportWritten, false);
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/reports/cleanup-latest.md")),
+      false
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/phases/01-prior-milestone-alpha")),
+      true
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/phases/02-prior-milestone-beta")),
+      true
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-prior-milestone-alpha")),
+      false
+    );
+    assert.equal(
+      await pathExists(path.join(repoPath, ".blueprint/archive/v1/02-prior-milestone-beta")),
+      false
+    );
+    assert.deepEqual(events, []);
+  } finally {
+    restoreFileSystem();
+  }
+});
+
+test("cleanup commit rejects stale or overbroad selected scope before filesystem mutation", async (t) => {
+  const repoPath = await createCleanupBehaviorFixture();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const preview = await blueprintCleanupArchive({
+    cwd: repoPath,
+    mode: "preview",
+    archiveDestination: ".blueprint/archive/v1"
+  });
+  const commit = await blueprintCleanupArchive({
+    cwd: repoPath,
+    mode: "commit",
+    archiveDestination: ".blueprint/archive/v1",
+    confirmed: true,
+    approveDestinationCreation: true,
+    overwriteReport: true,
+    expectedSelectedPhaseDirs: [
+      ...preview.selectedPhaseDirs,
+      ".blueprint/phases/05-current-maintenance"
+    ],
+    expectedProtectedPhaseDirs: preview.protectedEntries.map((entry) => entry.path)
+  });
+
+  assert.equal(commit.status, "blocked");
+  assert.equal(commit.waitingState, "stale-cleanup-preview");
+  assert.match(commit.reason ?? "", /Selected phase directories changed since preview/);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/reports/cleanup-latest.md")),
+    false
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/05-current-maintenance")),
+    true
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/05-current-maintenance")),
+    false
+  );
 });
 
 test("cleanup preserves cleanup-latest, keeps archived progress explicit, and leaves the failed candidate plus protected dirs in place when filesystem archival partially fails", async (t) => {
@@ -764,7 +974,7 @@ test("cleanup preserves cleanup-latest, keeps archived progress explicit, and le
   });
   const cleanupReport = await readRepoFile(repoPath, ".blueprint/reports/cleanup-latest.md");
 
-  assert.equal(result.status, "fs_failed");
+  assert.equal(result.status, "partial");
   assert.equal(archiveAttempts, 2);
   assert.match(result.reason ?? "", /simulated archive failure on second candidate/);
   assert.deepEqual(result.selectedPhaseDirs, [
@@ -773,6 +983,11 @@ test("cleanup preserves cleanup-latest, keeps archived progress explicit, and le
   ]);
   assert.match(cleanupReport, /01-prior-milestone-alpha/);
   assert.match(cleanupReport, /02-prior-milestone-beta/);
+  assert.match(cleanupReport, /Status: partial/);
+  assert.match(cleanupReport, /Failed phase directories:[\s\S]*02-prior-milestone-beta: simulated archive failure on second candidate/);
+  assert.match(cleanupReport, /Archived phase directories:[\s\S]*01-prior-milestone-alpha/);
+  assert.match(cleanupReport, /Kept phase directories:[\s\S]*02-prior-milestone-beta/);
+  assert.doesNotMatch(cleanupReport, /Status: pending|- pending/);
   assert.equal(
     await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-prior-milestone-alpha")),
     true
@@ -792,5 +1007,60 @@ test("cleanup preserves cleanup-latest, keeps archived progress explicit, and le
   assert.equal(await pathExists(path.join(repoPath, ".blueprint/phases/03-missing-closeout")), true);
   assert.equal(await pathExists(path.join(repoPath, ".blueprint/phases/04-active-roadmap")), true);
   assert.equal(await pathExists(path.join(repoPath, ".blueprint/phases/05-current-maintenance")), true);
-  assertReportWrittenBeforeFs(result.events);
+});
+
+test("cleanup keeps archive outcome public when cleanup-latest report write fails after successful archival", async (t) => {
+  const repoPath = await createCleanupBehaviorFixture();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const realWriteFile = fs.writeFile.bind(fs);
+  let simulatedReportWriteFailure = false;
+
+  t.mock.method(fs, "writeFile", async (filePath, data, options) => {
+    const normalizedPath =
+      typeof filePath === "string" ? filePath : path.resolve(String(filePath));
+
+    if (
+      normalizedPath.includes(`${path.sep}.cleanup-latest.md.`) &&
+      normalizedPath.endsWith(".tmp")
+    ) {
+      simulatedReportWriteFailure = true;
+      throw new Error("simulated cleanup report write failure");
+    }
+
+    return realWriteFile(
+      filePath as Parameters<typeof fs.writeFile>[0],
+      data as Parameters<typeof fs.writeFile>[1],
+      options as Parameters<typeof fs.writeFile>[2]
+    );
+  });
+
+  const result = await runCleanupBehavior({ cwd: repoPath });
+
+  assert.equal(simulatedReportWriteFailure, true);
+  assert.equal(result.status, "archived");
+  assert.equal(result.reportWritten, false);
+  assert.equal(result.reportPath, ".blueprint/reports/cleanup-latest.md");
+  assert.match(result.reason ?? "", /cleanup-latest\.md could not be written/i);
+  assert.match(result.issues.join("\n"), /simulated cleanup report write failure/);
+  assert.deepEqual(result.archivedPhaseDirs, [
+    ".blueprint/phases/01-prior-milestone-alpha",
+    ".blueprint/phases/02-prior-milestone-beta"
+  ]);
+  assert.deepEqual(result.failedPhaseDirs, []);
+  assert.deepEqual(result.skippedPhaseDirs, []);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/reports/cleanup-latest.md")),
+    false
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-prior-milestone-alpha")),
+    true
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/02-prior-milestone-beta")),
+    true
+  );
 });
