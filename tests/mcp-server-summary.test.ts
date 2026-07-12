@@ -10400,6 +10400,7 @@ test("public update plan live MCP response preserves non-empty warnings while om
 
 test("public update plan live MCP response preserves failed persistence fields and warnings", async (t) => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-update-plan-public-failure-"));
+  const originalCwd = process.cwd();
   const globalHome = path.join(tempRoot, "global-home");
   const extensionPath = await createInstalledExtensionFixture(tempRoot, "tabnine");
   const metadataPath = path.join(globalHome, "updates", "update-plan-latest.json");
@@ -10432,6 +10433,7 @@ test("public update plan live MCP response preserves failed persistence fields a
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
   try {
+    process.chdir(tempRoot);
     await withEnvOverrides(
       {
         BLUEPRINT_HOST: "tabnine",
@@ -10472,6 +10474,7 @@ test("public update plan live MCP response preserves failed persistence fields a
       }
     );
   } finally {
+    process.chdir(originalCwd);
     await Promise.all([client.close(), server.close()]);
     await rm(tempRoot, { recursive: true, force: true });
   }

@@ -8,7 +8,6 @@ import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
-import { blueprintToolNames, blueprintToolRegistry } from "../dist/mcp/server.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 import { withBuiltAssetLock } from "./helpers/built-assets.ts";
 
@@ -44,11 +43,6 @@ type ToolCallResponse = {
   structuredContent?: Record<string, unknown>;
 };
 
-const RETRYABLE_BUILT_ASSET_ERROR_PATTERNS = [
-  /Unexpected end of JSON input/i,
-  /ENOENT/i
-];
-
 async function runBuiltHook(
   scriptRelativePath: string,
   input: unknown
@@ -77,38 +71,6 @@ async function runBuiltHook(
     });
     child.stdin.end(`${JSON.stringify(input)}\n`);
   });
-}
-
-function isRetryableBuiltAssetError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  return RETRYABLE_BUILT_ASSET_ERROR_PATTERNS.some((pattern) =>
-    pattern.test(error.message)
-  );
-}
-
-async function withBuiltAssetRetry<T>(work: () => Promise<T>): Promise<T> {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    try {
-      return await work();
-    } catch (error) {
-      lastError = error;
-
-      if (!isRetryableBuiltAssetError(error) || attempt === 9) {
-        throw error;
-      }
-
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100);
-      });
-    }
-  }
-
-  throw lastError;
 }
 
 function assertToolResponseMirrorsStructuredContent(
@@ -298,57 +260,55 @@ test("built hook commands from hooks.json execute successfully", async (t) => {
       assert.equal(hook.type, "command");
 
       const scriptRelativePath = distScriptPath(hook.command);
-      await withBuiltAssetRetry(async () => {
-        await access(path.join(repoRoot, scriptRelativePath));
+      await access(path.join(repoRoot, scriptRelativePath));
 
-        const expectation = expectations.get(hook.name);
-        assert.ok(expectation, `Missing smoke expectation for ${hook.name}`);
+      const expectation = expectations.get(hook.name);
+      assert.ok(expectation, `Missing smoke expectation for ${hook.name}`);
 
-        const result = await runBuiltHook(scriptRelativePath, expectation.input);
-        const output = JSON.parse(result.stdout) as {
-          decision?: string;
-          systemMessage?: string;
-        };
+      const result = await runBuiltHook(scriptRelativePath, expectation.input);
+      const output = JSON.parse(result.stdout) as {
+        decision?: string;
+        systemMessage?: string;
+      };
 
-        assert.equal(result.code, 0, `${hook.name} should exit successfully`);
-        assert.equal(result.stderr, "", `${hook.name} should stay quiet on stderr`);
-        assert.equal(output.decision, "allow", `${hook.name} should stay advisory`);
-        assert.match(
-          output.systemMessage ?? "",
-          expectation.messagePattern,
-          `${hook.name} should return its advisory message`
-        );
-      });
+      assert.equal(result.code, 0, `${hook.name} should exit successfully`);
+      assert.equal(result.stderr, "", `${hook.name} should stay quiet on stderr`);
+      assert.equal(output.decision, "allow", `${hook.name} should stay advisory`);
+      assert.match(
+        output.systemMessage ?? "",
+        expectation.messagePattern,
+        `${hook.name} should return its advisory message`
+      );
     }
   });
 });
 
 test("built MCP server starts over stdio and exposes the expected tool set", async () => {
   await withBuiltAssetLock(async () => {
-    await withBuiltAssetRetry(async () => {
-      const serverPath = path.join(repoRoot, "dist/mcp/server.js");
-      await access(serverPath);
+    const serverPath = path.join(repoRoot, "dist/mcp/server.js");
+    await access(serverPath);
+    const { blueprintToolNames } = await import("../dist/mcp/server.js");
 
-      const transport = new StdioClientTransport({
-        command: process.execPath,
-        args: [serverPath],
-        cwd: repoRoot,
-        stderr: "pipe"
-      });
-      let stderr = "";
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [serverPath],
+      cwd: repoRoot,
+      stderr: "pipe"
+    });
+    let stderr = "";
 
-      transport.stderr?.setEncoding("utf8");
-      transport.stderr?.on("data", (chunk) => {
-        stderr += chunk;
-      });
+    transport.stderr?.setEncoding("utf8");
+    transport.stderr?.on("data", (chunk) => {
+      stderr += chunk;
+    });
 
-      const client = new Client({
-        name: "blueprint-built-assets-smoke",
-        version: "0.1.0"
-      });
+    const client = new Client({
+      name: "blueprint-built-assets-smoke",
+      version: "0.1.0"
+    });
 
-      try {
-        await client.connect(transport);
+    try {
+      await client.connect(transport);
 
         const listedTools = await client.listTools();
         const advertisedToolNames = listedTools.tools.map((tool) => tool.name).sort();
@@ -382,15 +342,15 @@ test("built MCP server starts over stdio and exposes the expected tool set", asy
           contractResponse as ToolCallResponse,
           "built artifact contract read"
         );
-      } finally {
-        await client.close();
-      }
-    });
+    } finally {
+      await client.close();
+    }
   });
 });
 
 test("built MCP command catalog resolves implemented commands from bundled assets", async () => {
   await withBuiltAssetLock(async () => {
+    const { blueprintToolRegistry } = await import("../dist/mcp/server.js");
     const catalog = await blueprintToolRegistry.blueprint_command_catalog.handler({});
     const commands = catalog.commands as Record<
       string,
@@ -429,6 +389,7 @@ test("built MCP command catalog resolves implemented commands from bundled asset
 
 test("built roadmap mutation tools expose and enforce confirmation receipts", async (t) => {
   await withBuiltAssetLock(async () => {
+    const { blueprintToolRegistry } = await import("../dist/mcp/server.js");
     const repoPath = await createRoadmapConfirmationFixture();
     t.after(async () => {
       await rm(path.dirname(repoPath), { recursive: true, force: true });
