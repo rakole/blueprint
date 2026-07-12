@@ -165,7 +165,7 @@ test("tracked dist outputs stay committed after build refreshes generated assets
     const beforeBuild = await listDirtyDistEntries();
     const beforeBuildDiff = await readTrackedDistDiffSnapshot();
 
-    await execFileAsync("npm", ["run", "build"], {
+    await execFileAsync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "build"], {
       cwd: repoRoot
     });
 

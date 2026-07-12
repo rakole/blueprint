@@ -11,7 +11,8 @@
     "build": "node scripts/build.mjs",
     "generate:commands": "tsx scripts/generate-command-registry.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build --silent && tsx --test tests/**/*.test.ts",
+    "test": "node scripts/run-tests.mjs",
+    "test:focused": "tsx --test",
     "smoke:gemini-clean-home": "node scripts/gemini-clean-home-smoke.mjs",
     "test:integration:extension": "npm run build --silent && tsx --test tests/extension-install.integration.ts"
   },

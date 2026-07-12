@@ -11,6 +11,19 @@ Fresh worktree:
 npm ci
 ```
 
+Canonical local verification (build first, then every non-fixture `*.test.ts`
+entrypoint exactly once):
+
+```bash
+npm test
+```
+
+The package-owned Node runner discovers files without shell glob expansion,
+excludes `tests/fixtures/**`, and runs the two built-asset checks after
+the parallel suite to isolate their shared `dist/` surface. Keep
+container-dependent extension installation coverage in
+the separate `npm run test:integration:extension` command.
+
 Static TypeScript gate when code changed:
 
 ```bash
@@ -47,6 +60,12 @@ Run:
 ```bash
 npm run typecheck
 npx tsx --test tests/<focused-area>.test.ts
+```
+
+The package-owned equivalent for one or more focused files is:
+
+```bash
+npm run test:focused -- tests/<focused-area>.test.ts
 ```
 
 Add `npm test` when the change touches shared runtime behavior, catalog status,
