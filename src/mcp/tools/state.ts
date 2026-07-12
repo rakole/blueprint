@@ -94,6 +94,7 @@ export type StateUpdateResult = {
 export type PreparedStateUpdate = StateUpdateResult & {
   projectRoot: string;
   absoluteStatePath: string;
+  expectedStateContent: string | null;
   content: string;
   routingFreshness: PreparedStateRoutingFreshness | null;
 };
@@ -1885,6 +1886,28 @@ async function assertPreparedStateRoutingFreshness(
         expected: prepared.routingFreshness.topology,
         actual: actual.topology
       })
+    );
+  }
+}
+
+async function assertPreparedStateContentFreshness(
+  prepared: PreparedStateUpdate
+): Promise<void> {
+  let actualStateContent: string | null;
+
+  try {
+    actualStateContent = await fs.readFile(prepared.absoluteStatePath, "utf8");
+  } catch (error) {
+    if (!isNodeErrorCode(error, "ENOENT")) {
+      throw error;
+    }
+
+    actualStateContent = null;
+  }
+
+  if (actualStateContent !== prepared.expectedStateContent) {
+    throw new Error(
+      `Prepared STATE.md update rejected stale STATE.md content because the file changed after preparation.`
     );
   }
 }
@@ -4073,7 +4096,7 @@ export async function blueprintPauseHandoffGet(
   return loadPauseHandoffReport(projectRoot);
 }
 
-export async function blueprintPauseHandoffWrite(
+async function blueprintPauseHandoffWriteUnlocked(
   args: PauseHandoffWriteArgs
 ): Promise<PauseHandoffWriteResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -4171,6 +4194,16 @@ export async function blueprintPauseHandoffWrite(
     handoff,
     warnings
   };
+}
+
+export async function blueprintPauseHandoffWrite(
+  args: PauseHandoffWriteArgs
+): Promise<PauseHandoffWriteResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+
+  return withBlueprintRepoLock(projectRoot, "pause-handoff", () =>
+    blueprintPauseHandoffWriteUnlocked({ ...args, cwd: projectRoot })
+  );
 }
 
 export async function loadBlueprintState(cwd?: string): Promise<BlueprintState> {
@@ -4291,6 +4324,18 @@ export async function prepareBlueprintStateUpdate(
 ): Promise<PreparedStateUpdate> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  let expectedStateContent: string | null;
+
+  try {
+    expectedStateContent = await fs.readFile(statePath, "utf8");
+  } catch (error) {
+    if (!isNodeErrorCode(error, "ENOENT")) {
+      throw error;
+    }
+
+    expectedStateContent = null;
+  }
+
   const useSyncedBase = args.base === "synced";
   const patch = args.patch ?? {};
   let normalizedPatchCurrentPhase: string | undefined;
@@ -4390,6 +4435,7 @@ export async function prepareBlueprintStateUpdate(
     statePath: toRepoRelativePath(projectRoot, statePath),
     warnings,
     absoluteStatePath: statePath,
+    expectedStateContent,
     content: renderStateDocument(nextState, metadata),
     routingFreshness
   };
@@ -4420,6 +4466,7 @@ export async function writePreparedBlueprintStateUpdate(
   return withBlueprintRepoLock(prepared.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () =>
     withBlueprintRepoLock(prepared.projectRoot, "state", async () => {
       await assertPreparedStateRoutingFreshness(prepared);
+      await assertPreparedStateContentFreshness(prepared);
       return writePreparedBlueprintStateUpdateUnlocked(prepared);
     })
   );
@@ -4439,6 +4486,7 @@ export async function blueprintStateUpdate(
       const prepared = await prepareBlueprintStateUpdate({ ...args, cwd: projectRoot });
 
       await assertPreparedStateRoutingFreshness(prepared);
+      await assertPreparedStateContentFreshness(prepared);
       return writePreparedBlueprintStateUpdateUnlocked(prepared);
     })
   );

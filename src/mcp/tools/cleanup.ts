@@ -21,6 +21,7 @@ import {
   writeTextFile
 } from "./artifacts.js";
 import { blueprintRoadmapRead } from "./phase.js";
+import { PHASE_TOPOLOGY_LOCK_NAME } from "./phase-topology-lock.js";
 import { blueprintStateLoad } from "./state.js";
 
 const CLEANUP_ARCHIVE_DEFAULT_DESTINATION = `${BLUEPRINT_DIR}/archive/v1`;
@@ -1089,7 +1090,9 @@ async function blueprintCleanupArchiveWithProjectRoot(
     return run();
   }
 
-  return withBlueprintRepoLock(projectRoot, "cleanup-archive", run);
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () =>
+    withBlueprintRepoLock(projectRoot, "cleanup-archive", run)
+  );
 }
 
 export async function blueprintCleanupArchive(

@@ -390,6 +390,30 @@ test("workstream mutate supports create, switch, resume, and complete while keep
   assert.match(indexContent, /`beta-stream`/);
 });
 
+test("workstream mutation preserves the mode of an existing atomic index file", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workstreams-mode-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Private Stream"
+  });
+  const indexPath = path.join(repoPath, ".blueprint/workstreams/WORKSTREAMS.md");
+  await fs.chmod(indexPath, 0o600);
+
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Second Stream"
+  });
+
+  assert.equal((await fs.stat(indexPath)).mode & 0o777, 0o600);
+});
+
 test("workstream switch requires runtime confirmation before mutating active state", async (t) => {
   const tempRoot = await fs.mkdtemp(
     path.join(os.tmpdir(), "blueprint-workstreams-switch-confirmation-")
@@ -810,6 +834,88 @@ test("resume rejects stale prepared STATE.md after topology renumber and rolls b
   assert.equal(storedState.nextAction, "Run /blu-execute-phase 1");
   assert.match(roadmap, /Phase 2\.1: Resume Target/);
   assert.doesNotMatch(roadmap, /Phase 2\.2: Resume Target/);
+});
+
+test("resume rejects stale prepared STATE.md after a concurrent state update and rolls back active workstream", async (t) => {
+  const tempRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "blueprint-workstreams-resume-state-stale-")
+  );
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  await addResumeTopologyRoadmap(repoPath);
+  await runGit(["add", "."], repoPath);
+  await runGit(["commit", "-m", "add resume state fixture"], repoPath);
+  await blueprintStateUpdate({
+    cwd: repoPath,
+    patch: {
+      currentPhase: "2.2",
+      activeCommand: "/blu-execute-phase",
+      nextAction: "Run /blu-validate-phase 2.2"
+    }
+  });
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Alpha Stream"
+  });
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Beta Stream"
+  });
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "switch",
+    workstream: "beta-stream",
+    confirmed: true
+  });
+  await blueprintStateUpdate({
+    cwd: repoPath,
+    patch: {
+      currentPhase: "1",
+      activeCommand: "/blu-plan-phase",
+      nextAction: "Run /blu-execute-phase 1"
+    }
+  });
+
+  const pause = pauseFirstMkdirToPath(t, phaseTopologyLockPath(repoPath));
+  const resume = blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "resume",
+    workstream: "alpha-stream"
+  });
+
+  await waitFor(pause.paused, "resume prepared STATE.md topology lock attempt");
+  await blueprintStateUpdate({
+    cwd: repoPath,
+    patch: { roadmapEvolutionNotes: ["Concurrent state update must survive."] }
+  });
+  pause.resume();
+  await assert.rejects(resume, /stale STATE\.md content/i);
+
+  const listed = await blueprintWorkstreamList({ cwd: repoPath });
+  const storedState = await loadBlueprintState(repoPath);
+  const indexContent = await fs.readFile(
+    path.join(repoPath, ".blueprint/workstreams/WORKSTREAMS.md"),
+    "utf8"
+  );
+  const restoredAlphaState = JSON.parse(
+    await fs.readFile(
+      path.join(repoPath, ".blueprint/workstreams/alpha-stream/state.json"),
+      "utf8"
+    )
+  ) as { status: string };
+
+  assert.equal(listed.active?.slug, "beta-stream");
+  assert.equal(restoredAlphaState.status, "paused");
+  assert.match(indexContent, /Active workstream: `Beta Stream`/);
+  assert.equal(storedState.currentPhase, "1");
+  assert.deepEqual(storedState.roadmapEvolutionNotes, [
+    "Concurrent state update must survive."
+  ]);
 });
 
 test("concurrent workstream creates serialize without losing index entries", async (t) => {

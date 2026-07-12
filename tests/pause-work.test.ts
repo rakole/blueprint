@@ -381,3 +381,36 @@ test("pause handoff tools create, reuse, update, and influence routed state whil
   assert.match(resumedState.derivedStatus.nextAction, /\/blu-execute-phase 3/);
   assert.doesNotMatch(resumedState.blockers.join("\n"), /Paused handoff is active/);
 });
+
+test("concurrent pause handoff creation serializes the overwrite decision", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const results = await Promise.allSettled([
+    blueprintPauseHandoffWrite({
+      cwd: repoPath,
+      currentState: "Paused by concurrent writer Alpha."
+    }),
+    blueprintPauseHandoffWrite({
+      cwd: repoPath,
+      currentState: "Paused by concurrent writer Beta."
+    })
+  ]);
+  const fulfilled = results.filter(
+    (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof blueprintPauseHandoffWrite>>> =>
+      result.status === "fulfilled"
+  );
+  const rejected = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected"
+  );
+  const saved = await blueprintPauseHandoffGet({ cwd: repoPath });
+
+  assert.equal(fulfilled.length, 1);
+  assert.equal(fulfilled[0].value.status, "created");
+  assert.equal(rejected.length, 1);
+  assert.match(String(rejected[0].reason), /explicit overwrite confirmation/i);
+  assert.equal(saved.found, true);
+  assert.equal(saved.handoff?.currentState, fulfilled[0].value.handoff.currentState);
+});

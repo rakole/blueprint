@@ -173,6 +173,26 @@ async function getDirectoryLockAgeMs(lockPath: string): Promise<number | null> {
   return getDirectoryLockPathAgeMs(lockPath);
 }
 
+async function assertDirectoryLockPathIsDirectory(lockPath: string): Promise<boolean> {
+  try {
+    const stats = await fs.lstat(lockPath);
+
+    if (!stats.isDirectory()) {
+      throw new Error(
+        `Cannot acquire directory lock at ${JSON.stringify(lockPath)}: the lock path exists but is not a directory. Move or remove the obstructing path and retry; Blueprint will not replace it automatically.`
+      );
+    }
+
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 async function readDirectoryLockOwnerForPath(lockPath: string): Promise<string | null> {
   return readDirectoryLockOwnerAtPath(directoryLockOwnerPath(lockPath));
 }
@@ -409,6 +429,10 @@ async function acquireDirectoryLock(
 
       if (lockError.code !== "EEXIST") {
         throw error;
+      }
+
+      if (!(await assertDirectoryLockPathIsDirectory(options.lockPath))) {
+        continue;
       }
 
       try {

@@ -25,7 +25,10 @@ import {
   blueprintCleanupArchiveTestHooks
 } from "../src/mcp/tools/cleanup.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
-import { blueprintRoadmapRead } from "../src/mcp/tools/phase.js";
+import {
+  blueprintRoadmapRead,
+  blueprintRoadmapRemovePhase
+} from "../src/mcp/tools/phase.js";
 import { createGitRepo, runGit } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
@@ -64,6 +67,28 @@ type CleanupRunResult = {
   issues: string[];
   events: string[];
 };
+
+function deferred(): { promise: Promise<void>; resolve(): void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
+}
+
+async function waitFor(promise: Promise<void>, label: string): Promise<void> {
+  let timeout: NodeJS.Timeout | null = null;
+  const timeoutPromise = new Promise<void>((_resolve, reject) => {
+    timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${label}.`)), 5000);
+  });
+
+  try {
+    await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -949,6 +974,106 @@ test("cleanup commit rejects stale or overbroad selected scope before filesystem
   assert.equal(
     await pathExists(path.join(repoPath, ".blueprint/archive/v1/05-current-maintenance")),
     false
+  );
+});
+
+test("cleanup commit holds phase topology through archive mutation so phase renumber waits", async (t) => {
+  const repoPath = await createCleanupBehaviorFixture();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const roadmap = await readFile(roadmapPath, "utf8");
+  await writeFile(
+    roadmapPath,
+    roadmap
+      .replace(
+        "- [ ] **Phase 5: Current Maintenance** - Current cleanup execution focus",
+        "- [ ] **Phase 5: Current Maintenance** - Current cleanup execution focus\n- [ ] **Phase 6: Future One** - Future topology mutation target\n- [ ] **Phase 7: Future Two** - Future phase that will be renumbered"
+      )
+      .replace(
+        "**Requirements**: BP-04",
+        "**Requirements**: BP-04\n\n### Phase 6: Future One\n**Goal**: Remove this future phase.\n**Requirements**: BP-05\n\n### Phase 7: Future Two\n**Goal**: Renumber after removal.\n**Requirements**: BP-06"
+      ),
+    "utf8"
+  );
+  await writeRepoFile(
+    repoPath,
+    ".blueprint/phases/06-future-one/06-CONTEXT.md",
+    "# Phase 6 Context\n"
+  );
+  await writeRepoFile(
+    repoPath,
+    ".blueprint/phases/07-future-two/07-CONTEXT.md",
+    "# Phase 7 Context\n"
+  );
+  await runGit(["add", "."], repoPath);
+  await runGit(["commit", "-m", "add future phase topology"], repoPath);
+
+  const preview = await blueprintCleanupArchive({
+    cwd: repoPath,
+    mode: "preview",
+    archiveDestination: ".blueprint/archive/v1"
+  });
+  assert.equal(preview.status, "ready");
+
+  const archivePaused = deferred();
+  const releaseArchive = deferred();
+  let paused = false;
+  const restoreFileSystem = blueprintCleanupArchiveTestHooks.setFileSystemForTest({
+    mkdir,
+    rename: async (sourcePath, destinationPath) => {
+      if (!paused) {
+        paused = true;
+        archivePaused.resolve();
+        await releaseArchive.promise;
+      }
+      return rename(sourcePath, destinationPath);
+    },
+    cp,
+    rm
+  });
+  t.after(() => {
+    releaseArchive.resolve();
+    restoreFileSystem();
+  });
+
+  const commit = blueprintCleanupArchive({
+    cwd: repoPath,
+    mode: "commit",
+    archiveDestination: ".blueprint/archive/v1",
+    confirmed: true,
+    approveDestinationCreation: true,
+    overwriteReport: true,
+    expectedSelectedPhaseDirs: preview.selectedPhaseDirs,
+    expectedProtectedPhaseDirs: preview.protectedEntries.map((entry) => entry.path)
+  });
+  await waitFor(archivePaused.promise, "cleanup archive mutation pause");
+
+  let removalSettled = false;
+  const removal = blueprintRoadmapRemovePhase({
+    cwd: repoPath,
+    phase: "6",
+    confirmed: true
+  }).finally(() => {
+    removalSettled = true;
+  });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(removalSettled, false);
+
+  releaseArchive.resolve();
+  const [commitResult, removalResult] = await Promise.all([commit, removal]);
+
+  assert.equal(commitResult.status, "archived");
+  assert.equal(removalResult.removedPhase.phaseNumber, "6");
+  assert.deepEqual(
+    removalResult.renumberedPhases.map((entry) => entry.previousPhaseNumber),
+    ["7"]
+  );
+  assert.deepEqual(
+    removalResult.renumberedPhases.map((entry) => entry.newPhaseNumber),
+    ["6"]
   );
 });
 

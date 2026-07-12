@@ -3240,6 +3240,14 @@ test("impact report writer reuses identical bundles and requires overwrite for c
 
     const first = await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
     const reused = await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
+    const impactDirPath = path.join(repoPath, first.impactDir);
+    const preservedModes = new Map([
+      [path.join(repoPath, first.paths.impactMarkdown), 0o4750],
+      [path.join(repoPath, first.paths.impactJson), 0o2640],
+      [path.join(repoPath, first.paths.summaryJson), 0o1600]
+    ]);
+    await fs.chmod(impactDirPath, 0o2750);
+    await Promise.all([...preservedModes].map(([filePath, mode]) => fs.chmod(filePath, mode)));
     await writeFile(path.join(repoPath, first.impactDir, "unexpected.txt"), "stale\n");
     const stale = await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
     const pruned = await blueprintImpactReportWrite({
@@ -3261,12 +3269,44 @@ test("impact report writer reuses identical bundles and requires overwrite for c
     assert.match(stale.errors.join("\n"), /already exists/);
     assert.equal(pruned.status, "overwritten");
     await assert.rejects(access(path.join(repoPath, first.impactDir, "unexpected.txt")));
+    if (process.platform !== "win32") {
+      assert.equal((await fs.stat(impactDirPath)).mode & 0o7777, 0o2750);
+      for (const [filePath, mode] of preservedModes) {
+        assert.equal((await fs.stat(filePath)).mode & 0o7777, mode);
+      }
+    }
     assert.equal(blocked.status, "invalid");
     assert.match(blocked.errors.join("\n"), /already exists/);
     assert.equal(overwritten.status, "overwritten");
     assert.equal(overwritten.written, true);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer rejects a symlink bundle without traversing or replacing it", async () => {
+  const repoPath = await createTempRepo();
+  const outside = await mkdtemp(path.join(os.tmpdir(), "blueprint-impact-outside-"));
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const impactDir = path.join(repoPath, ".blueprint", "impact", analysis.impactId);
+    await mkdir(path.dirname(impactDir), { recursive: true });
+    await writeFile(path.join(outside, "sentinel"), "outside\n");
+    await fs.symlink(outside, impactDir);
+
+    await assert.rejects(
+      blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report, overwrite: true }),
+      /real directory/
+    );
+    assert.equal((await fs.lstat(impactDir)).isSymbolicLink(), true);
+    assert.equal(await readFile(path.join(outside, "sentinel"), "utf8"), "outside\n");
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
   }
 });
 
@@ -3292,6 +3332,14 @@ test("impact report writer preserves the previous bundle when staged replacement
     const originalMarkdown = await readFile(impactMarkdownPath, "utf8");
     const originalImpactJson = await readFile(impactJsonPath, "utf8");
     const originalSummaryJson = await readFile(summaryJsonPath, "utf8");
+    const impactDirPath = path.join(repoPath, first.impactDir);
+    const preservedModes = new Map([
+      [impactMarkdownPath, 0o4750],
+      [impactJsonPath, 0o2640],
+      [summaryJsonPath, 0o1600]
+    ]);
+    await fs.chmod(impactDirPath, 0o2750);
+    await Promise.all([...preservedModes].map(([filePath, mode]) => fs.chmod(filePath, mode)));
 
     await writeFile(stalePath, "stale file from previous generation\n");
 
@@ -3333,6 +3381,12 @@ test("impact report writer preserves the previous bundle when staged replacement
     assert.equal(await readFile(summaryJsonPath, "utf8"), originalSummaryJson);
     assert.equal(JSON.parse(await readFile(impactJsonPath, "utf8")).summary, analysis.report.summary);
     assert.equal(JSON.parse(await readFile(summaryJsonPath, "utf8")).impactId, analysis.impactId);
+    if (process.platform !== "win32") {
+      assert.equal((await fs.stat(impactDirPath)).mode & 0o7777, 0o2750);
+      for (const [filePath, mode] of preservedModes) {
+        assert.equal((await fs.stat(filePath)).mode & 0o7777, mode);
+      }
+    }
     await access(stalePath);
     assert.equal(
       impactRootEntries.some((entry) => entry.startsWith(`.${analysis.impactId}.staging-`)),

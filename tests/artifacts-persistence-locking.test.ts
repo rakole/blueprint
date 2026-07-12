@@ -10,7 +10,8 @@ import {
   blueprintArtifactReportWrite,
   type BlueprintArtifactsJsonFileSystemForTest,
   withBlueprintRepoLock,
-  writeJsonFile
+  writeJsonFile,
+  writeTextFile
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintReviewRecord } from "../src/mcp/tools/review.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
@@ -447,6 +448,67 @@ test("writeJsonFile preserves existing JSON when the atomic rename fails", async
     (await fs.readdir(path.dirname(targetPath))).filter((entry) => entry.endsWith(".tmp")),
     []
   );
+});
+
+test("shared atomic artifact writers preserve the mode of existing regular files", async (t) => {
+  const projectRoot = await createBlueprintProject("blueprint-atomic-mode-");
+  t.after(async () => {
+    await fs.rm(projectRoot, { recursive: true, force: true });
+  });
+
+  const jsonPath = path.join(projectRoot, ".blueprint", "private.json");
+  const textPath = path.join(projectRoot, ".blueprint", "private.md");
+  await fs.writeFile(jsonPath, "{}\n", { mode: 0o600 });
+  await fs.writeFile(textPath, "old\n", { mode: 0o640 });
+
+  await writeJsonFile(jsonPath, { updated: true });
+  await writeTextFile(textPath, "updated\n", { enforcePromptBoundary: false });
+
+  assert.equal((await fs.stat(jsonPath)).mode & 0o777, 0o600);
+  assert.equal((await fs.stat(textPath)).mode & 0o777, 0o640);
+});
+
+test("shared atomic artifact writers reject symlink and directory targets", async (t) => {
+  const projectRoot = await createBlueprintProject("blueprint-atomic-kind-");
+  t.after(() => fs.rm(projectRoot, { recursive: true, force: true }));
+  const realPath = path.join(projectRoot, ".blueprint", "real.json");
+  const linkPath = path.join(projectRoot, ".blueprint", "linked.json");
+  const directoryPath = path.join(projectRoot, ".blueprint", "directory.md");
+  await fs.writeFile(realPath, "{}\n");
+  await fs.symlink(realPath, linkPath);
+  await fs.mkdir(directoryPath);
+
+  await assert.rejects(writeJsonFile(linkPath, { replaced: true }), /regular file/);
+  await assert.rejects(
+    writeTextFile(directoryPath, "replacement\n", { enforcePromptBoundary: false }),
+    /regular file/
+  );
+  assert.equal(await fs.readFile(realPath, "utf8"), "{}\n");
+  assert.equal((await fs.lstat(linkPath)).isSymbolicLink(), true);
+  assert.equal((await fs.lstat(directoryPath)).isDirectory(), true);
+});
+
+test("artifact index mutation preserves the mode of an existing shared-writer target", async (t) => {
+  const repoPath = await createInitializedBlueprintRepo("blueprint-index-mode-");
+  t.after(async () => {
+    await fs.rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    entry: { text: "Private todo", addedAt: "2026-07-12" }
+  });
+  const targetPath = path.join(repoPath, ".blueprint/todos/TODO.md");
+  await fs.chmod(targetPath, 0o600);
+
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    entry: { text: "Still private", addedAt: "2026-07-12" }
+  });
+
+  assert.equal((await fs.stat(targetPath)).mode & 0o777, 0o600);
 });
 
 test("withBlueprintRepoLock keeps a live writer from being stolen after the stale interval", async (t) => {
