@@ -264,6 +264,7 @@ test("non-standard mutation failure result shapes are logged durably", async (t)
   const cases = [
     {
       toolName: "blueprint_patch_reapply",
+      requestArgs: { dryRun: false, patchIds: ["conflict"] },
       result: {
         status: "blocked",
         appliedPatches: [],
@@ -275,6 +276,7 @@ test("non-standard mutation failure result shapes are logged durably", async (t)
     },
     {
       toolName: "blueprint_update_plan",
+      requestArgs: {},
       result: {
         status: "created",
         persistenceStatus: "not_saved",
@@ -285,6 +287,7 @@ test("non-standard mutation failure result shapes are logged durably", async (t)
     },
     {
       toolName: "blueprint_cleanup_archive",
+      requestArgs: { mode: "commit" },
       result: {
         status: "archived",
         mode: "commit",
@@ -309,7 +312,8 @@ test("non-standard mutation failure result shapes are logged durably", async (t)
       },
       {
         cwd: repoPath,
-        source: entry.toolName
+        source: entry.toolName,
+        ...entry.requestArgs
       }
     );
   }
@@ -339,6 +343,189 @@ test("non-standard mutation failure result shapes are logged durably", async (t)
     (entries[2]?.result as Record<string, unknown>).reportWritten,
     false
   );
+});
+
+test("rejected read-only previews do not log while equivalent write-mode rejections do", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const cases = [
+    {
+      toolName: "blueprint_cleanup_archive",
+      previewArgs: [{}, { mode: "preview" }],
+      writeArgs: { mode: "commit" }
+    },
+    {
+      toolName: "blueprint_plan_run_prepare",
+      previewArgs: [{}, { mode: "preview" }],
+      writeArgs: { mode: "prepare" }
+    },
+    {
+      toolName: "blueprint_roadmap_promote_backlog",
+      previewArgs: [
+        {},
+        { previewOnly: true, backlogIds: ["BACKLOG-1"] },
+        { previewOnly: false, backlogIds: [] },
+        { previewOnly: false, backlogIds: [" "] }
+      ],
+      writeArgs: { previewOnly: false, backlogIds: ["BACKLOG-1"] }
+    },
+    {
+      toolName: "blueprint_patch_reapply",
+      previewArgs: [{ dryRun: true, patchIds: ["patch-1"] }],
+      writeArgs: { dryRun: false, patchIds: ["patch-1"] }
+    },
+    {
+      toolName: "blueprint_artifact_mutate_index",
+      previewArgs: [
+        { target: "todos", action: "list", filter: { statuses: ["open"] } }
+      ],
+      writeArgs: {
+        target: "todos",
+        action: "append",
+        entry: { text: "Record the rejected mutation." }
+      }
+    }
+  ];
+
+  for (const entry of cases) {
+    for (const previewArgs of entry.previewArgs) {
+      await executeToolHandlerWithFailureLogging(
+        {
+          name: entry.toolName,
+          description: "fixture",
+          handler: async () => ({ status: "blocked", reason: "fixture rejection" })
+        },
+        {
+          cwd: repoPath,
+          ...previewArgs
+        }
+      );
+    }
+  }
+
+  await assert.rejects(
+    readFile(path.join(repoPath, MCP_WRITE_FAILURE_LOG_PATH), "utf8"),
+    (error: NodeJS.ErrnoException) => error.code === "ENOENT"
+  );
+
+  for (const entry of cases) {
+    await executeToolHandlerWithFailureLogging(
+      {
+        name: entry.toolName,
+        description: "fixture",
+        handler: async () => ({ status: "blocked", reason: "fixture rejection" })
+      },
+      {
+        cwd: repoPath,
+        ...entry.writeArgs
+      }
+    );
+  }
+
+  const entries = await readFailureLogEntries(repoPath);
+
+  assert.deepEqual(
+    entries.map((entry) => entry.toolName),
+    cases.map((entry) => entry.toolName)
+  );
+  assert.deepEqual(
+    entries.map((entry) => (entry.request as Record<string, unknown>).mode ??
+      (entry.request as Record<string, unknown>).previewOnly ??
+      (entry.request as Record<string, unknown>).dryRun ??
+      (entry.request as Record<string, unknown>).action),
+    ["commit", "prepare", false, false, "append"]
+  );
+});
+
+test("thrown read-only previews do not log while equivalent write-mode exceptions do", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const cases = [
+    {
+      toolName: "blueprint_cleanup_archive",
+      previewArgs: {},
+      writeArgs: { mode: "commit" }
+    },
+    {
+      toolName: "blueprint_plan_run_prepare",
+      previewArgs: { mode: "preview" },
+      writeArgs: { mode: "prepare" }
+    },
+    {
+      toolName: "blueprint_roadmap_promote_backlog",
+      previewArgs: { previewOnly: false, backlogIds: [] },
+      writeArgs: { previewOnly: false, backlogIds: ["BACKLOG-1"] }
+    },
+    {
+      toolName: "blueprint_patch_reapply",
+      previewArgs: { dryRun: true, patchIds: ["patch-1"] },
+      writeArgs: { dryRun: false, patchIds: ["patch-1"] }
+    },
+    {
+      toolName: "blueprint_artifact_mutate_index",
+      previewArgs: {
+        target: "todos",
+        action: "list",
+        filter: { statuses: ["open"] }
+      },
+      writeArgs: {
+        target: "todos",
+        action: "append",
+        entry: { text: "Record the thrown mutation." }
+      }
+    }
+  ];
+
+  for (const entry of cases) {
+    await assert.rejects(
+      executeToolHandlerWithFailureLogging(
+        {
+          name: entry.toolName,
+          description: "fixture",
+          handler: async () => {
+            throw new Error("fixture exception");
+          }
+        },
+        { cwd: repoPath, ...entry.previewArgs }
+      ),
+      /fixture exception/
+    );
+  }
+
+  await assert.rejects(
+    readFile(path.join(repoPath, MCP_WRITE_FAILURE_LOG_PATH), "utf8"),
+    (error: NodeJS.ErrnoException) => error.code === "ENOENT"
+  );
+
+  for (const entry of cases) {
+    await assert.rejects(
+      executeToolHandlerWithFailureLogging(
+        {
+          name: entry.toolName,
+          description: "fixture",
+          handler: async () => {
+            throw new Error("fixture exception");
+          }
+        },
+        { cwd: repoPath, ...entry.writeArgs }
+      ),
+      /fixture exception/
+    );
+  }
+
+  const entries = await readFailureLogEntries(repoPath);
+
+  assert.deepEqual(
+    entries.map((entry) => entry.toolName),
+    cases.map((entry) => entry.toolName)
+  );
+  assert.ok(entries.every((entry) => entry.failureKind === "exception"));
 });
 
 test("phase ui skip write rejections are logged by the central mutation wrapper", async (t) => {

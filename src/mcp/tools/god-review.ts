@@ -4511,7 +4511,10 @@ export async function blueprintGodReviewLoadFindings(
     session: reference.session
   });
 
-  if (fingerprint.staleReasons.length > 0) {
+  if (
+    fingerprint.staleReasons.length > 0 &&
+    (args.activeCommand === "/blu-code-review" || reference.session.scopeKind === "phase")
+  ) {
     return invalidLoadFindingsResult({
       reason:
         "God-review scope fingerprint changed. Start a new hidden review before loading saved findings.",

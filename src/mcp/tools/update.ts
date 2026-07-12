@@ -1082,18 +1082,55 @@ async function persistUpdatePlanArtifacts(
   let checklistPromoted = false;
 
   try {
+    const existingModes = await Promise.all(
+      [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
+        try {
+          const stats = await fs.lstat(targetPath);
+          if (!stats.isFile()) {
+            throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
+          }
+          return stats.mode & 0o7777;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+            return null;
+          }
+          throw error;
+        }
+      })
+    );
+
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
       label: path.basename(plan.savedPaths.checklistPath)
     });
+    if (existingModes[0] !== null) {
+      await fs.chmod(metadataTmpPath, existingModes[0]);
+    }
+    if (existingModes[1] !== null) {
+      await fs.chmod(checklistTmpPath, existingModes[1]);
+    }
 
-    if (await pathExists(plan.savedPaths.metadataPath)) {
+    const promotionModes = await Promise.all(
+      [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
+        try {
+          const stats = await fs.lstat(targetPath);
+          if (!stats.isFile()) {
+            throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
+          }
+          return stats.mode & 0o7777;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+          throw error;
+        }
+      })
+    );
+    if (promotionModes[0] !== null) {
       await fs.rename(plan.savedPaths.metadataPath, metadataBackupPath);
       metadataBackupCreated = true;
     }
 
-    if (await pathExists(plan.savedPaths.checklistPath)) {
+    if (promotionModes[1] !== null) {
       await fs.rename(plan.savedPaths.checklistPath, checklistBackupPath);
       checklistBackupCreated = true;
     }

@@ -721,6 +721,76 @@ test("new-project requires explicit overwrite confirmation after initialization"
   assert.match(status.nextAction, /\/blu-discuss-phase 1/);
 });
 
+test("concurrent new-project initializers produce one coherent winner", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const alphaSeed = buildAutoBootstrapSeed({ currentMilestone: "v1-alpha" });
+  const betaSeed = buildAutoBootstrapSeed({ currentMilestone: "v1-beta" });
+  const results = await Promise.allSettled([
+    blueprintProjectInit({
+      cwd: repoPath,
+      projectName: "Alpha",
+      bootstrapMode: "auto",
+      bootstrapSeed: alphaSeed
+    }),
+    blueprintProjectInit({
+      cwd: repoPath,
+      projectName: "Beta",
+      bootstrapMode: "auto",
+      bootstrapSeed: betaSeed
+    })
+  ]);
+  const fulfilled = results.filter(
+    (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof blueprintProjectInit>>> =>
+      result.status === "fulfilled"
+  );
+  const rejected = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected"
+  );
+  const projectDoc = await readFile(path.join(repoPath, ".blueprint/PROJECT.md"), "utf8");
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(fulfilled.length, 1);
+  assert.equal(rejected.length, 1);
+  assert.match(String(rejected[0].reason), /explicit overwrite confirmation/i);
+  assert.equal(fulfilled[0].value.createdPaths.length > 0, true);
+
+  const alphaWon = projectDoc.startsWith("# Alpha");
+  assert.equal(alphaWon || projectDoc.startsWith("# Beta"), true);
+  assert.equal(state.state.currentMilestone, alphaWon ? "v1-alpha" : "v1-beta");
+});
+
+test("new-project rejects and preserves a non-directory project-init lock", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const lockPath = path.join(repoPath, ".blueprint-project-init.lock");
+  await writeFile(lockPath, "user data\n", "utf8");
+
+  await assert.rejects(
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapMode: "auto",
+      bootstrapSeed: buildAutoBootstrapSeed()
+    }),
+    (error: Error) => {
+      assert.match(error.message, /cannot acquire directory lock/i);
+      assert.match(error.message, /lock path exists but is not a directory/i);
+      assert.match(error.message, /move or remove the obstructing path and retry/i);
+      assert.doesNotMatch(error.message, /ENOTDIR/);
+      return true;
+    }
+  );
+
+  assert.equal(await readFile(lockPath, "utf8"), "user data\n");
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+});
+
 test("new-project interactive mode rejects missing bootstrapSeed before writes", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {

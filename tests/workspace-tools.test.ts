@@ -790,6 +790,7 @@ test("blueprint_workspace_create appends to an existing host-global registry doc
       path: path.join(tempRoot, "workspaces", "feature-a")
     })
   );
+  await fs.chmod(firstWorkspace.registryPath, 0o4750);
   const secondWorkspace = await withGlobalHome(globalHome, () =>
     blueprintWorkspaceCreate({
       cwd: repoPath,
@@ -810,6 +811,41 @@ test("blueprint_workspace_create appends to an existing host-global registry doc
     registry.workspaces.map((workspace) => workspace.path),
     [firstWorkspace.workspacePath, secondWorkspace.workspacePath]
   );
+  if (process.platform !== "win32") {
+    assert.equal((await fs.stat(firstWorkspace.registryPath)).mode & 0o7777, 0o4750);
+  }
+
+  await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceRemove({
+      name: "feature-b",
+      path: secondWorkspace.workspacePath
+    })
+  );
+  if (process.platform !== "win32") {
+    assert.equal((await fs.stat(firstWorkspace.registryPath)).mode & 0o7777, 0o4750);
+  }
+});
+
+test("blueprint_workspace_create rejects a symlink registry target", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-registry-symlink-"));
+  t.after(() => fs.rm(tempRoot, { recursive: true, force: true }));
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const registryPath = path.join(globalHome, "workspaces.json");
+  const outside = path.join(tempRoot, "outside.json");
+  await fs.mkdir(path.dirname(registryPath), { recursive: true });
+  await fs.writeFile(outside, '{"version":1,"workspaces":[]}\n');
+  await fs.symlink(outside, registryPath);
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () => blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-link",
+      path: path.join(tempRoot, "workspaces", "feature-link")
+    })),
+    /regular file/
+  );
+  assert.equal((await fs.lstat(registryPath)).isSymbolicLink(), true);
 });
 
 test("blueprint_workspace_create tracks origin branch when worktree mode targets a remote-only branch", async (t) => {

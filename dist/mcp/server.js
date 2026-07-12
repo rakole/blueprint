@@ -23927,6 +23927,22 @@ async function getDirectoryLockAgeMs(lockPath) {
   }
   return getDirectoryLockPathAgeMs(lockPath);
 }
+async function assertDirectoryLockPathIsDirectory(lockPath) {
+  try {
+    const stats = await fs.lstat(lockPath);
+    if (!stats.isDirectory()) {
+      throw new Error(
+        `Cannot acquire directory lock at ${JSON.stringify(lockPath)}: the lock path exists but is not a directory. Move or remove the obstructing path and retry; Blueprint will not replace it automatically.`
+      );
+    }
+    return true;
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return false;
+    }
+    throw error2;
+  }
+}
 async function readDirectoryLockOwnerForPath(lockPath) {
   return readDirectoryLockOwnerAtPath(directoryLockOwnerPath(lockPath));
 }
@@ -24097,6 +24113,9 @@ async function acquireDirectoryLock(options) {
       const lockError = error2;
       if (lockError.code !== "EEXIST") {
         throw error2;
+      }
+      if (!await assertDirectoryLockPathIsDirectory(options.lockPath)) {
+        continue;
       }
       try {
         const ageMs = await getDirectoryLockAgeMs(options.lockPath);
@@ -28056,6 +28075,22 @@ async function assertPreparedStateRoutingFreshness(prepared) {
     );
   }
 }
+async function assertPreparedStateContentFreshness(prepared) {
+  let actualStateContent;
+  try {
+    actualStateContent = await fs3.readFile(prepared.absoluteStatePath, "utf8");
+  } catch (error2) {
+    if (!isNodeErrorCode(error2, "ENOENT")) {
+      throw error2;
+    }
+    actualStateContent = null;
+  }
+  if (actualStateContent !== prepared.expectedStateContent) {
+    throw new Error(
+      `Prepared STATE.md update rejected stale STATE.md content because the file changed after preparation.`
+    );
+  }
+}
 async function getImplementedCommandNames() {
   if (!implementedCommandNamesPromise) {
     implementedCommandNamesPromise = (async () => {
@@ -29420,7 +29455,7 @@ async function blueprintPauseHandoffGet(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   return loadPauseHandoffReport(projectRoot);
 }
-async function blueprintPauseHandoffWrite(args) {
+async function blueprintPauseHandoffWriteUnlocked(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   if (inspection.readiness !== "initialized") {
@@ -29501,6 +29536,14 @@ async function blueprintPauseHandoffWrite(args) {
     handoff,
     warnings
   };
+}
+async function blueprintPauseHandoffWrite(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  return withBlueprintRepoLock(
+    projectRoot,
+    "pause-handoff",
+    () => blueprintPauseHandoffWriteUnlocked({ ...args, cwd: projectRoot })
+  );
 }
 async function loadBlueprintState(cwd) {
   const projectRoot = await ensureRepoRoot(cwd);
@@ -29584,6 +29627,15 @@ async function blueprintStateLoad(args = {}) {
 async function prepareBlueprintStateUpdate(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  let expectedStateContent;
+  try {
+    expectedStateContent = await fs3.readFile(statePath, "utf8");
+  } catch (error2) {
+    if (!isNodeErrorCode(error2, "ENOENT")) {
+      throw error2;
+    }
+    expectedStateContent = null;
+  }
   const useSyncedBase = args.base === "synced";
   const patch = args.patch ?? {};
   let normalizedPatchCurrentPhase;
@@ -29654,6 +29706,7 @@ async function prepareBlueprintStateUpdate(args = {}) {
     statePath: toRepoRelativePath(projectRoot, statePath),
     warnings,
     absoluteStatePath: statePath,
+    expectedStateContent,
     content: renderStateDocument(nextState, metadata),
     routingFreshness
   };
@@ -29678,6 +29731,7 @@ async function writePreparedBlueprintStateUpdate(prepared) {
     PHASE_TOPOLOGY_LOCK_NAME,
     async () => withBlueprintRepoLock(prepared.projectRoot, "state", async () => {
       await assertPreparedStateRoutingFreshness(prepared);
+      await assertPreparedStateContentFreshness(prepared);
       return writePreparedBlueprintStateUpdateUnlocked(prepared);
     })
   );
@@ -29692,6 +29746,7 @@ async function blueprintStateUpdate(args = {}) {
       await assertBlueprintStateUpdateReady(projectRoot);
       const prepared = await prepareBlueprintStateUpdate({ ...args, cwd: projectRoot });
       await assertPreparedStateRoutingFreshness(prepared);
+      await assertPreparedStateContentFreshness(prepared);
       return writePreparedBlueprintStateUpdateUnlocked(prepared);
     })
   );
@@ -43120,13 +43175,32 @@ async function readJsonIfPresent(filePath) {
   const raw = await fs12.readFile(filePath, "utf8");
   return safeJsonParseObject(raw, { label: filePath });
 }
+async function existingRegularFileMode(filePath) {
+  try {
+    const stats = await fs12.lstat(filePath);
+    if (!stats.isFile()) {
+      throw new Error(`Atomic file target must be a regular file: ${filePath}`);
+    }
+    return stats.mode & 4095;
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
 async function writeJsonFile(filePath, value) {
   await ensureParentDirectory2(filePath);
   const fileSystem = activeJsonFileSystem();
   const tempPath = tempSiblingPath(filePath);
+  const existingMode = await existingRegularFileMode(filePath);
   try {
     await fileSystem.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
+    if (existingMode !== null) {
+      await fs12.chmod(tempPath, existingMode);
+    }
+    await existingRegularFileMode(filePath);
     await fileSystem.rename(tempPath, filePath);
   } catch (error2) {
     await fileSystem.rm(tempPath, { force: true }).catch(() => void 0);
@@ -43142,8 +43216,13 @@ async function writeTextFile(filePath, value, options = {}) {
   });
   await ensureParentDirectory2(filePath);
   const tempPath = tempSiblingPath(filePath);
+  const existingMode = await existingRegularFileMode(filePath);
   try {
     await fs12.writeFile(tempPath, prepared.content, "utf8");
+    if (existingMode !== null) {
+      await fs12.chmod(tempPath, existingMode);
+    }
+    await existingRegularFileMode(filePath);
     await fs12.rename(tempPath, filePath);
   } catch (error2) {
     await fs12.rm(tempPath, { force: true }).catch(() => void 0);
@@ -54066,9 +54145,32 @@ function renderWorkstreamsIndex(workstreams) {
 }
 async function writeFileAtomically(filePath, content) {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  let existingMode = null;
   try {
     await fs13.mkdir(path13.dirname(filePath), { recursive: true });
+    try {
+      const stats = await fs13.lstat(filePath);
+      if (!stats.isFile()) {
+        throw new Error(`Atomic file target must be a regular file: ${filePath}`);
+      }
+      existingMode = stats.mode & 4095;
+    } catch (error2) {
+      if (error2.code !== "ENOENT") {
+        throw error2;
+      }
+    }
     await fs13.writeFile(tempPath, content, "utf8");
+    if (existingMode !== null) {
+      await fs13.chmod(tempPath, existingMode);
+    }
+    try {
+      const stats = await fs13.lstat(filePath);
+      if (!stats.isFile()) {
+        throw new Error(`Atomic file target must be a regular file: ${filePath}`);
+      }
+    } catch (error2) {
+      if (error2.code !== "ENOENT") throw error2;
+    }
     await fs13.rename(tempPath, filePath);
   } catch (error2) {
     await fs13.rm(tempPath, { force: true }).catch(() => void 0);
@@ -54414,9 +54516,8 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
 async function persistWorkstreamStateWithPreparedStateUpdate(args) {
   const uniqueSlugs = [...new Set(args.affectedSlugs)];
   const indexPath = workstreamsIndexAbsolute(args.projectRoot);
-  const statePath = resolveBlueprintPath(args.projectRoot, BLUEPRINT_STATE_PATH);
   const statePaths = uniqueSlugs.map((slug) => workstreamStateAbsolute(args.projectRoot, slug));
-  const snapshots = await snapshotFiles([statePath, indexPath, ...statePaths]);
+  const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(args.projectRoot),
     ...uniqueSlugs.map((slug) => path13.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
@@ -54719,9 +54820,24 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     directory,
     `${path13.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
+  let existingMode = null;
   await fs13.mkdir(directory, { recursive: true });
+  try {
+    const stats = await fs13.lstat(registryPath);
+    if (!stats.isFile()) {
+      throw new Error(`Workspace registry target must be a regular file: ${registryPath}`);
+    }
+    existingMode = stats.mode & 4095;
+  } catch (error2) {
+    if (error2.code !== "ENOENT") {
+      throw error2;
+    }
+  }
   await fs13.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
 `, "utf8");
+  if (existingMode !== null) {
+    await fs13.chmod(tempPath, existingMode);
+  }
   try {
     maybeFailWorkspaceRegistryWrite(registryPath);
   } catch (error2) {
@@ -54738,6 +54854,10 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
   );
   let restoredOriginal = false;
   try {
+    const currentStats = await fs13.lstat(registryPath);
+    if (!currentStats.isFile()) {
+      throw new Error(`Workspace registry target must be a regular file: ${registryPath}`);
+    }
     await fs13.copyFile(registryPath, backupPath);
     await fs13.rename(tempPath, registryPath);
   } catch (error2) {
@@ -58061,8 +58181,26 @@ function normalizePlanRunRecord(value, expected) {
   };
 }
 async function readJsonObjectIfPresent(filePath, label) {
+  const existingMode = await inspectPlanRunFileTarget(filePath);
+  if (existingMode === null) {
+    return null;
+  }
   try {
     return safeJsonParseObject(await fs14.readFile(filePath, "utf8"), { label });
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
+async function inspectPlanRunFileTarget(filePath) {
+  try {
+    const stats = await fs14.lstat(filePath);
+    if (!stats.isFile()) {
+      throw new Error(`PlanRun persistence target must be a regular file: ${filePath}`);
+    }
+    return stats.mode & 4095;
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -58081,6 +58219,26 @@ function maybeFailPlanRunRecordWrite(filePath) {
   }
   delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE;
   throw new Error(`Injected PlanRun record write failure for ${filePath}`);
+}
+function maybeFailPlanRunRecordRestore(filePath) {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_RESTORE_ONCE;
+  if (!injectedFailure) {
+    return;
+  }
+  const matchesPath = injectedFailure === "1" || path14.resolve(injectedFailure) === path14.resolve(filePath);
+  if (!matchesPath) {
+    return;
+  }
+  delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_RESTORE_ONCE;
+  throw new Error(`Injected PlanRun record restore failure for ${filePath}`);
+}
+function maybeFailPlanRunRecordStage(stage) {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_STAGE_ONCE;
+  if (injectedFailure !== stage) {
+    return;
+  }
+  delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_STAGE_ONCE;
+  throw new Error(`Injected PlanRun record failure at stage ${stage}`);
 }
 function parsePositivePlanRunTestIntegerEnv(name) {
   const raw = process.env[name];
@@ -58126,6 +58284,7 @@ async function maybeDelayPlanRunPatchRollbackForTest() {
 async function writeAtomicJsonFile(filePath, value) {
   await ensureParentDirectory2(filePath);
   maybeFailPlanRunRecordWrite(filePath);
+  const existingMode = await inspectPlanRunFileTarget(filePath);
   const tempPath = path14.join(
     path14.dirname(filePath),
     `.${path14.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
@@ -58133,6 +58292,42 @@ async function writeAtomicJsonFile(filePath, value) {
   try {
     await fs14.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
+    if (existingMode !== null) {
+      await fs14.chmod(tempPath, existingMode);
+    }
+    await inspectPlanRunFileTarget(filePath);
+    await fs14.rename(tempPath, filePath);
+  } catch (error2) {
+    await fs14.rm(tempPath, { force: true }).catch(() => void 0);
+    throw error2;
+  }
+}
+async function readPlanRunFileSnapshot(filePath) {
+  const mode = await inspectPlanRunFileTarget(filePath);
+  if (mode === null) {
+    return null;
+  }
+  return {
+    content: await fs14.readFile(filePath, "utf8"),
+    mode
+  };
+}
+async function restorePlanRunFileSnapshot(filePath, snapshot) {
+  maybeFailPlanRunRecordRestore(filePath);
+  if (snapshot === null) {
+    await inspectPlanRunFileTarget(filePath);
+    await fs14.rm(filePath, { force: true });
+    return;
+  }
+  await ensureParentDirectory2(filePath);
+  const tempPath = path14.join(
+    path14.dirname(filePath),
+    `.${path14.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.rollback.tmp`
+  );
+  try {
+    await fs14.writeFile(tempPath, snapshot.content, "utf8");
+    await fs14.chmod(tempPath, snapshot.mode);
+    await inspectPlanRunFileTarget(filePath);
     await fs14.rename(tempPath, filePath);
   } catch (error2) {
     await fs14.rm(tempPath, { force: true }).catch(() => void 0);
@@ -58315,11 +58510,6 @@ async function blueprintPlanRunRecord(args) {
   const runId = normalizePlanRunId(args.runId);
   const indexPath = buildPlanRunIndexPath(projectRoot, phase, planId2);
   const recordPath = buildPlanRunRecordPath(projectRoot, phase, planId2, runId);
-  const planMetadata = await loadPlanMetadata({
-    projectRoot,
-    phase,
-    planId: planId2
-  });
   const changedFiles = normalizeRepoRelativePlanRunPaths(
     projectRoot,
     args.changedFiles,
@@ -58330,76 +58520,112 @@ async function blueprintPlanRunRecord(args) {
     args.unauthorizedChangedFiles,
     "unauthorizedChangedFiles"
   );
-  const unauthorizedChangedFiles = deriveUnauthorizedChangedFiles({
-    changedFiles,
-    authorizedFiles: planMetadata.authorizedFiles,
-    explicitUnauthorizedChangedFiles
-  });
-  const warnings = uniqueSortedStrings2([
-    ...normalizeStringList(args.warnings, "warnings"),
-    ...planMetadata.warnings
-  ]);
-  return withBlueprintRepoLock(projectRoot, "plan-run-record", async () => {
-    const existingIndex = await readPlanRunIndexIfPresent({
-      projectRoot,
-      indexPath,
-      phase,
-      planId: planId2
+  const inputWarnings = normalizeStringList(args.warnings, "warnings");
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    return withBlueprintRepoLock(projectRoot, "plan-run-record", async () => {
+      const planMetadata = await loadPlanMetadata({
+        projectRoot,
+        phase,
+        planId: planId2
+      });
+      const unauthorizedChangedFiles = deriveUnauthorizedChangedFiles({
+        changedFiles,
+        authorizedFiles: planMetadata.authorizedFiles,
+        explicitUnauthorizedChangedFiles
+      });
+      const warnings = uniqueSortedStrings2([
+        ...inputWarnings,
+        ...planMetadata.warnings
+      ]);
+      const existingIndex = await readPlanRunIndexIfPresent({
+        projectRoot,
+        indexPath,
+        phase,
+        planId: planId2
+      });
+      const existingRecord = await readPlanRunRecordIfPresent({
+        projectRoot,
+        recordPath,
+        phase,
+        planId: planId2,
+        runId
+      });
+      const run = createPlanRunRecord({
+        projectRoot,
+        input: args,
+        phase,
+        planId: planId2,
+        runId,
+        planPath: planMetadata.path,
+        planTitle: planMetadata.title,
+        authorizedFiles: planMetadata.authorizedFiles,
+        changedFiles,
+        unauthorizedChangedFiles,
+        warnings,
+        existingRecord,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      const index = buildPlanRunIndex({
+        existingIndex,
+        run
+      });
+      const [previousRecordContent, previousIndexContent] = await Promise.all([
+        readPlanRunFileSnapshot(recordPath),
+        readPlanRunFileSnapshot(indexPath)
+      ]);
+      try {
+        await writeAtomicJsonFile(recordPath, run);
+        await writeAtomicJsonFile(indexPath, index);
+        maybeFailPlanRunRecordStage("after-index-promotion-before-reload");
+        const reloadedIndex = await readPlanRunIndexIfPresent({
+          projectRoot,
+          indexPath,
+          phase,
+          planId: planId2
+        });
+        const reloadedRun = await readPlanRunRecordIfPresent({
+          projectRoot,
+          recordPath,
+          phase,
+          planId: planId2,
+          runId
+        });
+        if (!reloadedIndex || !reloadedRun) {
+          throw new Error(`PlanRun ${runId} failed to reload after persistence.`);
+        }
+        return {
+          status: "recorded",
+          created: existingRecord === null,
+          updated: existingRecord !== null,
+          indexPath,
+          path: recordPath,
+          run: reloadedRun,
+          history: reloadedIndex.runs,
+          warnings: reloadedRun.warnings
+        };
+      } catch (error2) {
+        const rollbackErrors = [];
+        try {
+          await restorePlanRunFileSnapshot(indexPath, previousIndexContent);
+          maybeFailPlanRunRecordStage("after-index-rollback-restore");
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
+        }
+        try {
+          await restorePlanRunFileSnapshot(recordPath, previousRecordContent);
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
+        }
+        if (rollbackErrors.length > 0) {
+          const originalMessage = error2 instanceof Error ? error2.message : String(error2);
+          const rollbackMessage = rollbackErrors.map((rollbackError) => rollbackError instanceof Error ? rollbackError.message : String(rollbackError)).join("; ");
+          throw new Error(
+            `PlanRun persistence failed and rollback also failed. Original error: ${originalMessage}. Rollback error: ${rollbackMessage}`
+          );
+        }
+        throw error2;
+      }
     });
-    const existingRecord = await readPlanRunRecordIfPresent({
-      projectRoot,
-      recordPath,
-      phase,
-      planId: planId2,
-      runId
-    });
-    const run = createPlanRunRecord({
-      projectRoot,
-      input: args,
-      phase,
-      planId: planId2,
-      runId,
-      planPath: planMetadata.path,
-      planTitle: planMetadata.title,
-      authorizedFiles: planMetadata.authorizedFiles,
-      changedFiles,
-      unauthorizedChangedFiles,
-      warnings,
-      existingRecord,
-      now: (/* @__PURE__ */ new Date()).toISOString()
-    });
-    const index = buildPlanRunIndex({
-      existingIndex,
-      run
-    });
-    await writeAtomicJsonFile(recordPath, run);
-    await writeAtomicJsonFile(indexPath, index);
-    const reloadedIndex = await readPlanRunIndexIfPresent({
-      projectRoot,
-      indexPath,
-      phase,
-      planId: planId2
-    });
-    const reloadedRun = await readPlanRunRecordIfPresent({
-      projectRoot,
-      recordPath,
-      phase,
-      planId: planId2,
-      runId
-    });
-    if (!reloadedIndex || !reloadedRun) {
-      throw new Error(`PlanRun ${runId} failed to reload after persistence.`);
-    }
-    return {
-      status: "recorded",
-      created: existingRecord === null,
-      updated: existingRecord !== null,
-      indexPath,
-      path: recordPath,
-      run: reloadedRun,
-      history: reloadedIndex.runs,
-      warnings: reloadedRun.warnings
-    };
   });
 }
 async function blueprintPlanRunLoad(args) {
@@ -59066,6 +59292,7 @@ var init_plan_run = __esm({
     init_phase();
     init_phase_plan_identifiers();
     init_phase_numbering();
+    init_phase_topology_lock();
     init_workspace();
     init_security();
     execFileAsync3 = promisify3(execFile3);
@@ -59941,7 +60168,11 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
   if (mode === "preview") {
     return run();
   }
-  return withBlueprintRepoLock(projectRoot, "cleanup-archive", run);
+  return withBlueprintRepoLock(
+    projectRoot,
+    PHASE_TOPOLOGY_LOCK_NAME,
+    async () => withBlueprintRepoLock(projectRoot, "cleanup-archive", run)
+  );
 }
 async function blueprintCleanupArchive(rawArgs = {}) {
   const parsed = object2(cleanupArchiveInputSchema).safeParse(rawArgs);
@@ -59970,6 +60201,7 @@ var init_cleanup = __esm({
     init_v4();
     init_artifacts();
     init_phase();
+    init_phase_topology_lock();
     init_state();
     CLEANUP_ARCHIVE_DEFAULT_DESTINATION = `${BLUEPRINT_DIR}/archive/v1`;
     CLEANUP_LATEST_REPORT_NAME = "cleanup-latest";
@@ -68077,16 +68309,52 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
   let metadataPromoted = false;
   let checklistPromoted = false;
   try {
+    const existingModes = await Promise.all(
+      [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
+        try {
+          const stats = await fs17.lstat(targetPath);
+          if (!stats.isFile()) {
+            throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
+          }
+          return stats.mode & 4095;
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return null;
+          }
+          throw error2;
+        }
+      })
+    );
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
       label: path17.basename(plan.savedPaths.checklistPath)
     });
-    if (await pathExists6(plan.savedPaths.metadataPath)) {
+    if (existingModes[0] !== null) {
+      await fs17.chmod(metadataTmpPath, existingModes[0]);
+    }
+    if (existingModes[1] !== null) {
+      await fs17.chmod(checklistTmpPath, existingModes[1]);
+    }
+    const promotionModes = await Promise.all(
+      [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
+        try {
+          const stats = await fs17.lstat(targetPath);
+          if (!stats.isFile()) {
+            throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
+          }
+          return stats.mode & 4095;
+        } catch (error2) {
+          if (error2.code === "ENOENT") return null;
+          throw error2;
+        }
+      })
+    );
+    if (promotionModes[0] !== null) {
       await fs17.rename(plan.savedPaths.metadataPath, metadataBackupPath);
       metadataBackupCreated = true;
     }
-    if (await pathExists6(plan.savedPaths.checklistPath)) {
+    if (promotionModes[1] !== null) {
       await fs17.rename(plan.savedPaths.checklistPath, checklistBackupPath);
       checklistBackupCreated = true;
     }
@@ -73653,16 +73921,23 @@ function uniqueImpactBundleWorkDir(impactRoot, impactId, purpose) {
 function persistenceErrorMessage(error2) {
   return error2 instanceof Error ? error2.message : String(error2);
 }
-async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files) {
+async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files, existingDirectoryMode, existingFileModes) {
   const stagingDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "staging");
   try {
     await fs18.mkdir(stagingDir);
+    if (existingDirectoryMode !== null) {
+      await fs18.chmod(stagingDir, existingDirectoryMode);
+    }
     for (const [fileName, content] of files) {
       const filePath = ensurePathWithinRootSync(stagingDir, path18.join(stagingDir, fileName), {
         label: "staged impact report file"
       });
       ensurePathWithinRootSync(projectRoot, filePath, { label: "staged impact report file" });
       await fs18.writeFile(filePath, content, "utf8");
+      const existingMode = existingFileModes.get(fileName);
+      if (existingMode !== void 0) {
+        await fs18.chmod(filePath, existingMode);
+      }
     }
     const stagedComparison = await compareImpactBundle(projectRoot, stagingDir, files);
     if (!stagedComparison.existing || !stagedComparison.identical) {
@@ -73677,7 +73952,16 @@ async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files) 
 async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impactId) {
   const warnings = [];
   const backupDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "backup");
-  const hadExistingBundle = await pathExists7(impactDir);
+  let hadExistingBundle = false;
+  try {
+    const stats = await fs18.lstat(impactDir);
+    if (!stats.isDirectory()) {
+      throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
+    }
+    hadExistingBundle = true;
+  } catch (error2) {
+    if (error2.code !== "ENOENT") throw error2;
+  }
   let backupCreated = false;
   let promoted = false;
   try {
@@ -73716,7 +74000,49 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
 async function replaceImpactBundleTransactionally(projectRoot, impactId, impactDir, files) {
   const impactRoot = ensureImpactReportRoot(projectRoot);
   await fs18.mkdir(impactRoot, { recursive: true });
-  const stagingDir = await stageImpactBundleFiles(projectRoot, impactRoot, impactId, files);
+  let existingDirectoryMode = null;
+  const existingFileModes = /* @__PURE__ */ new Map();
+  try {
+    const stats = await fs18.lstat(impactDir);
+    if (!stats.isDirectory()) {
+      throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
+    }
+    existingDirectoryMode = stats.mode & 4095;
+  } catch (error2) {
+    if (error2.code !== "ENOENT") {
+      throw error2;
+    }
+  }
+  if (existingDirectoryMode !== null) {
+    await Promise.all(
+      [...files.keys()].map(async (fileName) => {
+        const existingPath = ensurePathWithinRootSync(
+          impactDir,
+          path18.join(impactDir, fileName),
+          { label: "existing impact report file" }
+        );
+        try {
+          const stats = await fs18.lstat(existingPath);
+          if (!stats.isFile()) {
+            throw new Error(`Impact bundle file target must be a regular file: ${existingPath}`);
+          }
+          existingFileModes.set(fileName, stats.mode & 4095);
+        } catch (error2) {
+          if (error2.code !== "ENOENT") {
+            throw error2;
+          }
+        }
+      })
+    );
+  }
+  const stagingDir = await stageImpactBundleFiles(
+    projectRoot,
+    impactRoot,
+    impactId,
+    files,
+    existingDirectoryMode,
+    existingFileModes
+  );
   return promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impactId);
 }
 async function readSavedImpactReport(projectRoot, impactId) {
@@ -73772,6 +74098,15 @@ async function blueprintImpactReportWrite(args = {}) {
     writeEvidenceLog: args.writeEvidenceLog
   });
   return withBlueprintRepoLock(projectRoot, `impact-report-${impactId}`, async () => {
+    const lexicalImpactDir = path18.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
+    try {
+      const stats = await fs18.lstat(lexicalImpactDir);
+      if (!stats.isDirectory()) {
+        throw new Error(`Impact bundle target must be a real directory: ${lexicalImpactDir}`);
+      }
+    } catch (error2) {
+      if (error2.code !== "ENOENT") throw error2;
+    }
     const impactDir = ensureImpactBundleDir(projectRoot, impactId);
     const comparison = await compareImpactBundle(projectRoot, impactDir, bundle.files);
     if (comparison.existing && comparison.identical) {
@@ -75175,7 +75510,7 @@ async function blueprintRuntimeOwnedCommandCatalog() {
 async function blueprintCommandCatalog() {
   return buildRuntimeOwnedFallbackCommandCatalog();
 }
-async function blueprintProjectInit(args = {}) {
+async function blueprintProjectInitUnlocked(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const overwrite = args.overwrite ?? false;
   const bootstrapMode = args.bootstrapMode ?? "interactive";
@@ -75309,6 +75644,20 @@ async function blueprintProjectInit(args = {}) {
     warnings: [...new Set(warnings)]
   };
 }
+async function blueprintProjectInit(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  return withDirectoryLock(
+    {
+      lockPath: path19.join(projectRoot, ".blueprint-project-init.lock"),
+      timing: {
+        retryMs: 25,
+        staleMs: 3e4,
+        heartbeatMs: 7500
+      }
+    },
+    () => blueprintProjectInitUnlocked({ ...args, cwd: projectRoot })
+  );
+}
 async function blueprintProjectStatus(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
@@ -75392,6 +75741,7 @@ var init_project = __esm({
     "use strict";
     init_v4();
     init_artifacts();
+    init_directory_lock();
     init_security();
     init_config();
     init_phase();
@@ -89809,7 +90159,7 @@ async function blueprintGodReviewLoadFindings(rawArgs) {
     projectRoot,
     session: reference.session
   });
-  if (fingerprint.staleReasons.length > 0) {
+  if (fingerprint.staleReasons.length > 0 && (args.activeCommand === "/blu-code-review" || reference.session.scopeKind === "phase")) {
     return invalidLoadFindingsResult({
       reason: "God-review scope fingerprint changed. Start a new hidden review before loading saved findings.",
       reportPath: reference.reportPath,
@@ -91360,11 +91710,29 @@ var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
 function isMutationTool(toolName) {
   return BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName);
 }
-function shouldLogMutationFailure(toolName, result) {
+function isReadOnlyPreviewInvocation(toolName, args) {
+  if (toolName === "blueprint_cleanup_archive") {
+    return (args.mode ?? "preview") === "preview";
+  }
+  if (toolName === "blueprint_plan_run_prepare") {
+    return (args.mode ?? "preview") === "preview";
+  }
+  if (toolName === "blueprint_roadmap_promote_backlog") {
+    const backlogIds = Array.isArray(args.backlogIds) ? args.backlogIds.filter(
+      (value) => typeof value === "string" && value.trim().length > 0
+    ) : [];
+    return args.previewOnly === true || backlogIds.length === 0;
+  }
+  if (toolName === "blueprint_artifact_mutate_index") {
+    return args.action === "list";
+  }
+  return toolName === "blueprint_patch_reapply" && args.dryRun === true;
+}
+function shouldLogMutationFailure(toolName, result, args = {}) {
   if (!isMutationTool(toolName)) {
     return false;
   }
-  if (toolName === "blueprint_patch_reapply" && getBoolean(result, "preview") === true) {
+  if (isReadOnlyPreviewInvocation(toolName, args) || toolName === "blueprint_patch_reapply" && getBoolean(result, "preview") === true) {
     return false;
   }
   if (toolName === "blueprint_update_plan" && getString(result, "persistenceStatus") === "not_saved") {
@@ -91388,12 +91756,12 @@ function shouldLogMutationFailure(toolName, result) {
 async function executeToolHandlerWithFailureLogging(definition, args) {
   try {
     const result = await definition.handler(args);
-    if (shouldLogMutationFailure(definition.name, result)) {
+    if (shouldLogMutationFailure(definition.name, result, args)) {
       await logRejectedMutationResult(definition.name, args, result);
     }
     return result;
   } catch (error2) {
-    if (isMutationTool(definition.name)) {
+    if (isMutationTool(definition.name) && !isReadOnlyPreviewInvocation(definition.name, args)) {
       await logThrownMutationError(definition.name, args, error2);
     }
     throw error2;

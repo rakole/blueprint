@@ -2822,6 +2822,21 @@ export async function readJsonIfPresent(
   return safeJsonParseObject(raw, { label: filePath });
 }
 
+async function existingRegularFileMode(filePath: string): Promise<number | null> {
+  try {
+    const stats = await fs.lstat(filePath);
+    if (!stats.isFile()) {
+      throw new Error(`Atomic file target must be a regular file: ${filePath}`);
+    }
+    return stats.mode & 0o7777;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function writeJsonFile(
   filePath: string,
   value: Record<string, unknown>
@@ -2829,9 +2844,14 @@ export async function writeJsonFile(
   await ensureParentDirectory(filePath);
   const fileSystem = activeJsonFileSystem();
   const tempPath = tempSiblingPath(filePath);
+  const existingMode = await existingRegularFileMode(filePath);
 
   try {
     await fileSystem.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+    if (existingMode !== null) {
+      await fs.chmod(tempPath, existingMode);
+    }
+    await existingRegularFileMode(filePath);
     await fileSystem.rename(tempPath, filePath);
   } catch (error) {
     await fileSystem.rm(tempPath, { force: true }).catch(() => undefined);
@@ -2856,9 +2876,14 @@ export async function writeTextFile(
 
   await ensureParentDirectory(filePath);
   const tempPath = tempSiblingPath(filePath);
+  const existingMode = await existingRegularFileMode(filePath);
 
   try {
     await fs.writeFile(tempPath, prepared.content, "utf8");
+    if (existingMode !== null) {
+      await fs.chmod(tempPath, existingMode);
+    }
+    await existingRegularFileMode(filePath);
     await fs.rename(tempPath, filePath);
   } catch (error) {
     await fs.rm(tempPath, { force: true }).catch(() => undefined);

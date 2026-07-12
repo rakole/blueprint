@@ -38,6 +38,7 @@ export type StateUpdateResult = {
 export type PreparedStateUpdate = StateUpdateResult & {
     projectRoot: string;
     absoluteStatePath: string;
+    expectedStateContent: string | null;
     content: string;
     routingFreshness: PreparedStateRoutingFreshness | null;
 };

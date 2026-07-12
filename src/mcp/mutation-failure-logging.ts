@@ -64,15 +64,48 @@ export function isMutationTool(toolName: string): boolean {
   return BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName);
 }
 
+function isReadOnlyPreviewInvocation(
+  toolName: string,
+  args: Record<string, unknown>
+): boolean {
+  if (toolName === "blueprint_cleanup_archive") {
+    return (args.mode ?? "preview") === "preview";
+  }
+
+  if (toolName === "blueprint_plan_run_prepare") {
+    return (args.mode ?? "preview") === "preview";
+  }
+
+  if (toolName === "blueprint_roadmap_promote_backlog") {
+    const backlogIds = Array.isArray(args.backlogIds)
+      ? args.backlogIds.filter(
+          (value): value is string => typeof value === "string" && value.trim().length > 0
+        )
+      : [];
+
+    return args.previewOnly === true || backlogIds.length === 0;
+  }
+
+  if (toolName === "blueprint_artifact_mutate_index") {
+    return args.action === "list";
+  }
+
+  return toolName === "blueprint_patch_reapply" && args.dryRun === true;
+}
+
 export function shouldLogMutationFailure(
   toolName: string,
-  result: ToolResult
+  result: ToolResult,
+  args: Record<string, unknown> = {}
 ): boolean {
   if (!isMutationTool(toolName)) {
     return false;
   }
 
-  if (toolName === "blueprint_patch_reapply" && getBoolean(result, "preview") === true) {
+  if (
+    isReadOnlyPreviewInvocation(toolName, args) ||
+    (toolName === "blueprint_patch_reapply" && getBoolean(result, "preview") === true)
+  ) {
     return false;
   }
 
@@ -120,13 +153,16 @@ export async function executeToolHandlerWithFailureLogging(
   try {
     const result = await definition.handler(args as Record<string, unknown>);
 
-    if (shouldLogMutationFailure(definition.name, result)) {
+    if (shouldLogMutationFailure(definition.name, result, args)) {
       await logRejectedMutationResult(definition.name, args, result);
     }
 
     return result;
   } catch (error) {
-    if (isMutationTool(definition.name)) {
+    if (
+      isMutationTool(definition.name) &&
+      !isReadOnlyPreviewInvocation(definition.name, args)
+    ) {
       await logThrownMutationError(definition.name, args, error);
     }
 

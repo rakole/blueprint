@@ -8145,12 +8145,17 @@ async function stageImpactBundleFiles(
   projectRoot: string,
   impactRoot: string,
   impactId: string,
-  files: Map<string, string>
+  files: Map<string, string>,
+  existingDirectoryMode: number | null,
+  existingFileModes: Map<string, number>
 ): Promise<string> {
   const stagingDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "staging");
 
   try {
     await fs.mkdir(stagingDir);
+    if (existingDirectoryMode !== null) {
+      await fs.chmod(stagingDir, existingDirectoryMode);
+    }
 
     for (const [fileName, content] of files) {
       const filePath = ensurePathWithinRootSync(stagingDir, path.join(stagingDir, fileName), {
@@ -8158,6 +8163,10 @@ async function stageImpactBundleFiles(
       });
       ensurePathWithinRootSync(projectRoot, filePath, { label: "staged impact report file" });
       await fs.writeFile(filePath, content, "utf8");
+      const existingMode = existingFileModes.get(fileName);
+      if (existingMode !== undefined) {
+        await fs.chmod(filePath, existingMode);
+      }
     }
 
     const stagedComparison = await compareImpactBundle(projectRoot, stagingDir, files);
@@ -8181,7 +8190,16 @@ async function promoteStagedImpactBundle(
 ): Promise<string[]> {
   const warnings: string[] = [];
   const backupDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "backup");
-  const hadExistingBundle = await pathExists(impactDir);
+  let hadExistingBundle = false;
+  try {
+    const stats = await fs.lstat(impactDir);
+    if (!stats.isDirectory()) {
+      throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
+    }
+    hadExistingBundle = true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   let backupCreated = false;
   let promoted = false;
 
@@ -8233,7 +8251,49 @@ async function replaceImpactBundleTransactionally(
   const impactRoot = ensureImpactReportRoot(projectRoot);
 
   await fs.mkdir(impactRoot, { recursive: true });
-  const stagingDir = await stageImpactBundleFiles(projectRoot, impactRoot, impactId, files);
+  let existingDirectoryMode: number | null = null;
+  const existingFileModes = new Map<string, number>();
+  try {
+    const stats = await fs.lstat(impactDir);
+    if (!stats.isDirectory()) {
+      throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
+    }
+    existingDirectoryMode = stats.mode & 0o7777;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
+  if (existingDirectoryMode !== null) {
+    await Promise.all(
+      [...files.keys()].map(async (fileName) => {
+        const existingPath = ensurePathWithinRootSync(
+          impactDir,
+          path.join(impactDir, fileName),
+          { label: "existing impact report file" }
+        );
+        try {
+          const stats = await fs.lstat(existingPath);
+          if (!stats.isFile()) {
+            throw new Error(`Impact bundle file target must be a regular file: ${existingPath}`);
+          }
+          existingFileModes.set(fileName, stats.mode & 0o7777);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+            throw error;
+          }
+        }
+      })
+    );
+  }
+  const stagingDir = await stageImpactBundleFiles(
+    projectRoot,
+    impactRoot,
+    impactId,
+    files,
+    existingDirectoryMode,
+    existingFileModes
+  );
 
   return promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impactId);
 }
@@ -8310,6 +8370,15 @@ export async function blueprintImpactReportWrite(
   });
 
   return withBlueprintRepoLock(projectRoot, `impact-report-${impactId}`, async () => {
+    const lexicalImpactDir = path.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
+    try {
+      const stats = await fs.lstat(lexicalImpactDir);
+      if (!stats.isDirectory()) {
+        throw new Error(`Impact bundle target must be a real directory: ${lexicalImpactDir}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
     const impactDir = ensureImpactBundleDir(projectRoot, impactId);
     const comparison = await compareImpactBundle(projectRoot, impactDir, bundle.files);
 

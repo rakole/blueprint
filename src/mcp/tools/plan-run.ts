@@ -19,6 +19,7 @@ import { blueprintConfigGet } from "./config.js";
 import { blueprintPhaseExecutionTargets, blueprintPhasePlanRead } from "./phase.js";
 import { normalizePlanId } from "./phase-plan-identifiers.js";
 import { normalizePhaseNumber, type NumericInput } from "./phase-numbering.js";
+import { PHASE_TOPOLOGY_LOCK_NAME } from "./phase-topology-lock.js";
 import {
   blueprintPatchRecord,
   rollbackPatchRecordToSnapshot,
@@ -2230,8 +2231,32 @@ async function readJsonObjectIfPresent(
   filePath: string,
   label: string
 ): Promise<Record<string, unknown> | null> {
+  const existingMode = await inspectPlanRunFileTarget(filePath);
+
+  if (existingMode === null) {
+    return null;
+  }
+
   try {
     return safeJsonParseObject(await fs.readFile(filePath, "utf8"), { label });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function inspectPlanRunFileTarget(filePath: string): Promise<number | null> {
+  try {
+    const stats = await fs.lstat(filePath);
+
+    if (!stats.isFile()) {
+      throw new Error(`PlanRun persistence target must be a regular file: ${filePath}`);
+    }
+
+    return stats.mode & 0o7777;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return null;
@@ -2257,6 +2282,39 @@ function maybeFailPlanRunRecordWrite(filePath: string): void {
 
   delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE;
   throw new Error(`Injected PlanRun record write failure for ${filePath}`);
+}
+
+function maybeFailPlanRunRecordRestore(filePath: string): void {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_RESTORE_ONCE;
+
+  if (!injectedFailure) {
+    return;
+  }
+
+  const matchesPath =
+    injectedFailure === "1" || path.resolve(injectedFailure) === path.resolve(filePath);
+
+  if (!matchesPath) {
+    return;
+  }
+
+  delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_RESTORE_ONCE;
+  throw new Error(`Injected PlanRun record restore failure for ${filePath}`);
+}
+
+type PlanRunRecordFailureStage =
+  | "after-index-promotion-before-reload"
+  | "after-index-rollback-restore";
+
+function maybeFailPlanRunRecordStage(stage: PlanRunRecordFailureStage): void {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_STAGE_ONCE;
+
+  if (injectedFailure !== stage) {
+    return;
+  }
+
+  delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_STAGE_ONCE;
+  throw new Error(`Injected PlanRun record failure at stage ${stage}`);
 }
 
 function parsePositivePlanRunTestIntegerEnv(name: string): number | null {
@@ -2315,6 +2373,7 @@ async function maybeDelayPlanRunPatchRollbackForTest(): Promise<void> {
 async function writeAtomicJsonFile(filePath: string, value: Record<string, unknown>): Promise<void> {
   await ensureParentDirectory(filePath);
   maybeFailPlanRunRecordWrite(filePath);
+  const existingMode = await inspectPlanRunFileTarget(filePath);
 
   const tempPath = path.join(
     path.dirname(filePath),
@@ -2325,6 +2384,59 @@ async function writeAtomicJsonFile(filePath: string, value: Record<string, unkno
 
   try {
     await fs.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+    if (existingMode !== null) {
+      await fs.chmod(tempPath, existingMode);
+    }
+    await inspectPlanRunFileTarget(filePath);
+    await fs.rename(tempPath, filePath);
+  } catch (error) {
+    await fs.rm(tempPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+
+type PlanRunFileSnapshot = {
+  content: string;
+  mode: number;
+};
+
+async function readPlanRunFileSnapshot(filePath: string): Promise<PlanRunFileSnapshot | null> {
+  const mode = await inspectPlanRunFileTarget(filePath);
+
+  if (mode === null) {
+    return null;
+  }
+
+  return {
+    content: await fs.readFile(filePath, "utf8"),
+    mode
+  };
+}
+
+async function restorePlanRunFileSnapshot(
+  filePath: string,
+  snapshot: PlanRunFileSnapshot | null
+): Promise<void> {
+  maybeFailPlanRunRecordRestore(filePath);
+
+  if (snapshot === null) {
+    await inspectPlanRunFileTarget(filePath);
+    await fs.rm(filePath, { force: true });
+    return;
+  }
+
+  await ensureParentDirectory(filePath);
+  const tempPath = path.join(
+    path.dirname(filePath),
+    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random()
+      .toString(36)
+      .slice(2)}.rollback.tmp`
+  );
+
+  try {
+    await fs.writeFile(tempPath, snapshot.content, "utf8");
+    await fs.chmod(tempPath, snapshot.mode);
+    await inspectPlanRunFileTarget(filePath);
     await fs.rename(tempPath, filePath);
   } catch (error) {
     await fs.rm(tempPath, { force: true }).catch(() => undefined);
@@ -2585,11 +2697,6 @@ export async function blueprintPlanRunRecord(
   const runId = normalizePlanRunId(args.runId);
   const indexPath = buildPlanRunIndexPath(projectRoot, phase, planId);
   const recordPath = buildPlanRunRecordPath(projectRoot, phase, planId, runId);
-  const planMetadata = await loadPlanMetadata({
-    projectRoot,
-    phase,
-    planId
-  });
   const changedFiles = normalizeRepoRelativePlanRunPaths(
     projectRoot,
     args.changedFiles,
@@ -2600,17 +2707,24 @@ export async function blueprintPlanRunRecord(
     args.unauthorizedChangedFiles,
     "unauthorizedChangedFiles"
   );
-  const unauthorizedChangedFiles = deriveUnauthorizedChangedFiles({
-    changedFiles,
-    authorizedFiles: planMetadata.authorizedFiles,
-    explicitUnauthorizedChangedFiles
-  });
-  const warnings = uniqueSortedStrings([
-    ...normalizeStringList(args.warnings, "warnings"),
-    ...planMetadata.warnings
-  ]);
+  const inputWarnings = normalizeStringList(args.warnings, "warnings");
 
-  return withBlueprintRepoLock(projectRoot, "plan-run-record", async () => {
+  return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    return withBlueprintRepoLock(projectRoot, "plan-run-record", async () => {
+    const planMetadata = await loadPlanMetadata({
+      projectRoot,
+      phase,
+      planId
+    });
+    const unauthorizedChangedFiles = deriveUnauthorizedChangedFiles({
+      changedFiles,
+      authorizedFiles: planMetadata.authorizedFiles,
+      explicitUnauthorizedChangedFiles
+    });
+    const warnings = uniqueSortedStrings([
+      ...inputWarnings,
+      ...planMetadata.warnings
+    ]);
     const existingIndex = await readPlanRunIndexIfPresent({
       projectRoot,
       indexPath,
@@ -2643,38 +2757,76 @@ export async function blueprintPlanRunRecord(
       existingIndex,
       run
     });
+    const [previousRecordContent, previousIndexContent] = await Promise.all([
+      readPlanRunFileSnapshot(recordPath),
+      readPlanRunFileSnapshot(indexPath)
+    ]);
 
-    await writeAtomicJsonFile(recordPath, run as unknown as Record<string, unknown>);
-    await writeAtomicJsonFile(indexPath, index as unknown as Record<string, unknown>);
+    try {
+      await writeAtomicJsonFile(recordPath, run as unknown as Record<string, unknown>);
+      await writeAtomicJsonFile(indexPath, index as unknown as Record<string, unknown>);
+      maybeFailPlanRunRecordStage("after-index-promotion-before-reload");
 
-    const reloadedIndex = await readPlanRunIndexIfPresent({
-      projectRoot,
-      indexPath,
-      phase,
-      planId
-    });
-    const reloadedRun = await readPlanRunRecordIfPresent({
-      projectRoot,
-      recordPath,
-      phase,
-      planId,
-      runId
-    });
+      const reloadedIndex = await readPlanRunIndexIfPresent({
+        projectRoot,
+        indexPath,
+        phase,
+        planId
+      });
+      const reloadedRun = await readPlanRunRecordIfPresent({
+        projectRoot,
+        recordPath,
+        phase,
+        planId,
+        runId
+      });
 
-    if (!reloadedIndex || !reloadedRun) {
-      throw new Error(`PlanRun ${runId} failed to reload after persistence.`);
+      if (!reloadedIndex || !reloadedRun) {
+        throw new Error(`PlanRun ${runId} failed to reload after persistence.`);
+      }
+
+      return {
+        status: "recorded" as const,
+        created: existingRecord === null,
+        updated: existingRecord !== null,
+        indexPath,
+        path: recordPath,
+        run: reloadedRun,
+        history: reloadedIndex.runs,
+        warnings: reloadedRun.warnings
+      };
+    } catch (error) {
+      const rollbackErrors: unknown[] = [];
+
+      try {
+        await restorePlanRunFileSnapshot(indexPath, previousIndexContent);
+        maybeFailPlanRunRecordStage("after-index-rollback-restore");
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError);
+      }
+
+      try {
+        await restorePlanRunFileSnapshot(recordPath, previousRecordContent);
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError);
+      }
+
+      if (rollbackErrors.length > 0) {
+        const originalMessage = error instanceof Error ? error.message : String(error);
+        const rollbackMessage = rollbackErrors
+          .map((rollbackError) => rollbackError instanceof Error
+            ? rollbackError.message
+            : String(rollbackError))
+          .join("; ");
+
+        throw new Error(
+          `PlanRun persistence failed and rollback also failed. Original error: ${originalMessage}. Rollback error: ${rollbackMessage}`
+        );
+      }
+
+      throw error;
     }
-
-    return {
-      status: "recorded",
-      created: existingRecord === null,
-      updated: existingRecord !== null,
-      indexPath,
-      path: recordPath,
-      run: reloadedRun,
-      history: reloadedIndex.runs,
-      warnings: reloadedRun.warnings
-    };
+    });
   });
 }
 

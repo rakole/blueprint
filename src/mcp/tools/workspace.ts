@@ -837,9 +837,32 @@ function renderWorkstreamsIndex(workstreams: WorkstreamStateDocument[]): string 
 
 async function writeFileAtomically(filePath: string, content: string): Promise<void> {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  let existingMode: number | null = null;
   try {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
+    try {
+      const stats = await fs.lstat(filePath);
+      if (!stats.isFile()) {
+        throw new Error(`Atomic file target must be a regular file: ${filePath}`);
+      }
+      existingMode = stats.mode & 0o7777;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
+      }
+    }
     await fs.writeFile(tempPath, content, "utf8");
+    if (existingMode !== null) {
+      await fs.chmod(tempPath, existingMode);
+    }
+    try {
+      const stats = await fs.lstat(filePath);
+      if (!stats.isFile()) {
+        throw new Error(`Atomic file target must be a regular file: ${filePath}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
     await fs.rename(tempPath, filePath);
   } catch (error) {
     await fs.rm(tempPath, { force: true }).catch(() => undefined);
@@ -1365,9 +1388,8 @@ async function persistWorkstreamStateWithPreparedStateUpdate(args: {
 }> {
   const uniqueSlugs = [...new Set(args.affectedSlugs)];
   const indexPath = workstreamsIndexAbsolute(args.projectRoot);
-  const statePath = resolveBlueprintPath(args.projectRoot, BLUEPRINT_STATE_PATH);
   const statePaths = uniqueSlugs.map((slug) => workstreamStateAbsolute(args.projectRoot, slug));
-  const snapshots = await snapshotFiles([statePath, indexPath, ...statePaths]);
+  const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(args.projectRoot),
     ...uniqueSlugs.map((slug) => path.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
@@ -1835,9 +1857,24 @@ async function writeWorkspaceRegistryDocument(
     directory,
     `${path.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
+  let existingMode: number | null = null;
 
   await fs.mkdir(directory, { recursive: true });
+  try {
+    const stats = await fs.lstat(registryPath);
+    if (!stats.isFile()) {
+      throw new Error(`Workspace registry target must be a regular file: ${registryPath}`);
+    }
+    existingMode = stats.mode & 0o7777;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
   await fs.writeFile(tempPath, `${JSON.stringify(document, null, 2)}\n`, "utf8");
+  if (existingMode !== null) {
+    await fs.chmod(tempPath, existingMode);
+  }
   try {
     maybeFailWorkspaceRegistryWrite(registryPath);
   } catch (error) {
@@ -1857,6 +1894,10 @@ async function writeWorkspaceRegistryDocument(
   let restoredOriginal = false;
 
   try {
+    const currentStats = await fs.lstat(registryPath);
+    if (!currentStats.isFile()) {
+      throw new Error(`Workspace registry target must be a regular file: ${registryPath}`);
+    }
     await fs.copyFile(registryPath, backupPath);
     await fs.rename(tempPath, registryPath);
   } catch (error) {

@@ -22,6 +22,7 @@ import {
   type BootstrapSeed,
   writeTextFile
 } from "./artifacts.js";
+import { withDirectoryLock } from "../directory-lock.js";
 import {
   formatBlueprintPhasePrefix,
   normalizeBlueprintPhaseRef,
@@ -1120,7 +1121,7 @@ export async function blueprintCommandCatalog(): Promise<CommandCatalogResult> {
   return buildRuntimeOwnedFallbackCommandCatalog();
 }
 
-export async function blueprintProjectInit(
+async function blueprintProjectInitUnlocked(
   args: ProjectInitArgs = {}
 ): Promise<ProjectInitResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -1290,6 +1291,24 @@ export async function blueprintProjectInit(
     nextAction: initializedNextAction,
     warnings: [...new Set(warnings)]
   };
+}
+
+export async function blueprintProjectInit(
+  args: ProjectInitArgs = {}
+): Promise<ProjectInitResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+
+  return withDirectoryLock(
+    {
+      lockPath: path.join(projectRoot, ".blueprint-project-init.lock"),
+      timing: {
+        retryMs: 25,
+        staleMs: 30_000,
+        heartbeatMs: 7_500
+      }
+    },
+    () => blueprintProjectInitUnlocked({ ...args, cwd: projectRoot })
+  );
 }
 
 export async function blueprintProjectStatus(

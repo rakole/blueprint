@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
@@ -10,6 +10,8 @@ import {
   blueprintPlanRunRecord,
   buildPlanRunIndexPath
 } from "../src/mcp/tools/plan-run.js";
+import { PHASE_TOPOLOGY_LOCK_NAME } from "../src/mcp/tools/phase-topology-lock.js";
+import { withBlueprintRepoLock } from "../src/mcp/tools/artifacts.js";
 import {
   createCommittedGitRepo,
   runGit
@@ -421,6 +423,98 @@ test("plan-run record refuses malformed existing RUNS indexes", async (t) => {
   );
 });
 
+test("plan-run record rejects symlink record and index targets without replacing them", async (t) => {
+  const { repoPath, baseHead } = await createPlanRunRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const initial = await blueprintPlanRunRecord({
+    cwd: repoPath,
+    runId: "run-01",
+    phase: "3",
+    planId: "1",
+    status: "PREPARED",
+    baseHead,
+    changedFiles: ["src/app.ts"]
+  });
+  const externalRecordPath = path.join(path.dirname(initial.path), "external-record.json");
+  const externalIndexPath = path.join(path.dirname(initial.path), "external-index.json");
+  const recordContent = await readFile(initial.path, "utf8");
+  const indexContent = await readFile(initial.indexPath, "utf8");
+
+  for (const [targetPath, externalPath, content] of [
+    [initial.path, externalRecordPath, recordContent],
+    [initial.indexPath, externalIndexPath, indexContent]
+  ] as const) {
+    await writeFile(externalPath, content, "utf8");
+    await rm(targetPath);
+    await symlink(externalPath, targetPath);
+
+    await assert.rejects(
+      () => blueprintPlanRunRecord({
+        cwd: repoPath,
+        runId: "run-01",
+        phase: "3",
+        planId: "1",
+        status: "IMPLEMENTED",
+        baseHead,
+        changedFiles: ["src/app.ts"]
+      }),
+      /PlanRun persistence target must be a regular file/
+    );
+
+    assert.equal((await lstat(targetPath)).isSymbolicLink(), true);
+    assert.equal(await readFile(externalPath, "utf8"), content);
+    await rm(targetPath);
+    await writeFile(targetPath, content, "utf8");
+  }
+});
+
+test("plan-run record rejects directory record and index targets without replacing them", async (t) => {
+  const { repoPath, baseHead } = await createPlanRunRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const initial = await blueprintPlanRunRecord({
+    cwd: repoPath,
+    runId: "run-01",
+    phase: "3",
+    planId: "1",
+    status: "PREPARED",
+    baseHead,
+    changedFiles: ["src/app.ts"]
+  });
+  const recordContent = await readFile(initial.path, "utf8");
+  const indexContent = await readFile(initial.indexPath, "utf8");
+
+  for (const [targetPath, content] of [
+    [initial.path, recordContent],
+    [initial.indexPath, indexContent]
+  ] as const) {
+    await rm(targetPath);
+    await mkdir(targetPath);
+
+    await assert.rejects(
+      () => blueprintPlanRunRecord({
+        cwd: repoPath,
+        runId: "run-01",
+        phase: "3",
+        planId: "1",
+        status: "IMPLEMENTED",
+        baseHead,
+        changedFiles: ["src/app.ts"]
+      }),
+      /PlanRun persistence target must be a regular file/
+    );
+
+    assert.equal((await lstat(targetPath)).isDirectory(), true);
+    await rm(targetPath, { recursive: true });
+    await writeFile(targetPath, content, "utf8");
+  }
+});
+
 test("plan-run load rejects RUNS indexes with phantom latest run ids", async (t) => {
   const { repoPath, baseHead } = await createPlanRunRepo();
   t.after(async () => {
@@ -693,4 +787,248 @@ test("plan-run record serializes concurrent writers without losing runs", async 
     loaded.history.map((entry) => entry.runId).sort(),
     ["run-01", "run-02", "run-03", "run-04", "run-05"]
   );
+});
+
+test("plan-run record derives authorization while holding the phase topology lock", async (t) => {
+  const { repoPath, baseHead } = await createPlanRunRepo(["src/old.ts"]);
+  const planPath = path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md");
+  let releaseTopologyLock!: () => void;
+  let signalTopologyLockHeld!: () => void;
+  const topologyLockHeld = new Promise<void>((resolve) => {
+    signalTopologyLockHeld = resolve;
+  });
+  const releaseTopology = new Promise<void>((resolve) => {
+    releaseTopologyLock = resolve;
+  });
+  t.after(async () => {
+    releaseTopologyLock();
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const topologyHolder = withBlueprintRepoLock(
+    repoPath,
+    PHASE_TOPOLOGY_LOCK_NAME,
+    async () => {
+      signalTopologyLockHeld();
+      await releaseTopology;
+    }
+  );
+  await topologyLockHeld;
+
+  let settled = false;
+  const recordPromise = blueprintPlanRunRecord({
+    cwd: repoPath,
+    runId: "run-01",
+    phase: "3",
+    planId: "1",
+    status: "PREPARED",
+    baseHead,
+    changedFiles: ["src/new.ts"]
+  }).finally(() => {
+    settled = true;
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(settled, false);
+  await writeFile(planPath, validPlanContent(["src/new.ts"]), "utf8");
+  releaseTopologyLock();
+  await topologyHolder;
+
+  const recorded = await recordPromise;
+  assert.deepEqual(recorded.run.authorization.authorizedFiles, ["src/new.ts"]);
+  assert.deepEqual(recorded.run.authorization.unauthorizedChangedFiles, []);
+});
+
+test("plan-run record removes a newly created record when index persistence fails", async (t) => {
+  const { repoPath, baseHead } = await createPlanRunRepo();
+  const indexPath = buildPlanRunIndexPath(repoPath, "3", "1");
+  t.after(async () => {
+    delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE;
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE = indexPath;
+  await assert.rejects(
+    () => blueprintPlanRunRecord({
+      cwd: repoPath,
+      runId: "run-01",
+      phase: "3",
+      planId: "1",
+      status: "PREPARED",
+      baseHead,
+      changedFiles: ["src/app.ts"]
+    }),
+    /Injected PlanRun record write failure/
+  );
+
+  await assert.rejects(() => readFile(indexPath, "utf8"), { code: "ENOENT" });
+  await assert.rejects(
+    () => readFile(path.join(repoPath, ".blueprint/runs/3/01/run-01.json"), "utf8"),
+    { code: "ENOENT" }
+  );
+});
+
+test("plan-run record restores exact prior record and index content when index update fails", async (t) => {
+  const { repoPath, baseHead } = await createPlanRunRepo();
+  t.after(async () => {
+    delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE;
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const initial = await blueprintPlanRunRecord({
+    cwd: repoPath,
+    runId: "run-01",
+    phase: "3",
+    planId: "1",
+    status: "PREPARED",
+    baseHead,
+    changedFiles: ["src/app.ts"]
+  });
+  const priorRecord = await readFile(initial.path, "utf8");
+  const priorIndex = await readFile(initial.indexPath, "utf8");
+  await chmod(initial.path, 0o4750);
+  await chmod(initial.indexPath, 0o2640);
+
+  process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_WRITE_ONCE = initial.indexPath;
+  await assert.rejects(
+    () => blueprintPlanRunRecord({
+      cwd: repoPath,
+      runId: "run-01",
+      phase: "3",
+      planId: "1",
+      status: "IMPLEMENTED",
+      baseHead,
+      changedFiles: ["src/app.ts"]
+    }),
+    /Injected PlanRun record write failure/
+  );
+
+  assert.equal(await readFile(initial.path, "utf8"), priorRecord);
+  assert.equal(await readFile(initial.indexPath, "utf8"), priorIndex);
+  assert.equal((await stat(initial.path)).mode & 0o7777, 0o4750);
+  assert.equal((await stat(initial.indexPath)).mode & 0o7777, 0o2640);
+});
+
+test("plan-run record restores exact prior bytes and modes after both files are promoted", async (t) => {
+  const { repoPath, baseHead } = await createPlanRunRepo();
+  t.after(async () => {
+    delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_STAGE_ONCE;
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const initial = await blueprintPlanRunRecord({
+    cwd: repoPath,
+    runId: "run-01",
+    phase: "3",
+    planId: "1",
+    status: "PREPARED",
+    baseHead,
+    changedFiles: ["src/app.ts"]
+  });
+  const priorRecord = await readFile(initial.path);
+  const priorIndex = await readFile(initial.indexPath);
+  await chmod(initial.path, 0o4750);
+  await chmod(initial.indexPath, 0o2640);
+
+  process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_STAGE_ONCE =
+    "after-index-promotion-before-reload";
+  await assert.rejects(
+    () => blueprintPlanRunRecord({
+      cwd: repoPath,
+      runId: "run-01",
+      phase: "3",
+      planId: "1",
+      status: "IMPLEMENTED",
+      baseHead,
+      changedFiles: ["src/app.ts"]
+    }),
+    /Injected PlanRun record failure at stage after-index-promotion-before-reload/
+  );
+
+  assert.deepEqual(await readFile(initial.path), priorRecord);
+  assert.deepEqual(await readFile(initial.indexPath), priorIndex);
+  assert.equal((await stat(initial.path)).mode & 0o7777, 0o4750);
+  assert.equal((await stat(initial.indexPath)).mode & 0o7777, 0o2640);
+});
+
+test("plan-run record attempts record restoration when index restoration fails", async (t) => {
+  const { repoPath, baseHead } = await createPlanRunRepo();
+  t.after(async () => {
+    delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_STAGE_ONCE;
+    delete process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_RESTORE_ONCE;
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const initial = await blueprintPlanRunRecord({
+    cwd: repoPath,
+    runId: "run-01",
+    phase: "3",
+    planId: "1",
+    status: "PREPARED",
+    baseHead,
+    changedFiles: ["src/app.ts"]
+  });
+  const priorRecord = await readFile(initial.path);
+  const priorIndex = await readFile(initial.indexPath);
+  await chmod(initial.path, 0o4750);
+  await chmod(initial.indexPath, 0o2640);
+
+  process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_STAGE_ONCE =
+    "after-index-promotion-before-reload";
+  process.env.BLUEPRINT_TEST_FAIL_PLAN_RUN_RECORD_RESTORE_ONCE = initial.indexPath;
+  await assert.rejects(
+    () => blueprintPlanRunRecord({
+      cwd: repoPath,
+      runId: "run-01",
+      phase: "3",
+      planId: "1",
+      status: "IMPLEMENTED",
+      baseHead,
+      changedFiles: ["src/app.ts"]
+    }),
+    (error: Error) => {
+      assert.match(
+        error.message,
+        /Original error: Injected PlanRun record failure at stage after-index-promotion-before-reload/
+      );
+      assert.match(
+        error.message,
+        /Rollback error: Injected PlanRun record restore failure/
+      );
+      return true;
+    }
+  );
+
+  assert.deepEqual(await readFile(initial.path), priorRecord);
+  assert.equal((await stat(initial.path)).mode & 0o7777, 0o4750);
+  assert.notDeepEqual(await readFile(initial.indexPath), priorIndex);
+  assert.equal((await stat(initial.indexPath)).mode & 0o7777, 0o2640);
+});
+
+test("plan-run record preserves existing record and index modes on successful update", async (t) => {
+  const { repoPath, baseHead } = await createPlanRunRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const initial = await blueprintPlanRunRecord({
+    cwd: repoPath,
+    runId: "run-01",
+    phase: "3",
+    planId: "1",
+    status: "PREPARED",
+    baseHead,
+    changedFiles: ["src/app.ts"]
+  });
+  await chmod(initial.path, 0o4750);
+  await chmod(initial.indexPath, 0o2640);
+
+  await blueprintPlanRunRecord({
+    cwd: repoPath,
+    runId: "run-01",
+    phase: "3",
+    planId: "1",
+    status: "IMPLEMENTED",
+    baseHead,
+    changedFiles: ["src/app.ts"]
+  });
+
+  assert.equal((await stat(initial.path)).mode & 0o7777, 0o4750);
+  assert.equal((await stat(initial.indexPath)).mode & 0o7777, 0o2640);
 });

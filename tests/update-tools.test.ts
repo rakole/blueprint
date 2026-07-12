@@ -400,6 +400,53 @@ test("blueprint_update_plan defaults checklist mode to the active host", async (
   assert.match(geminiChecklist, /Use Gemini CLI `ask_user`/i);
 });
 
+test("blueprint_update_plan preserves the full modes of both existing artifacts", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-update-plan-modes-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const env = {
+    ...process.env,
+    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_GLOBAL_HOME: path.join(tempRoot, "global-home"),
+    BLUEPRINT_EXTENSION_PATH: await createExtensionFixture(tempRoot, "gemini")
+  };
+  const firstResult = await blueprintUpdatePlan({ mode: "manual" }, env);
+  await fs.chmod(firstResult.savedPaths.metadataPath, 0o4750);
+  await fs.chmod(firstResult.savedPaths.checklistPath, 0o2640);
+
+  const updatedResult = await blueprintUpdatePlan({ mode: "auto" }, env);
+
+  assert.equal(updatedResult.persistenceStatus, "saved");
+  if (process.platform !== "win32") {
+    assert.equal((await fs.stat(firstResult.savedPaths.metadataPath)).mode & 0o7777, 0o4750);
+    assert.equal((await fs.stat(firstResult.savedPaths.checklistPath)).mode & 0o7777, 0o2640);
+  }
+});
+
+test("blueprint_update_plan rejects a symlink artifact target without replacing it", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-update-plan-symlink-"));
+  t.after(() => fs.rm(tempRoot, { recursive: true, force: true }));
+  const env = {
+    ...process.env,
+    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_GLOBAL_HOME: path.join(tempRoot, "global-home"),
+    BLUEPRINT_EXTENSION_PATH: await createExtensionFixture(tempRoot, "gemini")
+  };
+  const first = await blueprintUpdatePlan({ mode: "manual" }, env);
+  const outside = path.join(tempRoot, "outside.json");
+  await fs.writeFile(outside, "outside\n");
+  await fs.rm(first.savedPaths.metadataPath);
+  await fs.symlink(outside, first.savedPaths.metadataPath);
+
+  const result = await blueprintUpdatePlan({ mode: "auto" }, env);
+  assert.equal(result.persistenceStatus, "not_saved");
+  assert.match(result.warnings.join("\n"), /regular file/);
+  assert.equal((await fs.lstat(first.savedPaths.metadataPath)).isSymbolicLink(), true);
+  assert.equal(await fs.readFile(outside, "utf8"), "outside\n");
+});
+
 test("blueprint_update_plan falls back cleanly when checklist persistence fails", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-update-plan-write-failure-"));
   t.after(async () => {
@@ -757,6 +804,8 @@ test("blueprint_update_plan restores the previous metadata and checklist generat
   const firstResult = await blueprintUpdatePlan({ mode: "manual" }, env);
   const originalMetadata = await fs.readFile(firstResult.savedPaths.metadataPath, "utf8");
   const originalChecklist = await fs.readFile(firstResult.savedPaths.checklistPath, "utf8");
+  await fs.chmod(firstResult.savedPaths.metadataPath, 0o4750);
+  await fs.chmod(firstResult.savedPaths.checklistPath, 0o2640);
   const realRename = fs.rename.bind(fs);
   let simulatedFailureTriggered = false;
 
@@ -797,6 +846,10 @@ test("blueprint_update_plan restores the previous metadata and checklist generat
     await fs.readFile(firstResult.savedPaths.checklistPath, "utf8"),
     originalChecklist
   );
+  if (process.platform !== "win32") {
+    assert.equal((await fs.stat(firstResult.savedPaths.metadataPath)).mode & 0o7777, 0o4750);
+    assert.equal((await fs.stat(firstResult.savedPaths.checklistPath)).mode & 0o7777, 0o2640);
+  }
   assert.deepEqual((await fs.readdir(firstResult.savedPaths.updatesDir)).sort(), [
     "update-plan-latest.json",
     "update-plan-latest.md"
