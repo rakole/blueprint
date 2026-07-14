@@ -24,6 +24,17 @@ the parallel suite to isolate their shared `dist/` surface. Keep
 container-dependent extension installation coverage in
 the separate `npm run test:integration:extension` command.
 
+Production dependency security (requires advisory-network access):
+
+```bash
+npm run audit:production
+```
+
+This checks production dependencies only and fails on moderate, high, or
+critical advisories while preserving npm's actionable audit output and exit
+code. Keep it separate from `npm test` so canonical local verification remains
+deterministic when the advisory service is unavailable.
+
 Static TypeScript gate when code changed:
 
 ```bash

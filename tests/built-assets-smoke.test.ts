@@ -43,6 +43,10 @@ type ToolCallResponse = {
   structuredContent?: Record<string, unknown>;
 };
 
+type SourceMap = {
+  sources?: string[];
+};
+
 async function runBuiltHook(
   scriptRelativePath: string,
   input: unknown
@@ -344,6 +348,31 @@ test("built MCP server starts over stdio and exposes the expected tool set", asy
         );
     } finally {
       await client.close();
+    }
+  });
+});
+
+test("built MCP bundle contains only the supported stdio transport", async () => {
+  await withBuiltAssetLock(async () => {
+    const sourceMap = JSON.parse(
+      await readFile(path.join(repoRoot, "dist/mcp/server.js.map"), "utf8")
+    ) as SourceMap;
+    const sources = sourceMap.sources ?? [];
+
+    assert.ok(
+      sources.some((source) => source.endsWith("/server/stdio.ts")),
+      "the built MCP bundle should include the SDK stdio transport"
+    );
+
+    for (const forbiddenSource of [
+      /\/server\/(?:sse|streamableHttp|websocket)\.ts$/,
+      /\/(?:hono|express|express-rate-limit|@hono\/node-server)\//
+    ]) {
+      assert.equal(
+        sources.some((source) => forbiddenSource.test(source)),
+        false,
+        `the built MCP bundle should exclude ${forbiddenSource}`
+      );
     }
   });
 });
