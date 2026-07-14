@@ -104,6 +104,15 @@ are not normal execution inputs for the runtime-owned maintenance commands.
 - `blueprint_artifact_contract_read`
 - `blueprint_artifact_summary_digest`
 - `blueprint_artifact_report_write`
+- `blueprint_pr_branch_preview`
+- `blueprint_pr_branch_execute`
+- `blueprint_pr_branch_persist`
+- `blueprint_ship_preview`
+- `blueprint_ship_execute`
+- `blueprint_ship_persist`
+- `blueprint_undo_preview`
+- `blueprint_undo_execute`
+- `blueprint_undo_persist`
 - `blueprint_cleanup_archive`
 - `blueprint_state_update`
 
@@ -113,6 +122,15 @@ are not normal execution inputs for the runtime-owned maintenance commands.
 - `blueprint_artifact_contract_read`: for known report shapes such as `report.pr-branch`, `report.ship`, and `report.undo`, use the returned `authoringTemplate` as the heading and schema authority before report persistence.
 - `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths`, `trackedFiles`, and related file inputs only, and treat `inputsUsed` as the authoritative digest scope.
 - `blueprint_artifact_report_write`: pass a bare report name such as `pr-branch-latest`, `ship-latest`, or `undo-latest`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
+- `blueprint_pr_branch_preview`: pass the exact local base ref, candidate branch, explicit path policy, non-empty evidence paths, report-overwrite posture, and final checkout posture; trust its canonical packet and never substitute host-authored git argv.
+- `blueprint_pr_branch_execute`: pass only the one-shot operation id, exact fingerprint, and `confirmed: true`; trust its structured git, validation, report, and recovery receipt.
+- `blueprint_pr_branch_persist`: pass only a terminal operation id and fingerprint after the executor reports outcome persistence failure; it retries no git process.
+- `blueprint_ship_preview`: pass the exact base, optional explicit remote, draft/ready posture, push/PR intent, title/body, typed non-empty evidence paths, report-overwrite posture, and optional state patch; trust its canonical repo/remote/config/evidence/report-CAS packet and exact argv.
+- `blueprint_ship_execute`: pass only the one-shot operation id, exact fingerprint, and `confirmed: true`; it revalidates before distinct push and PR stages, persists actual receipts, and orders state after confirmed outcomes.
+- `blueprint_ship_persist`: pass a retained terminal operation id/fingerprint plus only `outcome-report` or `state`; it never repeats push or PR creation.
+- `blueprint_undo_preview`: pass only canonical full commit hashes plus explicit merge mainlines, repo-relative evidence paths, dependency impact, report-overwrite approval, and any optional state patch that must be fingerprint-bound.
+- `blueprint_undo_execute`: pass only the one-shot operation id, its exact fingerprint, and `confirmed: true`; trust its structured git, report, state, and recovery receipt.
+- `blueprint_undo_persist`: pass a retained terminal operation id and fingerprint plus only `outcome-report` or `state`; it retries no git process and rejects recovery outside the receipt-authorized persistence stage.
 - `blueprint_cleanup_archive`: for cleanup, use `mode: "preview"` before confirmation and `mode: "commit"` after confirmation. Treat its selected, protected, archived, failed, skipped, kept, `reportPath`, and `reportWritten` fields as authoritative.
 
 ## Workflow Rules
@@ -199,16 +217,16 @@ Shared rule for all maintenance flows:
 3. Inspect git status before mutation. A dirty working tree is a hard stop for the clean review-branch flow.
 4. Keep the waiting state explicit before mutation: a dirty working tree should surface the pending gate `clean-working-tree` plus the next safe action to clean, stash, or commit before rerunning.
 5. Make the resolved target explicit before mutation: name the source branch, source `HEAD`, base branch, candidate review branch, and whether `.blueprint/**` is included.
-6. Classify commits ahead of the base branch into `code-only`, `blueprint-only`, `mixed`, and `empty-after-filter`; preview the include/exclude/skip action, touched paths, filtered paths, and reason for each row before confirmation.
+6. Do not classify or replay commits in the host. After artifact discovery, call `blueprint_pr_branch_preview` with the exact base, candidate branch, explicit policy, and non-empty digest inputs. It owns canonical repo/common-dir, source/base/merge-base OIDs, effective Blueprint config and Git config receipts, evidence/report-CAS receipts, safe source/review ref validation, real commit/path classification, exact filtered final path/tree receipt, typed argv plan, and the bounded expiring one-shot packet.
 7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, changed-file inputs so the filtered review scope stays evidence-backed.
 8. Read `report.pr-branch` through `blueprint_artifact_contract_read` and use the canonical authoring template as the report heading and schema authority.
 9. Keep the filtering decision explicit: default to excluding `.blueprint/**` bookkeeping paths when `planning.commit_docs` is true unless the user clearly wants those artifacts included.
 10. Fail fast when the filtered diff is empty. Do not create noise branches just to satisfy the command.
-11. Require one explicit confirmation that includes the base branch, source branch, candidate review branch name, commit classification counts, and included versus excluded scope before any git mutation, and keep the pending gate visible as `review-branch-confirmation` until the user approves.
-12. If a later `pr-branch-latest` replacement is blocked on an existing report, keep the pending gate explicit as report overwrite confirmation and name the next safe action instead of smoothing past it.
-13. Create the review branch without rewriting or deleting the source branch in place, replay retained commits in source order, strip excluded `.blueprint/**` paths from mixed commits, and return to the source branch unless the user explicitly asks to stay on the review branch.
-14. Validate the created review branch with concrete git checks: clean status, retained file count, retained commit count, and zero excluded `.blueprint/**` entries when filtering is active.
-15. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`, and use the returned `path` as the authoritative saved report location. If the write is invalid, repair once against the canonical `report.pr-branch` template before stopping.
+11. Require explicit confirmation of the runtime packet's exact operation id, fingerprint, repo identity, source/base/merge-base, candidate branch, ledger, evidence/config/report posture, and literal plan. Keep `review-branch-confirmation` visible until approved.
+12. If preview returns `report-overwrite-confirmation`, obtain overwrite approval and create a fresh packet; never reuse the earlier fingerprint.
+13. Call `blueprint_pr_branch_execute` once. It owns freshness revalidation, pre-report CAS, branch creation, source-order replay, exact `.blueprint/**` filtering, empty-commit skip, conflict receipt, validation, source preservation/restoration, and actual-outcome report rendering. Never run mutation argv in the host.
+14. Trust only the structured receipt for complete, partial, stale, divergent, restoration, validation, and outcome-unknown facts. Never auto-resolve, reset, clean, force, delete/overwrite a branch, or retry a consumed approval.
+15. A post-mutation report failure is partial. Retry only `blueprint_pr_branch_persist` for its receipt-bound operation id/fingerprint; it never re-enters git. Existing complete, partial, and divergent branch reruns remain explicit non-destructive blockers.
 16. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
 
 ### `ship`
@@ -232,10 +250,10 @@ Shared in-flight contract for `ship`:
 11. Require explicit confirmation that includes draft versus ready state, the effective `workflow.code_review` and `workflow.secure_phase` values, source and base branches, requested push or PR steps, and fallback behavior when `gh` is missing or unauthenticated.
 12. When the flow branches across local prep, remote checks, optional push, optional PR creation, manual fallback preparation, and post-ship routing, tracker-backed coordination may be used, but treat tracker state as session-local coordination only and keep the visible checklist authoritative for the user.
 13. Read `blueprint_artifact_contract_read` for `report.ship` before report persistence, and use the returned `authoringTemplate` as the canonical `ship-latest` report authority.
-14. Persist the approved shipping plan through `blueprint_artifact_report_write` with the bare report name `ship-latest`, including manual fallback guidance when remote creation does not happen. Use the returned `path` as the authoritative saved report location.
-15. Run only the approved local prep, push, or PR steps. Never hide a push behind PR creation, skip PR creation in favor of manual fallback guidance when `gh` is missing or unauthenticated, and never claim ready shipping when the effective config still requires missing review or security evidence.
-16. After the approved push or PR attempt finishes, overwrite `ship-latest` through `blueprint_artifact_report_write` so the durable report captures actual outcomes, fallback notes, post-mutation evidence, and the config-aware gate posture instead of leaving only the pre-mutation plan.
-17. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the post-mutation report overwrite is written.
+14. Do not author or run mutation argv in the host. Call `blueprint_ship_preview` with the exact base/remote/posture, push and PR intent, title/body, canonical same-directory verification plus config-required review/security and successful `pr-branch-latest` evidence, overwrite posture, optional state patch, and exact GitHub `[host/]owner/repo` selector derived from the effective push URL when PR creation is requested. It owns canonical repo/common-dir identity, clean attached HEAD, base/merge-base and candidate ledger, the single effective fetch/push URLs and refs/OIDs, upstream, effective config, byte-exact/fatal-UTF-8 symlink-safe all-regular-file phase inventory and live gate evaluation, canonical directory/filename phase-prefix identity, artifact validation and digest linkage, report CAS, exact argv, and the expiring one-shot approval. Explicit remote input never waives a missing or mismatched upstream, and an ambiguous rewritten push endpoint or mismatched GitHub selector blocks PR creation.
+15. Require confirmation of the exact operation id/fingerprint, then call `blueprint_ship_execute` once. It writes `ship-latest` before mutation, revalidates, runs only exact push argv, revalidates again, then runs only exact `gh pr create` argv. Never hide push behind PR creation.
+16. Trust the receipt for pushed/reused/failed/partial/outcome-unknown stages. Missing/auth/repository/view/create `gh` failures stay typed. After dependency repair, preserve the original push and PR intent in a completely fresh preview when a required push has not run; use a fresh `push:false`, `createPr:true` preview only when the remote was already exact or the push was confirmed pushed/reused. Reconcile exact remote truth first for an outcome-unknown push. Never replay stale argv or repeat a confirmed push. The runtime executor will overwrite `ship-latest` with actual outcomes, fallback notes, post-mutation evidence, and the config-aware gate posture. Post-pre-report outcome/state persistence failure is retried only through `blueprint_ship_persist`; it never re-enters external mutation.
+17. State is updated only by the executor after confirmed external outcomes and persisted outcome report, or by its receipt-bound state recovery.
 
 ### `undo`
 
@@ -249,18 +267,18 @@ Shared in-flight contract for `undo`:
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
 2. Resolve the undo scope explicitly. Prefer the user-named phase or plan when one was provided; otherwise keep any `last N commits` request bounded to the current branch and recent history instead of guessing across unrelated work.
 3. Read `blueprint_phase_locate` when the user names a phase or plan so the revert target stays anchored to authoritative Blueprint metadata instead of filenames or chat memory.
-4. Inspect git status before mutation. A dirty working tree, detached HEAD, in-progress merge, or missing revert target is a hard stop for undo. Keep that waiting state explicit as pending gate `dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`, and keep the next safe action explicit before rerunning.
+4. Resolve candidate intent to full hashes, but do not call `blueprint_undo_preview` until artifact discovery and digest are complete. Never author or run mutation argv in the host.
 5. Make the resolved target explicit before mutation: name the branch, candidate revert set, revert order, and any saved Blueprint evidence that would become stale if the revert succeeds.
 6. Read saved summaries, verification or UAT artifacts, review artifacts, shipping reports, and related evidence through `blueprint_artifact_list` before proposing the revert so dependency impact stays visible.
 7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, tracked-file inputs so the undo plan stays grounded in the selected evidence and candidate revert set.
-8. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, pending gate, execution mode, and next safe action legible throughout the run.
-9. Require explicit confirmation that includes the exact revert scope, candidate commits, dependency-impact notes, the `undo-latest` report, and the precise git commands that will run. Keep the pending gate explicit as `undo-confirmation` until the user approves.
-10. If replacing `undo-latest` needs overwrite approval, keep the report-overwrite waiting state explicit as `report-overwrite-confirmation` and name the next safe action before continuing.
+8. Call `blueprint_undo_preview` only now, with the exact candidate hashes and the non-empty authoritative digest `inputsUsed` path set. It owns canonical repository identity, effective git-config and prior-report receipts, dirty/detached and all sequencer-state checks, ancestry and merge-mainline validation, mainline-relative paths, durable idempotency, descendant-first ordering, evidence hashes, literal revert argv, stable fingerprinting, and the bounded expiring one-shot approval packet. Keep the active stage and status fields visible.
+9. Require explicit confirmation of the exact `blueprint_undo_preview` operation id, fingerprint, repository identity, candidate ledger, dependency-impact notes, `undo-latest` report posture, and runtime-derived argv. Keep `undo-confirmation` explicit until the user approves.
+10. If preview returns `report-overwrite-confirmation`, obtain overwrite approval and create a fresh approval packet; never reuse the earlier fingerprint.
 11. Read `blueprint_artifact_contract_read` for `report.undo` before report persistence, and use the returned `authoringTemplate` as the canonical `undo-latest` report authority.
-12. Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest` before git mutation begins, and use the returned `path` as the authoritative saved report location. Keep the report-before-mutate posture for undo by preserving this approved-plan write before any git revert step begins.
-13. Run only safe revert-style git steps. Never use `git reset --hard`, implicit branch deletion, or other destructive shortcuts for this command.
-14. After the revert attempt finishes, overwrite `undo-latest` through `blueprint_artifact_report_write` so the durable report captures the actual outcome, blockers, and stale-evidence fallout instead of leaving only the pre-mutation plan.
-15. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the post-mutation report overwrite is written and the revert succeeds.
+12. Call `blueprint_undo_execute` once with the approved operation id, fingerprint, and `confirmed: true`. It consumes the approval, revalidates immediately, persists the exact approved plan before mutation, derives and runs only literal `git revert --no-edit` argv, and records exact process and observed repository outcomes.
+13. Never run `git reset --hard` or any other `git reset`, checkout/restore discard, clean, branch deletion, rebase, force push, amend, shell chaining, automatic conflict resolution, `git revert --continue`, `git revert --abort`, or a retry from the orchestration layer.
+14. Trust the structured executor receipt for succeeded, partial, failed, stale, already-applied, and outcome-unknown facts. A post-mutation report failure preserves git success as an overall partial result and is retried only through `blueprint_undo_persist` stage `outcome-report`.
+15. Let the executor apply a packet-bound state patch only after every approved revert succeeds and the actual-outcome report persists. A state failure is partial and retries only through `blueprint_undo_persist` stage `state`; the tool then refreshes the final report with state success or failure.
 
 ### `cleanup`
 

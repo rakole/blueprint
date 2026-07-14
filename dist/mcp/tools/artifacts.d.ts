@@ -232,6 +232,7 @@ type ArtifactReportWriteArgs = {
     content?: string;
     model?: Record<string, unknown>;
     overwrite?: boolean;
+    expectedExistingContentSha256?: string | null;
     auditFixContext?: {
         source: AuditFixReportSource;
         severity: AuditFixReportSeverityFilter;
@@ -1084,6 +1085,7 @@ export declare const artifactToolDefinitions: ({
         content: z.ZodOptional<z.ZodString>;
         model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
+        expectedExistingContentSha256: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         auditFixContext: z.ZodOptional<z.ZodObject<{
             source: z.ZodEnum<{
                 review: "review";

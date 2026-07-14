@@ -1,6 +1,6 @@
 # PR Branch Runtime Contract
 
-This reference is the detailed `/blu-pr-branch` workflow contract. The command manifest stays thin, the `blueprint-maintenance` skill owns orchestration, MCP tools own Blueprint persistence, and git mutation remains confirmation-gated.
+This reference is the detailed `/blu-pr-branch` workflow contract. The command manifest stays thin, the `blueprint-maintenance` skill owns orchestration, and MCP owns deterministic planning, freshness-bound confirmation, git mutation, truthful report persistence, and persistence-only recovery.
 
 ## Stage Mapping
 
@@ -11,6 +11,7 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
 - Stop and route to `/blu-health` when health is partial or unhealthy.
 - Call `mcp_blueprint_blueprint_config_get` with effective scope before deriving branch policy.
 - Resolve the base branch from explicit user input, then normalized `git.base_branch`, then safe repo detection.
+- The deterministic boundary accepts only a local branch, tag, or exact commit as base authority. It rejects remote-tracking refs rather than omitting remote name, URL, and ref from the approval packet.
 - Resolve the source branch, source `HEAD`, candidate review branch name, `git.branching_strategy`, and `planning.commit_docs`.
 - Refuse to run from the base branch itself unless the user explicitly supplied a different source branch to inspect.
 
@@ -18,7 +19,7 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
 
 - Inspect `git status --short --branch` before any mutation. A dirty tree is a hard stop with pending gate `clean-working-tree`.
 - Count commits ahead of the base branch and stop when there is nothing to filter.
-- Build the commit ledger from `git log --reverse --no-merges <base>..<source>` and `git diff-tree --no-commit-id --name-only -r <commit>`.
+- After artifact discovery and digest creation, call `mcp_blueprint_blueprint_pr_branch_preview`; do not author git inspection or mutation argv in the host.
 - Classify each commit:
   - `code-only`: touches no `.blueprint/**` files.
   - `blueprint-only`: touches only `.blueprint/**` files.
@@ -30,23 +31,23 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
 
 ### Decide
 
-- Preview the base branch, source branch, source `HEAD`, candidate review branch, included commits, excluded commits, mixed commits, included paths, excluded paths, digest inputs, and exact git commands that would run.
+- Preview the runtime packet's canonical repo/common-dir, exact source/base/merge-base OIDs, safe source and candidate refs, effective Blueprint config and Git config receipts, exact filtered final path/tree receipt, commit/path ledger, evidence/report receipts, and typed internal argv plan.
 - If filtering produces an empty diff, stop before branch creation and explain which commits or paths were filtered out.
 - Require explicit confirmation before branch creation or replay. While waiting, surface pending gate `review-branch-confirmation`.
 - If `.blueprint/reports/pr-branch-latest.md` already exists, require explicit overwrite confirmation before replacing it and surface pending gate `report-overwrite-confirmation`.
 
 ### Execute
 
-- Execute only after the confirmation gate clears.
+- Execute only once through `mcp_blueprint_blueprint_pr_branch_execute` after confirmation of the exact operation id and fingerprint.
 - Preserve the source branch. Never rewrite, delete, reset, or force-push it.
 - Create the review branch from the resolved base branch.
 - Replay included commits in source order. Preserve commit messages when commit replay is used.
 - For mixed commits, restore or remove excluded `.blueprint/**` paths from both the index and review-branch working tree before committing, so the review branch diff stays clean.
-- If a replay conflicts or produces unexpected dirty state, stop, abort the in-progress replay when safe, return to the source branch when possible, and report the blocker. Do not delete the created review branch unless the user explicitly confirms deletion.
+- The executor immediately revalidates all bound state, consumes the approval, records exact process and required validation receipts, requires every replay to advance HEAD when it creates a commit, compares exact retained path/tree and commit mapping/count outcomes, verifies literal source restoration, never auto-resolves, and returns a partial/conflict/restoration receipt without deleting or overwriting either branch.
 
 ### Persist
 
-- Author the report body from the `report.pr-branch` authoring template before calling the write tool.
+- The executor renders the approved pre-mutation report and actual outcome report from its structured packet and receipt.
 - The report must include:
   - base branch, source branch, source `HEAD`, candidate and created review branch
   - config inputs used for branch policy
@@ -56,8 +57,8 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
   - exact verification commands and results
   - recovery notes or `none`
   - next safe action
-- Persist only through `mcp_blueprint_blueprint_artifact_report_write` with bare `reportName: "pr-branch-latest"`.
-- If the write returns `status: "invalid"`, repair the report once against `contract.authoringTemplate` and retry. If the retry fails, stop with the validation issues and do not claim the report was saved.
+- A post-mutation report failure is partial; retry only `mcp_blueprint_blueprint_pr_branch_persist` with the receipt-bound operation id/fingerprint. It never re-enters git.
+- If runtime-rendered report persistence is rejected, stop before mutation for the approved-plan report or return partial after mutation for the outcome report; never replace it with model-authored facts.
 
 ### Validate
 

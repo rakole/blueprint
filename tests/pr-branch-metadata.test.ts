@@ -28,7 +28,9 @@ test("pr-branch manifest references the maintenance skill, report tool, and git 
   assert.match(commandFile, /mcp_blueprint_blueprint_config_get/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_pr_branch_preview/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_pr_branch_execute/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_pr_branch_persist/);
   assert.match(commandFile, /skills\/blueprint-maintenance\/references\/pr-branch-runtime-contract\.md/);
   assert.match(commandFile, /pr-branch-latest/);
   assert.match(commandFile, /explicit confirmation/i);
@@ -36,11 +38,11 @@ test("pr-branch manifest references the maintenance skill, report tool, and git 
   assert.match(commandFile, /planning\.commit_docs/);
   assert.match(commandFile, /contract\.authoringTemplate/);
   assert.match(commandFile, /commit classification ledger/i);
-  assert.match(commandFile, /`code-only`, `blueprint-only`, `mixed`, or `empty-after-filter`/);
+  assert.match(commandFile, /commit classification ledger/);
   assert.match(commandFile, /verification counts/i);
   assert.match(commandFile, /uncommitted changes/i);
   assert.match(commandFile, /pending gate `clean-working-tree`/);
-  assert.match(commandFile, /pending gate as `review-branch-confirmation`/);
+  assert.match(commandFile, /`review-branch-confirmation`/);
   assert.match(commandFile, /`report-overwrite-confirmation`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
@@ -59,18 +61,20 @@ test("maintenance skill captures pr-branch filtering, report persistence, and so
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
+  assert.match(skillFile, /blueprint_pr_branch_preview/);
+  assert.match(skillFile, /blueprint_pr_branch_execute/);
+  assert.match(skillFile, /blueprint_pr_branch_persist/);
   assert.match(skillFile, /pr-branch-runtime-contract\.md/);
   assert.match(skillFile, /commit classification/i);
-  assert.match(skillFile, /`code-only`, `blueprint-only`, `mixed`, and `empty-after-filter`/);
+  assert.match(skillFile, /real commit\/path classification/i);
   assert.match(skillFile, /canonical authoring template/i);
-  assert.match(skillFile, /repair once/i);
   assert.match(skillFile, /excluding `?\.blueprint\/\*\*`? bookkeeping paths/i);
   assert.match(skillFile, /dirty working tree/i);
   assert.match(skillFile, /pending gate `clean-working-tree`/);
   assert.match(skillFile, /`review-branch-confirmation`/);
-  assert.match(skillFile, /report overwrite confirmation/i);
-  assert.match(skillFile, /without rewriting or deleting the source branch in place/i);
-  assert.match(skillFile, /clean status, retained file count, retained commit count/i);
+  assert.match(skillFile, /`report-overwrite-confirmation`/);
+  assert.match(skillFile, /Never auto-resolve, reset, clean, force, delete\/overwrite a branch/i);
+  assert.match(skillFile, /owns freshness revalidation, pre-report CAS, branch creation/i);
   assert.match(skillFile, /pr-branch-latest/);
 });
 
@@ -95,13 +99,15 @@ test("pr-branch runtime contract locks commit classification, fallback, and repo
   assert.match(runtimeContract, /mcp_blueprint_blueprint_config_get/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_report_write/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_pr_branch_preview/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_pr_branch_execute/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_pr_branch_persist/);
   assert.match(runtimeContract, /`code-only`/);
   assert.match(runtimeContract, /`blueprint-only`/);
   assert.match(runtimeContract, /`mixed`/);
   assert.match(runtimeContract, /`empty-after-filter`/);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
-  assert.match(runtimeContract, /repair the report once/i);
+  assert.match(runtimeContract, /actual outcome report from its structured packet and receipt/i);
   assert.match(runtimeContract, /No-subagent fallback is the canonical behavior/i);
   assert.match(runtimeContract, /Browser, web-search-only, shell-only, and generic agents are forbidden/i);
   assert.match(runtimeContract, /clean branch state/i);
@@ -132,12 +138,13 @@ test("pr-branch local runtime contract, runtime resource, and artifact contract 
   assert.match(runtimeReference, /report-overwrite-confirmation/);
   assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
   assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /pr-branch-runtime-contract\.md/);
-  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /clean tree and review-branch confirmation/i);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /canonical repo, source\/base\/merge-base/i);
   assert.ok(
     runtimeContract.runtimeReference?.exactMcpDestination.includes(
       "blueprint_artifact_contract_read"
     )
   );
+  assert.ok(runtimeContract.runtimeReference?.exactMcpDestination.includes("blueprint_pr_branch_execute"));
   assert.equal(
     runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
@@ -232,7 +239,7 @@ test("repo-facing status docs treat pr-branch as a shipped command", async () =>
   assert.equal(metadata.runtimeReference.waveTitle, "Quality And Shipping");
   assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /pr-branch-runtime-contract\.md/);
-  assert.match(metadata.runtimeReference.contractNotes, /clean tree and review-branch confirmation/i);
+  assert.match(metadata.runtimeReference.contractNotes, /expiring one-shot approval binding/i);
   assert.match(agentsFile, /`pr-branch` are also shipped|`pr-branch`/i);
   assert.match(readmeFile, /`\/blu-pr-branch`: `pr-branch` prepares a clean review branch/i);
   assert.match(geminiFile, /`\/blu-pr-branch`/);

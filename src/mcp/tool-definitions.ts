@@ -7,10 +7,13 @@ import { impactToolDefinitions } from "./tools/impact.js";
 import { lightweightToolDefinitions } from "./tools/lightweight.js";
 import { phaseToolDefinitions } from "./tools/phase.js";
 import { planRunToolDefinitions } from "./tools/plan-run.js";
+import { prBranchToolDefinitions } from "./tools/pr-branch.js";
 import { projectToolDefinitions } from "./tools/project.js";
 import { reviewToolDefinitions } from "./tools/review.js";
+import { shipToolDefinitions } from "./tools/ship.js";
 import { stateToolDefinitions } from "./tools/state.js";
 import { updateToolDefinitions } from "./tools/update.js";
+import { undoToolDefinitions } from "./tools/undo.js";
 import { workspaceToolDefinitions } from "./tools/workspace.js";
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
@@ -25,6 +28,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...artifactToolDefinitions,
   ...cleanupToolDefinitions,
   ...impactToolDefinitions,
+  ...prBranchToolDefinitions,
+  ...shipToolDefinitions,
+  ...undoToolDefinitions,
   ...updateToolDefinitions,
   ...workspaceToolDefinitions
 ];

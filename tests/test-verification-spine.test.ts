@@ -18,7 +18,7 @@ const repoRoot = process.cwd();
 test("canonical discovery includes root and nested tests while excluding fixtures", async () => {
   const discovered = await discoverTestFiles(repoRoot);
 
-  assert.equal(discovered.length, 151);
+  assert.equal(discovered.length, 155);
   assert.ok(discovered.includes("tests/test-verification-spine.test.ts"));
   assert.ok(discovered.includes("tests/prompt-eval/lightweight-command-contracts.test.ts"));
   assert.equal(

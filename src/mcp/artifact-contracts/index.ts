@@ -3166,12 +3166,15 @@ function renderShipTemplate(): string {
 ## Remote Actions
 
 - **gh commands approved:** <commands or none>
-- **gh availability and auth:** <available and authenticated|available but unauthenticated|unavailable>
+- **gh availability and auth:** <not-requested|ready|gh-missing|gh-unauthenticated|gh-repository-unavailable|pr-view-unavailable|pr-create-failed>
+- **gh detail:** <none or exact runtime detail>
 
 ## Push Or PR Outcome
 
-- **Push outcome:** <not-run|success|failed|blocked>
-- **PR outcome:** <not-run|created|updated|failed|blocked>
+- **Push outcome:** <not-run|success|failed|blocked|outcome-unknown>
+- **PR outcome:** <not-run|created|updated|failed|blocked|outcome-unknown>
+- **Outcome blockers:** <none or exact runtime blockers>
+- **Outcome recovery:** <none or exact runtime recovery actions>
 - **gh fallback notes:** <fallback notes or none>
 
 ## Manual Fallback Guidance
@@ -3201,7 +3204,7 @@ function renderUndoTemplate(): string {
 - **Current branch:** <current branch>
 - **HEAD:** <commit sha>
 - **Working tree status:** <clean|dirty>
-- **Merge state:** <not in progress|merge in progress|rebase in progress|cherry-pick in progress>
+- **Merge state:** <not in progress|merge in progress|rebase in progress|cherry-pick in progress|revert in progress|sequencer in progress>
 - **Report overwrite status:** <new report|overwrite approved|overwrite blocked>
 
 ## Affected Evidence And Digest Inputs
@@ -3231,7 +3234,7 @@ function renderUndoTemplate(): string {
 
 ## Mutation Outcome
 
-- **Revert outcome:** <not-run|success|failed|blocked>
+- **Revert outcome:** <not-run|success|partial|failed|blocked|outcome-unknown>
 - **Blockers:** <blockers or none>
 
 ## Next Safe Action
@@ -5416,8 +5419,11 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "**Git commands approved:**",
       "**gh commands approved:**",
       "**gh availability and auth:**",
+      "**gh detail:**",
       "**Push outcome:**",
       "**PR outcome:**",
+      "**Outcome blockers:**",
+      "**Outcome recovery:**",
       "**gh fallback notes:**",
       "**Manual checklist:**"
     ],
@@ -5437,9 +5443,12 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<path|generated body|none>",
       "<true|false>",
       "<commands or none>",
-      "<available and authenticated|available but unauthenticated|unavailable>",
-      "<not-run|success|failed|blocked>",
-      "<not-run|created|updated|failed|blocked>",
+      "<not-requested|ready|gh-missing|gh-unauthenticated|gh-repository-unavailable|pr-view-unavailable|pr-create-failed>",
+      "<none or exact runtime detail>",
+      "<not-run|success|failed|blocked|outcome-unknown>",
+      "<not-run|created|updated|failed|blocked|outcome-unknown>",
+      "<none or exact runtime blockers>",
+      "<none or exact runtime recovery actions>",
       "<fallback notes or none>",
       "<manual step one>",
       "<manual step two>",
@@ -5501,7 +5510,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<current branch>",
       "<commit sha>",
       "<clean|dirty>",
-      "<not in progress|merge in progress|rebase in progress|cherry-pick in progress>",
+      "<not in progress|merge in progress|rebase in progress|cherry-pick in progress|revert in progress|sequencer in progress>",
       "<new report|overwrite approved|overwrite blocked>",
       "<inputsUsed from blueprint_artifact_summary_digest>",
       "<saved evidence paths or none>",
@@ -5516,7 +5525,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<commands awaiting approval or none>",
       "<approved commands or none>",
       "<passed|failed with blockers>",
-      "<not-run|success|failed|blocked>",
+      "<not-run|success|partial|failed|blocked|outcome-unknown>",
       "<blockers or none>",
       "<manual next action or /blu-progress>"
     ],

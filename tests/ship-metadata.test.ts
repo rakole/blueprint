@@ -11,7 +11,7 @@ import { validateReportArtifactContent } from "../src/mcp/tools/artifacts.js";
 
 const repoRoot = process.cwd();
 
-test("ship manifest references the maintenance skill, report tool, and explicit remote confirmation guards", async () => {
+test("ship manifest references the maintenance skill, runtime-owned executor, and explicit remote confirmation guards", async () => {
   const commandFile = await readFile(
     path.join(repoRoot, "commands/blu-ship.toml"),
     "utf8"
@@ -25,8 +25,14 @@ test("ship manifest references the maintenance skill, report tool, and explicit 
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(
+    commandFile,
+    /executor owns the underlying `mcp_blueprint_blueprint_artifact_report_write` and `mcp_blueprint_blueprint_state_update` calls/
+  );
+  assert.match(commandFile, /mcp_blueprint_blueprint_ship_preview/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_ship_execute/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_ship_persist/);
+  assert.match(commandFile, /Never run model-authored git or `gh` mutation commands/);
   assert.match(commandFile, /`workflow\.secure_phase` defaults to `false`/);
   assert.match(commandFile, /`\/blu-secure-phase` remains manually runnable and implemented/i);
   assert.match(commandFile, /`workflow\.code_review=false`/);
@@ -85,6 +91,9 @@ test("ship local runtime contract, maintenance skill, and runtime resource captu
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_state_update/);
+  assert.match(skillFile, /blueprint_ship_preview/);
+  assert.match(skillFile, /blueprint_ship_execute/);
+  assert.match(skillFile, /blueprint_ship_persist/);
   assert.match(skillFile, /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/i);
   assert.match(skillFile, /`update_topic` tool/i);
   assert.match(skillFile, /`write_todos`/);
@@ -105,6 +114,9 @@ test("ship local runtime contract, maintenance skill, and runtime resource captu
   assert.match(skillFile, /actual outcomes, fallback notes, post-mutation evidence, and the config-aware gate posture/i);
 
   assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.ok(runtimeContract.catalog.requiredTools.includes("blueprint_ship_preview"));
+  assert.ok(runtimeContract.catalog.requiredTools.includes("blueprint_ship_execute"));
+  assert.ok(runtimeContract.catalog.requiredTools.includes("blueprint_ship_persist"));
   assert.deepEqual(
     runtimeContract.runtimeReference?.exactMcpDestination,
     runtimeContract.catalog.requiredTools
@@ -170,8 +182,11 @@ test("ship canonical report contract requires populated contract-backed evidence
     "**Git commands approved:**",
     "**gh commands approved:**",
     "**gh availability and auth:**",
+    "**gh detail:**",
     "**Push outcome:**",
     "**PR outcome:**",
+    "**Outcome blockers:**",
+    "**Outcome recovery:**",
     "**gh fallback notes:**",
     "**Manual checklist:**"
   ]);
@@ -183,11 +198,7 @@ test("ship canonical report contract requires populated contract-backed evidence
     contract.placeholderSignals.includes("<base branch value>")
   );
   assert.ok(contract.placeholderSignals.includes("<branching strategy value>"));
-  assert.ok(
-    contract.placeholderSignals.includes(
-      "<available and authenticated|available but unauthenticated|unavailable>"
-    )
-  );
+  assert.ok(contract.placeholderSignals.includes("<not-requested|ready|gh-missing|gh-unauthenticated|gh-repository-unavailable|pr-view-unavailable|pr-create-failed>"));
   assert.ok(contract.placeholderSignals.includes("<manual step one>"));
   assert.match(contract.authoringTemplate, /^# Ship Report$/m);
   assert.match(contract.authoringTemplate, /## Selected Scope/);
@@ -199,6 +210,8 @@ test("ship canonical report contract requires populated contract-backed evidence
     /\*\*Config used:\*\* git\.base_branch=<base branch value>; git\.branching_strategy=<branching strategy value>; planning\.commit_docs=<true\|false>/
   );
   assert.match(contract.authoringTemplate, /\*\*Manual checklist:\*\*/);
+  assert.match(contract.authoringTemplate, /\*\*Push outcome:\*\* <not-run\|success\|failed\|blocked\|outcome-unknown>/);
+  assert.match(contract.authoringTemplate, /\*\*PR outcome:\*\* <not-run\|created\|updated\|failed\|blocked\|outcome-unknown>/);
   assert.match(contract.authoringTemplate, /<manual next action or \/blu-progress>/);
 
   const templateValidation = validateReportArtifactContent(
@@ -267,12 +280,15 @@ test("ship canonical report contract requires populated contract-backed evidence
 ## Remote Actions
 
 - **gh commands approved:** gh pr create --draft --base main --head codex/bpbug-repair-run
-- **gh availability and auth:** available and authenticated
+- **gh availability and auth:** ready
+- **gh detail:** none
 
 ## Push Or PR Outcome
 
 - **Push outcome:** success
 - **PR outcome:** created
+- **Outcome blockers:** none
+- **Outcome recovery:** none
 - **gh fallback notes:** none
 
 ## Manual Fallback Guidance
