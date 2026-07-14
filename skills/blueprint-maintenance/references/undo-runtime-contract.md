@@ -9,42 +9,45 @@ This reference is the detailed `/blu-undo` workflow contract. The command manife
 - Call `mcp_blueprint_blueprint_project_status` first. Route to `/blu-new-project` when uninitialized and `/blu-health` when partial or unhealthy.
 - Resolve the undo scope explicitly from a named phase, named plan, or bounded recent commit request.
 - When a phase or plan is named, call `mcp_blueprint_blueprint_phase_locate`; stop if it cannot anchor the target.
-- Resolve current branch, candidate commits, revert order, and saved evidence likely to become stale.
+- Resolve candidates to canonical full hashes, but defer `mcp_blueprint_blueprint_undo_preview` until artifact discovery and digest have produced the non-empty authoritative evidence input set.
 
 ### Read
 
-- Inspect git status before mutation. Dirty tree, detached HEAD, in-progress merge, or missing target is a hard stop.
+- Treat preview blockers as authoritative. Dirty tree, detached HEAD, merge/rebase/cherry-pick/revert/sequencer state, malformed or missing targets, non-ancestors, roots, duplicates, incomparable candidates, and merges without valid mainline are hard stops.
 - Call `mcp_blueprint_blueprint_artifact_list` for summaries, verification or UAT artifacts, review artifacts, shipping reports, and related stale-evidence signals.
 - Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit `artifactPaths` and relevant `trackedFiles`.
 - Call `mcp_blueprint_blueprint_artifact_contract_read` for `report.undo` before report persistence.
+- Call `mcp_blueprint_blueprint_undo_preview` after these reads with the authoritative digest input paths. Its packet binds effective git config, prior report existence/content, durable idempotency, and evidence receipts.
 
 ### Decide
 
-- Preview branch, exact revert scope, candidate commits in revert order, dependency-impact notes, `undo-latest`, and exact git commands.
+- Preview canonical repository identity, branch and HEAD, exact candidate ledger, dependency-impact notes, evidence receipts, `undo-latest`, operation id, fingerprint, and runtime-derived argv.
 - State that Blueprint undo uses safe `git revert` style steps only.
 - Require explicit confirmation and surface `undo-confirmation` until approved.
 - If replacing `undo-latest` needs approval, surface `report-overwrite-confirmation`.
 
 ### Execute
 
-- Run only approved safe revert-style steps.
-- Never use `git reset --hard`, implicit branch deletion, or destructive shortcuts.
-- Stop immediately on conflicts or dependency mismatches and keep blockers explicit.
+- Call `mcp_blueprint_blueprint_undo_execute` once with the approved operation id, fingerprint, and `confirmed: true`.
+- The executor consumes approval, immediately revalidates, and runs only literal `git revert --no-edit <full-sha>` or `git revert --no-edit -m <parent> <full-sha>` argv.
+- Never auto-resolve, continue, abort, reset, clean, retry, or author shell commands. Preserve exact exit/stdout/stderr, observed HEAD, conflicts, sequencer state, and manual recovery choices.
 
 ### Persist
 
-- Persist the approved undo plan before git mutation through `mcp_blueprint_blueprint_artifact_report_write` with bare `reportName: "undo-latest"`.
-- After the revert attempt, overwrite `undo-latest` through the same MCP tool with actual outcome, conflicts, stale-evidence fallout, and next safe action.
-- If a successful undo changes routing, call `mcp_blueprint_blueprint_state_update` only after the post-mutation report is written.
+- The executor persists its canonical approved-plan report before the first revert argv.
+- The executor overwrites `undo-latest` from the structured actual receipt after the attempt. If that persistence fails after git succeeds, return overall `partial` without retrying git.
+- The executor applies an optional packet-bound state patch only after every revert and the actual-outcome report succeed. A state failure is partial and recovery retries only state persistence.
+- Use `mcp_blueprint_blueprint_undo_persist` for fingerprint-bound report-only or state-only recovery. It must never run git and must refresh the durable report with final state persistence success or failure.
 
 ### Validate
 
 - Verify final branch state, revert outcome, saved report path, and any stale evidence or conflict warnings.
-- Treat MCP report write results as authoritative.
+- Treat the structured preview and execution receipts as authoritative. Successful reruns are `already-applied`; consumed, drifted, or replayed approvals fail closed.
 
 ### Route
 
 - Prefer `/blu-progress`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-code-review`, `/blu-pr-branch`, or manual conflict resolution when appropriate.
+- Keep the next safe action explicit in blocked, partial, failed, stale, and successful receipts.
 - Do not present planned-only commands as runnable.
 
 ## Persistence Boundaries
@@ -59,5 +62,6 @@ This reference is the detailed `/blu-undo` workflow contract. The command manife
 - `mcp_blueprint_blueprint_artifact_list`
 - `mcp_blueprint_blueprint_artifact_summary_digest`
 - `mcp_blueprint_blueprint_artifact_contract_read`
-- `mcp_blueprint_blueprint_artifact_report_write`
-- `mcp_blueprint_blueprint_state_update`
+- `mcp_blueprint_blueprint_undo_preview`
+- `mcp_blueprint_blueprint_undo_execute`
+- `mcp_blueprint_blueprint_undo_persist`

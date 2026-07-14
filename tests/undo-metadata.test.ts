@@ -35,16 +35,17 @@ test("undo manifest references the maintenance skill, high-risk maintenance prof
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_undo_preview/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_undo_execute/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_undo_persist/);
   assert.match(commandFile, /undo-latest/);
-  assert.match(commandFile, /`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/);
+  assert.match(commandFile, /dirty working tree, detached HEAD, merge\/rebase\/cherry-pick\/revert\/sequencer state/i);
   assert.match(commandFile, /undo-confirmation/);
   assert.match(commandFile, /report-overwrite-confirmation/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /git revert/i);
   assert.match(commandFile, /git reset --hard/i);
-  assert.match(commandFile, /After the revert attempt finishes, explicitly overwrite `undo-latest`/);
+  assert.match(commandFile, /persists the actual-outcome report/i);
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
@@ -63,6 +64,9 @@ test("maintenance skill captures undo visibility, report persistence, and destru
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_state_update/);
+  assert.match(skillFile, /blueprint_undo_preview/);
+  assert.match(skillFile, /blueprint_undo_execute/);
+  assert.match(skillFile, /blueprint_undo_persist/);
   assert.match(skillFile, /Execution profile: `high-risk-maintenance`/);
   assert.match(
     skillFile,
@@ -73,12 +77,12 @@ test("maintenance skill captures undo visibility, report persistence, and destru
     /resolved scope, active stage, pending gate, execution mode, next safe action/
   );
   assert.match(skillFile, /undo-latest/);
-  assert.match(skillFile, /`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/);
+  assert.match(skillFile, /dirty\/detached and all sequencer-state checks/i);
   assert.match(skillFile, /undo-confirmation/);
   assert.match(skillFile, /report-overwrite-confirmation/);
   assert.match(skillFile, /git reset --hard/i);
-  assert.match(skillFile, /report-before-mutate/i);
-  assert.match(skillFile, /overwrite `undo-latest`[\s\S]*actual outcome, blockers, and stale-evidence fallout/i);
+  assert.match(skillFile, /persists the exact approved plan before mutation/i);
+  assert.match(skillFile, /post-mutation report failure preserves git success/i);
 });
 
 test("undo local runtime contract and runtime resource expose the destructive gate, waiting state, and next safe action contract", async () => {
@@ -91,7 +95,7 @@ test("undo local runtime contract and runtime resource expose the destructive ga
   ]);
 
   assert.match(runtimeReference, /Stage Mapping[\s\S]*Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
-  assert.match(runtimeReference, /Dirty tree, detached HEAD, in-progress merge, or missing target is a hard stop/i);
+  assert.match(runtimeReference, /Dirty tree, detached HEAD, merge\/rebase\/cherry-pick\/revert\/sequencer state/i);
   assert.match(runtimeReference, /undo-confirmation/);
   assert.match(runtimeReference, /report-overwrite-confirmation/);
   assert.match(runtimeReference, /`mcp_blueprint_blueprint_artifact_contract_read`/);
@@ -106,6 +110,9 @@ test("undo local runtime contract and runtime resource expose the destructive ga
       "blueprint_artifact_contract_read"
     )
   );
+  assert.ok(runtimeContract.runtimeReference?.exactMcpDestination.includes("blueprint_undo_preview"));
+  assert.ok(runtimeContract.runtimeReference?.exactMcpDestination.includes("blueprint_undo_execute"));
+  assert.ok(runtimeContract.runtimeReference?.exactMcpDestination.includes("blueprint_undo_persist"));
   assert.equal(
     runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
@@ -155,6 +162,9 @@ test("undo canonical report contract requires populated contract-backed revert e
   assert.ok(contract.placeholderSignals.includes("<awaiting confirmation|approved|blocked>"));
   assert.ok(contract.placeholderSignals.includes("<commands awaiting approval or none>"));
   assert.ok(contract.placeholderSignals.includes("<passed|failed with blockers>"));
+  assert.ok(
+    contract.placeholderSignals.includes("<not-run|success|partial|failed|blocked|outcome-unknown>")
+  );
   assert.match(contract.authoringTemplate, /^# Undo Report$/m);
   assert.match(contract.authoringTemplate, /## Requested Scope/);
   assert.match(contract.authoringTemplate, /## Affected Evidence And Digest Inputs/);
@@ -236,7 +246,7 @@ test("undo canonical report contract requires populated contract-backed revert e
 
 | Commit | Subject | Scope | Revert action | Notes |
 |---|---|---|---|---|
-| def5678 | test: cover ship undo report contracts | tests/ship-metadata.test.ts, tests/undo-metadata.test.ts | revert | Cleanly reverts the Wave 3 regression coverage if the shipping run must be backed out. |
+| deadbeefdeadbeefdeadbeefdeadbeefdeadbeef | test: cover ship undo report contracts | tests/ship-metadata.test.ts, tests/undo-metadata.test.ts | revert | Cleanly reverts the Wave 3 regression coverage if the shipping run must be backed out. |
 
 ## Dependency Impact
 
@@ -245,7 +255,7 @@ test("undo canonical report contract requires populated contract-backed revert e
 ## Approved Revert Commands
 
 - **Pending git commands:** none
-- **Approved git commands:** git revert --no-edit def5678
+- **Approved git commands:** git revert --no-edit deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
 - **Forbidden-command check:** passed
 
 ## Mutation Outcome
@@ -266,19 +276,50 @@ test("undo canonical report contract requires populated contract-backed revert e
 
   const invalidSemanticValidation = validateReportArtifactContent(
     populatedUndoReport
-      .replace("**Approved git commands:** git revert --no-edit def5678", "**Approved git commands:** git reset --hard HEAD~1")
+      .replace("**Approved git commands:** git revert --no-edit deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", "**Approved git commands:** git reset --hard HEAD~1")
       .replace("**Forbidden-command check:** passed", "**Forbidden-command check:** passed"),
     "undo-latest"
   );
   assert.equal(invalidSemanticValidation.valid, false);
   assert.match(
     invalidSemanticValidation.issues.join("\n"),
-    /Undo report marker Approved git commands must not include destructive undo commands: git reset --hard\./
+    /Undo report marker Approved git commands must not include destructive undo commands: git reset --hard, git reset\./
   );
   assert.match(
     invalidSemanticValidation.issues.join("\n"),
     /Undo report marker Forbidden-command check cannot be `passed` when destructive undo commands appear in the approved revert commands section\./
   );
+
+  for (const unsafeCommand of [
+    "git clean -fdx",
+    "git checkout -- .",
+    "git reset --soft HEAD~1",
+    "git revert --no-edit deadbeefdeadbeefdeadbeefdeadbeefdeadbeef && git clean -fdx"
+  ]) {
+    const unsafeValidation = validateReportArtifactContent(
+      populatedUndoReport.replace(
+        "**Approved git commands:** git revert --no-edit deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        `**Approved git commands:** ${unsafeCommand}`
+      ),
+      "undo-latest"
+    );
+    assert.equal(unsafeValidation.valid, false, unsafeCommand);
+  }
+
+  const partialValidation = validateReportArtifactContent(
+    populatedUndoReport.replace("**Revert outcome:** success", "**Revert outcome:** partial"),
+    "undo-latest"
+  );
+  assert.equal(partialValidation.valid, true, partialValidation.issues.join("\n"));
+
+  const unknownValidation = validateReportArtifactContent(
+    populatedUndoReport.replace(
+      "**Revert outcome:** success",
+      "**Revert outcome:** outcome-unknown"
+    ),
+    "undo-latest"
+  );
+  assert.equal(unknownValidation.valid, true, unknownValidation.issues.join("\n"));
 });
 
 test("repo-facing status docs treat undo as a shipped command", async () => {

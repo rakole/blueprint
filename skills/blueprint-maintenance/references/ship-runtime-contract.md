@@ -2,6 +2,12 @@
 
 This reference is the detailed `/blu-ship` workflow contract. The command manifest stays thin, the `blueprint-maintenance` skill owns orchestration, MCP tools own Blueprint persistence, and git or remote mutation remains confirmation-gated.
 
+`mcp_blueprint_blueprint_ship_preview` is the only shipping planner and `mcp_blueprint_blueprint_ship_execute` is the only push/PR executor. The host never authors or runs git or `gh` mutation commands. Preview binds canonical repository/common-dir identity, clean attached HEAD/branch, exact local and remote base OIDs and merge base, candidate commits, the single effective fetch and push URLs plus head/base refs and OIDs, upstream, effective Blueprint and Git config receipts, canonical same-directory and directory/filename phase-prefix artifact identity, a symlink-safe all-regular-file phase inventory whose raw-byte digests and fatal-UTF-8 decoded contents feed the live quality-gate evaluator, and successful `pr-branch-latest` digest linkage, requested draft/ready posture, title/body digest, report CAS, optional state patch, and exact argv into a bounded expiring one-shot fingerprint.
+
+Execution requires the exact operation id/fingerprint and explicit confirmation. It revalidates the phase inventory before mutation and between separate push and PR stages. It never forces, retries, shells, guesses a remote, or creates a PR after failed/unknown push. Exact already-present remote/PR state is reused; divergent state blocks. A successful push whose ref cannot still be observed at the approved HEAD is durably `outcome-unknown`, as is an unverified PR-create outcome. Initial, post-report, and final PR-view observation failures remain typed `pr-view-unavailable` with their detail and contextual fresh-preview fallback. Typed `gh` failure recovery preserves the original push and PR intent when a required push has not run, switches to a fresh `push:false`, `createPr:true` preview only when the remote was already exact or push is confirmed, and reconciles exact remote truth first for outcome-unknown push. Stale direct argv is never emitted. Outcome-report/state failure after the pre-mutation report is recovered only through `mcp_blueprint_blueprint_ship_persist`, which never re-enters external mutation.
+
+PR creation also requires one exact `[host/]owner/repo` selector derived from and matching the approved effective push URL. Every `gh repo view`, `gh pr view`, and `gh pr create` call binds that selector with `--repo`; authentication is checked for its hostname. Multiple effective push URLs, unstable rewrite endpoints, unparseable non-GitHub push URLs, selector mismatches, and missing or mismatched upstreams hard-stop. Explicit remote selection does not waive upstream safety.
+
 ## Stage Mapping
 
 ### Resolve
@@ -66,3 +72,6 @@ This reference is the detailed `/blu-ship` workflow contract. The command manife
 - `mcp_blueprint_blueprint_artifact_contract_read`
 - `mcp_blueprint_blueprint_artifact_report_write`
 - `mcp_blueprint_blueprint_state_update`
+- `mcp_blueprint_blueprint_ship_preview`
+- `mcp_blueprint_blueprint_ship_execute`
+- `mcp_blueprint_blueprint_ship_persist`

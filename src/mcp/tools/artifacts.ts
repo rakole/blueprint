@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -397,6 +398,7 @@ type ArtifactReportWriteArgs = {
   content?: string;
   model?: Record<string, unknown>;
   overwrite?: boolean;
+  expectedExistingContentSha256?: string | null;
   auditFixContext?: {
     source: AuditFixReportSource;
     severity: AuditFixReportSeverityFilter;
@@ -2396,8 +2398,37 @@ const artifactReportWriteInputSchema = {
   content: z.string().optional(),
   model: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional(),
+  expectedExistingContentSha256: z.string().regex(/^[0-9a-f]{64}$/).nullable().optional(),
   auditFixContext: auditFixRuntimeInputSchema.optional()
 };
+
+async function assertReportCompareAndSwap(
+  absolutePath: string,
+  expectedExistingContentSha256: string | null | undefined
+): Promise<void> {
+  if (expectedExistingContentSha256 === undefined) return;
+
+  const exists = await pathExists(absolutePath);
+
+  if (expectedExistingContentSha256 === null) {
+    if (exists) {
+      throw new Error("Report compare-and-swap failed because a report appeared after approval.");
+    }
+    return;
+  }
+
+  if (!exists) {
+    throw new Error("Report compare-and-swap failed because the approved report disappeared.");
+  }
+
+  const actualSha256 = createHash("sha256")
+    .update(await fs.readFile(absolutePath))
+    .digest("hex");
+
+  if (actualSha256 !== expectedExistingContentSha256) {
+    throw new Error("Report compare-and-swap failed because report content changed after approval.");
+  }
+}
 const artifactReportAuthoringContextInputSchema = {
   cwd: z.string().optional(),
   reportName: z.string(),
@@ -8917,14 +8948,28 @@ function validateReportEnumMarker(
 function detectForbiddenUndoCommands(commands: string): string[] {
   const forbiddenPatterns: Array<{ pattern: RegExp; label: string }> = [
     { pattern: /\bgit\s+reset\s+--hard\b/i, label: "git reset --hard" },
+    { pattern: /\bgit\s+reset\b/i, label: "git reset" },
+    { pattern: /\bgit\s+(?:checkout|restore)\b/i, label: "git checkout or restore" },
+    { pattern: /\bgit\s+clean\b/i, label: "git clean" },
     { pattern: /\bgit\s+branch\s+(?:-D|--delete)\b/i, label: "git branch delete" },
     { pattern: /\bgit\s+push\s+(?:--force(?:-with-lease)?|-f)\b/i, label: "git push --force" },
-    { pattern: /\bgit\s+rebase\b/i, label: "git rebase" }
+    { pattern: /\bgit\s+rebase\b/i, label: "git rebase" },
+    { pattern: /(?:&&|\|\||[;`]|\$\()/, label: "shell chaining or evaluation" }
   ];
 
   return forbiddenPatterns
     .filter(({ pattern }) => pattern.test(commands))
     .map(({ label }) => label);
+}
+
+function isLiteralApprovedUndoCommandList(commands: string): boolean {
+  const fullHash = "(?:[0-9a-f]{40}|[0-9a-f]{64})";
+  const command = new RegExp(
+    `^git revert --no-edit(?: -m [1-9][0-9]*)? ${fullHash}$`
+  );
+  const entries = commands.split(/, then /i).map((entry) => entry.trim());
+
+  return entries.length > 0 && entries.every((entry) => command.test(entry));
 }
 
 function validateShipReportSemantics(content: string): string[] {
@@ -8963,21 +9008,21 @@ function validateShipReportSemantics(content: string): string[] {
       content,
       "Remote Actions",
       "gh availability and auth",
-      ["available and authenticated", "available but unauthenticated", "unavailable"],
+      ["not-requested", "ready", "gh-missing", "gh-unauthenticated", "gh-repository-unavailable", "pr-view-unavailable", "pr-create-failed"],
       "Ship report"
     ),
     ...validateReportEnumMarker(
       content,
       "Push Or PR Outcome",
       "Push outcome",
-      ["not-run", "success", "failed", "blocked"],
+      ["not-run", "success", "failed", "blocked", "outcome-unknown"],
       "Ship report"
     ),
     ...validateReportEnumMarker(
       content,
       "Push Or PR Outcome",
       "PR outcome",
-      ["not-run", "created", "updated", "failed", "blocked"],
+      ["not-run", "created", "updated", "failed", "blocked", "outcome-unknown"],
       "Ship report"
     )
   );
@@ -9014,7 +9059,14 @@ function validateUndoReportSemantics(content: string): string[] {
       content,
       "Branch State",
       "Merge state",
-      ["not in progress", "merge in progress", "rebase in progress", "cherry-pick in progress"],
+      [
+        "not in progress",
+        "merge in progress",
+        "rebase in progress",
+        "cherry-pick in progress",
+        "revert in progress",
+        "sequencer in progress"
+      ],
       "Undo report"
     ),
     ...validateReportEnumMarker(
@@ -9035,7 +9087,7 @@ function validateUndoReportSemantics(content: string): string[] {
       content,
       "Mutation Outcome",
       "Revert outcome",
-      ["not-run", "success", "failed", "blocked"],
+      ["not-run", "success", "partial", "failed", "blocked", "outcome-unknown"],
       "Undo report"
     )
   );
@@ -9054,6 +9106,12 @@ function validateUndoReportSemantics(content: string): string[] {
     }
 
     const forbiddenCommands = detectForbiddenUndoCommands(commands);
+
+    if (!isLiteralApprovedUndoCommandList(commands)) {
+      issues.push(
+        `Undo report marker ${marker} must contain only literal full-hash git revert --no-edit argv displays separated by ", then ".`
+      );
+    }
 
     if (forbiddenCommands.length === 0) {
       continue;
@@ -16796,6 +16854,7 @@ async function blueprintArtifactReportWriteUnlocked(
 
   const pathValue = buildBlueprintReportPath(args.reportName);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+  await assertReportCompareAndSwap(absolutePath, args.expectedExistingContentSha256);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
   const contractId = resolveReportContractId(args.reportName);

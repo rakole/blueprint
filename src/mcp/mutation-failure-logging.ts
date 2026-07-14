@@ -31,6 +31,12 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_codebase_artifact_write",
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
+  "blueprint_pr_branch_execute",
+  "blueprint_pr_branch_persist",
+  "blueprint_ship_execute",
+  "blueprint_ship_persist",
+  "blueprint_undo_execute",
+  "blueprint_undo_persist",
   "blueprint_cleanup_archive",
   "blueprint_review_record",
   "blueprint_god_review_start",
@@ -57,7 +63,8 @@ export const MUTATION_FAILURE_STATUSES = new Set([
   "refused",
   "partial",
   "failed",
-  "error"
+  "error",
+  "outcome-unknown"
 ]);
 
 export function isMutationTool(toolName: string): boolean {
@@ -74,6 +81,14 @@ function isReadOnlyPreviewInvocation(
 
   if (toolName === "blueprint_plan_run_prepare") {
     return (args.mode ?? "preview") === "preview";
+  }
+
+  if (toolName === "blueprint_undo_execute") {
+    return false;
+  }
+
+  if (toolName === "blueprint_ship_execute") {
+    return false;
   }
 
   if (toolName === "blueprint_roadmap_promote_backlog") {

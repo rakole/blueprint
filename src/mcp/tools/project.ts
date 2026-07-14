@@ -48,6 +48,9 @@ import { cleanupToolDefinitions } from "./cleanup.js";
 import { reviewToolDefinitions } from "./review.js";
 import { impactToolDefinitions } from "./impact.js";
 import { updateToolDefinitions } from "./update.js";
+import { undoToolDefinitions } from "./undo.js";
+import { prBranchToolDefinitions } from "./pr-branch.js";
+import { shipToolDefinitions } from "./ship.js";
 import { workspaceToolDefinitions } from "./workspace.js";
 import {
   resolveBlueprintSkillPath,
@@ -266,6 +269,9 @@ const AVAILABLE_TOOL_NAMES = new Set([
   ...artifactToolDefinitions.map((definition) => definition.name),
   ...cleanupToolDefinitions.map((definition) => definition.name),
   ...impactToolDefinitions.map((definition) => definition.name),
+  ...prBranchToolDefinitions.map((definition) => definition.name),
+  ...shipToolDefinitions.map((definition) => definition.name),
+  ...undoToolDefinitions.map((definition) => definition.name),
   ...updateToolDefinitions.map((definition) => definition.name),
   ...workspaceToolDefinitions.map((definition) => definition.name)
 ]);

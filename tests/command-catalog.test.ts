@@ -2197,13 +2197,20 @@ test("pr-branch is implemented once manifest, skill, and review-branch report MC
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
-    "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
     "blueprint_config_get",
+    "blueprint_pr_branch_execute",
+    "blueprint_pr_branch_persist",
+    "blueprint_pr_branch_preview",
     "blueprint_project_status"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
+  assert.deepEqual(PR_BRANCH_RUNTIME_METADATA.runtimeReference.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "behavior-audited"
+  ]);
 });
 
 test("ship is implemented once manifest, skill, and report-backed shipping MCP tools exist", async () => {
@@ -2220,15 +2227,21 @@ test("ship is implemented once manifest, skill, and report-backed shipping MCP t
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
-    "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
     "blueprint_config_get",
     "blueprint_phase_locate",
     "blueprint_project_status",
-    "blueprint_state_update"
+    "blueprint_ship_execute",
+    "blueprint_ship_persist",
+    "blueprint_ship_preview"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
+  assert.deepEqual(SHIP_RUNTIME_METADATA.runtimeReference.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "behavior-audited"
+  ]);
 });
 
 test("cleanup is implemented once manifest, skill, and archival mutation MCP tools exist", async () => {
@@ -2268,14 +2281,41 @@ test("undo is implemented once manifest, skill, and report-backed revert MCP too
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
-    "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
     "blueprint_phase_locate",
     "blueprint_project_status",
-    "blueprint_state_update"
+    "blueprint_undo_execute",
+    "blueprint_undo_persist",
+    "blueprint_undo_preview"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
+  assert.deepEqual(UNDO_RUNTIME_METADATA.runtimeReference.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "behavior-audited"
+  ]);
+});
+
+test("generated command catalog exposes behavior-audited Quality Shipping evidence", async () => {
+  const generated = JSON.parse(
+    await readFile(path.join(process.cwd(), "generated/command-catalog.json"), "utf8")
+  ) as {
+    commands: Array<{
+      name: string;
+      runtimeReference?: { evidenceState?: string[] };
+    }>;
+  };
+
+  for (const commandName of ["pr-branch", "ship", "undo"]) {
+    const entry = generated.commands.find((command) => command.name === commandName);
+    assert.ok(entry, `missing generated catalog entry for ${commandName}`);
+    assert.deepEqual(entry.runtimeReference?.evidenceState, [
+      "locked",
+      "runtime-owned",
+      "behavior-audited"
+    ]);
+  }
 });
 
 test("reapply-patches is implemented once manifest, skill, and patch replay MCP tools exist", async () => {

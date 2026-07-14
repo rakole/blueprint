@@ -1270,7 +1270,7 @@ export declare const PR_BRANCH_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: git branch mutation.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_pr_branch_preview", "blueprint_pr_branch_execute", "blueprint_pr_branch_persist"];
     readonly optionalAgents: readonly [];
     readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/pr-branch-runtime-contract.md"];
     readonly spec: {
@@ -1287,11 +1287,11 @@ export declare const PR_BRANCH_RUNTIME_METADATA: {
         readonly waveTitle: "Quality And Shipping";
         readonly command: "pr-branch";
         readonly primarySkill: "blueprint-maintenance";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_pr_branch_preview", "blueprint_pr_branch_execute", "blueprint_pr_branch_persist"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly [".blueprint write guard"];
-        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, require a clean tree and review-branch confirmation before git mutation, default to excluding .blueprint/** bookkeeping when configured, persist only the durable report through blueprint_artifact_report_write, and route follow-ups only to implemented commands or manual git/PR steps.";
-        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, use blueprint_pr_branch_preview for canonical repo, source/base/merge-base, config/evidence/report-CAS, commit-ledger, path-policy, exact-argv, and expiring one-shot approval binding, require review-branch confirmation, execute only through blueprint_pr_branch_execute, and use blueprint_pr_branch_persist only for receipt-bound outcome-report recovery without re-entering git.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
     };
 };
 export declare const SHIP_RUNTIME_METADATA: {
@@ -1304,7 +1304,7 @@ export declare const SHIP_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: remote and git mutation path.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_ship_preview", "blueprint_ship_execute", "blueprint_ship_persist"];
     readonly optionalAgents: readonly [];
     readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/ship-runtime-contract.md"];
     readonly spec: {
@@ -1321,11 +1321,11 @@ export declare const SHIP_RUNTIME_METADATA: {
         readonly waveTitle: "Quality And Shipping";
         readonly command: "ship";
         readonly primarySkill: "blueprint-maintenance";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_ship_preview", "blueprint_ship_execute", "blueprint_ship_persist"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly [".blueprint write guard"];
-        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, and evaluate saved review/security evidence through effective config before ready shipping. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented; write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.";
-        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, discover canonical same-directory verification plus config-required review/security and successful pr-branch receipt evidence before blueprint_ship_preview, then use blueprint_ship_execute for config/evidence/all-regular-file-phase-inventory/repository/effective-fetch-and-push-URL/report-bound freshness, distinct exact-argv push and PR stages, typed gh outcomes, durable outcome-unknown reporting, and state ordering; use blueprint_ship_persist only for receipt-bound report/state recovery without repeating external mutation. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
     };
 };
 export declare const UNDO_RUNTIME_METADATA: {
@@ -1338,7 +1338,7 @@ export declare const UNDO_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_undo_preview", "blueprint_undo_execute", "blueprint_undo_persist"];
     readonly optionalAgents: readonly [];
     readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/undo-runtime-contract.md"];
     readonly spec: {
@@ -1355,11 +1355,11 @@ export declare const UNDO_RUNTIME_METADATA: {
         readonly waveTitle: "Quality And Shipping";
         readonly command: "undo";
         readonly primarySkill: "blueprint-maintenance";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_undo_preview", "blueprint_undo_execute", "blueprint_undo_persist"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly [".blueprint write guard"];
-        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, hard-stop on dirty or unsafe git state, require undo confirmation, write undo-latest before mutation, run only safe git revert style steps, overwrite undo-latest with actual outcome, and update state only after a successful revert changes routing.";
-        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, discover artifacts and digest inputs before using blueprint_undo_preview for exact full-hash planning and a config/report/evidence-bound expiring one-shot approval, hard-stop on dirty or unsafe git state, and use blueprint_undo_execute to write undo-latest before mutation, run only runtime-derived safe git revert argv, overwrite undo-latest with the actual structured outcome, and update state only after successful reverts and outcome-report persistence; use blueprint_undo_persist only for receipt-bound report/state recovery without re-entering git.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
     };
 };
 export declare const NEW_WORKSPACE_RUNTIME_METADATA: {
@@ -3134,7 +3134,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: git branch mutation.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_pr_branch_preview", "blueprint_pr_branch_execute", "blueprint_pr_branch_persist"];
         readonly optionalAgents: readonly [];
         readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/pr-branch-runtime-contract.md"];
         readonly spec: {
@@ -3151,11 +3151,11 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality And Shipping";
             readonly command: "pr-branch";
             readonly primarySkill: "blueprint-maintenance";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_pr_branch_preview", "blueprint_pr_branch_execute", "blueprint_pr_branch_persist"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly [".blueprint write guard"];
-            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, require a clean tree and review-branch confirmation before git mutation, default to excluding .blueprint/** bookkeeping when configured, persist only the durable report through blueprint_artifact_report_write, and route follow-ups only to implemented commands or manual git/PR steps.";
-            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, use blueprint_pr_branch_preview for canonical repo, source/base/merge-base, config/evidence/report-CAS, commit-ledger, path-policy, exact-argv, and expiring one-shot approval binding, require review-branch confirmation, execute only through blueprint_pr_branch_execute, and use blueprint_pr_branch_persist only for receipt-bound outcome-report recovery without re-entering git.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
         };
     };
     readonly ship: {
@@ -3168,7 +3168,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: remote and git mutation path.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_ship_preview", "blueprint_ship_execute", "blueprint_ship_persist"];
         readonly optionalAgents: readonly [];
         readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/ship-runtime-contract.md"];
         readonly spec: {
@@ -3185,11 +3185,11 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality And Shipping";
             readonly command: "ship";
             readonly primarySkill: "blueprint-maintenance";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_ship_preview", "blueprint_ship_execute", "blueprint_ship_persist"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly [".blueprint write guard"];
-            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, and evaluate saved review/security evidence through effective config before ready shipping. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented; write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.";
-            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, discover canonical same-directory verification plus config-required review/security and successful pr-branch receipt evidence before blueprint_ship_preview, then use blueprint_ship_execute for config/evidence/all-regular-file-phase-inventory/repository/effective-fetch-and-push-URL/report-bound freshness, distinct exact-argv push and PR stages, typed gh outcomes, durable outcome-unknown reporting, and state ordering; use blueprint_ship_persist only for receipt-bound report/state recovery without repeating external mutation. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
         };
     };
     readonly undo: {
@@ -3202,7 +3202,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_undo_preview", "blueprint_undo_execute", "blueprint_undo_persist"];
         readonly optionalAgents: readonly [];
         readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/undo-runtime-contract.md"];
         readonly spec: {
@@ -3219,11 +3219,11 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality And Shipping";
             readonly command: "undo";
             readonly primarySkill: "blueprint-maintenance";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_undo_preview", "blueprint_undo_execute", "blueprint_undo_persist"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly [".blueprint write guard"];
-            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, hard-stop on dirty or unsafe git state, require undo confirmation, write undo-latest before mutation, run only safe git revert style steps, overwrite undo-latest with actual outcome, and update state only after a successful revert changes routing.";
-            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, discover artifacts and digest inputs before using blueprint_undo_preview for exact full-hash planning and a config/report/evidence-bound expiring one-shot approval, hard-stop on dirty or unsafe git state, and use blueprint_undo_execute to write undo-latest before mutation, run only runtime-derived safe git revert argv, overwrite undo-latest with the actual structured outcome, and update state only after successful reverts and outcome-report persistence; use blueprint_undo_persist only for receipt-bound report/state recovery without re-entering git.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
         };
     };
     readonly "new-workspace": {

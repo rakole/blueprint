@@ -68,10 +68,10 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runt
   assert.match(prBranch, /pr-branch-runtime-contract\.md/);
   assert.match(prBranch, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(prBranch, /commit classification ledger/i);
-  assert.match(prBranch, /Summarize the target base branch, current source branch, source `HEAD`, candidate review branch name/i);
-  assert.match(prBranch, /Require explicit confirmation before any branch creation or replay step/i);
-  assert.match(prBranch, /retained file count, retained commit count/i);
-  assert.match(prBranch, /If that report already exists.*require explicit overwrite confirmation before replacing it/i);
+  assert.match(prBranch, /Summarize the runtime packet and require explicit confirmation of its exact operation id and fingerprint/i);
+  assert.match(prBranch, /mcp_blueprint_blueprint_pr_branch_execute/);
+  assert.match(prBranch, /validates actual content, preserves the source ref/i);
+  assert.match(prBranch, /report-overwrite-confirmation/);
   assert.match(prBranch, /next safe action/i);
 
   assert.match(ship, /A dirty working tree or missing base branch is a hard stop for shipping/i);
@@ -90,13 +90,16 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runt
   assert.match(ship, /After the approved push or PR attempt finishes, explicitly overwrite `ship-latest`/i);
   assert.match(ship, /next safe action/i);
 
-  assert.match(undo, /A dirty working tree, detached HEAD, merge in progress, or missing revert target is a hard stop for undo/i);
+  assert.match(undo, /A dirty working tree, detached HEAD, merge\/rebase\/cherry-pick\/revert\/sequencer state[\s\S]*is a hard stop/i);
   assert.match(undo, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(undo, /contract\.authoringTemplate/);
-  assert.match(undo, /keep the destructive approval gate visible as `undo-confirmation`/i);
-  assert.match(undo, /keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i);
-  assert.match(undo, /approved undo plan[\s\S]*before git mutation begins/i);
-  assert.match(undo, /After the revert attempt finishes, explicitly overwrite `undo-latest`/i);
+  assert.match(
+    undo,
+    /keep `undo-confirmation` visible until the user approves that operation id and fingerprint/i,
+  );
+  assert.match(undo, /returns `report-overwrite-confirmation`[\s\S]*obtain explicit overwrite approval/i);
+  assert.match(undo, /persists the exact approved plan before mutation/i);
+  assert.match(undo, /persists the actual-outcome report/i);
   assert.match(undo, /next safe action/i);
 
   assert.match(cleanup, /A dirty working tree, missing phase directory root, or obviously inconsistent phase layout is a hard stop for cleanup/i);
@@ -158,9 +161,9 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and runtime-o
   assert.match(skill, /require code-review evidence first and secure-phase or security evidence before ready shipping/);
   assert.match(skill, /overwrite `ship-latest`/i);
   assert.match(skill, /actual outcomes, fallback notes, post-mutation evidence, and the config-aware gate posture/i);
-  assert.match(skill, /`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/);
+  assert.match(skill, /dirty\/detached and all sequencer-state checks/i);
   assert.match(skill, /Keep `undo-confirmation` and `report-overwrite-confirmation` visible/i);
-  assert.match(skill, /overwrite `undo-latest`[\s\S]*actual outcome, blockers, and stale-evidence fallout/i);
+  assert.match(skill, /post-mutation report failure preserves git success/i);
   assert.match(skill, /Keep the protected scope explicit throughout the run/i);
   assert.match(skill, /`cleanup-confirmation`/);
   assert.match(skill, /`archive-destination-confirmation`/);
@@ -177,7 +180,7 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and runtime-o
 
 test("maintenance runtime contract resources keep aborts, approvals, and owned inputs visible", async () => {
   const expectations = [
-    ["pr-branch", /clean tree and review-branch confirmation/i, /pr-branch-runtime-contract\.md/],
+    ["pr-branch", /expiring one-shot approval binding/i, /pr-branch-runtime-contract\.md/],
     ["ship", /local prep, push, and PR creation as separate approved steps/i, /ship-runtime-contract\.md/],
     ["undo", /hard-stop on dirty or unsafe git state/i, /undo-runtime-contract\.md/],
     ["new-workspace", /derive workspace root from config or explicit input/i, /new-workspace-runtime-contract\.md/],
