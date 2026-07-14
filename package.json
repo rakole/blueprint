@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "audit:production": "npm audit --omit=dev --audit-level=moderate",
     "generate:commands": "tsx scripts/generate-command-registry.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node scripts/run-tests.mjs",

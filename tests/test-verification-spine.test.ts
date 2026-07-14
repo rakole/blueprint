@@ -37,6 +37,26 @@ test("discovery is identical when invoked without caller-shell glob expansion", 
   assert.deepEqual(stdout.trim().split("\n"), await discoverTestFiles(repoRoot));
 });
 
+test("production security audit is production-only and separate from canonical tests", async () => {
+  const packageJson = JSON.parse(
+    await readFile(path.join(repoRoot, "package.json"), "utf8")
+  ) as {
+    scripts?: Record<string, string>;
+  };
+  const productionAudit = packageJson.scripts?.["audit:production"];
+
+  assert.equal(
+    productionAudit,
+    "npm audit --omit=dev --audit-level=moderate",
+    "the production audit should preserve npm output and fail on moderate or higher advisories"
+  );
+  assert.doesNotMatch(
+    packageJson.scripts?.test ?? "",
+    /audit/i,
+    "canonical tests should not depend on advisory-network availability"
+  );
+});
+
 test("test execution propagates a real failing test exit", async (t) => {
   const childEnv = { ...process.env };
   delete childEnv.NODE_TEST_CONTEXT;
