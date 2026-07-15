@@ -761,27 +761,27 @@ export declare const EXECUTE_PHASE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: drives real repo mutation during implementation and records execution summaries.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_plan_index", "blueprint_phase_execution_targets", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_summary_authoring_context", "blueprint_phase_summary_validate_model", "blueprint_phase_summary_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
-    readonly optionalAgents: readonly ["blueprint-executor"];
+    readonly requiredTools: readonly ["blueprint_phase_execution_prepare", "blueprint_phase_execution_apply", "blueprint_phase_execution_verify", "blueprint_phase_execution_finalize"];
+    readonly optionalAgents: readonly [];
     readonly spec: {
         readonly path: string;
         readonly title: "`/blu-execute-phase`";
         readonly executionProfile: "long-running-mutation";
         readonly rootRoutable: true;
         readonly purpose: "`execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.";
-        readonly reads: readonly [".blueprint/config.json", ".blueprint/STATE.md", "selected plan and summary files through MCP", "phase.summary contract"];
-        readonly writes: readonly ["one or more XX-YY-SUMMARY.md files", ".blueprint/STATE.md"];
+        readonly reads: readonly ["one immutable execution packet through blueprint_phase_execution_prepare", "selected plan bodies, effective config, repo HEAD/status, preimages, summaries, and external prerequisites bound into that packet"];
+        readonly writes: readonly ["selected plan-owned repository files through blueprint_phase_execution_apply", "durable execute-phase session receipts under .blueprint/executions/execute-phase/", "one XX-YY-SUMMARY.md per finalized plan", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
         readonly waveTitle: "Core Lifecycle";
         readonly command: "execute-phase";
         readonly primarySkill: "blueprint-phase-execution";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_plan_index", "blueprint_phase_execution_targets", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_summary_authoring_context", "blueprint_phase_summary_validate_model", "blueprint_phase_summary_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
-        readonly optionalAgents: readonly ["blueprint-executor"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_execution_prepare", "blueprint_phase_execution_apply", "blueprint_phase_execution_verify", "blueprint_phase_execution_finalize"];
+        readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
-        readonly contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, use blueprint_phase_execution_targets as the common read authority for deterministic target selection plus overwrite and overlap warnings with selectedPlans, existingSummaries, blockers, and conflicts as the default public metadata source, keep blueprint_config_get with scope: \"effective\" on the common path for execution mode and safety explanation, read plan bodies through blueprint_phase_plan_read only for the selected plans, read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text, keep blueprint_artifact_contract_read with artifactId: \"phase.summary\" plus the Markdown-first summary authoring context before any summary write or replacement, do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path, refuse stale or invalid saved plans, preserve wave order, lower-wave blockers, gap-only routing, overlap detection, and external-service confirmation through execution_targets, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, keep the post-write sequence as blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: \"synced\", never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.";
-        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        readonly contractNotes: "Long-running-mutation profile; blueprint_phase_execution_prepare is the sole preview, claim, selection, approval, freshness, and resume authority; require its exact claim literal plus preview fingerprint before mutation; execute selected plans sequentially in packet order; route every repo write through blueprint_phase_execution_apply with exact claimed preimages; never let an agent write directly; run only packet-bound verification through blueprint_phase_execution_verify; permit exactly one repair mutation and one mandatory re-verification; persist receipt-derived COMPLETED or BLOCKED summaries only through blueprint_phase_execution_finalize, which owns summary write, summary index, artifact validation, synced state, terminal release, and next-plan advancement as an idempotent stage machine; stop on any stale authority, mixed postimage, cleanup debt, failed second verification, or unconfirmed overwrite/external prerequisite; resume only the exact active session; never persist execute-phase reports or claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
     };
 };
 export declare const LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA: {
@@ -2625,27 +2625,27 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: drives real repo mutation during implementation and records execution summaries.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_plan_index", "blueprint_phase_execution_targets", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_summary_authoring_context", "blueprint_phase_summary_validate_model", "blueprint_phase_summary_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
-        readonly optionalAgents: readonly ["blueprint-executor"];
+        readonly requiredTools: readonly ["blueprint_phase_execution_prepare", "blueprint_phase_execution_apply", "blueprint_phase_execution_verify", "blueprint_phase_execution_finalize"];
+        readonly optionalAgents: readonly [];
         readonly spec: {
             readonly path: string;
             readonly title: "`/blu-execute-phase`";
             readonly executionProfile: "long-running-mutation";
             readonly rootRoutable: true;
             readonly purpose: "`execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.";
-            readonly reads: readonly [".blueprint/config.json", ".blueprint/STATE.md", "selected plan and summary files through MCP", "phase.summary contract"];
-            readonly writes: readonly ["one or more XX-YY-SUMMARY.md files", ".blueprint/STATE.md"];
+            readonly reads: readonly ["one immutable execution packet through blueprint_phase_execution_prepare", "selected plan bodies, effective config, repo HEAD/status, preimages, summaries, and external prerequisites bound into that packet"];
+            readonly writes: readonly ["selected plan-owned repository files through blueprint_phase_execution_apply", "durable execute-phase session receipts under .blueprint/executions/execute-phase/", "one XX-YY-SUMMARY.md per finalized plan", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;
             readonly waveTitle: "Core Lifecycle";
             readonly command: "execute-phase";
             readonly primarySkill: "blueprint-phase-execution";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_plan_index", "blueprint_phase_execution_targets", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_summary_authoring_context", "blueprint_phase_summary_validate_model", "blueprint_phase_summary_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
-            readonly optionalAgents: readonly ["blueprint-executor"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_execution_prepare", "blueprint_phase_execution_apply", "blueprint_phase_execution_verify", "blueprint_phase_execution_finalize"];
+            readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
-            readonly contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, use blueprint_phase_execution_targets as the common read authority for deterministic target selection plus overwrite and overlap warnings with selectedPlans, existingSummaries, blockers, and conflicts as the default public metadata source, keep blueprint_config_get with scope: \"effective\" on the common path for execution mode and safety explanation, read plan bodies through blueprint_phase_plan_read only for the selected plans, read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text, keep blueprint_artifact_contract_read with artifactId: \"phase.summary\" plus the Markdown-first summary authoring context before any summary write or replacement, do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path, refuse stale or invalid saved plans, preserve wave order, lower-wave blockers, gap-only routing, overlap detection, and external-service confirmation through execution_targets, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, keep the post-write sequence as blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: \"synced\", never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.";
-            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+            readonly contractNotes: "Long-running-mutation profile; blueprint_phase_execution_prepare is the sole preview, claim, selection, approval, freshness, and resume authority; require its exact claim literal plus preview fingerprint before mutation; execute selected plans sequentially in packet order; route every repo write through blueprint_phase_execution_apply with exact claimed preimages; never let an agent write directly; run only packet-bound verification through blueprint_phase_execution_verify; permit exactly one repair mutation and one mandatory re-verification; persist receipt-derived COMPLETED or BLOCKED summaries only through blueprint_phase_execution_finalize, which owns summary write, summary index, artifact validation, synced state, terminal release, and next-plan advancement as an idempotent stage machine; stop on any stale authority, mixed postimage, cleanup debt, failed second verification, or unconfirmed overwrite/external prerequisite; resume only the exact active session; never persist execute-phase reports or claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
         };
     };
     readonly "list-phase-assumptions": {

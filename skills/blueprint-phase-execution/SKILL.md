@@ -101,21 +101,16 @@ contracts from manifests, local references, and MCP/artifact contract reads.
 - `blueprint_phase_locate`: pass only a numeric phase reference when the
   command provides one, or omit `phase` to allow state or roadmap inference.
   Never pass phase directories, slugs, or filenames.
-- `blueprint_phase_execution_targets`: use it as the deterministic read path
-  for execute-phase target selection, lower-wave blockers, overwrite
-  candidates, overlap warnings, selected plan metadata, existing summary
-  metadata, blocker packets, and gap-only routing on the common pre-write path.
-- `blueprint_phase_summary_authoring_context`: read it before summary drafting
-  so Markdown summary content is grounded in the selected saved plan's
-  acceptance criteria, dependency plan inventory, linked plan path, summary
-  path, and status-safe next actions.
-- `blueprint_phase_summary_validate_model`: validate Markdown summary draft
-  content and repair semantic diagnostics before persistence. The tool name is
-  retained for compatibility; schema-first summary JSON is deprecated.
-- `blueprint_phase_summary_write`: pass numeric `phase`, numeric `planId`, and
-  Markdown `content` with an explicit Status marker. The matching plan must
-  already exist, and the returned `path` plus `linkedPlanPath` are
-  authoritative.
+- `blueprint_phase_execution_prepare`: use preview to obtain the immutable
+  selection/authority packet, claim with the exact fingerprint and confirmation
+  literal, and resume only the exact active durable session.
+- `blueprint_phase_execution_apply`: use it for every selected plan-owned
+  write or delete with the exact claimed or latest receipted preimage.
+- `blueprint_phase_execution_verify`: run only the commands bound into the
+  claimed packet and accept its one-repair limit.
+- `blueprint_phase_execution_finalize`: use it after pass or terminal failure;
+  it derives the summary from receipts and owns summary/index/artifact/state
+  persistence plus next-plan or terminal routing.
 - `blueprint_artifact_contract_read`: read canonical authoring templates and
   validation metadata by contract id instead of relying on copied prompt-local
   templates.
@@ -136,20 +131,10 @@ does not widen a command's tool scope.
 
 ### `/blu-execute-phase`
 
-- `blueprint_phase_locate`
-- `blueprint_phase_plan_index`
-- `blueprint_phase_execution_targets`
-- `blueprint_phase_plan_read`
-- `blueprint_phase_summary_index`
-- `blueprint_phase_summary_read`
-- `blueprint_phase_summary_authoring_context`
-- `blueprint_phase_summary_validate_model`
-- `blueprint_phase_summary_write`
-- `blueprint_artifact_contract_read`
-- `blueprint_config_get`
-- `blueprint_artifact_validate`
-- `blueprint_state_load`
-- `blueprint_state_update`
+- `blueprint_phase_execution_prepare`
+- `blueprint_phase_execution_apply`
+- `blueprint_phase_execution_verify`
+- `blueprint_phase_execution_finalize`
 
 ### `/blu-quick`
 
@@ -172,6 +157,10 @@ does not widen a command's tool scope.
 Use optional agents only when the active command contract allows them. `/blu-fast`
 does not use subagents.
 
+`/blu-execute-phase` has no optional write agent. Its inline orchestrator may
+reason about the packet, but all repository mutation stays inside
+`blueprint_phase_execution_apply`.
+
 For `/blu-quick`, default inline and use optional agents only when the local
 decision table says the bounded value outweighs the coordination cost. Do not
 substitute browser-only, shell-only, web-search-only, or generic helper agents,
@@ -183,10 +172,8 @@ and do not let tracker state impersonate a saved plan.
 - Follow-up routing stays inside the implemented Blueprint surface.
 - State updates happen after artifact truth is refreshed, not before.
 - `/blu-execute-phase` keeps saved plans as the execution scope authority.
-- `/blu-execute-phase` keeps `blueprint_phase_execution_targets` as the common
-  pre-write metadata authority; `blueprint_phase_plan_read` stays for selected
-  plan bodies, and `blueprint_phase_summary_read` stays conditional on needing
-  existing summary body text for overwrite or repair reasoning.
+- `/blu-execute-phase` keeps the claimed execution packet as the only selection,
+  freshness, approval, plan-body, preimage, and verification authority.
 - `/blu-quick` stays bounded and report-backed rather than impersonating saved
   planning or broad lifecycle execution.
 - `/blu-fast` stays trivial and does not create durable reports or phase
@@ -198,41 +185,27 @@ and do not let tracker state impersonate a saved plan.
 
 Before running the command flow, read
 `skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md`.
-It locks the retained execute behavior that is easy to dilute: deterministic
-`blueprint_phase_execution_targets` selection, absolute lower-wave blockers,
-disjoint-write parallel gating, summary-backed carry-forward evidence,
-`PARTIAL` and `BLOCKED` pending semantics, synced state refresh, validation
-handoff, and no report persistence.
+It locks deterministic claimed selection, sequential plan ownership,
+preimage-bound MCP mutation, packet-bound verification, one repair,
+receipt-derived summaries, resumable persistence, validation handoff, and no
+report persistence.
 
 - Execution profile: `long-running-mutation`.
 - Keep the shared stage vocabulary explicit during non-trivial runs:
   `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 - Keep the in-flight status contract visible during non-trivial runs: resolved
   scope, active stage, pending gate, execution mode, next safe action.
-- Use `blueprint-executor` only for bounded plan work with disjoint write
-  ownership. Use the single-agent fallback when agents are unavailable or
-  unsafe.
-- Persist one Markdown summary per executed plan through MCP and
-  treat valid `PARTIAL` and `BLOCKED` summaries as durable carry-forward
-  evidence rather than completion.
-- Use saved plan external-service prerequisites plus
-  `blueprint_phase_execution_targets.externalServicePreflight` to stop for
-  readiness confirmation before meaningful execution when the plan depends on
-  runtime services the agent cannot safely assume are ready.
-- Keep the default pre-write read path trimmed to
-  `blueprint_phase_execution_targets`, effective `blueprint_config_get`, and
-  `blueprint_phase_plan_read` for selected plan bodies. Do not treat
-  pre-write `blueprint_artifact_validate` or `blueprint_state_load` as common
-  required reads, and use `blueprint_phase_summary_read` only when existing
-  summary body text is needed for overwrite or repair reasoning.
-- If a selected plan depends on another plan whose summary is not yet
-  `COMPLETED`, do not write `COMPLETED` for the dependent plan. Use `PARTIAL`
-  or `BLOCKED`, update Readiness, Completion State, Next Safe Action,
-  Verification, Gap / Repair Routes, and Follow-Ups to match, and keep the
-  dependency blocker explicit until the dependency summary exists.
-- Warning-only Markdown shape, exact sentinel, or style advice does not require
-  another repair loop when linkage, status, dependency order, verification truth,
-  and external-service readiness are otherwise valid.
+- Preview first, bind external-service and overwrite decisions into the packet,
+  then claim with the exact fingerprint and confirmation literal.
+- Execute packet plans sequentially. Never delegate or perform direct repo
+  writes; submit exact preimage-bound mutations through execution_apply.
+- Run execution_verify after each apply. A first failure permits exactly one
+  repair apply and one mandatory second verification.
+- Finalize passing or blocked plans through execution_finalize. Its durable
+  session, receipt-derived summary, summary index, artifact validation, synced
+  state, and advancement order are authoritative.
+- Resume interruptions with execution_prepare `mode: "resume"` and the exact
+  session id; mixed postimages, unreceipted drift, and stale authority block.
 - Do not make a phase-level completion claim from execute-phase itself; that
   waits for `/blu-validate-phase`, and the validation/state tools choose
   `/blu-verify-work` or `/blu-progress` from `workflow.no_uat` once validation
@@ -322,10 +295,10 @@ runtime contract support the result:
 - Required Blueprint MCP calls were made in the active contract's order through
   runtime FQNs; no `/blu-*` command ran in the shell and no shorthand tool id
   was treated as callable.
-- Persistence used only the owning MCP tools:
-  `mcp_blueprint_blueprint_phase_summary_write` for execute summaries,
-  `mcp_blueprint_blueprint_artifact_report_write` for the quick report, and
-  `mcp_blueprint_blueprint_state_update` for allowed state refreshes.
+- Persistence used only the owning MCP tools: the four execute-phase control
+  tools for saved-plan execution, `mcp_blueprint_blueprint_artifact_report_write`
+  for the quick report, and `mcp_blueprint_blueprint_state_update` for fast or
+  quick state refreshes.
 - Returned command-specific fields such as summary `path`, `linkedPlanPath`,
   report `path`, `written`, `overwritten`, state `statePath`,
   `updatedFields`, validation results, warnings, issues, statuses, and
@@ -334,7 +307,7 @@ runtime contract support the result:
   overlapping execution, quick optional-depth expansion or report replacement,
   and fast persistence only through healthy initialized Blueprint state.
 - Validation, model-check, and tool rejection results were repaired or reported
-  honestly: execute uses valid `PARTIAL` or `BLOCKED` summaries when needed,
+  honestly: execute uses receipt-derived `BLOCKED` summaries when needed,
   while quick and fast report warnings, deferred follow-up, reroute, or
   no-write status instead of claiming success.
 - The run stayed inside the active command's write boundary and did not mutate

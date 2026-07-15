@@ -282,10 +282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path26) {
-  if (!path26)
+function getElementAtPath(obj, path29) {
+  if (!path29)
     return obj;
-  return path26.reduce((acc, key) => acc?.[key], obj);
+  return path29.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path26, issues) {
+function prefixIssues(path29, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path26);
+    iss.path.unshift(path29);
     return iss;
   });
 }
@@ -10716,8 +10716,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path26) {
-      let input = path26;
+    function removeDotSegments(path29) {
+      let input = path29;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -10969,8 +10969,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path26, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path26 && path26 !== "/" ? path26 : void 0;
+        const [path29, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path29 && path29 !== "/" ? path29 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -14363,12 +14363,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs24, exportName) {
+    function addFormats(ajv, list, fs27, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs24[f]);
+        ajv.addFormat(f, fs27[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -14660,20 +14660,10 @@ var init_command_runtime_metadata = __esm({
       "blueprint_state_update"
     ];
     EXECUTE_PHASE_REQUIRED_TOOLS = [
-      "blueprint_phase_locate",
-      "blueprint_phase_plan_index",
-      "blueprint_phase_execution_targets",
-      "blueprint_phase_plan_read",
-      "blueprint_phase_summary_index",
-      "blueprint_phase_summary_read",
-      "blueprint_phase_summary_authoring_context",
-      "blueprint_phase_summary_validate_model",
-      "blueprint_phase_summary_write",
-      "blueprint_artifact_contract_read",
-      "blueprint_config_get",
-      "blueprint_artifact_validate",
-      "blueprint_state_load",
-      "blueprint_state_update"
+      "blueprint_phase_execution_prepare",
+      "blueprint_phase_execution_apply",
+      "blueprint_phase_execution_verify",
+      "blueprint_phase_execution_finalize"
     ];
     LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
@@ -15083,7 +15073,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint-ui-designer",
       "blueprint-checker"
     );
-    EXECUTE_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-executor");
+    EXECUTE_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents();
     VALIDATION_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-verifier");
     ADD_TESTS_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-executor",
@@ -15899,13 +15889,13 @@ var init_command_runtime_metadata = __esm({
         rootRoutable: true,
         purpose: "`execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.",
         reads: [
-          ".blueprint/config.json",
-          ".blueprint/STATE.md",
-          "selected plan and summary files through MCP",
-          "phase.summary contract"
+          "one immutable execution packet through blueprint_phase_execution_prepare",
+          "selected plan bodies, effective config, repo HEAD/status, preimages, summaries, and external prerequisites bound into that packet"
         ],
         writes: [
-          "one or more XX-YY-SUMMARY.md files",
+          "selected plan-owned repository files through blueprint_phase_execution_apply",
+          "durable execute-phase session receipts under .blueprint/executions/execute-phase/",
+          "one XX-YY-SUMMARY.md per finalized plan",
           ".blueprint/STATE.md"
         ]
       },
@@ -15921,8 +15911,8 @@ var init_command_runtime_metadata = __esm({
           ".blueprint write guard",
           "workflow advisory"
         ],
-        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, use blueprint_phase_execution_targets as the common read authority for deterministic target selection plus overwrite and overlap warnings with selectedPlans, existingSummaries, blockers, and conflicts as the default public metadata source, keep blueprint_config_get with scope: "effective" on the common path for execution mode and safety explanation, read plan bodies through blueprint_phase_plan_read only for the selected plans, read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text, keep blueprint_artifact_contract_read with artifactId: "phase.summary" plus the Markdown-first summary authoring context before any summary write or replacement, do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path, refuse stale or invalid saved plans, preserve wave order, lower-wave blockers, gap-only routing, overlap detection, and external-service confirmation through execution_targets, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, keep the post-write sequence as blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: "synced", never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.',
-        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+        contractNotes: "Long-running-mutation profile; blueprint_phase_execution_prepare is the sole preview, claim, selection, approval, freshness, and resume authority; require its exact claim literal plus preview fingerprint before mutation; execute selected plans sequentially in packet order; route every repo write through blueprint_phase_execution_apply with exact claimed preimages; never let an agent write directly; run only packet-bound verification through blueprint_phase_execution_verify; permit exactly one repair mutation and one mandatory re-verification; persist receipt-derived COMPLETED or BLOCKED summaries only through blueprint_phase_execution_finalize, which owns summary write, summary index, artifact validation, synced state, terminal release, and next-plan advancement as an idempotent stage machine; stop on any stale authority, mixed postimage, cleanup debt, failed second verification, or unconfirmed overwrite/external prerequisite; resume only the exact active session; never persist execute-phase reports or claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.",
+        evidenceState: ["locked", "runtime-owned", "behavior-audited"]
       }
     };
     LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA = {
@@ -37013,10 +37003,10 @@ async function readPhaseRoadmapRequirements(projectRoot, phaseNumber) {
   );
   return matchedPhase?.requirements ?? [];
 }
-async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @__PURE__ */ new Map()) {
+async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @__PURE__ */ new Map(), knownPlanPaths) {
   const phaseRoot = resolveBlueprintPath(projectRoot, resolved.phaseDir);
-  const planPaths = /* @__PURE__ */ new Set();
-  if (await pathExists(phaseRoot)) {
+  const planPaths = new Set(knownPlanPaths ?? []);
+  if (knownPlanPaths === void 0 && await pathExists(phaseRoot)) {
     const entries = await fs11.readdir(phaseRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith("-PLAN.md")) {
@@ -37093,11 +37083,12 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
   const { plans, nonCanonicalPlanPaths } = await collectPhasePlanArtifacts(
     projectRoot,
     resolved,
-    options.overrides
+    options.overrides,
+    options.knownPlanPaths
   );
   const issues = [];
   const warnings = [];
-  const roadmapRequirementIds = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
+  const roadmapRequirementIds = options.roadmapRequirementIds === void 0 ? await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber) : [...options.roadmapRequirementIds];
   const coveredRequirementIds = /* @__PURE__ */ new Set();
   const unexpectedRequirementIds = /* @__PURE__ */ new Set();
   const missingDependencyIds = /* @__PURE__ */ new Set();
@@ -39747,7 +39738,7 @@ async function buildPhasePlanIndexFromResolved(input) {
       continue;
     }
     knownPlanIds.add(planId2);
-    const content = await fs11.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = input.planContents?.get(planPath) ?? await fs11.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record2 = toPhasePlanRecord(planId2, planPath, content, resolved.phaseNumber);
     const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record2.dependsOn);
     if (dependencyIssues.length > 0) {
@@ -41224,7 +41215,8 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   if (args.wave !== void 0 && (!Number.isInteger(args.wave) || args.wave < 1)) {
     throw new Error("Wave must be a positive integer.");
   }
-  const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
+  const snapshot3 = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved } = snapshot3;
   if (!resolved) {
     return {
       phaseFound: false,
@@ -41256,6 +41248,7 @@ async function blueprintPhaseExecutionTargets(args = {}) {
         blockingPrerequisites: [],
         reasons: []
       },
+      planSetValidation: null,
       existingSummaries: [],
       blockers: {
         executionBlocked: true,
@@ -41275,17 +41268,37 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
   const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
-  const [summaryContext, effectiveConfig] = await Promise.all([
+  const planPaths = located.artifacts.filter(
+    (artifactPath) => path11.posix.dirname(artifactPath) === resolved.phaseDir && artifactPath.endsWith("-PLAN.md")
+  );
+  const planContents = new Map(
+    await Promise.all(
+      planPaths.map(async (planPath) => [
+        planPath,
+        await fs11.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8")
+      ])
+    )
+  );
+  const [summaryContext, effectiveConfig, planSetValidation] = await Promise.all([
     loadResolvedPhaseSummaryContext({
       projectRoot,
       located,
       resolved,
-      buildPhasePlanIndexFromLocated,
+      buildPhasePlanIndexFromLocated: (input) => buildPhasePlanIndexFromResolved({
+        ...input,
+        artifacts: located.artifacts,
+        planContents
+      }),
       validateSummaryAgainstLivePlanInventory
     }),
     blueprintConfigGet({
       cwd: projectRoot,
       scope: "effective"
+    }),
+    validatePhasePlanSet(projectRoot, resolved, {
+      overrides: planContents,
+      roadmapRequirementIds: snapshot3.matchedPhase?.requirements ?? [],
+      knownPlanPaths: planPaths
     })
   ]);
   const { planIndex, summaryInventory } = summaryContext;
@@ -41343,6 +41356,12 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   const invalidPlanIds = selectedPlans.filter((plan) => !plan.valid).map((plan) => plan.planId);
   const stalePlanIds = selectedPlans.filter((plan) => plan.missingDependencyPlans.length > 0).map((plan) => plan.planId);
   const blockers = [];
+  if (planSetValidation.status === "invalid") {
+    blockers.push(
+      `Phase ${resolved.phaseNumber} plan set is invalid and must be repaired before execution.`,
+      ...planSetValidation.issues
+    );
+  }
   if (candidatePlans.length === 0) {
     if (requestedWave !== null && gapsOnly) {
       blockers.push(
@@ -41533,6 +41552,7 @@ async function blueprintPhaseExecutionTargets(args = {}) {
       blockingPrerequisites: blockingExternalServicePrerequisites,
       reasons: externalServicePreflightReasons
     },
+    planSetValidation,
     existingSummaries,
     blockers: {
       executionBlocked: blockers.length > 0,
@@ -49356,14 +49376,14 @@ function collectDependencyNames(manifest) {
 function detectTestFramework(manifest, testFiles) {
   const scripts = asRecord(manifest.scripts);
   const testScript = typeof scripts.test === "string" ? scripts.test : "";
-  const dependencies = collectDependencyNames(manifest);
+  const dependencies2 = collectDependencyNames(manifest);
   if (testScript.includes("--test") || testFiles.some((file2) => file2.endsWith(".test.ts"))) {
     return testScript.includes("tsx") ? "node:test via tsx --test" : "node:test";
   }
-  if (dependencies.includes("vitest")) {
+  if (dependencies2.includes("vitest")) {
     return "Vitest";
   }
-  if (dependencies.includes("jest")) {
+  if (dependencies2.includes("jest")) {
     return "Jest";
   }
   return testFiles.length > 0 ? "custom test harness" : "no test framework detected";
@@ -49373,8 +49393,8 @@ function summarizeTopDirectories(files) {
     files.map((file2) => file2.split("/")[0] ?? file2).filter((segment) => segment.length > 0)
   );
 }
-function summarizeIntegrations(dependencies, sourceFiles, trackedFiles) {
-  const integrationPackages = dependencies.filter(
+function summarizeIntegrations(dependencies2, sourceFiles, trackedFiles) {
+  const integrationPackages = dependencies2.filter(
     (dependency) => /^@modelcontextprotocol\/sdk$|^@octokit\/rest$|^axios$|^zod$/.test(dependency)
   );
   const integrationPaths = uniqueSorted(
@@ -49392,14 +49412,14 @@ function collectFocusEvidence(focusArea, candidates) {
   );
 }
 function buildCodebaseDigestSections(args) {
-  const dependencies = collectDependencyNames(args.packageManifest);
+  const dependencies2 = collectDependencyNames(args.packageManifest);
   const testFramework = detectTestFramework(args.packageManifest, args.testFiles);
   const sourceRoots = summarizeTopDirectories(args.sourceFiles);
   const docRoots = summarizeTopDirectories(args.docFiles);
-  const runtime = args.sourceFiles.some((file2) => file2.endsWith(".ts") || file2.endsWith(".tsx")) || dependencies.includes("typescript") ? "TypeScript" : "JavaScript";
+  const runtime = args.sourceFiles.some((file2) => file2.endsWith(".ts") || file2.endsWith(".tsx")) || dependencies2.includes("typescript") ? "TypeScript" : "JavaScript";
   const moduleType = typeof args.packageManifest.type === "string" && args.packageManifest.type.length > 0 ? args.packageManifest.type : "commonjs";
   const integrations = summarizeIntegrations(
-    dependencies,
+    dependencies2,
     args.sourceFiles,
     args.trackedFiles
   );
@@ -49407,7 +49427,7 @@ function buildCodebaseDigestSections(args) {
   const focusedSourceFiles = collectFocusEvidence(focusLabel, args.sourceFiles);
   const focusedDocFiles = collectFocusEvidence(focusLabel, args.docFiles);
   const focusedTrackedFiles = collectFocusEvidence(focusLabel, args.trackedFiles);
-  const focusedDependencies = collectFocusEvidence(focusLabel, dependencies);
+  const focusedDependencies = collectFocusEvidence(focusLabel, dependencies2);
   const focusedEvidence = uniqueSorted([
     ...focusedSourceFiles,
     ...focusedDocFiles,
@@ -59594,17 +59614,3301 @@ var init_plan_run = __esm({
   }
 });
 
-// src/mcp/tools/cleanup.ts
+// src/mcp/tools/phase-execution-control.ts
 import { execFile as execFile4 } from "node:child_process";
+import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
 import { promises as fs15 } from "node:fs";
 import path15 from "node:path";
+function dependencies(overrides) {
+  return { ...defaultDependencies, ...overrides };
+}
+function sha2562(value) {
+  return createHash4("sha256").update(value).digest("hex");
+}
+function canonicalize(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => canonicalize(entry));
+  }
+  if (value && typeof value === "object") {
+    const input = value;
+    const output = {};
+    for (const key of Object.keys(input).sort()) {
+      if (input[key] !== void 0) {
+        output[key] = canonicalize(input[key]);
+      }
+    }
+    return output;
+  }
+  return value;
+}
+function fingerprintPacket(packet) {
+  return sha2562(JSON.stringify(canonicalize(packet)));
+}
+function canonicalJson(value) {
+  return JSON.stringify(canonicalize(value));
+}
+function unique2(values) {
+  return [...new Set(values)];
+}
+function extractBoundVerificationCommands(planContent) {
+  const verificationSection = planContent.match(
+    /(?:^|\n)## Verification\s*\n([\s\S]*?)(?=\n## |$)/i
+  )?.[1] ?? "";
+  const commands = [...verificationSection.matchAll(/`([^`\n]+)`/g)].map((match) => match[1]?.trim() ?? "").filter((command) => /^(?:npm|npx|node|pnpm|yarn|bun|deno|python\d*|pytest|cargo|go|make|cmake|\.\/|\/bin\/sh)\b/.test(command));
+  return unique2(commands);
+}
+function isInside(root, candidate) {
+  return candidate === root || candidate.startsWith(`${root}${path15.sep}`);
+}
+function assertSafeRelativePath(relativePath, options) {
+  if (!relativePath || path15.isAbsolute(relativePath) || relativePath.includes("\0") || relativePath.includes("\\")) {
+    throw new Error(`Unsafe execution path: ${JSON.stringify(relativePath)}.`);
+  }
+  const normalized = path15.posix.normalize(relativePath.replace(/^\.\//, ""));
+  if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized !== relativePath.replace(/^\.\//, "") || normalized === ".git" || normalized.startsWith(".git/") || !options.allowBlueprint && (normalized === BLUEPRINT_DIR || normalized.startsWith(`${BLUEPRINT_DIR}/`))) {
+    throw new Error(`Unsafe execution path: ${JSON.stringify(relativePath)}.`);
+  }
+  return normalized;
+}
+async function readRepoFile(projectRoot, canonicalRoot, relativePath) {
+  const safePath = assertSafeRelativePath(relativePath, { allowBlueprint: true });
+  const absolutePath = resolveBlueprintPath(projectRoot, safePath);
+  const [stats, realPath, bytes] = await Promise.all([
+    fs15.lstat(absolutePath),
+    fs15.realpath(absolutePath),
+    fs15.readFile(absolutePath)
+  ]);
+  if (!stats.isFile() || !isInside(canonicalRoot, realPath)) {
+    throw new Error(`Execution authority path is not a regular repo file: ${safePath}.`);
+  }
+  let content;
+  try {
+    content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(`Execution authority path is not valid UTF-8: ${safePath}.`);
+  }
+  return {
+    content,
+    digest: {
+      path: safePath,
+      sha256: sha2562(bytes),
+      sizeBytes: bytes.byteLength,
+      mode: stats.mode & 4095
+    }
+  };
+}
+function isOwnedControlStatusPath(value) {
+  const normalized = value.replace(/^\.\//, "");
+  const lockPath = `${BLUEPRINT_DIR}/locks/${CONTROL_LOCK}.lock`;
+  return normalized === CONTROL_ROOT || normalized.startsWith(`${CONTROL_ROOT}/`) || normalized === lockPath || normalized.startsWith(`${lockPath}/`);
+}
+function withoutOwnedControlStatus(raw) {
+  const records = raw.split("\0");
+  const kept = [];
+  for (let index = 0; index < records.length; index += 1) {
+    const record2 = records[index];
+    if (!record2) continue;
+    const status = record2.slice(0, 2);
+    const targetPath = record2.slice(3);
+    const renamed = status.includes("R") || status.includes("C");
+    const sourcePath = renamed ? records[index + 1] ?? "" : "";
+    if (!isOwnedControlStatusPath(targetPath) && !isOwnedControlStatusPath(sourcePath)) {
+      kept.push(record2);
+      if (renamed) kept.push(sourcePath);
+    }
+    if (renamed) index += 1;
+  }
+  return kept.length > 0 ? `${kept.join("\0")}\0` : "";
+}
+function porcelainEntries(raw) {
+  const records = raw.split("\0");
+  const entries = [];
+  for (let index = 0; index < records.length; index += 1) {
+    const record2 = records[index];
+    if (!record2) continue;
+    if (record2.length < 4 || record2[2] !== " ") {
+      throw new Error("Git porcelain status returned an invalid NUL-delimited record.");
+    }
+    const status = record2.slice(0, 2);
+    const targetPath = record2.slice(3);
+    entries.push({ status, path: targetPath });
+    if (status.includes("R") || status.includes("C")) {
+      const sourcePath = records[++index];
+      if (!sourcePath) {
+        throw new Error("Git porcelain rename/copy status omitted one endpoint.");
+      }
+      entries.push({ status: `${status}:source`, path: sourcePath });
+    }
+  }
+  return entries;
+}
+async function digestRepoBoundaryPath(args) {
+  const safePath = assertSafeRelativePath(args.relativePath, {
+    allowBlueprint: args.allowBlueprint
+  });
+  const absolutePath = path15.resolve(args.projectRoot, ...safePath.split("/"));
+  const segments = safePath.split("/");
+  let current = args.canonicalRoot;
+  for (let index = 0; index < segments.length; index += 1) {
+    current = path15.join(current, segments[index] ?? "");
+    try {
+      const stats2 = await fs15.lstat(current);
+      if (stats2.isSymbolicLink()) {
+        throw new Error(`Execution boundary path traverses a symbolic link: ${safePath}.`);
+      }
+      if (index < segments.length - 1 && !stats2.isDirectory()) {
+        throw new Error(`Execution boundary path parent is not a directory: ${safePath}.`);
+      }
+      if (index === segments.length - 1 && !stats2.isFile()) {
+        throw new Error(`Execution boundary path is not a regular file: ${safePath}.`);
+      }
+    } catch (error2) {
+      if (error2.code === "ENOENT" && args.allowMissing) {
+        const existingParent = path15.dirname(current);
+        const realParent = await fs15.realpath(existingParent);
+        if (!isInside(args.canonicalRoot, realParent)) {
+          throw new Error(`Execution boundary path escapes the repository: ${safePath}.`);
+        }
+        return { path: safePath, sha256: null, sizeBytes: null, mode: null };
+      }
+      throw error2;
+    }
+  }
+  const [realPath, stats, bytes] = await Promise.all([
+    fs15.realpath(absolutePath),
+    fs15.lstat(absolutePath),
+    fs15.readFile(absolutePath)
+  ]);
+  if (!isInside(args.canonicalRoot, realPath)) {
+    throw new Error(`Execution boundary path escapes the repository: ${safePath}.`);
+  }
+  return {
+    path: safePath,
+    sha256: sha2562(bytes),
+    sizeBytes: bytes.byteLength,
+    mode: stats.mode & 4095
+  };
+}
+async function workingTreeDigests(projectRoot, canonicalRoot, porcelainV1Z) {
+  const digests = [];
+  for (const entry of porcelainEntries(porcelainV1Z)) {
+    const digest = await digestRepoBoundaryPath({
+      projectRoot,
+      canonicalRoot,
+      relativePath: entry.path,
+      allowBlueprint: true,
+      allowMissing: true
+    });
+    digests.push({ ...digest, status: entry.status });
+  }
+  return digests.sort(
+    (left, right) => left.path.localeCompare(right.path) || left.status.localeCompare(right.status)
+  );
+}
+async function gitSnapshot(projectRoot, deps) {
+  const [headResult, statusResult, canonicalRoot] = await Promise.all([
+    deps.processRunner("git", ["rev-parse", "--verify", "HEAD^{commit}"], projectRoot),
+    deps.processRunner(
+      "git",
+      ["-c", "core.quotepath=false", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+      projectRoot
+    ),
+    fs15.realpath(projectRoot)
+  ]);
+  const head = headResult.stdout.trim();
+  if (headResult.exitCode !== 0 || headResult.signal !== null || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(head)) {
+    throw new Error(`Git HEAD is unavailable or invalid: ${headResult.stderr.trim() || "rev-parse failed"}.`);
+  }
+  if (statusResult.exitCode !== 0 || statusResult.signal !== null) {
+    throw new Error(`Git status is unavailable: ${statusResult.stderr.trim() || "status failed"}.`);
+  }
+  const porcelainV1Z = withoutOwnedControlStatus(statusResult.stdout);
+  const workingTree = await workingTreeDigests(projectRoot, canonicalRoot, porcelainV1Z);
+  return {
+    canonicalRoot,
+    head,
+    porcelainV1Z,
+    porcelainSha256: sha2562(porcelainV1Z),
+    workingTree
+  };
+}
+async function capturePhaseExecutionRepositorySnapshot(projectRoot) {
+  return gitSnapshot(projectRoot, dependencies());
+}
+async function artifactInventory(projectRoot, canonicalRoot, phaseDir2) {
+  const safePhaseDir = assertSafeRelativePath(phaseDir2, { allowBlueprint: true });
+  if (!safePhaseDir.startsWith(`${BLUEPRINT_DIR}/phases/`)) {
+    throw new Error(`Unsafe phase directory: ${phaseDir2}.`);
+  }
+  const phaseAbsolute = resolveBlueprintPath(projectRoot, safePhaseDir);
+  const realPhaseDir = await fs15.realpath(phaseAbsolute);
+  if (!isInside(canonicalRoot, realPhaseDir)) {
+    throw new Error(`Phase directory escapes the canonical repository: ${phaseDir2}.`);
+  }
+  const entries = await fs15.readdir(phaseAbsolute, { withFileTypes: true });
+  const paths = [
+    `${BLUEPRINT_DIR}/ROADMAP.md`,
+    BLUEPRINT_STATE_PATH,
+    BLUEPRINT_CONFIG_PATH,
+    ...entries.filter(
+      (entry) => entry.name.endsWith("-PLAN.md") || entry.name.endsWith("-SUMMARY.md")
+    ).map((entry) => `${safePhaseDir}/${entry.name}`)
+  ].sort();
+  const contents = /* @__PURE__ */ new Map();
+  const digests = [];
+  for (const artifactPath of paths) {
+    const artifact = await readRepoFile(projectRoot, canonicalRoot, artifactPath);
+    contents.set(artifactPath, artifact.content);
+    digests.push(artifact.digest);
+  }
+  return { digests, contents };
+}
+function prepareOptions(args) {
+  return {
+    phase: args.phase ?? null,
+    wave: args.wave ?? null,
+    gapsOnly: args.gapsOnly ?? false,
+    includeConflicts: args.includeConflicts ?? true,
+    externalServiceConfirmed: args.externalServiceConfirmed ?? false,
+    overwriteConfirmedPlanIds: unique2(args.overwriteConfirmedPlanIds ?? []).sort()
+  };
+}
+async function buildPacket(projectRoot, args, deps) {
+  const options = prepareOptions(args);
+  const targetArgs = {
+    cwd: projectRoot,
+    phase: args.phase,
+    wave: args.wave,
+    gapsOnly: options.gapsOnly,
+    includeConflicts: options.includeConflicts,
+    externalServiceConfirmed: options.externalServiceConfirmed
+  };
+  const [targets, config2, repository] = await Promise.all([
+    deps.targetResolver(targetArgs),
+    deps.configReader({ cwd: projectRoot, scope: "effective", defaultsPath: args.defaultsPath }),
+    gitSnapshot(projectRoot, deps)
+  ]);
+  const blockers = [...targets.blockers.reasons];
+  const unconfirmedOverwrites = targets.overwriteCandidatePlanIds.filter(
+    (planId2) => targets.selectedPlanIds.includes(planId2) && !options.overwriteConfirmedPlanIds.includes(planId2)
+  );
+  if (unconfirmedOverwrites.length > 0) {
+    blockers.push(
+      `Selected plan summaries require explicit overwrite confirmation in overwriteConfirmedPlanIds: ${unconfirmedOverwrites.join(", ")}.`
+    );
+  }
+  if (!targets.phaseFound || !targets.phaseDir) {
+    blockers.push("The selected phase could not be resolved to a safe phase directory.");
+  }
+  if (targets.selectedPlanIds.length === 0) {
+    blockers.push("The execute-phase selection is empty; no execution session can be claimed.");
+  }
+  const inventory = targets.phaseDir ? await artifactInventory(projectRoot, repository.canonicalRoot, targets.phaseDir) : { digests: [], contents: /* @__PURE__ */ new Map() };
+  const selectedPlans = [];
+  for (const plan of targets.selectedPlans) {
+    const safePlanPath = assertSafeRelativePath(plan.path, { allowBlueprint: true });
+    const content = inventory.contents.get(safePlanPath);
+    if (content === void 0) {
+      throw new Error(`Selected plan body could not be read from the live inventory: ${safePlanPath}.`);
+    }
+    const allowedFiles = plan.filesModified.map(
+      (filePath) => assertSafeRelativePath(filePath, { allowBlueprint: false })
+    );
+    const readFirst = plan.readFirst.map(
+      (filePath) => assertSafeRelativePath(filePath, { allowBlueprint: true })
+    );
+    const [ownedFilePreimages, readFirstArtifacts] = await Promise.all([
+      Promise.all(allowedFiles.map((filePath) => digestRepoBoundaryPath({
+        projectRoot,
+        canonicalRoot: repository.canonicalRoot,
+        relativePath: filePath,
+        allowBlueprint: false,
+        allowMissing: true
+      }))),
+      Promise.all(readFirst.map((filePath) => digestRepoBoundaryPath({
+        projectRoot,
+        canonicalRoot: repository.canonicalRoot,
+        relativePath: filePath,
+        allowBlueprint: true,
+        allowMissing: false
+      })))
+    ]);
+    selectedPlans.push({
+      planId: plan.planId,
+      path: safePlanPath,
+      title: plan.title,
+      wave: plan.wave,
+      dependsOn: [...plan.dependsOn],
+      requirements: [...plan.requirements],
+      allowedFiles,
+      readFirst,
+      verificationCriteria: [...plan.acceptanceCriteria],
+      verificationCommands: extractBoundVerificationCommands(content),
+      content,
+      contentSha256: sha2562(content),
+      ownedFilePreimages,
+      readFirstArtifacts
+    });
+    if (selectedPlans.at(-1)?.verificationCommands.length === 0) {
+      blockers.push(
+        `${safePlanPath}: no exact repo-local verification command could be bound from ## Verification.`
+      );
+    }
+  }
+  await deps.beforeAuthorityRecheck?.();
+  const recheckedInventory = targets.phaseDir ? await artifactInventory(projectRoot, repository.canonicalRoot, targets.phaseDir) : { digests: [], contents: /* @__PURE__ */ new Map() };
+  const recheckedSelectedInputs = await Promise.all(selectedPlans.map(async (plan) => ({
+    planId: plan.planId,
+    ownedFilePreimages: await Promise.all(plan.allowedFiles.map(
+      (filePath) => digestRepoBoundaryPath({
+        projectRoot,
+        canonicalRoot: repository.canonicalRoot,
+        relativePath: filePath,
+        allowBlueprint: false,
+        allowMissing: true
+      })
+    )),
+    readFirstArtifacts: await Promise.all(plan.readFirst.map(
+      (filePath) => digestRepoBoundaryPath({
+        projectRoot,
+        canonicalRoot: repository.canonicalRoot,
+        relativePath: filePath,
+        allowBlueprint: true,
+        allowMissing: false
+      })
+    ))
+  })));
+  const [recheckedTargets, recheckedConfig, recheckedRepository] = await Promise.all([
+    deps.targetResolver(targetArgs),
+    deps.configReader({ cwd: projectRoot, scope: "effective", defaultsPath: args.defaultsPath }),
+    gitSnapshot(projectRoot, deps)
+  ]);
+  if (canonicalJson(recheckedInventory.digests) !== canonicalJson(inventory.digests) || canonicalJson(recheckedSelectedInputs) !== canonicalJson(
+    selectedPlans.map((plan) => ({
+      planId: plan.planId,
+      ownedFilePreimages: plan.ownedFilePreimages,
+      readFirstArtifacts: plan.readFirstArtifacts
+    }))
+  ) || canonicalJson(recheckedTargets) !== canonicalJson(targets) || canonicalJson(recheckedConfig) !== canonicalJson(config2) || canonicalJson(recheckedRepository) !== canonicalJson(repository)) {
+    throw new Error(
+      "Execute-phase authority changed while the preview packet was being built; retry preview from a stable repository snapshot."
+    );
+  }
+  const packet = {
+    schemaVersion: 1,
+    command: "execute-phase",
+    repository,
+    options,
+    selection: {
+      phaseNumber: targets.phaseNumber,
+      phasePrefix: targets.phasePrefix,
+      phaseName: targets.phaseName,
+      phaseDir: targets.phaseDir,
+      selectedWave: targets.selectedWave,
+      selectedPlanIds: [...targets.selectedPlanIds],
+      selectedPlanPaths: [...targets.selectedPlanPaths],
+      pendingPlanIds: [...targets.pendingPlanIds],
+      candidatePlanIds: [...targets.candidatePlanIds],
+      overlapPlanIds: [...targets.overlapPlanIds]
+    },
+    selectedPlans,
+    planSetValidation: targets.planSetValidation,
+    externalServicePreflight: targets.externalServicePreflight,
+    conflicts: targets.conflicts,
+    existingSummaries: targets.existingSummaries,
+    artifacts: inventory.digests,
+    effectiveConfig: config2
+  };
+  return {
+    packet,
+    fingerprint: fingerprintPacket(packet),
+    blockers: unique2(blockers),
+    warnings: unique2(targets.warnings)
+  };
+}
+async function validateExecutingSessionAuthority(projectRoot, session, deps) {
+  const blockers = [];
+  const repository = await gitSnapshot(projectRoot, deps);
+  if (repository.head !== session.packet.repository.head) {
+    blockers.push(
+      `Execution session HEAD drifted: expected ${session.packet.repository.head}, observed ${repository.head}.`
+    );
+  }
+  const config2 = await deps.configReader({
+    cwd: projectRoot,
+    scope: "effective",
+    defaultsPath: session.prepareArgs.defaultsPath ?? void 0
+  });
+  if (canonicalJson(config2) !== canonicalJson(session.packet.effectiveConfig)) {
+    blockers.push("Execute-phase effective config drifted after claim.");
+  }
+  const latestReceipts = /* @__PURE__ */ new Map();
+  const latestMutationStatuses = /* @__PURE__ */ new Map();
+  const pendingMutations = /* @__PURE__ */ new Map();
+  const persistencePaths = /* @__PURE__ */ new Set();
+  let stateMayBePersisted = false;
+  let pendingStateUpdate = null;
+  for (const [planId2, progress] of Object.entries(session.execution.plans)) {
+    for (const receipt of progress.mutationReceipts) latestReceipts.set(receipt.path, receipt);
+    for (const receipt of progress.mutationGitStatusReceipts) {
+      latestMutationStatuses.set(receipt.path, receipt.status);
+    }
+    for (const mutation of progress.pendingMutations) pendingMutations.set(mutation.path, mutation);
+    if (progress.persistenceStage !== "none") {
+      persistencePaths.add(
+        `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId2}-SUMMARY.md`
+      );
+    }
+    if (progress.persistenceStage === "done" || progress.pendingStateUpdate !== null) {
+      stateMayBePersisted = true;
+    }
+    if (progress.pendingStateUpdate) {
+      if (pendingStateUpdate) blockers.push("Execute-phase session contains multiple pending STATE effects.");
+      pendingStateUpdate = progress.pendingStateUpdate;
+    }
+  }
+  const authorizedChangedPaths = /* @__PURE__ */ new Set([
+    ...session.packet.repository.workingTree.map((entry) => entry.path),
+    ...latestReceipts.keys(),
+    ...pendingMutations.keys(),
+    ...persistencePaths,
+    ...stateMayBePersisted ? [BLUEPRINT_STATE_PATH] : []
+  ]);
+  for (const entry of repository.workingTree) {
+    if (!authorizedChangedPaths.has(entry.path)) {
+      blockers.push(`Execute-phase observed changes without MCP receipts: ${entry.path}.`);
+    }
+  }
+  const currentStatusByPath = new Map(
+    repository.workingTree.map((entry) => [entry.path, entry.status])
+  );
+  const observe = async (relativePath, allowBlueprint) => digestRepoBoundaryPath({
+    projectRoot,
+    canonicalRoot: repository.canonicalRoot,
+    relativePath,
+    allowBlueprint,
+    allowMissing: true
+  });
+  let stateMatchesPendingPostimage = false;
+  if (pendingStateUpdate) {
+    const observed = await observe(BLUEPRINT_STATE_PATH, true);
+    const matches = (digest) => observed.sha256 === digest.sha256 && observed.sizeBytes === digest.sizeBytes && observed.mode === digest.mode;
+    stateMatchesPendingPostimage = matches(pendingStateUpdate.postimage);
+    if (!matches(pendingStateUpdate.preimage) && !stateMatchesPendingPostimage) {
+      blockers.push("Execute-phase pending STATE effect matches neither its trusted preimage nor prepared postimage.");
+    }
+  }
+  for (const progress of Object.values(session.execution.plans)) {
+    if (progress.persistenceStage !== "none" && progress.persistenceStage !== "summary-write" && progress.summaryReceipt === null) {
+      blockers.push(`Execute-phase plan ${progress.planId} is missing its persisted summary receipt.`);
+    }
+    if (progress.summaryReceipt) {
+      const observed = await observe(progress.summaryReceipt.path, true);
+      if (observed.sha256 !== progress.summaryReceipt.sha256 || observed.sizeBytes !== progress.summaryReceipt.sizeBytes || observed.mode !== progress.summaryReceipt.mode) {
+        blockers.push(`Execute-phase persisted summary receipt drifted: ${progress.summaryReceipt.path}.`);
+      }
+    }
+    if (progress.persistenceStage === "done" && progress.stateReceipt === null && !stateMatchesPendingPostimage) {
+      blockers.push(`Execute-phase plan ${progress.planId} is missing its persisted state receipt.`);
+    }
+    if (progress.stateReceipt && !stateMatchesPendingPostimage) {
+      const observed = await observe(progress.stateReceipt.path, true);
+      if (observed.sha256 !== progress.stateReceipt.sha256 || observed.sizeBytes !== progress.stateReceipt.sizeBytes || observed.mode !== progress.stateReceipt.mode) {
+        blockers.push(`Execute-phase persisted state receipt drifted: ${progress.stateReceipt.path}.`);
+      }
+    }
+  }
+  for (const baseline of session.packet.repository.workingTree) {
+    if (latestReceipts.has(baseline.path) || pendingMutations.has(baseline.path)) continue;
+    if (currentStatusByPath.get(baseline.path) !== baseline.status) {
+      blockers.push(`Execute-phase baseline Git status drifted: ${baseline.path}.`);
+    }
+    const observed = await observe(baseline.path, baseline.path.startsWith(`${BLUEPRINT_DIR}/`));
+    if (observed.sha256 !== baseline.sha256 || observed.sizeBytes !== baseline.sizeBytes || observed.mode !== baseline.mode) {
+      blockers.push(`Execute-phase baseline working-tree authority drifted: ${baseline.path}.`);
+    }
+  }
+  for (const [relativePath, receipt] of latestReceipts) {
+    if (pendingMutations.has(relativePath)) continue;
+    if (currentStatusByPath.get(relativePath) !== latestMutationStatuses.get(relativePath)) {
+      blockers.push(`Execute-phase mutation Git status drifted: ${relativePath}.`);
+    }
+    const observed = await observe(relativePath, false);
+    if (observed.sha256 !== receipt.afterHash || observed.mode !== receipt.afterMode) {
+      blockers.push(`Execute-phase mutation receipt no longer matches ${relativePath}.`);
+    }
+  }
+  if (pendingMutations.size > 0) {
+    const observations = await Promise.all([...pendingMutations.values()].map(async (mutation) => ({
+      mutation,
+      observed: await observe(mutation.path, false)
+    })));
+    const allAfter = observations.every(
+      ({ mutation, observed }) => observed.sha256 === (mutation.operation === "write" ? sha2562(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
+    );
+    const allBeforeWithMode = observations.every(
+      ({ mutation, observed }) => observed.sha256 === mutation.expectedHash && observed.mode === mutation.expectedMode
+    );
+    if (!allBeforeWithMode && !allAfter) {
+      blockers.push("Interrupted execute-phase mutation has a mixed or unknown repository postimage.");
+    }
+  }
+  for (const artifact of session.packet.artifacts) {
+    if (persistencePaths.has(artifact.path) || stateMayBePersisted && artifact.path === BLUEPRINT_STATE_PATH) continue;
+    const observed = await observe(artifact.path, true);
+    if (observed.sha256 !== artifact.sha256 || observed.sizeBytes !== artifact.sizeBytes || observed.mode !== artifact.mode) {
+      blockers.push(`Execute-phase authority artifact drifted after claim: ${artifact.path}.`);
+    }
+  }
+  for (const plan of session.packet.selectedPlans) {
+    for (const artifact of [...plan.ownedFilePreimages, ...plan.readFirstArtifacts]) {
+      if (pendingMutations.has(artifact.path)) continue;
+      const receipt = latestReceipts.get(artifact.path);
+      const observed = await observe(artifact.path, artifact.path.startsWith(`${BLUEPRINT_DIR}/`));
+      if (observed.sha256 !== (receipt?.afterHash ?? artifact.sha256) || observed.mode !== (receipt?.afterMode ?? artifact.mode)) {
+        blockers.push(`Execute-phase repo authority drifted outside MCP ownership: ${artifact.path}.`);
+      }
+    }
+  }
+  return unique2(blockers);
+}
+function emptyIndex() {
+  return {
+    schemaVersion: 1,
+    activeSessionId: null,
+    consumedFingerprints: {},
+    sessions: {}
+  };
+}
+function createExecutionProgress(packet) {
+  return {
+    schemaVersion: 1,
+    currentPlanIndex: 0,
+    plans: Object.fromEntries(packet.selectedPlans.map((plan) => [plan.planId, {
+      planId: plan.planId,
+      status: "pending",
+      applyAttempts: 0,
+      verificationAttempts: 0,
+      pendingMutations: [],
+      mutationReceipts: [],
+      mutationGitStatusReceipts: [],
+      verificationReceipts: [],
+      failure: null,
+      summaryReceipt: null,
+      stateReceipt: null,
+      pendingStateUpdate: null,
+      persistenceStage: "none"
+    }]))
+  };
+}
+function sessionPath(sessionId) {
+  if (!/^[0-9A-Za-z-]{1,128}$/.test(sessionId)) {
+    throw new Error("Execute-phase sessionId is unsafe or invalid.");
+  }
+  return `${SESSION_ROOT}/${sessionId}.json`;
+}
+async function assertControlStorageSafe(projectRoot, relativePath) {
+  const safePath = assertSafeRelativePath(relativePath, { allowBlueprint: true });
+  const segments = safePath.split("/");
+  let cursor = projectRoot;
+  for (const segment of segments.slice(0, -1)) {
+    cursor = path15.join(cursor, segment);
+    try {
+      const stats = await fs15.lstat(cursor);
+      if (stats.isSymbolicLink() || !stats.isDirectory()) {
+        throw new Error(`Execute-phase control storage has an unsafe ancestor: ${safePath}.`);
+      }
+    } catch (error2) {
+      if (error2.code === "ENOENT") break;
+      throw error2;
+    }
+  }
+  const target = resolveBlueprintPath(projectRoot, safePath);
+  try {
+    const stats = await fs15.lstat(target);
+    if (stats.isSymbolicLink() || !stats.isFile()) {
+      throw new Error(`Execute-phase control storage is not a regular file: ${safePath}.`);
+    }
+  } catch (error2) {
+    if (error2.code !== "ENOENT") throw error2;
+  }
+}
+async function assertExecutionLockStorageSafe(projectRoot) {
+  const canonicalRoot = await fs15.realpath(projectRoot);
+  const blueprintRoot = path15.join(canonicalRoot, BLUEPRINT_DIR);
+  const locksRoot = path15.join(blueprintRoot, "locks");
+  const blueprintStats = await fs15.lstat(blueprintRoot);
+  if (blueprintStats.isSymbolicLink() || !blueprintStats.isDirectory()) {
+    throw new Error("Execute-phase lock storage has an unsafe .blueprint ancestor.");
+  }
+  try {
+    const lockStats = await fs15.lstat(locksRoot);
+    if (lockStats.isSymbolicLink() || !lockStats.isDirectory()) {
+      throw new Error("Execute-phase lock storage must be a real repository directory.");
+    }
+    const realLocksRoot = await fs15.realpath(locksRoot);
+    if (!isInside(canonicalRoot, realLocksRoot)) {
+      throw new Error("Execute-phase lock storage escapes the canonical repository.");
+    }
+  } catch (error2) {
+    if (error2.code !== "ENOENT") throw error2;
+  }
+}
+async function readJsonIfPresent2(projectRoot, relativePath) {
+  await assertControlStorageSafe(projectRoot, relativePath);
+  try {
+    const raw = await fs15.readFile(resolveBlueprintPath(projectRoot, relativePath), "utf8");
+    return JSON.parse(raw);
+  } catch (error2) {
+    if (error2.code === "ENOENT") return null;
+    throw error2;
+  }
+}
+function asIndex(value) {
+  if (value === null) return emptyIndex();
+  if (!value || typeof value !== "object") throw new Error("Execute-phase control index is malformed.");
+  const candidate = value;
+  if (candidate.schemaVersion !== 1 || !(candidate.activeSessionId === null || typeof candidate.activeSessionId === "string") || !candidate.consumedFingerprints || typeof candidate.consumedFingerprints !== "object" || Array.isArray(candidate.consumedFingerprints) || !candidate.sessions || typeof candidate.sessions !== "object" || Array.isArray(candidate.sessions)) {
+    throw new Error("Execute-phase control index is malformed.");
+  }
+  const index = candidate;
+  if (index.activeSessionId !== null && !/^[0-9A-Za-z-]{1,128}$/.test(index.activeSessionId) || Object.entries(index.consumedFingerprints).some(
+    ([fingerprint, sessionId]) => !/^[0-9a-f]{64}$/.test(fingerprint) || typeof sessionId !== "string" || !/^[0-9A-Za-z-]{1,128}$/.test(sessionId)
+  ) || Object.entries(index.sessions).some(
+    ([sessionId, storedPath]) => !/^[0-9A-Za-z-]{1,128}$/.test(sessionId) || storedPath !== sessionPath(sessionId)
+  )) {
+    throw new Error("Execute-phase control index is malformed.");
+  }
+  return index;
+}
+function isArtifactDigest(value) {
+  if (!value || typeof value !== "object") return false;
+  const digest = value;
+  return typeof digest.path === "string" && (digest.sha256 === null || typeof digest.sha256 === "string" && /^[0-9a-f]{64}$/.test(digest.sha256)) && (digest.sizeBytes === null || Number.isInteger(digest.sizeBytes) && (digest.sizeBytes ?? -1) >= 0) && (digest.mode === null || Number.isInteger(digest.mode));
+}
+function isVerificationOutputValid(receipt, channel) {
+  const text = receipt[channel];
+  const bytes = receipt[`${channel}Bytes`];
+  const hash2 = receipt[`${channel}Hash`];
+  const truncated = receipt[`${channel}Truncated`];
+  if (typeof text !== "string" || !Number.isInteger(bytes) || bytes < Buffer.byteLength(text) || typeof hash2 !== "string" || !/^[0-9a-f]{64}$/.test(hash2) || typeof truncated !== "boolean") {
+    return false;
+  }
+  if (truncated) return bytes > Buffer.byteLength(text);
+  return bytes === Buffer.byteLength(text) && hash2 === sha2562(text);
+}
+function isValidPhaseExecutionVerificationReceipt(value, command) {
+  if (!value || typeof value !== "object") return false;
+  const receipt = value;
+  const argv = receipt.argv;
+  const exitCode = receipt.exitCode;
+  const signal = receipt.signal;
+  const timedOut = receipt.timedOut;
+  const outputLimitExceeded = receipt.outputLimitExceeded;
+  const passed = receipt.passed;
+  const outcomePassed = exitCode === 0 && signal === null && timedOut === false && outputLimitExceeded === false;
+  return receipt.command === command && Array.isArray(argv) && argv.length === 2 && argv[0] === "-c" && argv[1] === command && (exitCode === null || Number.isInteger(exitCode)) && (signal === null || typeof signal === "string") && typeof timedOut === "boolean" && typeof outputLimitExceeded === "boolean" && typeof passed === "boolean" && passed === outcomePassed && isVerificationOutputValid(receipt, "stdout") && isVerificationOutputValid(receipt, "stderr");
+}
+function hasPassingBoundPhaseExecutionVerification(commands, receipts) {
+  return Array.isArray(receipts) && receipts.length === commands.length && receipts.every(
+    (receipt, index) => isValidPhaseExecutionVerificationReceipt(receipt, commands[index]) && receipt.passed
+  );
+}
+function isPreparedStateUpdate(value, packet) {
+  if (!value || typeof value !== "object") return false;
+  const effect = value;
+  if (!isArtifactDigest(effect.preimage) || !isArtifactDigest(effect.postimage)) return false;
+  const prepared = effect.prepared;
+  if (!prepared) return false;
+  const expectedAbsolutePath = path15.join(packet.repository.canonicalRoot, ...BLUEPRINT_STATE_PATH.split("/"));
+  const expectedStateContent = prepared.expectedStateContent;
+  if (!(expectedStateContent === null || typeof expectedStateContent === "string")) return false;
+  if (prepared.projectRoot !== packet.repository.canonicalRoot || prepared.statePath !== BLUEPRINT_STATE_PATH || prepared.absoluteStatePath !== expectedAbsolutePath || typeof prepared.content !== "string" || typeof prepared.updated !== "boolean" || !Array.isArray(prepared.updatedFields) || !prepared.updatedFields.every((entry) => typeof entry === "string") || !Array.isArray(prepared.warnings) || !prepared.warnings.every((entry) => typeof entry === "string") || effect.preimage.path !== BLUEPRINT_STATE_PATH || effect.postimage.path !== BLUEPRINT_STATE_PATH || effect.preimage.sha256 !== (expectedStateContent === null ? null : sha2562(expectedStateContent)) || effect.preimage.sizeBytes !== (expectedStateContent === null ? null : Buffer.byteLength(expectedStateContent)) || effect.postimage.sha256 !== sha2562(prepared.content) || effect.postimage.sizeBytes !== Buffer.byteLength(prepared.content)) {
+    return false;
+  }
+  return true;
+}
+function isExecutionProgress(value, packet) {
+  if (!value || typeof value !== "object") return false;
+  const progress = value;
+  if (progress.schemaVersion !== 1 || !Number.isInteger(progress.currentPlanIndex) || (progress.currentPlanIndex ?? -1) < 0 || (progress.currentPlanIndex ?? Infinity) > packet.selectedPlans.length || !progress.plans || typeof progress.plans !== "object" || Array.isArray(progress.plans)) {
+    return false;
+  }
+  const expectedIds = packet.selectedPlans.map((plan) => plan.planId).sort();
+  if (canonicalJson(Object.keys(progress.plans).sort()) !== canonicalJson(expectedIds)) return false;
+  const statuses = /* @__PURE__ */ new Set([
+    "pending",
+    "applying",
+    "mutated",
+    "awaiting-repair",
+    "repairing",
+    "verifying",
+    "verified",
+    "blocked",
+    "summary-written",
+    "persisted"
+  ]);
+  const stages = /* @__PURE__ */ new Set([
+    "none",
+    "summary-write",
+    "summary-index",
+    "artifact-validate",
+    "state-update",
+    "done"
+  ]);
+  return Object.entries(progress.plans).every(([planId2, candidate]) => {
+    const plan = candidate;
+    const packetPlan = packet.selectedPlans.find((entry) => entry.planId === planId2);
+    if (!packetPlan) return false;
+    const mutationReceiptsValid = Array.isArray(plan.mutationReceipts) && plan.mutationReceipts.every(
+      (receipt) => receipt && typeof receipt === "object" && packetPlan.allowedFiles.includes(receipt.path) && (receipt.operation === "write" || receipt.operation === "delete") && (receipt.beforeHash === null || /^[0-9a-f]{64}$/.test(receipt.beforeHash)) && (receipt.afterHash === null || /^[0-9a-f]{64}$/.test(receipt.afterHash)) && (receipt.beforeMode === null || Number.isInteger(receipt.beforeMode)) && (receipt.afterMode === null || Number.isInteger(receipt.afterMode)) && Number.isInteger(receipt.bytesWritten) && receipt.bytesWritten >= 0
+    );
+    const mutationGitStatusReceiptsValid = Array.isArray(plan.mutationGitStatusReceipts) && plan.mutationGitStatusReceipts.length === plan.mutationReceipts?.length && plan.mutationGitStatusReceipts.every(
+      (receipt, index) => receipt && typeof receipt === "object" && receipt.path === plan.mutationReceipts?.[index]?.path && packetPlan.allowedFiles.includes(receipt.path) && (receipt.status === null || typeof receipt.status === "string" && receipt.status.length === 2)
+    );
+    const verificationReceiptsValid = Array.isArray(plan.verificationReceipts) && plan.verificationReceipts.every(
+      (attempt) => Array.isArray(attempt) && attempt.length > 0 && attempt.length <= packetPlan.verificationCommands.length && attempt.every(
+        (receipt, index) => isValidPhaseExecutionVerificationReceipt(receipt, packetPlan.verificationCommands[index])
+      )
+    );
+    const latestVerification = plan.verificationReceipts?.at(-1);
+    const hasPassingBoundVerification = hasPassingBoundPhaseExecutionVerification(
+      packetPlan.verificationCommands,
+      latestVerification
+    );
+    const completedStatus = plan.status === "verified" || (plan.status === "summary-written" || plan.status === "persisted") && plan.failure === null;
+    const receiptAttemptDelta = (plan.verificationAttempts ?? -1) - (plan.verificationReceipts?.length ?? 0);
+    const attemptCountsValid = completedStatus ? receiptAttemptDelta === 0 : receiptAttemptDelta === 0 || receiptAttemptDelta === 1 && (plan.status === "verifying" || (plan.status === "awaiting-repair" || plan.status === "blocked") && typeof plan.failure === "string" && /verification attempt \d+ was interrupted/i.test(plan.failure));
+    const pendingMutationsValid = Array.isArray(plan.pendingMutations) && plan.pendingMutations.every(
+      (mutation) => mutation && typeof mutation === "object" && packetPlan.allowedFiles.includes(mutation.path) && (mutation.operation === "write" || mutation.operation === "delete") && (mutation.expectedHash === null || /^[0-9a-f]{64}$/.test(mutation.expectedHash)) && (mutation.expectedMode === null || Number.isInteger(mutation.expectedMode)) && (mutation.expectedAfterMode === null || Number.isInteger(mutation.expectedAfterMode)) && (mutation.operation === "write" ? typeof mutation.content === "string" : mutation.content === void 0)
+    );
+    const completionClaimValid = !((plan.status === "verified" || (plan.status === "summary-written" || plan.status === "persisted") && plan.failure === null) && (!(plan.applyAttempts && plan.applyAttempts > 0) || !plan.mutationReceipts?.length || !hasPassingBoundVerification));
+    return plan.planId === planId2 && typeof plan.status === "string" && statuses.has(plan.status) && Number.isInteger(plan.applyAttempts) && (plan.applyAttempts ?? -1) >= 0 && (plan.applyAttempts ?? Infinity) <= 2 && Number.isInteger(plan.verificationAttempts) && (plan.verificationAttempts ?? -1) >= 0 && (plan.verificationAttempts ?? Infinity) <= 2 && pendingMutationsValid && mutationReceiptsValid && mutationGitStatusReceiptsValid && verificationReceiptsValid && attemptCountsValid && (plan.failure === null || typeof plan.failure === "string") && (plan.summaryReceipt === null || isArtifactDigest(plan.summaryReceipt)) && (plan.stateReceipt === null || isArtifactDigest(plan.stateReceipt)) && (plan.pendingStateUpdate === null || isPreparedStateUpdate(plan.pendingStateUpdate, packet)) && (plan.pendingStateUpdate === null || plan.persistenceStage === "state-update") && typeof plan.persistenceStage === "string" && stages.has(plan.persistenceStage) && completionClaimValid;
+  });
+}
+function asSession(value) {
+  if (!value || typeof value !== "object") throw new Error("Execute-phase session is malformed.");
+  const candidate = value;
+  if (candidate.schemaVersion !== 1 || typeof candidate.sessionId !== "string" || !["claimed", "executing", "blocked", "completed"].includes(candidate.status ?? "") || typeof candidate.fingerprint !== "string" || !/^[0-9a-f]{64}$/.test(candidate.fingerprint) || typeof candidate.createdAt !== "string" || !(candidate.lastResumedAt === null || typeof candidate.lastResumedAt === "string") || !Number.isInteger(candidate.resumeCount) || (candidate.resumeCount ?? -1) < 0 || !candidate.packet || candidate.packet.schemaVersion !== 1 || candidate.packet.command !== "execute-phase" || !candidate.prepareArgs || fingerprintPacket(candidate.packet) !== candidate.fingerprint || !isExecutionProgress(candidate.execution, candidate.packet)) {
+    throw new Error("Execute-phase session is malformed.");
+  }
+  return candidate;
+}
+async function loadSession(projectRoot, sessionId) {
+  const value = await readJsonIfPresent2(projectRoot, sessionPath(sessionId));
+  if (value === null) throw new Error(`Execute-phase session ${sessionId} does not exist.`);
+  const session = asSession(value);
+  if (session.sessionId !== sessionId) throw new Error("Execute-phase session identity is inconsistent.");
+  return session;
+}
+async function loadDurableSessions(projectRoot) {
+  const absoluteRoot = resolveBlueprintPath(projectRoot, SESSION_ROOT);
+  let names;
+  try {
+    const [stats, canonicalProjectRoot, canonicalSessionRoot] = await Promise.all([
+      fs15.lstat(absoluteRoot),
+      fs15.realpath(projectRoot),
+      fs15.realpath(absoluteRoot)
+    ]);
+    if (stats.isSymbolicLink() || !stats.isDirectory() || !isInside(canonicalProjectRoot, canonicalSessionRoot)) {
+      throw new Error("Execute-phase session storage is unsafe.");
+    }
+    names = await fs15.readdir(absoluteRoot);
+  } catch (error2) {
+    if (error2.code === "ENOENT") return /* @__PURE__ */ new Map();
+    throw error2;
+  }
+  const sessions = /* @__PURE__ */ new Map();
+  for (const name of names.sort()) {
+    if (!name.endsWith(".json")) continue;
+    const sessionId = name.slice(0, -5);
+    if (!/^[0-9A-Za-z-]{1,128}$/.test(sessionId)) {
+      throw new Error(`Execute-phase session filename is invalid: ${name}.`);
+    }
+    const session = await loadSession(projectRoot, sessionId);
+    sessions.set(sessionId, session);
+  }
+  return sessions;
+}
+function isEmptyIndex(index) {
+  return index.activeSessionId === null && Object.keys(index.consumedFingerprints).length === 0 && Object.keys(index.sessions).length === 0;
+}
+async function reconcileControlIndex(projectRoot, index) {
+  const sessions = await loadDurableSessions(projectRoot);
+  if (isEmptyIndex(index) && sessions.size === 1) {
+    const orphan = [...sessions.values()][0];
+    const recovered = {
+      schemaVersion: 1,
+      activeSessionId: orphan.status === "completed" || orphan.status === "blocked" ? null : orphan.sessionId,
+      consumedFingerprints: { [orphan.fingerprint]: orphan.sessionId },
+      sessions: { [orphan.sessionId]: sessionPath(orphan.sessionId) }
+    };
+    await persistIndex(projectRoot, recovered);
+    return { index: recovered, sessions };
+  }
+  if (isEmptyIndex(index) && sessions.size > 1) {
+    throw new Error(
+      "Multiple orphaned execute-phase sessions exist; control ownership is ambiguous and requires repair."
+    );
+  }
+  const indexedIds = Object.keys(index.sessions).sort();
+  const durableIds = [...sessions.keys()].sort();
+  const missingIndexedIds = indexedIds.filter((sessionId) => !sessions.has(sessionId));
+  const orphanIds = durableIds.filter((sessionId) => !(sessionId in index.sessions));
+  if (missingIndexedIds.length === 0 && orphanIds.length === 1 && index.activeSessionId === null) {
+    const orphan = sessions.get(orphanIds[0]);
+    const indexedSessionsAreTerminal = indexedIds.every((sessionId) => {
+      const status = sessions.get(sessionId)?.status;
+      return status === "completed" || status === "blocked";
+    });
+    if (orphan.status === "claimed" && indexedSessionsAreTerminal && !(orphan.fingerprint in index.consumedFingerprints)) {
+      const recovered = {
+        ...index,
+        activeSessionId: orphan.sessionId,
+        consumedFingerprints: {
+          ...index.consumedFingerprints,
+          [orphan.fingerprint]: orphan.sessionId
+        },
+        sessions: {
+          ...index.sessions,
+          [orphan.sessionId]: sessionPath(orphan.sessionId)
+        }
+      };
+      await persistIndex(projectRoot, recovered);
+      return { index: recovered, sessions };
+    }
+  }
+  if (canonicalJson(indexedIds) !== canonicalJson(durableIds)) {
+    throw new Error("Execute-phase index/session membership is inconsistent.");
+  }
+  const seenFingerprints = /* @__PURE__ */ new Set();
+  for (const sessionId of indexedIds) {
+    const session = sessions.get(sessionId);
+    if (index.sessions[sessionId] !== sessionPath(sessionId)) {
+      throw new Error(`Execute-phase index path is inconsistent for session ${sessionId}.`);
+    }
+    if (seenFingerprints.has(session.fingerprint)) {
+      throw new Error(`Execute-phase durable sessions duplicate fingerprint ${session.fingerprint}.`);
+    }
+    seenFingerprints.add(session.fingerprint);
+    if (index.consumedFingerprints[session.fingerprint] !== sessionId) {
+      throw new Error(`Execute-phase consumed fingerprint mapping is inconsistent for session ${sessionId}.`);
+    }
+  }
+  for (const [fingerprint, sessionId] of Object.entries(index.consumedFingerprints)) {
+    const session = sessions.get(sessionId);
+    if (!session || session.fingerprint !== fingerprint) {
+      throw new Error(`Execute-phase consumed fingerprint ${fingerprint} is dangling or mismatched.`);
+    }
+  }
+  if (index.activeSessionId !== null) {
+    const active = sessions.get(index.activeSessionId);
+    if (!active || index.consumedFingerprints[active.fingerprint] !== active.sessionId) {
+      throw new Error("Execute-phase active-session mapping is inconsistent.");
+    }
+    if (active.status === "completed" || active.status === "blocked") {
+      index.activeSessionId = null;
+      await persistIndex(projectRoot, index);
+    }
+  } else if ([...sessions.values()].some(
+    (session) => session.status !== "completed" && session.status !== "blocked"
+  )) {
+    throw new Error("Execute-phase durable active sessions exist without an active-session mapping.");
+  }
+  return { index, sessions };
+}
+async function persistIndex(projectRoot, index) {
+  await assertControlStorageSafe(projectRoot, INDEX_PATH);
+  await writeJsonFile(
+    resolveBlueprintPath(projectRoot, INDEX_PATH),
+    index
+  );
+}
+async function persistSession(projectRoot, session) {
+  await assertControlStorageSafe(projectRoot, sessionPath(session.sessionId));
+  await writeJsonFile(
+    resolveBlueprintPath(projectRoot, sessionPath(session.sessionId)),
+    session
+  );
+}
+function failure(mode, projectRoot, message, status = "blocked", packet = null, fingerprint = null, warnings = []) {
+  return {
+    status,
+    mode,
+    ready: false,
+    reused: false,
+    projectRoot,
+    fingerprint,
+    packet,
+    session: null,
+    blockers: [message],
+    warnings
+  };
+}
+async function mutatePhaseExecutionSession(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  await assertExecutionLockStorageSafe(projectRoot);
+  return withBlueprintRepoLock(projectRoot, CONTROL_LOCK, async () => {
+    const reconciled = await reconcileControlIndex(
+      projectRoot,
+      asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH))
+    );
+    const original = reconciled.sessions.get(args.sessionId);
+    if (!original) throw new Error(`Execute-phase session ${args.sessionId} does not exist.`);
+    if (reconciled.index.activeSessionId !== original.sessionId) {
+      throw new Error(`Execute-phase session ${args.sessionId} is not active.`);
+    }
+    const assertIdentity = (session2) => {
+      const validated = asSession(structuredClone(session2));
+      if (validated.sessionId !== original.sessionId || validated.fingerprint !== original.fingerprint || canonicalJson(validated.packet) !== canonicalJson(original.packet)) {
+        throw new Error("Execute-phase session mutation changed immutable execution authority.");
+      }
+      return validated;
+    };
+    const checkpoint = async (session2) => {
+      await persistSession(projectRoot, assertIdentity(session2));
+    };
+    const updated = await args.mutate(structuredClone(original), {
+      projectRoot,
+      checkpoint
+    });
+    const session = assertIdentity(updated.session);
+    await persistSession(projectRoot, session);
+    if (session.status === "completed" || session.status === "blocked") {
+      reconciled.index.activeSessionId = null;
+      await persistIndex(projectRoot, reconciled.index);
+    }
+    return { session, result: updated.result, projectRoot };
+  });
+}
+async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
+  const mode = args.mode ?? "preview";
+  const deps = dependencies(dependencyOverrides);
+  let projectRoot;
+  try {
+    projectRoot = await ensureRepoRoot(args.cwd);
+    await assertExecutionLockStorageSafe(projectRoot);
+  } catch (error2) {
+    return failure(mode, null, error2.message);
+  }
+  if (mode === "resume") {
+    if (!args.sessionId) return failure(mode, projectRoot, "Resume requires an exact sessionId.");
+    try {
+      return await withBlueprintRepoLock(projectRoot, CONTROL_LOCK, async () => {
+        const reconciled = await reconcileControlIndex(
+          projectRoot,
+          asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH))
+        );
+        const index = reconciled.index;
+        const session = reconciled.sessions.get(args.sessionId);
+        if (!session) {
+          return failure(mode, projectRoot, `Execute-phase session ${args.sessionId} does not exist.`);
+        }
+        if (index.activeSessionId !== session.sessionId) {
+          return failure(mode, projectRoot, "The requested session is not the active execute-phase session.");
+        }
+        if (session.packet.repository.canonicalRoot !== await fs15.realpath(projectRoot)) {
+          return failure(mode, projectRoot, "The durable session belongs to a different canonical repository.", "stale");
+        }
+        const current = session.status === "claimed" ? await buildPacket(projectRoot, {
+          cwd: projectRoot,
+          mode: "preview",
+          phase: session.prepareArgs.phase ?? void 0,
+          wave: session.prepareArgs.wave ?? void 0,
+          gapsOnly: session.prepareArgs.gapsOnly,
+          includeConflicts: session.prepareArgs.includeConflicts,
+          externalServiceConfirmed: session.prepareArgs.externalServiceConfirmed,
+          overwriteConfirmedPlanIds: session.prepareArgs.overwriteConfirmedPlanIds,
+          defaultsPath: session.prepareArgs.defaultsPath ?? void 0
+        }, deps) : {
+          packet: session.packet,
+          fingerprint: session.fingerprint,
+          blockers: await validateExecutingSessionAuthority(projectRoot, session, deps),
+          warnings: []
+        };
+        if (current.fingerprint !== session.fingerprint || current.blockers.length > 0) {
+          return {
+            ...failure(
+              mode,
+              projectRoot,
+              `Execution session is stale; expected ${session.fingerprint}, observed ${current.fingerprint}.`,
+              "stale",
+              current.packet,
+              current.fingerprint,
+              current.warnings
+            ),
+            blockers: unique2([
+              `Execution session is stale; expected ${session.fingerprint}, observed ${current.fingerprint}.`,
+              ...current.blockers
+            ])
+          };
+        }
+        const resumed = {
+          ...session,
+          lastResumedAt: deps.now(),
+          resumeCount: session.resumeCount + 1
+        };
+        await persistSession(projectRoot, resumed);
+        return {
+          status: "resumed",
+          mode,
+          ready: true,
+          reused: true,
+          projectRoot,
+          fingerprint: current.fingerprint,
+          packet: current.packet,
+          session: resumed,
+          blockers: [],
+          warnings: current.warnings
+        };
+      });
+    } catch (error2) {
+      return failure(mode, projectRoot, error2.message);
+    }
+  }
+  if (mode === "claim" && args.confirmation !== EXECUTE_PHASE_CLAIM_CONFIRMATION) {
+    return failure(
+      mode,
+      projectRoot,
+      `Claim requires the exact confirmation literal: ${EXECUTE_PHASE_CLAIM_CONFIRMATION}.`
+    );
+  }
+  if (mode === "claim" && !/^[0-9a-f]{64}$/.test(args.previewFingerprint ?? "")) {
+    return failure(mode, projectRoot, "Claim requires the exact 64-character preview fingerprint.");
+  }
+  const execute = async () => {
+    const built = await buildPacket(projectRoot, args, deps);
+    if (mode === "preview") {
+      return {
+        status: built.blockers.length > 0 ? "blocked" : "preview",
+        mode,
+        ready: built.blockers.length === 0,
+        reused: false,
+        projectRoot,
+        fingerprint: built.fingerprint,
+        packet: built.packet,
+        session: null,
+        blockers: built.blockers,
+        warnings: built.warnings
+      };
+    }
+    if (args.previewFingerprint !== built.fingerprint) {
+      return failure(
+        mode,
+        projectRoot,
+        `Preview drifted; expected ${args.previewFingerprint}, observed ${built.fingerprint}.`,
+        "stale",
+        built.packet,
+        built.fingerprint,
+        built.warnings
+      );
+    }
+    if (built.blockers.length > 0) {
+      return {
+        ...failure(mode, projectRoot, built.blockers[0], "blocked", built.packet, built.fingerprint, built.warnings),
+        blockers: built.blockers
+      };
+    }
+    const reconciled = await reconcileControlIndex(
+      projectRoot,
+      asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH))
+    );
+    const index = reconciled.index;
+    const consumedSessionId = index.consumedFingerprints[built.fingerprint];
+    if (consumedSessionId) {
+      const session2 = reconciled.sessions.get(consumedSessionId);
+      if (!session2 || session2.fingerprint !== built.fingerprint) {
+        throw new Error("Execute-phase consumed fingerprint mapping is inconsistent.");
+      }
+      if (index.activeSessionId === session2.sessionId) {
+        return {
+          status: "claimed",
+          mode,
+          ready: true,
+          reused: true,
+          projectRoot,
+          fingerprint: built.fingerprint,
+          packet: built.packet,
+          session: session2,
+          blockers: [],
+          warnings: unique2([...built.warnings, "Identical claim reused the active durable session."])
+        };
+      }
+      return failure(mode, projectRoot, "This preview fingerprint was already consumed and cannot be replayed.");
+    }
+    if (index.activeSessionId) {
+      return failure(
+        mode,
+        projectRoot,
+        `A different execute-phase session is already active: ${index.activeSessionId}.`
+      );
+    }
+    const sessionId = deps.createSessionId();
+    sessionPath(sessionId);
+    const options = prepareOptions(args);
+    const session = {
+      schemaVersion: 1,
+      sessionId,
+      status: "claimed",
+      fingerprint: built.fingerprint,
+      createdAt: deps.now(),
+      lastResumedAt: null,
+      resumeCount: 0,
+      prepareArgs: {
+        ...options,
+        defaultsPath: args.defaultsPath ?? null
+      },
+      packet: built.packet,
+      execution: createExecutionProgress(built.packet)
+    };
+    await persistSession(projectRoot, session);
+    await deps.afterSessionPersisted?.(session);
+    index.activeSessionId = sessionId;
+    index.consumedFingerprints[built.fingerprint] = sessionId;
+    index.sessions[sessionId] = sessionPath(sessionId);
+    await persistIndex(projectRoot, index);
+    return {
+      status: "claimed",
+      mode,
+      ready: true,
+      reused: false,
+      projectRoot,
+      fingerprint: built.fingerprint,
+      packet: built.packet,
+      session,
+      blockers: [],
+      warnings: built.warnings
+    };
+  };
+  try {
+    return mode === "claim" ? await withBlueprintRepoLock(projectRoot, CONTROL_LOCK, execute) : await execute();
+  } catch (error2) {
+    return failure(mode, projectRoot, error2.message);
+  }
+}
+var CONTROL_ROOT, INDEX_PATH, SESSION_ROOT, CONTROL_LOCK, EXECUTE_PHASE_CLAIM_CONFIRMATION, defaultProcessRunner, defaultDependencies;
+var init_phase_execution_control = __esm({
+  "src/mcp/tools/phase-execution-control.ts"() {
+    "use strict";
+    init_artifacts();
+    init_config();
+    init_phase();
+    CONTROL_ROOT = `${BLUEPRINT_DIR}/executions/execute-phase`;
+    INDEX_PATH = `${CONTROL_ROOT}/index.json`;
+    SESSION_ROOT = `${CONTROL_ROOT}/sessions`;
+    CONTROL_LOCK = "execute-phase-control";
+    EXECUTE_PHASE_CLAIM_CONFIRMATION = "CLAIM BLUEPRINT PHASE EXECUTION";
+    defaultProcessRunner = async (command, argv, cwd) => new Promise((resolve) => {
+      execFile4(
+        command,
+        [...argv],
+        {
+          cwd,
+          encoding: "utf8",
+          windowsHide: true,
+          env: {
+            ...process.env,
+            GIT_OPTIONAL_LOCKS: "0",
+            LANG: "C",
+            LC_ALL: "C"
+          }
+        },
+        (error2, stdout, stderr) => {
+          const code = error2?.code;
+          resolve({
+            exitCode: error2 ? typeof code === "number" ? code : null : 0,
+            signal: error2?.signal ?? null,
+            stdout: stdout ?? "",
+            stderr: stderr ?? ""
+          });
+        }
+      );
+    });
+    defaultDependencies = {
+      processRunner: defaultProcessRunner,
+      targetResolver: blueprintPhaseExecutionTargets,
+      configReader: blueprintConfigGet,
+      now: () => (/* @__PURE__ */ new Date()).toISOString(),
+      createSessionId: randomUUID2
+    };
+  }
+});
+
+// src/mcp/tools/phase-execution-runtime.ts
+import { spawn } from "node:child_process";
+import { createHash as createHash5, randomUUID as randomUUID3 } from "node:crypto";
+import { promises as fs16 } from "node:fs";
+import path16 from "node:path";
+import { createInterface } from "node:readline";
+function sha2563(value) {
+  return createHash5("sha256").update(value).digest("hex");
+}
+function uniqueSorted2(values) {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
+function isMissingPathError(error2) {
+  return error2?.code === "ENOENT";
+}
+function normalizeRepoRelativePath(value, label) {
+  if (typeof value !== "string" || value.trim().length === 0 || value.includes("\0")) {
+    throw new Error(`${label} must be a non-empty repo-relative path without NUL bytes.`);
+  }
+  const normalized = value.trim();
+  if (normalized.includes("\\") || path16.posix.isAbsolute(normalized) || normalized === "." || normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
+    throw new Error(`${label} must be a canonical repo-relative path.`);
+  }
+  const firstSegment = normalized.split("/")[0]?.toLowerCase();
+  if (firstSegment === ".git" || firstSegment === ".blueprint") {
+    throw new Error(`${label} must not target Git or Blueprint-owned state.`);
+  }
+  return normalized;
+}
+function normalizeObservedRepoPath(value) {
+  if (typeof value !== "string" || value.length === 0 || value.includes("\0") || value.includes("\\") || path16.posix.isAbsolute(value) || value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") || value === ".git" || value.startsWith(".git/")) {
+    throw new Error("git.changedPath must be a canonical repo-relative path.");
+  }
+  return value;
+}
+function normalizeAuthorizedPath(value) {
+  const directory = value.endsWith("/");
+  const normalized = normalizeRepoRelativePath(
+    directory ? value.slice(0, -1) : value,
+    "authorizedFiles"
+  );
+  return { path: normalized, directory };
+}
+function isAuthorizedPath(filePath, authorized) {
+  return authorized.some(
+    (entry) => entry.directory ? filePath === entry.path || filePath.startsWith(`${entry.path}/`) : filePath === entry.path
+  );
+}
+async function assertNoSymlinkTraversal(root, relativePath, fileSystem) {
+  const segments = relativePath.split("/");
+  let current = root;
+  for (let index = 0; index < segments.length; index += 1) {
+    current = path16.join(current, segments[index] ?? "");
+    try {
+      const stats = await fileSystem.lstat(current);
+      if (stats.isSymbolicLink()) {
+        throw new Error(`Mutation path traverses a symbolic link: ${relativePath}`);
+      }
+      if (index < segments.length - 1 && !stats.isDirectory()) {
+        throw new Error(`Mutation path parent is not a directory: ${relativePath}`);
+      }
+      if (index === segments.length - 1 && !stats.isFile()) {
+        throw new Error(`Mutation target is not a regular file: ${relativePath}`);
+      }
+    } catch (error2) {
+      if (isMissingPathError(error2)) {
+        return;
+      }
+      throw error2;
+    }
+  }
+}
+async function assertMutationParentContained(root, absolutePath, relativePath, fileSystem) {
+  const realParent = await fileSystem.realpath(path16.dirname(absolutePath));
+  if (realParent !== root && !realParent.startsWith(`${root}${path16.sep}`)) {
+    throw new Error(`Mutation parent escapes the canonical repository: ${relativePath}`);
+  }
+}
+async function readExistingFile(filePath, fileSystem) {
+  try {
+    const stats = await fileSystem.lstat(filePath);
+    if (!stats.isFile() || stats.isSymbolicLink()) {
+      throw new Error(`Mutation target must be a regular file: ${filePath}`);
+    }
+    return {
+      content: await fileSystem.readFile(filePath),
+      mode: stats.mode & 4095
+    };
+  } catch (error2) {
+    if (isMissingPathError(error2)) {
+      return { content: null, mode: null };
+    }
+    throw error2;
+  }
+}
+function tempSibling(filePath, kind) {
+  return path16.join(
+    path16.dirname(filePath),
+    `.${path16.basename(filePath)}.blueprint-execute-${kind}-${process.pid}-${randomUUID3()}`
+  );
+}
+async function applyPinnedPhaseExecutionMutations(args) {
+  const realRoot = await fs16.realpath(path16.resolve(args.projectRoot));
+  const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
+  if (authorized.length === 0) throw new Error("At least one authorized file or directory is required.");
+  if (args.mutations.length === 0) throw new Error("At least one file mutation is required.");
+  const normalizedMutations = args.mutations.map((mutation, index) => ({
+    ...mutation,
+    path: normalizeRepoRelativePath(mutation.path, `mutations[${index}].path`)
+  }));
+  const duplicatePaths = normalizedMutations.map((mutation) => mutation.path).filter((filePath, index, all) => all.indexOf(filePath) !== index);
+  if (duplicatePaths.length > 0) {
+    throw new Error(`Duplicate mutation paths are not allowed: ${uniqueSorted2(duplicatePaths).join(", ")}`);
+  }
+  const groups = /* @__PURE__ */ new Map();
+  for (const mutation of normalizedMutations) {
+    if (!isAuthorizedPath(mutation.path, authorized)) {
+      throw new Error(`Mutation path is outside the selected plan ownership: ${mutation.path}`);
+    }
+    if (mutation.operation === "write") {
+      if (typeof mutation.content !== "string" || mutation.content.includes("\0")) {
+        throw new Error(`Write mutation requires NUL-free string content: ${mutation.path}`);
+      }
+      if (Buffer.byteLength(mutation.content) > MAX_MUTATION_BYTES) {
+        throw new Error(`Write mutation exceeds ${MAX_MUTATION_BYTES} bytes: ${mutation.path}`);
+      }
+    } else if (mutation.content !== void 0) {
+      throw new Error(`Delete mutation must not include content: ${mutation.path}`);
+    }
+    const absolutePath = path16.resolve(realRoot, ...mutation.path.split("/"));
+    if (!absolutePath.startsWith(`${realRoot}${path16.sep}`)) {
+      throw new Error(`Mutation path escapes the repository: ${mutation.path}`);
+    }
+    await assertNoSymlinkTraversal(realRoot, mutation.path, fs16);
+    const parentPath = path16.dirname(absolutePath);
+    const [parentLstat, realParent, parentStats] = await Promise.all([
+      fs16.lstat(parentPath),
+      fs16.realpath(parentPath),
+      fs16.stat(parentPath)
+    ]);
+    if (parentLstat.isSymbolicLink() || !parentLstat.isDirectory() || realParent !== realRoot && !realParent.startsWith(`${realRoot}${path16.sep}`)) {
+      throw new Error(`Mutation parent is not a contained real directory: ${mutation.path}`);
+    }
+    const parentRelativePath = path16.relative(realRoot, realParent).replaceAll(path16.sep, "/");
+    const key = `${parentStats.dev}:${parentStats.ino}`;
+    const group = groups.get(key) ?? {
+      parentPath: realParent,
+      parentRelativePath,
+      dev: String(parentStats.dev),
+      ino: String(parentStats.ino),
+      mutations: []
+    };
+    const basename = path16.basename(absolutePath);
+    const nonce = `${process.pid}-${randomUUID3()}`;
+    group.mutations.push({
+      path: mutation.path,
+      name: basename,
+      operation: mutation.operation,
+      content: mutation.content,
+      expectedHash: mutation.expectedHash,
+      staged: `.${basename}.blueprint-execute-staged-${nonce}`,
+      backup: `.${basename}.blueprint-execute-backup-${nonce}`,
+      quarantine: `.${basename}.blueprint-execute-quarantine-${nonce}`
+    });
+    groups.set(key, group);
+  }
+  const requestTimeoutMs = args.runtimeHooks?.pinnedWorkerTimeoutMs ?? DEFAULT_PINNED_WORKER_TIMEOUT_MS;
+  if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 25 || requestTimeoutMs > 12e4) {
+    throw new Error("Pinned mutation worker timeout must be an integer between 25 and 120000ms.");
+  }
+  const workers = [...groups.values()].map((group) => ({
+    group,
+    worker: new PinnedMutationWorker({
+      ...group,
+      requestTimeoutMs,
+      readyTimeoutMs: Math.max(MIN_PINNED_WORKER_READY_TIMEOUT_MS, requestTimeoutMs),
+      closeTimeoutMs: Math.min(DEFAULT_PINNED_WORKER_CLOSE_TIMEOUT_MS, requestTimeoutMs),
+      withholdCloseExitSignal: args.runtimeHooks?.withholdCloseExitSignalForTest === true
+    })
+  }));
+  const committed = [];
+  const recoveryCandidates = (item) => uniqueSorted2(item.group.mutations.flatMap(
+    (mutation) => [mutation.backup, mutation.staged, mutation.quarantine].filter((value) => typeof value === "string").map((fileName) => path16.join(item.group.parentPath, fileName))
+  ));
+  const rollbackCommitted = async (failure2) => {
+    const rollbackFailures = [];
+    const cleanupPaths = [];
+    for (const item of [...committed].reverse()) {
+      try {
+        const rollback = await item.worker.request({ action: "rollback" });
+        rollbackFailures.push(...rollback.rollbackFailures ?? []);
+        cleanupPaths.push(...(rollback.cleanupPaths ?? []).map(
+          (fileName) => path16.join(item.group.parentPath, fileName)
+        ));
+      } catch (error2) {
+        rollbackFailures.push(
+          `${item.group.parentRelativePath || "."}: rollback worker failed: ${error2 instanceof Error ? error2.message : String(error2)}`
+        );
+        cleanupPaths.push(...recoveryCandidates(item));
+      }
+    }
+    return {
+      status: rollbackFailures.length > 0 ? "rollback-failed" : "rolled-back",
+      receipts: [],
+      cleanupPaths: uniqueSorted2(cleanupPaths),
+      failure: failure2,
+      rollbackFailures
+    };
+  };
+  try {
+    await Promise.all(workers.map(({ worker }) => worker.ready()));
+    await args.runtimeHooks?.afterParentsPinned?.();
+    await Promise.all(workers.map(
+      ({ worker, group }) => worker.request({ action: "prepare", mutations: group.mutations })
+    ));
+    for (const item of workers) {
+      let result;
+      try {
+        result = await item.worker.request({
+          action: "commit",
+          crashAfterCommit: args.runtimeHooks?.crashWorkerAfterCommit === true,
+          stopAfterCommit: args.runtimeHooks?.stopWorkerAfterCommit === true
+        });
+      } catch (error2) {
+        const previousRollback = await rollbackCommitted(
+          `Pinned mutation commit worker failed: ${error2 instanceof Error ? error2.message : String(error2)}`
+        );
+        return {
+          ...previousRollback,
+          status: "rollback-failed",
+          cleanupPaths: uniqueSorted2([
+            ...previousRollback.cleanupPaths,
+            ...recoveryCandidates(item)
+          ]),
+          rollbackFailures: [
+            ...previousRollback.rollbackFailures,
+            `${item.group.parentRelativePath || "."}: commit outcome is unknown after worker failure.`
+          ]
+        };
+      }
+      if (result.status !== "committed") {
+        const previousRollback = await rollbackCommitted(
+          result.failure ?? "Pinned mutation commit failed."
+        );
+        const currentCleanup = (result.cleanupPaths ?? []).map(
+          (fileName) => path16.join(item.group.parentPath, fileName)
+        );
+        return {
+          ...previousRollback,
+          status: previousRollback.rollbackFailures.length > 0 || (result.rollbackFailures?.length ?? 0) > 0 ? "rollback-failed" : "rolled-back",
+          cleanupPaths: uniqueSorted2([...previousRollback.cleanupPaths, ...currentCleanup]),
+          rollbackFailures: [
+            ...previousRollback.rollbackFailures,
+            ...result.rollbackFailures ?? []
+          ]
+        };
+      }
+      committed.push(item);
+    }
+    let containmentFailure = null;
+    for (const { group } of workers) {
+      try {
+        const [stats, realParent] = await Promise.all([
+          fs16.stat(group.parentPath),
+          fs16.realpath(group.parentPath)
+        ]);
+        if (String(stats.dev) !== group.dev || String(stats.ino) !== group.ino || realParent !== group.parentPath) {
+          containmentFailure = `Mutation parent identity changed during commit: ${group.parentRelativePath}.`;
+          break;
+        }
+      } catch (error2) {
+        containmentFailure = `Mutation parent became unavailable during commit: ${error2 instanceof Error ? error2.message : String(error2)}`;
+        break;
+      }
+    }
+    if (containmentFailure) {
+      return rollbackCommitted(containmentFailure);
+    }
+    await args.runtimeHooks?.beforeFinalObservation?.();
+    let observations;
+    try {
+      observations = await Promise.all(workers.map(
+        ({ worker }) => worker.request({ action: "observe" })
+      ));
+    } catch (error2) {
+      return rollbackCommitted(
+        `Mutation postimage could not be observed: ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+    }
+    const receipts = observations.flatMap((result) => result.receipts ?? []);
+    let divergence = null;
+    for (const receipt of receipts) {
+      const mutation = normalizedMutations.find((candidate) => candidate.path === receipt.path);
+      const expectedHash = mutation.operation === "write" ? sha2563(mutation.content ?? "") : null;
+      if (receipt.afterHash !== expectedHash) {
+        divergence = `Mutation postimage diverged before receipt persistence for ${receipt.path}.`;
+        break;
+      }
+    }
+    if (divergence) return rollbackCommitted(divergence);
+    const sealFailures = [];
+    await Promise.all(workers.map(async (item) => {
+      try {
+        const sealed = await item.worker.request({ action: "seal" });
+        if (sealed.status !== "sealed") throw new Error(`unexpected status ${sealed.status}`);
+      } catch (error2) {
+        sealFailures.push(
+          `${item.group.parentRelativePath || "."}: commit seal failed: ${error2 instanceof Error ? error2.message : String(error2)}`
+        );
+      }
+    }));
+    if (sealFailures.length > 0) {
+      return {
+        status: "rollback-failed",
+        receipts,
+        cleanupPaths: uniqueSorted2(workers.flatMap(recoveryCandidates)),
+        failure: "Pinned mutation commit could not be sealed before worker shutdown.",
+        rollbackFailures: sealFailures
+      };
+    }
+    const cleanups = await Promise.all(workers.map(async (item) => {
+      try {
+        return await item.worker.request({
+          action: "cleanup",
+          crashDuringCleanup: args.runtimeHooks?.crashWorkerDuringCleanup === true,
+          stopDuringCleanup: args.runtimeHooks?.stopWorkerDuringCleanup === true
+        });
+      } catch (error2) {
+        return {
+          status: "cleanup-required",
+          cleanupPaths: item.group.mutations.flatMap(
+            (mutation) => [mutation.backup, mutation.staged, mutation.quarantine].filter((value) => typeof value === "string")
+          ),
+          failure: `Pinned mutation cleanup worker failed: ${error2 instanceof Error ? error2.message : String(error2)}`
+        };
+      }
+    }));
+    const cleanupPaths = cleanups.flatMap(
+      (result, index) => (result.cleanupPaths ?? []).map((fileName) => path16.join(workers[index].group.parentPath, fileName))
+    );
+    const cleanupFailures = cleanups.flatMap((result) => result.failure ? [result.failure] : []);
+    return {
+      status: divergence ? "postimage-diverged" : cleanupPaths.length > 0 ? "committed-cleanup-required" : "committed",
+      receipts: normalizedMutations.map(
+        (mutation) => receipts.find((receipt) => receipt.path === mutation.path)
+      ),
+      cleanupPaths,
+      failure: cleanupFailures.length > 0 ? cleanupFailures.join("; ") : divergence,
+      rollbackFailures: []
+    };
+  } finally {
+    await Promise.all(workers.map(({ worker }) => worker.close().catch(() => void 0)));
+  }
+}
+async function applyPhaseExecutionMutations(args) {
+  if (args.fileSystem === void 0) {
+    return applyPinnedPhaseExecutionMutations(args);
+  }
+  const fileSystem = args.fileSystem ?? fs16;
+  const realRoot = await fileSystem.realpath(path16.resolve(args.projectRoot));
+  const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
+  if (authorized.length === 0) {
+    throw new Error("At least one authorized file or directory is required.");
+  }
+  if (args.mutations.length === 0) {
+    throw new Error("At least one file mutation is required.");
+  }
+  const normalizedMutations = args.mutations.map((mutation, index) => ({
+    ...mutation,
+    path: normalizeRepoRelativePath(mutation.path, `mutations[${index}].path`)
+  }));
+  const duplicatePaths = normalizedMutations.map((mutation) => mutation.path).filter((filePath, index, all) => all.indexOf(filePath) !== index);
+  if (duplicatePaths.length > 0) {
+    throw new Error(`Duplicate mutation paths are not allowed: ${uniqueSorted2(duplicatePaths).join(", ")}`);
+  }
+  const prepared = [];
+  try {
+    for (const mutation of normalizedMutations) {
+      if (!isAuthorizedPath(mutation.path, authorized)) {
+        throw new Error(`Mutation path is outside the selected plan ownership: ${mutation.path}`);
+      }
+      if (mutation.operation === "write") {
+        if (typeof mutation.content !== "string") {
+          throw new Error(`Write mutation requires string content: ${mutation.path}`);
+        }
+        if (mutation.content.includes("\0")) {
+          throw new Error(`Write mutation content must not contain NUL bytes: ${mutation.path}`);
+        }
+        if (Buffer.byteLength(mutation.content) > MAX_MUTATION_BYTES) {
+          throw new Error(`Write mutation exceeds ${MAX_MUTATION_BYTES} bytes: ${mutation.path}`);
+        }
+      } else if (mutation.content !== void 0) {
+        throw new Error(`Delete mutation must not include content: ${mutation.path}`);
+      }
+      const absolutePath = path16.resolve(realRoot, ...mutation.path.split("/"));
+      if (!absolutePath.startsWith(`${realRoot}${path16.sep}`)) {
+        throw new Error(`Mutation path escapes the repository: ${mutation.path}`);
+      }
+      await assertNoSymlinkTraversal(realRoot, mutation.path, fileSystem);
+      const existing = await readExistingFile(absolutePath, fileSystem);
+      const beforeHash = existing.content === null ? null : sha2563(existing.content);
+      if (beforeHash !== mutation.expectedHash) {
+        throw new Error(
+          `Mutation preimage is stale for ${mutation.path}: expected ${mutation.expectedHash ?? "missing"}, observed ${beforeHash ?? "missing"}.`
+        );
+      }
+      if (mutation.operation === "delete" && existing.content === null) {
+        throw new Error(`Delete mutation target does not exist: ${mutation.path}`);
+      }
+      await fileSystem.mkdir(path16.dirname(absolutePath), { recursive: true });
+      await assertMutationParentContained(realRoot, absolutePath, mutation.path, fileSystem);
+      const stagedPath = mutation.operation === "write" ? tempSibling(absolutePath, "staged") : null;
+      if (stagedPath && mutation.content !== void 0) {
+        try {
+          await fileSystem.writeFile(stagedPath, mutation.content, "utf8");
+          if (existing.mode !== null) {
+            await fileSystem.chmod(stagedPath, existing.mode);
+          }
+        } catch (error2) {
+          await fileSystem.rm(stagedPath, { force: true }).catch(() => void 0);
+          throw error2;
+        }
+      }
+      prepared.push({
+        mutation,
+        absolutePath,
+        beforeHash,
+        beforeMode: existing.mode,
+        stagedPath,
+        backupPath: tempSibling(absolutePath, "backup"),
+        backupCreated: false,
+        committed: false,
+        observedAfterHash: beforeHash,
+        observedAfterBytes: existing.content?.byteLength ?? 0,
+        observedAfterMode: existing.mode
+      });
+    }
+    for (const entry of prepared) {
+      await assertMutationParentContained(
+        realRoot,
+        entry.absolutePath,
+        entry.mutation.path,
+        fileSystem
+      );
+      await assertNoSymlinkTraversal(realRoot, entry.mutation.path, fileSystem);
+      if (entry.beforeHash !== null) {
+        await fileSystem.rename(entry.absolutePath, entry.backupPath);
+        entry.backupCreated = true;
+      }
+      if (entry.mutation.operation === "write" && entry.stagedPath) {
+        await fileSystem.rename(entry.stagedPath, entry.absolutePath);
+        entry.stagedPath = null;
+      }
+      entry.committed = true;
+      if (entry.mutation.operation === "write") {
+        await assertMutationParentContained(
+          realRoot,
+          entry.absolutePath,
+          entry.mutation.path,
+          fileSystem
+        );
+        await assertNoSymlinkTraversal(realRoot, entry.mutation.path, fileSystem);
+        const observed = await readExistingFile(entry.absolutePath, fileSystem);
+        const observedHash = observed.content === null ? null : sha2563(observed.content);
+        const requestedHash = sha2563(entry.mutation.content ?? "");
+        if (observedHash !== requestedHash) {
+          throw new Error(
+            `Mutation postimage mismatch for ${entry.mutation.path}: expected ${requestedHash}, observed ${observedHash ?? "missing"}.`
+          );
+        }
+        entry.observedAfterHash = observedHash;
+        entry.observedAfterBytes = observed.content?.byteLength ?? 0;
+        entry.observedAfterMode = observed.mode;
+      } else {
+        const observed = await readExistingFile(entry.absolutePath, fileSystem);
+        if (observed.content !== null) {
+          throw new Error(
+            `Delete mutation postimage mismatch for ${entry.mutation.path}: target still exists.`
+          );
+        }
+        entry.observedAfterHash = null;
+        entry.observedAfterBytes = 0;
+        entry.observedAfterMode = null;
+      }
+    }
+  } catch (error2) {
+    const rollbackFailures = [];
+    for (const entry of [...prepared].reverse()) {
+      if (entry.committed && entry.mutation.operation === "write") {
+        try {
+          await fileSystem.rm(entry.absolutePath, { force: true });
+        } catch (rollbackError) {
+          rollbackFailures.push(
+            `${entry.mutation.path}: remove committed postimage failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+          );
+        }
+      }
+      if (entry.backupCreated) {
+        try {
+          await fileSystem.rename(entry.backupPath, entry.absolutePath);
+          entry.backupCreated = false;
+        } catch (rollbackError) {
+          rollbackFailures.push(
+            `${entry.mutation.path}: restore preimage failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+          );
+        }
+      }
+      if (entry.stagedPath) {
+        try {
+          await fileSystem.rm(entry.stagedPath, { force: true });
+          entry.stagedPath = null;
+        } catch (rollbackError) {
+          rollbackFailures.push(
+            `${entry.mutation.path}: staged-file cleanup failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+          );
+        }
+      }
+    }
+    if (rollbackFailures.length > 0) {
+      const receipts2 = await Promise.all(prepared.map(async (entry) => {
+        const observed = await readExistingFile(entry.absolutePath, fileSystem).catch(() => ({
+          content: null,
+          mode: null
+        }));
+        return {
+          path: entry.mutation.path,
+          operation: entry.mutation.operation,
+          beforeHash: entry.beforeHash,
+          beforeMode: entry.beforeMode,
+          afterHash: observed.content === null ? null : sha2563(observed.content),
+          afterMode: observed.mode,
+          bytesWritten: observed.content?.byteLength ?? 0
+        };
+      }));
+      return {
+        status: "rollback-failed",
+        receipts: receipts2,
+        cleanupPaths: prepared.flatMap((entry) => [
+          ...entry.backupCreated ? [entry.backupPath] : [],
+          ...entry.stagedPath ? [entry.stagedPath] : []
+        ]),
+        failure: error2 instanceof Error ? error2.message : String(error2),
+        rollbackFailures
+      };
+    }
+    throw error2;
+  }
+  const cleanupPaths = [];
+  for (const entry of prepared) {
+    if (entry.backupCreated) {
+      try {
+        await fileSystem.rm(entry.backupPath, { force: true });
+        entry.backupCreated = false;
+      } catch {
+        cleanupPaths.push(entry.backupPath);
+      }
+    }
+  }
+  let finalObservationFailure = null;
+  const receipts = await Promise.all(prepared.map(async (entry) => {
+    try {
+      const observed = await readExistingFile(entry.absolutePath, fileSystem);
+      const afterHash = observed.content === null ? null : sha2563(observed.content);
+      const expectedHash = entry.mutation.operation === "write" ? sha2563(entry.mutation.content ?? "") : null;
+      if (afterHash !== expectedHash) {
+        finalObservationFailure ??= `Mutation postimage diverged before receipt persistence for ${entry.mutation.path}.`;
+      }
+      return {
+        path: entry.mutation.path,
+        operation: entry.mutation.operation,
+        beforeHash: entry.beforeHash,
+        beforeMode: entry.beforeMode,
+        afterHash,
+        afterMode: observed.mode,
+        bytesWritten: observed.content?.byteLength ?? 0
+      };
+    } catch (error2) {
+      finalObservationFailure ??= `Mutation postimage could not be observed for ${entry.mutation.path}: ${error2 instanceof Error ? error2.message : String(error2)}`;
+      return {
+        path: entry.mutation.path,
+        operation: entry.mutation.operation,
+        beforeHash: entry.beforeHash,
+        beforeMode: entry.beforeMode,
+        afterHash: entry.observedAfterHash,
+        afterMode: entry.observedAfterMode,
+        bytesWritten: entry.observedAfterBytes
+      };
+    }
+  }));
+  return {
+    status: finalObservationFailure ? "postimage-diverged" : cleanupPaths.length > 0 ? "committed-cleanup-required" : "committed",
+    receipts,
+    cleanupPaths,
+    failure: finalObservationFailure,
+    rollbackFailures: []
+  };
+}
+function receiptOutput(value) {
+  const bytes = Buffer.byteLength(value);
+  const buffer = Buffer.from(value);
+  const truncated = bytes > MAX_RECEIPT_OUTPUT_BYTES;
+  return {
+    text: truncated ? buffer.subarray(0, MAX_RECEIPT_OUTPUT_BYTES).toString("utf8") : value,
+    bytes,
+    hash: sha2563(buffer),
+    truncated
+  };
+}
+async function runPhaseExecutionVerification(args) {
+  if (args.commands.length === 0 || args.commands.length > MAX_VERIFICATION_COMMANDS) {
+    throw new Error(
+      `Verification requires between 1 and ${MAX_VERIFICATION_COMMANDS} bound commands.`
+    );
+  }
+  const timeoutMs = args.timeoutMs ?? DEFAULT_VERIFICATION_TIMEOUT_MS;
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error("Verification timeout must be a positive integer.");
+  }
+  const runner = args.processRunner ?? phaseExecutionProcessRunner;
+  const receipts = [];
+  for (const rawCommand of args.commands) {
+    const command = rawCommand.trim();
+    if (command.length === 0 || command.includes("\0") || Buffer.byteLength(command) > MAX_VERIFICATION_COMMAND_BYTES) {
+      throw new Error("Each bound verification command must be non-empty, NUL-free, and within the command size limit.");
+    }
+    const argv = ["-c", command];
+    const result = await runner(
+      "/bin/sh",
+      argv,
+      args.projectRoot,
+      {
+        ...process.env,
+        LC_ALL: "C",
+        LANG: "C",
+        GIT_TERMINAL_PROMPT: "0"
+      },
+      timeoutMs
+    );
+    const stdout = receiptOutput(result.stdout);
+    const stderr = receiptOutput(result.stderr);
+    const outputLimitExceeded = result.outputLimitExceeded === true;
+    const passed = result.exitCode === 0 && result.signal === null && !result.timedOut && !outputLimitExceeded;
+    receipts.push({
+      command,
+      argv,
+      exitCode: result.exitCode,
+      signal: result.signal,
+      timedOut: result.timedOut,
+      outputLimitExceeded,
+      passed,
+      stdout: stdout.text,
+      stdoutBytes: stdout.bytes,
+      stdoutHash: stdout.hash,
+      stdoutTruncated: stdout.truncated,
+      stderr: stderr.text,
+      stderrBytes: stderr.bytes,
+      stderrHash: stderr.hash,
+      stderrTruncated: stderr.truncated
+    });
+    if (!passed) {
+      break;
+    }
+  }
+  return receipts;
+}
+async function runGitObservationCommand(projectRoot, argv, processRunner4) {
+  const result = await processRunner4(
+    "git",
+    argv,
+    projectRoot,
+    {
+      ...process.env,
+      LC_ALL: "C",
+      LANG: "C",
+      GIT_TERMINAL_PROMPT: "0"
+    },
+    3e4
+  );
+  if (result.exitCode !== 0 || result.signal !== null || result.timedOut) {
+    throw new Error(
+      `Git observation failed for git ${argv.join(" ")}: ${result.stderr || "no stderr"}`
+    );
+  }
+  return result;
+}
+function parseNullSeparatedPaths(value) {
+  return value.split("\0").filter(Boolean);
+}
+function parseGitNameStatusPaths(value) {
+  const fields = value.split("\0").filter(Boolean);
+  const paths = [];
+  for (let index = 0; index < fields.length; ) {
+    const status = fields[index++] ?? "";
+    const firstPath = fields[index++];
+    if (!firstPath || !/^[ACDMRTUXB][0-9]*$/.test(status)) {
+      throw new Error("Git name-status observation returned an invalid NUL-delimited record.");
+    }
+    paths.push(firstPath);
+    if (status.startsWith("R") || status.startsWith("C")) {
+      const secondPath = fields[index++];
+      if (!secondPath) {
+        throw new Error("Git rename/copy observation omitted one path endpoint.");
+      }
+      paths.push(secondPath);
+    }
+  }
+  return paths;
+}
+function isIgnoredExecutionRuntimePath(filePath) {
+  return filePath === ".blueprint/locks" || filePath.startsWith(".blueprint/locks/") || filePath === ".blueprint/executions/execute-phase" || filePath.startsWith(".blueprint/executions/execute-phase/");
+}
+async function observePhaseExecutionGitState(args) {
+  const runner = args.processRunner ?? phaseExecutionProcessRunner;
+  const [headResult, trackedResult, untrackedResult] = await Promise.all([
+    runGitObservationCommand(args.projectRoot, ["rev-parse", "HEAD"], runner),
+    runGitObservationCommand(
+      args.projectRoot,
+      ["diff", "--name-status", "--no-renames", "-z", "HEAD", "--"],
+      runner
+    ),
+    runGitObservationCommand(
+      args.projectRoot,
+      ["ls-files", "--others", "--exclude-standard", "-z", "--"],
+      runner
+    )
+  ]);
+  const head = headResult.stdout.trim();
+  if (!/^[0-9a-f]{40,64}$/.test(head)) {
+    throw new Error("Git observation did not return a canonical full HEAD hash.");
+  }
+  const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
+  const baseline = new Set((args.baselineChangedPaths ?? []).map(normalizeObservedRepoPath));
+  const changedPaths = uniqueSorted2(
+    [...parseGitNameStatusPaths(trackedResult.stdout), ...parseNullSeparatedPaths(untrackedResult.stdout)].filter((filePath) => !isIgnoredExecutionRuntimePath(filePath))
+  );
+  for (const filePath of changedPaths) {
+    normalizeObservedRepoPath(filePath);
+  }
+  return {
+    head,
+    changedPaths,
+    unauthorizedChangedPaths: changedPaths.filter(
+      (filePath) => !baseline.has(filePath) && !isAuthorizedPath(filePath, authorized)
+    )
+  };
+}
+var MAX_MUTATION_BYTES, MAX_VERIFICATION_COMMANDS, MAX_VERIFICATION_COMMAND_BYTES, MAX_RECEIPT_OUTPUT_BYTES, MAX_PROCESS_OUTPUT_BUFFER_BYTES, DEFAULT_VERIFICATION_TIMEOUT_MS, DEFAULT_PINNED_WORKER_TIMEOUT_MS, DEFAULT_PINNED_WORKER_CLOSE_TIMEOUT_MS, MIN_PINNED_WORKER_READY_TIMEOUT_MS, PINNED_MUTATION_WORKER_SOURCE, PinnedMutationWorker, phaseExecutionProcessRunner;
+var init_phase_execution_runtime = __esm({
+  "src/mcp/tools/phase-execution-runtime.ts"() {
+    "use strict";
+    MAX_MUTATION_BYTES = 8 * 1024 * 1024;
+    MAX_VERIFICATION_COMMANDS = 32;
+    MAX_VERIFICATION_COMMAND_BYTES = 8 * 1024;
+    MAX_RECEIPT_OUTPUT_BYTES = 64 * 1024;
+    MAX_PROCESS_OUTPUT_BUFFER_BYTES = 16 * 1024 * 1024;
+    DEFAULT_VERIFICATION_TIMEOUT_MS = 10 * 60 * 1e3;
+    DEFAULT_PINNED_WORKER_TIMEOUT_MS = 3e4;
+    DEFAULT_PINNED_WORKER_CLOSE_TIMEOUT_MS = 5e3;
+    MIN_PINNED_WORKER_READY_TIMEOUT_MS = 1e3;
+    PINNED_MUTATION_WORKER_SOURCE = String.raw`
+import { createHash } from "node:crypto";
+import { promises as fs } from "node:fs";
+import { createInterface } from "node:readline";
+
+const entries = new Map();
+let finalized = false;
+const hash = (value) => createHash("sha256").update(value).digest("hex");
+const safeName = (value) => {
+  if (!value || value === "." || value === ".." || value.includes("/") || value.includes("\\") || value.includes("\0")) {
+    throw new Error("Pinned mutation worker received an unsafe basename.");
+  }
+  return value;
+};
+const readTarget = async (name) => {
+  try {
+    const stats = await fs.lstat(name);
+    if (stats.isSymbolicLink() || !stats.isFile()) throw new Error("Mutation target must be a regular file.");
+    const content = await fs.readFile(name);
+    return { content, hash: hash(content), mode: stats.mode & 0o7777 };
+  } catch (error) {
+    if (error?.code === "ENOENT") return { content: null, hash: null, mode: null };
+    throw error;
+  }
+};
+const rollback = async () => {
+  const failures = [];
+  const cleanupPaths = [];
+  for (const entry of [...entries.values()].reverse()) {
+    try {
+      let quarantined = false;
+      if (entry.committed) {
+        try {
+          await fs.lstat(entry.name);
+          await fs.rename(entry.name, entry.quarantine);
+          quarantined = true;
+        } catch (error) {
+          if (error?.code !== "ENOENT") throw error;
+        }
+      }
+      if (entry.backupCreated) {
+        await fs.rename(entry.backup, entry.name);
+        entry.backupCreated = false;
+      }
+      if (quarantined) {
+        let removeQuarantine = false;
+        try {
+          const stats = await fs.lstat(entry.quarantine);
+          if (stats.isFile() && !stats.isSymbolicLink()) {
+            const content = await fs.readFile(entry.quarantine);
+            const expected = entry.operation === "write" ? hash(entry.content) : null;
+            removeQuarantine = hash(content) === expected;
+          }
+        } catch (error) {
+          if (error?.code !== "ENOENT") throw error;
+        }
+        if (removeQuarantine) await fs.rm(entry.quarantine, { force: true });
+        else cleanupPaths.push(entry.quarantine);
+      }
+      if (entry.staged) {
+        await fs.rm(entry.staged, { force: true });
+        entry.staged = null;
+      }
+      entry.committed = false;
+    } catch (error) {
+      failures.push(entry.name + ": " + (error instanceof Error ? error.message : String(error)));
+      for (const candidate of [entry.backupCreated ? entry.backup : null, entry.staged, entry.quarantine]) {
+        if (candidate) cleanupPaths.push(candidate);
+      }
+    }
+  }
+  return { failures, cleanupPaths: [...new Set(cleanupPaths)] };
+};
+const handle = async (request) => {
+  if (request.action === "prepare") {
+    for (const mutation of request.mutations) {
+      const name = safeName(mutation.name);
+      if (entries.has(name)) throw new Error("Duplicate pinned mutation basename.");
+      const current = await readTarget(name);
+      if (current.hash !== mutation.expectedHash) throw new Error("Mutation preimage is stale for " + name + ".");
+      if (mutation.operation === "delete" && current.content === null) throw new Error("Delete target does not exist: " + name + ".");
+      const staged = mutation.operation === "write" ? mutation.staged : null;
+      if (staged) {
+        safeName(staged);
+        await fs.writeFile(staged, mutation.content, { encoding: "utf8", flag: "wx" });
+        if (current.mode !== null) await fs.chmod(staged, current.mode);
+      }
+      entries.set(name, {
+        ...mutation,
+        name,
+        staged,
+        backup: safeName(mutation.backup),
+        quarantine: safeName(mutation.quarantine),
+        beforeHash: current.hash,
+        beforeMode: current.mode,
+        beforeBytes: current.content?.byteLength ?? 0,
+        backupCreated: false,
+        committed: false
+      });
+    }
+    return { status: "prepared" };
+  }
+  if (request.action === "commit") {
+    try {
+      for (const entry of entries.values()) {
+        const current = await readTarget(entry.name);
+        if (current.hash !== entry.beforeHash) throw new Error("Mutation preimage changed before commit: " + entry.name + ".");
+        if (entry.beforeHash !== null) {
+          await fs.rename(entry.name, entry.backup);
+          entry.backupCreated = true;
+        }
+        if (entry.operation === "write") {
+          await fs.rename(entry.staged, entry.name);
+          entry.staged = null;
+        }
+        entry.committed = true;
+        const observed = await readTarget(entry.name);
+        const expected = entry.operation === "write" ? hash(entry.content) : null;
+        if (observed.hash !== expected) throw new Error("Mutation postimage mismatch: " + entry.name + ".");
+      }
+      if (request.crashAfterCommit) process.kill(process.pid, "SIGKILL");
+      if (request.stopAfterCommit) process.kill(process.pid, "SIGSTOP");
+      return { status: "committed" };
+    } catch (error) {
+      const rollbackResult = await rollback();
+      return {
+        status: rollbackResult.failures.length ? "rollback-failed" : "rejected",
+        failure: error instanceof Error ? error.message : String(error),
+        rollbackFailures: rollbackResult.failures,
+        cleanupPaths: rollbackResult.cleanupPaths
+      };
+    }
+  }
+  if (request.action === "rollback") {
+    const rollbackResult = await rollback();
+    return {
+      status: rollbackResult.failures.length ? "rollback-failed" : "rolled-back",
+      rollbackFailures: rollbackResult.failures,
+      cleanupPaths: rollbackResult.cleanupPaths
+    };
+  }
+  if (request.action === "observe") {
+    const receipts = [];
+    for (const entry of entries.values()) {
+      const observed = await readTarget(entry.name);
+      receipts.push({
+        path: entry.path,
+        operation: entry.operation,
+        beforeHash: entry.beforeHash,
+        beforeMode: entry.beforeMode,
+        afterHash: observed.hash,
+        afterMode: observed.mode,
+        bytesWritten: observed.content?.byteLength ?? 0
+      });
+    }
+    return { status: "observed", receipts };
+  }
+  if (request.action === "seal") {
+    finalized = true;
+    return { status: "sealed" };
+  }
+  if (request.action === "cleanup") {
+    if (!finalized) throw new Error("Pinned mutation cleanup requires a sealed commit.");
+    if (request.crashDuringCleanup) process.kill(process.pid, "SIGKILL");
+    if (request.stopDuringCleanup) process.kill(process.pid, "SIGSTOP");
+    const cleanupPaths = [];
+    for (const entry of entries.values()) {
+      for (const candidate of [entry.backupCreated ? entry.backup : null, entry.staged]) {
+        if (!candidate) continue;
+        try {
+          await fs.rm(candidate, { force: true });
+        } catch {
+          cleanupPaths.push(candidate);
+        }
+      }
+    }
+    return { status: cleanupPaths.length ? "cleanup-required" : "clean", cleanupPaths };
+  }
+  throw new Error("Unknown pinned mutation worker action.");
+};
+
+const parentStats = await fs.stat(".");
+if (String(parentStats.dev) !== process.env.BLUEPRINT_PARENT_DEV || String(parentStats.ino) !== process.env.BLUEPRINT_PARENT_INO) {
+  throw new Error("Pinned mutation parent identity changed before worker startup.");
+}
+process.stdout.write(JSON.stringify({ id: 0, ok: true, result: { status: "ready" } }) + "\n");
+const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
+for await (const line of lines) {
+  let request;
+  try {
+    request = JSON.parse(line);
+    const result = await handle(request);
+    process.stdout.write(JSON.stringify({ id: request.id, ok: true, result }) + "\n");
+  } catch (error) {
+    process.stdout.write(JSON.stringify({
+      id: request?.id ?? -1,
+      ok: false,
+      error: error instanceof Error ? error.message : String(error)
+    }) + "\n");
+  }
+}
+if (!finalized) await rollback();
+`;
+    PinnedMutationWorker = class {
+      parentPath;
+      parentRelativePath;
+      expectedDev;
+      expectedIno;
+      child;
+      pending = /* @__PURE__ */ new Map();
+      nextId = 1;
+      stderr = "";
+      readyPromise;
+      readyTimeoutMs;
+      requestTimeoutMs;
+      closeTimeoutMs;
+      withholdCloseExitSignal;
+      constructor(args) {
+        this.parentPath = args.parentPath;
+        this.parentRelativePath = args.parentRelativePath;
+        this.expectedDev = args.dev;
+        this.expectedIno = args.ino;
+        this.requestTimeoutMs = args.requestTimeoutMs;
+        this.readyTimeoutMs = args.readyTimeoutMs;
+        this.closeTimeoutMs = args.closeTimeoutMs;
+        this.withholdCloseExitSignal = args.withholdCloseExitSignal;
+        this.child = spawn(
+          process.execPath,
+          ["--input-type=module", "-e", PINNED_MUTATION_WORKER_SOURCE],
+          {
+            cwd: args.parentPath,
+            env: {
+              ...process.env,
+              BLUEPRINT_PARENT_DEV: args.dev,
+              BLUEPRINT_PARENT_INO: args.ino
+            },
+            stdio: ["pipe", "pipe", "pipe"],
+            windowsHide: true
+          }
+        );
+        this.readyPromise = new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            this.pending.delete(0);
+            this.child.kill("SIGKILL");
+            reject(new Error(`Pinned mutation worker readiness timed out after ${this.readyTimeoutMs}ms.`));
+          }, this.readyTimeoutMs);
+          timer.unref();
+          this.pending.set(0, {
+            resolve: () => {
+              clearTimeout(timer);
+              resolve();
+            },
+            reject: (error2) => {
+              clearTimeout(timer);
+              reject(error2);
+            }
+          });
+        });
+        const lines2 = createInterface({ input: this.child.stdout, crlfDelay: Infinity });
+        lines2.on("line", (line) => {
+          try {
+            const message = JSON.parse(line);
+            const waiter = this.pending.get(message.id);
+            if (!waiter) return;
+            this.pending.delete(message.id);
+            if (message.ok && message.result) waiter.resolve(message.result);
+            else waiter.reject(new Error(message.error ?? "Pinned mutation worker failed."));
+          } catch (error2) {
+            this.rejectAll(error2 instanceof Error ? error2 : new Error(String(error2)));
+          }
+        });
+        this.child.stderr.on("data", (chunk) => {
+          if (this.stderr.length < 16384) this.stderr += String(chunk).slice(0, 16384);
+        });
+        this.child.on("error", (error2) => this.rejectAll(error2));
+        this.child.on("exit", (code, signal) => {
+          if (this.pending.size > 0) {
+            this.rejectAll(new Error(
+              `Pinned mutation worker exited unexpectedly (${code ?? signal ?? "unknown"}): ${this.stderr}`
+            ));
+          }
+        });
+      }
+      rejectAll(error2) {
+        for (const waiter of this.pending.values()) waiter.reject(error2);
+        this.pending.clear();
+      }
+      async ready() {
+        await this.readyPromise;
+      }
+      request(payload) {
+        const id = this.nextId++;
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            this.pending.delete(id);
+            this.child.kill("SIGKILL");
+            reject(new Error(
+              `Pinned mutation worker request ${String(payload.action ?? "unknown")} timed out after ${this.requestTimeoutMs}ms.`
+            ));
+          }, this.requestTimeoutMs);
+          timer.unref();
+          this.pending.set(id, {
+            resolve: (value) => {
+              clearTimeout(timer);
+              resolve(value);
+            },
+            reject: (error2) => {
+              clearTimeout(timer);
+              reject(error2);
+            }
+          });
+          this.child.stdin.write(`${JSON.stringify({ id, ...payload })}
+`, (error2) => {
+            if (error2) {
+              clearTimeout(timer);
+              this.pending.delete(id);
+              reject(error2);
+            }
+          });
+        });
+      }
+      async close() {
+        this.child.stdin.end();
+        if (this.child.exitCode === null && this.child.signalCode === null) {
+          await new Promise((resolve) => {
+            let settled = false;
+            const finish = () => {
+              if (settled) return;
+              settled = true;
+              resolve();
+            };
+            const timer = setTimeout(() => {
+              this.child.kill("SIGKILL");
+              this.child.stdin?.destroy();
+              this.child.stdout?.destroy();
+              this.child.stderr?.destroy();
+              this.child.unref();
+              finish();
+            }, this.closeTimeoutMs);
+            timer.unref();
+            this.child.once("exit", () => {
+              if (!this.withholdCloseExitSignal) {
+                clearTimeout(timer);
+                finish();
+              }
+            });
+          });
+        }
+      }
+    };
+    phaseExecutionProcessRunner = async (command, argv, cwd, env2, timeoutMs) => new Promise((resolve) => {
+      const child = spawn(command, [...argv], {
+        cwd,
+        env: env2,
+        detached: process.platform !== "win32",
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true
+      });
+      const stdout = [];
+      const stderr = [];
+      let stdoutBytes = 0;
+      let stderrBytes = 0;
+      let timedOut = false;
+      let outputLimitExceeded = false;
+      let spawnError = null;
+      let killTimer = null;
+      let groupPoll = null;
+      let escalationComplete = false;
+      let closeResult = null;
+      let resolved = false;
+      const killGroup = (signal) => {
+        if (child.pid && process.platform !== "win32") {
+          try {
+            process.kill(-child.pid, signal);
+            return;
+          } catch {
+          }
+        }
+        child.kill(signal);
+      };
+      const processGroupAlive = () => {
+        if (!child.pid || process.platform === "win32") return false;
+        try {
+          process.kill(-child.pid, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      const finish = () => {
+        if (resolved || closeResult === null || (timedOut || outputLimitExceeded) && !escalationComplete) {
+          return;
+        }
+        resolved = true;
+        clearTimeout(timeout);
+        if (groupPoll) clearInterval(groupPoll);
+        resolve({
+          exitCode: spawnError ? null : closeResult.exitCode,
+          stdout: Buffer.concat(stdout).toString("utf8"),
+          stderr: `${Buffer.concat(stderr).toString("utf8")}${spawnError ? spawnError.message : ""}`,
+          signal: closeResult.signal,
+          timedOut,
+          outputLimitExceeded
+        });
+      };
+      const requestTermination = () => {
+        if (killTimer || escalationComplete) return;
+        killGroup("SIGTERM");
+        killTimer = setTimeout(() => {
+          killGroup("SIGKILL");
+          killTimer = null;
+          setTimeout(() => {
+            escalationComplete = true;
+            finish();
+          }, 25).unref?.();
+        }, 250);
+        killTimer.unref?.();
+      };
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        requestTermination();
+      }, timeoutMs);
+      timeout.unref?.();
+      const appendOutput = (target, chunk, channel) => {
+        const buffer = Buffer.from(chunk);
+        const currentBytes = channel === "stdout" ? stdoutBytes : stderrBytes;
+        const remaining = Math.max(0, MAX_PROCESS_OUTPUT_BUFFER_BYTES - currentBytes);
+        if (remaining > 0) target.push(buffer.subarray(0, remaining));
+        if (channel === "stdout") stdoutBytes += Math.min(buffer.byteLength, remaining);
+        else stderrBytes += Math.min(buffer.byteLength, remaining);
+        if (buffer.byteLength > remaining) {
+          outputLimitExceeded = true;
+          requestTermination();
+        }
+      };
+      child.stdout.on("data", (chunk) => appendOutput(stdout, chunk, "stdout"));
+      child.stderr.on("data", (chunk) => appendOutput(stderr, chunk, "stderr"));
+      child.on("error", (error2) => {
+        spawnError = error2;
+      });
+      child.on("close", (exitCode, signal) => {
+        closeResult = { exitCode, signal };
+        if (!timedOut && !outputLimitExceeded && processGroupAlive()) {
+          groupPoll = setInterval(() => {
+            if (!processGroupAlive()) finish();
+          }, 25);
+          groupPoll.unref?.();
+          return;
+        }
+        finish();
+      });
+    });
+  }
+});
+
+// src/mcp/tools/phase-execution-tools.ts
+import { createHash as createHash6 } from "node:crypto";
+import { promises as fs17 } from "node:fs";
+import path17 from "node:path";
+function sha2564(value) {
+  return createHash6("sha256").update(value).digest("hex");
+}
+function canonicalize2(value) {
+  if (Array.isArray(value)) return value.map(canonicalize2);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalize2(entry)])
+    );
+  }
+  return value;
+}
+function canonicalJson2(value) {
+  return JSON.stringify(canonicalize2(value));
+}
+async function readRepoHash(projectRoot, relativePath) {
+  const absolutePath = path17.resolve(projectRoot, ...relativePath.split("/"));
+  if (!absolutePath.startsWith(`${path17.resolve(projectRoot)}${path17.sep}`)) {
+    throw new Error(`Execution authority path escapes the repository: ${relativePath}.`);
+  }
+  try {
+    const stats = await fs17.lstat(absolutePath);
+    if (stats.isSymbolicLink() || !stats.isFile()) {
+      throw new Error(`Execution authority path is not a regular file: ${relativePath}.`);
+    }
+    const content = await fs17.readFile(absolutePath);
+    return { hash: sha2564(content), bytes: content.byteLength, mode: stats.mode & 4095 };
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return { hash: null, bytes: 0, mode: null };
+    }
+    throw error2;
+  }
+}
+function interruptedVerificationReceipt(command) {
+  const stderr = "Verification was interrupted before a complete process receipt was persisted.\n";
+  return {
+    command,
+    argv: ["-c", command],
+    exitCode: null,
+    signal: null,
+    timedOut: true,
+    outputLimitExceeded: false,
+    passed: false,
+    stdout: "",
+    stdoutBytes: 0,
+    stdoutHash: sha2564(""),
+    stdoutTruncated: false,
+    stderr,
+    stderrBytes: Buffer.byteLength(stderr),
+    stderrHash: sha2564(stderr),
+    stderrTruncated: false
+  };
+}
+function latestReceiptByPath(session) {
+  const receipts = /* @__PURE__ */ new Map();
+  for (const plan of Object.values(session.execution.plans)) {
+    for (const receipt of plan.mutationReceipts) receipts.set(receipt.path, receipt);
+  }
+  return receipts;
+}
+function currentPlan(session) {
+  const packetPlan = session.packet.selectedPlans[session.execution.currentPlanIndex];
+  if (!packetPlan) throw new Error("Execute-phase session has no current selected plan.");
+  const progress = session.execution.plans[packetPlan.planId];
+  if (!progress) throw new Error(`Execute-phase session is missing progress for plan ${packetPlan.planId}.`);
+  return { packetPlan, progress };
+}
+async function assertSessionAuthority(projectRoot, session) {
+  const receipts = latestReceiptByPath(session);
+  const mutationStatuses = /* @__PURE__ */ new Map();
+  const persistedSummaryPaths = /* @__PURE__ */ new Set();
+  let stateWasPersisted = false;
+  let pendingStateUpdate = null;
+  for (const [planId2, progress] of Object.entries(session.execution.plans)) {
+    for (const receipt of progress.mutationGitStatusReceipts) {
+      mutationStatuses.set(receipt.path, receipt.status);
+    }
+    if (progress.persistenceStage !== "none") {
+      persistedSummaryPaths.add(
+        `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId2}-SUMMARY.md`
+      );
+    }
+    if (progress.persistenceStage === "done" || progress.pendingStateUpdate !== null) {
+      stateWasPersisted = true;
+    }
+    if (progress.pendingStateUpdate) {
+      if (pendingStateUpdate) throw new Error("Execute-phase session contains multiple pending STATE effects.");
+      pendingStateUpdate = progress.pendingStateUpdate;
+    }
+  }
+  const baselinePaths = session.packet.repository.workingTree.map((entry) => entry.path);
+  const observation = await observePhaseExecutionGitState({
+    projectRoot,
+    authorizedFiles: [...receipts.keys()],
+    baselineChangedPaths: baselinePaths
+  });
+  if (observation.head !== session.packet.repository.head) {
+    throw new Error(
+      `Execute-phase session HEAD drifted: expected ${session.packet.repository.head}, observed ${observation.head}.`
+    );
+  }
+  const exactRepository = await capturePhaseExecutionRepositorySnapshot(projectRoot);
+  const currentStatusByPath = new Map(
+    exactRepository.workingTree.map((entry) => [entry.path, entry.status])
+  );
+  const pendingMutationPaths = new Set(
+    Object.values(session.execution.plans).flatMap(
+      (progress) => progress.pendingMutations.map((mutation) => mutation.path)
+    )
+  );
+  for (const relativePath of receipts.keys()) {
+    if (pendingMutationPaths.has(relativePath)) continue;
+    if (currentStatusByPath.get(relativePath) !== mutationStatuses.get(relativePath)) {
+      throw new Error(`Execute-phase mutation Git status drifted: ${relativePath}.`);
+    }
+  }
+  for (const baseline of session.packet.repository.workingTree) {
+    if (receipts.has(baseline.path) || pendingMutationPaths.has(baseline.path)) continue;
+    if (currentStatusByPath.get(baseline.path) !== baseline.status) {
+      throw new Error(`Execute-phase baseline Git status drifted: ${baseline.path}.`);
+    }
+  }
+  const unauthorizedChangedPaths = observation.unauthorizedChangedPaths.filter(
+    (relativePath) => !persistedSummaryPaths.has(relativePath) && !(stateWasPersisted && relativePath === ".blueprint/STATE.md")
+  );
+  if (unauthorizedChangedPaths.length > 0) {
+    throw new Error(
+      `Execute-phase observed changes without MCP receipts: ${unauthorizedChangedPaths.join(", ")}.`
+    );
+  }
+  const config2 = await blueprintConfigGet({
+    cwd: projectRoot,
+    scope: "effective",
+    defaultsPath: session.prepareArgs.defaultsPath ?? void 0
+  });
+  if (canonicalJson2(config2) !== canonicalJson2(session.packet.effectiveConfig)) {
+    throw new Error("Execute-phase effective config drifted after claim.");
+  }
+  let stateMatchesPendingPostimage = false;
+  if (pendingStateUpdate) {
+    const observed = await readRepoHash(projectRoot, ".blueprint/STATE.md");
+    const matches = (digest) => observed.hash === digest.sha256 && observed.bytes === digest.sizeBytes && observed.mode === digest.mode;
+    stateMatchesPendingPostimage = matches(pendingStateUpdate.postimage);
+    if (!matches(pendingStateUpdate.preimage) && !stateMatchesPendingPostimage) {
+      throw new Error(
+        "Execute-phase pending STATE effect matches neither its trusted preimage nor prepared postimage."
+      );
+    }
+  }
+  for (const progress of Object.values(session.execution.plans)) {
+    if (progress.summaryReceipt) {
+      const observed = await readRepoHash(projectRoot, progress.summaryReceipt.path);
+      if (observed.hash !== progress.summaryReceipt.sha256 || observed.bytes !== progress.summaryReceipt.sizeBytes || observed.mode !== progress.summaryReceipt.mode) {
+        throw new Error(`Execute-phase persisted summary receipt drifted: ${progress.summaryReceipt.path}.`);
+      }
+    } else if (progress.persistenceStage !== "none" && progress.persistenceStage !== "summary-write") {
+      throw new Error(`Execute-phase plan ${progress.planId} is missing its persisted summary receipt.`);
+    }
+    if (progress.stateReceipt && !stateMatchesPendingPostimage) {
+      const observed = await readRepoHash(projectRoot, progress.stateReceipt.path);
+      if (observed.hash !== progress.stateReceipt.sha256 || observed.bytes !== progress.stateReceipt.sizeBytes || observed.mode !== progress.stateReceipt.mode) {
+        throw new Error(`Execute-phase persisted state receipt drifted: ${progress.stateReceipt.path}.`);
+      }
+    } else if (progress.persistenceStage === "done" && !stateMatchesPendingPostimage) {
+      throw new Error(`Execute-phase plan ${progress.planId} is missing its persisted STATE receipt.`);
+    }
+  }
+  for (const baseline of session.packet.repository.workingTree) {
+    if (receipts.has(baseline.path)) continue;
+    const observed = await readRepoHash(projectRoot, baseline.path);
+    if (observed.hash !== baseline.sha256 || observed.bytes !== baseline.sizeBytes || observed.mode !== baseline.mode) {
+      throw new Error(`Execute-phase baseline working-tree authority drifted: ${baseline.path}.`);
+    }
+  }
+  for (const artifact of session.packet.artifacts) {
+    if (persistedSummaryPaths.has(artifact.path) || stateWasPersisted && artifact.path === ".blueprint/STATE.md") continue;
+    const observed = await readRepoHash(projectRoot, artifact.path);
+    if (observed.hash !== artifact.sha256 || observed.bytes !== artifact.sizeBytes || observed.mode !== artifact.mode) {
+      throw new Error(`Execute-phase authority artifact drifted after claim: ${artifact.path}.`);
+    }
+  }
+  for (const plan of session.packet.selectedPlans) {
+    for (const artifact of [...plan.ownedFilePreimages, ...plan.readFirstArtifacts]) {
+      const receipt = receipts.get(artifact.path);
+      const observed = await readRepoHash(projectRoot, artifact.path);
+      const expectedHash = receipt ? receipt.afterHash : artifact.sha256;
+      const expectedMode = receipt ? receipt.afterMode : artifact.mode;
+      if (observed.hash !== expectedHash || observed.mode !== expectedMode) {
+        throw new Error(`Execute-phase repo preimage drifted outside MCP ownership: ${artifact.path}.`);
+      }
+    }
+  }
+}
+async function recoverInterruptedMutation(projectRoot, session, progress) {
+  if (progress.status !== "applying" && progress.status !== "repairing") return "none";
+  const observations = await Promise.all(progress.pendingMutations.map(async (mutation) => ({
+    mutation,
+    observed: await readRepoHash(projectRoot, mutation.path)
+  })));
+  const allBefore = observations.every(
+    ({ mutation, observed }) => observed.hash === mutation.expectedHash && observed.mode === mutation.expectedMode
+  );
+  const allAfter = observations.every(
+    ({ mutation, observed }) => observed.hash === (mutation.operation === "write" ? sha2564(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
+  );
+  if (allBefore) {
+    progress.status = progress.status === "repairing" ? "awaiting-repair" : "pending";
+    progress.pendingMutations = [];
+    return "rolled-back";
+  }
+  if (allAfter) {
+    const receipts = observations.map(({ mutation, observed }) => ({
+      path: mutation.path,
+      operation: mutation.operation,
+      beforeHash: mutation.expectedHash,
+      beforeMode: mutation.expectedMode,
+      afterHash: observed.hash,
+      afterMode: mutation.expectedAfterMode,
+      bytesWritten: observed.bytes
+    }));
+    progress.mutationReceipts.push(...receipts);
+    progress.mutationGitStatusReceipts.push(
+      ...await captureMutationGitStatusReceipts(projectRoot, receipts)
+    );
+    progress.applyAttempts += 1;
+    progress.pendingMutations = [];
+    progress.status = "mutated";
+    return "committed";
+  }
+  progress.status = "blocked";
+  progress.failure = "Interrupted mutation left a mixed or unknown repo postimage.";
+  return "ambiguous";
+}
+async function captureMutationGitStatusReceipts(projectRoot, receipts) {
+  const repository = await capturePhaseExecutionRepositorySnapshot(projectRoot);
+  const statuses = new Map(repository.workingTree.map((entry) => [entry.path, entry.status]));
+  return receipts.map((receipt) => ({
+    path: receipt.path,
+    status: statuses.get(receipt.path) ?? null
+  }));
+}
+function expectedPreimages(session, planId2) {
+  const plan = session.packet.selectedPlans.find((candidate) => candidate.planId === planId2);
+  if (!plan) throw new Error(`Plan ${planId2} is not selected in this execute-phase session.`);
+  const expected = new Map(plan.ownedFilePreimages.map((entry) => [entry.path, entry.sha256]));
+  for (const packetPlan of session.packet.selectedPlans) {
+    for (const receipt of session.execution.plans[packetPlan.planId]?.mutationReceipts ?? []) {
+      if (expected.has(receipt.path)) expected.set(receipt.path, receipt.afterHash);
+    }
+    if (packetPlan.planId === planId2) break;
+  }
+  return expected;
+}
+async function blueprintPhaseExecutionApply(args) {
+  const updated = await mutatePhaseExecutionSession({
+    cwd: args.cwd,
+    sessionId: args.sessionId,
+    mutate: async (session, context) => {
+      const { packetPlan, progress } = currentPlan(session);
+      if (packetPlan.planId !== args.planId) {
+        throw new Error(
+          `Execute-phase plan order is deterministic; current plan is ${packetPlan.planId}, not ${args.planId}.`
+        );
+      }
+      const recovery = await recoverInterruptedMutation(context.projectRoot, session, progress);
+      if (recovery === "ambiguous") {
+        return {
+          session,
+          result: {
+            status: "blocked",
+            sessionId: session.sessionId,
+            planId: packetPlan.planId,
+            attempt: progress.applyAttempts,
+            receipts: progress.mutationReceipts,
+            failure: progress.failure
+          }
+        };
+      }
+      if (recovery === "committed") {
+        await assertSessionAuthority(context.projectRoot, session);
+        return {
+          session,
+          result: {
+            status: "recovered",
+            sessionId: session.sessionId,
+            planId: packetPlan.planId,
+            attempt: progress.applyAttempts,
+            receipts: progress.mutationReceipts,
+            failure: null
+          }
+        };
+      }
+      if (progress.status !== "pending" && progress.status !== "awaiting-repair") {
+        throw new Error(`Plan ${packetPlan.planId} cannot accept mutations from status ${progress.status}.`);
+      }
+      if (progress.status === "awaiting-repair" && progress.applyAttempts !== 1) {
+        throw new Error("Execute-phase repair is allowed exactly once after the first failed verification.");
+      }
+      if (progress.status === "pending" && progress.applyAttempts !== 0) {
+        throw new Error("Execute-phase initial mutation attempt has already been consumed.");
+      }
+      const expected = expectedPreimages(session, packetPlan.planId);
+      for (const mutation of args.mutations) {
+        if (!expected.has(mutation.path)) {
+          throw new Error(`Mutation path is outside plan ${packetPlan.planId} ownership: ${mutation.path}.`);
+        }
+        if (expected.get(mutation.path) !== mutation.expectedHash) {
+          throw new Error(`Mutation preimage is not the claimed session preimage: ${mutation.path}.`);
+        }
+      }
+      await assertSessionAuthority(context.projectRoot, session);
+      progress.status = progress.status === "awaiting-repair" ? "repairing" : "applying";
+      progress.pendingMutations = await Promise.all(args.mutations.map(async (mutation) => {
+        const observed = await readRepoHash(context.projectRoot, mutation.path);
+        const expectedAfterMode = mutation.operation === "delete" ? null : observed.mode ?? 438 & ~process.umask();
+        return {
+          ...structuredClone(mutation),
+          expectedMode: observed.mode,
+          expectedAfterMode
+        };
+      }));
+      progress.failure = null;
+      session.status = "executing";
+      await context.checkpoint(session);
+      let outcome;
+      try {
+        outcome = await applyPhaseExecutionMutations({
+          projectRoot: context.projectRoot,
+          authorizedFiles: packetPlan.allowedFiles,
+          mutations: args.mutations
+        });
+      } catch (error2) {
+        progress.status = progress.applyAttempts === 0 ? "pending" : "awaiting-repair";
+        progress.pendingMutations = [];
+        progress.failure = error2 instanceof Error ? error2.message : String(error2);
+        return {
+          session,
+          result: {
+            status: "blocked",
+            sessionId: session.sessionId,
+            planId: packetPlan.planId,
+            attempt: progress.applyAttempts,
+            receipts: progress.mutationReceipts,
+            failure: progress.failure
+          }
+        };
+      }
+      progress.pendingMutations = [];
+      progress.mutationReceipts.push(...outcome.receipts);
+      progress.mutationGitStatusReceipts.push(
+        ...await captureMutationGitStatusReceipts(context.projectRoot, outcome.receipts)
+      );
+      if (outcome.status !== "committed") {
+        progress.status = "blocked";
+        progress.failure = outcome.failure ?? outcome.status;
+        return {
+          session,
+          result: {
+            status: "blocked",
+            sessionId: session.sessionId,
+            planId: packetPlan.planId,
+            attempt: progress.applyAttempts,
+            receipts: progress.mutationReceipts,
+            failure: progress.failure
+          }
+        };
+      }
+      progress.applyAttempts += 1;
+      progress.status = "mutated";
+      await assertSessionAuthority(context.projectRoot, session);
+      return {
+        session,
+        result: {
+          status: "mutated",
+          sessionId: session.sessionId,
+          planId: packetPlan.planId,
+          attempt: progress.applyAttempts,
+          receipts: outcome.receipts,
+          failure: null
+        }
+      };
+    }
+  });
+  return updated.result;
+}
+async function blueprintPhaseExecutionVerify(args, dependencies2 = {}) {
+  const updated = await mutatePhaseExecutionSession({
+    cwd: args.cwd,
+    sessionId: args.sessionId,
+    mutate: async (session, context) => {
+      const { packetPlan, progress } = currentPlan(session);
+      if (packetPlan.planId !== args.planId) {
+        throw new Error(`Execute-phase current plan is ${packetPlan.planId}, not ${args.planId}.`);
+      }
+      const recovery = await recoverInterruptedMutation(context.projectRoot, session, progress);
+      if (recovery === "ambiguous") {
+        return {
+          session,
+          result: {
+            status: "blocked",
+            sessionId: session.sessionId,
+            planId: packetPlan.planId,
+            attempt: progress.verificationAttempts,
+            commands: packetPlan.verificationCommands,
+            receipts: [],
+            failure: progress.failure
+          }
+        };
+      }
+      if (progress.status === "verifying") {
+        await assertSessionAuthority(context.projectRoot, session);
+        if (progress.verificationReceipts.length < progress.verificationAttempts) {
+          progress.verificationReceipts.push([
+            interruptedVerificationReceipt(packetPlan.verificationCommands[0])
+          ]);
+        }
+        progress.failure = `Verification attempt ${progress.verificationAttempts} was interrupted before a complete receipt was persisted.`;
+        if (progress.verificationAttempts >= 2) {
+          progress.status = "blocked";
+          return {
+            session,
+            result: {
+              status: "blocked",
+              sessionId: session.sessionId,
+              planId: packetPlan.planId,
+              attempt: progress.verificationAttempts,
+              commands: packetPlan.verificationCommands,
+              receipts: [],
+              failure: progress.failure
+            }
+          };
+        }
+        progress.status = "awaiting-repair";
+        return {
+          session,
+          result: {
+            status: "awaiting-repair",
+            sessionId: session.sessionId,
+            planId: packetPlan.planId,
+            attempt: progress.verificationAttempts,
+            commands: packetPlan.verificationCommands,
+            receipts: [],
+            failure: progress.failure
+          }
+        };
+      }
+      if (progress.verificationAttempts >= 2) {
+        throw new Error("Execute-phase verification and one repair attempt are already exhausted.");
+      }
+      if (progress.status !== "mutated") {
+        throw new Error(`Plan ${packetPlan.planId} must have an MCP mutation receipt before verification.`);
+      }
+      if (packetPlan.verificationCommands.length === 0) {
+        throw new Error(`Plan ${packetPlan.planId} has no bound verification commands.`);
+      }
+      await assertSessionAuthority(context.projectRoot, session);
+      progress.status = "verifying";
+      progress.verificationAttempts += 1;
+      progress.failure = null;
+      await context.checkpoint(session);
+      const receipts = await runPhaseExecutionVerification({
+        projectRoot: context.projectRoot,
+        commands: packetPlan.verificationCommands,
+        processRunner: dependencies2.processRunner,
+        timeoutMs: dependencies2.timeoutMs
+      });
+      progress.verificationReceipts.push(receipts);
+      const passed = receipts.length === packetPlan.verificationCommands.length && receipts.every((receipt) => receipt.passed);
+      await assertSessionAuthority(context.projectRoot, session);
+      if (passed) {
+        progress.status = "verified";
+        progress.failure = null;
+        return {
+          session,
+          result: {
+            status: "verified",
+            sessionId: session.sessionId,
+            planId: packetPlan.planId,
+            attempt: progress.verificationAttempts,
+            commands: packetPlan.verificationCommands,
+            receipts,
+            failure: null
+          }
+        };
+      }
+      const failure2 = receipts.find((receipt) => !receipt.passed);
+      progress.failure = failure2 ? `Verification failed for ${failure2.command} (exit ${failure2.exitCode ?? "none"}${failure2.timedOut ? ", timed out" : ""}).` : "Verification did not produce receipts for every bound command.";
+      if (progress.verificationAttempts === 1) {
+        progress.status = "awaiting-repair";
+        return {
+          session,
+          result: {
+            status: "awaiting-repair",
+            sessionId: session.sessionId,
+            planId: packetPlan.planId,
+            attempt: progress.verificationAttempts,
+            commands: packetPlan.verificationCommands,
+            receipts,
+            failure: progress.failure
+          }
+        };
+      }
+      progress.status = "blocked";
+      return {
+        session,
+        result: {
+          status: "blocked",
+          sessionId: session.sessionId,
+          planId: packetPlan.planId,
+          attempt: progress.verificationAttempts,
+          commands: packetPlan.verificationCommands,
+          receipts,
+          failure: progress.failure
+        }
+      };
+    }
+  });
+  return updated.result;
+}
+function hasReceiptDerivedCompletion(packetPlan, progress) {
+  const latest = progress.verificationReceipts.at(-1);
+  return progress.applyAttempts > 0 && progress.mutationReceipts.length > 0 && progress.verificationAttempts === progress.verificationReceipts.length && hasPassingBoundPhaseExecutionVerification(packetPlan.verificationCommands, latest);
+}
+function summaryModelForPlan(session, packetPlan, progress) {
+  const completed = hasReceiptDerivedCompletion(packetPlan, progress);
+  const phase = session.packet.selection.phaseNumber ?? String(session.prepareArgs.phase ?? "");
+  const remainingPending = session.packet.selection.pendingPlanIds.filter(
+    (planId2) => planId2 !== packetPlan.planId && session.execution.plans[planId2]?.status !== "persisted"
+  );
+  const nextSafeAction = completed ? remainingPending.length > 0 ? `/blu-execute-phase ${phase}` : `/blu-validate-phase ${phase}` : "/blu-progress";
+  const latestVerification = progress.verificationReceipts.at(-1) ?? [];
+  const existingByPlan = new Map(
+    session.packet.existingSummaries.map((summary) => [summary.planId, summary])
+  );
+  const changes = progress.mutationReceipts.map(
+    (receipt) => `${receipt.operation === "delete" ? "Deleted" : "Updated"} ${receipt.path} through the Blueprint MCP execution boundary (${receipt.beforeHash ?? "missing"} -> ${receipt.afterHash ?? "missing"}).`
+  );
+  const failure2 = progress.failure ?? "Execution stopped before the selected plan reached passing verification.";
+  return {
+    status: completed ? "COMPLETED" : "BLOCKED",
+    readiness: completed ? "ready-for-validation" : "blocked",
+    completionState: completed ? "complete" : "blocked",
+    outcome: completed ? [`Plan ${packetPlan.planId} completed with MCP-owned mutation and verification receipts.`] : [`Plan ${packetPlan.planId} stopped with durable execution evidence: ${failure2}`],
+    changesMade: changes.length > 0 ? changes : [`No repository mutation was accepted for plan ${packetPlan.planId}.`],
+    targetedVerification: packetPlan.verificationCommands.map((command) => {
+      const receipt = latestVerification.find((candidate) => candidate.command === command);
+      return {
+        check: `${command} exits 0`,
+        command,
+        result: completed && receipt?.passed ? "pass" : "blocked",
+        evidence: receipt ? `Exit ${receipt.exitCode ?? "none"}; stdout sha256 ${receipt.stdoutHash}; stderr sha256 ${receipt.stderrHash}.` : "No successful verification receipt was persisted.",
+        notes: receipt?.timedOut ? "The bound command timed out and its process group was terminated." : receipt?.passed ? "The exact packet-bound command passed." : failure2
+      };
+    }),
+    dependencyPlans: packetPlan.dependsOn.map((planId2) => {
+      const summary = existingByPlan.get(planId2);
+      return {
+        planId: planId2,
+        path: summary?.path ?? `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId2}-SUMMARY.md`,
+        status: "satisfied",
+        evidence: summary?.path ? `Dependency completion was bound from ${summary.path}.` : `Dependency plan ${planId2} was satisfied by the claimed plan topology.`
+      };
+    }),
+    manualOrDeferredWork: completed ? [{ item: "none", reason: "none", followUp: "none", status: "NONE" }] : [{
+      item: `Resolve execute-phase blocker for plan ${packetPlan.planId}`,
+      reason: failure2,
+      followUp: "/blu-progress",
+      status: "MANUAL"
+    }],
+    gapRoutes: completed ? [{ gap: "none", evidence: "none", repair: "none", status: "NONE" }] : [{
+      gap: `Plan ${packetPlan.planId} did not reach passing verification`,
+      evidence: failure2,
+      repair: "Inspect the persisted receipts and resolve the blocker before a new claimed execution.",
+      status: "BLOCKED"
+    }],
+    followUps: completed ? ["none"] : ["Resolve the persisted execution blocker."],
+    evidence: [
+      {
+        kind: "artifact",
+        source: packetPlan.path,
+        summary: `Claimed execution authority for plan ${packetPlan.planId}.`
+      },
+      ...progress.mutationReceipts.map((receipt) => ({
+        kind: "repo-path",
+        source: receipt.path,
+        summary: `MCP mutation receipt ${receipt.beforeHash ?? "missing"} -> ${receipt.afterHash ?? "missing"}.`
+      })),
+      ...latestVerification.map((receipt) => ({
+        kind: "command",
+        source: receipt.command,
+        summary: `Bound verification ${receipt.passed ? "passed" : "failed"} with exit ${receipt.exitCode ?? "none"}.`
+      }))
+    ],
+    nextSafeAction
+  };
+}
+async function blueprintPhaseExecutionFinalize(args, dependencyOverrides = {}) {
+  const deps = {
+    summaryWrite: blueprintPhaseSummaryWrite,
+    summaryIndex: blueprintPhaseSummaryIndex,
+    artifactValidate: blueprintArtifactValidate,
+    statePrepare: prepareBlueprintStateUpdate,
+    stateWrite: writePreparedBlueprintStateUpdate,
+    ...dependencyOverrides
+  };
+  const updated = await mutatePhaseExecutionSession({
+    cwd: args.cwd,
+    sessionId: args.sessionId,
+    mutate: async (session, context) => {
+      const { packetPlan, progress } = currentPlan(session);
+      if (packetPlan.planId !== args.planId) {
+        throw new Error(`Execute-phase current plan is ${packetPlan.planId}, not ${args.planId}.`);
+      }
+      if (progress.status !== "verified" && progress.status !== "blocked" && progress.status !== "summary-written" && progress.status !== "persisted") {
+        throw new Error(
+          `Plan ${packetPlan.planId} cannot persist an execution summary from status ${progress.status}.`
+        );
+      }
+      const completed = hasReceiptDerivedCompletion(packetPlan, progress);
+      if (progress.status !== "blocked" && !completed) {
+        throw new Error(
+          `Plan ${packetPlan.planId} cannot claim COMPLETED without accepted mutation receipts and a fully passing packet-bound verification receipt.`
+        );
+      }
+      const model = summaryModelForPlan(session, packetPlan, progress);
+      const phase = session.packet.selection.phaseNumber ?? session.prepareArgs.phase;
+      if (phase === null) throw new Error("Execute-phase session has no bound phase number.");
+      await assertSessionAuthority(context.projectRoot, session);
+      if (progress.persistenceStage === "none") {
+        progress.persistenceStage = "summary-write";
+        await context.checkpoint(session);
+      }
+      if (progress.persistenceStage === "summary-write") {
+        const summary = await deps.summaryWrite({
+          cwd: context.projectRoot,
+          phase,
+          planId: packetPlan.planId,
+          model,
+          authoringMode: "model-only",
+          overwrite: session.packet.options.overwriteConfirmedPlanIds.includes(packetPlan.planId)
+        });
+        if (summary.status === "invalid" || !summary.written && summary.status !== "reused") {
+          throw new Error(`Execute-phase summary persistence failed: ${summary.issues.join("; ")}`);
+        }
+        const summaryDigest = await readRepoHash(context.projectRoot, summary.path);
+        progress.summaryReceipt = {
+          path: summary.path,
+          sha256: summaryDigest.hash,
+          sizeBytes: summaryDigest.bytes,
+          mode: summaryDigest.mode
+        };
+        progress.status = "summary-written";
+        progress.persistenceStage = "summary-index";
+        await context.checkpoint(session);
+        await deps.afterStage?.("summary-write", session);
+      }
+      if (progress.persistenceStage === "summary-index") {
+        await assertSessionAuthority(context.projectRoot, session);
+        const index = await deps.summaryIndex({ cwd: context.projectRoot, phase });
+        const saved = index.summaries.find((summary) => summary.planId === packetPlan.planId);
+        if (!saved || saved.status !== (completed ? "COMPLETED" : "BLOCKED")) {
+          throw new Error(`Execute-phase summary index did not project plan ${packetPlan.planId}.`);
+        }
+        progress.persistenceStage = "artifact-validate";
+        await context.checkpoint(session);
+        await deps.afterStage?.("summary-index", session);
+      }
+      if (progress.persistenceStage === "artifact-validate") {
+        await assertSessionAuthority(context.projectRoot, session);
+        const validation = await deps.artifactValidate({ cwd: context.projectRoot });
+        if (!validation.valid) {
+          throw new Error(`Execute-phase artifact validation failed: ${validation.issues.join("; ")}`);
+        }
+        progress.persistenceStage = "state-update";
+        await context.checkpoint(session);
+        await deps.afterStage?.("artifact-validate", session);
+      }
+      if (progress.persistenceStage === "state-update") {
+        await assertSessionAuthority(context.projectRoot, session);
+        if (progress.pendingStateUpdate === null) {
+          const prepared = await deps.statePrepare({ cwd: context.projectRoot, base: "synced" });
+          const observed = await readRepoHash(context.projectRoot, ".blueprint/STATE.md");
+          const currentContent = observed.hash === null ? null : await fs17.readFile(path17.join(context.projectRoot, ".blueprint/STATE.md"), "utf8");
+          if (prepared.expectedStateContent !== currentContent) {
+            throw new Error("Execute-phase STATE authority changed while its deterministic update was prepared.");
+          }
+          const canonicalPrepared = {
+            ...prepared,
+            projectRoot: session.packet.repository.canonicalRoot,
+            absoluteStatePath: path17.join(
+              session.packet.repository.canonicalRoot,
+              ".blueprint/STATE.md"
+            )
+          };
+          progress.pendingStateUpdate = {
+            prepared: canonicalPrepared,
+            preimage: {
+              path: ".blueprint/STATE.md",
+              sha256: observed.hash,
+              sizeBytes: observed.hash === null ? null : observed.bytes,
+              mode: observed.mode
+            },
+            postimage: {
+              path: ".blueprint/STATE.md",
+              sha256: sha2564(prepared.content),
+              sizeBytes: Buffer.byteLength(prepared.content),
+              mode: observed.mode ?? 438 & ~process.umask()
+            }
+          };
+          await context.checkpoint(session);
+        }
+        await assertSessionAuthority(context.projectRoot, session);
+        const effect = progress.pendingStateUpdate;
+        const stateBeforeWrite = await readRepoHash(context.projectRoot, ".blueprint/STATE.md");
+        const matches = (digest) => stateBeforeWrite.hash === digest.sha256 && stateBeforeWrite.bytes === digest.sizeBytes && stateBeforeWrite.mode === digest.mode;
+        if (matches(effect.preimage)) {
+          await deps.stateWrite(effect.prepared);
+        } else if (!matches(effect.postimage)) {
+          throw new Error(
+            "Execute-phase pending STATE effect matches neither its trusted preimage nor prepared postimage."
+          );
+        }
+        const stateDigest = await readRepoHash(context.projectRoot, ".blueprint/STATE.md");
+        if (stateDigest.hash !== effect.postimage.sha256 || stateDigest.bytes !== effect.postimage.sizeBytes || stateDigest.mode !== effect.postimage.mode) {
+          throw new Error("Execute-phase prepared STATE postimage was not written exactly.");
+        }
+        const stateReceipt = {
+          path: ".blueprint/STATE.md",
+          sha256: stateDigest.hash,
+          sizeBytes: stateDigest.bytes,
+          mode: stateDigest.mode
+        };
+        for (const candidate of Object.values(session.execution.plans)) {
+          if (candidate.persistenceStage === "done" || candidate.planId === progress.planId) {
+            candidate.stateReceipt = stateReceipt;
+          }
+        }
+        progress.pendingStateUpdate = null;
+        progress.persistenceStage = "done";
+        progress.status = "persisted";
+        await context.checkpoint(session);
+        await deps.afterStage?.("state-update", session);
+      }
+      await assertSessionAuthority(context.projectRoot, session);
+      const summaryPath2 = `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${packetPlan.planId}-SUMMARY.md`;
+      let nextPlanId = null;
+      let status;
+      if (completed) {
+        session.execution.currentPlanIndex += 1;
+        nextPlanId = session.packet.selectedPlans[session.execution.currentPlanIndex]?.planId ?? null;
+        if (nextPlanId) {
+          session.status = "executing";
+          status = "advanced";
+        } else {
+          session.status = "completed";
+          status = "completed";
+        }
+      } else {
+        session.status = "blocked";
+        status = "blocked";
+      }
+      return {
+        session,
+        result: {
+          status,
+          sessionId: session.sessionId,
+          planId: packetPlan.planId,
+          summaryPath: summaryPath2,
+          persistenceStage: "done",
+          nextPlanId,
+          failure: completed ? null : progress.failure
+        }
+      };
+    }
+  });
+  return updated.result;
+}
+var commonExecutionInputSchema, phaseExecutionToolDefinitions;
+var init_phase_execution_tools = __esm({
+  "src/mcp/tools/phase-execution-tools.ts"() {
+    "use strict";
+    init_v4();
+    init_config();
+    init_artifacts();
+    init_phase_execution_control();
+    init_phase_execution_runtime();
+    init_phase();
+    init_state();
+    commonExecutionInputSchema = {
+      cwd: string2().optional(),
+      sessionId: string2().min(1),
+      planId: string2().min(1)
+    };
+    phaseExecutionToolDefinitions = [
+      {
+        name: "blueprint_phase_execution_prepare",
+        description: "Preview, claim, or resume a deterministic execute-phase session bound to repository, plan, config, selection, and approval fingerprints.",
+        inputSchema: {
+          cwd: string2().optional(),
+          mode: _enum(["preview", "claim", "resume"]).optional(),
+          phase: union([string2(), number2()]).optional(),
+          wave: number2().int().nonnegative().optional(),
+          gapsOnly: boolean2().optional(),
+          includeConflicts: boolean2().optional(),
+          externalServiceConfirmed: boolean2().optional(),
+          overwriteConfirmedPlanIds: array(string2()).optional(),
+          confirmation: string2().optional(),
+          previewFingerprint: string2().optional(),
+          sessionId: string2().optional(),
+          defaultsPath: string2().optional()
+        },
+        handler: async (args) => blueprintPhaseExecutionPrepare(
+          args
+        )
+      },
+      {
+        name: "blueprint_phase_execution_apply",
+        description: "Apply one preimage-bound initial or repair mutation set through pinned MCP workers and persist exact mutation receipts.",
+        inputSchema: {
+          ...commonExecutionInputSchema,
+          mutations: array(object2({
+            path: string2().min(1),
+            operation: _enum(["write", "delete"]),
+            content: string2().optional(),
+            expectedHash: string2().nullable()
+          })).min(1)
+        },
+        handler: async (args) => blueprintPhaseExecutionApply(args)
+      },
+      {
+        name: "blueprint_phase_execution_verify",
+        description: "Run the exact packet-bound verification commands, persist bounded receipts, and enforce at most one repair cycle.",
+        inputSchema: commonExecutionInputSchema,
+        handler: async (args) => blueprintPhaseExecutionVerify(args)
+      },
+      {
+        name: "blueprint_phase_execution_finalize",
+        description: "Derive and persist the plan execution summary, validate its index and artifacts, sync STATE, and advance or terminate the durable session.",
+        inputSchema: commonExecutionInputSchema,
+        handler: async (args) => blueprintPhaseExecutionFinalize(args)
+      }
+    ];
+  }
+});
+
+// src/mcp/tools/cleanup.ts
+import { execFile as execFile5 } from "node:child_process";
+import { promises as fs18 } from "node:fs";
+import path18 from "node:path";
 import { promisify as promisify4 } from "node:util";
 function activeCleanupArchiveFileSystem() {
   return cleanupArchiveFileSystemForTest ?? defaultCleanupArchiveFileSystem;
 }
 async function pathExists4(targetPath) {
   try {
-    await fs15.access(targetPath);
+    await fs18.access(targetPath);
     return true;
   } catch {
     return false;
@@ -59636,7 +62940,7 @@ function normalizePhaseNumber4(phaseNumber) {
   }
   return phaseNumber.split(".")[0] ?? phaseNumber;
 }
-function uniqueSorted2(values) {
+function uniqueSorted3(values) {
   return [...new Set(values)].sort();
 }
 function escapeRegExp2(value) {
@@ -59683,7 +62987,7 @@ function mismatchReason(label, expected, actual) {
 }
 function buildCleanupArchiveResult(args) {
   const protectedPhaseDirs = (args.protectedEntries ?? []).map((entry) => entry.path);
-  const keptPhaseDirs = uniqueSorted2([
+  const keptPhaseDirs = uniqueSorted3([
     ...protectedPhaseDirs,
     ...args.failedPhaseDirs ?? [],
     ...args.skippedPhaseDirs ?? []
@@ -59717,28 +63021,28 @@ async function listPhaseDirectories(projectRoot) {
   if (!await pathExists4(phasesRoot)) {
     throw new Error(`Missing ${BLUEPRINT_PHASES_PATH}.`);
   }
-  const entries = await fs15.readdir(phasesRoot, { withFileTypes: true });
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => path15.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
+  const entries = await fs18.readdir(phasesRoot, { withFileTypes: true });
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => path18.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
 }
 async function listPhaseArtifactPaths(projectRoot, phaseDir2) {
   const absolutePhaseDir = resolveBlueprintPath(projectRoot, phaseDir2);
-  const entries = await fs15.readdir(absolutePhaseDir, { withFileTypes: true });
-  return entries.filter((entry) => entry.isFile()).map((entry) => path15.posix.join(phaseDir2, entry.name)).sort();
+  const entries = await fs18.readdir(absolutePhaseDir, { withFileTypes: true });
+  return entries.filter((entry) => entry.isFile()).map((entry) => path18.posix.join(phaseDir2, entry.name)).sort();
 }
 function milestoneFromSummaryReportPath(reportPath) {
-  const match = path15.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
+  const match = path18.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
   return match?.[1] ?? null;
 }
 async function completedMilestoneEvidenceForPhase(projectRoot, phaseDir2, reportPaths, activeMilestone) {
   const matches = [];
   for (const reportPath of reportPaths.filter(
-    (value) => path15.posix.basename(value).startsWith("milestone-summary-")
+    (value) => path18.posix.basename(value).startsWith("milestone-summary-")
   )) {
     const evidenceMilestone = milestoneFromSummaryReportPath(reportPath);
     if (!evidenceMilestone || evidenceMilestone === activeMilestone) {
       continue;
     }
-    const reportContent = await fs15.readFile(resolveBlueprintPath(projectRoot, reportPath), "utf8");
+    const reportContent = await fs18.readFile(resolveBlueprintPath(projectRoot, reportPath), "utf8");
     const archivalEvidencePattern = new RegExp(
       `${escapeRegExp2(phaseDir2)}[^\\n]*safe to archive`,
       "i"
@@ -59754,7 +63058,7 @@ async function protectedArtifactPaths(projectRoot, protectedEntries) {
   for (const entry of protectedEntries) {
     artifactPaths.push(...await listPhaseArtifactPaths(projectRoot, entry.path));
   }
-  return uniqueSorted2(artifactPaths);
+  return uniqueSorted3(artifactPaths);
 }
 async function computeCleanupArchiveScope(projectRoot) {
   const blockers = [];
@@ -59846,7 +63150,7 @@ async function computeCleanupArchiveScope(projectRoot) {
   const protectedEntries = [...protectedEntryMap.values()].sort(
     (left, right) => left.path.localeCompare(right.path)
   );
-  const digestArtifactPaths = uniqueSorted2([
+  const digestArtifactPaths = uniqueSorted3([
     `${BLUEPRINT_DIR}/ROADMAP.md`,
     `${BLUEPRINT_DIR}/STATE.md`,
     ...selectedEvidencePaths,
@@ -59857,7 +63161,7 @@ async function computeCleanupArchiveScope(projectRoot) {
     artifactPaths: digestArtifactPaths
   });
   return {
-    selectedPhaseDirs: uniqueSorted2(selectedPhaseDirs),
+    selectedPhaseDirs: uniqueSorted3(selectedPhaseDirs),
     protectedEntries,
     digestInputs: digest.inputsUsed,
     blockers,
@@ -59890,7 +63194,7 @@ async function executeCleanupArchiveMutation(args) {
   const skippedPhaseDirs = [];
   const failureReasons = {};
   for (const phaseDir2 of args.selectedPhaseDirs) {
-    const destinationPhaseDir = path15.posix.join(args.archiveDestination, path15.posix.basename(phaseDir2));
+    const destinationPhaseDir = path18.posix.join(args.archiveDestination, path18.posix.basename(phaseDir2));
     try {
       await archivePhaseDirectory({
         projectRoot: args.projectRoot,
@@ -59917,7 +63221,7 @@ async function executeCleanupArchiveMutation(args) {
   };
 }
 function renderCleanupArchiveReport(args) {
-  const keptPhaseDirs = uniqueSorted2([
+  const keptPhaseDirs = uniqueSorted3([
     ...args.protectedEntries.map((entry) => entry.path),
     ...args.outcome.failedPhaseDirs,
     ...args.outcome.skippedPhaseDirs
@@ -59976,7 +63280,7 @@ function cleanupArchiveStatusForOutcome(outcome) {
 async function rejectDestinationCollisions(args) {
   const collisions = [];
   for (const phaseDir2 of args.selectedPhaseDirs) {
-    const destinationPhaseDir = path15.posix.join(args.archiveDestination, path15.posix.basename(phaseDir2));
+    const destinationPhaseDir = path18.posix.join(args.archiveDestination, path18.posix.basename(phaseDir2));
     if (await pathExists4(resolveBlueprintPath(args.projectRoot, destinationPhaseDir))) {
       collisions.push(destinationPhaseDir);
     }
@@ -59994,12 +63298,12 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       projectRoot,
       args.archiveDestination ?? CLEANUP_ARCHIVE_DEFAULT_DESTINATION
     );
-    expectedSelectedPhaseDirs = args.expectedSelectedPhaseDirs ? uniqueSorted2(
+    expectedSelectedPhaseDirs = args.expectedSelectedPhaseDirs ? uniqueSorted3(
       args.expectedSelectedPhaseDirs.map(
         (phaseDir2, index) => normalizePhaseDirectoryInput(projectRoot, phaseDir2, `expectedSelectedPhaseDirs[${index}]`)
       )
     ) : null;
-    expectedProtectedPhaseDirs = args.expectedProtectedPhaseDirs ? uniqueSorted2(
+    expectedProtectedPhaseDirs = args.expectedProtectedPhaseDirs ? uniqueSorted3(
       args.expectedProtectedPhaseDirs.map(
         (phaseDir2, index) => normalizePhaseDirectoryInput(projectRoot, phaseDir2, `expectedProtectedPhaseDirs[${index}]`)
       )
@@ -60350,7 +63654,7 @@ var init_cleanup = __esm({
     CLEANUP_ARCHIVE_DEFAULT_DESTINATION = `${BLUEPRINT_DIR}/archive/v1`;
     CLEANUP_LATEST_REPORT_NAME = "cleanup-latest";
     CLEANUP_NEXT_ACTION = "/blu-progress";
-    execFileAsync4 = promisify4(execFile4);
+    execFileAsync4 = promisify4(execFile5);
     cleanupArchiveInputSchema = {
       cwd: string2().optional(),
       mode: _enum(["preview", "commit"]).optional(),
@@ -60363,10 +63667,10 @@ var init_cleanup = __esm({
       expectedProtectedPhaseDirs: array(string2()).optional()
     };
     defaultCleanupArchiveFileSystem = {
-      mkdir: (targetPath, options) => fs15.mkdir(targetPath, options),
-      rename: (sourcePath, destinationPath) => fs15.rename(sourcePath, destinationPath),
-      cp: (sourcePath, destinationPath, options) => fs15.cp(sourcePath, destinationPath, options),
-      rm: (targetPath, options) => fs15.rm(targetPath, options)
+      mkdir: (targetPath, options) => fs18.mkdir(targetPath, options),
+      rename: (sourcePath, destinationPath) => fs18.rename(sourcePath, destinationPath),
+      cp: (sourcePath, destinationPath, options) => fs18.cp(sourcePath, destinationPath, options),
+      rm: (targetPath, options) => fs18.rm(targetPath, options)
     };
     cleanupArchiveFileSystemForTest = null;
     cleanupToolDefinitions = [
@@ -60381,9 +63685,9 @@ var init_cleanup = __esm({
 });
 
 // src/mcp/tools/review.ts
-import { createHash as createHash4 } from "node:crypto";
-import { promises as fs16 } from "node:fs";
-import path16 from "node:path";
+import { createHash as createHash7 } from "node:crypto";
+import { promises as fs19 } from "node:fs";
+import path19 from "node:path";
 function createAjvValidator2() {
   return new import__3.Ajv2020({
     allErrors: true,
@@ -60543,7 +63847,7 @@ function stripVisibleReviewTargetId2(value) {
   return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
 }
 function buildLegacyReviewTargetId(prefix, sourceSection, value) {
-  const digest = createHash4("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
+  const digest = createHash7("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
   return `${prefix}-LEGACY-${digest}`;
 }
 function sanitizeMarkdownScalar(value) {
@@ -60947,7 +64251,7 @@ async function buildPeerReviewAuthoringContext(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path16.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -61425,7 +64729,7 @@ async function buildReviewFixAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path16.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -61639,7 +64943,7 @@ async function inspectUatRoutingState(args) {
     };
   }
   try {
-    const content = await fs16.readFile(
+    const content = await fs19.readFile(
       resolveBlueprintPath(args.projectRoot, args.artifactPath),
       "utf8"
     );
@@ -62108,7 +65412,7 @@ async function buildSecurityAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path16.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -62469,7 +65773,7 @@ async function buildUiReviewAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path16.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -62615,7 +65919,7 @@ async function buildUiReviewAuthoringContext(args) {
 }
 async function pathExists5(targetPath) {
   try {
-    await fs16.access(targetPath);
+    await fs19.access(targetPath);
     return true;
   } catch {
     return false;
@@ -64739,7 +68043,7 @@ function parseCodeReviewLocation(location) {
   };
 }
 async function countFileLines(filePath) {
-  const content = await fs16.readFile(filePath, "utf8");
+  const content = await fs19.readFile(filePath, "utf8");
   const contentWithoutTerminalNewline = content.replace(/(?:\r\n|\r|\n)$/, "");
   if (contentWithoutTerminalNewline.length === 0) {
     return content.length === 0 ? 0 : 1;
@@ -64914,7 +68218,7 @@ async function addFindingLocationDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs16.stat(absolutePath);
+      const stats = await fs19.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -65462,7 +68766,7 @@ async function addReviewFixChangedFileDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs16.stat(absolutePath);
+      const stats = await fs19.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -66095,7 +69399,7 @@ async function addUiReviewRepoCitationDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs16.stat(absolutePath);
+      const stats = await fs19.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -66198,7 +69502,7 @@ function findPhaseArtifact3(artifacts, suffix) {
 async function readRepoFileIfPresent(projectRoot, relativePath) {
   try {
     const absolutePath = resolveRepoRelativePath(projectRoot, relativePath);
-    return await fs16.readFile(absolutePath, "utf8");
+    return await fs19.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -66214,7 +69518,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     if (requestedPath.length === 0) {
       continue;
     }
-    if (path16.isAbsolute(requestedPath)) {
+    if (path19.isAbsolute(requestedPath)) {
       warnings.push(
         `Invalid ${sourceLabel} path: ${requestedPath} (absolute filesystem paths are not allowed).`
       );
@@ -66248,7 +69552,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     }
     let stats;
     try {
-      stats = await fs16.stat(absolutePath);
+      stats = await fs19.stat(absolutePath);
     } catch {
       warnings.push(`Invalid ${sourceLabel} path: ${relativePath} (file does not exist).`);
       rejected = true;
@@ -66326,7 +69630,7 @@ async function deriveReviewFilesFromSummaries(projectRoot, located, warnings) {
         }
         let stats;
         try {
-          stats = await fs16.stat(absolutePath);
+          stats = await fs19.stat(absolutePath);
         } catch {
           warnings.push(
             `Skipped missing repo path from ${summaryPath2} review scope: ${relativePath}`
@@ -66414,7 +69718,7 @@ async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
       }
       let stats;
       try {
-        stats = await fs16.stat(absolutePath);
+        stats = await fs19.stat(absolutePath);
       } catch {
         warnings.push(
           `Skipped missing repo path from ${planPath} review scope: ${relativePath}`
@@ -66556,7 +69860,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path16.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -66590,7 +69894,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path16.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -66658,7 +69962,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path16.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -66682,7 +69986,7 @@ async function blueprintReviewScope(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path16.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -67388,7 +70692,7 @@ async function blueprintReviewRecordUnlocked(args, expectedTopology) {
   const { counts, followUps } = modelCountsOverride ?? parsedCounts;
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   const exists3 = await pathExists5(absolutePath);
-  const existingContent = exists3 ? await fs16.readFile(absolutePath, "utf8") : null;
+  const existingContent = exists3 ? await fs19.readFile(absolutePath, "utf8") : null;
   warnings.push(...prepared.warnings);
   const validation = validateReviewArtifactContent(normalizedContent, args.artifact);
   const evidenceCoverageIssues = args.artifact === "code-review" ? validateCodeReviewEvidenceCoverage(
@@ -67568,7 +70872,7 @@ async function blueprintReviewLoadFindings(args) {
       warnings: located.warnings
     };
   }
-  const content = await fs16.readFile(
+  const content = await fs19.readFile(
     resolveBlueprintPath(projectRoot, artifactPath),
     "utf8"
   );
@@ -67772,11 +71076,11 @@ var init_review = __esm({
 });
 
 // src/mcp/tools/update.ts
-import { execFile as execFile5 } from "node:child_process";
-import { randomUUID as randomUUID2 } from "node:crypto";
-import { promises as fs17 } from "node:fs";
+import { execFile as execFile6 } from "node:child_process";
+import { randomUUID as randomUUID4 } from "node:crypto";
+import { promises as fs20 } from "node:fs";
 import os5 from "node:os";
-import path17 from "node:path";
+import path20 from "node:path";
 import { promisify as promisify5 } from "node:util";
 function positiveTimingOverride2(value, fallback) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -67810,7 +71114,7 @@ function expandHomePath5(value) {
     return os5.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path17.join(os5.homedir(), trimmed.slice(2));
+    return path20.join(os5.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -67822,7 +71126,7 @@ function normalizeOptionalString(value) {
 }
 async function pathExists6(targetPath) {
   try {
-    await fs17.access(targetPath);
+    await fs20.access(targetPath);
     return true;
   } catch {
     return false;
@@ -67869,7 +71173,7 @@ async function readJsonObject(filePath) {
     };
   }
   try {
-    const raw = await fs17.readFile(filePath, "utf8");
+    const raw = await fs20.readFile(filePath, "utf8");
     return {
       value: safeJsonParseObject(raw, { label: filePath }),
       warning: null
@@ -67893,19 +71197,19 @@ async function resolveInstalledVersion(extensionPath, manifestFileName) {
       warnings
     };
   }
-  const normalizedExtensionPath = path17.resolve(extensionPath);
+  const normalizedExtensionPath = path20.resolve(extensionPath);
   if (!await pathExists6(normalizedExtensionPath)) {
     warnings.push(`Configured extension path does not exist: ${normalizedExtensionPath}`);
     return {
       extensionPathState: "missing",
-      extensionManifestPath: path17.join(normalizedExtensionPath, manifestFileName),
+      extensionManifestPath: path20.join(normalizedExtensionPath, manifestFileName),
       installedVersion: null,
       warnings
     };
   }
-  const extensionManifestPath = path17.join(normalizedExtensionPath, manifestFileName);
+  const extensionManifestPath = path20.join(normalizedExtensionPath, manifestFileName);
   const manifestResult = await readJsonObject(extensionManifestPath);
-  const packageJsonResult = await readJsonObject(path17.join(normalizedExtensionPath, "package.json"));
+  const packageJsonResult = await readJsonObject(path20.join(normalizedExtensionPath, "package.json"));
   const manifest = manifestResult.value;
   const packageJson = packageJsonResult.value;
   if (manifestResult.warning) {
@@ -68163,7 +71467,7 @@ function compareSemver(left, right) {
 async function resolveUpdateCheck(args = {}, env2 = process.env) {
   const cwd = normalizeOptionalString(args.cwd) ?? process.cwd();
   const runtimeHost = resolveBlueprintRuntimeHost(env2);
-  const extensionPath = runtimeHost.extensionPath ? path17.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
+  const extensionPath = runtimeHost.extensionPath ? path20.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
   const warnings = [];
   if (extensionPath) {
     assertNoNullBytes(extensionPath, "Blueprint extension path");
@@ -68375,7 +71679,7 @@ function serializeUpdatePlan(generatedAt, plan) {
   };
 }
 async function removeIfExists(targetPath) {
-  await fs17.rm(targetPath, { force: true });
+  await fs20.rm(targetPath, { force: true });
 }
 async function removeIfExistsSafely(targetPath, label) {
   try {
@@ -68386,10 +71690,10 @@ async function removeIfExistsSafely(targetPath, label) {
   }
 }
 function createUpdatePlanNonce() {
-  return `${process.pid}-${Date.now()}-${randomUUID2()}`;
+  return `${process.pid}-${Date.now()}-${randomUUID4()}`;
 }
 async function withUpdatePlanLock(updatesDir, callback) {
-  const lockPath = path17.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
+  const lockPath = path20.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
   const lockOptions = {
     lockPath,
     timing: updatePlanLockTiming()
@@ -68420,7 +71724,7 @@ async function restoreFromBackup(backupPath, targetPath) {
   }
   try {
     await removeIfExists(targetPath);
-    await fs17.rename(backupPath, targetPath);
+    await fs20.rename(backupPath, targetPath);
     return {
       backupExisted: true,
       restored: true,
@@ -68456,7 +71760,7 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     const existingModes = await Promise.all(
       [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
         try {
-          const stats = await fs17.lstat(targetPath);
+          const stats = await fs20.lstat(targetPath);
           if (!stats.isFile()) {
             throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
           }
@@ -68472,18 +71776,18 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
-      label: path17.basename(plan.savedPaths.checklistPath)
+      label: path20.basename(plan.savedPaths.checklistPath)
     });
     if (existingModes[0] !== null) {
-      await fs17.chmod(metadataTmpPath, existingModes[0]);
+      await fs20.chmod(metadataTmpPath, existingModes[0]);
     }
     if (existingModes[1] !== null) {
-      await fs17.chmod(checklistTmpPath, existingModes[1]);
+      await fs20.chmod(checklistTmpPath, existingModes[1]);
     }
     const promotionModes = await Promise.all(
       [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
         try {
-          const stats = await fs17.lstat(targetPath);
+          const stats = await fs20.lstat(targetPath);
           if (!stats.isFile()) {
             throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
           }
@@ -68495,16 +71799,16 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
       })
     );
     if (promotionModes[0] !== null) {
-      await fs17.rename(plan.savedPaths.metadataPath, metadataBackupPath);
+      await fs20.rename(plan.savedPaths.metadataPath, metadataBackupPath);
       metadataBackupCreated = true;
     }
     if (promotionModes[1] !== null) {
-      await fs17.rename(plan.savedPaths.checklistPath, checklistBackupPath);
+      await fs20.rename(plan.savedPaths.checklistPath, checklistBackupPath);
       checklistBackupCreated = true;
     }
-    await fs17.rename(metadataTmpPath, plan.savedPaths.metadataPath);
+    await fs20.rename(metadataTmpPath, plan.savedPaths.metadataPath);
     metadataPromoted = true;
-    await fs17.rename(checklistTmpPath, plan.savedPaths.checklistPath);
+    await fs20.rename(checklistTmpPath, plan.savedPaths.checklistPath);
     checklistPromoted = true;
     for (const [backupPath, label] of [
       [metadataBackupPath, "update metadata backup"],
@@ -68590,9 +71894,9 @@ async function blueprintUpdatePlan(args = {}, env2 = process.env) {
   const runtimeHost = resolveBlueprintRuntimeHost(env2);
   const mode = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
   const check2 = await resolveUpdateCheck(args, env2);
-  const updatesDir = path17.resolve(expandHomePath5(runtimeHost.updatesDir));
-  const metadataPath = path17.join(updatesDir, UPDATE_PLAN_FILE);
-  const checklistPath = path17.join(updatesDir, UPDATE_CHECKLIST_FILE);
+  const updatesDir = path20.resolve(expandHomePath5(runtimeHost.updatesDir));
+  const metadataPath = path20.join(updatesDir, UPDATE_PLAN_FILE);
+  const checklistPath = path20.join(updatesDir, UPDATE_CHECKLIST_FILE);
   const savedPaths = {
     updatesDir,
     metadataPath,
@@ -68645,7 +71949,7 @@ var init_update = __esm({
     init_directory_lock();
     init_runtime_host();
     init_security();
-    execFileAsync5 = promisify5(execFile5);
+    execFileAsync5 = promisify5(execFile6);
     UPDATE_PLAN_FILE = "update-plan-latest.json";
     UPDATE_CHECKLIST_FILE = "update-plan-latest.md";
     UPDATE_ARTIFACT_TEMP_SUFFIX = ".tmp";
@@ -68684,14 +71988,14 @@ var init_update = __esm({
 });
 
 // src/mcp/tools/impact.ts
-import { execFile as execFile6 } from "node:child_process";
-import { createHash as createHash5 } from "node:crypto";
-import { promises as fs18 } from "node:fs";
+import { execFile as execFile7 } from "node:child_process";
+import { createHash as createHash8 } from "node:crypto";
+import { promises as fs21 } from "node:fs";
 import os6 from "node:os";
-import path18 from "node:path";
+import path21 from "node:path";
 import { promisify as promisify6 } from "node:util";
 function stableHash(value) {
-  return createHash5("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
+  return createHash8("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
 }
 function stableStringify(value) {
   if (Array.isArray(value)) {
@@ -68763,7 +72067,7 @@ function hasPathSegment(filePath, segment) {
   return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
 }
 function hasConfigName(filePath) {
-  const basename = path18.posix.basename(filePath);
+  const basename = path21.posix.basename(filePath);
   return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
 }
 function isGeneratedPath(filePath) {
@@ -68773,7 +72077,7 @@ function isTestPath(filePath) {
   return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 function isDocsPath(filePath) {
-  const extension = path18.posix.extname(filePath).toLowerCase();
+  const extension = path21.posix.extname(filePath).toLowerCase();
   return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
 }
 function areaForSurface(surface) {
@@ -68818,8 +72122,8 @@ function areaForSurface(surface) {
 }
 function classifyImpactFile(filePath) {
   const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const basename = path18.posix.basename(normalizedPath);
-  const extension = path18.posix.extname(normalizedPath).toLowerCase();
+  const basename = path21.posix.basename(normalizedPath);
+  const extension = path21.posix.extname(normalizedPath).toLowerCase();
   const rules = [];
   if (SECRET_PATH_PATTERN.test(normalizedPath)) {
     addSurfaceRule(
@@ -68982,11 +72286,11 @@ function buildSurfaceSummary(records) {
     };
   });
 }
-function uniqueSorted3(values) {
+function uniqueSorted4(values) {
   return [...new Set(values.filter((value) => value.trim().length > 0))].sort();
 }
 function allRegisteredRuntimeToolNames() {
-  return uniqueSorted3([
+  return uniqueSorted4([
     ...PROJECT_RUNTIME_TOOL_NAMES,
     ...configToolDefinitions.map((definition) => definition.name),
     ...stateToolDefinitions.map((definition) => definition.name),
@@ -69012,13 +72316,13 @@ function sortEvidenceRecords(records) {
     if (!existing) {
       deduped.set(record2.id, {
         ...record2,
-        paths: uniqueSorted3(record2.paths)
+        paths: uniqueSorted4(record2.paths)
       });
       continue;
     }
     deduped.set(record2.id, {
       ...existing,
-      paths: uniqueSorted3([...existing.paths, ...record2.paths])
+      paths: uniqueSorted4([...existing.paths, ...record2.paths])
     });
   }
   return [...deduped.values()].sort((left, right) => left.id.localeCompare(right.id));
@@ -69030,16 +72334,16 @@ function sortUnknownRecords(records) {
     if (!existing) {
       deduped.set(record2.id, {
         ...record2,
-        impactedFiles: uniqueSorted3(record2.impactedFiles),
-        evidenceRefs: uniqueSorted3(record2.evidenceRefs)
+        impactedFiles: uniqueSorted4(record2.impactedFiles),
+        evidenceRefs: uniqueSorted4(record2.evidenceRefs)
       });
       continue;
     }
     deduped.set(record2.id, {
       ...existing,
       severity: moreSevere(existing.severity, record2.severity),
-      impactedFiles: uniqueSorted3([...existing.impactedFiles, ...record2.impactedFiles]),
-      evidenceRefs: uniqueSorted3([...existing.evidenceRefs, ...record2.evidenceRefs])
+      impactedFiles: uniqueSorted4([...existing.impactedFiles, ...record2.impactedFiles]),
+      evidenceRefs: uniqueSorted4([...existing.evidenceRefs, ...record2.evidenceRefs])
     });
   }
   return [...deduped.values()].sort((left, right) => left.id.localeCompare(right.id));
@@ -69063,11 +72367,11 @@ function sortFindings(records) {
     if (!existing) {
       deduped.set(record2.id, {
         ...record2,
-        impactedFiles: uniqueSorted3(record2.impactedFiles),
-        impactedAreas: uniqueSorted3(record2.impactedAreas),
-        owners: uniqueSorted3(record2.owners),
-        requiredActions: uniqueSorted3(record2.requiredActions),
-        evidenceRefs: uniqueSorted3(record2.evidenceRefs)
+        impactedFiles: uniqueSorted4(record2.impactedFiles),
+        impactedAreas: uniqueSorted4(record2.impactedAreas),
+        owners: uniqueSorted4(record2.owners),
+        requiredActions: uniqueSorted4(record2.requiredActions),
+        evidenceRefs: uniqueSorted4(record2.evidenceRefs)
       });
       continue;
     }
@@ -69076,11 +72380,11 @@ function sortFindings(records) {
       severity: moreSevere(existing.severity, record2.severity),
       status: higherImpactStatus(existing.status, record2.status),
       confidence: Math.max(existing.confidence, record2.confidence),
-      impactedFiles: uniqueSorted3([...existing.impactedFiles, ...record2.impactedFiles]),
-      impactedAreas: uniqueSorted3([...existing.impactedAreas, ...record2.impactedAreas]),
-      owners: uniqueSorted3([...existing.owners, ...record2.owners]),
-      requiredActions: uniqueSorted3([...existing.requiredActions, ...record2.requiredActions]),
-      evidenceRefs: uniqueSorted3([...existing.evidenceRefs, ...record2.evidenceRefs])
+      impactedFiles: uniqueSorted4([...existing.impactedFiles, ...record2.impactedFiles]),
+      impactedAreas: uniqueSorted4([...existing.impactedAreas, ...record2.impactedAreas]),
+      owners: uniqueSorted4([...existing.owners, ...record2.owners]),
+      requiredActions: uniqueSorted4([...existing.requiredActions, ...record2.requiredActions]),
+      evidenceRefs: uniqueSorted4([...existing.evidenceRefs, ...record2.evidenceRefs])
     });
   }
   return [...deduped.values()].sort(
@@ -69094,21 +72398,21 @@ function sortObligations(records) {
     if (!existing) {
       deduped.set(record2.id, {
         ...record2,
-        impactedFiles: uniqueSorted3(record2.impactedFiles),
+        impactedFiles: uniqueSorted4(record2.impactedFiles),
         sourceSurfaces: [...new Set(record2.sourceSurfaces)].sort(compareImpactSurfaces),
-        requiredActions: uniqueSorted3(record2.requiredActions),
-        evidenceRefs: uniqueSorted3(record2.evidenceRefs)
+        requiredActions: uniqueSorted4(record2.requiredActions),
+        evidenceRefs: uniqueSorted4(record2.evidenceRefs)
       });
       continue;
     }
     deduped.set(record2.id, {
       ...existing,
-      impactedFiles: uniqueSorted3([...existing.impactedFiles, ...record2.impactedFiles]),
+      impactedFiles: uniqueSorted4([...existing.impactedFiles, ...record2.impactedFiles]),
       sourceSurfaces: [.../* @__PURE__ */ new Set([...existing.sourceSurfaces, ...record2.sourceSurfaces])].sort(
         compareImpactSurfaces
       ),
-      requiredActions: uniqueSorted3([...existing.requiredActions, ...record2.requiredActions]),
-      evidenceRefs: uniqueSorted3([...existing.evidenceRefs, ...record2.evidenceRefs])
+      requiredActions: uniqueSorted4([...existing.requiredActions, ...record2.requiredActions]),
+      evidenceRefs: uniqueSorted4([...existing.evidenceRefs, ...record2.evidenceRefs])
     });
   }
   return [...deduped.values()].sort(
@@ -69120,7 +72424,7 @@ function addEvidence(records, record2) {
   records.push({
     id,
     ...record2,
-    paths: uniqueSorted3(record2.paths)
+    paths: uniqueSorted4(record2.paths)
   });
   return id;
 }
@@ -69275,7 +72579,7 @@ function buildConfidenceScore(options) {
   return {
     score: roundedScore,
     level: confidenceLevelForScore(roundedScore),
-    reasons: uniqueSorted3([...drivers, ...reducers])
+    reasons: uniqueSorted4([...drivers, ...reducers])
   };
 }
 function hasBreakingContractSignal(findings, _obligations, unknowns) {
@@ -69333,8 +72637,8 @@ function buildImpactStatus(options) {
   }
   return {
     status,
-    drivers: uniqueSorted3(drivers),
-    reducers: uniqueSorted3(reducers)
+    drivers: uniqueSorted4(drivers),
+    reducers: uniqueSorted4(reducers)
   };
 }
 function buildImpactRisk(options) {
@@ -69370,23 +72674,23 @@ function buildImpactRisk(options) {
   }
   return {
     level,
-    reasons: uniqueSorted3(reasons)
+    reasons: uniqueSorted4(reasons)
   };
 }
 function requiredReviewersFromOwnership(ownership) {
-  return uniqueSorted3(
+  return uniqueSorted4(
     ownership.matches.flatMap(
       (match) => match.owners.length > 0 ? match.owners : match.fallbackReviewers
     )
   );
 }
 function requiredTestsFromObligations(obligations) {
-  return uniqueSorted3(
+  return uniqueSorted4(
     obligations.filter((obligation) => obligation.category === "tests").flatMap((obligation) => obligation.requiredActions)
   );
 }
 function requiredActionsFromSignals(findings, obligations, unknowns) {
-  return uniqueSorted3([
+  return uniqueSorted4([
     ...findings.flatMap((finding) => finding.requiredActions),
     ...obligations.flatMap((obligation) => obligation.requiredActions),
     ...unknowns.map((unknown2) => unknown2.resolution)
@@ -69449,8 +72753,8 @@ function scoreImpactAnalysis(options) {
       confidenceLevel: confidence.level,
       maxSeverity,
       blocking: statusResult.status === "BLOCK",
-      drivers: uniqueSorted3([...statusResult.drivers, ...risk.reasons]),
-      reducers: uniqueSorted3(statusResult.reducers),
+      drivers: uniqueSorted4([...statusResult.drivers, ...risk.reasons]),
+      reducers: uniqueSorted4(statusResult.reducers),
       policy: {
         blockOnCritical: options.config.risk.blockOnCritical,
         blockOnBreakingContract: options.config.risk.blockOnBreakingContract,
@@ -69505,7 +72809,7 @@ function matchesRepoPattern(filePath, pattern) {
     return false;
   }
   if (!normalizedPattern.includes("/")) {
-    return globPatternToRegExp(normalizedPattern).test(path18.posix.basename(normalizedPath));
+    return globPatternToRegExp(normalizedPattern).test(path21.posix.basename(normalizedPath));
   }
   return globPatternToRegExp(normalizedPattern).test(normalizedPath);
 }
@@ -69546,13 +72850,13 @@ function expandHomePath6(value) {
     return os6.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path18.join(os6.homedir(), trimmed.slice(2));
+    return path21.join(os6.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
 async function pathExists7(targetPath) {
   try {
-    await fs18.access(targetPath);
+    await fs21.access(targetPath);
     return true;
   } catch {
     return false;
@@ -69563,7 +72867,7 @@ function resolveContainedInputPath(projectRoot, inputPath, label) {
   if (trimmed.length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  const candidatePath = path18.isAbsolute(trimmed) ? trimmed : path18.resolve(projectRoot, trimmed);
+  const candidatePath = path21.isAbsolute(trimmed) ? trimmed : path21.resolve(projectRoot, trimmed);
   return ensurePathWithinRootSync(projectRoot, candidatePath, { label });
 }
 function toRepoRelativeInputPath(projectRoot, inputPath, label) {
@@ -69628,15 +72932,15 @@ function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
 }
 function getImpactDefaultsPath() {
   const runtimeHost = resolveBlueprintRuntimeHost();
-  return path18.resolve(
+  return path21.resolve(
     expandHomePath6(
-      path18.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
+      path21.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
     )
   );
 }
 function isUnsafeRepoPattern(value) {
   const normalized = value.trim().replaceAll("\\", "/");
-  return normalized.length === 0 || normalized.includes("\0") || path18.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
+  return normalized.length === 0 || normalized.includes("\0") || path21.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
 }
 function validateConfigPathArrays(config2) {
   const errors = [];
@@ -69808,7 +73112,7 @@ async function readConfigLayer(filePath, label, warnings, errors) {
     return null;
   }
   try {
-    return safeJsonParseObject(await fs18.readFile(filePath, "utf8"), { label });
+    return safeJsonParseObject(await fs21.readFile(filePath, "utf8"), { label });
   } catch (error2) {
     errors.push(error2 instanceof Error ? error2.message : `${label} could not be read.`);
     return null;
@@ -69860,7 +73164,7 @@ function parseCodeownersRules(raw, sourcePath) {
       source: "codeowners",
       sourcePath,
       pattern,
-      owners: uniqueSorted3(owners),
+      owners: uniqueSorted4(owners),
       sensitive: false,
       line: lineIndex + 1,
       order: rules.length
@@ -69881,7 +73185,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
   const evidence = [];
   const unknowns = [];
   const findings = [];
-  const configuredSources = uniqueSorted3(config2.ownership.sources);
+  const configuredSources = uniqueSorted4(config2.ownership.sources);
   const sourcesUsed = [];
   const metadataFallbackReviewers = [];
   const metadataPaths = [];
@@ -69900,7 +73204,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       continue;
     }
     codeownersPath = toRepoRelativePath(projectRoot, absolutePath);
-    const parsedRules = parseCodeownersRules(await fs18.readFile(absolutePath, "utf8"), codeownersPath);
+    const parsedRules = parseCodeownersRules(await fs21.readFile(absolutePath, "utf8"), codeownersPath);
     rules.push(...parsedRules);
     sourcesUsed.push(codeownersPath);
     addEvidence(evidence, {
@@ -69924,7 +73228,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     try {
-      const parsed = safeJsonParseObject(await fs18.readFile(absolutePath, "utf8"), {
+      const parsed = safeJsonParseObject(await fs21.readFile(absolutePath, "utf8"), {
         label: `Impact ownership metadata ${relativePath}`
       });
       const metadataResult = ownershipMetadataSchema.safeParse(parsed);
@@ -69941,7 +73245,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
           source: "metadata",
           sourcePath: relativePath,
           pattern: rule.pattern,
-          owners: uniqueSorted3(rule.owners),
+          owners: uniqueSorted4(rule.owners),
           sensitive: rule.sensitive,
           line: null,
           order: startIndex + index
@@ -69981,8 +73285,8 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       });
     }
   }
-  const effectiveMetadataFallback = uniqueSorted3(metadataFallbackReviewers);
-  const configuredFallback = uniqueSorted3(config2.ownership.fallbackReviewers);
+  const effectiveMetadataFallback = uniqueSorted4(metadataFallbackReviewers);
+  const configuredFallback = uniqueSorted4(config2.ownership.fallbackReviewers);
   const orderedFallbackReviewers = configuredFallback.length > 0 ? configuredFallback : effectiveMetadataFallback;
   const matches = [];
   const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
@@ -69994,7 +73298,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
     const matchedRules = [...codeownersRule ? [codeownersRule] : [], ...metadataRules].sort(
       (left, right) => left.order - right.order
     );
-    const explicitOwners = uniqueSorted3(matchedRules.flatMap((rule) => rule.owners));
+    const explicitOwners = uniqueSorted4(matchedRules.flatMap((rule) => rule.owners));
     const fallbackReviewers = explicitOwners.length === 0 ? orderedFallbackReviewers : [];
     const owners = explicitOwners.length > 0 ? explicitOwners : fallbackReviewers;
     const surface = surfaceByPath.get(file2);
@@ -70059,7 +73363,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       coverage: {
         status: coverageStatus,
         sourcesConfigured: configuredSources,
-        sourcesUsed: uniqueSorted3(sourcesUsed),
+        sourcesUsed: uniqueSorted4(sourcesUsed),
         fallbackReviewers: orderedFallbackReviewers,
         filesWithOwners,
         filesMissingOwners,
@@ -70084,7 +73388,7 @@ function addDependencyNode(nodes, node) {
   nodes.set(node.id, {
     ...existing,
     path: existing.path ?? node.path,
-    source: uniqueSorted3([...existing.source.split(","), node.source]).join(",")
+    source: uniqueSorted4([...existing.source.split(","), node.source]).join(",")
   });
 }
 function addDependencyEdge(edges, edge) {
@@ -70094,7 +73398,7 @@ function addDependencyEdge(edges, edge) {
   }
 }
 function dependencyNamesFromPackageJson(parsed) {
-  return uniqueSorted3(
+  return uniqueSorted4(
     ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].flatMap(
       (key) => isPlainObject7(parsed[key]) ? Object.keys(parsed[key]) : []
     )
@@ -70116,7 +73420,7 @@ async function readJsonObjectIfPresent2(filePath, label) {
   if (!await pathExists7(filePath)) {
     return null;
   }
-  return safeJsonParseObject(await fs18.readFile(filePath, "utf8"), { label });
+  return safeJsonParseObject(await fs21.readFile(filePath, "utf8"), { label });
 }
 async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns) {
   const directories = [];
@@ -70126,25 +73430,25 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
       continue;
     }
     const root = normalizedPattern.split("/")[0];
-    const absoluteRoot = path18.join(projectRoot, root);
+    const absoluteRoot = path21.join(projectRoot, root);
     if (!await pathExists7(absoluteRoot)) {
       continue;
     }
-    const entries = await fs18.readdir(absoluteRoot, { withFileTypes: true });
+    const entries = await fs21.readdir(absoluteRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name.startsWith(".")) {
         continue;
       }
       const relativePath = `${root}/${entry.name}`;
-      if (await pathExists7(path18.join(projectRoot, relativePath, "package.json"))) {
+      if (await pathExists7(path21.join(projectRoot, relativePath, "package.json"))) {
         directories.push(relativePath);
       }
     }
   }
-  return uniqueSorted3(directories);
+  return uniqueSorted4(directories);
 }
 async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
-  const packagePath = path18.join(projectRoot, "package.json");
+  const packagePath = path21.join(projectRoot, "package.json");
   const parsed = await readJsonObjectIfPresent2(packagePath, "Impact package.json");
   const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
   if (!parsed) {
@@ -70181,7 +73485,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   for (const workspacePath of workspaceDirectories) {
     try {
       const workspacePackage = await readJsonObjectIfPresent2(
-        path18.join(projectRoot, workspacePath, "package.json"),
+        path21.join(projectRoot, workspacePath, "package.json"),
         `Impact workspace package ${workspacePath}/package.json`
       );
       if (!workspacePackage) {
@@ -70211,7 +73515,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   }
   for (const workspacePath of workspaceDirectories) {
     const workspacePackage = await readJsonObjectIfPresent2(
-      path18.join(projectRoot, workspacePath, "package.json"),
+      path21.join(projectRoot, workspacePath, "package.json"),
       `Impact workspace package ${workspacePath}/package.json`
     );
     if (!workspacePackage) {
@@ -70245,12 +73549,12 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   return { used: true, packageNameByWorkspacePath };
 }
 async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
-  const lockPath = path18.join(projectRoot, "package-lock.json");
+  const lockPath = path21.join(projectRoot, "package-lock.json");
   if (!await pathExists7(lockPath)) {
     return false;
   }
   try {
-    const parsed = safeJsonParseObject(await fs18.readFile(lockPath, "utf8"), {
+    const parsed = safeJsonParseObject(await fs21.readFile(lockPath, "utf8"), {
       label: "Impact package-lock.json"
     });
     const packages = isPlainObject7(parsed.packages) ? Object.entries(parsed.packages) : [];
@@ -70299,7 +73603,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
   const results = /* @__PURE__ */ new Set();
   const queue = [];
   for (const root of roots) {
-    if (await pathExists7(path18.join(projectRoot, root))) {
+    if (await pathExists7(path21.join(projectRoot, root))) {
       queue.push({ relativePath: root, depth: 0 });
     }
   }
@@ -70308,8 +73612,8 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
     if (!current || current.depth > 8) {
       continue;
     }
-    const absolutePath = path18.join(projectRoot, current.relativePath);
-    const entries = await fs18.readdir(absolutePath, { withFileTypes: true });
+    const absolutePath = path21.join(projectRoot, current.relativePath);
+    const entries = await fs21.readdir(absolutePath, { withFileTypes: true });
     for (const entry of entries) {
       if (results.size >= 600) {
         break;
@@ -70323,13 +73627,13 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
           continue;
         }
         queue.push({ relativePath, depth: current.depth + 1 });
-      } else if (SOURCE_FILE_EXTENSIONS.has(path18.posix.extname(relativePath).toLowerCase())) {
+      } else if (SOURCE_FILE_EXTENSIONS.has(path21.posix.extname(relativePath).toLowerCase())) {
         results.add(relativePath);
       }
     }
   }
   for (const file2 of changedFiles) {
-    if (SOURCE_FILE_EXTENSIONS.has(path18.posix.extname(file2).toLowerCase())) {
+    if (SOURCE_FILE_EXTENSIONS.has(path21.posix.extname(file2).toLowerCase())) {
       results.add(file2);
     }
   }
@@ -70339,7 +73643,7 @@ function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPath
   if (!specifier.startsWith(".")) {
     return null;
   }
-  const base = path18.posix.normalize(path18.posix.join(path18.posix.dirname(importerPath), specifier));
+  const base = path21.posix.normalize(path21.posix.join(path21.posix.dirname(importerPath), specifier));
   const candidates = [
     base,
     `${base}.ts`,
@@ -70385,7 +73689,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
       skippedSecretCount += 1;
       continue;
     }
-    const absolutePath = path18.join(projectRoot, file2);
+    const absolutePath = path21.join(projectRoot, file2);
     if (!await pathExists7(absolutePath)) {
       continue;
     }
@@ -70405,7 +73709,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
         source: TS_IMPORT_SCAN_SOURCE
       });
     }
-    const rawSource = await fs18.readFile(absolutePath, "utf8");
+    const rawSource = await fs21.readFile(absolutePath, "utf8");
     scannedCount += 1;
     for (const specifier of extractImportSpecifiers(rawSource)) {
       const targetPath = resolveImportSpecifierToRepoPath(file2, specifier, sourceFileSet);
@@ -70461,7 +73765,7 @@ async function loadCustomDependencyGraphs(projectRoot, config2, nodes, edges, ev
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     try {
-      const parsed = safeJsonParseObject(await fs18.readFile(absolutePath, "utf8"), {
+      const parsed = safeJsonParseObject(await fs21.readFile(absolutePath, "utf8"), {
         label: `Impact dependency graph ${relativePath}`
       });
       const graphResult = dependencyGraphMetadataSchema.safeParse(parsed);
@@ -70546,7 +73850,7 @@ function buildReverseDependentsByPath(files, nodes, edges) {
   const reverseDependentsByPath = {};
   for (const file2 of files) {
     const matchingNodeIds = nodes.filter((node) => nodeMatchesChangedFile(node, file2)).map((node) => node.id);
-    const dependents = uniqueSorted3(
+    const dependents = uniqueSorted4(
       matchingNodeIds.flatMap((nodeId) => [...incoming.get(nodeId) ?? /* @__PURE__ */ new Set()])
     );
     reverseDependentsByPath[file2] = dependents;
@@ -70568,7 +73872,7 @@ function buildDependencyCoverage(files, surfaces, sourcesConfigured, sourcesUsed
     (file2) => (reverseDependentsByPath[file2]?.length ?? 0) > 0
   );
   const filesUncovered = relevantFiles.filter((file2) => !filesCovered.includes(file2));
-  const gaps = uniqueSorted3([
+  const gaps = uniqueSorted4([
     ...filesUncovered.map((file2) => `No dependency node covered ${file2}.`),
     ...relevantFiles.filter((file2) => !reverseCovered.includes(file2)).map((file2) => `Reverse dependency coverage is absent for ${file2}.`)
   ]);
@@ -70599,7 +73903,7 @@ async function loadDependencyAnalysis(projectRoot, files, surfaces, config2, war
   const edgesByKey = /* @__PURE__ */ new Map();
   const evidence = [];
   const unknowns = [];
-  const sourcesConfigured = uniqueSorted3(config2.dependencyGraph.sources);
+  const sourcesConfigured = uniqueSorted4(config2.dependencyGraph.sources);
   const sourcesUsed = [];
   const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
   if (config2.dependencyGraph.sources.includes(PACKAGE_JSON_SOURCE)) {
@@ -70662,7 +73966,7 @@ async function loadDependencyAnalysis(projectRoot, files, surfaces, config2, war
     files,
     surfaces,
     sourcesConfigured,
-    uniqueSorted3(sourcesUsed),
+    uniqueSorted4(sourcesUsed),
     nodes,
     reverseDependentsByPath
   );
@@ -70944,7 +74248,7 @@ function collectCommandSubstratePaths(commandName, entry) {
     pathFromBlockedBy(blockedBy, "Missing primary skill: "),
     expectedSkillPath(entry)
   ].filter((value) => value !== null);
-  return uniqueSorted3(candidates.flatMap((value) => {
+  return uniqueSorted4(candidates.flatMap((value) => {
     const normalized = stripPathFragment(value);
     return normalized === value ? [value] : [value, normalized];
   }));
@@ -71020,11 +74324,11 @@ function analyzeImplementedCommandSubstrate(files, catalog, runtime, findings, e
     const blockedBy = extractBlockedBy(entry);
     const manifestPath = stringValue(entry.manifestPath) ?? pathFromBlockedBy(blockedBy, "Missing command manifest: ") ?? expectedCommandManifestPath(commandName);
     const skillPath = stringValue(entry.skillPath) ?? pathFromBlockedBy(blockedBy, "Missing primary skill: ") ?? expectedSkillPath(entry);
-    const missingRequiredToolsFromBlockedBy = uniqueSorted3(
+    const missingRequiredToolsFromBlockedBy = uniqueSorted4(
       blockedBy.filter((item) => item.startsWith("Missing required MCP tool: ")).map((item) => item.slice("Missing required MCP tool: ".length).trim())
     );
     const missingRequiredToolsFromRuntime = runtimeToolNames && extractRequiredTools(entry).length > 0 ? extractRequiredTools(entry).filter((toolName) => !runtimeToolNames.has(toolName)) : [];
-    const missingRequiredTools = uniqueSorted3([
+    const missingRequiredTools = uniqueSorted4([
       ...missingRequiredToolsFromBlockedBy,
       ...missingRequiredToolsFromRuntime,
       ...entry.requiredToolsSatisfied === false && missingRequiredToolsFromBlockedBy.length === 0 && missingRequiredToolsFromRuntime.length === 0 ? ["unknown-required-tool"] : []
@@ -71217,7 +74521,7 @@ function addSurfaceObligations(surfaces, obligations, evidence) {
     category: "build",
     title: "Runtime source changes require generated dist review",
     severity: "HIGH",
-    impactedFiles: uniqueSorted3([...runtimeCatalogFiles, ...mcpFiles]),
+    impactedFiles: uniqueSorted4([...runtimeCatalogFiles, ...mcpFiles]),
     sourceSurfaces: ["command-catalog", "mcp-server", "mcp-tool", "mcp-resource"],
     requiredActions: ["Run the build and verify dist output provenance for runtime source changes."],
     evidenceKind: "build"
@@ -71374,7 +74678,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
   const missingMcpRuntimeBundleCoverage = compiledRuntimeOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
-  if (hasRuntimeOrExtension && !await pathExists7(path18.join(projectRoot, "dist/mcp/server.js"))) {
+  if (hasRuntimeOrExtension && !await pathExists7(path21.join(projectRoot, "dist/mcp/server.js"))) {
     const evidenceRef = addEvidence(evidence, {
       kind: "build",
       source: "dist-entrypoint",
@@ -71480,7 +74784,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
       category: "build",
       title: "Generated output provenance must be verified",
       severity: "HIGH",
-      impactedFiles: uniqueSorted3([...runtimeOrExtensionFiles, ...distFiles]),
+      impactedFiles: uniqueSorted4([...runtimeOrExtensionFiles, ...distFiles]),
       sourceSurfaces: ["generated"],
       requiredActions: [
         "Verify dist/** output was generated from the intended source and extension runtime inputs."
@@ -71581,7 +74885,7 @@ async function isGitRepository(projectRoot) {
   });
   return result.success && result.stdout.trim() === "true";
 }
-function parseNullSeparatedPaths(stdout) {
+function parseNullSeparatedPaths2(stdout) {
   return [...new Set(stdout.split("\0").map((value) => value.trim()).filter(Boolean))].sort();
 }
 function parseNumstat(stdout) {
@@ -71644,7 +74948,7 @@ async function resolveGitDiffMetadata(projectRoot, kind, diffArgs, hashSeed) {
       patchHash: null
     };
   }
-  let changedFiles = parseNullSeparatedPaths(nameResult.stdout);
+  let changedFiles = parseNullSeparatedPaths2(nameResult.stdout);
   const numstatResult = await runGit4(projectRoot, ["diff", "--numstat", ...diffArgs], {
     allowFailure: true
   });
@@ -71857,7 +75161,7 @@ async function loadSeededScopeArgs(projectRoot, args) {
     return args;
   }
   const seedPath = resolveContainedInputPath(projectRoot, args.seedFile, "Impact seed file");
-  const parsed = safeJsonParseObject(await fs18.readFile(seedPath, "utf8"), {
+  const parsed = safeJsonParseObject(await fs21.readFile(seedPath, "utf8"), {
     label: "Impact seed file"
   });
   const seedResult = impactScopeSeedSchema.safeParse(parsed);
@@ -71883,7 +75187,7 @@ async function blueprintImpactConfigGet(args = {}) {
   const errors = [];
   const layersApplied = ["built-in"];
   const defaultsPath = getImpactDefaultsPath();
-  const projectConfigPath = path18.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
+  const projectConfigPath = path21.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
   let appliedDefaultsPath = null;
   let appliedProjectPath = null;
   let appliedInvocationPath = null;
@@ -72036,7 +75340,7 @@ async function resolveDiffFileScope(projectRoot, args, mode, description, warnin
     );
   }
   const diffPath = resolveContainedInputPath(projectRoot, args.diffFile, "Impact diff file");
-  const rawDiff = await fs18.readFile(diffPath, "utf8");
+  const rawDiff = await fs21.readFile(diffPath, "utf8");
   const files = parseDiffFilePaths(rawDiff).map((file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact diff path")).sort();
   const stats = parseDiffFileStats(rawDiff);
   const diffFileRelativePath = toRepoRelativePath(projectRoot, diffPath);
@@ -72303,7 +75607,7 @@ async function blueprintImpactScopeResolve(args = {}) {
   return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
 }
 async function readPackageMetadata(projectRoot) {
-  const packageJsonPath = path18.join(projectRoot, "package.json");
+  const packageJsonPath = path21.join(projectRoot, "package.json");
   if (!await pathExists7(packageJsonPath)) {
     return {
       loaded: false,
@@ -72316,7 +75620,7 @@ async function readPackageMetadata(projectRoot) {
     };
   }
   try {
-    const parsed = safeJsonParseObject(await fs18.readFile(packageJsonPath, "utf8"), {
+    const parsed = safeJsonParseObject(await fs21.readFile(packageJsonPath, "utf8"), {
       label: "package.json"
     });
     const scripts = isPlainObject7(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
@@ -72346,7 +75650,7 @@ async function readPackageMetadata(projectRoot) {
 async function listExistingTopLevelPaths(projectRoot, candidates) {
   const existing = [];
   for (const candidate of candidates) {
-    if (await pathExists7(path18.join(projectRoot, candidate))) {
+    if (await pathExists7(path21.join(projectRoot, candidate))) {
       existing.push(candidate);
     }
   }
@@ -73011,7 +76315,7 @@ function canonicalizeImpactReport(report) {
   };
 }
 function normalizeExpectedFilePath(value) {
-  return path18.posix.normalize(value.trim().replaceAll("\\", "/"));
+  return path21.posix.normalize(value.trim().replaceAll("\\", "/"));
 }
 function normalizeExpectedEvidencePathsById(expectedPathsById) {
   if (expectedPathsById === void 0) {
@@ -73234,13 +76538,13 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
   }
   if (!isPlainObject7(rawReport)) {
     errors.push("Impact report payload must be a JSON object.");
-    return { impactId, report: null, errors: uniqueSorted3(errors), warnings };
+    return { impactId, report: null, errors: uniqueSorted4(errors), warnings };
   }
   const baseSchema = reportImpactBaseSchema();
   const baseErrors = validateImpactReportAgainstSchema(rawReport, baseSchema);
   if (baseErrors.length > 0) {
     errors.push(...baseErrors);
-    return { impactId, report: null, errors: uniqueSorted3(errors), warnings };
+    return { impactId, report: null, errors: uniqueSorted4(errors), warnings };
   }
   const report = canonicalizeImpactReport(rawReport);
   const taskErrors = validateImpactReportAgainstSchema(
@@ -73259,7 +76563,7 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
   );
   if (taskErrors.length > 0) {
     errors.push(...taskErrors);
-    return { impactId, report: null, errors: uniqueSorted3(errors), warnings };
+    return { impactId, report: null, errors: uniqueSorted4(errors), warnings };
   }
   if (requestedImpactId && requestedImpactId !== report.impactId) {
     errors.push(
@@ -73273,8 +76577,8 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
   return {
     impactId: report.impactId,
     report,
-    errors: uniqueSorted3(errors),
-    warnings: uniqueSorted3(warnings)
+    errors: uniqueSorted4(errors),
+    warnings: uniqueSorted4(warnings)
   };
 }
 function validateImpactReportQuality(report, projectRoot) {
@@ -73295,8 +76599,8 @@ function validateImpactReportQuality(report, projectRoot) {
   const markdown = renderImpactMarkdown(report);
   validateRenderedImpactMarkdown(markdown, errors, warnings);
   return {
-    errors: uniqueSorted3(errors),
-    warnings: uniqueSorted3(warnings)
+    errors: uniqueSorted4(errors),
+    warnings: uniqueSorted4(warnings)
   };
 }
 function validateReportRepoRelativePath(projectRoot, value, label, errors) {
@@ -73310,17 +76614,17 @@ function validateReportRepoRelativePath(projectRoot, value, label, errors) {
     errors.push(`${label} must not contain null bytes.`);
     return;
   }
-  if (path18.isAbsolute(trimmed) || path18.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
+  if (path21.isAbsolute(trimmed) || path21.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
     errors.push(`${label} must be repo-relative, not absolute: ${value}`);
     return;
   }
-  const normalizedPath = path18.posix.normalize(slashNormalized);
+  const normalizedPath = path21.posix.normalize(slashNormalized);
   if (normalizedPath === ".." || normalizedPath.startsWith("../")) {
     errors.push(`${label} escapes the repository: ${value}`);
     return;
   }
   try {
-    ensurePathWithinRootSync(projectRoot, path18.resolve(projectRoot, normalizedPath), {
+    ensurePathWithinRootSync(projectRoot, path21.resolve(projectRoot, normalizedPath), {
       label
     });
   } catch (error2) {
@@ -73341,7 +76645,7 @@ function shouldValidateReportScopeSource(scope) {
   }
   const trimmed = scope.source.trim();
   const slashNormalized = trimmed.replaceAll("\\", "/");
-  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path18.isAbsolute(trimmed) || path18.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
+  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path21.isAbsolute(trimmed) || path21.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
 }
 function validateReportScopeSource(projectRoot, scope, errors) {
   if (!shouldValidateReportScopeSource(scope)) {
@@ -74017,13 +77321,13 @@ function renderImpactHumanText(report, verbosity) {
 `;
 }
 function ensureImpactReportRoot(projectRoot) {
-  return ensurePathWithinRootSync(projectRoot, path18.join(projectRoot, IMPACT_REPORT_ROOT), {
+  return ensurePathWithinRootSync(projectRoot, path21.join(projectRoot, IMPACT_REPORT_ROOT), {
     label: "impact report root"
   });
 }
 function ensureImpactBundleDir(projectRoot, impactId) {
   const impactRoot = ensureImpactReportRoot(projectRoot);
-  const impactDir = ensurePathWithinRootSync(impactRoot, path18.join(impactRoot, impactId), {
+  const impactDir = ensurePathWithinRootSync(impactRoot, path21.join(impactRoot, impactId), {
     label: "impact report directory"
   });
   ensurePathWithinRootSync(projectRoot, impactDir, { label: "impact report directory" });
@@ -74035,18 +77339,18 @@ async function compareImpactBundle(projectRoot, impactDir, files) {
     return { existing: false, identical: false };
   }
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path18.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path21.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
     if (!await pathExists7(filePath)) {
       return { existing: true, identical: false };
     }
-    if (await fs18.readFile(filePath, "utf8") !== content) {
+    if (await fs21.readFile(filePath, "utf8") !== content) {
       return { existing: true, identical: false };
     }
   }
-  const existingEntries = await fs18.readdir(impactDir, { withFileTypes: true });
+  const existingEntries = await fs21.readdir(impactDir, { withFileTypes: true });
   for (const entry of existingEntries) {
     if (!IMPACT_ALLOWED_BUNDLE_FILES.has(entry.name) || !files.has(entry.name)) {
       return { existing: true, identical: false };
@@ -74058,7 +77362,7 @@ function uniqueImpactBundleWorkDir(impactRoot, impactId, purpose) {
   const suffix = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return ensurePathWithinRootSync(
     impactRoot,
-    path18.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
+    path21.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
     { label: `impact report ${purpose} directory` }
   );
 }
@@ -74068,19 +77372,19 @@ function persistenceErrorMessage(error2) {
 async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files, existingDirectoryMode, existingFileModes) {
   const stagingDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "staging");
   try {
-    await fs18.mkdir(stagingDir);
+    await fs21.mkdir(stagingDir);
     if (existingDirectoryMode !== null) {
-      await fs18.chmod(stagingDir, existingDirectoryMode);
+      await fs21.chmod(stagingDir, existingDirectoryMode);
     }
     for (const [fileName, content] of files) {
-      const filePath = ensurePathWithinRootSync(stagingDir, path18.join(stagingDir, fileName), {
+      const filePath = ensurePathWithinRootSync(stagingDir, path21.join(stagingDir, fileName), {
         label: "staged impact report file"
       });
       ensurePathWithinRootSync(projectRoot, filePath, { label: "staged impact report file" });
-      await fs18.writeFile(filePath, content, "utf8");
+      await fs21.writeFile(filePath, content, "utf8");
       const existingMode = existingFileModes.get(fileName);
       if (existingMode !== void 0) {
-        await fs18.chmod(filePath, existingMode);
+        await fs21.chmod(filePath, existingMode);
       }
     }
     const stagedComparison = await compareImpactBundle(projectRoot, stagingDir, files);
@@ -74089,7 +77393,7 @@ async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files, 
     }
     return stagingDir;
   } catch (error2) {
-    await fs18.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+    await fs21.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -74098,7 +77402,7 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
   const backupDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "backup");
   let hadExistingBundle = false;
   try {
-    const stats = await fs18.lstat(impactDir);
+    const stats = await fs21.lstat(impactDir);
     if (!stats.isDirectory()) {
       throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
     }
@@ -74110,29 +77414,29 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
   let promoted = false;
   try {
     if (hadExistingBundle) {
-      await fs18.rename(impactDir, backupDir);
+      await fs21.rename(impactDir, backupDir);
       backupCreated = true;
     }
-    await fs18.rename(stagingDir, impactDir);
+    await fs21.rename(stagingDir, impactDir);
     promoted = true;
   } catch (error2) {
     if (backupCreated && !promoted) {
-      await fs18.rm(impactDir, { recursive: true, force: true }).catch(() => void 0);
+      await fs21.rm(impactDir, { recursive: true, force: true }).catch(() => void 0);
       try {
-        await fs18.rename(backupDir, impactDir);
+        await fs21.rename(backupDir, impactDir);
       } catch (restoreError) {
-        await fs18.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+        await fs21.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
         throw new Error(
           `Impact report bundle replacement failed and the previous bundle could not be restored. Replacement error: ${persistenceErrorMessage(error2)}. Restore error: ${persistenceErrorMessage(restoreError)}.`
         );
       }
     }
-    await fs18.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+    await fs21.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   if (backupCreated) {
     try {
-      await fs18.rm(backupDir, { recursive: true, force: true });
+      await fs21.rm(backupDir, { recursive: true, force: true });
     } catch (error2) {
       warnings.push(
         `Impact report bundle was replaced, but cleanup of the previous staged backup failed: ${persistenceErrorMessage(error2)}`
@@ -74143,11 +77447,11 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
 }
 async function replaceImpactBundleTransactionally(projectRoot, impactId, impactDir, files) {
   const impactRoot = ensureImpactReportRoot(projectRoot);
-  await fs18.mkdir(impactRoot, { recursive: true });
+  await fs21.mkdir(impactRoot, { recursive: true });
   let existingDirectoryMode = null;
   const existingFileModes = /* @__PURE__ */ new Map();
   try {
-    const stats = await fs18.lstat(impactDir);
+    const stats = await fs21.lstat(impactDir);
     if (!stats.isDirectory()) {
       throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
     }
@@ -74162,11 +77466,11 @@ async function replaceImpactBundleTransactionally(projectRoot, impactId, impactD
       [...files.keys()].map(async (fileName) => {
         const existingPath = ensurePathWithinRootSync(
           impactDir,
-          path18.join(impactDir, fileName),
+          path21.join(impactDir, fileName),
           { label: "existing impact report file" }
         );
         try {
-          const stats = await fs18.lstat(existingPath);
+          const stats = await fs21.lstat(existingPath);
           if (!stats.isFile()) {
             throw new Error(`Impact bundle file target must be a regular file: ${existingPath}`);
           }
@@ -74191,13 +77495,13 @@ async function replaceImpactBundleTransactionally(projectRoot, impactId, impactD
 }
 async function readSavedImpactReport(projectRoot, impactId) {
   const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const reportPath = ensurePathWithinRootSync(impactDir, path18.join(impactDir, "impact.json"), {
+  const reportPath = ensurePathWithinRootSync(impactDir, path21.join(impactDir, "impact.json"), {
     label: "saved impact report"
   });
   if (!await pathExists7(reportPath)) {
     throw new Error(`${IMPACT_REPORT_ROOT}/${impactId}/impact.json does not exist.`);
   }
-  return safeJsonParseObject(await fs18.readFile(reportPath, "utf8"), {
+  return safeJsonParseObject(await fs21.readFile(reportPath, "utf8"), {
     label: `${IMPACT_REPORT_ROOT}/${impactId}/impact.json`
   });
 }
@@ -74242,9 +77546,9 @@ async function blueprintImpactReportWrite(args = {}) {
     writeEvidenceLog: args.writeEvidenceLog
   });
   return withBlueprintRepoLock(projectRoot, `impact-report-${impactId}`, async () => {
-    const lexicalImpactDir = path18.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
+    const lexicalImpactDir = path21.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
     try {
-      const stats = await fs18.lstat(lexicalImpactDir);
+      const stats = await fs21.lstat(lexicalImpactDir);
       if (!stats.isDirectory()) {
         throw new Error(`Impact bundle target must be a real directory: ${lexicalImpactDir}`);
       }
@@ -74385,7 +77689,7 @@ var init_impact = __esm({
       "reporting"
     ];
     BUILT_IN_BASE_BRANCHES = ["main", "master"];
-    execFileAsync6 = promisify6(execFile6);
+    execFileAsync6 = promisify6(execFile7);
     IMPACT_SURFACE_PRIORITY = {
       "secret-sensitive": 1,
       "env-config": 2,
@@ -74691,24 +77995,24 @@ var init_impact = __esm({
 });
 
 // src/mcp/quality-shipping-safety.ts
-import { execFile as execFile7 } from "node:child_process";
-import { createHash as createHash6 } from "node:crypto";
-function canonicalize(value) {
+import { execFile as execFile8 } from "node:child_process";
+import { createHash as createHash9 } from "node:crypto";
+function canonicalize3(value) {
   if (Array.isArray(value)) {
-    return value.map(canonicalize);
+    return value.map(canonicalize3);
   }
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).filter(([, entryValue]) => entryValue !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entryValue]) => [key, canonicalize(entryValue)])
+      Object.entries(value).filter(([, entryValue]) => entryValue !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entryValue]) => [key, canonicalize3(entryValue)])
     );
   }
   return value;
 }
 function qualityShippingStableSerialize(value) {
-  return JSON.stringify(canonicalize(value));
+  return JSON.stringify(canonicalize3(value));
 }
 function qualityShippingSha256(value) {
-  return createHash6("sha256").update(value).digest("hex");
+  return createHash9("sha256").update(value).digest("hex");
 }
 function qualityShippingFingerprint(value) {
   return qualityShippingSha256(qualityShippingStableSerialize(value));
@@ -74753,7 +78057,7 @@ var init_quality_shipping_safety = __esm({
     "use strict";
     activeOperationKeys = /* @__PURE__ */ new Set();
     qualityShippingProcessRunner = async (command, argv, cwd, env2) => new Promise((resolve) => {
-      execFile7(
+      execFile8(
         command,
         [...argv],
         {
@@ -74782,10 +78086,10 @@ var init_quality_shipping_safety = __esm({
 });
 
 // src/mcp/tools/undo.ts
-import { randomUUID as randomUUID3 } from "node:crypto";
+import { randomUUID as randomUUID5 } from "node:crypto";
 import { access, lstat, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import os7 from "node:os";
-import path19 from "node:path";
+import path22 from "node:path";
 function pruneApprovals(forInsertion = false) {
   const now = nowProvider();
   for (const [operationId, approval] of approvals) {
@@ -74833,14 +78137,14 @@ async function pathExists8(targetPath) {
 }
 async function gitPathExists(repoRoot, name) {
   const gitPath = await requiredGit(repoRoot, ["rev-parse", "--git-path", name]);
-  return pathExists8(path19.isAbsolute(gitPath) ? gitPath : path19.resolve(repoRoot, gitPath));
+  return pathExists8(path22.isAbsolute(gitPath) ? gitPath : path22.resolve(repoRoot, gitPath));
 }
 async function inspectRepository(cwd) {
   const repoRootRaw = await requiredGit(cwd, ["rev-parse", "--show-toplevel"]);
   const repoRoot = await realpath(repoRootRaw);
   const gitCommonDirRaw = await requiredGit(repoRoot, ["rev-parse", "--git-common-dir"]);
   const gitCommonDir2 = await realpath(
-    path19.isAbsolute(gitCommonDirRaw) ? gitCommonDirRaw : path19.resolve(repoRoot, gitCommonDirRaw)
+    path22.isAbsolute(gitCommonDirRaw) ? gitCommonDirRaw : path22.resolve(repoRoot, gitCommonDirRaw)
   );
   const headResult = await runGit5(repoRoot, ["rev-parse", "--verify", "HEAD"]);
   const branchResult = await runGit5(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
@@ -74901,12 +78205,12 @@ function repositoryBlockers(snapshot3) {
 }
 function normalizeEvidencePath(repoRoot, value) {
   const trimmed = value.trim().replaceAll("\\", "/");
-  if (!trimmed || path19.isAbsolute(trimmed) || trimmed.split("/").includes("..")) {
+  if (!trimmed || path22.isAbsolute(trimmed) || trimmed.split("/").includes("..")) {
     throw new Error(`Evidence path must be repo-relative and contained: ${value}`);
   }
-  const absolutePath = path19.resolve(repoRoot, trimmed);
-  const relativePath = path19.relative(repoRoot, absolutePath).replaceAll("\\", "/");
-  if (!relativePath || relativePath.startsWith("../") || path19.isAbsolute(relativePath)) {
+  const absolutePath = path22.resolve(repoRoot, trimmed);
+  const relativePath = path22.relative(repoRoot, absolutePath).replaceAll("\\", "/");
+  if (!relativePath || relativePath.startsWith("../") || path22.isAbsolute(relativePath)) {
     throw new Error(`Evidence path must resolve inside the repository: ${value}`);
   }
   if (relativePath !== trimmed) {
@@ -74918,7 +78222,7 @@ async function assertCanonicalEvidenceParents(repoRoot, relativePath) {
   const parentParts = relativePath.split("/").slice(0, -1);
   let currentPath = repoRoot;
   for (const part of parentParts) {
-    currentPath = path19.join(currentPath, part);
+    currentPath = path22.join(currentPath, part);
     let metadata;
     try {
       metadata = await lstat(currentPath);
@@ -74929,8 +78233,8 @@ async function assertCanonicalEvidenceParents(repoRoot, relativePath) {
     if (metadata.isSymbolicLink()) {
       try {
         const linkedPath = await realpath(currentPath);
-        const linkedRelativePath = path19.relative(repoRoot, linkedPath);
-        if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path19.sep}`) || path19.isAbsolute(linkedRelativePath)) {
+        const linkedRelativePath = path22.relative(repoRoot, linkedPath);
+        if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path22.sep}`) || path22.isAbsolute(linkedRelativePath)) {
           throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
         }
       } catch (error2) {
@@ -74950,7 +78254,7 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
   const normalized = [...new Set(evidencePaths.map((value) => normalizeEvidencePath(repoRoot, value)))].sort();
   const receipts = [];
   for (const relativePath of normalized) {
-    const absolutePath = path19.join(repoRoot, relativePath);
+    const absolutePath = path22.join(repoRoot, relativePath);
     let contentSha256 = null;
     if (relativePath === UNDO_REPORT_PATH) {
       throw new Error(`${UNDO_REPORT_PATH} cannot be its own undo evidence input.`);
@@ -74961,8 +78265,8 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
       if (metadata.isSymbolicLink()) {
         try {
           const linkedPath = await realpath(absolutePath);
-          const linkedRelativePath = path19.relative(repoRoot, linkedPath);
-          if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path19.sep}`) || path19.isAbsolute(linkedRelativePath)) {
+          const linkedRelativePath = path22.relative(repoRoot, linkedPath);
+          if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path22.sep}`) || path22.isAbsolute(linkedRelativePath)) {
             throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
           }
         } catch (error2) {
@@ -74977,8 +78281,8 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
         throw new Error(`Evidence path must be a regular file: ${relativePath}`);
       }
       const realEvidencePath = await realpath(absolutePath);
-      const realRelativePath = path19.relative(repoRoot, realEvidencePath);
-      if (realRelativePath === ".." || realRelativePath.startsWith(`..${path19.sep}`) || path19.isAbsolute(realRelativePath)) {
+      const realRelativePath = path22.relative(repoRoot, realEvidencePath);
+      if (realRelativePath === ".." || realRelativePath.startsWith(`..${path22.sep}`) || path22.isAbsolute(realRelativePath)) {
         throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
       }
       if (realEvidencePath !== absolutePath) {
@@ -74993,7 +78297,7 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
   return receipts;
 }
 async function readUndoReportReceipt(repoRoot) {
-  const reportPath = path19.join(repoRoot, UNDO_REPORT_PATH);
+  const reportPath = path22.join(repoRoot, UNDO_REPORT_PATH);
   if (!await pathExists8(reportPath)) {
     return { exists: false, contentSha256: null, content: null, appliedReverts: [] };
   }
@@ -75044,10 +78348,10 @@ async function expectedRevertTree(repoRoot, headBefore, candidate) {
   if (!selectedParent) return null;
   const sourceObjectsRaw = await requiredGit(repoRoot, ["rev-parse", "--git-path", "objects"]);
   const sourceObjects = await realpath(
-    path19.isAbsolute(sourceObjectsRaw) ? sourceObjectsRaw : path19.resolve(repoRoot, sourceObjectsRaw)
+    path22.isAbsolute(sourceObjectsRaw) ? sourceObjectsRaw : path22.resolve(repoRoot, sourceObjectsRaw)
   );
-  const temporaryObjectRoot = await mkdtemp(path19.join(os7.tmpdir(), "blueprint-undo-tree-"));
-  const temporaryObjects = path19.join(temporaryObjectRoot, "objects");
+  const temporaryObjectRoot = await mkdtemp(path22.join(os7.tmpdir(), "blueprint-undo-tree-"));
+  const temporaryObjects = path22.join(temporaryObjectRoot, "objects");
   try {
     await mkdir(temporaryObjects, { recursive: true });
     const result = await processRunner(
@@ -75502,7 +78806,7 @@ async function blueprintUndoPreview(args) {
         warnings: []
       };
     }
-    const operationId = randomUUID3();
+    const operationId = randomUUID5();
     const fingerprint = qualityShippingFingerprint(built.packet);
     approvals.set(operationId, {
       packet: built.packet,
@@ -75745,7 +79049,7 @@ async function blueprintUndoExecute(args) {
         return result;
       }
       const persistedPreReport = await readFile(
-        path19.join(stored.packet.repoRoot, stored.packet.report.path)
+        path22.join(stored.packet.repoRoot, stored.packet.report.path)
       );
       if (qualityShippingSha256(persistedPreReport) !== stored.packet.report.preMutationContentSha256) {
         result.status = "stale";
@@ -76198,9 +79502,9 @@ var init_undo = __esm({
 });
 
 // src/mcp/tools/pr-branch.ts
-import { randomUUID as randomUUID4 } from "node:crypto";
+import { randomUUID as randomUUID6 } from "node:crypto";
 import { access as access2, lstat as lstat2, mkdtemp as mkdtemp2, readFile as readFile2, realpath as realpath2, rm as rm2 } from "node:fs/promises";
-import path20 from "node:path";
+import path23 from "node:path";
 function env() {
   return qualityShippingGitEnvironment();
 }
@@ -76248,14 +79552,14 @@ async function inProgressState(commonDir) {
     ["bisect", "BISECT_LOG"]
   ];
   const found = [];
-  for (const [name, marker] of markers) if (await exists(path20.join(commonDir, marker))) found.push(name);
+  for (const [name, marker] of markers) if (await exists(path23.join(commonDir, marker))) found.push(name);
   return found;
 }
 async function snapshot(cwd) {
   const repoRootRaw = await gitText(cwd, ["rev-parse", "--show-toplevel"], "repository discovery");
   const repoRoot = await realpath2(repoRootRaw);
   const commonRaw = await gitText(repoRoot, ["rev-parse", "--git-common-dir"], "git common-dir discovery");
-  const gitCommonDir2 = await realpath2(path20.resolve(repoRoot, commonRaw));
+  const gitCommonDir2 = await realpath2(path23.resolve(repoRoot, commonRaw));
   const branchResult = await git(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
   const headResult = await git(repoRoot, ["rev-parse", "--verify", "HEAD"]);
   const statusResult = await git(repoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
@@ -76364,12 +79668,12 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
   const normalized = [...new Set(evidencePaths.map((value) => value.trim().replaceAll("\\", "/").replace(/^\.\//, "")))].sort();
   const receipts = [];
   for (const relative of normalized) {
-    if (!relative || relative.startsWith("-") || path20.isAbsolute(relative) || relative.split("/").includes("..")) {
+    if (!relative || relative.startsWith("-") || path23.isAbsolute(relative) || relative.split("/").includes("..")) {
       throw new Error(`Evidence path must be a safe repo-relative canonical path: ${relative}`);
     }
-    const absolute = path20.resolve(repoRoot, relative);
-    const lexicalRelative = path20.relative(repoRoot, absolute);
-    if (!lexicalRelative || lexicalRelative === ".." || lexicalRelative.startsWith(`..${path20.sep}`) || path20.isAbsolute(lexicalRelative)) {
+    const absolute = path23.resolve(repoRoot, relative);
+    const lexicalRelative = path23.relative(repoRoot, absolute);
+    if (!lexicalRelative || lexicalRelative === ".." || lexicalRelative.startsWith(`..${path23.sep}`) || path23.isAbsolute(lexicalRelative)) {
       throw new Error(`Evidence path escapes the canonical repository: ${relative}`);
     }
     if (lexicalRelative.replaceAll("\\", "/") !== relative) {
@@ -76384,15 +79688,15 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
         } catch {
           throw new Error(`Evidence path ${relative} is a broken or unresolvable symlink.`);
         }
-        const linkedRelative = path20.relative(repoRoot, linkedPath);
-        if (linkedRelative === ".." || linkedRelative.startsWith(`..${path20.sep}`) || path20.isAbsolute(linkedRelative)) {
+        const linkedRelative = path23.relative(repoRoot, linkedPath);
+        if (linkedRelative === ".." || linkedRelative.startsWith(`..${path23.sep}`) || path23.isAbsolute(linkedRelative)) {
           throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
         }
         throw new Error(`Evidence path ${relative} is a symlink; evidence inputs must be canonical repository files.`);
       }
       const resolved = await realpath2(absolute);
-      const resolvedRelative = path20.relative(repoRoot, resolved);
-      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path20.sep}`) || path20.isAbsolute(resolvedRelative)) {
+      const resolvedRelative = path23.relative(repoRoot, resolved);
+      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path23.sep}`) || path23.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
       }
       const canonical = resolvedRelative.replaceAll("\\", "/");
@@ -76410,7 +79714,7 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
 }
 async function reportReceipt(repoRoot) {
   try {
-    return { exists: true, sha256: qualityShippingSha256(await readFile2(path20.join(repoRoot, REPORT_PATH))) };
+    return { exists: true, sha256: qualityShippingSha256(await readFile2(path23.join(repoRoot, REPORT_PATH))) };
   } catch (error2) {
     if (error2.code === "ENOENT") return { exists: false, sha256: null };
     throw error2;
@@ -76598,7 +79902,7 @@ function baseResult(packet, operationId, fingerprint) {
 async function existingBranchDisposition(repoRoot, reviewBranch, report, request) {
   if (await localBranchDisposition(repoRoot, reviewBranch) === "absent") return null;
   if (!report.exists) return "divergent";
-  const content = await readFile2(path20.join(repoRoot, REPORT_PATH), "utf8");
+  const content = await readFile2(path23.join(repoRoot, REPORT_PATH), "utf8");
   const escaped = reviewBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const createdOid = content.match(new RegExp(`^- Created branch: ${escaped} \\(([0-9a-f]{40}|[0-9a-f]{64})\\)$`, "m"))?.[1] ?? null;
   const sourceBranch = content.match(/^- Source branch: (.+)$/m)?.[1] ?? null;
@@ -76728,7 +80032,7 @@ async function blueprintPrBranchPreview(args) {
     };
     const plan = executionPlan(partialPacket);
     const packet = { ...partialPacket, report: placeholderReport, executionPlan: plan };
-    const operationId = randomUUID4();
+    const operationId = randomUUID6();
     const approvalFingerprint2 = prBranchApprovalFingerprint(packet);
     const reportContent = renderReport(packet, approvalFingerprint2, null);
     packet.report.preMutationContentSha256 = qualityShippingSha256(reportContent);
@@ -77008,8 +80312,8 @@ async function blueprintPrBranchExecute(args) {
           break;
         }
         try {
-          ownedTempDir = await mkdtemp2(path20.join(stored.packet.gitCommonDir, "blueprint-pr-branch-"));
-          const mixedPatchPath = path20.join(ownedTempDir, "replay.patch");
+          ownedTempDir = await mkdtemp2(path23.join(stored.packet.gitCommonDir, "blueprint-pr-branch-"));
+          const mixedPatchPath = path23.join(ownedTempDir, "replay.patch");
           const patchResult = await recordProcess(result, `filter-diff:${commit.sourceCommit}`, ["diff", "--binary", "--full-index", `--output=${mixedPatchPath}`, parent, commit.sourceCommit, "--", ".", ":(exclude).blueprint", ":(exclude).blueprint/**"]);
           if (!succeeded(patchResult)) {
             result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
@@ -77043,7 +80347,7 @@ async function blueprintPrBranchExecute(args) {
         result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
         result.status = abnormal(replay) ? "outcome-unknown" : "partial";
         result.blockers.push(`Replay failed at ${commit.sourceCommit}; conflicts were not resolved automatically.`);
-        const cherryPickHead = path20.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
+        const cherryPickHead = path23.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
         if (!mixed && await exists(cherryPickHead)) await recordProcess(result, "abort-cherry-pick", ["cherry-pick", "--abort"]);
         break;
       }
@@ -77354,9 +80658,9 @@ var init_pr_branch = __esm({
 });
 
 // src/mcp/tools/ship.ts
-import { randomUUID as randomUUID5 } from "node:crypto";
+import { randomUUID as randomUUID7 } from "node:crypto";
 import { access as access3, lstat as lstat3, readFile as readFile3, readdir, realpath as realpath3 } from "node:fs/promises";
-import path21 from "node:path";
+import path24 from "node:path";
 function pruneApprovals3(forInsertion = false) {
   const now = nowProvider3();
   for (const [id, stored] of approvals3) {
@@ -77399,13 +80703,13 @@ function rejectLiteral(value, label) {
 async function inProgressState2(commonDir) {
   const markers = [["merge", "MERGE_HEAD"], ["cherry-pick", "CHERRY_PICK_HEAD"], ["revert", "REVERT_HEAD"], ["rebase-merge", "rebase-merge"], ["rebase-apply", "rebase-apply"], ["sequencer", "sequencer"], ["bisect", "BISECT_LOG"]];
   const found = [];
-  for (const [label, marker] of markers) if (await exists2(path21.join(commonDir, marker))) found.push(label);
+  for (const [label, marker] of markers) if (await exists2(path24.join(commonDir, marker))) found.push(label);
   return found;
 }
 async function snapshot2(cwd) {
   const root = await realpath3(await gitText2(cwd, ["rev-parse", "--show-toplevel"], "repository discovery"));
   const commonRaw = await gitText2(root, ["rev-parse", "--git-common-dir"], "git common-dir discovery");
-  const common = await realpath3(path21.resolve(root, commonRaw));
+  const common = await realpath3(path24.resolve(root, commonRaw));
   const [branch, head, status, config2] = await Promise.all([
     run("git", root, ["symbolic-ref", "--quiet", "--short", "HEAD"]),
     run("git", root, ["rev-parse", "--verify", "HEAD"]),
@@ -77459,16 +80763,16 @@ async function evidenceReceipts3(repoRoot, inputs) {
   const seen = /* @__PURE__ */ new Set();
   for (const input of inputs) {
     rejectLiteral(input.path, "Evidence path");
-    if (path21.isAbsolute(input.path) || input.path.split(/[\\/]+/).includes("..")) throw new Error("Evidence paths must be safe repo-relative paths.");
+    if (path24.isAbsolute(input.path) || input.path.split(/[\\/]+/).includes("..")) throw new Error("Evidence paths must be safe repo-relative paths.");
     const normalized = input.path.replaceAll("\\", "/").replace(/^\.\//, "");
     if (seen.has(normalized)) throw new Error("Each evidence path may be supplied only once.");
     seen.add(normalized);
     const role = canonicalEvidenceRole(normalized);
     if (!role) throw new Error(`Evidence path ${normalized} is not a canonical phase quality artifact or pr-branch-latest receipt.`);
     if (role.kind !== input.kind) throw new Error(`Evidence kind ${input.kind} does not match the canonical ${role.kind} role derived from ${normalized}.`);
-    const absolutePath = path21.resolve(repoRoot, normalized);
-    const lexicalRelative = path21.relative(repoRoot, absolutePath);
-    if (lexicalRelative === ".." || lexicalRelative.startsWith(`..${path21.sep}`) || path21.isAbsolute(lexicalRelative)) {
+    const absolutePath = path24.resolve(repoRoot, normalized);
+    const lexicalRelative = path24.relative(repoRoot, absolutePath);
+    if (lexicalRelative === ".." || lexicalRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(lexicalRelative)) {
       throw new Error(`Evidence path ${normalized} escapes the canonical repository.`);
     }
     try {
@@ -77476,8 +80780,8 @@ async function evidenceReceipts3(repoRoot, inputs) {
       if (metadata.isSymbolicLink()) {
         try {
           const linkedPath = await realpath3(absolutePath);
-          const linkedRelative = path21.relative(repoRoot, linkedPath);
-          if (linkedRelative === ".." || linkedRelative.startsWith(`..${path21.sep}`) || path21.isAbsolute(linkedRelative)) {
+          const linkedRelative = path24.relative(repoRoot, linkedPath);
+          if (linkedRelative === ".." || linkedRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(linkedRelative)) {
             throw new Error(`Evidence path ${normalized} resolves outside the canonical repository.`);
           }
         } catch (error2) {
@@ -77487,8 +80791,8 @@ async function evidenceReceipts3(repoRoot, inputs) {
         throw new Error(`Evidence path ${normalized} is a symlink; evidence inputs must be canonical repository files.`);
       }
       const resolvedPath = await realpath3(absolutePath);
-      const resolvedRelative = path21.relative(repoRoot, resolvedPath);
-      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path21.sep}`) || path21.isAbsolute(resolvedRelative)) {
+      const resolvedRelative = path24.relative(repoRoot, resolvedPath);
+      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${normalized} resolves outside the canonical repository.`);
       }
       const canonicalPath = resolvedRelative.replaceAll("\\", "/");
@@ -77536,14 +80840,14 @@ function parsePrBranchDigestInputs(content) {
     const split = token.lastIndexOf(":");
     if (split <= 0) return null;
     const evidencePath = token.slice(0, split);
-    const sha2562 = token.slice(split + 1);
-    if (!/^[0-9a-f]{64}$/.test(sha2562)) return null;
-    entries.push({ path: evidencePath, sha256: sha2562 });
+    const sha2565 = token.slice(split + 1);
+    if (!/^[0-9a-f]{64}$/.test(sha2565)) return null;
+    entries.push({ path: evidencePath, sha256: sha2565 });
   }
   return entries;
 }
 async function loadQualityGateInventory(repoRoot, phaseDir2) {
-  const absoluteDir = path21.resolve(repoRoot, phaseDir2);
+  const absoluteDir = path24.resolve(repoRoot, phaseDir2);
   const metadata = await lstat3(absoluteDir);
   if (!metadata.isDirectory() || metadata.isSymbolicLink()) throw new Error(`Canonical phase directory ${phaseDir2} must be one real directory.`);
   const resolvedDir = await realpath3(absoluteDir);
@@ -77554,7 +80858,7 @@ async function loadQualityGateInventory(repoRoot, phaseDir2) {
     if (!entry.isFile() || entry.isSymbolicLink()) {
       throw new Error(`Canonical phase inventory entry ${phaseDir2}/${entry.name} must be one regular non-symlink file.`);
     }
-    const absolute = path21.join(resolvedDir, entry.name);
+    const absolute = path24.join(resolvedDir, entry.name);
     const resolved = await realpath3(absolute);
     if (resolved !== absolute) throw new Error(`Canonical phase inventory entry ${phaseDir2}/${entry.name} resolves through a non-canonical alias.`);
     const inventoryPath = `${phaseDir2}/${entry.name}`;
@@ -77668,7 +80972,7 @@ async function configReceipt(repoRoot) {
 }
 async function reportReceipt2(repoRoot) {
   try {
-    const content = await readFile3(path21.join(repoRoot, REPORT_PATH2));
+    const content = await readFile3(path24.join(repoRoot, REPORT_PATH2));
     return { exists: true, sha256: qualityShippingSha256(content) };
   } catch {
     return { exists: false, sha256: null };
@@ -77890,19 +81194,19 @@ function selectorFromRemoteUrl(remoteUrl) {
 }
 async function ghPreflight(repoRoot, selector) {
   const blockers = [];
-  let failure = null;
+  let failure2 = null;
   rejectLiteral(selector, "GitHub repository selector");
   if (!/^(?:[^/\s]+\/)?[^/\s]+\/[^/\s]+$/.test(selector)) blockers.push("GitHub repository selector must be exact [host/]owner/repo syntax.");
   const available = await run("gh", repoRoot, ["--version"]);
   if (!succeeded2(available)) {
-    failure = "gh-missing";
+    failure2 = "gh-missing";
     blockers.push(abnormal2(available) ? "gh could not be spawned or observed." : "gh is unavailable.");
   }
   if (blockers.length === 0) {
     const parts = selector.split("/");
     const auth = await run("gh", repoRoot, parts.length === 3 ? ["auth", "status", "--hostname", parts[0]] : ["auth", "status"]);
     if (!succeeded2(auth)) {
-      failure = "gh-unauthenticated";
+      failure2 = "gh-unauthenticated";
       blockers.push(abnormal2(auth) ? "gh authentication status could not be observed." : "gh is unauthenticated.");
     }
   }
@@ -77910,23 +81214,23 @@ async function ghPreflight(repoRoot, selector) {
   if (blockers.length === 0) {
     const repository = await run("gh", repoRoot, ["repo", "view", "--repo", selector, "--json", "nameWithOwner,url"]);
     if (!succeeded2(repository)) {
-      failure = "gh-repository-unavailable";
+      failure2 = "gh-repository-unavailable";
       blockers.push("GitHub repository selector could not be verified.");
     } else {
       try {
         const parsed = JSON.parse(repository.stdout);
         const ownerRepo = selector.split("/").slice(-2).join("/");
         if (parsed.nameWithOwner !== ownerRepo || typeof parsed.url !== "string") {
-          failure = "gh-repository-unavailable";
+          failure2 = "gh-repository-unavailable";
           blockers.push("GitHub repository verification did not match the exact approved selector.");
         } else url2 = parsed.url;
       } catch {
-        failure = "gh-repository-unavailable";
+        failure2 = "gh-repository-unavailable";
         blockers.push("GitHub repository verification returned malformed metadata.");
       }
     }
   }
-  return { blockers, url: url2, failure };
+  return { blockers, url: url2, failure: failure2 };
 }
 async function singleEffectiveRemoteUrl(repoRoot, remoteName, push) {
   const argv = ["remote", "get-url", ...push ? ["--push"] : [], "--all", remoteName];
@@ -78082,7 +81386,7 @@ async function blueprintShipPreview(args) {
       statePatch: args.statePatch ?? null
     };
     const packet = { ...partial2, executionPlan: planFor(partial2, args.body) };
-    const operationId = randomUUID5();
+    const operationId = randomUUID7();
     const fingerprint = approvalFingerprint(packet);
     const pre = renderReport2(packet, fingerprint, null);
     packet.report.preMutationContentSha256 = qualityShippingSha256(pre);
@@ -78988,8 +82292,8 @@ __export(project_exports, {
   blueprintRuntimeOwnedCommandCatalog: () => blueprintRuntimeOwnedCommandCatalog,
   projectToolDefinitions: () => projectToolDefinitions
 });
-import { promises as fs19 } from "node:fs";
-import path22 from "node:path";
+import { promises as fs22 } from "node:fs";
+import path25 from "node:path";
 function bundledUrl(relativePath) {
   const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
   return new URL(`${rootDepth}${relativePath}`, import.meta.url);
@@ -79060,7 +82364,7 @@ ${BOOTSTRAP_STARTER_CONTEXT_MARKER}
 }
 async function pathExists9(targetPath) {
   try {
-    await fs19.access(targetPath);
+    await fs22.access(targetPath);
     return true;
   } catch {
     return false;
@@ -79068,7 +82372,7 @@ async function pathExists9(targetPath) {
 }
 async function readPackageProjectName(projectRoot) {
   try {
-    const raw = await fs19.readFile(path22.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs22.readFile(path25.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -79080,7 +82384,7 @@ async function readPackageProjectName(projectRoot) {
 }
 async function readPackageDescription(projectRoot) {
   try {
-    const raw = await fs19.readFile(path22.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs22.readFile(path25.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -79095,13 +82399,13 @@ async function inferProjectName2(projectRoot, requestedName) {
   if (explicit) {
     return explicit;
   }
-  return await readPackageProjectName(projectRoot) ?? path22.basename(projectRoot);
+  return await readPackageProjectName(projectRoot) ?? path25.basename(projectRoot);
 }
 async function readRepoSummary(projectRoot) {
   const readmePaths = ["README.md", "README"];
   for (const candidate of readmePaths) {
     try {
-      const raw = await fs19.readFile(path22.join(projectRoot, candidate), "utf8");
+      const raw = await fs22.readFile(path25.join(projectRoot, candidate), "utf8");
       const summary = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith("#"));
       if (summary) {
         return summary;
@@ -79471,7 +82775,7 @@ async function buildCommandCatalogEntry(parsedRow) {
   availableOptionalAgents.push(
     ...await resolveAvailableOptionalAgents(optionalAgents, async (relativePath) => {
       try {
-        return await fs19.readFile(bundledUrl(relativePath), "utf8");
+        return await fs22.readFile(bundledUrl(relativePath), "utf8");
       } catch {
         return null;
       }
@@ -79767,7 +83071,7 @@ async function blueprintProjectInit(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   return withDirectoryLock(
     {
-      lockPath: path22.join(projectRoot, ".blueprint-project-init.lock"),
+      lockPath: path25.join(projectRoot, ".blueprint-project-init.lock"),
       timing: {
         retryMs: 25,
         staleMs: 3e4,
@@ -79865,6 +83169,7 @@ var init_project = __esm({
     init_config();
     init_phase();
     init_plan_run();
+    init_phase_execution_tools();
     init_state();
     init_cleanup();
     init_review();
@@ -79946,6 +83251,7 @@ var init_project = __esm({
       ...configToolDefinitions.map((definition) => definition.name),
       ...stateToolDefinitions.map((definition) => definition.name),
       ...phaseToolDefinitions.map((definition) => definition.name),
+      ...phaseExecutionToolDefinitions.map((definition) => definition.name),
       ...planRunToolDefinitions.map((definition) => definition.name),
       ...reviewToolDefinitions.map((definition) => definition.name),
       ...artifactToolDefinitions.map((definition) => definition.name),
@@ -80344,8 +83650,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path26, errorMaps, issueData } = params;
-  const fullPath = [...path26, ...issueData.path || []];
+  const { data, path: path29, errorMaps, issueData } = params;
+  const fullPath = [...path29, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -80460,11 +83766,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path26, key) {
+  constructor(parent, value, path29, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path26;
+    this._path = path29;
     this._key = key;
   }
   get path() {
@@ -89802,7 +93108,7 @@ var StdioServerTransport = class {
 };
 
 // src/mcp/command-resources.ts
-import { promises as fs20 } from "node:fs";
+import { promises as fs23 } from "node:fs";
 init_command_runtime_metadata();
 
 // src/mcp/skill-metadata.ts
@@ -90023,7 +93329,7 @@ async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath
       preferredPath ?? null,
       blueprintDiscoverableSkillPath(skillName),
       blueprintLegacySkillPath(skillName)
-    ].filter((path26) => typeof path26 === "string" && path26.length > 0)
+    ].filter((path29) => typeof path29 === "string" && path29.length > 0)
   );
   for (const candidatePath of candidatePaths) {
     const content = await readRelativePath(candidatePath);
@@ -90048,7 +93354,7 @@ function bundledUrl2(relativePath) {
 }
 async function readBundledFile(relativePath) {
   try {
-    return await fs20.readFile(bundledUrl2(relativePath), "utf8");
+    return await fs23.readFile(bundledUrl2(relativePath), "utf8");
   } catch {
     return null;
   }
@@ -90201,7 +93507,7 @@ function registerBlueprintCommandResources(server) {
 }
 
 // src/mcp/response-sanitizer.ts
-import path23 from "node:path";
+import path26 from "node:path";
 
 // src/mcp/tool-result-utils.ts
 function getString(result, key) {
@@ -90333,7 +93639,7 @@ function trimUpdatePlanPublicFields(result) {
   const updatesDir = typeof savedPaths?.updatesDir === "string" ? savedPaths.updatesDir : null;
   const metadataPath = typeof savedPaths?.metadataPath === "string" ? savedPaths.metadataPath : null;
   const checklistPath = typeof savedPaths?.checklistPath === "string" ? savedPaths.checklistPath : null;
-  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path23.dirname(metadataPath) === updatesDir && path23.dirname(checklistPath) === updatesDir;
+  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path26.dirname(metadataPath) === updatesDir && path26.dirname(checklistPath) === updatesDir;
   if (shouldTrimUpdatesDir && savedPaths !== null) {
     const { updatesDir: _updatesDir, ...trimmedSavedPaths } = savedPaths;
     trimmedResult = {
@@ -91140,12 +94446,12 @@ init_phase();
 init_phase_topology_lock();
 init_artifacts();
 init_review();
-import { execFile as execFile8 } from "node:child_process";
-import { createHash as createHash7, randomBytes } from "node:crypto";
-import { promises as fs21 } from "node:fs";
-import path24 from "node:path";
+import { execFile as execFile9 } from "node:child_process";
+import { createHash as createHash10, randomBytes } from "node:crypto";
+import { promises as fs24 } from "node:fs";
+import path27 from "node:path";
 import { promisify as promisify7 } from "node:util";
-var execFileAsync7 = promisify7(execFile8);
+var execFileAsync7 = promisify7(execFile9);
 var GOD_REVIEW_FLAG = "--feels-like-god";
 var GOD_REVIEW_REFUSAL = [
   "God mode only wakes during special `occassions`.",
@@ -91474,7 +94780,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Path must not be empty." };
   }
-  if (path24.isAbsolute(requestedPath)) {
+  if (path27.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -91487,7 +94793,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.endsWith("/")) {
     return { valid: false, path: null, reason: "Directories are not allowed." };
   }
-  const normalizedPath = path24.posix.normalize(requestedPath);
+  const normalizedPath = path27.posix.normalize(requestedPath);
   if (normalizedPath === "." || normalizedPath === ".." || normalizedPath.startsWith("../")) {
     return {
       valid: false,
@@ -91515,15 +94821,15 @@ function hashGodReviewFileSet(args) {
       (left, right) => left.path.localeCompare(right.path)
     )
   });
-  return `sha256:${createHash7("sha256").update(payload).digest("hex")}`;
+  return `sha256:${createHash10("sha256").update(payload).digest("hex")}`;
 }
 async function hashGodReviewResolvedFileSet(args) {
   const contentHashes = await Promise.all(
     stableUniqueSorted(args.files).map(async (file2) => {
-      const content = await fs21.readFile(resolveRepoRelativePath(args.projectRoot, file2));
+      const content = await fs24.readFile(resolveRepoRelativePath(args.projectRoot, file2));
       return {
         path: file2,
-        hash: `sha256:${createHash7("sha256").update(content).digest("hex")}`
+        hash: `sha256:${createHash10("sha256").update(content).digest("hex")}`
       };
     })
   );
@@ -91566,14 +94872,14 @@ function isGeneratedReportReportPath(value) {
   return /^\.blueprint\/reports\/god-review-[A-Za-z0-9._-]+\.md$/.test(value);
 }
 function normalizeSessionOwnedPath(value) {
-  return path24.posix.normalize(normalizePathSeparators(value.trim()));
+  return path27.posix.normalize(normalizePathSeparators(value.trim()));
 }
 function validateGodReviewSessionPaths(session) {
   const issues = [];
-  const sessionPath = normalizeSessionOwnedPath(session.sessionPath);
+  const sessionPath2 = normalizeSessionOwnedPath(session.sessionPath);
   const humanStatePath = normalizeSessionOwnedPath(session.humanStatePath);
   const reportPath = normalizeSessionOwnedPath(session.reportPath);
-  if (sessionPath !== session.sessionPath || humanStatePath !== session.humanStatePath || reportPath !== session.reportPath) {
+  if (sessionPath2 !== session.sessionPath || humanStatePath !== session.humanStatePath || reportPath !== session.reportPath) {
     return [
       {
         field: "sessionPath",
@@ -91582,13 +94888,13 @@ function validateGodReviewSessionPaths(session) {
     ];
   }
   if (session.scopeKind === "phase") {
-    if (!isGeneratedPhaseSessionPath(sessionPath)) {
+    if (!isGeneratedPhaseSessionPath(sessionPath2)) {
       issues.push({
         field: "sessionPath",
         message: "Phase god-review sessions must use a generated phase session path."
       });
     }
-    const phaseDir2 = sessionPath.replace(/\/\.god-review-session\.json$/, "");
+    const phaseDir2 = sessionPath2.replace(/\/\.god-review-session\.json$/, "");
     if (!isGeneratedPhaseHumanStatePath(humanStatePath) || humanStatePath !== `${phaseDir2}/.god-review-state.md`) {
       issues.push({
         field: "humanStatePath",
@@ -91604,7 +94910,7 @@ function validateGodReviewSessionPaths(session) {
     return issues;
   }
   const expected = buildGodReviewReportPaths({ runId: session.runId });
-  if (!isGeneratedReportSessionPath(sessionPath) || sessionPath !== expected.sessionPath) {
+  if (!isGeneratedReportSessionPath(sessionPath2) || sessionPath2 !== expected.sessionPath) {
     issues.push({
       field: "sessionPath",
       message: "Report-scoped god-review sessions must use the generated report session path."
@@ -91633,20 +94939,20 @@ function buildInitialGodReviewGroups() {
   }));
 }
 function stableHash2(value) {
-  return `sha256:${createHash7("sha256").update(value).digest("hex")}`;
+  return `sha256:${createHash10("sha256").update(value).digest("hex")}`;
 }
 function isValidRunId(value) {
   return /^[A-Za-z0-9._-]+$/.test(value) && !value.includes("..");
 }
 function generateGodReviewRunId(args) {
   const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const scopeHash = createHash7("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
+  const scopeHash = createHash10("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
   const entropy = randomBytes(3).toString("hex");
   return `god-${day}-${scopeHash}-${entropy}`;
 }
 async function pathExists10(absolutePath) {
   try {
-    await fs21.access(absolutePath);
+    await fs24.access(absolutePath);
     return true;
   } catch {
     return false;
@@ -91654,7 +94960,7 @@ async function pathExists10(absolutePath) {
 }
 async function readTextIfPresent(absolutePath) {
   try {
-    return await fs21.readFile(absolutePath, "utf8");
+    return await fs24.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -91707,7 +95013,7 @@ async function resolveExistingRepoFiles2(args) {
     }
     let stats;
     try {
-      stats = await fs21.stat(absolutePath);
+      stats = await fs24.stat(absolutePath);
     } catch {
       if (deletedFiles.has(normalized.path)) {
         resolvedFiles.add(normalized.path);
@@ -91791,7 +95097,7 @@ async function hashCurrentDiff(projectRoot, files) {
         if (trackedStatus === "tracked") {
           return null;
         }
-        const content = await fs21.readFile(
+        const content = await fs24.readFile(
           resolveRepoRelativePath(projectRoot, file2),
           "utf8"
         );
@@ -91843,7 +95149,7 @@ async function beforeGodReviewPersistenceBundleWrite(args) {
 }
 async function restoreGodReviewBundleFile(args) {
   if (args.previousContent === null) {
-    await fs21.rm(args.absolutePath, { force: true }).catch(() => void 0);
+    await fs24.rm(args.absolutePath, { force: true }).catch(() => void 0);
     return;
   }
   await writeTextFile(args.absolutePath, args.previousContent, {
@@ -92318,7 +95624,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Session path must not be empty." };
   }
-  if (path24.isAbsolute(requestedPath)) {
+  if (path27.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -92328,7 +95634,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path24.posix.normalize(requestedPath);
+  const normalizedPath = path27.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -92357,7 +95663,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Report path must not be empty." };
   }
-  if (path24.isAbsolute(requestedPath)) {
+  if (path27.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -92367,7 +95673,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path24.posix.normalize(requestedPath);
+  const normalizedPath = path27.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -92577,11 +95883,11 @@ async function resolveGodReviewReportReference(args, projectRoot) {
       warnings: []
     };
   }
-  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
-  if (!sessionPath.valid) {
+  const sessionPath2 = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath2.valid) {
     return {
       valid: false,
-      reason: sessionPath.reason,
+      reason: sessionPath2.reason,
       reportPath: null,
       sessionPath: null,
       warnings: []
@@ -92589,14 +95895,14 @@ async function resolveGodReviewReportReference(args, projectRoot) {
   }
   const loaded = await loadGodReviewSession({
     projectRoot,
-    sessionPath: sessionPath.path
+    sessionPath: sessionPath2.path
   });
   if (!loaded.valid) {
     return {
       valid: false,
       reason: loaded.reason,
       reportPath: null,
-      sessionPath: sessionPath.path,
+      sessionPath: sessionPath2.path,
       warnings: loaded.warnings
     };
   }
@@ -93203,7 +96509,7 @@ async function validateGodReviewFixTargetEvidence(args) {
     }
     let stats;
     try {
-      stats = await fs21.stat(absolutePath);
+      stats = await fs24.stat(absolutePath);
     } catch {
       staleReasons.push(`${args.target.id} references missing file ${parsedReference.path}.`);
       continue;
@@ -93212,7 +96518,7 @@ async function validateGodReviewFixTargetEvidence(args) {
       staleReasons.push(`${args.target.id} references non-file path ${parsedReference.path}.`);
       continue;
     }
-    const fileText = await fs21.readFile(absolutePath, "utf8");
+    const fileText = await fs24.readFile(absolutePath, "utf8");
     readableFileTexts.set(parsedReference.path, fileText);
     if (parsedReference.line !== null) {
       const lineCount = fileText.split("\n").length;
@@ -93703,11 +97009,11 @@ function staleStartResultForPhaseScope(args) {
 }
 async function startGodReviewSessionWithResolvedScope(args) {
   return withBlueprintRepoLock(args.projectRoot, "god-review-session", async () => {
-    const sessionPath = resolveBlueprintPath(
+    const sessionPath2 = resolveBlueprintPath(
       args.projectRoot,
       args.resolvedScope.paths.sessionPath
     );
-    const existingSessionRaw = await readTextIfPresent(sessionPath);
+    const existingSessionRaw = await readTextIfPresent(sessionPath2);
     if (existingSessionRaw !== null) {
       let existingSessionJson;
       try {
@@ -93751,7 +97057,7 @@ async function startGodReviewSessionWithResolvedScope(args) {
       });
     }
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path24.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
+    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path27.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
     const groups = buildInitialGodReviewGroups();
     const nextGroupId = groups[0]?.id ?? null;
     const session = {
@@ -93958,15 +97264,15 @@ async function blueprintGodReviewNext(rawArgs) {
     };
   }
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
-  if (!sessionPath.valid) {
+  const sessionPath2 = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath2.valid) {
     return invalidNextResult({
-      reason: sessionPath.reason
+      reason: sessionPath2.reason
     });
   }
   const loaded = await loadGodReviewSession({
     projectRoot,
-    sessionPath: sessionPath.path
+    sessionPath: sessionPath2.path
   });
   if (!loaded.valid) {
     return invalidNextResult({
@@ -94070,16 +97376,16 @@ async function blueprintGodReviewAppend(rawArgs) {
     });
   }
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
-  if (!sessionPath.valid) {
+  const sessionPath2 = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath2.valid) {
     return invalidAppendResult({
-      reason: sessionPath.reason
+      reason: sessionPath2.reason
     });
   }
   return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
     const loaded = await loadGodReviewSession({
       projectRoot,
-      sessionPath: sessionPath.path
+      sessionPath: sessionPath2.path
     });
     if (!loaded.valid) {
       return invalidAppendResult({
@@ -94358,10 +97664,10 @@ async function blueprintGodReviewRecordFix(rawArgs) {
     };
   }
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
-  if (!sessionPath.valid) {
+  const sessionPath2 = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath2.valid) {
     return invalidRecordFixResult({
-      reason: sessionPath.reason,
+      reason: sessionPath2.reason,
       findingId: args.findingId,
       selectedBy: args.selectedBy,
       remediationStatus: args.status
@@ -94370,12 +97676,12 @@ async function blueprintGodReviewRecordFix(rawArgs) {
   return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
     const loaded = await loadGodReviewSession({
       projectRoot,
-      sessionPath: sessionPath.path
+      sessionPath: sessionPath2.path
     });
     if (!loaded.valid) {
       return invalidRecordFixResult({
         reason: loaded.reason,
-        sessionPath: sessionPath.path,
+        sessionPath: sessionPath2.path,
         findingId: args.findingId,
         selectedBy: args.selectedBy,
         remediationStatus: args.status,
@@ -94712,21 +98018,21 @@ async function blueprintGodReviewCleanup(rawArgs) {
     };
   }
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
-  if (!sessionPath.valid) {
+  const sessionPath2 = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath2.valid) {
     return invalidCleanupResult({
-      reason: sessionPath.reason
+      reason: sessionPath2.reason
     });
   }
   return withBlueprintRepoLock(projectRoot, "god-review-session", async () => {
     const loaded = await loadGodReviewSession({
       projectRoot,
-      sessionPath: sessionPath.path
+      sessionPath: sessionPath2.path
     });
     if (!loaded.valid) {
       return invalidCleanupResult({
         reason: loaded.reason,
-        sessionPath: sessionPath.path,
+        sessionPath: sessionPath2.path,
         warnings: loaded.warnings
       });
     }
@@ -94844,7 +98150,7 @@ async function blueprintGodReviewCleanup(rawArgs) {
       [session.humanStatePath, humanStateAbsolutePath]
     ]) {
       if (await pathExists10(absolutePath)) {
-        await fs21.rm(absolutePath, { force: true });
+        await fs24.rm(absolutePath, { force: true });
         deletedPaths.push(relativePath);
       }
     }
@@ -95011,7 +98317,7 @@ init_impact();
 
 // src/mcp/tools/lightweight.ts
 init_v4();
-import { promises as fs22 } from "node:fs";
+import { promises as fs25 } from "node:fs";
 
 // src/mcp/lightweight-classifier.ts
 var VAGUE_TASK_PATTERNS = [
@@ -95492,7 +98798,7 @@ async function quickRunReportStatus(projectRoot) {
   const reportPath = buildBlueprintReportPath("quick-run-latest");
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   try {
-    const stats = await fs22.stat(absolutePath);
+    const stats = await fs25.stat(absolutePath);
     return {
       name: "quick-run-latest",
       exists: true,
@@ -95598,6 +98904,7 @@ var lightweightToolDefinitions = [
 
 // src/mcp/tool-definitions.ts
 init_phase();
+init_phase_execution_tools();
 init_plan_run();
 init_pr_branch();
 init_project();
@@ -95613,6 +98920,7 @@ var TOOL_DEFINITIONS = [
   ...configToolDefinitions,
   ...stateToolDefinitions,
   ...phaseToolDefinitions,
+  ...phaseExecutionToolDefinitions,
   ...planRunToolDefinitions,
   ...reviewToolDefinitions,
   ...godReviewToolDefinitions,
@@ -95665,8 +98973,8 @@ var blueprintToolNames = TOOL_DEFINITIONS.map(
 
 // src/mcp/write-failure-log.ts
 init_artifacts();
-import { promises as fs23 } from "node:fs";
-import path25 from "node:path";
+import { promises as fs26 } from "node:fs";
+import path28 from "node:path";
 var BLUEPRINT_DIR2 = ".blueprint";
 var MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
 var LOG_SCHEMA_VERSION = 1;
@@ -95746,9 +99054,9 @@ function toLoggedError(error2) {
 async function appendFailureEntry(cwd, entry) {
   try {
     const projectRoot = await ensureRepoRoot(cwd);
-    const absoluteLogPath = path25.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
-    await fs23.mkdir(path25.dirname(absoluteLogPath), { recursive: true });
-    await fs23.appendFile(
+    const absoluteLogPath = path28.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+    await fs26.mkdir(path28.dirname(absoluteLogPath), { recursive: true });
+    await fs26.appendFile(
       absoluteLogPath,
       `${JSON.stringify({
         ...entry,
@@ -95805,6 +99113,10 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_phase_validation_write",
   "blueprint_phase_checkpoint_put",
   "blueprint_phase_checkpoint_delete",
+  "blueprint_phase_execution_prepare",
+  "blueprint_phase_execution_apply",
+  "blueprint_phase_execution_verify",
+  "blueprint_phase_execution_finalize",
   "blueprint_plan_run_record",
   "blueprint_plan_run_prepare",
   "blueprint_plan_run_patch_record",
@@ -95853,6 +99165,9 @@ function isReadOnlyPreviewInvocation(toolName, args) {
     return (args.mode ?? "preview") === "preview";
   }
   if (toolName === "blueprint_plan_run_prepare") {
+    return (args.mode ?? "preview") === "preview";
+  }
+  if (toolName === "blueprint_phase_execution_prepare") {
     return (args.mode ?? "preview") === "preview";
   }
   if (toolName === "blueprint_undo_execute") {
@@ -96228,13 +99543,13 @@ function getNonSuccessSummaryVerb(status, preferredVerb) {
 function buildNonSuccessStatusSummary(toolName, subject, status, result, preferredVerb) {
   const reason = getString(result, "reason");
   const waitingState = getString(result, "waitingState");
-  const path26 = findSummaryPath(result);
+  const path29 = findSummaryPath(result);
   const content = getString(result, "content");
   const mutationFlags = buildMutationFlags(toolName, result);
   const countSummary = buildCountSummary(result);
   const details = [];
-  if (path26) {
-    details.push(`at \`${path26}\``);
+  if (path29) {
+    details.push(`at \`${path29}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
@@ -96261,8 +99576,8 @@ function buildStateNoopSummary(toolName, result) {
   const synced = getBoolean(result, "synced");
   const updatedFieldCount = getArrayCount(result, "updatedFields");
   const syncedFieldCount = getArrayCount(result, "syncedFields");
-  const path26 = findSummaryPath(result);
-  const location = path26 ? ` at \`${path26}\`` : "";
+  const path29 = findSummaryPath(result);
+  const location = path29 ? ` at \`${path29}\`` : "";
   if (toolName === "blueprint_state_update" && (updated === false || updatedFieldCount === 0)) {
     return `No state changes${location}.`;
   }
@@ -96346,7 +99661,7 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path26 = findSummaryPath(result);
+  const path29 = findSummaryPath(result);
   const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
@@ -96387,8 +99702,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path26) {
-    details.push(`at \`${path26}\``);
+  if (path29) {
+    details.push(`at \`${path29}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);

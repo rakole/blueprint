@@ -340,6 +340,7 @@ export type PhasePlanIndexBuildInput = {
   projectRoot: string;
   resolved: ResolvedPhaseLocation;
   artifacts: string[];
+  planContents?: ReadonlyMap<string, string>;
   warnings?: string[];
 };
 
@@ -1192,6 +1193,7 @@ export type PhaseExecutionTargetsResult = {
     blockingPrerequisites: PhaseExecutionExternalServicePrerequisite[];
     reasons: string[];
   };
+  planSetValidation: PhasePlanValidationResult | null;
   existingSummaries: Array<{
     planId: string;
     path: string;

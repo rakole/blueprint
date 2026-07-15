@@ -3423,6 +3423,11 @@ test("phase execution targets avoid nested phase re-resolution while mixing exis
   );
   assert.equal(targets.existingSummaries[0]?.status, "COMPLETED");
   assertSinglePhaseResolutionPass(trace, "blueprintPhaseExecutionTargets");
+  assert.equal(
+    trace.counts.planReads,
+    2,
+    `blueprintPhaseExecutionTargets must read each of the two plan bodies exactly once: ${trace.operations.join(", ")}`
+  );
 });
 
 test("completed summary repair guidance bundles lifecycle marker downgrades", async (t) => {
@@ -3804,6 +3809,76 @@ test("phase execution targets surface stale selected plans and plan-index warnin
     [".blueprint/phases/03-phase-discovery/03-09-PLAN.md"]
   );
   assert.match(targets.blockers.reasons.join("\n"), /Selected plans are stale/i);
+});
+
+test("phase execution targets fail closed on whole-plan-set dependency cycles and wave-order defects", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"),
+    executionPlanContent("01", 1),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 2).replace(
+      "depends_on: []",
+      'depends_on:\n  - "03"'
+    ),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-03-PLAN.md"),
+    executionPlanContent("03", 2).replace(
+      "depends_on: []",
+      'depends_on:\n  - "02"'
+    ),
+    "utf8"
+  );
+
+  const targets = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.deepEqual(targets.selectedPlanIds, ["01"]);
+  assert.equal(targets.planSetValidation?.status, "invalid");
+  assert.deepEqual(targets.planSetValidation?.cyclicDependencyPlanIds, [
+    ["02", "03", "02"]
+  ]);
+  assert.equal(targets.blockers.executionBlocked, true);
+  assert.match(
+    targets.blockers.reasons.join("\n"),
+    /plan set is invalid[\s\S]*wave 2 must come after dependency[\s\S]*dependency cycle detected/i
+  );
+});
+
+test("phase execution targets fail closed when the final plan set lacks roadmap requirement coverage", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"),
+    executionPlanContent("01", 1).replace("  - LIFE-01", "  - OTHER-01"),
+    "utf8"
+  );
+
+  const targets = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(targets.planSetValidation?.status, "invalid");
+  assert.equal(targets.blockers.executionBlocked, true);
+  assert.match(
+    targets.blockers.reasons.join("\n"),
+    /plan set is invalid[\s\S]*does not cover roadmap requirements: LIFE-01/i
+  );
 });
 
 test("phase execution targets require explicit confirmation for blocking external services", async (t) => {

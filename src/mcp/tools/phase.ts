@@ -863,15 +863,16 @@ async function readPhaseRoadmapRequirements(
 async function collectPhasePlanArtifacts(
   projectRoot: string,
   resolved: ResolvedPhaseLocation,
-  overrides: ReadonlyMap<string, string> = new Map()
+  overrides: ReadonlyMap<string, string> = new Map(),
+  knownPlanPaths?: readonly string[]
 ): Promise<{
   plans: LoadedPhasePlanArtifact[];
   nonCanonicalPlanPaths: string[];
 }> {
   const phaseRoot = resolveBlueprintPath(projectRoot, resolved.phaseDir);
-  const planPaths = new Set<string>();
+  const planPaths = new Set<string>(knownPlanPaths ?? []);
 
-  if (await pathExists(phaseRoot)) {
+  if (knownPlanPaths === undefined && await pathExists(phaseRoot)) {
     const entries = await fs.readdir(phaseRoot, { withFileTypes: true });
 
     for (const entry of entries) {
@@ -974,17 +975,22 @@ async function validatePhasePlanSet(
   options: {
     overrides?: ReadonlyMap<string, string>;
     roadmapCoverageSeverity?: "issue" | "warning" | "ignore";
+    roadmapRequirementIds?: readonly string[];
+    knownPlanPaths?: readonly string[];
   } = {}
 ): Promise<PhasePlanValidationResult> {
   const coverageSeverity = options.roadmapCoverageSeverity ?? "issue";
   const { plans, nonCanonicalPlanPaths } = await collectPhasePlanArtifacts(
     projectRoot,
     resolved,
-    options.overrides
+    options.overrides,
+    options.knownPlanPaths
   );
   const issues: string[] = [];
   const warnings: string[] = [];
-  const roadmapRequirementIds = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
+  const roadmapRequirementIds = options.roadmapRequirementIds === undefined
+    ? await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber)
+    : [...options.roadmapRequirementIds];
   const coveredRequirementIds = new Set<string>();
   const unexpectedRequirementIds = new Set<string>();
   const missingDependencyIds = new Set<string>();
@@ -4659,7 +4665,8 @@ async function buildPhasePlanIndexFromResolved(
     }
 
     knownPlanIds.add(planId);
-    const content = await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = input.planContents?.get(planPath)
+      ?? await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record = toPhasePlanRecord(planId, planPath, content, resolved.phaseNumber);
     const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record.dependsOn);
 
@@ -6398,7 +6405,8 @@ export async function blueprintPhaseExecutionTargets(
     throw new Error("Wave must be a positive integer.");
   }
 
-  const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved } = snapshot;
 
   if (!resolved) {
     return {
@@ -6431,6 +6439,7 @@ export async function blueprintPhaseExecutionTargets(
         blockingPrerequisites: [],
         reasons: []
       },
+      planSetValidation: null,
       existingSummaries: [],
       blockers: {
         executionBlocked: true,
@@ -6451,17 +6460,39 @@ export async function blueprintPhaseExecutionTargets(
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
   const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
-  const [summaryContext, effectiveConfig] = await Promise.all([
+  const planPaths = located.artifacts.filter(
+    (artifactPath) =>
+      path.posix.dirname(artifactPath) === resolved.phaseDir &&
+      artifactPath.endsWith("-PLAN.md")
+  );
+  const planContents = new Map(
+    await Promise.all(
+      planPaths.map(async (planPath) => [
+        planPath,
+        await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8")
+      ] as const)
+    )
+  );
+  const [summaryContext, effectiveConfig, planSetValidation] = await Promise.all([
     loadResolvedPhaseSummaryContext({
       projectRoot,
       located,
       resolved,
-      buildPhasePlanIndexFromLocated,
+      buildPhasePlanIndexFromLocated: (input) => buildPhasePlanIndexFromResolved({
+        ...input,
+        artifacts: located.artifacts,
+        planContents
+      }),
       validateSummaryAgainstLivePlanInventory
     }),
     blueprintConfigGet({
       cwd: projectRoot,
       scope: "effective"
+    }),
+    validatePhasePlanSet(projectRoot, resolved, {
+      overrides: planContents,
+      roadmapRequirementIds: snapshot.matchedPhase?.requirements ?? [],
+      knownPlanPaths: planPaths
     })
   ]);
   const { planIndex, summaryInventory } = summaryContext;
@@ -6546,6 +6577,13 @@ export async function blueprintPhaseExecutionTargets(
     .filter((plan) => plan.missingDependencyPlans.length > 0)
     .map((plan) => plan.planId);
   const blockers: string[] = [];
+
+  if (planSetValidation.status === "invalid") {
+    blockers.push(
+      `Phase ${resolved.phaseNumber} plan set is invalid and must be repaired before execution.`,
+      ...planSetValidation.issues
+    );
+  }
 
   if (candidatePlans.length === 0) {
     if (requestedWave !== null && gapsOnly) {
@@ -6797,6 +6835,7 @@ export async function blueprintPhaseExecutionTargets(
       blockingPrerequisites: blockingExternalServicePrerequisites,
       reasons: externalServicePreflightReasons
     },
+    planSetValidation,
     existingSummaries,
     blockers: {
       executionBlocked: blockers.length > 0,

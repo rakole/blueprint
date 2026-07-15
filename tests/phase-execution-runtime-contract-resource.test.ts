@@ -78,19 +78,19 @@ test("phase-execution runtime contracts do not read bundled docs command specs o
     if (commandName === "execute-phase") {
       assert.match(
         contract.runtimeReference.contractNotes ?? "",
-        /use blueprint_phase_execution_targets as the common read authority/i
+        /blueprint_phase_execution_prepare is the sole preview, claim, selection, approval, freshness, and resume authority/i
       );
       assert.match(
         contract.runtimeReference.contractNotes ?? "",
-        /read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text/i
+        /route every repo write through blueprint_phase_execution_apply/i
       );
       assert.match(
         contract.runtimeReference.contractNotes ?? "",
-        /do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path/i
+        /run only packet-bound verification through blueprint_phase_execution_verify/i
       );
       assert.match(
         contract.runtimeReference.contractNotes ?? "",
-        /blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: "synced"/i
+        /blueprint_phase_execution_finalize[\s\S]*summary write, summary index, artifact validation, synced state/i
       );
     }
   }
