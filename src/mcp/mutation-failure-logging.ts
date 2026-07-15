@@ -24,6 +24,10 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_phase_validation_write",
   "blueprint_phase_checkpoint_put",
   "blueprint_phase_checkpoint_delete",
+  "blueprint_phase_execution_prepare",
+  "blueprint_phase_execution_apply",
+  "blueprint_phase_execution_verify",
+  "blueprint_phase_execution_finalize",
   "blueprint_plan_run_record",
   "blueprint_plan_run_prepare",
   "blueprint_plan_run_patch_record",
@@ -80,6 +84,10 @@ function isReadOnlyPreviewInvocation(
   }
 
   if (toolName === "blueprint_plan_run_prepare") {
+    return (args.mode ?? "preview") === "preview";
+  }
+
+  if (toolName === "blueprint_phase_execution_prepare") {
     return (args.mode ?? "preview") === "preview";
   }
 

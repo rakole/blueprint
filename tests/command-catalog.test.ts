@@ -1598,7 +1598,7 @@ test("plan-phase runtime contract resource survives missing command docs", async
   );
 });
 
-test("execute-phase is implemented once manifest, skill, and execution summary MCP tools exist", async () => {
+test("execute-phase is implemented once manifest, skill, and execution control-plane MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["execute-phase"];
   const metadata = getRuntimeOwnedCommandMetadata("execute-phase");
@@ -1612,8 +1612,19 @@ test("execute-phase is implemented once manifest, skill, and execution summary M
   assert.ok(entry.manifestPath);
   assert.ok(entry.skillPath);
   assert.equal(entry.specPath, metadata.sourceId);
-  assert.deepEqual(entry.availableOptionalAgents.sort(), ["blueprint-executor"]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.requiredTools, [
+    "blueprint_phase_execution_prepare",
+    "blueprint_phase_execution_apply",
+    "blueprint_phase_execution_verify",
+    "blueprint_phase_execution_finalize"
+  ]);
   assert.deepEqual(entry.blockedBy, []);
+  assert.deepEqual(metadata.runtimeReference.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "behavior-audited"
+  ]);
 });
 
 test("validation slice commands are implemented once manifests, shared skill, and MCP tools exist", async () => {
@@ -2297,7 +2308,7 @@ test("undo is implemented once manifest, skill, and report-backed revert MCP too
   ]);
 });
 
-test("generated command catalog exposes behavior-audited Quality Shipping evidence", async () => {
+test("generated command catalog exposes behavior-audited execution and Quality Shipping evidence", async () => {
   const generated = JSON.parse(
     await readFile(path.join(process.cwd(), "generated/command-catalog.json"), "utf8")
   ) as {
@@ -2307,7 +2318,7 @@ test("generated command catalog exposes behavior-audited Quality Shipping eviden
     }>;
   };
 
-  for (const commandName of ["pr-branch", "ship", "undo"]) {
+  for (const commandName of ["execute-phase", "pr-branch", "ship", "undo"]) {
     const entry = generated.commands.find((command) => command.name === commandName);
     assert.ok(entry, `missing generated catalog entry for ${commandName}`);
     assert.deepEqual(entry.runtimeReference?.evidenceState, [

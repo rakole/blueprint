@@ -6,6 +6,11 @@ import path from "node:path";
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import {
+  BLUEPRINT_MUTATION_TOOL_NAMES,
+  blueprintToolNames,
+  createToolResponseContent
+} from "../src/mcp/server.js";
 
 const repoRoot = process.cwd();
 
@@ -23,31 +28,16 @@ test("execute-phase manifest stays thin while keeping the core execution invaria
   const commandFile = await readRepoFile("commands/blu-execute-phase.toml");
 
   assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
-  assert.match(commandFile, /`long-running-mutation`/);
-  assert.match(commandFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
-  assert.match(
-    commandFile,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
-  );
-  assert.match(commandFile, /ask_user/);
-  assert.match(commandFile, /`update_topic` tool plus `write_todos`/);
-  assert.match(commandFile, /`blueprint-executor` subagent/);
+  assert.match(commandFile, /long-running stages/);
+  assert.match(commandFile, /`Resolve`[\s\S]*`Read`[\s\S]*`Route`/);
+  assert.match(commandFile, /session id, selected\/current plan, apply and verification attempt/i);
+  assert.match(commandFile, /no optional executor|Do not delegate write ownership/i);
 
   const requiredTools = [
-    "blueprint_phase_locate",
-    "blueprint_phase_plan_index",
-    "blueprint_phase_execution_targets",
-    "blueprint_phase_plan_read",
-    "blueprint_phase_summary_index",
-    "blueprint_phase_summary_read",
-    "blueprint_phase_summary_authoring_context",
-    "blueprint_phase_summary_validate_model",
-    "blueprint_phase_summary_write",
-    "blueprint_artifact_contract_read",
-    "blueprint_config_get",
-    "blueprint_artifact_validate",
-    "blueprint_state_load",
-    "blueprint_state_update"
+    "blueprint_phase_execution_prepare",
+    "blueprint_phase_execution_apply",
+    "blueprint_phase_execution_verify",
+    "blueprint_phase_execution_finalize"
   ];
 
   for (const tool of requiredTools) {
@@ -55,25 +45,49 @@ test("execute-phase manifest stays thin while keeping the core execution invaria
   }
 
   assertMatchesAll(commandFile, [
-    /gapClosurePlans/,
-    /lowerWavePendingPlans/,
-    /externalServicePreflight/,
-    /externalServiceConfirmed/,
-    /always_confirm_external_services/,
-    /shared file set/i,
-    /artifactId: "phase\.summary"/,
-    /parallelization\.\*/,
-    /workflow\.use_worktrees/,
-    /git\.branching_strategy/,
-    /base: "synced"/,
-    /PARTIAL` or `BLOCKED`/,
-    /Do not persist execute-phase reports/i,
-    /phase-level completion claim/i,
+    /previewFingerprint/,
+    /CLAIM BLUEPRINT PHASE EXECUTION/,
+    /overwriteConfirmedPlanIds/,
+    /exact claimed or latest receipted preimage/i,
+    /at most one bounded repair/i,
+    /receipt-derived `BLOCKED` summary/i,
+    /mode: "resume"/,
+    /never persist execute-phase reports/i,
+    /does not complete the phase/i,
     /\/blu-validate-phase/,
-    /\/blu-verify-work/,
     /\/blu-progress/
   ]);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md|agents\/blueprint-executor\.md/);
+});
+
+test("execute-phase control tools are registered, mutation-logged, and public-response safe", () => {
+  const requiredTools = [
+    "blueprint_phase_execution_prepare",
+    "blueprint_phase_execution_apply",
+    "blueprint_phase_execution_verify",
+    "blueprint_phase_execution_finalize"
+  ];
+  for (const toolName of requiredTools) {
+    assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
+    assert.ok(
+      BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName),
+      `${toolName} should use durable mutation-failure logging`
+    );
+  }
+
+  const publicResult = JSON.parse(createToolResponseContent(
+    "blueprint_phase_execution_prepare",
+    {
+      status: "stale",
+      ready: false,
+      sessionId: "session-01",
+      fingerprint: "a".repeat(64),
+      blockers: ["authority drifted"]
+    }
+  )[0]!.text) as Record<string, unknown>;
+  assert.equal(publicResult.status, "stale");
+  assert.equal(publicResult.sessionId, "session-01");
+  assert.deepEqual(publicResult.blockers, ["authority drifted"]);
 });
 
 test("execute-phase skill bundle points the command at execute-specific references instead of quick or fast detail", async () => {
@@ -94,15 +108,9 @@ test("execute-phase skill bundle points the command at execute-specific referenc
     skillFile,
     /not inline[\s\S]*`\/blu-quick`[\s\S]*`\/blu-fast`[\s\S]*`\/blu-execute-phase` context/i
   );
-  assert.match(
-    skillFile,
-    /If a selected plan depends on another plan whose summary is not yet[\s\S]*Use `PARTIAL`[\s\S]*`BLOCKED`[\s\S]*dependency summary exists/i
-  );
-  assert.match(
-    skillFile,
-    /Warning-only Markdown shape[\s\S]*does not require[\s\S]*another repair loop/i
-  );
-  assert.match(skillFile, /externalServicePreflight/i);
+  assert.match(skillFile, /four execute-phase control\s+tools/i);
+  assert.match(skillFile, /no optional write agent/i);
+  assert.match(skillFile, /one mandatory second verification/i);
 });
 
 test("execute-phase runtime-owned sources keep the important invariants concise", async () => {
@@ -118,13 +126,13 @@ test("execute-phase runtime-owned sources keep the important invariants concise"
     ),
     true
   );
-  assert.match(runtimeContract, /blueprint_phase_execution_targets/i);
-  assert.match(runtimeContract, /selection helper for default runs, `--wave`, and `--gaps-only`/i);
-  assert.match(runtimeContract, /externalServicePreflight/);
-  assert.match(runtimeContract, /Do not persist execute-phase reports/i);
-  assert.match(runtimeContract, /phase_summary_authoring_context/);
-  assert.match(runtimeContract, /phase_summary_validate_model/);
-  assert.match(runtimeContract, /base: "synced"/);
+  assert.match(runtimeContract, /blueprint_phase_execution_prepare/i);
+  assert.match(runtimeContract, /immutable\s+selection\/authority packet/i);
+  assert.match(runtimeContract, /CLAIM BLUEPRINT PHASE EXECUTION/);
+  assert.match(runtimeContract, /never persist an execute-phase report/i);
+  assert.match(runtimeContract, /blueprint_phase_execution_apply/i);
+  assert.match(runtimeContract, /blueprint_phase_execution_verify/i);
+  assert.match(runtimeContract, /blueprint_phase_execution_finalize/i);
 });
 
 test("execute-phase runtime contract carries the rich execution sequencing and carry-forward rules", async () => {
@@ -133,34 +141,27 @@ test("execute-phase runtime contract carries the rich execution sequencing and c
   );
 
   assertMatchesAll(runtimeContract, [
-    /This reference is the rich behavior contract for `\/blu-execute-phase`/i,
-    /## Visible Execution Progress/,
-    /resolve execution phase[\s\S]*select executable targets[\s\S]*confirm execution mode[\s\S]*execute selected plan work[\s\S]*write execution summary[\s\S]*run post-execution checks[\s\S]*sync state and route/i,
-    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, executor authority,\s+verification authority, state-sync authority, routing authority, or user\s+confirmation authority/i,
-    /Emit exceptional updates for[\s\S]*missing or stale plans, lower-wave blockers, external-service waits, overwrite\s+waits, overlapping write ownership/i,
-    /blueprint_phase_execution_targets/,
-    /gapClosurePlans/,
-    /lowerWavePendingPlans/,
-    /externalServicePreflight/,
-    /absolute\s+blocker/i,
-    /PARTIAL` and `BLOCKED` summaries/i,
-    /If a dependency plan summary is still missing or not yet `COMPLETED`[\s\S]*Downgrade to `PARTIAL` or[\s\S]*`BLOCKED`[\s\S]*dependency summary exists/i,
-    /authoring template is a safe `PARTIAL`[\s\S]*Switch it to `COMPLETED`[\s\S]*only after execution evidence/i,
-    /Warning-only Markdown shape[\s\S]*should not start[\s\S]*another repair loop/i,
-    /carry-forward evidence/i,
-    /one `XX-YY-SUMMARY\.md` artifact per executed plan/i,
-    /phase_summary_authoring_context/,
-    /phase_summary_validate_model/,
-    /Do not persist execute-phase reports/i,
-    /code-review, regression, or schema-drift warnings/i,
-    /post-execution checks/i,
-    /base: "synced"/,
-    /summary-backed carry-forward evidence/i,
-    /one-plan-at-a-time\s+inline execution/i,
-    /phase-level completion claim/i,
+    /behavior authority for `\/blu-execute-phase`/i,
+    /## Control Plane/,
+    /phase_execution_prepare[\s\S]*phase_execution_apply[\s\S]*phase_execution_verify[\s\S]*phase_execution_finalize/i,
+    /exact preview fingerprint/i,
+    /lower-wave pending work[\s\S]*absolute blockers/i,
+    /sequentially and in order/i,
+    /no optional executor/i,
+    /pinned workers retain the original parent directory identity/i,
+    /one repair/i,
+    /verification attempt[\s\S]*interrupted/i,
+    /receipt-derived/i,
+    /summary index[\s\S]*artifact validation[\s\S]*STATE/i,
+    /Every boundary is checkpointed/i,
+    /## Resume/,
+    /mixed interruption state/i,
+    /never persist an execute-phase report/i,
     /external service/i,
+    /pending plan debt[\s\S]*\/blu-execute-phase <phase>/i,
+    /no remaining execution debt[\s\S]*\/blu-validate-phase <phase>/i,
     /\/blu-validate-phase/,
-    /\/blu-verify-work/
+    /\/blu-progress/
   ]);
 });
 
@@ -180,8 +181,13 @@ test("execute-phase runtime contract resource is owned by runtime metadata, not 
   assert.deepEqual(contract.runtimeReference.exactMcpDestination, [
     ...metadata.requiredTools
   ]);
-  assert.deepEqual(contract.spec.optionalSubagents, ["blueprint-executor"]);
-  assert.deepEqual(contract.runtimeReference.optionalAgents, ["blueprint-executor"]);
+  assert.deepEqual(contract.spec.optionalSubagents, []);
+  assert.deepEqual(contract.runtimeReference.optionalAgents, []);
+  assert.deepEqual(contract.runtimeReference.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "behavior-audited"
+  ]);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
     "commands/blu-execute-phase.toml",
@@ -194,27 +200,27 @@ test("execute-phase runtime contract resource is owned by runtime metadata, not 
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /use blueprint_phase_execution_targets as the common read authority/i
+    /blueprint_phase_execution_prepare is the sole preview, claim, selection, approval, freshness, and resume authority/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /selectedPlans, existingSummaries, blockers, and conflicts as the default public metadata source/i
+    /route every repo write through blueprint_phase_execution_apply/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /read plan bodies through blueprint_phase_plan_read only for the selected plans/i
+    /run only packet-bound verification through blueprint_phase_execution_verify/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text/i
+    /persist receipt-derived COMPLETED or BLOCKED summaries only through blueprint_phase_execution_finalize/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path/i
+    /summary write, summary index, artifact validation, synced state/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /keep the post-write sequence as blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: "synced"/i
+    /next-plan advancement as an idempotent stage machine/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
@@ -222,7 +228,7 @@ test("execute-phase runtime contract resource is owned by runtime metadata, not 
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
-    /never claim phase completion before validation and verification evidence exists/i
+    /claim phase completion before validation and verification evidence exists/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",

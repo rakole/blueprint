@@ -39,6 +39,7 @@ import {
   phaseToolDefinitions
 } from "./phase.js";
 import { planRunToolDefinitions } from "./plan-run.js";
+import { phaseExecutionToolDefinitions } from "./phase-execution-tools.js";
 import {
   stateToolDefinitions,
   blueprintStateLoad,
@@ -264,6 +265,7 @@ const AVAILABLE_TOOL_NAMES = new Set([
   ...configToolDefinitions.map((definition) => definition.name),
   ...stateToolDefinitions.map((definition) => definition.name),
   ...phaseToolDefinitions.map((definition) => definition.name),
+  ...phaseExecutionToolDefinitions.map((definition) => definition.name),
   ...planRunToolDefinitions.map((definition) => definition.name),
   ...reviewToolDefinitions.map((definition) => definition.name),
   ...artifactToolDefinitions.map((definition) => definition.name),
