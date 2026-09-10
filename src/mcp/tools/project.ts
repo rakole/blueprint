@@ -1,3 +1,4 @@
+import { discussToolDefinitions } from "./discuss.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -261,6 +262,7 @@ const PROJECT_TOOL_NAMES = [
   "blueprint_lightweight_preflight"
  ] as const satisfies readonly BlueprintInternalToolName[];
 const AVAILABLE_TOOL_NAMES = new Set([
+  ...discussToolDefinitions.map((definition) => definition.name),
   ...PROJECT_TOOL_NAMES,
   ...configToolDefinitions.map((definition) => definition.name),
   ...stateToolDefinitions.map((definition) => definition.name),

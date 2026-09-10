@@ -7,6 +7,9 @@ import {
 
 export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_project_init",
+  "blueprint_discuss_prepare",
+  "blueprint_discuss_record",
+  "blueprint_discuss_finalize",
   "blueprint_config_set",
   "blueprint_config_set_profile",
   "blueprint_state_update",
@@ -58,6 +61,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
 // These statuses mean a mutating tool either rejected a write attempt or stopped
 // before side effects because its write preconditions were not satisfied.
 export const MUTATION_FAILURE_STATUSES = new Set([
+  "reconciliation_required",
   "invalid",
   "project_missing",
   "not_found",

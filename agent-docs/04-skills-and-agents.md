@@ -85,3 +85,13 @@ Do not:
 - Let agents persist `.blueprint/` state by hand.
 - Let agents decide command routing independently of the catalog.
 - Let agents widen a command's allowed tools.
+
+## Discussion input boundary
+
+The phase-discovery shared skill loads only the active bundle. Discuss uses its
+short runtime contract and progressively loads recovery instructions on conflicts.
+Sibling command call/schema/ownership rules live in `discovery-sibling-contracts.md`
+and are required only by sibling bundles. Do not reintroduce primitive evidence,
+checkpoint, artifact or state orchestration into the normal discuss prompt:
+`blueprint_discuss_prepare` → `blueprint_discuss_record` →
+`blueprint_discuss_finalize` owns it; read is recovery/view only.

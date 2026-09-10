@@ -258,7 +258,7 @@ The runnable command groups below are generated from the same registry as `gener
 
 ### Core Lifecycle
 
-- `/blu-discuss-phase`: `discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.
+- `/blu-discuss-phase`: `discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, durable resumability, validation repair, and MCP-owned phase artifact writes.
 - `/blu-execute-phase`: `execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.
 - `/blu-next`: `next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.
 - `/blu-pause-work`: `pause-work` records a canonical handoff from current Blueprint state and artifact inventory.

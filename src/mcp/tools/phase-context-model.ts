@@ -1,10 +1,21 @@
+import * as z from "zod/v4";
+import type { ValidateFunction } from "ajv";
 import { readArtifactContract } from "../artifact-contracts/index.js";
 import {
   type PhaseArtifactValidationDiagnostic,
-  validatePhaseArtifactContent
+  validatePhaseArtifactContent,
 } from "./artifacts.js";
 import { asJsonObject, createAjvValidator } from "./phase-json-helpers.js";
 import { markdownTableCell } from "./phase-markdown.js";
+
+// The contract is source-owned and immutable during a runtime process. Compile
+// lazily once; consume AJV diagnostics synchronously before the next call.
+export const phaseContextAuthoringSchema = z.fromJSONSchema(
+  readArtifactContract("phase.context").modelContract!
+    .jsonSchema as z.core.JSONSchema.JSONSchema,
+);
+
+let contextModelValidator: ValidateFunction | undefined;
 
 type PhaseContextResolvedLocation = {
   phasePrefix: string;
@@ -49,13 +60,17 @@ function renderContextBulletList(items: string[]): string {
 
 function renderContextOptionalBulletList(
   items: string[],
-  options?: { allowNoneAlias?: boolean }
+  options?: { allowNoneAlias?: boolean },
 ): string {
   if (items.length === 0) {
     return "- none";
   }
 
-  if (options?.allowNoneAlias && items.length === 1 && items[0].trim().toLowerCase() === "none") {
+  if (
+    options?.allowNoneAlias &&
+    items.length === 1 &&
+    items[0].trim().toLowerCase() === "none"
+  ) {
     return "- none";
   }
 
@@ -66,7 +81,7 @@ function renderContextTable(headers: string[], rows: string[][]): string {
   return [
     `| ${headers.map(markdownTableCell).join(" | ")} |`,
     `| ${headers.map(() => "---").join(" | ")} |`,
-    ...rows.map((row) => `| ${row.map(markdownTableCell).join(" | ")} |`)
+    ...rows.map((row) => `| ${row.map(markdownTableCell).join(" | ")} |`),
   ].join("\n");
 }
 
@@ -97,21 +112,25 @@ ${renderContextBulletList(args.model.discoveryGrounding.confirmedDecisions)}
 
 ## Implementation Decisions
 
-${renderContextTable(
-  ["Decision", "Tradeoff Or Constraint"],
-  args.model.implementationDecisions.map((row) => [
-    row.decision,
-    row.tradeoffOrConstraint
-  ])
-)}
+${
+  args.model.implementationDecisions.length === 0
+    ? "- none"
+    : renderContextTable(
+        ["Decision", "Tradeoff Or Constraint"],
+        args.model.implementationDecisions.map((row) => [
+          row.decision,
+          row.tradeoffOrConstraint,
+        ]),
+      )
+}
 
 ## Specific Ideas
 
-${renderContextBulletList(args.model.specificIdeas)}
+${renderContextOptionalBulletList(args.model.specificIdeas)}
 
 ## Existing Code Insights
 
-${renderContextBulletList(args.model.existingCodeInsights)}
+${renderContextOptionalBulletList(args.model.existingCodeInsights)}
 
 ## Dependencies
 
@@ -120,7 +139,7 @@ ${renderContextOptionalBulletList(args.model.dependencies.priorPhaseArtifacts)}
 - External constraints:
 ${renderContextOptionalBulletList(args.model.dependencies.externalConstraints)}
 - Required follow-up reads:
-${renderContextBulletList(args.model.dependencies.requiredFollowUpReads)}
+${renderContextOptionalBulletList(args.model.dependencies.requiredFollowUpReads)}
 
 ## Open Questions
 
@@ -134,17 +153,28 @@ ${renderContextOptionalBulletList(args.model.deferredIdeas)}
 
 ${renderContextTable(
   ["Source", "Relevance"],
-  args.model.canonicalReferences.map((row) => [row.source, row.relevance])
+  args.model.canonicalReferences.map((row) => [row.source, row.relevance]),
 )}
 `;
 }
 
 export function validatePhaseContextModelInput(
-  model: unknown
+  model: unknown,
 ):
   | { model: null; validation: ReturnType<typeof validatePhaseArtifactContent> }
   | { model: PhaseContextStructuredModel; validation: null } {
-  const modelObject = asJsonObject(model);
+  const modelObject = asJsonObject(structuredClone(model));
+  if (modelObject) {
+    for (const field of [
+      "implementationDecisions",
+      "specificIdeas",
+      "existingCodeInsights",
+    ])
+      if (modelObject[field] === undefined) modelObject[field] = [];
+    const dependencies = asJsonObject(modelObject.dependencies);
+    if (dependencies && dependencies.requiredFollowUpReads === undefined)
+      dependencies.requiredFollowUpReads = [];
+  }
   const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
 
   if (!modelObject) {
@@ -154,7 +184,7 @@ export function validatePhaseContextModelInput(
       message: "phase.context model must be a JSON object.",
       repair: "Pass a JSON object matching phase.context.modelContract.",
       retryable: true,
-      nextTool: "blueprint_phase_artifact_write"
+      nextTool: "blueprint_phase_artifact_write",
     });
   } else {
     const contract = readArtifactContract("phase.context");
@@ -165,12 +195,14 @@ export function validatePhaseContextModelInput(
         path: "model",
         code: "schema.missing",
         message: "phase.context does not expose a model schema.",
-        repair: "Read blueprint_artifact_contract_read for phase.context before retrying.",
+        repair:
+          "Read blueprint_artifact_contract_read for phase.context before retrying.",
         retryable: true,
-        nextTool: "blueprint_phase_artifact_write"
+        nextTool: "blueprint_phase_artifact_write",
       });
     } else {
-      const validate = createAjvValidator().compile(schema);
+      const validate = (contextModelValidator ??=
+        createAjvValidator().compile(schema));
       const valid = validate(modelObject);
 
       if (!valid) {
@@ -206,11 +238,15 @@ export function validatePhaseContextModelInput(
               code: `schema.${error.keyword}`,
               message: `phase.context model schema violation at ${pathValue}: ${error.message ?? error.keyword}.`,
               missing: missingProperty ? [missingProperty] : undefined,
-              repair: phaseContextModelSchemaRepair(error.keyword, pathValue, missingProperty),
+              repair: phaseContextModelSchemaRepair(
+                error.keyword,
+                pathValue,
+                missingProperty,
+              ),
               retryable: true,
-              nextTool: "blueprint_phase_artifact_write"
+              nextTool: "blueprint_phase_artifact_write",
             };
-          })
+          }),
         );
       }
     }
@@ -223,15 +259,15 @@ export function validatePhaseContextModelInput(
         valid: false,
         issues: diagnostics.map((diagnostic) => diagnostic.message),
         warnings: [],
-        diagnostics
-      }
+        diagnostics,
+      },
     };
   }
 
   diagnostics.push(
     ...phaseContextModelSentinelDiagnostics(
-      modelObject as unknown as PhaseContextStructuredModel
-    )
+      modelObject as unknown as PhaseContextStructuredModel,
+    ),
   );
 
   if (diagnostics.length > 0) {
@@ -241,21 +277,21 @@ export function validatePhaseContextModelInput(
         valid: false,
         issues: diagnostics.map((diagnostic) => diagnostic.message),
         warnings: [],
-        diagnostics
-      }
+        diagnostics,
+      },
     };
   }
 
   return {
     model: modelObject as unknown as PhaseContextStructuredModel,
-    validation: null
+    validation: null,
   };
 }
 
 function phaseContextModelSchemaRepair(
   keyword: string,
   pathValue: string,
-  missingProperty: string | null
+  missingProperty: string | null,
 ): string {
   if (keyword === "required" && missingProperty) {
     return `Add ${pathValue} using the phase.context model contract before retrying.`;
@@ -263,7 +299,7 @@ function phaseContextModelSchemaRepair(
 
   if (keyword === "type") {
     if (pathValue === "model.openQuestions") {
-      return "Set model.openQuestions to an array. Use openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel. Keep openQuestions: [\"none\"] only as compatibility for older saved model inputs.";
+      return 'Set model.openQuestions to an array. Use openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel. Keep openQuestions: ["none"] only as compatibility for older saved model inputs.';
     }
 
     return `Set ${pathValue} to the type required by phase.context.modelContract; use arrays for list fields and objects for grouped sections.`;
@@ -271,7 +307,7 @@ function phaseContextModelSchemaRepair(
 
   if (keyword === "minItems") {
     if (pathValue === "model.openQuestions") {
-      return "Use openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel. Keep openQuestions: [\"none\"] only as compatibility for older saved model inputs.";
+      return 'Use openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel. Keep openQuestions: ["none"] only as compatibility for older saved model inputs.';
     }
 
     if (pathValue === "model.deferredIdeas") {
@@ -289,7 +325,7 @@ function phaseContextModelSchemaRepair(
 }
 
 function phaseContextModelSentinelDiagnostics(
-  model: PhaseContextStructuredModel
+  model: PhaseContextStructuredModel,
 ): PhaseArtifactValidationDiagnostic[] {
   const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
 
@@ -302,31 +338,34 @@ function phaseContextModelSentinelDiagnostics(
       path: "model.dependencies.priorPhaseArtifacts",
       items: model.dependencies.priorPhaseArtifacts,
       repair:
-        "Use dependencies.priorPhaseArtifacts: [] when no prior artifacts apply; do not pass [\"none\"] as model content."
+        'Use dependencies.priorPhaseArtifacts: [] when no prior artifacts apply; do not pass ["none"] as model content.',
     },
     {
       path: "model.dependencies.externalConstraints",
       items: model.dependencies.externalConstraints,
       repair:
-        "Use dependencies.externalConstraints: [] when no external constraints apply; do not pass [\"none\"] as model content."
+        'Use dependencies.externalConstraints: [] when no external constraints apply; do not pass ["none"] as model content.',
     },
     {
       path: "model.deferredIdeas",
       items: model.deferredIdeas,
       repair:
-        "Use deferredIdeas: [] when nothing is deferred; do not pass [\"none\"] as model content."
-    }
+        'Use deferredIdeas: [] when nothing is deferred; do not pass ["none"] as model content.',
+    },
   ];
 
   for (const field of aliasSensitiveFields) {
-    if (field.items.length === 1 && field.items[0].trim().toLowerCase() === "none") {
+    if (
+      field.items.length === 1 &&
+      field.items[0].trim().toLowerCase() === "none"
+    ) {
       diagnostics.push({
         path: field.path,
         code: "schema.none_alias_forbidden",
         message: `phase.context model field ${field.path} must use an empty array for the canonical none state; [\"none\"] is reserved for Open Questions compatibility only.`,
         repair: field.repair,
         retryable: true,
-        nextTool: "blueprint_phase_artifact_write"
+        nextTool: "blueprint_phase_artifact_write",
       });
     }
   }

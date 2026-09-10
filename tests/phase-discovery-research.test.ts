@@ -513,10 +513,9 @@ test("research-phase command references only registered tool names and safe rout
     path.join(repoRoot, "commands/blu-research-phase.toml"),
     "utf8"
   );
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
-    "utf8"
-  );
+  const skillFile = (await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"), "utf8"
+  )) + "\n" + await readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8");
   const researcherAgent = await readFile(
     path.join(repoRoot, "agents/blueprint-researcher.md"),
     "utf8"
@@ -615,9 +614,11 @@ test("research-phase command references only registered tool names and safe rout
   ]);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
   assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
@@ -863,10 +864,9 @@ test("research-phase spec evidence stays context-gated and nonblocking across ru
     path.join(repoRoot, "commands/blu-research-phase.toml"),
     "utf8"
   );
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
-    "utf8"
-  );
+  const skillFile = (await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"), "utf8"
+  )) + "\n" + await readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8");
   const runtimeContract = await readFile(
     path.join(
       repoRoot,
@@ -974,10 +974,9 @@ test("research-phase spec contradictions and planner-critical traceability stay 
 });
 
 test("research-phase spec integration keeps write ownership limited to research, checkpoints, and state", async () => {
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
-    "utf8"
-  );
+  const skillFile = (await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"), "utf8"
+  )) + "\n" + await readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8");
   const runtimeContract = await readFile(
     path.join(
       repoRoot,
@@ -1021,10 +1020,9 @@ test("research-phase surface responsibility matrix preserves no-dilution owners"
     path.join(repoRoot, "commands/blu-research-phase.toml"),
     "utf8"
   );
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
-    "utf8"
-  );
+  const skillFile = (await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"), "utf8"
+  )) + "\n" + await readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8");
   const runtimeContract = await readFile(
     path.join(
       repoRoot,

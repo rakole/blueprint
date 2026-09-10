@@ -55,6 +55,7 @@ test("spec-phase runtime metadata is implemented, root-routable, and runtime-own
   assert.deepEqual(metadata.requiredTools, [...specPhaseTools]);
   assert.deepEqual(metadata.optionalAgents, []);
   assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
   ]);
   assert.equal(metadata.spec.path, metadata.sourceId);
@@ -110,9 +111,11 @@ test("spec-phase runtime contract resource is advertised only after implemented 
     skill: "blueprint-phase-discovery",
     shared: [],
     commandSpecific: [
+      "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
       "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
     ],
     effective: [
+      "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
       "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
     ]
   });

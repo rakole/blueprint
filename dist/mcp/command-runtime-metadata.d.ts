@@ -591,27 +591,27 @@ export declare const DISCUSS_PHASE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: can replace or extend phase context artifacts.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_phase_plan_index", "blueprint_artifact_list", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_phase_artifact_scaffold", "blueprint_state_update", "blueprint_state_load"];
+    readonly requiredTools: readonly ["blueprint_discuss_prepare", "blueprint_discuss_record", "blueprint_discuss_read", "blueprint_discuss_finalize"];
     readonly optionalAgents: readonly ["blueprint-researcher"];
-    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md", "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"];
     readonly spec: {
         readonly path: string;
         readonly title: "`/blu-discuss-phase`";
         readonly executionProfile: "long-running-mutation";
         readonly rootRoutable: true;
-        readonly purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.";
-        readonly reads: readonly ["Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts including phase-local spec when phase.artifacts.spec exists, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."];
-        readonly writes: readonly ["starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases", "phase XX-CONTEXT.md", "optional phase XX-DISCUSSION-LOG.md", "optional shared phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery", ".blueprint/STATE.md"];
+        readonly purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, durable resumability, validation repair, and MCP-owned phase artifact writes.";
+        readonly reads: readonly ["blueprint_discuss_prepare bundles selected phase, roadmap, effective config, artifacts, bounded relevant prior context, codebase evidence, plan inventory and session readiness; canonical baselines and mutable state remain separate."];
+        readonly writes: readonly ["starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases", "phase XX-CONTEXT.md", "optional phase XX-DISCUSSION-LOG.md", "durable phase XX-DISCUSS-SESSION.json records, evidence basis and publication journal", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
         readonly waveTitle: "Core Lifecycle";
         readonly command: "discuss-phase";
         readonly primarySkill: "blueprint-phase-discovery";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_phase_plan_index", "blueprint_artifact_list", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_phase_artifact_scaffold", "blueprint_state_update", "blueprint_state_load"];
+        readonly exactMcpDestination: readonly ["blueprint_discuss_prepare", "blueprint_discuss_record", "blueprint_discuss_read", "blueprint_discuss_finalize"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, treats a planned ROADMAP phase with no matching directory as seedable by blueprint_phase_artifact_scaffold artifact=context before regular selected-phase reads, reports other phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, reads phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists, treats saved Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, counts locked numbered requirements, keeps missing spec nonblocking, avoids generic deliverable questions when the spec already answers them, routes spec contradictions back through ask_user to /blu-spec-phase <phase> instead of silently overriding spec intent in context, does a prior-context sweep before asking implementation questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, maps spec basis into existing context fields only, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.";
+        readonly contractNotes: "Use prepare -> record -> finalize, with read for recovery/viewing. Prepare owns bundled evidence, planned-phase scaffold seeding, effective config, optional authoritative spec and bounded prior context; changed inputs require explicit acknowledgment. Record exposes the canonical typed model and raw candidate salvage before validation, field repair, CAS and idempotent answer history. Finalize owns fresh-basis checks, confirmed overwrite, record-derived context/log publication, recoverable journal, selected-phase synced state and exact derivedStatus.nextAction. Ask only missing/conflicting/high-impact gray areas, let users pick areas, gate spec contradictions, and keep researcher bounded and config-controlled.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -661,7 +661,7 @@ export declare const RESEARCH_PHASE_RUNTIME_METADATA: {
     };
     readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_artifact_scaffold", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_state_load", "blueprint_command_catalog", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-researcher"];
-    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md", "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"];
     readonly spec: {
         readonly path: string;
         readonly title: "`/blu-research-phase`";
@@ -695,7 +695,7 @@ export declare const SPEC_PHASE_RUNTIME_METADATA: {
     };
     readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_config_get", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_artifact_contract_read", "blueprint_state_load", "blueprint_state_update", "blueprint_command_catalog"];
     readonly optionalAgents: readonly [];
-    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md", "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"];
     readonly spec: {
         readonly path: string;
         readonly title: "`/blu-spec-phase`";
@@ -729,7 +729,7 @@ export declare const UI_PHASE_RUNTIME_METADATA: {
     };
     readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_research_status", "blueprint_config_get", "blueprint_phase_artifact_read", "blueprint_phase_ui_skip_write", "blueprint_artifact_contract_read", "blueprint_phase_artifact_write", "blueprint_artifact_scaffold", "blueprint_state_load", "blueprint_command_catalog", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-ui-designer", "blueprint-checker"];
-    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md", "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"];
     readonly spec: {
         readonly path: string;
         readonly title: "`/blu-ui-phase`";
@@ -796,7 +796,7 @@ export declare const LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA: {
     };
     readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status", "blueprint_config_get"];
     readonly optionalAgents: readonly ["blueprint-researcher"];
-    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md", "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"];
     readonly spec: {
         readonly path: string;
         readonly title: "`/blu-list-phase-assumptions`";
@@ -2455,27 +2455,27 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: can replace or extend phase context artifacts.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_phase_plan_index", "blueprint_artifact_list", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_phase_artifact_scaffold", "blueprint_state_update", "blueprint_state_load"];
+        readonly requiredTools: readonly ["blueprint_discuss_prepare", "blueprint_discuss_record", "blueprint_discuss_read", "blueprint_discuss_finalize"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
-        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md", "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"];
         readonly spec: {
             readonly path: string;
             readonly title: "`/blu-discuss-phase`";
             readonly executionProfile: "long-running-mutation";
             readonly rootRoutable: true;
-            readonly purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.";
-            readonly reads: readonly ["Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts including phase-local spec when phase.artifacts.spec exists, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."];
-            readonly writes: readonly ["starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases", "phase XX-CONTEXT.md", "optional phase XX-DISCUSSION-LOG.md", "optional shared phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery", ".blueprint/STATE.md"];
+            readonly purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, durable resumability, validation repair, and MCP-owned phase artifact writes.";
+            readonly reads: readonly ["blueprint_discuss_prepare bundles selected phase, roadmap, effective config, artifacts, bounded relevant prior context, codebase evidence, plan inventory and session readiness; canonical baselines and mutable state remain separate."];
+            readonly writes: readonly ["starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases", "phase XX-CONTEXT.md", "optional phase XX-DISCUSSION-LOG.md", "durable phase XX-DISCUSS-SESSION.json records, evidence basis and publication journal", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;
             readonly waveTitle: "Core Lifecycle";
             readonly command: "discuss-phase";
             readonly primarySkill: "blueprint-phase-discovery";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_phase_plan_index", "blueprint_artifact_list", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_phase_artifact_scaffold", "blueprint_state_update", "blueprint_state_load"];
+            readonly exactMcpDestination: readonly ["blueprint_discuss_prepare", "blueprint_discuss_record", "blueprint_discuss_read", "blueprint_discuss_finalize"];
             readonly optionalAgents: readonly ["blueprint-researcher"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, treats a planned ROADMAP phase with no matching directory as seedable by blueprint_phase_artifact_scaffold artifact=context before regular selected-phase reads, reports other phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, reads phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists, treats saved Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, counts locked numbered requirements, keeps missing spec nonblocking, avoids generic deliverable questions when the spec already answers them, routes spec contradictions back through ask_user to /blu-spec-phase <phase> instead of silently overriding spec intent in context, does a prior-context sweep before asking implementation questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, maps spec basis into existing context fields only, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.";
+            readonly contractNotes: "Use prepare -> record -> finalize, with read for recovery/viewing. Prepare owns bundled evidence, planned-phase scaffold seeding, effective config, optional authoritative spec and bounded prior context; changed inputs require explicit acknowledgment. Record exposes the canonical typed model and raw candidate salvage before validation, field repair, CAS and idempotent answer history. Finalize owns fresh-basis checks, confirmed overwrite, record-derived context/log publication, recoverable journal, selected-phase synced state and exact derivedStatus.nextAction. Ask only missing/conflicting/high-impact gray areas, let users pick areas, gate spec contradictions, and keep researcher bounded and config-controlled.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -2525,7 +2525,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
         };
         readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_artifact_scaffold", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_state_load", "blueprint_command_catalog", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
-        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md", "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"];
         readonly spec: {
             readonly path: string;
             readonly title: "`/blu-research-phase`";
@@ -2559,7 +2559,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
         };
         readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_config_get", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_artifact_contract_read", "blueprint_state_load", "blueprint_state_update", "blueprint_command_catalog"];
         readonly optionalAgents: readonly [];
-        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md", "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"];
         readonly spec: {
             readonly path: string;
             readonly title: "`/blu-spec-phase`";
@@ -2593,7 +2593,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
         };
         readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_research_status", "blueprint_config_get", "blueprint_phase_artifact_read", "blueprint_phase_ui_skip_write", "blueprint_artifact_contract_read", "blueprint_phase_artifact_write", "blueprint_artifact_scaffold", "blueprint_state_load", "blueprint_command_catalog", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-ui-designer", "blueprint-checker"];
-        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md", "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"];
         readonly spec: {
             readonly path: string;
             readonly title: "`/blu-ui-phase`";
@@ -2660,7 +2660,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
         };
         readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status", "blueprint_config_get"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
-        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md", "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"];
         readonly spec: {
             readonly path: string;
             readonly title: "`/blu-list-phase-assumptions`";

@@ -18,7 +18,7 @@ test("phase.context exposes a schema-backed model contract without a read-time a
   assert.ok(modelContract);
   assert.equal("authoringTemplate" in contract, false);
   assert.equal(modelContract.schemaId, "blueprint.phase.context.model");
-  assert.equal(modelContract.schemaVersion, "1.0.0");
+  assert.equal(modelContract.schemaVersion, "1.1.0");
   assert.equal(
     modelContract.schemaPath,
     "src/mcp/artifact-contracts/schemas/phase.context.model.schema.json"
@@ -42,9 +42,6 @@ test("phase.context exposes a schema-backed model contract without a read-time a
   assert.deepEqual(required, [
     "phaseBoundary",
     "discoveryGrounding",
-    "implementationDecisions",
-    "specificIdeas",
-    "existingCodeInsights",
     "dependencies",
     "openQuestions",
     "deferredIdeas",

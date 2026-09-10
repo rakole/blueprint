@@ -228,7 +228,7 @@ test("phase context model diagnostics keep nested required-field repair paths in
   });
   const model = validPhaseContextModel();
 
-  delete (model.dependencies as { requiredFollowUpReads?: unknown }).requiredFollowUpReads;
+  delete (model.dependencies as { priorPhaseArtifacts?: unknown }).priorPhaseArtifacts;
 
   const invalid = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
@@ -240,16 +240,16 @@ test("phase context model diagnostics keep nested required-field repair paths in
   assert.equal(invalid.status, "invalid");
   assert.ok(
     invalid.diagnostics?.some(
-      (diagnostic) => diagnostic.path === "model.dependencies.requiredFollowUpReads"
+      (diagnostic) => diagnostic.path === "model.dependencies.priorPhaseArtifacts"
     )
   );
   assert.match(
     invalid.suggestedRepairs?.join("\n") ?? "",
-    /Add model\.dependencies\.requiredFollowUpReads/i
+    /Add model\.dependencies\.priorPhaseArtifacts/i
   );
   assert.doesNotMatch(
     invalid.suggestedRepairs?.join("\n") ?? "",
-    /Add model\.requiredFollowUpReads/i
+    /Add model\.priorPhaseArtifacts/i
   );
 });
 

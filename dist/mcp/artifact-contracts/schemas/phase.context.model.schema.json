@@ -8,9 +8,6 @@
   "required": [
     "phaseBoundary",
     "discoveryGrounding",
-    "implementationDecisions",
-    "specificIdeas",
-    "existingCodeInsights",
     "dependencies",
     "openQuestions",
     "deferredIdeas",
@@ -28,26 +25,26 @@
     "implementationDecisions": {
       "type": "array",
       "description": "Decision rows rendered under Implementation Decisions.",
-      "minItems": 1,
       "items": {
         "$ref": "#/$defs/implementationDecision"
-      }
+      },
+      "default": []
     },
     "specificIdeas": {
       "type": "array",
       "description": "Concrete ideas rendered under Specific Ideas.",
-      "minItems": 1,
       "items": {
         "$ref": "#/$defs/nonEmptyString"
-      }
+      },
+      "default": []
     },
     "existingCodeInsights": {
       "type": "array",
       "description": "Concrete codebase observations, reusable patterns, gaps, or cautions rendered under Existing Code Insights.",
-      "minItems": 1,
       "items": {
         "$ref": "#/$defs/nonEmptyString"
-      }
+      },
+      "default": []
     },
     "dependencies": {
       "$ref": "#/$defs/dependencies",
@@ -178,8 +175,7 @@
       "additionalProperties": false,
       "required": [
         "priorPhaseArtifacts",
-        "externalConstraints",
-        "requiredFollowUpReads"
+        "externalConstraints"
       ],
       "properties": {
         "priorPhaseArtifacts": {
@@ -196,10 +192,10 @@
         },
         "requiredFollowUpReads": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/repoOrSourceReference"
-          }
+          },
+          "default": []
         }
       }
     },

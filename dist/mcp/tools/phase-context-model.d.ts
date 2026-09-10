@@ -1,4 +1,6 @@
+import * as z from "zod/v4";
 import { validatePhaseArtifactContent } from "./artifacts.js";
+export declare const phaseContextAuthoringSchema: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
 type PhaseContextResolvedLocation = {
     phasePrefix: string;
     phaseName: string;

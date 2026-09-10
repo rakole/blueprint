@@ -216,21 +216,10 @@ const NEXT_REQUIRED_TOOLS = [
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const DISCUSS_PHASE_REQUIRED_TOOLS = [
-  "blueprint_phase_locate",
-  "blueprint_phase_context",
-  "blueprint_roadmap_read",
-  "blueprint_phase_plan_index",
-  "blueprint_artifact_list",
-  "blueprint_config_get",
-  "blueprint_artifact_contract_read",
-  "blueprint_phase_artifact_read",
-  "blueprint_phase_artifact_write",
-  "blueprint_phase_checkpoint_get",
-  "blueprint_phase_checkpoint_put",
-  "blueprint_phase_checkpoint_delete",
-  "blueprint_phase_artifact_scaffold",
-  "blueprint_state_update",
-  "blueprint_state_load"
+  "blueprint_discuss_prepare",
+  "blueprint_discuss_record",
+  "blueprint_discuss_read",
+  "blueprint_discuss_finalize"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const PLAN_PHASE_REQUIRED_TOOLS = [
@@ -1461,25 +1450,20 @@ export const DISCUSS_PHASE_RUNTIME_METADATA = {
   },
   requiredTools: DISCUSS_PHASE_REQUIRED_TOOLS,
   optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
-  requiredInputPaths: [
-    DISCUSS_PHASE_SPEC_PATH,
-    LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH
-  ],
+  requiredInputPaths: [DISCUSS_PHASE_SPEC_PATH],
   spec: {
     path: runtimeMetadataSourceId("discuss-phase"),
     title: "`/blu-discuss-phase`",
     executionProfile: "long-running-mutation",
     rootRoutable: true,
     purpose:
-      "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.",
-    reads: [
-      "Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts including phase-local spec when phase.artifacts.spec exists, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."
-    ],
+      "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, durable resumability, validation repair, and MCP-owned phase artifact writes.",
+    reads: ["blueprint_discuss_prepare bundles selected phase, roadmap, effective config, artifacts, bounded relevant prior context, codebase evidence, plan inventory and session readiness; canonical baselines and mutable state remain separate."],
     writes: [
       "starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases",
       "phase XX-CONTEXT.md",
       "optional phase XX-DISCUSSION-LOG.md",
-      "optional shared phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery",
+      "durable phase XX-DISCUSS-SESSION.json records, evidence basis and publication journal",
       ".blueprint/STATE.md"
     ]
   },
@@ -1492,7 +1476,7 @@ export const DISCUSS_PHASE_RUNTIME_METADATA = {
     optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, treats a planned ROADMAP phase with no matching directory as seedable by blueprint_phase_artifact_scaffold artifact=context before regular selected-phase reads, reports other phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, reads phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists, treats saved Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, counts locked numbered requirements, keeps missing spec nonblocking, avoids generic deliverable questions when the spec already answers them, routes spec contradictions back through ask_user to /blu-spec-phase <phase> instead of silently overriding spec intent in context, does a prior-context sweep before asking implementation questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, maps spec basis into existing context fields only, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
+      "Use prepare -> record -> finalize, with read for recovery/viewing. Prepare owns bundled evidence, planned-phase scaffold seeding, effective config, optional authoritative spec and bounded prior context; changed inputs require explicit acknowledgment. Record exposes the canonical typed model and raw candidate salvage before validation, field repair, CAS and idempotent answer history. Finalize owns fresh-basis checks, confirmed overwrite, record-derived context/log publication, recoverable journal, selected-phase synced state and exact derivedStatus.nextAction. Ask only missing/conflicting/high-impact gray areas, let users pick areas, gate spec contradictions, and keep researcher bounded and config-controlled.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1553,7 +1537,10 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
   },
   requiredTools: RESEARCH_PHASE_REQUIRED_TOOLS,
   optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
-  requiredInputPaths: [RESEARCH_PHASE_SPEC_PATH],
+  requiredInputPaths: [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    RESEARCH_PHASE_SPEC_PATH
+  ],
   spec: {
     path: runtimeMetadataSourceId("research-phase"),
     title: "`/blu-research-phase`",
@@ -1597,7 +1584,10 @@ export const SPEC_PHASE_RUNTIME_METADATA = {
   },
   requiredTools: SPEC_PHASE_REQUIRED_TOOLS,
   optionalAgents: [],
-  requiredInputPaths: [SPEC_PHASE_SPEC_PATH],
+  requiredInputPaths: [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    SPEC_PHASE_SPEC_PATH
+  ],
   spec: {
     path: runtimeMetadataSourceId("spec-phase"),
     title: "`/blu-spec-phase`",
@@ -1639,7 +1629,10 @@ export const UI_PHASE_RUNTIME_METADATA = {
   },
   requiredTools: UI_PHASE_REQUIRED_TOOLS,
   optionalAgents: UI_PHASE_OPTIONAL_AGENTS,
-  requiredInputPaths: [UI_PHASE_SPEC_PATH],
+  requiredInputPaths: [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    UI_PHASE_SPEC_PATH
+  ],
   spec: {
     path: runtimeMetadataSourceId("ui-phase"),
     title: "`/blu-ui-phase`",
@@ -1730,7 +1723,10 @@ export const LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA = {
   },
   requiredTools: LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS,
   optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
-  requiredInputPaths: [LIST_PHASE_ASSUMPTIONS_SPEC_PATH],
+  requiredInputPaths: [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    LIST_PHASE_ASSUMPTIONS_SPEC_PATH
+  ],
   spec: {
     path: runtimeMetadataSourceId("list-phase-assumptions"),
     title: "`/blu-list-phase-assumptions`",

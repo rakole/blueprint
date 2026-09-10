@@ -56,6 +56,7 @@ test("phase context ownership stays discuss-led and runtime-contract scoped", as
     false
   );
   assert.deepEqual(researchContract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
   assert.deepEqual(planContract.skillInputs.commandSpecific, [
@@ -63,20 +64,13 @@ test("phase context ownership stays discuss-led and runtime-contract scoped", as
   ]);
 });
 
-test("discovery and planning repair loops stop on repeated identical diagnostics", () => {
-  const files = [
-    "commands/blu-discuss-phase.toml",
-    "commands/blu-research-phase.toml",
-    "commands/blu-plan-phase.toml",
-    "skills/blueprint-phase-discovery/SKILL.md",
-    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
+test("discovery and planning recovery rules stop repeated identical diagnostics", () => {
+  for (const file of [
+    "skills/blueprint-phase-discovery/references/discuss-phase-recovery.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md",
     "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
-  ] as const;
-
-  for (const file of files) {
-    const content = read(file);
-    assert.match(content, /identical diagnostics|same diagnostics repeat/);
-    assert.match(content, /do not inspect MCP source/i);
+  ]) {
+    assert.match(read(file), /identical (?:diagnostics|errors)|same diagnostics repeat/);
+    assert.match(read(file), /source.code investigation|do not inspect MCP source/i);
   }
 });
