@@ -213,7 +213,7 @@ export async function blueprintPhaseCheckpointDelete(
     };
   }
 
-  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
+  const expectedTopology = args.expectedTopology ?? phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
 
   if (!args.expectedOwnerCommand && !args.expectedMode) {
     const checkpointPath = checkpointPathFor(resolved);

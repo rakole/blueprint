@@ -1,4 +1,5 @@
 import test from "node:test";
+import { promises as fs } from "node:fs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
@@ -506,4 +507,84 @@ test("confirmed runtime reconciliation archives partial journal and safely rebas
     discussFinalizeDependencies.stateUpdate = original;
     await rm(cwd, { recursive: true, force: true });
   }
+});
+
+test("retry after partial publication refuses changed source evidence", async () => {
+  const cwd = await fixture();
+  const original = discussFinalizeDependencies.stateUpdate;
+  try {
+    const revision = await seeded(cwd);
+    discussFinalizeDependencies.stateUpdate = async () => { throw new Error("Interrupted state write"); };
+    const args = { cwd, phase, requestId: "retry", expectedRevision: revision };
+    assert.equal((await blueprintDiscussFinalize(args)).status, "partial");
+    discussFinalizeDependencies.stateUpdate = original;
+    await writeFile(path.join(cwd, ".blueprint/PROJECT.md"), "# Changed project intent\n");
+    const result = await blueprintDiscussFinalize(args);
+    assert.equal(result.status, "partial");
+    assert.match(result.reason, /evidence changed/);
+  } finally {
+    discussFinalizeDependencies.stateUpdate = original;
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("artifact writer rejects topology drift after outer finalize check", async () => {
+  const cwd = await fixture();
+  const original = discussFinalizeDependencies.artifactWrite;
+  try {
+    const revision = await seeded(cwd);
+    discussFinalizeDependencies.artifactWrite = async (args) => {
+      const roadmap = path.join(cwd, ".blueprint/ROADMAP.md");
+      await writeFile(roadmap, (await readFile(roadmap, "utf8")).replaceAll("Durable discovery", "Revised discovery"));
+      return original(args);
+    };
+    const result = await blueprintDiscussFinalize({ cwd, phase, requestId: "race", expectedRevision: revision });
+    assert.equal(result.status, "partial");
+    assert.match(result.reason, /topology/);
+    await assert.rejects(readFile(path.join(cwd, relative, "03-CONTEXT.md")), { code: "ENOENT" });
+  } finally {
+    discussFinalizeDependencies.artifactWrite = original;
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("tampered publication paths and bytes cannot resume a journal", async () => {
+  const cwd = await fixture();
+  const original = discussFinalizeDependencies.stateUpdate;
+  try {
+    const revision = await seeded(cwd);
+    discussFinalizeDependencies.stateUpdate = async () => { throw new Error("Interrupted"); };
+    const args = { cwd, phase, requestId: "journal", expectedRevision: revision };
+    assert.equal((await blueprintDiscussFinalize(args)).status, "partial");
+    const sessionPath = path.join(cwd, relative, "03-DISCUSS-SESSION.json");
+    const session = JSON.parse(await readFile(sessionPath, "utf8"));
+    session.journal.context.path = ".blueprint/phases/04-delivery/04-CONTEXT.md";
+    await writeFile(sessionPath, JSON.stringify(session));
+    await assert.rejects(blueprintDiscussFinalize(args), /journal identity or integrity/);
+  } finally {
+    discussFinalizeDependencies.stateUpdate = original;
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+
+test("session save cannot recreate a phase directory renamed before the topology lock", async (t) => {
+  const cwd = await fixture();
+  try {
+    const revision = await seeded(cwd);
+    const originalMkdir = fs.mkdir.bind(fs);
+    let renamed = false;
+    t.mock.method(fs, "mkdir", async (target, options) => {
+      if (!renamed && String(target).endsWith("phase-topology.lock")) {
+        renamed = true;
+        await fs.rename(path.join(cwd, relative), path.join(cwd, ".blueprint/phases/03-renamed"));
+      }
+      return originalMkdir(target, options);
+    });
+    await assert.rejects(blueprintDiscussRecord({ cwd, phase, requestId: "race-save", expectedRevision: revision, candidate: { captured: true } }), /topology changed/);
+    assert.equal(renamed, true);
+    await assert.rejects(readFile(path.join(cwd, relative, "03-DISCUSS-SESSION.json")), { code: "ENOENT" });
+    const saved = JSON.parse(await readFile(path.join(cwd, ".blueprint/phases/03-renamed/03-DISCUSS-SESSION.json"), "utf8"));
+    assert.equal(saved.revision, revision);
+  } finally { t.mock.restoreAll(); await rm(cwd, { recursive: true, force: true }); }
 });

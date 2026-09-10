@@ -17,6 +17,7 @@ import {
 } from "./artifacts.js";
 import { resolveLocatedPhaseForMutation } from "./phase-resolution.js";
 import {
+  PHASE_TOPOLOGY_LOCK_NAME,
   phaseTopologyFingerprintFromLocation,
   phaseTopologyFingerprintsMatch,
   type PhaseTopologyFingerprint,
@@ -51,6 +52,7 @@ export type DiscussRecord = z.infer<typeof recordSchema>;
 type Basis = {
   readSet: Array<{ path: string; hash: string | null }>;
   prepared: boolean;
+  evidencePaths?: string[];
 };
 type Event = {
   revision: number;
@@ -180,10 +182,15 @@ const sessionSchema = z.object({
     phasePrefix: z.string(),
     phaseName: z.string().nullable(),
     phaseDir: z.string(),
-    roadmapEntry: z.unknown(),
+    roadmapEntry: z.object({
+      phaseNumber: z.string(), phasePrefix: z.string(), phaseName: z.string(),
+      completed: z.boolean(), summary: z.string().nullable(), goal: z.string().nullable(),
+      successCriteria: z.string().nullable(), requirements: z.array(z.string()),
+    }).nullable(),
   }),
   basis: z.object({
     prepared: z.boolean(),
+    evidencePaths: z.array(z.string()).optional(),
     readSet: z.array(
       z.object({
         path: z.string(),
@@ -268,12 +275,31 @@ async function readSession(
     );
     sessionSchema.parse(parsed);
     const session = parsed as unknown as DiscussSession;
+    const prefix = session.topology.phasePrefix;
+    const sessionPathPattern = new RegExp(`^\\.blueprint/phases/${prefix.replaceAll(".", "\\.")}(?:-[^/]+)?/${prefix.replaceAll(".", "\\.")}-DISCUSS-SESSION\\.json$`);
     if (
       session.phase !== session.topology.phaseNumber ||
-      relative !==
-        `${session.topology.phaseDir}/${session.topology.phasePrefix}-DISCUSS-SESSION.json`
+      !/^\d+(?:\.\d+)*$/.test(prefix) ||
+      prefix.replace(/^0+(?=\d)/, "") !== session.phase ||
+      !sessionPathPattern.test(relative) ||
+      !sessionPathPattern.test(`${session.topology.phaseDir}/${prefix}-DISCUSS-SESSION.json`)
     )
       throw new Error("Discuss session phase/path identity mismatch.");
+    const journal = session.journal;
+    if (journal) {
+      const receipt = session.requests[journal.requestId];
+      const contextPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-CONTEXT.md`;
+      const logPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-DISCUSSION-LOG.md`;
+      const model = validatePhaseContextModelInput(journal.context.model).model;
+      if (!model || journal.context.path !== contextPath ||
+        (journal.log && journal.log.path !== logPath) ||
+        journal.revision > session.revision || !receipt ||
+        receipt.revision !== journal.revision || receipt.hash !== journal.requestHash ||
+        Object.keys(journal.stages).some((stage) => !["context", "log", "state", "refresh", "cleanup"].includes(stage)) ||
+        digest(prepareTextForPersistence(renderPhaseContextModelContent({ resolved: { phasePrefix: session.topology.phasePrefix, phaseName: session.topology.phaseName ?? "" }, model })).content.replace(/\r\n/g, "\n")) !== journal.context.hash ||
+        (journal.log && digest(journal.log.content) !== journal.log.hash))
+        throw new Error("Discuss publication journal identity or integrity mismatch.");
+    }
     return parsed as unknown as DiscussSession;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
@@ -291,7 +317,13 @@ async function save(root: string, relative: string, session: DiscussSession) {
     throw new Error(
       "Discuss session exceeds 32 MiB; preserve history and start a new phase session through runtime maintenance.",
     );
-  await writeTextFile(resolveBlueprintPath(root, relative), content);
+  await withBlueprintRepoLock(root, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const current = await location({ cwd: root, phase: session.phase });
+    if (current.sessionPath !== relative || !phaseTopologyFingerprintsMatch(
+      session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase),
+    )) throw new Error("Phase topology changed; prepare with explicit reconciliation before saving.");
+    await writeTextFile(resolveBlueprintPath(root, relative), content);
+  });
 }
 async function locked<T>(
   args: Lookup,
@@ -334,6 +366,7 @@ async function initial(
 export async function prepareDiscussInputBasis(
   args: Lookup & {
     readSet: Array<{ path: string; hash: string | null }>;
+    evidencePaths?: string[];
     expectedRevision?: number;
     acknowledgeChangedInputs?: boolean;
     targetHashes?: { context: string | null; log: string | null };
@@ -474,6 +507,7 @@ export async function prepareDiscussInputBasis(
     session.basis = {
       prepared: true,
       readSet: checkedPayload(args.readSet) as Basis["readSet"],
+      evidencePaths: args.evidencePaths ?? session.basis.evidencePaths,
     };
     session.revision++;
     session.history.push({
@@ -514,7 +548,7 @@ function assemble(session: DiscussSession): unknown {
         )
         .map((r) => ({
           decision: `[${r.id}] ${r.value}`,
-          tradeoffOrConstraint: `${r.rationale}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}`,
+          tradeoffOrConstraint: `${r.rationale}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}${r.rejectedOptions?.length ? ` Rejected options: ${r.rejectedOptions.join("; ")}` : ""}`,
         })),
     ];
     for (const [field, type] of [
@@ -902,6 +936,9 @@ export async function blueprintDiscussFinalize(
     };
     try {
       await assertTopology();
+      const freshness = await basisFreshness(loc.projectRoot, session.basis.readSet);
+      if (!session.basis.prepared || freshness.status !== "fresh")
+        throw new Error("Discussion evidence changed or is unknown; run blueprint_discuss_prepare with explicit target reconciliation and review changed inputs.");
       for (const kind of ["context", "log"] as const) {
         const item = journal[kind];
         if (!item) continue;
@@ -933,6 +970,7 @@ export async function blueprintDiscussFinalize(
             : { content: journal.log!.content }),
           overwrite: args.overwrite,
           expectedContentHash: session.baseline[kind],
+          expectedTopology: session.topology,
         });
         if (result.status === "invalid")
           throw new Error(`Canonical ${kind} validation rejected publication.`);
@@ -979,6 +1017,7 @@ export async function blueprintDiscussFinalize(
         const cleanup = await discussFinalizeDependencies.checkpointDelete({
           cwd: loc.projectRoot,
           phase: session.phase,
+          expectedTopology: session.topology,
           expectedOwnerCommand: "/blu-discuss-phase",
           expectedMode: "discuss",
         });
@@ -1034,13 +1073,23 @@ export async function blueprintDiscussPrepare(
   raw: z.input<typeof prepareInput>,
 ) {
   const args = prepareInput.parse(raw);
-  const evidence = await collectDiscussEvidence(args);
+  let evidencePaths = args.evidencePaths;
+  const evidence = await collectDiscussEvidence({ ...args,
+    resolveEvidencePaths: async (root, relative) => {
+      if (evidencePaths === undefined) {
+        const prior = await readSession(root, relative);
+        evidencePaths = prior?.basis.evidencePaths ?? [];
+      }
+      return evidencePaths;
+    },
+  });
   if (evidence.status !== "collected") return evidence;
   const result = await prepareDiscussInputBasis({
     ...args,
     cwd: evidence.root,
     phase: evidence.phase,
     readSet: evidence.readSet,
+    evidencePaths,
     targetHashes: {
       context: evidence.packet.artifacts.context.hash,
       log: evidence.packet.artifacts.log.hash,

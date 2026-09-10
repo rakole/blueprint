@@ -334,3 +334,49 @@ test("effective host defaults changes invalidate prepared basis even without pro
     await rm(cwd, { recursive: true, force: true });
   }
 });
+
+test("prepare retains source evidence by default and explicitly removed evidence requires review", async () => {
+  const cwd = await fixture();
+  try {
+    await writeFile(path.join(cwd, "engine.ts"), "export const engine = 1;\n");
+    const first = await blueprintDiscussPrepare({ cwd, phase: 3, evidencePaths: ["engine.ts"] });
+    const reused = await blueprintDiscussPrepare({ cwd, phase: 3 });
+    assert.equal(reused.revision, first.revision);
+    assert.ok(reused.readSet.some((item) => item.path === "engine.ts"));
+    await writeFile(path.join(cwd, "engine.ts"), "export const engine = 2;\n");
+    const changed = await blueprintDiscussPrepare({ cwd, phase: 3 });
+    assert.equal(changed.status, "reconciliation_required");
+    assert.ok(changed.changedPaths.includes("engine.ts"));
+    const removed = await blueprintDiscussPrepare({ cwd, phase: 3, evidencePaths: [] });
+    assert.equal(removed.status, "reconciliation_required");
+    assert.ok(removed.changedPaths.includes("engine.ts"));
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
+
+test("appearance of a previously absent prior phase invalidates prepared inputs", async () => {
+  const cwd = await fixture();
+  try {
+    const prior = path.join(cwd, ".blueprint/phases/02-foundation");
+    await rm(prior, { recursive: true });
+    const prepared = await blueprintDiscussPrepare({ cwd, phase: 3 });
+    const record = await blueprintDiscussRecord({ cwd, phase: 3, requestId: "candidate", expectedRevision: prepared.revision!, candidate: validPhaseContextModel() });
+    await mkdir(prior);
+    await writeFile(path.join(prior, "02-CONTEXT.md"), "# Newly available dependency\n");
+    const result = await blueprintDiscussFinalize({ cwd, phase: 3, requestId: "publish", expectedRevision: record.revision! });
+    assert.equal(result.status, "stale");
+    assert.ok(result.freshness.stalePaths.includes("@discuss/prior/2"));
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
+
+test("renamed same-number session remains readable and explicitly reconcilable", async () => {
+  const cwd = await fixture();
+  try {
+    const first = await blueprintDiscussPrepare({ cwd, phase: 3 });
+    const { rename } = await import("node:fs/promises");
+    await rename(path.join(cwd, relative), path.join(cwd, ".blueprint/phases/03-renamed"));
+    assert.equal((await blueprintDiscussRead({ cwd, phase: 3 })).session!.revision, first.revision);
+    const next = await blueprintDiscussPrepare({ cwd, phase: 3, expectedRevision: first.revision, acknowledgeChangedInputs: true, reconcile: { confirmed: true, contextHash: null, logHash: null } });
+    assert.equal(next.status, "prepared");
+    assert.equal((await blueprintDiscussRead({ cwd, phase: 3 })).session!.topology.phaseDir, ".blueprint/phases/03-renamed");
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});

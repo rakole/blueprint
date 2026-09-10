@@ -315,7 +315,7 @@ export async function blueprintPhaseArtifactWrite(
   args: PhaseArtifactWriteArgs
 ): Promise<PhaseArtifactWriteResult> {
   const { projectRoot, resolved, matchedPhase } = await resolveLocatedPhaseForMutation(args);
-  const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
+  const expectedTopology = args.expectedTopology ?? phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   const artifactPath = artifactPathFor(resolved, args.artifact);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;

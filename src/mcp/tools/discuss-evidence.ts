@@ -56,6 +56,10 @@ export async function discussEvidenceHash(root: string, relative: string) {
       stableEvidence({ config: config.config, provenance: config.provenance }),
     );
   }
+  if (relative.startsWith("@discuss/prior/")) {
+    const snapshot = await resolvePhaseRuntimeSnapshot({ cwd: root, phase: relative.slice("@discuss/prior/".length) });
+    return evidenceDigest(stableEvidence({ resolved: snapshot.resolved, reason: snapshot.located.reason }));
+  }
   if (relative.startsWith("@discuss/plans/"))
     return evidenceDigest(
       stableEvidence(
@@ -71,6 +75,7 @@ export async function collectDiscussEvidence(args: {
   cwd?: string;
   phase?: string | number;
   evidencePaths?: string[];
+  resolveEvidencePaths?: (root: string, sessionPath: string) => Promise<string[]>;
 }) {
   // Resolution helpers read separately: bind their result to the exact roadmap bytes before/after.
   const { ensureRepoRoot } = await import("./artifacts.js");
@@ -97,6 +102,9 @@ export async function collectDiscussEvidence(args: {
       reason: snapshot.located.reason,
     };
   const selected = snapshot.resolved;
+  const evidencePaths = args.resolveEvidencePaths
+    ? await args.resolveEvidencePaths(root, `${selected.phaseDir}/${selected.phasePrefix}-DISCUSS-SESSION.json`)
+    : args.evidencePaths ?? [];
   const contextPath = artifactPathFor(selected, "context");
   const logPath = artifactPathFor(selected, "discussion-log");
   const specPath = artifactPathFor(selected, "spec");
@@ -173,7 +181,7 @@ export async function collectDiscussEvidence(args: {
       "package.json",
       "README.md",
       ...priorPaths,
-      ...(args.evidencePaths ?? []),
+      ...evidencePaths,
       ...inventory.map((name) => `${selected.phaseDir}/${name}`),
     ]),
   ].filter((p) => ![contextPath, logPath, specPath, roadmap.path].includes(p));
@@ -204,6 +212,10 @@ export async function collectDiscussEvidence(args: {
     path,
     hash,
   }));
+  readSet.push(...priorSnapshots.map((snapshot, index) => ({
+    path: `@discuss/prior/${prior[index].phaseNumber}`,
+    hash: evidenceDigest(stableEvidence({ resolved: snapshot.resolved, reason: snapshot.located.reason })),
+  })));
   readSet.push(
     {
       path: "@discuss/effective-config",
