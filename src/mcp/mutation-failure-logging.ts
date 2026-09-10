@@ -7,6 +7,7 @@ import {
 
 export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_project_init",
+  "blueprint_discuss_prepare",
   "blueprint_discuss_record",
   "blueprint_discuss_finalize",
   "blueprint_config_set",

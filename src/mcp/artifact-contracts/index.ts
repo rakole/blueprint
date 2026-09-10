@@ -831,10 +831,11 @@ const PHASE_CONTEXT_MODEL_SCHEMA_PATH =
 
 const PHASE_CONTEXT_MODEL_CONTRACT: ArtifactModelContract = {
   schemaId: "blueprint.phase.context.model",
-  schemaVersion: "1.0.0",
+  schemaVersion: "1.1.0",
   schemaPath: PHASE_CONTEXT_MODEL_SCHEMA_PATH,
   jsonSchema: readJsonSchemaAsset(PHASE_CONTEXT_MODEL_SCHEMA_FILE),
   qualityRules: [
+    "Optional implementationDecisions, specificIdeas, existingCodeInsights and dependencies.requiredFollowUpReads default to empty arrays; no applicable item needs invented filler.",
     "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, or content; the write tool owns identity and path derivation.",
     "Preserve phase boundary separation: goal, in-scope work, out-of-scope work, and success criteria must stay distinct so downstream planning can narrow safely.",
     "Discovery grounding must cite concrete project brief, requirements, workflow posture, and confirmed decisions rather than placeholder or generic process prose.",
@@ -4387,6 +4388,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Canonical References"
     ],
     sectionValidations: {
+      "Implementation Decisions": { exactEmptySentinel: "- none" },
+      "Specific Ideas": { exactEmptySentinel: "- none" },
+      "Existing Code Insights": { exactEmptySentinel: "- none" },
       "Open Questions": {
         exactEmptySentinel: "- none"
       },

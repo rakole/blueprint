@@ -56,7 +56,7 @@ test("list-phase-assumptions manifest references only registered read-oriented d
 test("list-phase-assumptions manifest preserves the read-only assumptions review contract", async () => {
   const [raw, skillFile] = await Promise.all([
     readFile(manifestPath, "utf8"),
-    readFile(discoverableSkillPath, "utf8")
+    Promise.all([readFile(discoverableSkillPath, "utf8"), readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8")]).then(parts => parts.join("\n"))
   ]);
 
   assert.match(raw, /Use the `blueprint-phase-discovery` skill/);
@@ -90,9 +90,11 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
   ]);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
   ]);
   assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
@@ -103,6 +105,7 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
     true
   );
   assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
   ]);
 });

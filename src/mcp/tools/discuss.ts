@@ -25,11 +25,15 @@ import { artifactPathFor } from "./phase-locations.js";
 import { blueprintPhaseArtifactWrite } from "./phase-artifacts.js";
 import { blueprintPhaseCheckpointDelete } from "./phase-checkpoints.js";
 import {
+  phaseContextAuthoringSchema,
   renderPhaseContextModelContent,
   validatePhaseContextModelInput,
 } from "./phase-context-model.js";
 import { blueprintStateUpdate, blueprintStateLoad } from "./state.js";
-import { evaluateCheckpointFreshness } from "./phase-checkpoint-freshness.js";
+import {
+  collectDiscussEvidence,
+  discussEvidenceHash,
+} from "./discuss-evidence.js";
 import type { ToolDefinition } from "../tool-types.js";
 
 const recordSchema = z.object({
@@ -81,20 +85,32 @@ export type DiscussSession = {
   requests: Record<string, { hash: string; revision: number }>;
   journal?: Journal;
 };
-type Lookup = { cwd?: string; phase: string };
-const lookupShape = { cwd: z.string().optional(), phase: z.string().min(1) };
+type Lookup = { cwd?: string; phase: string | number };
+const numericPhase = z
+  .union([z.string().regex(/^\d+(?:\.\d+)*$/), z.number().nonnegative()])
+  .describe("Numeric phase reference, never a directory or filename.");
+const lookupShape = { cwd: z.string().optional(), phase: numericPhase };
 const idSchema = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/);
 const recordInput = z.object({
   ...lookupShape,
   requestId: idSchema,
   expectedRevision: z.number().int().min(0),
   records: z.array(recordSchema).max(100).optional(),
-  candidate: z.unknown().optional(),
+  model: phaseContextAuthoringSchema
+    .optional()
+    .describe(
+      "Typed canonical context. Use candidate instead to salvage incomplete or invalid drafts.",
+    ),
+  candidate: z
+    .unknown()
+    .optional()
+    .describe("Lossless raw JSON salvage; saved before context schema checks."),
   corrections: z
     .array(
       z.object({
         path: z.array(z.string()).min(1).max(20),
-        value: z.unknown(),
+        value: z.unknown().optional(),
+        operation: z.enum(["set", "remove"]).default("set"),
       }),
     )
     .max(50)
@@ -216,22 +232,29 @@ const sessionSchema = z.object({
     .optional(),
 });
 async function basisFreshness(root: string, readSet: Basis["readSet"]) {
-  const present = readSet.filter((item) => item.hash !== null);
-  const result = present.length
-    ? await evaluateCheckpointFreshness(root, {
-        ownerCommand: "/blu-discuss-phase",
-        readSet: present,
-      })
-    : {
-        status: readSet.length ? "fresh" : "unknown",
-        stalePaths: [] as string[],
-        unknownPaths: [] as string[],
-        warnings: [] as string[],
-      };
-  for (const item of readSet.filter((item) => item.hash === null))
-    if ((await hashPath(root, item.path)) !== null)
-      result.stalePaths.push(item.path);
-  if (result.stalePaths.length) result.status = "stale";
+  const result = {
+    status: readSet.length ? "fresh" : "unknown",
+    stalePaths: [] as string[],
+    unknownPaths: [] as string[],
+    warnings: [] as string[],
+  };
+  await Promise.all(
+    readSet.map(async (item) => {
+      try {
+        if ((await discussEvidenceHash(root, item.path)) !== item.hash)
+          result.stalePaths.push(item.path);
+      } catch {
+        result.unknownPaths.push(item.path);
+      }
+    }),
+  );
+  result.stalePaths.sort();
+  result.unknownPaths.sort();
+  result.status = result.stalePaths.length
+    ? "stale"
+    : result.unknownPaths.length
+      ? "unknown"
+      : result.status;
   return result;
 }
 async function readSession(
@@ -312,6 +335,8 @@ export async function prepareDiscussInputBasis(
   args: Lookup & {
     readSet: Array<{ path: string; hash: string | null }>;
     expectedRevision?: number;
+    acknowledgeChangedInputs?: boolean;
+    targetHashes?: { context: string | null; log: string | null };
     reconcile?: {
       confirmed: true;
       contextHash: string | null;
@@ -328,8 +353,73 @@ export async function prepareDiscussInputBasis(
       session.revision !== args.expectedRevision
     )
       throw new Error("Discuss revision conflict.");
+    if (args.targetHashes) {
+      const actual = {
+        context: await hashPath(
+          loc.projectRoot,
+          artifactPathFor(loc.resolved, "context"),
+        ),
+        log: await hashPath(
+          loc.projectRoot,
+          artifactPathFor(loc.resolved, "discussion-log"),
+        ),
+      };
+      if (
+        actual.context !== args.targetHashes.context ||
+        actual.log !== args.targetHashes.log
+      )
+        return {
+          status: "stale",
+          reason: "Canonical targets changed while preparing; retry.",
+        };
+      if (
+        !args.reconcile &&
+        (actual.context !== session.baseline.context ||
+          actual.log !== session.baseline.log)
+      )
+        return {
+          status: "reconciliation_required",
+          revision: session.revision,
+          reason:
+            "Canonical targets changed; review packet and explicitly reconcile target hashes.",
+          affectedRecordIds: session.records.map((r) => r.id),
+        };
+    }
     const freshness = await basisFreshness(loc.projectRoot, args.readSet);
     if (freshness.status !== "fresh") return { status: "stale", freshness };
+    const changedPaths = [
+      ...new Set([
+        ...session.basis.readSet.map((i) => i.path),
+        ...args.readSet.map((i) => i.path),
+      ]),
+    ].filter(
+      (path) =>
+        session.basis.readSet.find((i) => i.path === path)?.hash !==
+        args.readSet.find((i) => i.path === path)?.hash,
+    );
+    if (
+      session.basis.prepared &&
+      changedPaths.length &&
+      !args.acknowledgeChangedInputs
+    )
+      return {
+        status: "reconciliation_required",
+        revision: session.revision,
+        changedPaths,
+        affectedRecordIds: session.records.map((r) => r.id),
+        candidateNeedsReview: session.candidate !== undefined,
+        nextAction:
+          "Review affected records and candidate against this packet, save corrections, then prepare with expectedRevision and acknowledgeChangedInputs=true.",
+      };
+    if (args.acknowledgeChangedInputs && args.expectedRevision === undefined)
+      throw new Error("Input acknowledgment requires expectedRevision.");
+    if (session.basis.prepared && !changedPaths.length && !args.reconcile)
+      return {
+        status: "prepared",
+        revision: session.revision,
+        path: loc.sessionPath,
+        reused: true,
+      };
     if (args.reconcile) {
       if (
         args.expectedRevision === undefined ||
@@ -417,7 +507,11 @@ function assemble(session: DiscussSession): unknown {
     model.implementationDecisions = [
       ...decisions.filter((item) => !isOwned(item?.decision ?? "")),
       ...session.records
-        .filter((r) => r.type === "decision")
+        .filter(
+          (r) =>
+            r.type === "decision" ||
+            (r.type === "open-question" && r.status === "resolved"),
+        )
         .map((r) => ({
           decision: `[${r.id}] ${r.value}`,
           tradeoffOrConstraint: `${r.rationale}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}`,
@@ -456,9 +550,11 @@ function assess(
   const blockers = session.records
     .filter(
       (r) =>
-        r.type === "open-question" &&
-        r.status !== "resolved" &&
-        (r.blocking || !r.downstreamOwner),
+        (r.type === "open-question" &&
+          r.status !== "resolved" &&
+          (r.blocking || !r.downstreamOwner)) ||
+        (r.type === "decision" &&
+          (r.blocking || r.status === "open" || r.status === "deferred")),
     )
     .map((r) => r.id);
   if (!shape.model)
@@ -496,6 +592,13 @@ export async function blueprintDiscussRecord(raw: z.input<typeof recordInput>) {
     const session =
       (await readSession(loc.projectRoot, loc.sessionPath)) ??
       (await initial(loc));
+    if (args.model !== undefined) {
+      if (args.candidate !== undefined || args.corrections?.length)
+        throw new Error(
+          "Pass model, candidate, or corrections, not multiple authoring inputs.",
+        );
+      args.candidate = args.model;
+    }
     const requestHash = digest(stable(args));
     const replay = Object.hasOwn(session.requests, args.requestId)
       ? session.requests[args.requestId]
@@ -549,7 +652,14 @@ export async function blueprintDiscussRecord(raw: z.input<typeof recordInput>) {
         }
         if (!target || typeof target !== "object")
           throw new Error("Correction target is not an object.");
-        target[correction.path.at(-1)!] = checkedPayload(correction.value);
+        const field = correction.path.at(-1)!;
+        if (correction.operation === "remove") {
+          if (Array.isArray(target)) {
+            if (!/^(?:0|[1-9]\d*)$/.test(field))
+              throw new Error("Array correction requires an index.");
+            target.splice(Number(field), 1);
+          } else delete target[field];
+        } else target[field] = checkedPayload(correction.value);
       }
     }
     for (const record of args.records ?? []) {
@@ -698,7 +808,12 @@ export async function blueprintDiscussFinalize(
       const content = prepareTextForPersistence(
         assessment.content,
       ).content.replace(/\r\n/g, "\n");
-      const log = args.includeLog
+      const logNeeded =
+        args.includeLog ??
+        (session.records.length > 1 ||
+          session.records.some((r) => r.rejectedOptions?.length) ||
+          session.history.filter((e) => e.kind === "record").length > 1);
+      const log = logNeeded
         ? prepareTextForPersistence(
             renderLog(session, loc.resolved.phasePrefix),
           ).content.replace(/\r\n/g, "\n")
@@ -901,7 +1016,70 @@ export async function blueprintDiscussFinalize(
     }
   });
 }
+const prepareInput = z.object({
+  cwd: z.string().optional(),
+  phase: numericPhase.optional(),
+  evidencePaths: z.array(z.string().min(1)).max(20).optional(),
+  expectedRevision: z.number().int().min(0).optional(),
+  acknowledgeChangedInputs: z.boolean().optional(),
+  reconcile: z
+    .object({
+      confirmed: z.literal(true),
+      contextHash: z.string().nullable(),
+      logHash: z.string().nullable(),
+    })
+    .optional(),
+});
+export async function blueprintDiscussPrepare(
+  raw: z.input<typeof prepareInput>,
+) {
+  const args = prepareInput.parse(raw);
+  const evidence = await collectDiscussEvidence(args);
+  if (evidence.status !== "collected") return evidence;
+  const result = await prepareDiscussInputBasis({
+    ...args,
+    cwd: evidence.root,
+    phase: evidence.phase,
+    readSet: evidence.readSet,
+    targetHashes: {
+      context: evidence.packet.artifacts.context.hash,
+      log: evidence.packet.artifacts.log.hash,
+    },
+  });
+  const saved = await blueprintDiscussRead({
+    cwd: evidence.root,
+    phase: evidence.phase,
+  });
+  return {
+    ...result,
+    packet: evidence.packet,
+    readSet: evidence.readSet,
+    session: saved.session
+      ? {
+          revision: saved.session.revision,
+          records: saved.session.records,
+          candidateAvailable: saved.session.candidate !== undefined,
+          readiness: saved.readiness,
+          publication: saved.session.journal
+            ? {
+                requestId: saved.session.journal.requestId,
+                stages: saved.session.journal.stages,
+                receipt: saved.session.journal.receipt,
+              }
+            : null,
+        }
+      : null,
+  };
+}
 export const discussToolDefinitions: ToolDefinition[] = [
+  {
+    name: "blueprint_discuss_prepare",
+    description:
+      "Resolve and prepare one evidence packet; bind durable session freshness. Missing planned phase directories are scaffolded. Reconcile changed inputs explicitly before publication.",
+    inputSchema: prepareInput.shape,
+    handler: (args) =>
+      blueprintDiscussPrepare(args as z.input<typeof prepareInput>),
+  },
   {
     name: "blueprint_discuss_record",
     description:

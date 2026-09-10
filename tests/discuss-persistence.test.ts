@@ -478,6 +478,7 @@ test("confirmed runtime reconciliation archives partial journal and safely rebas
       phase,
       expectedRevision: revision,
       readSet: [{ path: input, hash: inputHash }],
+      acknowledgeChangedInputs: true,
       reconcile: { confirmed: true, contextHash: hash, logHash: null },
     });
     assert.equal(reconciliation.status, "prepared");

@@ -600,32 +600,35 @@ test("discovery runtime contracts expose runtime-owned metadata and docs-free sk
     {
       command: "discuss-phase",
       inputs: [
-        "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
-        "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
+        "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
       ]
     },
     {
       command: "research-phase",
       inputs: [
-        "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
       ]
     },
     {
       command: "spec-phase",
       inputs: [
-        "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
+        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
       ]
     },
     {
       command: "ui-phase",
       inputs: [
-        "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
+        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
       ]
     },
     {
       command: "list-phase-assumptions",
       inputs: [
-        "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
+        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
       ]
     }
   ] as const;
@@ -685,6 +688,7 @@ test("spec-phase is implemented and runtime-contract discoverable only after its
   assert.equal(entry.specPath, SPEC_PHASE_RUNTIME_METADATA.sourceId);
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
   ]);
   assert.deepEqual(entry.requiredTools, [
@@ -718,9 +722,11 @@ test("spec-phase is implemented and runtime-contract discoverable only after its
   );
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
   ]);
 });
@@ -1179,6 +1185,7 @@ test("runtime metadata keeps a config-read path for every optional-subagent comm
 
     const hasConfigReadPath =
       metadata.requiredTools.includes("blueprint_config_get") ||
+      (metadata.commandName === "discuss-phase" && metadata.requiredTools.includes("blueprint_discuss_prepare")) ||
       (metadata.requiredTools.includes("blueprint_lightweight_preflight") &&
         (metadata.commandName === "quick" || metadata.commandName === "fast"));
 

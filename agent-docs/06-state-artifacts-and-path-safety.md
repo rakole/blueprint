@@ -99,7 +99,7 @@ adding model-authored artifacts or reports.
 
 ## Durable Discussion Sessions
 
-`blueprint_discuss_record`, `blueprint_discuss_read`, and
+`blueprint_discuss_prepare`, `blueprint_discuss_record`, `blueprint_discuss_read`, and
 `blueprint_discuss_finalize` own
 `.blueprint/phases/<phase-slug>/XX-DISCUSS-SESSION.json` (version 1).
 The store retains raw candidate revisions, stable decision records, request
@@ -108,7 +108,15 @@ journals. It is runtime-owned state, never a freehand artifact. Canonical contex
 and optional discussion logs retain their existing artifact contracts and are
 published through the guarded phase artifact writer.
 
-The internal `prepareDiscussInputBasis` hook binds an authoritative input packet.
+The public prepare tool bundles independent evidence reads and binds the exact
+content hashes through the internal `prepareDiscussInputBasis` hook. Optional
+absence, selected plan inventory and effective config (including host defaults)
+are checked again at publication. STATE and canonical context/log baselines are
+separate from evidence freshness. Unchanged prepares reuse the session revision;
+changed inputs require expectedRevision and acknowledgment after record review.
+The record tool exposes the canonical typed model plus broad raw candidate salvage
+and field set/remove corrections. Optional presentation fields default to empty
+arrays; typed records own blocking status and prose heuristics remain warnings.
 Explicitly confirmed target reconciliation requires the expected session revision
 and reviewed context/log hashes; it archives prior journal and baseline evidence
 before rebasing. Finalize retries verify publication bytes before resuming later

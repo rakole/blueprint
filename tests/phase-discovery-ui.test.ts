@@ -155,10 +155,9 @@ await blueprintStateUpdate({ base: "synced", patch: { activeCommand: "/blu-ui-ph
 
 test("ui-phase command references registered tools and single-artifact UI handling", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-ui-phase.toml"), "utf8");
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
-    "utf8"
-  );
+  const skillFile = (await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"), "utf8"
+  )) + "\n" + await readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8");
   const runtimeContract = await readFile(
     path.join(
       repoRoot,
@@ -273,9 +272,11 @@ test("ui-phase command references registered tools and single-artifact UI handli
   ]);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
   ]);
   assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
