@@ -1,4 +1,5 @@
 import test from "node:test";
+import { promises as fs } from "node:fs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdtemp, writeFile, rm, symlink, stat } from "node:fs/promises";
@@ -46,4 +47,28 @@ test("checkpoint freshness does not inspect paths outside the repository", async
     assert.equal(result.status, "unknown");
     assert.deepEqual(result.unknownPaths, [inputPath]);
   }
+});
+
+
+test("timestamp comparison uses serialized Date precision and hashes remain authoritative", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "blueprint-freshness-precision-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const input = path.join(root, "input.md");
+  await writeFile(input, "original");
+  const observed = await stat(input);
+  const timestamp = new Date("2026-09-10T00:00:00.001Z");
+  // Node/filesystems can expose fractional mtimeMs whose truncation differs
+  // from the Date used to serialize the checkpoint's updatedAt field.
+  t.mock.method(fs, "stat", async () => Object.assign(Object.create(observed), {
+    mtime: timestamp,
+    mtimeMs: timestamp.getTime() - 0.25,
+  }));
+  const updatedAt = timestamp.toISOString();
+  assert.equal((await evaluateCheckpointFreshness(root, checkpoint([{ path: "input.md", updatedAt }]))).status, "fresh");
+  const older = new Date(timestamp.getTime() - 1).toISOString();
+  assert.equal((await evaluateCheckpointFreshness(root, checkpoint([{ path: "input.md", updatedAt: older }]))).status, "stale");
+  const hash = createHash("sha256").update("original").digest("hex");
+  assert.equal((await evaluateCheckpointFreshness(root, checkpoint([{ path: "input.md", hash, updatedAt: older }]))).status, "fresh");
+  await writeFile(input, "changed");
+  assert.equal((await evaluateCheckpointFreshness(root, checkpoint([{ path: "input.md", hash, updatedAt }]))).status, "stale");
 });

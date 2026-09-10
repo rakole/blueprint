@@ -49,7 +49,7 @@ export async function evaluateCheckpointFreshness(
       }
       const unchanged = expectedHash
         ? createHash("sha256").update(await fs.readFile(absolutePath)).digest("hex") === expectedHash
-        : Math.trunc(stat.mtimeMs) === expectedTime;
+        : stat.mtime.getTime() === expectedTime;
       if (!unchanged) result.stalePaths.push(inputPath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") result.stalePaths.push(inputPath);
