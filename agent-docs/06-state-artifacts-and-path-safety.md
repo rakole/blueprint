@@ -96,3 +96,20 @@ Blueprint-owned state and has its own containment story.
 Some tools inspect prompt-like content for injection markers, unsafe display
 markers, encoded payloads, and control characters. Preserve this boundary when
 adding model-authored artifacts or reports.
+
+## Durable Discussion Sessions
+
+`blueprint_discuss_record`, `blueprint_discuss_read`, and
+`blueprint_discuss_finalize` own
+`.blueprint/phases/<phase-slug>/XX-DISCUSS-SESSION.json` (version 1).
+The store retains raw candidate revisions, stable decision records, request
+receipts, evidence hashes (including absent optional inputs), and publication
+journals. It is runtime-owned state, never a freehand artifact. Canonical context
+and optional discussion logs retain their existing artifact contracts and are
+published through the guarded phase artifact writer.
+
+The internal `prepareDiscussInputBasis` hook binds an authoritative input packet.
+Explicitly confirmed target reconciliation requires the expected session revision
+and reviewed context/log hashes; it archives prior journal and baseline evidence
+before rebasing. Finalize retries verify publication bytes before resuming later
+stages. Session history remains durable after publication or reconciliation.

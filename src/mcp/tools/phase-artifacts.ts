@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 
 import {
@@ -435,6 +436,10 @@ export async function blueprintPhaseArtifactWrite(
 
       return withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
         const exists = await pathExists(absolutePath);
+        if (args.expectedContentHash !== undefined) {
+          const actualHash = exists ? createHash("sha256").update(await fs.readFile(absolutePath)).digest("hex") : null;
+          if (actualHash !== args.expectedContentHash) throw new Error(`Stale artifact baseline: ${artifactPath}. Refresh and explicitly reconcile before publishing.`);
+        }
         const warnings: string[] = [];
 
         if (exists) {

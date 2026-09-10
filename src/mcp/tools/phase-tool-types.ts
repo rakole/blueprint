@@ -121,6 +121,8 @@ export type PhaseArtifactScaffoldArgs = PhaseLookupArgs & {
 
 export type PhaseArtifactWriteArgs = PhaseLookupArgs & {
   artifact: PhaseArtifactKind;
+  /** Internal publication CAS: null means the target must be absent. */
+  expectedContentHash?: string | null;
   content?: string;
   model?: Record<string, unknown>;
   overwrite?: boolean;
