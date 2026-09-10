@@ -347,8 +347,12 @@ discard using the warnings. If true, pick the first area in this order:
 the queue from legacy summary prose.
 
 `readSet` lists roadmap/context/config/spec/plan-index/artifact-contract
-inputs with path plus fingerprint or `updatedAt` when available. Changed inputs
-route affected areas to `needs-revisit`.
+inputs with path plus fingerprint or `updatedAt` when available. MCP verifies
+repository file SHA-256 fingerprints (`hash` or `fingerprint`, optionally
+`sha256:` prefixed) or file modification timestamps (`updatedAt`, ISO format).
+Opaque, virtual, or missing fingerprints report `freshness.status: "unknown"`
+and cannot establish `safeToResume`. Refresh unknown inputs; changed or deleted
+inputs appear in `freshness.stalePaths` and route affected areas to `needs-revisit`.
 
 Delete the checkpoint only after context write, optional discussion-log write,
 synced state update, and follow-up state load all succeed. Pass
@@ -875,8 +879,8 @@ Before claiming success, answer yes/no:
    command output, or explicit unknown?
 3. Are all deferred or later ideas preserved in `deferredIdeas` and, when
    useful, in the discussion log?
-4. Are all open questions either concrete blockers or exactly the model value
-   `"none"`?
+4. Are all open questions concrete blockers, with `openQuestions: []` when
+   none remain?
 5. Could `/blu-research-phase`, `/blu-ui-phase`, or `/blu-plan-phase` consume
    this without re-asking basics?
 

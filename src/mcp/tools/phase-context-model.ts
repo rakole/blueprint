@@ -1,3 +1,4 @@
+import type { ValidateFunction } from "ajv";
 import { readArtifactContract } from "../artifact-contracts/index.js";
 import {
   type PhaseArtifactValidationDiagnostic,
@@ -5,6 +6,10 @@ import {
 } from "./artifacts.js";
 import { asJsonObject, createAjvValidator } from "./phase-json-helpers.js";
 import { markdownTableCell } from "./phase-markdown.js";
+
+// The contract is source-owned and immutable during a runtime process. Compile
+// lazily once; consume AJV diagnostics synchronously before the next call.
+let contextModelValidator: ValidateFunction | undefined;
 
 type PhaseContextResolvedLocation = {
   phasePrefix: string;
@@ -170,7 +175,7 @@ export function validatePhaseContextModelInput(
         nextTool: "blueprint_phase_artifact_write"
       });
     } else {
-      const validate = createAjvValidator().compile(schema);
+      const validate = contextModelValidator ??= createAjvValidator().compile(schema);
       const valid = validate(modelObject);
 
       if (!valid) {

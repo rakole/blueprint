@@ -6612,12 +6612,9 @@ function matchesFuzzyEmptySentinel(section: string, exactEmptySentinel: string |
     return false;
   }
 
-  return (
-    normalizedSection.startsWith(normalizedSentinel) ||
-    /^(?:[-*]\s*)?(?:none(?:\b|$)|no (?:open questions?|deferred ideas?)\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
-      normalizedSection
-    )
-  );
+  // Match complete empty-state aliases, never a substantive sentence merely
+  // because its first word is "None" or "Nothing".
+  return /^(?:[-*]\s*)?(?:none(?: that block (?:this|the) (?:phase|fixture))?|no (?:open questions?|deferred ideas?)(?: currently)?|nothing(?: deferred)?|n\/a|na|not applicable)[.!]?$/i.test(normalizedSection);
 }
 
 function exactEmptySentinelRepairInstruction(heading: string, exactEmptySentinel: string): string {

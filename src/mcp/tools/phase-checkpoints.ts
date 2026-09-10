@@ -1,3 +1,4 @@
+import { evaluateCheckpointFreshness } from "./phase-checkpoint-freshness.js";
 import { promises as fs } from "node:fs";
 
 import {
@@ -96,6 +97,8 @@ export async function blueprintPhaseCheckpointGet(
     args.expectedMode
   );
 
+  const freshness = await evaluateCheckpointFreshness(projectRoot, parsed);
+
   return {
     phaseFound: true,
     found: true,
@@ -107,8 +110,9 @@ export async function blueprintPhaseCheckpointGet(
     checkpoint: parsed,
     ownerCommand: resumeSafety.ownerCommand,
     resumeMode: resumeSafety.resumeMode,
-    safeToResume: resumeSafety.safeToResume,
-    warnings: resumeSafety.warnings,
+    safeToResume: resumeSafety.safeToResume && (freshness.status === "fresh" || freshness.status === "not-applicable"),
+    freshness,
+    warnings: [...resumeSafety.warnings, ...freshness.warnings],
     reason: null
   };
 }

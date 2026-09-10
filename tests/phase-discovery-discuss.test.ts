@@ -1511,7 +1511,8 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   ]);
   assert.equal(checkpointCreated.updated, true);
   assert.equal(checkpointResumed.found, true);
-  assert.equal(checkpointResumed.safeToResume, true);
+  assert.equal(checkpointResumed.safeToResume, false);
+  assert.equal(checkpointResumed.freshness?.status, "unknown");
   assert.equal(checkpointResumed.checkpoint?.schemaVersion, 2);
   assert.equal(checkpointAreaRefreshed.updated, true);
   assert.equal(checkpointAreaLoaded.found, true);
@@ -2157,4 +2158,31 @@ test("checkpoint persistence rejects unknown resume modes and owner-mode mismatc
     }),
     /structured checkpoint v2/i
   );
+});
+
+
+test("context validation preserves substantive questions beginning None or Nothing", () => {
+  for (const question of [
+    "None of the providers supports offline mode; which fallback should we choose?",
+    "Nothing should migrate until export parity is proven."
+  ]) {
+    const validation = validatePhaseArtifactContent(buildValidDiscussContext(`- ${question}`), "context");
+    assert.equal(validation.valid, true, validation.issues.join("\n"));
+  }
+});
+
+test("typed context writes preserve substantive None and Nothing sentences", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  const openQuestions = [
+    "None of the providers supports offline mode; which fallback should we choose?",
+    "Nothing should migrate until export parity is proven."
+  ];
+  const result = await blueprintPhaseArtifactWrite({
+    cwd: repoPath, phase: "3", artifact: "context", overwrite: true,
+    model: validPhaseContextModel({ openQuestions })
+  });
+  assert.equal(result.written, true, JSON.stringify(result.validation));
+  const saved = await readFile(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"), "utf8");
+  for (const question of openQuestions) assert.ok(saved.includes(question));
 });

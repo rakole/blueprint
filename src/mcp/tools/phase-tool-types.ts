@@ -708,6 +708,7 @@ export type PhaseCheckpointGetResult = {
   ownerCommand: string | null;
   resumeMode: string | null;
   safeToResume: boolean;
+  freshness?: import("./phase-checkpoint-freshness.js").PhaseCheckpointFreshness;
   warnings: string[];
   reason: string | null;
 };
