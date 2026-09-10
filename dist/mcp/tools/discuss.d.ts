@@ -1,0 +1,2034 @@
+import * as z from "zod/v4";
+import { type PhaseTopologyFingerprint } from "./phase-topology-lock.js";
+import { blueprintPhaseArtifactWrite } from "./phase-artifacts.js";
+import { blueprintPhaseCheckpointDelete } from "./phase-checkpoints.js";
+import { blueprintStateUpdate, blueprintStateLoad } from "./state.js";
+import type { ToolDefinition } from "../tool-types.js";
+declare const recordSchema: z.ZodObject<{
+    id: z.ZodString;
+    type: z.ZodEnum<{
+        deferred: "deferred";
+        decision: "decision";
+        "open-question": "open-question";
+    }>;
+    value: z.ZodString;
+    rationale: z.ZodString;
+    evidence: z.ZodArray<z.ZodString>;
+    rejectedOptions: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    blocking: z.ZodOptional<z.ZodBoolean>;
+    downstreamOwner: z.ZodOptional<z.ZodString>;
+    status: z.ZodOptional<z.ZodEnum<{
+        deferred: "deferred";
+        resolved: "resolved";
+        accepted: "accepted";
+        open: "open";
+    }>>;
+}, z.core.$strip>;
+export type DiscussRecord = z.infer<typeof recordSchema>;
+type Basis = {
+    readSet: Array<{
+        path: string;
+        hash: string | null;
+    }>;
+    prepared: boolean;
+    evidencePaths?: string[];
+};
+type Event = {
+    revision: number;
+    requestId: string;
+    records?: DiscussRecord[];
+    candidate?: unknown;
+    kind: string;
+    basis?: Basis;
+    baseline?: DiscussSession["baseline"];
+    journal?: Journal;
+};
+type Journal = {
+    requestId: string;
+    requestHash: string;
+    revision: number;
+    context: {
+        path: string;
+        hash: string;
+        model: Record<string, unknown>;
+    };
+    log?: {
+        path: string;
+        hash: string;
+        content: string;
+    };
+    stages: Record<string, "intent" | "complete">;
+    receipt?: Record<string, unknown>;
+    warnings?: string[];
+};
+export type DiscussSession = {
+    version: 1;
+    phase: string;
+    topology: PhaseTopologyFingerprint;
+    revision: number;
+    basis: Basis;
+    baseline: {
+        context: string | null;
+        log: string | null;
+    };
+    records: DiscussRecord[];
+    candidate?: unknown;
+    history: Event[];
+    requests: Record<string, {
+        hash: string;
+        revision: number;
+    }>;
+    journal?: Journal;
+};
+type Lookup = {
+    cwd?: string;
+    phase: string | number;
+};
+declare const recordInput: z.ZodObject<{
+    requestId: z.ZodString;
+    expectedRevision: z.ZodNumber;
+    records: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        type: z.ZodEnum<{
+            deferred: "deferred";
+            decision: "decision";
+            "open-question": "open-question";
+        }>;
+        value: z.ZodString;
+        rationale: z.ZodString;
+        evidence: z.ZodArray<z.ZodString>;
+        rejectedOptions: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        blocking: z.ZodOptional<z.ZodBoolean>;
+        downstreamOwner: z.ZodOptional<z.ZodString>;
+        status: z.ZodOptional<z.ZodEnum<{
+            deferred: "deferred";
+            resolved: "resolved";
+            accepted: "accepted";
+            open: "open";
+        }>>;
+    }, z.core.$strip>>>;
+    model: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    candidate: z.ZodOptional<z.ZodUnknown>;
+    corrections: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        value: z.ZodOptional<z.ZodUnknown>;
+        operation: z.ZodDefault<z.ZodEnum<{
+            set: "set";
+            remove: "remove";
+        }>>;
+    }, z.core.$strip>>>;
+    cwd: z.ZodOptional<z.ZodString>;
+    phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
+}, z.core.$strip>;
+declare const finalizeInput: z.ZodObject<{
+    requestId: z.ZodString;
+    expectedRevision: z.ZodNumber;
+    overwrite: z.ZodOptional<z.ZodBoolean>;
+    includeLog: z.ZodOptional<z.ZodBoolean>;
+    cwd: z.ZodOptional<z.ZodString>;
+    phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
+}, z.core.$strip>;
+/** Runtime-only prepare hook. Call only after resolving/reading the authoritative input packet.
+ * No model-facing flag can assert freshness. Changed evidence requires a new prepare packet. */
+export declare function prepareDiscussInputBasis(args: Lookup & {
+    readSet: Array<{
+        path: string;
+        hash: string | null;
+    }>;
+    evidencePaths?: string[];
+    expectedRevision?: number;
+    acknowledgeChangedInputs?: boolean;
+    targetHashes?: {
+        context: string | null;
+        log: string | null;
+    };
+    reconcile?: {
+        confirmed: true;
+        contextHash: string | null;
+        logHash: string | null;
+    };
+}): Promise<{
+    status: string;
+    reason: string;
+    revision?: undefined;
+    affectedRecordIds?: undefined;
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    status: string;
+    revision: number;
+    reason: string;
+    affectedRecordIds: string[];
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    status: string;
+    freshness: {
+        status: string;
+        stalePaths: string[];
+        unknownPaths: string[];
+        warnings: string[];
+    };
+    reason?: undefined;
+    revision?: undefined;
+    affectedRecordIds?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    status: string;
+    revision: number;
+    changedPaths: string[];
+    affectedRecordIds: string[];
+    candidateNeedsReview: boolean;
+    nextAction: string;
+    reason?: undefined;
+    freshness?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    status: string;
+    revision: number;
+    path: string;
+    reused: boolean;
+    reason?: undefined;
+    affectedRecordIds?: undefined;
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+} | {
+    status: string;
+    nextAction: string;
+    reason?: undefined;
+    revision?: undefined;
+    affectedRecordIds?: undefined;
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    status: string;
+    revision: number;
+    path: string;
+    reason?: undefined;
+    affectedRecordIds?: undefined;
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+    reused?: undefined;
+}>;
+export declare function blueprintDiscussRecord(raw: z.input<typeof recordInput>): Promise<{
+    status: string;
+    reason: string;
+    revision: number;
+    currentRevision?: undefined;
+    path?: undefined;
+    nextAction?: undefined;
+    candidateSaved?: undefined;
+    readiness?: undefined;
+} | {
+    status: string;
+    revision: number;
+    currentRevision: number;
+    path: string;
+    reason?: undefined;
+    nextAction?: undefined;
+    candidateSaved?: undefined;
+    readiness?: undefined;
+} | {
+    status: string;
+    nextAction: string;
+    reason?: undefined;
+    revision?: undefined;
+    currentRevision?: undefined;
+    path?: undefined;
+    candidateSaved?: undefined;
+    readiness?: undefined;
+} | {
+    status: string;
+    revision: number;
+    path: string;
+    candidateSaved: boolean;
+    readiness: {
+        ready: boolean;
+        blockers: string[];
+        validation: {
+            valid: boolean;
+            issues: string[];
+            warnings: string[];
+            diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+        };
+    };
+    nextAction: string;
+    reason?: undefined;
+    currentRevision?: undefined;
+}>;
+export declare function blueprintDiscussRead(args: Lookup): Promise<{
+    status: string;
+    path: string;
+    session: DiscussSession | null;
+    readiness: {
+        ready: boolean;
+        blockers: string[];
+        validation: {
+            valid: boolean;
+            issues: string[];
+            warnings: string[];
+            diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+        };
+    } | null;
+}>;
+export declare const discussFinalizeDependencies: {
+    artifactWrite: typeof blueprintPhaseArtifactWrite;
+    stateUpdate: typeof blueprintStateUpdate;
+    stateLoad: typeof blueprintStateLoad;
+    checkpointDelete: typeof blueprintPhaseCheckpointDelete;
+};
+export declare function blueprintDiscussFinalize(raw: z.input<typeof finalizeInput>): Promise<Record<string, unknown>>;
+declare const prepareInput: z.ZodObject<{
+    cwd: z.ZodOptional<z.ZodString>;
+    phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    evidencePaths: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    expectedRevision: z.ZodOptional<z.ZodNumber>;
+    acknowledgeChangedInputs: z.ZodOptional<z.ZodBoolean>;
+    reconcile: z.ZodOptional<z.ZodObject<{
+        confirmed: z.ZodLiteral<true>;
+        contextHash: z.ZodNullable<z.ZodString>;
+        logHash: z.ZodNullable<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput>): Promise<{
+    status: "blocked";
+    selection: import("./phase-tool-types.js").PhaseLocateResult;
+    reason: string | null;
+    changedPaths?: undefined;
+    root?: undefined;
+    phase?: undefined;
+    readSet?: undefined;
+    packet?: undefined;
+} | {
+    status: "blocked";
+    reason: string;
+    selection?: undefined;
+    changedPaths?: undefined;
+    root?: undefined;
+    phase?: undefined;
+    readSet?: undefined;
+    packet?: undefined;
+} | {
+    status: "stale";
+    reason: string;
+    changedPaths: string[];
+    selection?: undefined;
+    root?: undefined;
+    phase?: undefined;
+    readSet?: undefined;
+    packet?: undefined;
+} | {
+    packet: {
+        selectedPhase: {
+            phaseNumber: string;
+            phasePrefix: string;
+            phaseName: string;
+            completed: boolean;
+            summary: string | null;
+            goal: string | null;
+            successCriteria: string | null;
+            requirements: string[];
+            phaseDir: string;
+        };
+        ambientCurrentPhase: string;
+        config: {
+            scope: "effective" | "project" | "defaults";
+            config: {
+                version: number;
+                mode: string;
+                granularity: string;
+                model_profile: "quality" | "balanced" | "budget" | "inherit";
+                project_code: string | null;
+                phase_naming: string;
+                response_language: string | null;
+                planning: {
+                    commit_docs: boolean;
+                    search_gitignored: boolean;
+                };
+                ux: {
+                    progress_mode: "quiet" | "stage" | "checklist";
+                    structured_confirmations: "required" | "auto";
+                    user_checkpoints: "phase" | "off" | "plan";
+                };
+                orchestration: {
+                    task_tracker: "auto" | "off";
+                };
+                research: {
+                    external_sources: "ask" | "auto" | "off";
+                };
+                workflow: {
+                    research: boolean;
+                    plan_check: boolean;
+                    secure_phase: boolean;
+                    verifier: boolean;
+                    nyquist_validation: boolean;
+                    ui_phase: boolean;
+                    ui_safety_gate: boolean;
+                    no_uat: boolean;
+                    code_review: boolean;
+                    code_review_depth: string;
+                    auto_advance: boolean;
+                    research_before_questions: boolean;
+                    discuss_mode: string;
+                    use_worktrees: boolean;
+                    subagents: boolean;
+                    subagent_timeout: number;
+                };
+                parallelization: {
+                    enabled: boolean;
+                    plan_level: boolean;
+                    task_level: boolean;
+                    skip_checkpoints: boolean;
+                    max_concurrent_agents: number;
+                    min_plans_for_parallel: number;
+                };
+                git: {
+                    branching_strategy: string;
+                    base_branch: string | null;
+                    phase_branch_template: string;
+                    milestone_branch_template: string;
+                    quick_branch_template: string | null;
+                };
+                gates: {
+                    confirm_project: boolean;
+                    confirm_phases: boolean;
+                    confirm_roadmap: boolean;
+                    confirm_breakdown: boolean;
+                    confirm_plan: boolean;
+                    execute_next_plan: boolean;
+                    issues_review: boolean;
+                    confirm_transition: boolean;
+                };
+                safety: {
+                    always_confirm_destructive: boolean;
+                    always_confirm_external_services: boolean;
+                };
+                maintenance: {
+                    patch_registry: string;
+                    workspace_root: string;
+                };
+                agent_skills: Record<string, unknown>;
+            };
+            provenance: {
+                layersApplied: string[];
+                defaultsPath: string | null;
+                projectPath: string | null;
+                defaultsApplied: boolean;
+                projectApplied: boolean;
+                defaultsSkipped?: boolean;
+            };
+            sourcePath: string | null;
+            warnings: string[];
+        };
+        artifacts: {
+            context: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            spec: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            log: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+        };
+        sources: ({
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        })[];
+        priorContextPaths: string[];
+        omittedPriorPhases: string[];
+        checkpoint: {
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        };
+        planInventory: string[];
+        warnings: string[];
+    };
+    readSet: {
+        path: string;
+        hash: string | null;
+    }[];
+    session: {
+        revision: number;
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        candidateAvailable: boolean;
+        readiness: {
+            ready: boolean;
+            blockers: string[];
+            validation: {
+                valid: boolean;
+                issues: string[];
+                warnings: string[];
+                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+            };
+        } | null;
+        publication: {
+            requestId: string;
+            stages: Record<string, "complete" | "intent">;
+            receipt: Record<string, unknown> | undefined;
+        } | null;
+    } | null;
+    status: string;
+    reason: string;
+    revision?: undefined;
+    affectedRecordIds?: undefined;
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    packet: {
+        selectedPhase: {
+            phaseNumber: string;
+            phasePrefix: string;
+            phaseName: string;
+            completed: boolean;
+            summary: string | null;
+            goal: string | null;
+            successCriteria: string | null;
+            requirements: string[];
+            phaseDir: string;
+        };
+        ambientCurrentPhase: string;
+        config: {
+            scope: "effective" | "project" | "defaults";
+            config: {
+                version: number;
+                mode: string;
+                granularity: string;
+                model_profile: "quality" | "balanced" | "budget" | "inherit";
+                project_code: string | null;
+                phase_naming: string;
+                response_language: string | null;
+                planning: {
+                    commit_docs: boolean;
+                    search_gitignored: boolean;
+                };
+                ux: {
+                    progress_mode: "quiet" | "stage" | "checklist";
+                    structured_confirmations: "required" | "auto";
+                    user_checkpoints: "phase" | "off" | "plan";
+                };
+                orchestration: {
+                    task_tracker: "auto" | "off";
+                };
+                research: {
+                    external_sources: "ask" | "auto" | "off";
+                };
+                workflow: {
+                    research: boolean;
+                    plan_check: boolean;
+                    secure_phase: boolean;
+                    verifier: boolean;
+                    nyquist_validation: boolean;
+                    ui_phase: boolean;
+                    ui_safety_gate: boolean;
+                    no_uat: boolean;
+                    code_review: boolean;
+                    code_review_depth: string;
+                    auto_advance: boolean;
+                    research_before_questions: boolean;
+                    discuss_mode: string;
+                    use_worktrees: boolean;
+                    subagents: boolean;
+                    subagent_timeout: number;
+                };
+                parallelization: {
+                    enabled: boolean;
+                    plan_level: boolean;
+                    task_level: boolean;
+                    skip_checkpoints: boolean;
+                    max_concurrent_agents: number;
+                    min_plans_for_parallel: number;
+                };
+                git: {
+                    branching_strategy: string;
+                    base_branch: string | null;
+                    phase_branch_template: string;
+                    milestone_branch_template: string;
+                    quick_branch_template: string | null;
+                };
+                gates: {
+                    confirm_project: boolean;
+                    confirm_phases: boolean;
+                    confirm_roadmap: boolean;
+                    confirm_breakdown: boolean;
+                    confirm_plan: boolean;
+                    execute_next_plan: boolean;
+                    issues_review: boolean;
+                    confirm_transition: boolean;
+                };
+                safety: {
+                    always_confirm_destructive: boolean;
+                    always_confirm_external_services: boolean;
+                };
+                maintenance: {
+                    patch_registry: string;
+                    workspace_root: string;
+                };
+                agent_skills: Record<string, unknown>;
+            };
+            provenance: {
+                layersApplied: string[];
+                defaultsPath: string | null;
+                projectPath: string | null;
+                defaultsApplied: boolean;
+                projectApplied: boolean;
+                defaultsSkipped?: boolean;
+            };
+            sourcePath: string | null;
+            warnings: string[];
+        };
+        artifacts: {
+            context: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            spec: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            log: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+        };
+        sources: ({
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        })[];
+        priorContextPaths: string[];
+        omittedPriorPhases: string[];
+        checkpoint: {
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        };
+        planInventory: string[];
+        warnings: string[];
+    };
+    readSet: {
+        path: string;
+        hash: string | null;
+    }[];
+    session: {
+        revision: number;
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        candidateAvailable: boolean;
+        readiness: {
+            ready: boolean;
+            blockers: string[];
+            validation: {
+                valid: boolean;
+                issues: string[];
+                warnings: string[];
+                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+            };
+        } | null;
+        publication: {
+            requestId: string;
+            stages: Record<string, "complete" | "intent">;
+            receipt: Record<string, unknown> | undefined;
+        } | null;
+    } | null;
+    status: string;
+    revision: number;
+    reason: string;
+    affectedRecordIds: string[];
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    packet: {
+        selectedPhase: {
+            phaseNumber: string;
+            phasePrefix: string;
+            phaseName: string;
+            completed: boolean;
+            summary: string | null;
+            goal: string | null;
+            successCriteria: string | null;
+            requirements: string[];
+            phaseDir: string;
+        };
+        ambientCurrentPhase: string;
+        config: {
+            scope: "effective" | "project" | "defaults";
+            config: {
+                version: number;
+                mode: string;
+                granularity: string;
+                model_profile: "quality" | "balanced" | "budget" | "inherit";
+                project_code: string | null;
+                phase_naming: string;
+                response_language: string | null;
+                planning: {
+                    commit_docs: boolean;
+                    search_gitignored: boolean;
+                };
+                ux: {
+                    progress_mode: "quiet" | "stage" | "checklist";
+                    structured_confirmations: "required" | "auto";
+                    user_checkpoints: "phase" | "off" | "plan";
+                };
+                orchestration: {
+                    task_tracker: "auto" | "off";
+                };
+                research: {
+                    external_sources: "ask" | "auto" | "off";
+                };
+                workflow: {
+                    research: boolean;
+                    plan_check: boolean;
+                    secure_phase: boolean;
+                    verifier: boolean;
+                    nyquist_validation: boolean;
+                    ui_phase: boolean;
+                    ui_safety_gate: boolean;
+                    no_uat: boolean;
+                    code_review: boolean;
+                    code_review_depth: string;
+                    auto_advance: boolean;
+                    research_before_questions: boolean;
+                    discuss_mode: string;
+                    use_worktrees: boolean;
+                    subagents: boolean;
+                    subagent_timeout: number;
+                };
+                parallelization: {
+                    enabled: boolean;
+                    plan_level: boolean;
+                    task_level: boolean;
+                    skip_checkpoints: boolean;
+                    max_concurrent_agents: number;
+                    min_plans_for_parallel: number;
+                };
+                git: {
+                    branching_strategy: string;
+                    base_branch: string | null;
+                    phase_branch_template: string;
+                    milestone_branch_template: string;
+                    quick_branch_template: string | null;
+                };
+                gates: {
+                    confirm_project: boolean;
+                    confirm_phases: boolean;
+                    confirm_roadmap: boolean;
+                    confirm_breakdown: boolean;
+                    confirm_plan: boolean;
+                    execute_next_plan: boolean;
+                    issues_review: boolean;
+                    confirm_transition: boolean;
+                };
+                safety: {
+                    always_confirm_destructive: boolean;
+                    always_confirm_external_services: boolean;
+                };
+                maintenance: {
+                    patch_registry: string;
+                    workspace_root: string;
+                };
+                agent_skills: Record<string, unknown>;
+            };
+            provenance: {
+                layersApplied: string[];
+                defaultsPath: string | null;
+                projectPath: string | null;
+                defaultsApplied: boolean;
+                projectApplied: boolean;
+                defaultsSkipped?: boolean;
+            };
+            sourcePath: string | null;
+            warnings: string[];
+        };
+        artifacts: {
+            context: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            spec: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            log: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+        };
+        sources: ({
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        })[];
+        priorContextPaths: string[];
+        omittedPriorPhases: string[];
+        checkpoint: {
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        };
+        planInventory: string[];
+        warnings: string[];
+    };
+    readSet: {
+        path: string;
+        hash: string | null;
+    }[];
+    session: {
+        revision: number;
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        candidateAvailable: boolean;
+        readiness: {
+            ready: boolean;
+            blockers: string[];
+            validation: {
+                valid: boolean;
+                issues: string[];
+                warnings: string[];
+                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+            };
+        } | null;
+        publication: {
+            requestId: string;
+            stages: Record<string, "complete" | "intent">;
+            receipt: Record<string, unknown> | undefined;
+        } | null;
+    } | null;
+    status: string;
+    freshness: {
+        status: string;
+        stalePaths: string[];
+        unknownPaths: string[];
+        warnings: string[];
+    };
+    reason?: undefined;
+    revision?: undefined;
+    affectedRecordIds?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    packet: {
+        selectedPhase: {
+            phaseNumber: string;
+            phasePrefix: string;
+            phaseName: string;
+            completed: boolean;
+            summary: string | null;
+            goal: string | null;
+            successCriteria: string | null;
+            requirements: string[];
+            phaseDir: string;
+        };
+        ambientCurrentPhase: string;
+        config: {
+            scope: "effective" | "project" | "defaults";
+            config: {
+                version: number;
+                mode: string;
+                granularity: string;
+                model_profile: "quality" | "balanced" | "budget" | "inherit";
+                project_code: string | null;
+                phase_naming: string;
+                response_language: string | null;
+                planning: {
+                    commit_docs: boolean;
+                    search_gitignored: boolean;
+                };
+                ux: {
+                    progress_mode: "quiet" | "stage" | "checklist";
+                    structured_confirmations: "required" | "auto";
+                    user_checkpoints: "phase" | "off" | "plan";
+                };
+                orchestration: {
+                    task_tracker: "auto" | "off";
+                };
+                research: {
+                    external_sources: "ask" | "auto" | "off";
+                };
+                workflow: {
+                    research: boolean;
+                    plan_check: boolean;
+                    secure_phase: boolean;
+                    verifier: boolean;
+                    nyquist_validation: boolean;
+                    ui_phase: boolean;
+                    ui_safety_gate: boolean;
+                    no_uat: boolean;
+                    code_review: boolean;
+                    code_review_depth: string;
+                    auto_advance: boolean;
+                    research_before_questions: boolean;
+                    discuss_mode: string;
+                    use_worktrees: boolean;
+                    subagents: boolean;
+                    subagent_timeout: number;
+                };
+                parallelization: {
+                    enabled: boolean;
+                    plan_level: boolean;
+                    task_level: boolean;
+                    skip_checkpoints: boolean;
+                    max_concurrent_agents: number;
+                    min_plans_for_parallel: number;
+                };
+                git: {
+                    branching_strategy: string;
+                    base_branch: string | null;
+                    phase_branch_template: string;
+                    milestone_branch_template: string;
+                    quick_branch_template: string | null;
+                };
+                gates: {
+                    confirm_project: boolean;
+                    confirm_phases: boolean;
+                    confirm_roadmap: boolean;
+                    confirm_breakdown: boolean;
+                    confirm_plan: boolean;
+                    execute_next_plan: boolean;
+                    issues_review: boolean;
+                    confirm_transition: boolean;
+                };
+                safety: {
+                    always_confirm_destructive: boolean;
+                    always_confirm_external_services: boolean;
+                };
+                maintenance: {
+                    patch_registry: string;
+                    workspace_root: string;
+                };
+                agent_skills: Record<string, unknown>;
+            };
+            provenance: {
+                layersApplied: string[];
+                defaultsPath: string | null;
+                projectPath: string | null;
+                defaultsApplied: boolean;
+                projectApplied: boolean;
+                defaultsSkipped?: boolean;
+            };
+            sourcePath: string | null;
+            warnings: string[];
+        };
+        artifacts: {
+            context: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            spec: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            log: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+        };
+        sources: ({
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        })[];
+        priorContextPaths: string[];
+        omittedPriorPhases: string[];
+        checkpoint: {
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        };
+        planInventory: string[];
+        warnings: string[];
+    };
+    readSet: {
+        path: string;
+        hash: string | null;
+    }[];
+    session: {
+        revision: number;
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        candidateAvailable: boolean;
+        readiness: {
+            ready: boolean;
+            blockers: string[];
+            validation: {
+                valid: boolean;
+                issues: string[];
+                warnings: string[];
+                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+            };
+        } | null;
+        publication: {
+            requestId: string;
+            stages: Record<string, "complete" | "intent">;
+            receipt: Record<string, unknown> | undefined;
+        } | null;
+    } | null;
+    status: string;
+    revision: number;
+    changedPaths: string[];
+    affectedRecordIds: string[];
+    candidateNeedsReview: boolean;
+    nextAction: string;
+    reason?: undefined;
+    freshness?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    packet: {
+        selectedPhase: {
+            phaseNumber: string;
+            phasePrefix: string;
+            phaseName: string;
+            completed: boolean;
+            summary: string | null;
+            goal: string | null;
+            successCriteria: string | null;
+            requirements: string[];
+            phaseDir: string;
+        };
+        ambientCurrentPhase: string;
+        config: {
+            scope: "effective" | "project" | "defaults";
+            config: {
+                version: number;
+                mode: string;
+                granularity: string;
+                model_profile: "quality" | "balanced" | "budget" | "inherit";
+                project_code: string | null;
+                phase_naming: string;
+                response_language: string | null;
+                planning: {
+                    commit_docs: boolean;
+                    search_gitignored: boolean;
+                };
+                ux: {
+                    progress_mode: "quiet" | "stage" | "checklist";
+                    structured_confirmations: "required" | "auto";
+                    user_checkpoints: "phase" | "off" | "plan";
+                };
+                orchestration: {
+                    task_tracker: "auto" | "off";
+                };
+                research: {
+                    external_sources: "ask" | "auto" | "off";
+                };
+                workflow: {
+                    research: boolean;
+                    plan_check: boolean;
+                    secure_phase: boolean;
+                    verifier: boolean;
+                    nyquist_validation: boolean;
+                    ui_phase: boolean;
+                    ui_safety_gate: boolean;
+                    no_uat: boolean;
+                    code_review: boolean;
+                    code_review_depth: string;
+                    auto_advance: boolean;
+                    research_before_questions: boolean;
+                    discuss_mode: string;
+                    use_worktrees: boolean;
+                    subagents: boolean;
+                    subagent_timeout: number;
+                };
+                parallelization: {
+                    enabled: boolean;
+                    plan_level: boolean;
+                    task_level: boolean;
+                    skip_checkpoints: boolean;
+                    max_concurrent_agents: number;
+                    min_plans_for_parallel: number;
+                };
+                git: {
+                    branching_strategy: string;
+                    base_branch: string | null;
+                    phase_branch_template: string;
+                    milestone_branch_template: string;
+                    quick_branch_template: string | null;
+                };
+                gates: {
+                    confirm_project: boolean;
+                    confirm_phases: boolean;
+                    confirm_roadmap: boolean;
+                    confirm_breakdown: boolean;
+                    confirm_plan: boolean;
+                    execute_next_plan: boolean;
+                    issues_review: boolean;
+                    confirm_transition: boolean;
+                };
+                safety: {
+                    always_confirm_destructive: boolean;
+                    always_confirm_external_services: boolean;
+                };
+                maintenance: {
+                    patch_registry: string;
+                    workspace_root: string;
+                };
+                agent_skills: Record<string, unknown>;
+            };
+            provenance: {
+                layersApplied: string[];
+                defaultsPath: string | null;
+                projectPath: string | null;
+                defaultsApplied: boolean;
+                projectApplied: boolean;
+                defaultsSkipped?: boolean;
+            };
+            sourcePath: string | null;
+            warnings: string[];
+        };
+        artifacts: {
+            context: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            spec: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            log: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+        };
+        sources: ({
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        })[];
+        priorContextPaths: string[];
+        omittedPriorPhases: string[];
+        checkpoint: {
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        };
+        planInventory: string[];
+        warnings: string[];
+    };
+    readSet: {
+        path: string;
+        hash: string | null;
+    }[];
+    session: {
+        revision: number;
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        candidateAvailable: boolean;
+        readiness: {
+            ready: boolean;
+            blockers: string[];
+            validation: {
+                valid: boolean;
+                issues: string[];
+                warnings: string[];
+                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+            };
+        } | null;
+        publication: {
+            requestId: string;
+            stages: Record<string, "complete" | "intent">;
+            receipt: Record<string, unknown> | undefined;
+        } | null;
+    } | null;
+    status: string;
+    revision: number;
+    path: string;
+    reused: boolean;
+    reason?: undefined;
+    affectedRecordIds?: undefined;
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+} | {
+    packet: {
+        selectedPhase: {
+            phaseNumber: string;
+            phasePrefix: string;
+            phaseName: string;
+            completed: boolean;
+            summary: string | null;
+            goal: string | null;
+            successCriteria: string | null;
+            requirements: string[];
+            phaseDir: string;
+        };
+        ambientCurrentPhase: string;
+        config: {
+            scope: "effective" | "project" | "defaults";
+            config: {
+                version: number;
+                mode: string;
+                granularity: string;
+                model_profile: "quality" | "balanced" | "budget" | "inherit";
+                project_code: string | null;
+                phase_naming: string;
+                response_language: string | null;
+                planning: {
+                    commit_docs: boolean;
+                    search_gitignored: boolean;
+                };
+                ux: {
+                    progress_mode: "quiet" | "stage" | "checklist";
+                    structured_confirmations: "required" | "auto";
+                    user_checkpoints: "phase" | "off" | "plan";
+                };
+                orchestration: {
+                    task_tracker: "auto" | "off";
+                };
+                research: {
+                    external_sources: "ask" | "auto" | "off";
+                };
+                workflow: {
+                    research: boolean;
+                    plan_check: boolean;
+                    secure_phase: boolean;
+                    verifier: boolean;
+                    nyquist_validation: boolean;
+                    ui_phase: boolean;
+                    ui_safety_gate: boolean;
+                    no_uat: boolean;
+                    code_review: boolean;
+                    code_review_depth: string;
+                    auto_advance: boolean;
+                    research_before_questions: boolean;
+                    discuss_mode: string;
+                    use_worktrees: boolean;
+                    subagents: boolean;
+                    subagent_timeout: number;
+                };
+                parallelization: {
+                    enabled: boolean;
+                    plan_level: boolean;
+                    task_level: boolean;
+                    skip_checkpoints: boolean;
+                    max_concurrent_agents: number;
+                    min_plans_for_parallel: number;
+                };
+                git: {
+                    branching_strategy: string;
+                    base_branch: string | null;
+                    phase_branch_template: string;
+                    milestone_branch_template: string;
+                    quick_branch_template: string | null;
+                };
+                gates: {
+                    confirm_project: boolean;
+                    confirm_phases: boolean;
+                    confirm_roadmap: boolean;
+                    confirm_breakdown: boolean;
+                    confirm_plan: boolean;
+                    execute_next_plan: boolean;
+                    issues_review: boolean;
+                    confirm_transition: boolean;
+                };
+                safety: {
+                    always_confirm_destructive: boolean;
+                    always_confirm_external_services: boolean;
+                };
+                maintenance: {
+                    patch_registry: string;
+                    workspace_root: string;
+                };
+                agent_skills: Record<string, unknown>;
+            };
+            provenance: {
+                layersApplied: string[];
+                defaultsPath: string | null;
+                projectPath: string | null;
+                defaultsApplied: boolean;
+                projectApplied: boolean;
+                defaultsSkipped?: boolean;
+            };
+            sourcePath: string | null;
+            warnings: string[];
+        };
+        artifacts: {
+            context: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            spec: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            log: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+        };
+        sources: ({
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        })[];
+        priorContextPaths: string[];
+        omittedPriorPhases: string[];
+        checkpoint: {
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        };
+        planInventory: string[];
+        warnings: string[];
+    };
+    readSet: {
+        path: string;
+        hash: string | null;
+    }[];
+    session: {
+        revision: number;
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        candidateAvailable: boolean;
+        readiness: {
+            ready: boolean;
+            blockers: string[];
+            validation: {
+                valid: boolean;
+                issues: string[];
+                warnings: string[];
+                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+            };
+        } | null;
+        publication: {
+            requestId: string;
+            stages: Record<string, "complete" | "intent">;
+            receipt: Record<string, unknown> | undefined;
+        } | null;
+    } | null;
+    status: string;
+    nextAction: string;
+    reason?: undefined;
+    revision?: undefined;
+    affectedRecordIds?: undefined;
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    path?: undefined;
+    reused?: undefined;
+} | {
+    packet: {
+        selectedPhase: {
+            phaseNumber: string;
+            phasePrefix: string;
+            phaseName: string;
+            completed: boolean;
+            summary: string | null;
+            goal: string | null;
+            successCriteria: string | null;
+            requirements: string[];
+            phaseDir: string;
+        };
+        ambientCurrentPhase: string;
+        config: {
+            scope: "effective" | "project" | "defaults";
+            config: {
+                version: number;
+                mode: string;
+                granularity: string;
+                model_profile: "quality" | "balanced" | "budget" | "inherit";
+                project_code: string | null;
+                phase_naming: string;
+                response_language: string | null;
+                planning: {
+                    commit_docs: boolean;
+                    search_gitignored: boolean;
+                };
+                ux: {
+                    progress_mode: "quiet" | "stage" | "checklist";
+                    structured_confirmations: "required" | "auto";
+                    user_checkpoints: "phase" | "off" | "plan";
+                };
+                orchestration: {
+                    task_tracker: "auto" | "off";
+                };
+                research: {
+                    external_sources: "ask" | "auto" | "off";
+                };
+                workflow: {
+                    research: boolean;
+                    plan_check: boolean;
+                    secure_phase: boolean;
+                    verifier: boolean;
+                    nyquist_validation: boolean;
+                    ui_phase: boolean;
+                    ui_safety_gate: boolean;
+                    no_uat: boolean;
+                    code_review: boolean;
+                    code_review_depth: string;
+                    auto_advance: boolean;
+                    research_before_questions: boolean;
+                    discuss_mode: string;
+                    use_worktrees: boolean;
+                    subagents: boolean;
+                    subagent_timeout: number;
+                };
+                parallelization: {
+                    enabled: boolean;
+                    plan_level: boolean;
+                    task_level: boolean;
+                    skip_checkpoints: boolean;
+                    max_concurrent_agents: number;
+                    min_plans_for_parallel: number;
+                };
+                git: {
+                    branching_strategy: string;
+                    base_branch: string | null;
+                    phase_branch_template: string;
+                    milestone_branch_template: string;
+                    quick_branch_template: string | null;
+                };
+                gates: {
+                    confirm_project: boolean;
+                    confirm_phases: boolean;
+                    confirm_roadmap: boolean;
+                    confirm_breakdown: boolean;
+                    confirm_plan: boolean;
+                    execute_next_plan: boolean;
+                    issues_review: boolean;
+                    confirm_transition: boolean;
+                };
+                safety: {
+                    always_confirm_destructive: boolean;
+                    always_confirm_external_services: boolean;
+                };
+                maintenance: {
+                    patch_registry: string;
+                    workspace_root: string;
+                };
+                agent_skills: Record<string, unknown>;
+            };
+            provenance: {
+                layersApplied: string[];
+                defaultsPath: string | null;
+                projectPath: string | null;
+                defaultsApplied: boolean;
+                projectApplied: boolean;
+                defaultsSkipped?: boolean;
+            };
+            sourcePath: string | null;
+            warnings: string[];
+        };
+        artifacts: {
+            context: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            spec: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+            log: {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: string;
+                content: string;
+            } | {
+                status: string;
+                validation: {
+                    valid: boolean;
+                    issues: string[];
+                    warnings: string[];
+                    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+                } | null;
+                path: string;
+                hash: null;
+                content: null;
+            };
+        };
+        sources: ({
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        })[];
+        priorContextPaths: string[];
+        omittedPriorPhases: string[];
+        checkpoint: {
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        };
+        planInventory: string[];
+        warnings: string[];
+    };
+    readSet: {
+        path: string;
+        hash: string | null;
+    }[];
+    session: {
+        revision: number;
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        candidateAvailable: boolean;
+        readiness: {
+            ready: boolean;
+            blockers: string[];
+            validation: {
+                valid: boolean;
+                issues: string[];
+                warnings: string[];
+                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+            };
+        } | null;
+        publication: {
+            requestId: string;
+            stages: Record<string, "complete" | "intent">;
+            receipt: Record<string, unknown> | undefined;
+        } | null;
+    } | null;
+    status: string;
+    revision: number;
+    path: string;
+    reason?: undefined;
+    affectedRecordIds?: undefined;
+    freshness?: undefined;
+    changedPaths?: undefined;
+    candidateNeedsReview?: undefined;
+    nextAction?: undefined;
+    reused?: undefined;
+}>;
+export declare const discussToolDefinitions: ToolDefinition[];
+export {};

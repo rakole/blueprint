@@ -72,8 +72,8 @@ export declare const godReviewScopeKindSchema: z.ZodEnum<{
 export declare const godReviewSessionStatusSchema: z.ZodEnum<{
     blocked: "blocked";
     completed: "completed";
-    "in-progress": "in-progress";
     stale: "stale";
+    "in-progress": "in-progress";
 }>;
 export declare const godReviewGroupStatusSchema: z.ZodEnum<{
     blocked: "blocked";
@@ -155,8 +155,8 @@ export declare const godReviewSessionSchema: z.ZodObject<{
     status: z.ZodEnum<{
         blocked: "blocked";
         completed: "completed";
-        "in-progress": "in-progress";
         stale: "stale";
+        "in-progress": "in-progress";
     }>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;

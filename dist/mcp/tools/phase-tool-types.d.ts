@@ -78,6 +78,10 @@ export type PhaseArtifactScaffoldArgs = PhaseLookupArgs & {
 };
 export type PhaseArtifactWriteArgs = PhaseLookupArgs & {
     artifact: PhaseArtifactKind;
+    /** Internal publication CAS: null means the target must be absent. */
+    expectedContentHash?: string | null;
+    /** Internal caller topology CAS, checked under the owning topology lock. */
+    expectedTopology?: import("./phase-topology-lock.js").PhaseTopologyFingerprint;
     content?: string;
     model?: Record<string, unknown>;
     overwrite?: boolean;
@@ -184,6 +188,8 @@ export type PhaseCheckpointPutArgs = PhaseLookupArgs & {
     checkpoint: PhaseCheckpointWriteRecord;
 };
 export type PhaseCheckpointDeleteArgs = PhaseLookupArgs & {
+    /** Internal caller topology CAS. */
+    expectedTopology?: import("./phase-topology-lock.js").PhaseTopologyFingerprint;
     expectedOwnerCommand?: PhaseCheckpointOwnerCommand;
     expectedMode?: PhaseCheckpointResumeMode;
 };
@@ -600,6 +606,7 @@ export type PhaseCheckpointGetResult = {
     ownerCommand: string | null;
     resumeMode: string | null;
     safeToResume: boolean;
+    freshness?: import("./phase-checkpoint-freshness.js").PhaseCheckpointFreshness;
     warnings: string[];
     reason: string | null;
 };
