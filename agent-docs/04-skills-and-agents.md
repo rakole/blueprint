@@ -95,3 +95,16 @@ and are required only by sibling bundles. Do not reintroduce primitive evidence,
 checkpoint, artifact or state orchestration into the normal discuss prompt:
 `blueprint_discuss_prepare` → `blueprint_discuss_record` →
 `blueprint_discuss_finalize` owns it; read is recovery/view only.
+
+## Research input boundary
+
+Research uses `blueprint_research_prepare` → investigate →
+`blueprint_research_submit`. The compact research contract is the only required
+research reference; load optional researcher instructions only when delegating an
+independent question. The parent owns source-policy approval and synthesis.
+Prepare supplies source fingerprints and a small typed authoring schema. MCP
+renders the existing research Markdown sections, so the model supplies findings,
+recommendations and evidence instead of reproducing a long document template.
+Record partial work at meaningful boundaries; read and field corrections are
+recovery tools. Do not reintroduce separate state, catalog, checkpoint or artifact
+calls into the normal research prompt.

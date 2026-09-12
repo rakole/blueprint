@@ -72,20 +72,9 @@ does not grant broader tool scope to a command.
 
 ### `/blu-research-phase`
 
-- `blueprint_phase_locate`
-- `blueprint_phase_context`
-- `blueprint_phase_research_status`
-- `blueprint_phase_artifact_read`
-- `blueprint_phase_artifact_scaffold`
-- `blueprint_phase_artifact_write`
-- `blueprint_artifact_contract_read`
-- `blueprint_phase_checkpoint_get`
-- `blueprint_phase_checkpoint_put`
-- `blueprint_phase_checkpoint_delete`
-- `blueprint_config_get`
-- `blueprint_state_load`
-- `blueprint_command_catalog`
-- `blueprint_state_update`
+Research does not load this sibling contract. Its own compact runtime reference
+allows `blueprint_research_prepare`, `blueprint_research_submit`,
+`blueprint_research_record` and `blueprint_research_read` only.
 
 ### `/blu-ui-phase`
 
@@ -141,14 +130,11 @@ does not grant broader tool scope to a command.
 0. Treat `blueprint_phase_context.codebase` as reusable brownfield repo evidence when it is present. Prefer the saved `.blueprint/codebase/` summaries before re-reading broad repo surfaces, and call out when the codebase bundle is missing or incomplete. Treat saved summaries as useful but potentially stale: cite them, then confirm the live repo still agrees before using them as planner-grade truth.
    Sweep prior-phase context first so the session reuses the current evidence base before it asks for fresh detail; this is a saved-artifact sweep, not a dedicated todo/backlog file crawl.
 
-### Canonical Research Contract
+### Research Ownership
 
-Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when `/blu-research-phase` creates or updates research.
-
-- Normalize the final draft to the returned `authoringTemplate`.
-- Keep the contract's required section names and locked markers unchanged.
-- Replace every placeholder signal before writing.
-- Allow extra top-level headings only when the contract policy says they are supported.
+Research uses its own prepare/investigate/submit lifecycle and candidate schema;
+MCP preserves drafts before assessment and renders the canonical research artifact.
+Sibling commands read published research but do not own research revisions.
 
 ### `spec-phase`
 
@@ -179,17 +165,12 @@ Keep `/blu-spec-phase` compact in this shared skill:
 
 ### `research-phase`
 
-Before running the command flow, read `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`. That file is the detailed authority for research-specific flow, evidence depth, checkpoint ownership, validation repair, and routing, so keep this shared skill focused on the active command boundary instead of restating the whole workflow inline.
-
-1. Confirm phase readiness with `blueprint_phase_context`, `blueprint_phase_research_status`, and `blueprint_config_get`.
-2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in saved discovery context, not only status metadata. If that read reports `found: false`, stop and route back to `/blu-discuss-phase <phase>`. If that read reports invalid or unusable context, stop and route back to `/blu-discuss-phase <phase>` without repairing, overwriting, synthesizing, or substituting repo-root `CONTEXT.md`.
-3. After usable context is confirmed, use the same phase artifact read path with `artifact: "spec"` only when the selected phase exposes `phase.artifacts.spec`. Treat spec as optional intent and constraint evidence; missing spec is nonblocking. If spec and context contradict, route to `/blu-discuss-phase <phase>` when context is stale relative to spec, or `/blu-spec-phase <phase>` when the spec is stale or wrong; do not silently resolve the mismatch inside research.
-4. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` only for view, update, or repair branches that need the body. Force repair when saved research is invalid. When saved research is already valid, default to reuse unless the user asks to view or update; choosing `update` is the overwrite gate.
-5. Draft directly from `contract.authoringTemplate`. Use `blueprint_phase_artifact_scaffold` only for deliberate placeholder creation when a seeded file is explicitly needed before final research exists.
-6. Apply the runtime contract sections for external-source decisions, evidence quality, investigation trace, strand ledger, dependency/tool evaluation, sidecar criteria, progress visibility, validation repair, and completion receipt. Tie relevant strands to spec requirements and constraints when spec evidence exists. For framework, library, service, or tool choices, cite the spec requirement or constraint that makes the choice planner-critical and preserve the spec path plus requirement labels in planner handoff when relevant. Those sections own the detailed research behavior; this shared skill owns only the command boundary.
-7. Use `blueprint-researcher` only when the runtime contract's capability and material-help criteria are met. The parent owns evidence acceptance, synthesis, final confidence, persistence, checkpoints, state sync, user gates, and routing. External evidence remains research evidence only and must not be used to patch missing spec intent or constraints.
-8. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry once before treating `/blu-research-phase` as complete. If the same diagnostics repeat, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, and stop.
-9. After a successful research write or a valid `view`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` while preserving the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, then call `blueprint_state_load`, verify the recommended follow-up through `blueprint_command_catalog`, and delete only the guarded research-owned checkpoint after route proof succeeds.
+Research loads only `research-phase-runtime-contract.md`. Its prepare packet owns
+context/spec/config/evidence reads; submit owns draft preservation, publication,
+state sync and implemented routing. Record/read are incremental or recovery paths.
+Missing spec is nonblocking, context and spec remain read-only, and source policy,
+explicit replacement decisions and freshness checks still apply. This sibling
+contract does not add primitive calls or checkpoint duties to research.
 
 ### `list-phase-assumptions`
 
@@ -217,6 +198,8 @@ bounded `blueprint-checker` use, no-subagent fallback, browser-only,
 web-search-only, shell-only, or generic agents rejection, validation repair,
 and `/blu-plan-phase <phase>` or `/blu-progress` routing. Do not inline the
 full UI workflow into `/blu-discuss-phase` context.
+On UI validation rejection, repair the same normalized draft using the returned
+diagnostics before the bounded retry.
 It preserves the exact `workflow.ui_safety_gate` rationale confirmation gate.
 It preserves the rejection of browser-only, web-search-only, shell-only, or generic agents.
 It preserves `artifactId: "phase.ui-spec"` as the canonical UI-spec contract id.
@@ -238,8 +221,8 @@ Before claiming completion, verify:
 - Persistence, when allowed, happened only through the owning MCP tools; returned `status`, `written`, `created`, `updated`, `path`, `validation`, `warnings`, and `reason` fields were treated as authoritative. For `/blu-list-phase-assumptions`, verify no write-capable MCP tool, task tracker, or hidden planning helper was called.
 - Required gates were satisfied before action: artifact overwrite/reuse/update, discuss checkpoint resume-versus-discard, research external-source policy, UI contract-versus-skip, `workflow.ui_safety_gate` rationale, checker-requested revisions, and checkpoint owner/mode cleanup guards.
 - Validation, checker, model-check, or MCP rejection results were repaired through the same normalized draft and retried when the active contract allows it; otherwise the run stopped with a checkpoint or waiting state and an honest blocker. Invalid, partial, scaffold-only, skipped, or silently reused invalid work was not described as successful completion.
-- For `/blu-research-phase`, the loaded runtime contract's research evidence, source-policy, strand-ledger, dependency/tool, sidecar, repair, and completion rules were followed; richer provenance warnings on older otherwise-valid artifacts remained warning-grade unless MCP validation made them strict.
-- For `/blu-research-phase`, progress used the visible research stages, any
+- For `/blu-research-phase`, follow its own lifecycle reference; saved candidates and planning-ready publication are distinct outcomes, and stale or unknown research is never silently reused.
+- For `/blu-research-phase`, progress stayed concise, any
   `research.external_sources=ask` branch recorded `accept`, `decline`, or
   `cancel`, parent-only fallback was explicit when relevant, and the final
   response used the compact completion receipt instead of duplicating

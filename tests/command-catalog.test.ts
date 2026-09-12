@@ -606,8 +606,7 @@ test("discovery runtime contracts expose runtime-owned metadata and docs-free sk
     {
       command: "research-phase",
       inputs: [
-        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
-    "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+        "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
       ]
     },
     {
@@ -1186,6 +1185,7 @@ test("runtime metadata keeps a config-read path for every optional-subagent comm
     const hasConfigReadPath =
       metadata.requiredTools.includes("blueprint_config_get") ||
       (metadata.commandName === "discuss-phase" && metadata.requiredTools.includes("blueprint_discuss_prepare")) ||
+      (metadata.commandName === "research-phase" && metadata.requiredTools.includes("blueprint_research_prepare")) ||
       (metadata.requiredTools.includes("blueprint_lightweight_preflight") &&
         (metadata.commandName === "quick" || metadata.commandName === "fast"));
 
@@ -1281,20 +1281,10 @@ test("research-phase is implemented once manifest, skill, and external-policy-aw
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.requiredTools, [
-    "blueprint_phase_locate",
-    "blueprint_phase_context",
-    "blueprint_phase_research_status",
-    "blueprint_phase_artifact_read",
-    "blueprint_phase_artifact_scaffold",
-    "blueprint_phase_artifact_write",
-    "blueprint_phase_checkpoint_get",
-    "blueprint_phase_checkpoint_put",
-    "blueprint_phase_checkpoint_delete",
-    "blueprint_artifact_contract_read",
-    "blueprint_config_get",
-    "blueprint_state_load",
-    "blueprint_command_catalog",
-    "blueprint_state_update"
+    "blueprint_research_prepare",
+    "blueprint_research_submit",
+    "blueprint_research_record",
+    "blueprint_research_read"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-researcher"]);
   assert.deepEqual(entry.blockedBy, []);

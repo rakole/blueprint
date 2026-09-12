@@ -49,6 +49,9 @@ Use focused tests such as:
 
 - `tests/phase-discovery-discuss.test.ts`
 - `tests/phase-discovery-research.test.ts`
+- `tests/research-lifecycle.test.ts`
+- `tests/phase-research-model.test.ts`
+- `tests/research-markdown-regressions.test.ts`
 - `tests/spec-phase-artifact.test.ts`
 - `tests/phase-planning-tools.test.ts`
 - `tests/phase-planning-contract.test.ts`

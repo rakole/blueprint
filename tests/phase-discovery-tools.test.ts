@@ -1550,7 +1550,8 @@ test("research checkpoints preserve nested strand ledger payloads", async (t) =>
   assert.equal(read.found, true);
   assert.equal(read.ownerCommand, "/blu-research-phase");
   assert.equal(read.resumeMode, "research");
-  assert.equal(read.safeToResume, true);
+  assert.equal(read.safeToResume, false, "A preserved ledger without input fingerprints is evidence, not safe resume authority.");
+  assert.equal(read.freshness.status, "unknown");
   assert.deepEqual(read.checkpoint, checkpointPayload);
   const readPayload = read.checkpoint as typeof checkpointPayload;
   assert.deepEqual(readPayload.researchLedger.strands.map((strand) => strand.id), ["S1"]);

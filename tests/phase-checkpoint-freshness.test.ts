@@ -6,6 +6,8 @@ import { mkdtemp, writeFile, rm, symlink, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { evaluateCheckpointFreshness } from "../src/mcp/tools/phase-checkpoint-freshness.js";
+import { blueprintPhaseCheckpointGet, blueprintPhaseCheckpointPut } from "../src/mcp/tools/phase-checkpoints.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const checkpoint = (readSet: unknown[]) => ({ ownerCommand: "/blu-discuss-phase", readSet });
 
@@ -35,7 +37,7 @@ test("checkpoint freshness recognizes timestamp evidence but never guesses legac
     assert.equal(result.status, "unknown");
     assert.ok(result.unknownPaths.length);
   }
-  assert.equal((await evaluateCheckpointFreshness(root, { ownerCommand: "/blu-research-phase" })).status, "not-applicable");
+  assert.equal((await evaluateCheckpointFreshness(root, { ownerCommand: "/blu-research-phase" })).status, "unknown");
 });
 
 test("checkpoint freshness does not inspect paths outside the repository", async (t) => {
@@ -71,4 +73,77 @@ test("timestamp comparison uses serialized Date precision and hashes remain auth
   assert.equal((await evaluateCheckpointFreshness(root, checkpoint([{ path: "input.md", hash, updatedAt: older }]))).status, "fresh");
   await writeFile(input, "changed");
   assert.equal((await evaluateCheckpointFreshness(root, checkpoint([{ path: "input.md", hash, updatedAt }]))).status, "stale");
+});
+
+
+test("research checkpoint freshness verifies explicit top-level and ledger read sets", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "blueprint-research-freshness-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const original = "observed research evidence";
+  const hash = createHash("sha256").update(original).digest("hex");
+  const readSet = [{ path: "input.md", hash }];
+  const checkpoints = [
+    { ownerCommand: "/blu-research-phase", readSet },
+    { ownerCommand: "/blu-research-phase", researchLedger: { readSet, strands: [{ status: "complete" }] } }
+  ];
+  await writeFile(path.join(root, "input.md"), original);
+  for (const saved of checkpoints) assert.equal((await evaluateCheckpointFreshness(root, saved)).status, "fresh");
+  await writeFile(path.join(root, "input.md"), "changed");
+  for (const saved of checkpoints) {
+    const stale = await evaluateCheckpointFreshness(root, saved);
+    assert.equal(stale.status, "stale");
+    assert.deepEqual(stale.stalePaths, ["input.md"]);
+  }
+  await rm(path.join(root, "input.md"));
+  for (const saved of checkpoints) assert.equal((await evaluateCheckpointFreshness(root, saved)).status, "stale");
+});
+
+test("research checkpoints never infer provenance from completed strands or legacy evidence", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "blueprint-research-freshness-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const saved of [
+    { researchLedger: { strands: [{ status: "complete", evidence: ["missing.md"] }] } },
+    { readSet: ["missing.md"] },
+    { readSet: [{ path: "missing.md" }] },
+    { readSet: [], researchLedger: { readSet: [{ path: "input.md", hash: null }] } }
+  ]) {
+    const result = await evaluateCheckpointFreshness(root, { ownerCommand: "/blu-research-phase", ...saved });
+    assert.equal(result.status, "unknown");
+    assert.ok(result.warnings.length > 0);
+  }
+});
+
+test("research fingerprints preserve observed optional absence while discuss semantics remain unchanged", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "blueprint-research-absence-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const entry of [{ path: "optional.md", hash: null }, { path: "optional.md", fingerprint: null }]) {
+    const saved = { ownerCommand: "/blu-research-phase", readSet: [entry] };
+    assert.equal((await evaluateCheckpointFreshness(root, saved)).status, "fresh");
+    assert.equal((await evaluateCheckpointFreshness(root, checkpoint([entry]))).status, "unknown");
+    await writeFile(path.join(root, "optional.md"), "new input");
+    assert.equal((await evaluateCheckpointFreshness(root, saved)).status, "stale");
+    await rm(path.join(root, "optional.md"));
+  }
+});
+
+
+test("research checkpoint tool refuses automatic resume after evidence changes or without provenance", async (t) => {
+  const root = await createGitRepo("blueprint-research-checkpoint-resume-");
+  t.after(() => rm(path.dirname(root), { recursive: true, force: true }));
+  await fs.mkdir(path.join(root, ".blueprint/phases/03-discovery"), { recursive: true });
+  await writeFile(path.join(root, ".blueprint/ROADMAP.md"), "# Roadmap\n\n## Phases\n\n- [ ] **Phase 3: Discovery**\n");
+  await writeFile(path.join(root, "input.md"), "original");
+  const hash = createHash("sha256").update("original").digest("hex");
+  const options = { cwd: root, phase: "3", expectedOwnerCommand: "/blu-research-phase" as const, expectedMode: "research" as const };
+  const base = { schemaVersion: 2, ownerCommand: "/blu-research-phase", mode: "research", researchLedger: { schemaVersion: "research-ledger/v1", strands: [{ status: "complete" }] } };
+  await blueprintPhaseCheckpointPut({ cwd: root, phase: "3", checkpoint: base });
+  const legacy = await blueprintPhaseCheckpointGet(options);
+  assert.equal(legacy.freshness?.status, "unknown");
+  assert.equal(legacy.safeToResume, false);
+  await blueprintPhaseCheckpointPut({ ...options, checkpoint: { ...base, readSet: [{ path: "input.md", hash }] } });
+  assert.equal((await blueprintPhaseCheckpointGet(options)).safeToResume, true);
+  await writeFile(path.join(root, "input.md"), "changed");
+  const changed = await blueprintPhaseCheckpointGet(options);
+  assert.equal(changed.freshness?.status, "stale");
+  assert.equal(changed.safeToResume, false);
 });

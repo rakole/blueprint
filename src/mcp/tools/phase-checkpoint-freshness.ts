@@ -17,20 +17,28 @@ export async function evaluateCheckpointFreshness(
   const result: PhaseCheckpointFreshness = {
     status: "not-applicable", stalePaths: [], unknownPaths: [], warnings: []
   };
-  // Research owns a separate ledger/freshness contract.
-  if (checkpoint.ownerCommand !== "/blu-discuss-phase") return result;
-  const entries = Array.isArray(checkpoint.readSet) ? checkpoint.readSet : [];
+  const isResearch = checkpoint.ownerCommand === "/blu-research-phase";
+  if (checkpoint.ownerCommand !== "/blu-discuss-phase" && !isResearch) return result;
+  const ledger = isResearch && typeof checkpoint.researchLedger === "object" && checkpoint.researchLedger !== null && !Array.isArray(checkpoint.researchLedger)
+    ? checkpoint.researchLedger as Record<string, unknown> : null;
+  // Only explicit observed inputs establish provenance; completed strands do not.
+  const entries = Array.isArray(checkpoint.readSet) ? checkpoint.readSet
+    : isResearch && Array.isArray(ledger?.readSet) ? ledger.readSet : [];
   if (entries.length === 0) result.unknownPaths.push("readSet");
   for (const [index, entry] of entries.entries()) {
     const record = typeof entry === "object" && entry !== null && !Array.isArray(entry)
       ? entry as Record<string, unknown> : null;
     const inputPath = typeof record?.path === "string" ? record.path
       : typeof entry === "string" ? entry : `readSet[${index}]`;
+    const expectedAbsence = isResearch && record !== null && (
+      Object.hasOwn(record, "hash") ? record.hash === null
+        : Object.hasOwn(record, "fingerprint") && record.fingerprint === null
+    );
     const fingerprint = record?.hash ?? record?.fingerprint;
     const expectedHash = typeof fingerprint === "string" && /^(?:sha256:)?[a-f0-9]{64}$/i.test(fingerprint)
       ? fingerprint.replace(/^sha256:/i, "").toLowerCase() : null;
     const expectedTime = typeof record?.updatedAt === "string" ? Date.parse(record.updatedAt) : NaN;
-    if (!record || (!expectedHash && !Number.isFinite(expectedTime))) {
+    if (!record || (!expectedAbsence && !expectedHash && !Number.isFinite(expectedTime))) {
       result.unknownPaths.push(inputPath);
       continue;
     }
@@ -43,6 +51,10 @@ export async function evaluateCheckpointFreshness(
     }
     try {
       const stat = await fs.stat(absolutePath);
+      if (expectedAbsence) {
+        result.stalePaths.push(inputPath);
+        continue;
+      }
       if (!stat.isFile()) {
         result.unknownPaths.push(inputPath);
         continue;
@@ -52,8 +64,9 @@ export async function evaluateCheckpointFreshness(
         : stat.mtime.getTime() === expectedTime;
       if (!unchanged) result.stalePaths.push(inputPath);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") result.stalePaths.push(inputPath);
-      else result.unknownPaths.push(inputPath);
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        if (!expectedAbsence) result.stalePaths.push(inputPath);
+      } else result.unknownPaths.push(inputPath);
     }
   }
   result.status = result.stalePaths.length ? "stale" : result.unknownPaths.length ? "unknown" : "fresh";

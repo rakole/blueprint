@@ -1408,10 +1408,10 @@ test("research contract accepts the exact none sentinel for empty open questions
   assert.equal(validation.valid, true, validation.issues.join("\n"));
 });
 
-test("research contract rejects fuzzy empty open-question prose and points to the exact sentinel", () => {
+test("research contract accepts deterministic empty open-question prose aliases", () => {
   const research = canonicalResearchContent(
-    "Reject prose empty-state variants so the writer converges on one stable sentinel.",
-    "| LIFE-01 | Keep endpoint research grounded. | The exact empty sentinel should be the only empty-state encoding. |"
+    "Normalize complete prose empty-state aliases to the stable sentinel.",
+    "| LIFE-01 | Keep endpoint research grounded. | MCP deterministically renders the saved empty state. |"
   ).replace(
     /## Open Questions\s+[\s\S]*?\n## Confidence Breakdown/,
     `## Open Questions
@@ -1423,10 +1423,8 @@ test("research contract rejects fuzzy empty open-question prose and points to th
   const validation = validateResearchArtifactContent(research);
   const diagnostic = validation.diagnostics.find((entry) => entry.heading === "Open Questions");
 
-  assert.equal(validation.valid, false, validation.issues.join("\n"));
-  assert.match(validation.issues.join("\n"), /must use exactly `- none`/i);
-  assert.equal(diagnostic?.code, "research.inexact_empty_sentinel");
-  assert.match(diagnostic?.repair ?? "", /use exactly `- none`/i);
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.equal(diagnostic, undefined);
 });
 
 test("research contract rejects null-style open-question placeholders", () => {

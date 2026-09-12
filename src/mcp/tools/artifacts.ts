@@ -3680,13 +3680,13 @@ const RESEARCH_GENERIC_INSTALL_ARGUMENTS = new Set([
 
 function researchDependencyChoiceText(content: string): string {
   return [
-    extractMarkdownSection(content, "Phase Requirements"),
-    extractMarkdownSection(content, "Summary"),
-    extractMarkdownSection(content, "Standard Stack"),
-    extractMarkdownSection(content, "Installation And Setup"),
-    extractMarkdownSection(content, "Alternatives Considered"),
-    extractMarkdownSection(content, "Don't Hand-Roll"),
-    extractMarkdownSection(content, "Recommendations")
+    extractResearchMarkdownSection(content, "Phase Requirements"),
+    extractResearchMarkdownSection(content, "Summary"),
+    extractResearchMarkdownSection(content, "Standard Stack"),
+    extractResearchMarkdownSection(content, "Installation And Setup"),
+    extractResearchMarkdownSection(content, "Alternatives Considered"),
+    extractResearchMarkdownSection(content, "Don't Hand-Roll"),
+    extractResearchMarkdownSection(content, "Recommendations")
   ].join("\n");
 }
 
@@ -3753,7 +3753,7 @@ function hasResearchTableCoverage(
   content: string,
   descriptor: ResearchTableCoverageDescriptor
 ): boolean {
-  const section = extractMarkdownSection(content, descriptor.sectionHeading);
+  const section = extractResearchMarkdownSection(content, descriptor.sectionHeading);
 
   return descriptor.requiredPatterns.every((pattern) => pattern.test(section));
 }
@@ -3791,7 +3791,7 @@ function hasLibraryVsCustomDecision(content: string): boolean {
 }
 
 function hasSupplyChainEvidenceSource(content: string): boolean {
-  const sources = extractMarkdownSection(content, "Sources");
+  const sources = extractResearchMarkdownSection(content, "Sources");
 
   return (
     /Supply Chain Evidence/i.test(sources) &&
@@ -3852,7 +3852,7 @@ function externalSourceRowHasCurrentAccessEvidence(row: ResearchMarkdownRow): bo
 }
 
 function hasLiveExternalAccessDateEvidence(sources: string): boolean {
-  const sourceRegister = extractMarkdownSubsection(sources, "Source Register");
+  const sourceRegister = extractResearchMarkdownSubsection(sources, "Source Register");
 
   if (/### External Sources/i.test(sources) && /\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources)) {
     return true;
@@ -3862,16 +3862,16 @@ function hasLiveExternalAccessDateEvidence(sources: string): boolean {
     return true;
   }
 
-  return parseResearchMarkdownTable(extractMarkdownSubsection(sources, "External Sources")).some(
+  return parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "External Sources")).some(
     externalSourceRowHasCurrentAccessEvidence
   );
 }
 
 function usesLiveVerificationLanguageWithoutExternalEvidence(content: string): boolean {
   const claimText = [
-    extractMarkdownSection(content, "Summary"),
-    extractMarkdownSection(content, "State Of The Art"),
-    extractMarkdownSection(content, "Recommendations")
+    extractResearchMarkdownSection(content, "Summary"),
+    extractResearchMarkdownSection(content, "State Of The Art"),
+    extractResearchMarkdownSection(content, "Recommendations")
   ].join("\n");
 
   const currentExternalClaimPattern =
@@ -3881,14 +3881,14 @@ function usesLiveVerificationLanguageWithoutExternalEvidence(content: string): b
     return false;
   }
 
-  const sources = extractMarkdownSection(content, "Sources");
+  const sources = extractResearchMarkdownSection(content, "Sources");
   return !hasLiveExternalAccessDateEvidence(sources);
 }
 
 function hasHighConfidenceWithUnsupportedEvidenceClaims(content: string): boolean {
   const highConfidence =
     /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) ||
-    /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractMarkdownSection(content, "Confidence Breakdown"));
+    /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractResearchMarkdownSection(content, "Confidence Breakdown"));
 
   if (!highConfidence) {
     return false;
@@ -3925,16 +3925,12 @@ function normalizeResearchTableHeader(value: string): string {
 }
 
 function splitResearchTableLine(line: string): string[] {
-  return line
-    .trim()
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((cell) => cell.trim());
+  const trimmed = line.trim();
+  return parseMarkdownTableCells(`${trimmed.startsWith("|") ? "" : "|"}${trimmed}${trimmed.endsWith("|") ? "" : "|"}`);
 }
 
 function parseResearchMarkdownTable(section: string): ResearchMarkdownRow[] {
-  const lines = section.split("\n");
+  const lines = stripResearchFencedCodeBlocks(section).split("\n");
 
   for (let index = 0; index < lines.length - 1; index += 1) {
     const headerLine = lines[index]?.trim() ?? "";
@@ -3974,10 +3970,8 @@ function parseResearchMarkdownTable(section: string): ResearchMarkdownRow[] {
   return [];
 }
 
-function extractMarkdownSubsection(section: string, subheading: string): string {
-  const escaped = subheading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = section.match(new RegExp(`(?:^|\\n)### ${escaped}\\s*\\n([\\s\\S]*?)(?=\\n### |\\n## |$)`));
-  return match?.[1] ?? "";
+function extractResearchMarkdownSubsection(section: string, subheading: string): string {
+  return extractResearchMarkdownSection(section, subheading, 3);
 }
 
 function splitResearchReferenceIds(value: string): string[] {
@@ -3989,16 +3983,16 @@ function isBackgroundSourceUse(value: string): boolean {
 }
 
 function collectResearchClaimRows(content: string): ResearchMarkdownRow[] {
-  return parseResearchMarkdownTable(extractMarkdownSection(content, "Claim Support Ledger"));
+  return parseResearchMarkdownTable(extractResearchMarkdownSection(content, "Claim Support Ledger"));
 }
 
 function collectResearchRecommendationRows(content: string): ResearchMarkdownRow[] {
-  return parseResearchMarkdownTable(extractMarkdownSection(content, "Recommendations"));
+  return parseResearchMarkdownTable(extractResearchMarkdownSection(content, "Recommendations"));
 }
 
 function collectResearchSourceRegisterRows(content: string): ResearchMarkdownRow[] {
   return parseResearchMarkdownTable(
-    extractMarkdownSubsection(extractMarkdownSection(content, "Sources"), "Source Register")
+    extractResearchMarkdownSubsection(extractResearchMarkdownSection(content, "Sources"), "Source Register")
   );
 }
 
@@ -4007,11 +4001,11 @@ function sourceRegisterRowId(row: ResearchMarkdownRow): string {
 }
 
 function collectResearchEvidenceRows(content: string): ResearchMarkdownRow[] {
-  const sources = extractMarkdownSection(content, "Sources");
+  const sources = extractResearchMarkdownSection(content, "Sources");
   return [
-    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "Repo Evidence")),
-    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "External Sources")),
-    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "Inference Notes"))
+    ...parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "Repo Evidence")),
+    ...parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "External Sources")),
+    ...parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "Inference Notes"))
   ];
 }
 
@@ -4191,7 +4185,7 @@ function hasRuntimeAdequateEvidence(
 
 function researchEvidenceWarningDiagnostics(content: string): PhaseArtifactValidationDiagnostic[] {
   const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
-  const sources = extractMarkdownSection(content, "Sources");
+  const sources = extractResearchMarkdownSection(content, "Sources");
   const sourceRows = collectResearchSourceRegisterRows(content);
   const sourceRowsById = new Map(
     sourceRows
@@ -4329,8 +4323,8 @@ function researchEvidenceWarningDiagnostics(content: string): PhaseArtifactValid
 
 function mentionsUnsafeAutomaticDependencyRemediation(content: string): boolean {
   const candidateText = [
-    extractMarkdownSection(content, "Installation And Setup"),
-    extractMarkdownSection(content, "Recommendations")
+    extractResearchMarkdownSection(content, "Installation And Setup"),
+    extractResearchMarkdownSection(content, "Recommendations")
   ].join("\n");
 
   return (
@@ -4339,34 +4333,47 @@ function mentionsUnsafeAutomaticDependencyRemediation(content: string): boolean 
   );
 }
 
-function stripTripleFencedCodeBlocks(content: string): string {
-  const strippedLines: string[] = [];
-  let activeFence: "```" | "~~~" | null = null;
+type ResearchMarkdownLine = {
+  text: string;
+  fenced: boolean;
+  heading?: { level: number; title: string };
+};
 
-  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-    const trimmedLine = line.trimStart();
-
+/** Keep research syntax separate from literal examples, including nested shorter fences. */
+function scanResearchMarkdown(content: string): ResearchMarkdownLine[] {
+  let activeFence: { marker: string; length: number } | null = null;
+  return content.split("\n").map((text) => {
     if (activeFence) {
-      if (trimmedLine.startsWith(activeFence)) {
+      const closing = text.match(/^ {0,3}(`+|~+)[ \t]*\r?$/u);
+      if (closing && closing[1][0] === activeFence.marker && closing[1].length >= activeFence.length) {
         activeFence = null;
       }
-      continue;
+      return { text, fenced: true };
     }
-
-    if (trimmedLine.startsWith("```")) {
-      activeFence = "```";
-      continue;
+    const opening = text.match(/^ {0,3}(`{3,}|~{3,})([^\r]*)\r?$/u);
+    if (opening && (opening[1][0] !== "`" || !opening[2].includes("`"))) {
+      activeFence = { marker: opening[1][0], length: opening[1].length };
+      return { text, fenced: true };
     }
+    const heading = text.match(/^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*\r?$/u);
+    return {
+      text,
+      fenced: false,
+      ...(heading ? { heading: { level: heading[1].length, title: stripResearchHeadingAdornment(heading[2]) } } : {})
+    };
+  });
+}
 
-    if (trimmedLine.startsWith("~~~")) {
-      activeFence = "~~~";
-      continue;
-    }
+function extractResearchMarkdownSection(content: string, heading: string, level = 2): string {
+  const lines = scanResearchMarkdown(content);
+  const start = lines.findIndex((line) => line.heading?.level === level && line.heading.title === heading);
+  if (start === -1) return "";
+  const next = lines.findIndex((line, index) => index > start && line.heading !== undefined && line.heading.level <= level);
+  return lines.slice(start + 1, next === -1 ? undefined : next).map((line) => line.text).join("\n").trim();
+}
 
-    strippedLines.push(line);
-  }
-
-  return strippedLines.join("\n");
+function stripResearchFencedCodeBlocks(content: string): string {
+  return scanResearchMarkdown(content).map((line) => line.fenced ? "" : line.text).join("\n");
 }
 
 function stripResearchPlaceholderSignals(section: string): string {
@@ -4477,15 +4484,10 @@ export function canonicalizeResearchRequiredHeadings(
   );
   const canonicalizedHeadings: Array<{ from: string; to: string }> = [];
   const unmatchedTopLevelHeadings: string[] = [];
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  const canonicalizedLines = lines.map((line) => {
-    const match = line.match(/^(##)(?!#)\s+(.+?)\s*$/u);
+  const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line, heading }) => {
+    if (heading?.level !== 2) return line;
 
-    if (!match) {
-      return line;
-    }
-
-    const originalHeading = stripResearchHeadingAdornment(match[2] ?? "");
+    const originalHeading = heading.title;
     const canonicalHeading = canonicalHeadingByKey.get(normalizeResearchHeadingKey(originalHeading));
 
     if (!canonicalHeading) {
@@ -4500,7 +4502,7 @@ export function canonicalizeResearchRequiredHeadings(
       });
     }
 
-    return `## ${canonicalHeading}`;
+    return `## ${canonicalHeading}${line.endsWith("\r") ? "\r" : ""}`;
   });
 
   return {
@@ -4511,32 +4513,39 @@ export function canonicalizeResearchRequiredHeadings(
 }
 
 export function canonicalizeResearchHeadingLines(content: string): string {
-  return canonicalizeResearchRequiredHeadings(content).content;
-}
-
-function countResearchContentWords(section: string): number {
-  return section.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g)?.length ?? 0;
+  const normalized = canonicalizeResearchRequiredHeadings(content).content;
+  const lines = scanResearchMarkdown(normalized);
+  for (let index = 0; index < lines.length; index += 1) {
+    const heading = lines[index].heading;
+    if (heading?.level !== 2) continue;
+    const sentinel = RESEARCH_SECTION_VALIDATIONS?.[heading.title]?.exactEmptySentinel;
+    if (!sentinel) continue;
+    let end = index + 1;
+    while (end < lines.length && (!lines[end].heading || lines[end].heading!.level > 2)) end += 1;
+    const section = lines.slice(index + 1, end).map((line) => line.text).join("\n");
+    if (!matchesFuzzyEmptySentinel(section, sentinel)) continue;
+    const contentLine = lines.slice(index + 1, end).find((line) => line.text.trim().length > 0);
+    if (contentLine) contentLine.text = `${sentinel}${contentLine.text.endsWith("\r") ? "\r" : ""}`;
+  }
+  return lines.map((line) => line.text).join("\n");
 }
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values)];
 }
 
-function hasSubstantiveResearchSection(section: string, heading: string): boolean {
+function hasSubstantiveResearchSection(section: string): boolean {
   const normalized = stripResearchPlaceholderSignals(section);
-  const meaningfulLines = normalized
-    .split("\n")
-    .map((line) => line.trim())
-    .map((line) => line.replace(/^(?:[-*]\s*)+/, "").trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => !/^[#>*`|_\-\s]+$/.test(line))
-    .filter((line) => !/^why it matters\.?$/i.test(line));
-
-  if (meaningfulLines.length === 0) {
-    return false;
-  }
-
-  return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
+  const lines = normalized.split("\n").map((line) => line.trim());
+  const tableDivider = /^\|?[\s:-]+\|[\s|:-]*$/;
+  return lines.some((rawLine, index) => {
+    // Empty table scaffolds and presentation syntax are not research findings.
+    if (tableDivider.test(rawLine) || (rawLine.startsWith("|") && tableDivider.test(lines[index + 1] ?? ""))) return false;
+    if (/^#{1,6}\s|^(?:`{3,}|~{3,})/.test(rawLine)) return false;
+    const line = rawLine.replace(/^(?:[-*+]\s*)+/, "").replace(/[*_`]/g, "").trim();
+    if (/^(?:why it matters|none|null|undefined|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)[.!]?$/i.test(line)) return false;
+    return /[\p{L}\p{N}]/u.test(line);
+  });
 }
 
 function matchedScaffoldPlaceholderSignals(
@@ -4570,8 +4579,8 @@ export function validateResearchArtifactContent(content: string): {
   const warnings: string[] = [];
   const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
   const canonicalizedHeadings = canonicalizeResearchRequiredHeadings(content);
-  const normalizedContent = canonicalizedHeadings.content;
-  const contentWithoutFencedCodeBlocks = stripTripleFencedCodeBlocks(normalizedContent);
+  const normalizedContent = canonicalizeResearchHeadingLines(content);
+  const contentWithoutFencedCodeBlocks = stripResearchFencedCodeBlocks(normalizedContent);
   const pushResearchIssue = (
     message: string,
     diagnostic: PhaseArtifactValidationDiagnostic
@@ -4580,7 +4589,7 @@ export function validateResearchArtifactContent(content: string): {
     diagnostics.push(diagnostic);
   };
 
-  if (!/^# .+ - Research\s*$/m.test(content)) {
+  if (!/^# .+ - Research[ \t]*\r?(?:\n|$)/.test(contentWithoutFencedCodeBlocks.trimStart())) {
     pushResearchIssue(
       "Research artifact must start with a '# ... - Research' heading.",
       phaseArtifactDiagnostic({
@@ -4613,7 +4622,7 @@ export function validateResearchArtifactContent(content: string): {
     );
   }
 
-  const confidenceMatch = normalizedContent.match(
+  const confidenceMatch = contentWithoutFencedCodeBlocks.match(
     /^\*\*Confidence:\*\*\s*(LOW|MEDIUM|HIGH)\s*$/m
   );
 
@@ -4634,7 +4643,7 @@ export function validateResearchArtifactContent(content: string): {
 
   for (const heading of REQUIRED_RESEARCH_SECTIONS) {
     const hasHeading = new RegExp(`(?:^|\\n)## ${escapeRegex(heading)}\\s*$`, "m").test(
-      normalizedContent
+      contentWithoutFencedCodeBlocks
     );
     const exactEmptySentinel = RESEARCH_SECTION_VALIDATIONS?.[heading]?.exactEmptySentinel;
 
@@ -4665,7 +4674,7 @@ export function validateResearchArtifactContent(content: string): {
       continue;
     }
 
-    const section = extractMarkdownSection(normalizedContent, heading);
+    const section = extractResearchMarkdownSection(normalizedContent, heading);
 
     if (section.trim().length === 0) {
       const message = `Research artifact section ${heading} must not be empty.`;
@@ -4706,7 +4715,7 @@ export function validateResearchArtifactContent(content: string): {
       continue;
     }
 
-    if (!hasSubstantiveResearchSection(section, heading)) {
+    if (!hasSubstantiveResearchSection(section)) {
       const message = exactEmptySentinel
         ? `Research artifact section ${heading} must contain substantive content after placeholders are removed or use exactly \`${exactEmptySentinel}\`.`
         : `Research artifact section ${heading} must contain substantive content after placeholders are removed.`;
@@ -4727,7 +4736,7 @@ export function validateResearchArtifactContent(content: string): {
     }
   }
 
-  const phaseRequirements = extractMarkdownSection(normalizedContent, "Phase Requirements");
+  const phaseRequirements = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Phase Requirements");
 
   if (!hasRequirementTableRows(phaseRequirements)) {
     pushResearchIssue(
@@ -4745,7 +4754,7 @@ export function validateResearchArtifactContent(content: string): {
     );
   }
 
-  const recommendations = extractMarkdownSection(normalizedContent, "Recommendations");
+  const recommendations = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Recommendations");
 
   if (
     !/^- /m.test(recommendations) &&
@@ -4766,7 +4775,7 @@ export function validateResearchArtifactContent(content: string): {
     );
   }
 
-  const sources = extractMarkdownSection(normalizedContent, "Sources");
+  const sources = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Sources");
 
   if (
     (!/^- /m.test(sources) || !containsSourceEvidence(sources)) &&

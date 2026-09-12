@@ -56,7 +56,6 @@ test("phase context ownership stays discuss-led and runtime-contract scoped", as
     false
   );
   assert.deepEqual(researchContract.skillInputs.commandSpecific, [
-    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
   assert.deepEqual(planContract.skillInputs.commandSpecific, [
