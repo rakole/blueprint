@@ -21,7 +21,6 @@ input_bundles:
       - skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md
       - skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md
     "/blu-research-phase":
-      - skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md
       - skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md
     "/blu-ui-phase":
       - skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md
@@ -35,15 +34,12 @@ input_bundles:
 
 ## Runtime Call Rules
 
+Load only the active command input bundle. Never preload sibling references.
+The active runtime contract owns orchestration and its MCP allowlist.
 Translate any shorthand tool ids like `blueprint_project_status` to runtime FQNs
 such as `mcp_blueprint_blueprint_project_status`.
 Treat Blueprint skills as loaded guidance, not callable tools.
 Never run `/blu-*` in the shell.
-
-Load only the active command input bundle. Never preload sibling references.
-The active runtime contract owns orchestration and its MCP allowlist. Translate
-internal tool names to `mcp_blueprint_<tool-name>` runtime FQNs; skills are loaded
-guidance, not callable tools. Never run slash commands in the shell.
 
 Persistent state is MCP-owned. Commands stay phase-scoped and never mutate source
 files, installed extensions, or host-global state. Phase context belongs only to
@@ -56,7 +52,12 @@ Effective config in prepare controls optional bounded researcher use. Require
 explicit substantive-overwrite and target-reconciliation gates, preserve evidence
 and deferred ideas, report durable receipts and exact MCP-derived routing.
 
-For sibling commands, the sibling-only contract retains their shared call, schema,
-checkpoint, ownership and completion rules; the command reference owns details.
+For research, use prepare → investigate → submit. MCP preserves candidates before
+assessment, renders research, and owns publication/state/routing recovery. Record
+is optional for longer investigations and narrow corrections; read is recovery or
+view only. Load only the research runtime reference, never the sibling contract.
+
+For spec, UI and assumptions, the sibling-only contract retains their shared call,
+schema, checkpoint, ownership and completion rules; the command reference owns details.
 Recommend only live implemented routes. Never claim stale, invalid or partial
 publication complete.

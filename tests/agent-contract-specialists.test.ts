@@ -123,67 +123,47 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(mapper, /For every artifact, include concise evidence paths/i);
   assert.match(mapper, /Do not revive omitted commands such as `scan` or `intel`/);
 
-  assert.match(researcher, /## Required Reads/);
-  assert.match(researcher, /## Parent-Owned Responsibilities/);
-  assert.match(researcher, /external-research approval/i);
-  assert.match(researcher, /host\/tool semantics clarification packet/i);
-  assert.match(researcher, /runtime-owned metadata\/resource\s+fact/i);
-  assert.match(researcher, /## External Research And Self-Correction Rules/);
-  assert.match(researcher, /Keep repo truth distinct from outside truth/i);
-  assert.match(researcher, /## Required Output Contract/);
-  assert.match(researcher, /Evidence Packet Rows/i);
-  assert.match(researcher, /evidence ID/i);
-  assert.match(researcher, /claim ID/i);
-  assert.match(researcher, /authority tier/i);
-  assert.match(researcher, /support span/i);
-  assert.match(researcher, /directly_supported/i);
-  assert.match(researcher, /partially_supported/i);
-  assert.match(researcher, /inferred_from_supported/i);
-  assert.match(researcher, /not_enough_evidence/i);
-  assert.match(researcher, /Do not invent evidence IDs/i);
-  assert.match(researcher, /## Investigation Trace Rules/);
-  assert.match(researcher, /bounded evidence question/i);
-  assert.match(researcher, /retrieval notes/i);
-  assert.match(researcher, /parent-supplied navigation packet/i);
-  assert.match(researcher, /sidecar equivalent of `rg --files`/i);
-  assert.match(researcher, /scope filter/i);
-  assert.match(researcher, /candidate files or\s+symbols/i);
-  assert.match(researcher, /Files actually read|files actually read/i);
-  assert.match(researcher, /source roles/i);
-  assert.match(researcher, /remote code-search hits as\s+discovery hints/i);
-  assert.match(researcher, /semantic navigation/i);
-  assert.match(researcher, /failed, noisy, blocked, no-hit, or intentionally skipped searches/i);
-  assert.match(researcher, /Planning Handoff/i);
-  assert.match(researcher, /Dependency \/ Tool Evaluation/i);
-  assert.match(researcher, /no new dependency/i);
-  assert.match(researcher, /standard library or platform API/i);
-  assert.match(researcher, /version, maintenance, vulnerability, license/i);
-  assert.match(researcher, /provenance\/signature/i);
-  assert.match(researcher, /transitive-footprint/i);
-  assert.match(researcher, /lockfile/i);
-  assert.match(researcher, /unchecked/i);
-  assert.match(researcher, /sidecar packet as final persisted research/i);
-  assert.match(researcher, /Research Sidecar Packet Semantics/i);
-  assert.match(researcher, /packetVersion: research-sidecar\.v1/i);
-  assert.match(researcher, /terminationReason/i);
-  assert.match(researcher, /failedSearches/i);
-  assert.match(researcher, /conversation transcript/i);
-  assert.match(researcher, /parent-owned strand/i);
-  assert.match(researcher, /full-artifact\s+draft/i);
-  assert.match(researcher, /## Revision Behavior/);
-  assert.match(
-    researcher,
-    /preserve strong sections and\s+revise only the stale or weak parts/i
-  );
-  assert.match(
-    researcher,
-    /official-doc,\s+external,\s+supplied-reference,\s+or\s+claim-addressable evidence\s+packets|official-doc or explicitly supplied external references/i
-  );
-  assert.match(researcher, /Replace every angle-bracket placeholder before returning any draft section/i);
-  assert.match(
-    researcher,
-    /Do not invent web research, outside reviewers, shell verification, or manual\s+persistence paths/i
-  );
+  for (const pattern of [
+    /## Read And Investigate/,
+    /Answer one bounded question/,
+    /parent-supplied context, requirement mapping/,
+    /parent-supplied locked constraints/,
+    /parent-supplied runtime contract excerpts/,
+    /scoped file discovery and search/,
+    /Confirm summaries against live code/,
+    /Stop when evidence supports a decision/,
+    /files actually read|paths actually read/i,
+    /Never claim tests, shell verification, semantic navigation/,
+    /## External Evidence/,
+    /parent owns external-source approval and fetching/i,
+    /does not fetch\s+official docs itself/,
+    /parent-supplied or user-supplied external evidence/,
+    /source title, date\/access date, supporting excerpt\/summary/,
+    /do not invent source access dates/i,
+    /not_enough_evidence/,
+    /runtime contract or\s+parent-supplied host\/tool semantics clarification packets/,
+    /Repo evidence establishes observed implementation/,
+    /Never present training knowledge as current upstream verification/,
+    /## Artifact-Grade Findings/,
+    /directly_supported/, /partially_supported/, /inferred_from_supported/,
+    /contradicted/, /conflicting_sources/, /out_of_scope/,
+    /Planning Handoff/, /requirement\/constraint links/,
+    /files\/modules, tests\/checks, alternatives, relevant risks and open blockers/,
+    /Retrieval Notes/,
+    /Do not present a sidecar packet as final persisted research/,
+    /Do not\s+return a full artifact, transcript, hidden chain of thought or raw search dump/,
+    /no new dependency/, /platform\/standard-library API/,
+    /version, maintenance, vulnerability\/license, footprint, install\/update posture/,
+    /unchecked/,
+    /## Gray-Area Memo/,
+    /exactly one gray area or assumptions pass/,
+    /options, tradeoffs, complexity\/impact, recommendation rationale/,
+    /ask_user/, /phase.context/,
+    /## Boundaries And Revisions/,
+    /Keep strong existing findings and revise stale or weak claims only/,
+    /Do not write files or mutate/,
+    /parent owns user-visible decisions and closes this\s+agent/i
+  ]) assert.match(researcher, pattern);
 
   assert.match(uiDesigner, /## Required Reads/);
   assert.match(uiDesigner, /## Parent-Owned Responsibilities/);

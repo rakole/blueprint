@@ -4610,8 +4610,8 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "Research writes validate in strict mode by default.",
       "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
-      "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
-      "Open Questions may use the exact `- none` sentinel only when no unresolved downstream question remains; do not use `null`, `[]`, or prose variants such as `- no open questions`.",
+      "New structured research uses phase.research.modelContract and runtime rendering; the canonical authoring template remains available for legacy Markdown compatibility.",
+      "Open Questions may use the exact `- none` sentinel when no unresolved downstream question remains; structured research uses openQuestions: [] and MCP renders the empty state.",
       "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
       "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
       "Planner-critical claims should use claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; validation warns instead of rejecting older valid artifacts that lack this richer source register.",
@@ -4621,6 +4621,50 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Research validation returns warning-grade evidence diagnostics for missing or weak claim/source/recommendation support before making the richer evidence contract strict.",
       "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
     ],
+    modelContract: {
+      schemaId: "blueprint.phase.research.model",
+      schemaVersion: "1.0.0",
+      schemaPath: "src/mcp/artifact-contracts/schemas/phase.research.model.schema.json",
+      jsonSchema: readJsonSchemaAsset("phase.research.model.schema.json"),
+      qualityRules: [
+        "Author summary, evidence-linked findings, recommendations, and sources; openQuestions and optional prose sections default to empty collections.",
+        "Draft preservation and publication readiness are distinct: save complete candidates before validation, including incomplete or unsupported research.",
+        "Source, finding and recommendation ids must be unique; every reference must resolve. Preserve explicit inference and uncertainty instead of upgrading confidence.",
+        "HIGH-confidence findings require supported status and source references. Ready recommendations require supported or explicitly inferred findings with sources, affected surfaces, and verification.",
+        "Blocking questions and blocked recommendations prevent publication but never discard a submitted candidate.",
+        "Known requirement ids and required research coverage come from the prepared saved evidence, not invented labels.",
+        "Optional prose is included only when useful. Omitted sections are rendered as not supplied; do not invent research to fill headings.",
+        "The structured model is authoring guidance, not a claim that the host applies constrained decoding. Legacy Markdown research remains readable and writable through its existing contract."
+      ],
+      contextBindings: [
+        "Phase identity, researched timestamp, canonical filename and output path are runtime-owned.",
+        "Requirements, locked decisions and user constraints are bound from the prepared saved evidence and supplied to the renderer by MCP.",
+        "Research submission validates referenced requirements against the prepared input basis and checks freshness before publication.",
+        "Source references identify observed repo evidence, permitted external sources or supplied material; citation entailment requires substantive research judgment."
+      ],
+      renderedHeadings: [
+        "Phase Requirements", "Summary", "Locked Decisions From Context", "User Constraints",
+        "Standard Stack", "Installation And Setup", "Alternatives Considered", "Architecture Patterns",
+        "Don't Hand-Roll", "Anti-Patterns", "State Of The Art", "Common Pitfalls", "Open Questions",
+        "Confidence Breakdown", "Code Examples", "Recommendations", "Sources"
+      ],
+      minimalValidExample: {
+        summary: "Reuse the repository's atomic text writer for the research candidate store.",
+        findings: [{
+          id: "CLM-001", finding: "The existing writer completes writes with an atomic rename.",
+          sourceIds: ["SRC-001"], confidence: "HIGH", requirementIds: [], status: "supported"
+        }],
+        recommendations: [{
+          id: "REC-001", recommendation: "Persist candidate revisions using the existing atomic writer.",
+          findingIds: ["CLM-001"], affectedSurfaces: ["src/mcp/tools/research.ts"],
+          verification: ["Interrupt a candidate save and verify that the previous revision remains readable."],
+          requirementIds: [], status: "ready"
+        }],
+        openQuestions: [],
+        sources: [{ id: "SRC-001", lane: "repo", reference: "src/mcp/tools/artifacts.ts#writeTextFile", excerpt: "The text writer renames a temporary file into place." }]
+      },
+      exampleLeakageSignals: []
+    },
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
     renderAuthoringTemplate: renderResearchTemplate
   },

@@ -121,3 +121,36 @@ Explicitly confirmed target reconciliation requires the expected session revisio
 and reviewed context/log hashes; it archives prior journal and baseline evidence
 before rebasing. Finalize retries verify publication bytes before resuming later
 stages. Session history remains durable after publication or reconciliation.
+
+## Durable Research Sessions
+
+`blueprint_research_prepare`, `blueprint_research_record`,
+`blueprint_research_read`, and `blueprint_research_submit` own version 1
+`XX-RESEARCH-SESSION.json` inside the resolved phase directory. JSON-compatible
+candidates up to 1 MiB are saved before model/readiness assessment, subject to
+the normal input security boundary. Malformed model JSON can be retained as raw
+text. Saved drafts are distinct from published, planner-ready research.
+
+The session retains candidates, revision history, notes and request receipts.
+Mutations require revision CAS; an uncertain response is retried with the same
+request ID and identical arguments. Field set/remove corrections retain the rest
+of the candidate. Requests accepted before a crash resume assessment without
+creating another revision. Pending publication blocks unrelated candidate writes.
+
+Preparation fingerprints project intent, requirements, roadmap, context, optional
+spec, codebase summaries, selected repository evidence and effective configuration,
+including absent optional files. Changed inputs need a reviewed refresh with
+expectedRevision and acknowledgment. Publication target conflicts require explicit
+reconciliation with the observed research hash; neither action discards history.
+
+Submit validates meaningful evidence links and requirement coverage, renders the
+existing 17 research sections, and journals artifact, provenance, state, routing
+and owned checkpoint cleanup. Canonical Markdown still uses the guarded phase
+artifact writer. `XX-RESEARCH-PROVENANCE.json` binds its content hash to the input
+basis. Retry verifies completed output bytes before resuming remaining stages.
+Final success requires both publication hashes and the input basis to match.
+
+Planning treats stale, malformed or incomplete new provenance as invalid research.
+Legacy research without provenance keeps its existing read compatibility, but
+explicit reuse requires verified freshness. Reuse retains the original input
+basis; preparing again never silently makes stale published evidence fresh.

@@ -243,20 +243,10 @@ const PLAN_PHASE_REQUIRED_TOOLS = [
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const RESEARCH_PHASE_REQUIRED_TOOLS = [
-  "blueprint_phase_locate",
-  "blueprint_phase_context",
-  "blueprint_phase_research_status",
-  "blueprint_phase_artifact_read",
-  "blueprint_phase_artifact_scaffold",
-  "blueprint_phase_artifact_write",
-  "blueprint_phase_checkpoint_get",
-  "blueprint_phase_checkpoint_put",
-  "blueprint_phase_checkpoint_delete",
-  "blueprint_artifact_contract_read",
-  "blueprint_config_get",
-  "blueprint_state_load",
-  "blueprint_command_catalog",
-  "blueprint_state_update"
+  "blueprint_research_prepare",
+  "blueprint_research_submit",
+  "blueprint_research_record",
+  "blueprint_research_read"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const SPEC_PHASE_REQUIRED_TOOLS = [
@@ -1538,7 +1528,6 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
   requiredTools: RESEARCH_PHASE_REQUIRED_TOOLS,
   optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
   requiredInputPaths: [
-    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
     RESEARCH_PHASE_SPEC_PATH
   ],
   spec: {
@@ -1547,13 +1536,13 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     executionProfile: "long-running-mutation",
     rootRoutable: true,
     purpose:
-      "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
+      "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then preserves candidates before assessment and publishes planning-ready research through MCP-owned state paths.",
     reads: [
-      "Phase selection starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate stays fallback-only recovery; research status, saved phase artifacts including optional spec when phase.artifacts.spec exists, checkpoints, artifact contracts, effective config, command catalog, and refreshed state stay MCP-owned."
+      "blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, candidate schema, session revision and evidence fingerprints; blueprint_research_read is view/recovery only."
     ],
     writes: [
       "phase XX-RESEARCH.md",
-      "optional shared phase checkpoint JSON owned by research-phase",
+      "phase-scoped research session, candidate revisions and finalization journal",
       ".blueprint/STATE.md"
     ]
   },
@@ -1566,7 +1555,7 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md. Selected-phase resolution starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate is fallback-only recovery. After usable context is confirmed, read phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists and treat missing spec as nonblocking. It ties research strands and dependency/tool choices to spec requirements or constraints, includes spec path and requirement labels in Recommendation Handoff, routes stale context to /blu-discuss-phase <phase>, and routes stale or wrong spec to /blu-spec-phase <phase>. Independent read-only calls with known args may share one tool-call turn; writes/repair/state/routing/checkpoint deletion stay sequenced. phase.research contract.authoringTemplate is schema authority.",
+      "Use research-phase-runtime-contract.md: prepare → investigate → submit; record/read are incremental or recovery paths. Prepare owns evidence/config/freshness/schema. Submit saves candidates before assessment and journals publication/state/routing. Preserve context/spec ownership, source policy, freshness and retry guards. Returned status/path/nextAction are authoritative.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

@@ -263,7 +263,7 @@ The runnable command groups below are generated from the same registry as `gener
 - `/blu-next`: `next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.
 - `/blu-pause-work`: `pause-work` records a canonical handoff from current Blueprint state and artifact inventory.
 - `/blu-plan-phase`: `plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.
-- `/blu-research-phase`: `research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.
+- `/blu-research-phase`: `research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then preserves candidates before assessment and publishes planning-ready research through MCP-owned state paths.
 - `/blu-resume-work`: `resume-work` restores working context from the canonical pause handoff and records the next safe action.
 - `/blu-spec-phase`: `spec-phase` clarifies what a Blueprint phase should deliver and writes the optional phase-scoped spec artifact before later discovery and planning flows.
 - `/blu-ui-phase`: `ui-phase` creates or reuses the single phase-scoped UI artifact, writing either a UI design contract or an explicit skip rationale through MCP-owned phase artifact persistence.

@@ -1,27 +1,15 @@
-description = "Produce and persist validated XX-RESEARCH.md for a Blueprint phase."
+description = "Investigate phase implementation decisions and preserve research through MCP."
 prompt = """
-Command: `/blu-research-phase`.
+Command: `/blu-research-phase`. Execution profile: `long-running-mutation`.
+Use the `blueprint-phase-discovery` skill and its `research-phase-runtime-contract.md` input.
 
-Execution profile: `long-running-mutation`.
-Use the `blueprint-phase-discovery` skill; Use `blueprint-phase-discovery`. Load `research-phase-runtime-contract.md`. Use `blueprint-researcher` only when suitable/enabled/useful; otherwise parent-only fallback.
+Normal flow: prepare → investigate → submit.
+- Prepare supplies phase evidence, config, freshness, revision and candidate schema. Treat phase context as read-only; route missing or unusable context to `/blu-discuss-phase`. Optional spec stays read-only and missing spec is nonblocking.
+- Honor `research.external_sources` off/ask/auto and one required approval gate. Investigate consequential questions; use `blueprint-researcher` only when enabled, available and useful.
+- Submit using the returned schema. MCP saves candidates before assessment and renders Markdown. A saved `needs_revision` draft is not planning-ready.
+- Reuse only verified-fresh research; review and explicitly update unknown legacy research. Publication replacement requires an update/overwrite decision.
+- Recovery uses narrow corrections and idempotent retries. MCP owns publication/state/routing; returned status/path/revision/nextAction are authoritative. No separate state/catalog/checkpoint calls.
 
-Gates:
-- Use `mcp_blueprint_blueprint_phase_context` as the first selected-phase read. Treat phase context as read-only. Treat `phase_context.phaseSelection` plus non-null `phase_context.phase` as authority only when number, prefix, name, directory, and `phase.artifacts` are complete; otherwise use fallback-only `mcp_blueprint_blueprint_phase_locate` recovery or stop. If the current `context` artifact or `XX-CONTEXT.md` is missing, invalid, unusable, or contradictory, route back to `/blu-discuss-phase <phase>` with diagnostics; do not repair or substitute it.
-- After usable context is confirmed, read phase-local spec through `mcp_blueprint_blueprint_phase_artifact_read` with `artifact: "spec"` only when `phase.artifacts.spec` exists. Missing spec is nonblocking; keep normal readiness and do not patch missing spec intent from external sources.
-- Treat spec/context contradictions as blockers: route to `/blu-discuss-phase <phase>` when context is stale, or `/blu-spec-phase <phase>` when spec is stale/wrong. Tie research strands and dependency/tool choices to the relevant spec requirement or spec constraint, then preserve final planner handoff spec path and requirement labels.
-- After selection, batch independent read-only MCP calls with known args in the same model response/tool-call turn when supported. Do not batch confirmation prompts, writes, validation repair, state update, post-write state load, route proof, or checkpoint deletion. Sequence context body before drafting, research body only for view/update/repair, and artifact contract before drafting/revising.
-- Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before external verification. Honor `research.external_sources` as `off`, `ask`, or `auto`; for `ask`, use one `ask_user` gate.
-- If saved research is invalid, repair or update is the only successful path. If saved research is valid, default to reuse unless the user asks to view or update; `update` is the overwrite gate and never the default.
-- Read `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising. Draft from `contract.authoringTemplate`, persist through `mcp_blueprint_blueprint_phase_artifact_write` in strict mode, and use the returned `path` as authoritative. Use scaffold only for an explicit placeholder.
-- Use the runtime contract for evidence depth, strand ledger/checkpoints, dependency/tool evaluation, sidecars, synthesis, validation repair, and fallback. Sidecars never own final research, external fetching, user gates, persistence, checkpoints, state, or routing.
-- If research validation rejects a draft, repair the same normalized draft once and retry. If identical diagnostics repeat, preserve or refresh the research checkpoint, report diagnostics and next safe action, stop, and do not inspect MCP source files as a repair strategy.
-- After final write or valid reuse, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` while preserving `patch.currentPhase` and `patch.activeCommand`, then call `mcp_blueprint_blueprint_state_load`, then verify follow-up through `mcp_blueprint_blueprint_command_catalog`.
-- Delete the research-owned checkpoint only after final research write or valid reuse, synced state update, refreshed state load, and implemented-command routing proof. Pass `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"` to `mcp_blueprint_blueprint_phase_checkpoint_delete`.
-- Receipt: phase, outcome, path/none, source mode, decision, blockers, checkpoint, state/routing, next action.
-
-Requirements:
-- Use only these Blueprint MCP tools: `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_artifact_scaffold`, `mcp_blueprint_blueprint_phase_artifact_write`, `mcp_blueprint_blueprint_phase_checkpoint_get`, `mcp_blueprint_blueprint_phase_checkpoint_put`, `mcp_blueprint_blueprint_phase_checkpoint_delete`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_command_catalog`, and `mcp_blueprint_blueprint_state_update`.
-- Keep writes inside selected `.blueprint/phases/<phase>/` plus `.blueprint/STATE.md`.
-- Pass the resolved numeric phase reference only; never pass directories, slugs, filenames, or bare artifact names.
-- Do not persist scaffold-only or validation-failing research content, and do not present blocked lifecycle commands as runnable.
+Use only these Blueprint MCP tools: `mcp_blueprint_blueprint_research_prepare`, `mcp_blueprint_blueprint_research_submit`, `mcp_blueprint_blueprint_research_record`, `mcp_blueprint_blueprint_research_read`.
+Explicit phase arguments are numeric references. Writes stay MCP-owned in the selected `.blueprint/phases/<phase>/` and `.blueprint/STATE.md`. Report phase, saved/published outcome, path, evidence limits, blockers and safe nextAction; recommend only implemented commands.
 """

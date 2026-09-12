@@ -29,7 +29,6 @@ test("structured input bundles resolve command-specific discovery inputs", async
     [
       "/blu-research-phase",
       [
-        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
         "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md",
       ],
     ],

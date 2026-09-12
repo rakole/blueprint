@@ -282,10 +282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path29) {
-  if (!path29)
+function getElementAtPath(obj, path30) {
+  if (!path30)
     return obj;
-  return path29.reduce((acc, key) => acc?.[key], obj);
+  return path30.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path29, issues) {
+function prefixIssues(path30, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path29);
+    iss.path.unshift(path30);
     return iss;
   });
 }
@@ -1697,9 +1697,9 @@ var init_doc = __esm({
           return;
         }
         const content = arg;
-        const lines2 = content.split("\n").filter((x) => x);
-        const minIndent = Math.min(...lines2.map((x) => x.length - x.trimStart().length));
-        const dedented = lines2.map((x) => x.slice(minIndent)).map((x) => " ".repeat(this.indent * 2) + x);
+        const lines3 = content.split("\n").filter((x) => x);
+        const minIndent = Math.min(...lines3.map((x) => x.length - x.trimStart().length));
+        const dedented = lines3.map((x) => x.slice(minIndent)).map((x) => " ".repeat(this.indent * 2) + x);
         for (const line of dedented) {
           this.content.push(line);
         }
@@ -1708,8 +1708,8 @@ var init_doc = __esm({
         const F = Function;
         const args = this?.args;
         const content = this?.content ?? [``];
-        const lines2 = [...content.map((x) => `  ${x}`)];
-        return new F(...args, lines2.join("\n"));
+        const lines3 = [...content.map((x) => `  ${x}`)];
+        return new F(...args, lines3.join("\n"));
       }
     };
   }
@@ -7476,13 +7476,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path29 = ref.slice(1).split("/").filter(Boolean);
-  if (path29.length === 0) {
+  const path30 = ref.slice(1).split("/").filter(Boolean);
+  if (path30.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path29[0] === defsKey) {
-    const key = path29[1];
+  if (path30[0] === defsKey) {
+    const key = path30[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -9015,10 +9015,10 @@ var require_util = __commonJS({
     var codegen_1 = require_codegen();
     var code_1 = require_code();
     function toHash(arr) {
-      const hash2 = {};
+      const hash3 = {};
       for (const item of arr)
-        hash2[item] = true;
-      return hash2;
+        hash3[item] = true;
+      return hash3;
     }
     exports.toHash = toHash;
     function alwaysValidSchema(it, schema) {
@@ -10851,9 +10851,9 @@ var require_compile = __commonJS({
       if (_sch)
         return _sch;
       const rootId = (0, resolve_1.getFullPath)(this.opts.uriResolver, sch.root.baseId);
-      const { es5, lines: lines2 } = this.opts.code;
+      const { es5, lines: lines3 } = this.opts.code;
       const { ownProperties } = this.opts;
-      const gen = new codegen_1.CodeGen(this.scope, { es5, lines: lines2, ownProperties });
+      const gen = new codegen_1.CodeGen(this.scope, { es5, lines: lines3, ownProperties });
       let _ValidationError;
       if (sch.$async) {
         _ValidationError = gen.scopeValue("Error", {
@@ -11183,8 +11183,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path29) {
-      let input = path29;
+    function removeDotSegments(path30) {
+      let input = path30;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -11436,8 +11436,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path29, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path29 && path29 !== "/" ? path29 : void 0;
+        const [path30, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path30 && path30 !== "/" ? path30 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -11994,8 +11994,8 @@ var require_core = __commonJS({
         this._loading = {};
         this._cache = /* @__PURE__ */ new Map();
         opts = this.opts = { ...opts, ...requiredOptions(opts) };
-        const { es5, lines: lines2 } = this.opts.code;
-        this.scope = new codegen_2.ValueScope({ scope: {}, prefixes: EXT_SCOPE_NAMES, es5, lines: lines2 });
+        const { es5, lines: lines3 } = this.opts.code;
+        this.scope = new codegen_2.ValueScope({ scope: {}, prefixes: EXT_SCOPE_NAMES, es5, lines: lines3 });
         this.logger = getLogger(opts.logger);
         const formatOpt = opts.validateFormats;
         opts.validateFormats = false;
@@ -14830,12 +14830,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs30, exportName) {
+    function addFormats(ajv, list, fs33, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs30[f]);
+        ajv.addFormat(f, fs33[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -15074,20 +15074,10 @@ var init_command_runtime_metadata = __esm({
       "blueprint_state_update"
     ];
     RESEARCH_PHASE_REQUIRED_TOOLS = [
-      "blueprint_phase_locate",
-      "blueprint_phase_context",
-      "blueprint_phase_research_status",
-      "blueprint_phase_artifact_read",
-      "blueprint_phase_artifact_scaffold",
-      "blueprint_phase_artifact_write",
-      "blueprint_phase_checkpoint_get",
-      "blueprint_phase_checkpoint_put",
-      "blueprint_phase_checkpoint_delete",
-      "blueprint_artifact_contract_read",
-      "blueprint_config_get",
-      "blueprint_state_load",
-      "blueprint_command_catalog",
-      "blueprint_state_update"
+      "blueprint_research_prepare",
+      "blueprint_research_submit",
+      "blueprint_research_record",
+      "blueprint_research_read"
     ];
     SPEC_PHASE_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
@@ -16215,7 +16205,6 @@ var init_command_runtime_metadata = __esm({
       requiredTools: RESEARCH_PHASE_REQUIRED_TOOLS,
       optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
       requiredInputPaths: [
-        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
         RESEARCH_PHASE_SPEC_PATH
       ],
       spec: {
@@ -16223,13 +16212,13 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-research-phase`",
         executionProfile: "long-running-mutation",
         rootRoutable: true,
-        purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
+        purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then preserves candidates before assessment and publishes planning-ready research through MCP-owned state paths.",
         reads: [
-          "Phase selection starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate stays fallback-only recovery; research status, saved phase artifacts including optional spec when phase.artifacts.spec exists, checkpoints, artifact contracts, effective config, command catalog, and refreshed state stay MCP-owned."
+          "blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, candidate schema, session revision and evidence fingerprints; blueprint_research_read is view/recovery only."
         ],
         writes: [
           "phase XX-RESEARCH.md",
-          "optional shared phase checkpoint JSON owned by research-phase",
+          "phase-scoped research session, candidate revisions and finalization journal",
           ".blueprint/STATE.md"
         ]
       },
@@ -16241,7 +16230,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md. Selected-phase resolution starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate is fallback-only recovery. After usable context is confirmed, read phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists and treat missing spec as nonblocking. It ties research strands and dependency/tool choices to spec requirements or constraints, includes spec path and requirement labels in Recommendation Handoff, routes stale context to /blu-discuss-phase <phase>, and routes stale or wrong spec to /blu-spec-phase <phase>. Independent read-only calls with known args may share one tool-call turn; writes/repair/state/routing/checkpoint deletion stay sequenced. phase.research contract.authoringTemplate is schema authority.",
+        contractNotes: "Use research-phase-runtime-contract.md: prepare \u2192 investigate \u2192 submit; record/read are incremental or recovery paths. Prepare owns evidence/config/freshness/schema. Submit saves candidates before assessment and journals publication/state/routing. Preserve context/spec ownership, source policy, freshness and retry guards. Returned status/path/nextAction are authoritative.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -23329,8 +23318,8 @@ var init_artifact_contracts = __esm({
         notes: [
           "Research writes validate in strict mode by default.",
           "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
-          "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
-          "Open Questions may use the exact `- none` sentinel only when no unresolved downstream question remains; do not use `null`, `[]`, or prose variants such as `- no open questions`.",
+          "New structured research uses phase.research.modelContract and runtime rendering; the canonical authoring template remains available for legacy Markdown compatibility.",
+          "Open Questions may use the exact `- none` sentinel when no unresolved downstream question remains; structured research uses openQuestions: [] and MCP renders the empty state.",
           "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
           "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
           "Planner-critical claims should use claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; validation warns instead of rejecting older valid artifacts that lack this richer source register.",
@@ -23340,6 +23329,70 @@ var init_artifact_contracts = __esm({
           "Research validation returns warning-grade evidence diagnostics for missing or weak claim/source/recommendation support before making the richer evidence contract strict.",
           "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
         ],
+        modelContract: {
+          schemaId: "blueprint.phase.research.model",
+          schemaVersion: "1.0.0",
+          schemaPath: "src/mcp/artifact-contracts/schemas/phase.research.model.schema.json",
+          jsonSchema: readJsonSchemaAsset("phase.research.model.schema.json"),
+          qualityRules: [
+            "Author summary, evidence-linked findings, recommendations, and sources; openQuestions and optional prose sections default to empty collections.",
+            "Draft preservation and publication readiness are distinct: save complete candidates before validation, including incomplete or unsupported research.",
+            "Source, finding and recommendation ids must be unique; every reference must resolve. Preserve explicit inference and uncertainty instead of upgrading confidence.",
+            "HIGH-confidence findings require supported status and source references. Ready recommendations require supported or explicitly inferred findings with sources, affected surfaces, and verification.",
+            "Blocking questions and blocked recommendations prevent publication but never discard a submitted candidate.",
+            "Known requirement ids and required research coverage come from the prepared saved evidence, not invented labels.",
+            "Optional prose is included only when useful. Omitted sections are rendered as not supplied; do not invent research to fill headings.",
+            "The structured model is authoring guidance, not a claim that the host applies constrained decoding. Legacy Markdown research remains readable and writable through its existing contract."
+          ],
+          contextBindings: [
+            "Phase identity, researched timestamp, canonical filename and output path are runtime-owned.",
+            "Requirements, locked decisions and user constraints are bound from the prepared saved evidence and supplied to the renderer by MCP.",
+            "Research submission validates referenced requirements against the prepared input basis and checks freshness before publication.",
+            "Source references identify observed repo evidence, permitted external sources or supplied material; citation entailment requires substantive research judgment."
+          ],
+          renderedHeadings: [
+            "Phase Requirements",
+            "Summary",
+            "Locked Decisions From Context",
+            "User Constraints",
+            "Standard Stack",
+            "Installation And Setup",
+            "Alternatives Considered",
+            "Architecture Patterns",
+            "Don't Hand-Roll",
+            "Anti-Patterns",
+            "State Of The Art",
+            "Common Pitfalls",
+            "Open Questions",
+            "Confidence Breakdown",
+            "Code Examples",
+            "Recommendations",
+            "Sources"
+          ],
+          minimalValidExample: {
+            summary: "Reuse the repository's atomic text writer for the research candidate store.",
+            findings: [{
+              id: "CLM-001",
+              finding: "The existing writer completes writes with an atomic rename.",
+              sourceIds: ["SRC-001"],
+              confidence: "HIGH",
+              requirementIds: [],
+              status: "supported"
+            }],
+            recommendations: [{
+              id: "REC-001",
+              recommendation: "Persist candidate revisions using the existing atomic writer.",
+              findingIds: ["CLM-001"],
+              affectedSurfaces: ["src/mcp/tools/research.ts"],
+              verification: ["Interrupt a candidate save and verify that the previous revision remains readable."],
+              requirementIds: [],
+              status: "ready"
+            }],
+            openQuestions: [],
+            sources: [{ id: "SRC-001", lane: "repo", reference: "src/mcp/tools/artifacts.ts#writeTextFile", excerpt: "The text writer renames a temporary file into place." }]
+          },
+          exampleLeakageSignals: []
+        },
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
         renderAuthoringTemplate: renderResearchTemplate
       },
@@ -25959,16 +26012,16 @@ function parseRoadmapPhaseLine(line) {
     requirements: title.requirements
   };
 }
-function parseRoadmapPhaseChildLines(lines2) {
+function parseRoadmapPhaseChildLines(lines3) {
   let goal = null;
   const successCriteria = [];
-  for (let index = 0; index < lines2.length; index += 1) {
-    const objectiveMatch = lines2[index]?.match(/^\s+-\s+Objective:\s*(.+)$/i);
+  for (let index = 0; index < lines3.length; index += 1) {
+    const objectiveMatch = lines3[index]?.match(/^\s+-\s+Objective:\s*(.+)$/i);
     if (objectiveMatch) {
       goal = objectiveMatch[1]?.trim() ?? null;
       continue;
     }
-    const successCriteriaMatch = lines2[index]?.match(/^(\s*)-\s+Success Criteria:\s*(.*)$/i);
+    const successCriteriaMatch = lines3[index]?.match(/^(\s*)-\s+Success Criteria:\s*(.*)$/i);
     if (!successCriteriaMatch) {
       continue;
     }
@@ -25977,8 +26030,8 @@ function parseRoadmapPhaseChildLines(lines2) {
     if (inlineCriterion.length > 0) {
       successCriteria.push(inlineCriterion);
     }
-    for (let nextIndex = index + 1; nextIndex < lines2.length; nextIndex += 1) {
-      const nestedMatch = lines2[nextIndex]?.match(/^(\s*)-\s+(.+)$/);
+    for (let nextIndex = index + 1; nextIndex < lines3.length; nextIndex += 1) {
+      const nestedMatch = lines3[nextIndex]?.match(/^(\s*)-\s+(.+)$/);
       if (!nestedMatch || (nestedMatch[1]?.length ?? 0) <= labelIndent) {
         break;
       }
@@ -26016,13 +26069,13 @@ function isRoadmapRequirementsTableHeader(value) {
 }
 function extractRoadmapPhaseTableRequirements(raw) {
   const requirementsByPhase = /* @__PURE__ */ new Map();
-  const lines2 = raw.replace(/\r\n/g, "\n").split("\n");
-  for (let index = 0; index < lines2.length; index += 1) {
-    const headers = parseSimpleMarkdownTableCells(lines2[index] ?? "");
+  const lines3 = raw.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines3.length; index += 1) {
+    const headers = parseSimpleMarkdownTableCells(lines3[index] ?? "");
     if (!headers) {
       continue;
     }
-    const separator = parseSimpleMarkdownTableCells(lines2[index + 1] ?? "");
+    const separator = parseSimpleMarkdownTableCells(lines3[index + 1] ?? "");
     if (!separator || !isSimpleMarkdownTableSeparator(separator)) {
       continue;
     }
@@ -26031,8 +26084,8 @@ function extractRoadmapPhaseTableRequirements(raw) {
     if (phaseIndex < 0 || requirementsIndex < 0) {
       continue;
     }
-    for (let rowIndex = index + 2; rowIndex < lines2.length; rowIndex += 1) {
-      const cells = parseSimpleMarkdownTableCells(lines2[rowIndex] ?? "");
+    for (let rowIndex = index + 2; rowIndex < lines3.length; rowIndex += 1) {
+      const cells = parseSimpleMarkdownTableCells(lines3[rowIndex] ?? "");
       if (!cells) {
         break;
       }
@@ -26068,15 +26121,15 @@ function parseRoadmapDocument(raw) {
     details.set(phaseNumber, { goal, successCriteria, requirements });
   }
   const phases = [];
-  const lines2 = raw.replace(/\r\n/g, "\n").split("\n");
-  for (let index = 0; index < lines2.length; index += 1) {
-    const inlinePhase = parseRoadmapPhaseLine(lines2[index] ?? "");
+  const lines3 = raw.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines3.length; index += 1) {
+    const inlinePhase = parseRoadmapPhaseLine(lines3[index] ?? "");
     if (!inlinePhase) {
       continue;
     }
     const childLines = [];
-    for (let nextIndex = index + 1; nextIndex < lines2.length; nextIndex += 1) {
-      const nextLine = lines2[nextIndex] ?? "";
+    for (let nextIndex = index + 1; nextIndex < lines3.length; nextIndex += 1) {
+      const nextLine = lines3[nextIndex] ?? "";
       if (parseRoadmapPhaseLine(nextLine) || /^#{1,6}\s+/.test(nextLine)) {
         break;
       }
@@ -27440,9 +27493,9 @@ function normalizeMarkdownListItems(section) {
   return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((line) => line.replace(/^[-*+]\s+/, "").trim()).filter((line) => line.length > 0);
 }
 function sectionToList(section) {
-  const lines2 = normalizeMarkdownListItems(section);
-  const bulletLines = lines2.filter((line) => !/^[A-Za-z0-9_.-]+\s*:\s*/.test(line));
-  return bulletLines.length > 0 ? bulletLines : lines2;
+  const lines3 = normalizeMarkdownListItems(section);
+  const bulletLines = lines3.filter((line) => !/^[A-Za-z0-9_.-]+\s*:\s*/.test(line));
+  return bulletLines.length > 0 ? bulletLines : lines3;
 }
 function summarizeContextPieces(pieces, emptyMessage) {
   const meaningfulPieces = pieces.map((piece) => piece.trim()).filter((piece) => piece.length > 0);
@@ -27455,11 +27508,11 @@ function markdownTableCell(value) {
   return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|").trim();
 }
 function renderBulletList(items, fallback = "none") {
-  const lines2 = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
-  if (lines2.length === 0) {
+  const lines3 = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
+  if (lines3.length === 0) {
     return `- ${fallback}`;
   }
-  return lines2.map((item) => `- ${item}`).join("\n");
+  return lines3.map((item) => `- ${item}`).join("\n");
 }
 function normalizeTextContent(content) {
   return content.endsWith("\n") ? content : `${content}
@@ -27740,10 +27793,10 @@ function parseBulletSection(markdown, heading) {
   return section.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
 }
 function renderBulletSection(title, values) {
-  const lines2 = values.length === 0 ? "- none" : values.map((value) => `- ${value}`).join("\n");
+  const lines3 = values.length === 0 ? "- none" : values.map((value) => `- ${value}`).join("\n");
   return `## ${title}
 
-${lines2}
+${lines3}
 `;
 }
 function renderPauseHandoff(record2) {
@@ -29421,15 +29474,15 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function extractMarkdownSectionLines(content, heading) {
-  const lines2 = content.split(/\r?\n/);
+  const lines3 = content.split(/\r?\n/);
   const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`);
-  const startIndex = lines2.findIndex((line) => headingPattern.test(line.trim()));
+  const startIndex = lines3.findIndex((line) => headingPattern.test(line.trim()));
   if (startIndex === -1) {
     return [];
   }
   const sectionLines = [];
-  for (let index = startIndex + 1; index < lines2.length; index += 1) {
-    const line = lines2[index]?.trim() ?? "";
+  for (let index = startIndex + 1; index < lines3.length; index += 1) {
+    const line = lines3[index]?.trim() ?? "";
     if (/^##\s+/.test(line)) {
       break;
     }
@@ -30511,16 +30564,19 @@ async function evaluateCheckpointFreshness(projectRoot, checkpoint) {
     unknownPaths: [],
     warnings: []
   };
-  if (checkpoint.ownerCommand !== "/blu-discuss-phase") return result;
-  const entries = Array.isArray(checkpoint.readSet) ? checkpoint.readSet : [];
+  const isResearch = checkpoint.ownerCommand === "/blu-research-phase";
+  if (checkpoint.ownerCommand !== "/blu-discuss-phase" && !isResearch) return result;
+  const ledger = isResearch && typeof checkpoint.researchLedger === "object" && checkpoint.researchLedger !== null && !Array.isArray(checkpoint.researchLedger) ? checkpoint.researchLedger : null;
+  const entries = Array.isArray(checkpoint.readSet) ? checkpoint.readSet : isResearch && Array.isArray(ledger?.readSet) ? ledger.readSet : [];
   if (entries.length === 0) result.unknownPaths.push("readSet");
   for (const [index, entry] of entries.entries()) {
     const record2 = typeof entry === "object" && entry !== null && !Array.isArray(entry) ? entry : null;
     const inputPath = typeof record2?.path === "string" ? record2.path : typeof entry === "string" ? entry : `readSet[${index}]`;
+    const expectedAbsence = isResearch && record2 !== null && (Object.hasOwn(record2, "hash") ? record2.hash === null : Object.hasOwn(record2, "fingerprint") && record2.fingerprint === null);
     const fingerprint = record2?.hash ?? record2?.fingerprint;
     const expectedHash = typeof fingerprint === "string" && /^(?:sha256:)?[a-f0-9]{64}$/i.test(fingerprint) ? fingerprint.replace(/^sha256:/i, "").toLowerCase() : null;
     const expectedTime = typeof record2?.updatedAt === "string" ? Date.parse(record2.updatedAt) : NaN;
-    if (!record2 || !expectedHash && !Number.isFinite(expectedTime)) {
+    if (!record2 || !expectedAbsence && !expectedHash && !Number.isFinite(expectedTime)) {
       result.unknownPaths.push(inputPath);
       continue;
     }
@@ -30533,6 +30589,10 @@ async function evaluateCheckpointFreshness(projectRoot, checkpoint) {
     }
     try {
       const stat = await fs4.stat(absolutePath);
+      if (expectedAbsence) {
+        result.stalePaths.push(inputPath);
+        continue;
+      }
       if (!stat.isFile()) {
         result.unknownPaths.push(inputPath);
         continue;
@@ -30540,8 +30600,9 @@ async function evaluateCheckpointFreshness(projectRoot, checkpoint) {
       const unchanged = expectedHash ? createHash("sha256").update(await fs4.readFile(absolutePath)).digest("hex") === expectedHash : stat.mtime.getTime() === expectedTime;
       if (!unchanged) result.stalePaths.push(inputPath);
     } catch (error2) {
-      if (error2.code === "ENOENT") result.stalePaths.push(inputPath);
-      else result.unknownPaths.push(inputPath);
+      if (error2.code === "ENOENT") {
+        if (!expectedAbsence) result.stalePaths.push(inputPath);
+      } else result.unknownPaths.push(inputPath);
     }
   }
   result.status = result.stalePaths.length ? "stale" : result.unknownPaths.length ? "unknown" : "fresh";
@@ -31972,6 +32033,88 @@ var init_phase_checkpoints = __esm({
   }
 });
 
+// src/mcp/tools/research-evidence.ts
+import { createHash as createHash2 } from "node:crypto";
+import { promises as fs7 } from "node:fs";
+import path9 from "node:path";
+function canonicalResearchEvidencePath(root, relative) {
+  return path9.relative(root, resolveRepoRelativeInputPathSync(root, relative)).split(path9.sep).join("/");
+}
+async function readResearchEvidence(root, relative, maxBytes = 256 * 1024) {
+  const absolute = resolveRepoRelativeInputPathSync(root, relative);
+  try {
+    const bytes = await fs7.readFile(absolute);
+    if (bytes.length > maxBytes) throw new Error(`Research evidence exceeds ${maxBytes} bytes: ${relative}. Select a smaller source.`);
+    return { path: relative, hash: researchDigest(bytes), content: bytes.toString("utf8") };
+  } catch (error2) {
+    if (error2.code === "ENOENT") return { path: relative, hash: null, content: null };
+    throw error2;
+  }
+}
+async function researchInputHash(root, relative) {
+  if (relative === "@research/effective-config") {
+    const config2 = await blueprintConfigGet({ cwd: root, scope: "effective" });
+    return researchDigest(stableResearchValue({ config: config2.config, provenance: config2.provenance }));
+  }
+  try {
+    return researchDigest(await fs7.readFile(resolveRepoRelativeInputPathSync(root, relative)));
+  } catch (error2) {
+    if (error2.code === "ENOENT") return null;
+    throw error2;
+  }
+}
+async function researchBasisFreshness(root, readSet) {
+  const stalePaths = [];
+  const unknownPaths = [];
+  if (!readSet.length) unknownPaths.push("readSet");
+  await Promise.all(readSet.map(async (item) => {
+    try {
+      if (await researchInputHash(root, item.path) !== item.hash) stalePaths.push(item.path);
+    } catch {
+      unknownPaths.push(item.path);
+    }
+  }));
+  stalePaths.sort();
+  unknownPaths.sort();
+  return { status: stalePaths.length ? "stale" : unknownPaths.length ? "unknown" : "fresh", stalePaths, unknownPaths };
+}
+function researchProvenancePath(researchPath) {
+  if (!researchPath.endsWith("-RESEARCH.md")) throw new Error("Invalid research artifact path.");
+  return researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json");
+}
+async function readPublishedResearchFreshness(root, researchPath) {
+  try {
+    const evidence = await readResearchEvidence(root, researchProvenancePath(researchPath));
+    if (evidence.content === null) {
+      const saved = await readResearchEvidence(root, researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json"), 32 * 1024 * 1024);
+      const session = saved.content ? safeJsonParseObject(saved.content, { label: saved.path, maxBytes: 32 * 1024 * 1024 }) : null;
+      const journal = session?.journal;
+      const incomplete = Boolean(journal?.stages?.artifact && journal.contentHash === await researchInputHash(root, researchPath));
+      return { status: "unknown", stalePaths: [], unknownPaths: [incomplete ? "publication" : "provenance"], reason: incomplete ? "Research session has not published source provenance." : "Legacy research has no recorded input fingerprints; review before reuse." };
+    }
+    const parsed = safeJsonParseObject(evidence.content, { label: evidence.path });
+    if (parsed.version !== 1 || typeof parsed.researchHash !== "string" || !/^[a-f0-9]{64}$/.test(parsed.researchHash) || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100 || !parsed.readSet.every((r) => {
+      const x = r;
+      return x && typeof x.path === "string" && (x.hash === null || typeof x.hash === "string" && /^[a-f0-9]{64}$/.test(x.hash));
+    })) throw new Error("Invalid research provenance.");
+    if (await researchInputHash(root, researchPath) !== parsed.researchHash)
+      return { status: "stale", stalePaths: [researchPath], unknownPaths: [], reason: "Research content changed after publication." };
+    return { ...await researchBasisFreshness(root, parsed.readSet), reason: null };
+  } catch (error2) {
+    return { status: "unknown", stalePaths: [], unknownPaths: [researchProvenancePath(researchPath)], reason: error2.message };
+  }
+}
+var researchDigest, stableResearchValue;
+var init_research_evidence = __esm({
+  "src/mcp/tools/research-evidence.ts"() {
+    "use strict";
+    init_security();
+    init_config();
+    researchDigest = (value) => createHash2("sha256").update(value).digest("hex");
+    stableResearchValue = (value) => JSON.stringify(value, (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.keys(item).sort().map((key) => [key, item[key]])) : item);
+  }
+});
+
 // src/mcp/tools/phase-json-helpers.ts
 function collectModelStringValues(value) {
   if (typeof value === "string") {
@@ -32261,8 +32404,8 @@ var init_phase_context_model = __esm({
 });
 
 // src/mcp/tools/phase-artifacts.ts
-import { createHash as createHash2 } from "node:crypto";
-import { promises as fs7 } from "node:fs";
+import { createHash as createHash3 } from "node:crypto";
+import { promises as fs8 } from "node:fs";
 function isScaffoldGeneratedPhaseArtifact(content) {
   return isScaffoldGeneratedArtifact(content);
 }
@@ -32309,7 +32452,7 @@ async function blueprintPhaseArtifactRead(args) {
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    content: await fs7.readFile(absolutePath, "utf8"),
+    content: await fs8.readFile(absolutePath, "utf8"),
     reason: null
   };
 }
@@ -32354,7 +32497,7 @@ async function blueprintPhaseArtifactScaffold(args) {
       } catch (error2) {
         if (phaseDirState.created) {
           try {
-            await fs7.rm(phaseDirState.phaseDirPath, { recursive: true, force: true });
+            await fs8.rm(phaseDirState.phaseDirPath, { recursive: true, force: true });
           } catch (rollbackError) {
             const reason = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
             const original = error2 instanceof Error ? error2.message : String(error2);
@@ -32589,12 +32732,12 @@ async function blueprintPhaseArtifactWrite(args) {
       return withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
         const exists3 = await pathExists(absolutePath);
         if (args.expectedContentHash !== void 0) {
-          const actualHash = exists3 ? createHash2("sha256").update(await fs7.readFile(absolutePath)).digest("hex") : null;
+          const actualHash = exists3 ? createHash3("sha256").update(await fs8.readFile(absolutePath)).digest("hex") : null;
           if (actualHash !== args.expectedContentHash) throw new Error(`Stale artifact baseline: ${artifactPath2}. Refresh and explicitly reconcile before publishing.`);
         }
         const warnings = [];
         if (exists3) {
-          const existingContent = await fs7.readFile(absolutePath, "utf8");
+          const existingContent = await fs8.readFile(absolutePath, "utf8");
           const existingValidation = validatePhaseArtifactContent(
             args.artifact === "research" ? canonicalizeResearchHeadingLines(normalizeTextContent(existingContent)) : existingContent,
             args.artifact
@@ -32704,7 +32847,7 @@ async function blueprintPhaseUiSkipWrite(args) {
         const exists3 = await pathExists(absolutePath);
         const warnings = [];
         if (exists3) {
-          const existingContent = await fs7.readFile(absolutePath, "utf8");
+          const existingContent = await fs8.readFile(absolutePath, "utf8");
           const existingValidation = validatePhaseArtifactContent(existingContent, "ui-spec");
           if (existingContent === normalizedContent) {
             if (!validation.valid) {
@@ -32805,7 +32948,7 @@ var init_phase_artifacts = __esm({
 });
 
 // src/mcp/tools/phase-plan-identifiers.ts
-import path9 from "node:path";
+import path10 from "node:path";
 function normalizePlanId(value) {
   const normalizedInput = normalizeBlueprintInput(value).trim();
   if (/^0+$/.test(normalizedInput)) {
@@ -32820,10 +32963,10 @@ function parsePlanArtifactPath(pathValue, phasePrefix2) {
   return match ? normalizePlanId(match[1]) : null;
 }
 function parseCanonicalPlanArtifactPath(pathValue, located) {
-  if (path9.posix.dirname(pathValue) !== located.phaseDir) {
+  if (path10.posix.dirname(pathValue) !== located.phaseDir) {
     return null;
   }
-  const match = path9.posix.basename(pathValue).match(
+  const match = path10.posix.basename(pathValue).match(
     new RegExp(`^${escapeForRegex2(located.phasePrefix)}-(\\d+)-PLAN\\.md$`)
   );
   return match ? normalizePlanId(match[1]) : null;
@@ -32977,7 +33120,7 @@ var init_phase_plan_identifiers = __esm({
 });
 
 // src/mcp/tools/phase-context-tools.ts
-import { promises as fs8 } from "node:fs";
+import { promises as fs9 } from "node:fs";
 function extractRequirementIdsFromRequirementsTable(section) {
   return extractMarkdownTableRows(section).map((row) => row[0]?.trim() ?? "").filter((id) => DURABLE_REQUIREMENT_ID_PATTERN.test(id));
 }
@@ -33129,7 +33272,7 @@ async function readMappedCodebaseContext(projectRoot) {
     }
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     try {
-      const raw = await fs8.readFile(absolutePath, "utf8");
+      const raw = await fs9.readFile(absolutePath, "utf8");
       const summary = summarizeSavedArtifact(raw);
       artifacts.push(artifact);
       digest2.push({
@@ -33187,7 +33330,7 @@ async function evaluatePhaseArtifactUsability(projectRoot, artifactPath, artifac
   }
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   try {
-    const raw = await fs8.readFile(absolutePath, "utf8");
+    const raw = await fs9.readFile(absolutePath, "utf8");
     const validation = validatePhaseArtifactContent(raw, artifact);
     const bootstrapStarter = artifact === "context" && isBootstrapStarterContext(raw);
     const issues = [...validation.issues];
@@ -33483,7 +33626,7 @@ async function buildPhaseResearchStatusFromContext(projectRoot, context) {
   if (researchPath) {
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
-      const raw = await fs8.readFile(absolutePath, "utf8");
+      const raw = await fs9.readFile(absolutePath, "utf8");
       const validation = validatePhaseArtifactContent(
         canonicalizeResearchHeadingLines(normalizeTextContent(raw)),
         "research"
@@ -33492,6 +33635,13 @@ async function buildPhaseResearchStatusFromContext(projectRoot, context) {
       researchIssues = validation.issues;
       researchDiagnostics = validation.diagnostics;
       warnings.push(...validation.warnings);
+      const freshness = await readPublishedResearchFreshness(projectRoot, researchPath);
+      if (freshness.status !== "fresh" && !(freshness.status === "unknown" && freshness.unknownPaths.length === 1 && freshness.unknownPaths[0] === "provenance")) {
+        researchValid = false;
+        const message = `Saved research inputs are ${freshness.status}: ${[...freshness.stalePaths, ...freshness.unknownPaths].join(", ")}.`;
+        researchIssues.push(message);
+        researchDiagnostics.push({ path: researchPath, code: "research.inputs_stale", message, repair: "Use /blu-research-phase to review changed inputs and update the saved candidate.", retryable: true, nextTool: "blueprint_research_prepare" });
+      }
     } catch (error2) {
       researchValid = false;
       const reason = error2 instanceof Error && error2.message.trim().length > 0 ? error2.message : "unknown read failure";
@@ -33568,6 +33718,7 @@ async function buildPhaseResearchStatusFromContext(projectRoot, context) {
 var init_phase_context_tools = __esm({
   "src/mcp/tools/phase-context-tools.ts"() {
     "use strict";
+    init_research_evidence();
     init_artifacts();
     init_config();
     init_phase_artifacts();
@@ -33783,11 +33934,11 @@ var init_phase_schema_paths = __esm({
 });
 
 // src/mcp/tools/phase-execution-surfaces.ts
-import path10 from "node:path";
+import path11 from "node:path";
 function normalizeExecutionSurfacePath(value) {
   const normalized = value.replaceAll("\\", "/").trim();
   const withoutDotPrefix = normalized.replace(/^\.\//, "");
-  const collapsed = path10.posix.normalize(withoutDotPrefix);
+  const collapsed = path11.posix.normalize(withoutDotPrefix);
   if (collapsed === ".") {
     return withoutDotPrefix.replace(/\/+$/u, "");
   }
@@ -34375,7 +34526,7 @@ var init_phase_command_actions = __esm({
 });
 
 // src/mcp/tools/phase-summary-inventory.ts
-import { promises as fs9 } from "node:fs";
+import { promises as fs10 } from "node:fs";
 function summarizeMarkdownContent(content) {
   const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
   const summary = content.split("\n").map((line) => line.trim()).find(
@@ -34420,7 +34571,7 @@ async function loadPhaseSummaryInventory(args) {
       warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath2}`);
       continue;
     }
-    const content = await fs9.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const content = await fs10.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
     const linkedPlanPath = extractSummaryPlanReference(content);
     const strictValidation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: knownPlanPaths.get(planId2) ?? null
@@ -34635,7 +34786,7 @@ async function collectValidatedSummaryPaths(projectRoot, summaries) {
   const summaryPaths = [];
   const warnings = [];
   for (const summary of summaries) {
-    const content = await fs9.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const content = await fs10.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: summary.linkedPlanPath
     });
@@ -35644,7 +35795,7 @@ var init_phase_validation_schemas = __esm({
 });
 
 // src/mcp/tools/phase-validation-tools.ts
-import { promises as fs10 } from "node:fs";
+import { promises as fs11 } from "node:fs";
 function trimPhaseValidationStandaloneValidateModelResult(validation) {
   const {
     taskSchema: _taskSchema,
@@ -35708,11 +35859,11 @@ function normalizeSummaryEvidenceHeading(value) {
 }
 function extractSummaryEvidenceSection(markdown, heading) {
   const expectedHeading = normalizeSummaryEvidenceHeading(heading);
-  const lines2 = markdown.replace(/\r\n/g, "\n").split("\n");
+  const lines3 = markdown.replace(/\r\n/g, "\n").split("\n");
   let startIndex = -1;
   let startLevel = 0;
-  for (let index = 0; index < lines2.length; index += 1) {
-    const match = lines2[index].match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+  for (let index = 0; index < lines3.length; index += 1) {
+    const match = lines3[index].match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
     if (match && normalizeSummaryEvidenceHeading(match[2]) === expectedHeading) {
       startIndex = index + 1;
       startLevel = match[1].length;
@@ -35722,15 +35873,15 @@ function extractSummaryEvidenceSection(markdown, heading) {
   if (startIndex < 0) {
     return "";
   }
-  let endIndex = lines2.length;
-  for (let index = startIndex; index < lines2.length; index += 1) {
-    const match = lines2[index].match(/^(#{1,6})\s+/);
+  let endIndex = lines3.length;
+  for (let index = startIndex; index < lines3.length; index += 1) {
+    const match = lines3[index].match(/^(#{1,6})\s+/);
     if (match && match[1].length <= startLevel) {
       endIndex = index;
       break;
     }
   }
-  return lines2.slice(startIndex, endIndex).join("\n").trim();
+  return lines3.slice(startIndex, endIndex).join("\n").trim();
 }
 function mergeSummarySections(content, headings) {
   return headings.flatMap((heading) => sectionToList(extractSummaryEvidenceSection(content, heading)));
@@ -35740,7 +35891,7 @@ async function collectValidationAuthoringSummaryEvidence(projectRoot, summaries,
   const evidence = [];
   const warnings = [];
   for (const summary of completedSummaryRecords(summaries, completedPlanIds)) {
-    const content = await fs10.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const content = await fs11.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: summary.linkedPlanPath
     });
@@ -36162,7 +36313,7 @@ async function blueprintPhaseValidationRead(args, deps) {
       reason: `${artifactPath} does not exist yet.`
     };
   }
-  const content = await fs10.readFile(absolutePath, "utf8");
+  const content = await fs11.readFile(absolutePath, "utf8");
   const summaryIndex = await deps.readSummaryIndex({
     cwd: projectRoot,
     phase: resolved.phaseNumber
@@ -36324,7 +36475,7 @@ async function blueprintPhaseValidationWrite(args, deps) {
             `Phase ${refreshedResolved.phaseNumber} must be validated before UAT. Run /blu-validate-phase ${refreshedResolved.phaseNumber} first.`
           );
         }
-        const verificationContent = await fs10.readFile(verificationAbsolutePath, "utf8");
+        const verificationContent = await fs11.readFile(verificationAbsolutePath, "utf8");
         const verificationValidation = validateVerificationArtifactContent(
           verificationContent,
           summaryPaths,
@@ -36342,7 +36493,7 @@ async function blueprintPhaseValidationWrite(args, deps) {
         }
       }
       if (exists3) {
-        const existingContent = await fs10.readFile(absolutePath, "utf8");
+        const existingContent = await fs11.readFile(absolutePath, "utf8");
         const existingReferencedSummaryPaths = collectReferencedValidatedSummaryPaths(
           existingContent,
           summaryIndex.summaries,
@@ -36713,7 +36864,7 @@ var init_phase_plan_diagnostics = __esm({
 });
 
 // src/mcp/tools/phase-roadmap-requirements.ts
-import { promises as fs11 } from "node:fs";
+import { promises as fs12 } from "node:fs";
 function parseRequirementTableRow(line) {
   if (!/^\|.*\|$/.test(line)) {
     return null;
@@ -36744,7 +36895,7 @@ async function readRequirementTable(projectRoot, options) {
   if (!await pathExists(requirementsPath)) {
     throw new Error(options.missingFileMessage);
   }
-  const rawRequirements = await fs11.readFile(requirementsPath, "utf8");
+  const rawRequirements = await fs12.readFile(requirementsPath, "utf8");
   const requirementsSectionMatch = rawRequirements.match(REQUIREMENTS_TABLE_SECTION_PATTERN);
   if (!requirementsSectionMatch) {
     throw new Error(options.malformedMessage);
@@ -37247,9 +37398,9 @@ __export(phase_exports, {
   phaseToolDefinitions: () => phaseToolDefinitions,
   resolvePhaseTopologySnapshot: () => resolvePhaseTopologySnapshot
 });
-import { createHash as createHash3 } from "node:crypto";
-import { promises as fs12 } from "node:fs";
-import path11 from "node:path";
+import { createHash as createHash4 } from "node:crypto";
+import { promises as fs13 } from "node:fs";
+import path12 from "node:path";
 function normalizedPhaseText(value) {
   return normalizePhaseDescription(value ?? "").toLowerCase();
 }
@@ -37292,7 +37443,7 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
     phase.phaseName,
     auditBackedDetails.sourceReportPath
   ) : null;
-  const originalRequirements = requirementRepair ? await fs12.readFile(requirementsAbsolutePath, "utf8") : null;
+  const originalRequirements = requirementRepair ? await fs13.readFile(requirementsAbsolutePath, "utf8") : null;
   const preparedRequirements = requirementRepair ? prepareTextForPersistence(requirementRepair.content, {
     label: requirementsPath
   }) : null;
@@ -37320,7 +37471,7 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
       }).catch(() => void 0);
     }
     if (phaseDirState.created) {
-      await fs12.rm(phaseDirState.phaseDirPath, {
+      await fs13.rm(phaseDirState.phaseDirPath, {
         recursive: true,
         force: true
       }).catch(() => void 0);
@@ -37371,7 +37522,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     if (!phaseArtifacts.includes(artifactPath)) {
       continue;
     }
-    const content = await fs12.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const content = await fs13.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
     const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths, {
       noUat: options.noUat === true
     }) : validateUatArtifactContent(content, summaryPaths, {
@@ -37424,7 +37575,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     );
   }
   const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true && !hasBlockingUat) && (!requiresQualityGate || qualityGateEvaluation.gatesSatisfied);
-  const rawRoadmap = await fs12.readFile(roadmapPath, "utf8");
+  const rawRoadmap = await fs13.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
     resolved.phaseNumber,
@@ -37476,7 +37627,7 @@ async function readBacklogPromotionCandidates(projectRoot) {
       warnings: ["No backlog index exists yet. Run /blu-add-backlog before reviewing backlog items."]
     };
   }
-  const rawBacklog = await fs12.readFile(backlogPath, "utf8");
+  const rawBacklog = await fs13.readFile(backlogPath, "utf8");
   const parsedBacklog = parseCaptureIndexDocument(rawBacklog, "backlog");
   const warnings = parsedBacklog.malformed ? [
     `Recovered non-canonical backlog index content while reading ${BLUEPRINT_BACKLOG_INDEX_PATH}.`
@@ -37546,7 +37697,7 @@ async function readPhaseRoadmapRequirements(projectRoot, phaseNumber) {
   if (!await pathExists(roadmapPath)) {
     return [];
   }
-  const roadmap = parseRoadmapDocument(await fs12.readFile(roadmapPath, "utf8"));
+  const roadmap = parseRoadmapDocument(await fs13.readFile(roadmapPath, "utf8"));
   const matchedPhase = roadmap.phases.find(
     (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizePhaseNumber(phaseNumber)
   );
@@ -37556,7 +37707,7 @@ async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @
   const phaseRoot = resolveBlueprintPath(projectRoot, resolved.phaseDir);
   const planPaths = new Set(knownPlanPaths ?? []);
   if (knownPlanPaths === void 0 && await pathExists(phaseRoot)) {
-    const entries = await fs12.readdir(phaseRoot, { withFileTypes: true });
+    const entries = await fs13.readdir(phaseRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith("-PLAN.md")) {
         continue;
@@ -37577,7 +37728,7 @@ async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @
       nonCanonicalPlanPaths.push(planPath);
       continue;
     }
-    const content = overrides.get(planPath) ?? await fs12.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = overrides.get(planPath) ?? await fs13.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
     plans.push({
       path: planPath,
@@ -38119,7 +38270,7 @@ function buildPhasePlanAuthoringReadinessReason(planningReadiness) {
   return `${detailWithPunctuation} Next safe action: ${action}${/[.!?]$/.test(action) ? "" : "."}`;
 }
 function hashString(value) {
-  return createHash3("sha256").update(value).digest("hex");
+  return createHash4("sha256").update(value).digest("hex");
 }
 function buildReadinessHashEntry(args) {
   const serialized = typeof args.value === "string" ? args.value : JSON.stringify(args.value) ?? "undefined";
@@ -38171,9 +38322,9 @@ async function readReadinessPath(args) {
       raw: null
     };
   }
-  const raw = await fs12.readFile(absolutePath, "utf8");
+  const raw = await fs13.readFile(absolutePath, "utf8");
   const rawSizeBytes = Buffer.byteLength(raw, "utf8");
-  const hash2 = hashString(raw);
+  const hash3 = hashString(raw);
   const summary = summarizeSavedArtifact(raw);
   const truncatedContent = truncateForReadiness(raw, args.maxBodyBytes);
   const contentIncluded = args.includeContent;
@@ -38181,7 +38332,7 @@ async function readReadinessPath(args) {
     readSet: {
       path: args.pathValue,
       kind: args.kind,
-      hash: hash2,
+      hash: hash3,
       sizeBytes: rawSizeBytes,
       truncated: contentIncluded ? truncatedContent.truncated : false,
       included: contentIncluded,
@@ -38191,7 +38342,7 @@ async function readReadinessPath(args) {
       path: args.pathValue,
       ...contentIncluded ? { content: truncatedContent.content } : {},
       summary: `${summary.title}: ${summary.summary}`,
-      hash: hash2,
+      hash: hash3,
       sizeBytes: rawSizeBytes,
       truncated: contentIncluded ? truncatedContent.truncated : false,
       ...contentIncluded ? {} : { omittedReason: args.reason ?? "bodyMode summary" },
@@ -38335,13 +38486,13 @@ function isCanonicalPhasePlanArtifactPath2(artifactPath, resolved) {
   return parseCanonicalPlanArtifactPath(artifactPath, resolved) !== null;
 }
 function isCanonicalPhaseSummaryArtifactPath(artifactPath, resolved) {
-  return path11.posix.dirname(artifactPath) === resolved.phaseDir && parseSummaryArtifactPath(artifactPath, resolved.phasePrefix) !== null;
+  return path12.posix.dirname(artifactPath) === resolved.phaseDir && parseSummaryArtifactPath(artifactPath, resolved.phasePrefix) !== null;
 }
 function isCanonicalPhaseSpecArtifactPath(artifactPath, resolved) {
   return artifactPath === artifactPathFor(resolved, "spec");
 }
 function isNoncanonicalPhaseSpecLookalikePath(artifactPath, resolved) {
-  const basename = path11.posix.basename(artifactPath);
+  const basename = path12.posix.basename(artifactPath);
   const canonicalSpecFileName = `${resolved.phasePrefix}-SPEC.md`;
   const uiSpecFileName = `${resolved.phasePrefix}-UI-SPEC.md`;
   if (isCanonicalPhaseSpecArtifactPath(artifactPath, resolved)) {
@@ -38420,7 +38571,7 @@ async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, tar
     if (isNoncanonicalPhaseSpecLookalikePath(artifact, resolved)) {
       return false;
     }
-    if (path11.posix.basename(artifact) === canonicalSpecFileName) {
+    if (path12.posix.basename(artifact) === canonicalSpecFileName) {
       return canonicalSpecPath !== null && isCanonicalPhaseSpecArtifactPath(artifact, resolved);
     }
     return true;
@@ -38803,11 +38954,11 @@ function normalizeSpecBoundaryComparisonValue(value) {
 }
 function extractMarkdownSubsection(markdown, heading) {
   const expectedHeading = normalizeSpecBoundaryComparisonValue(heading);
-  const lines2 = markdown.replace(/\r\n/g, "\n").split("\n");
+  const lines3 = markdown.replace(/\r\n/g, "\n").split("\n");
   let startIndex = -1;
   let startLevel = 0;
-  for (let index = 0; index < lines2.length; index += 1) {
-    const match = lines2[index].match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
+  for (let index = 0; index < lines3.length; index += 1) {
+    const match = lines3[index].match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
     if (match && normalizeSpecBoundaryComparisonValue(match[2] ?? "") === expectedHeading) {
       startIndex = index + 1;
       startLevel = match[1].length;
@@ -38817,15 +38968,15 @@ function extractMarkdownSubsection(markdown, heading) {
   if (startIndex < 0) {
     return "";
   }
-  let endIndex = lines2.length;
-  for (let index = startIndex; index < lines2.length; index += 1) {
-    const match = lines2[index].match(/^(#{2,6})\s+/);
+  let endIndex = lines3.length;
+  for (let index = startIndex; index < lines3.length; index += 1) {
+    const match = lines3[index].match(/^(#{2,6})\s+/);
     if (match && match[1].length <= startLevel) {
       endIndex = index;
       break;
     }
   }
-  return lines2.slice(startIndex, endIndex).join("\n").trim();
+  return lines3.slice(startIndex, endIndex).join("\n").trim();
 }
 function extractBoldLabelSection(markdown, label) {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -39297,7 +39448,7 @@ async function blueprintRoadmapAddPhase(args) {
     const slug = slugifyPhaseName(normalizedDescription);
     const phaseDir2 = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-    const rawRoadmap = await fs12.readFile(roadmapPath, "utf8");
+    const rawRoadmap = await fs13.readFile(roadmapPath, "utf8");
     const requirementRepair = auditBackedDetails?.repairRequirementIds?.length ? await repairRequirementsTraceability(
       projectRoot,
       auditBackedDetails.repairRequirementIds,
@@ -39345,7 +39496,7 @@ async function blueprintRoadmapAddPhase(args) {
     const preparedRequirements = requirementRepair ? prepareTextForPersistence(requirementRepair.content, {
       label: requirementsPath
     }) : null;
-    const originalRequirements = requirementRepair ? await fs12.readFile(requirementsAbsolutePath, "utf8") : null;
+    const originalRequirements = requirementRepair ? await fs13.readFile(requirementsAbsolutePath, "utf8") : null;
     warnings.push(...preparedRoadmap.warnings);
     warnings.push(...preparedRequirements?.warnings ?? []);
     const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir2);
@@ -39378,7 +39529,7 @@ async function blueprintRoadmapAddPhase(args) {
         }).catch(() => void 0);
       }
       if (materializedPhaseDir.created) {
-        await fs12.rm(materializedPhaseDir.phaseDirPath, {
+        await fs13.rm(materializedPhaseDir.phaseDirPath, {
           recursive: true,
           force: true
         }).catch(() => void 0);
@@ -39484,7 +39635,7 @@ async function blueprintRoadmapInsertPhase(args) {
       );
     }
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-    const rawRoadmap = await fs12.readFile(roadmapPath, "utf8");
+    const rawRoadmap = await fs13.readFile(roadmapPath, "utf8");
     const insertedPhaseLines = insertPhaseLineToRoadmap(
       rawRoadmap,
       insertionAnchor,
@@ -39522,7 +39673,7 @@ async function blueprintRoadmapInsertPhase(args) {
     const preparedRequirements = prepareTextForPersistence(requirementMapping.content, {
       label: requirementsPath
     });
-    const originalRequirements = await fs12.readFile(requirementsAbsolutePath, "utf8");
+    const originalRequirements = await fs13.readFile(requirementsAbsolutePath, "utf8");
     const warnings = [...preparedRoadmap.warnings];
     warnings.push(...preparedRequirements.warnings);
     const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir2);
@@ -39547,7 +39698,7 @@ async function blueprintRoadmapInsertPhase(args) {
         enforcePromptBoundary: false
       }).catch(() => void 0);
       if (materializedPhaseDir.created) {
-        await fs12.rm(materializedPhaseDir.phaseDirPath, {
+        await fs13.rm(materializedPhaseDir.phaseDirPath, {
           recursive: true,
           force: true
         }).catch(() => void 0);
@@ -39581,7 +39732,7 @@ function renameLeadingPhaseToken(entryName, phaseNumber, replacementPrefix) {
 async function assertExistingPhaseTopologyDirectory(directoryPath, repoRelativeDirectory) {
   let stats;
   try {
-    stats = await fs12.stat(directoryPath);
+    stats = await fs13.stat(directoryPath);
   } catch (error2) {
     const code = error2.code;
     if (code === "ENOENT") {
@@ -39607,26 +39758,26 @@ async function assertPhaseTopologyDestinationAvailable(destinationPath, repoRela
 async function collectPhaseArtifactRenamePlans(options) {
   const sourceRelativePath = options.sourceRelativePath ?? "";
   const executionRelativePath = options.executionRelativePath ?? "";
-  const scanDirectoryPath = sourceRelativePath ? path11.join(options.sourceRootPath, sourceRelativePath) : options.sourceRootPath;
-  const entries = await fs12.readdir(scanDirectoryPath, { withFileTypes: true });
+  const scanDirectoryPath = sourceRelativePath ? path12.join(options.sourceRootPath, sourceRelativePath) : options.sourceRootPath;
+  const entries = await fs13.readdir(scanDirectoryPath, { withFileTypes: true });
   const plans = [];
   for (const entry of entries) {
-    const originalRelativePath = sourceRelativePath ? path11.join(sourceRelativePath, entry.name) : entry.name;
-    const executionFromRelativePath = executionRelativePath ? path11.join(executionRelativePath, entry.name) : entry.name;
+    const originalRelativePath = sourceRelativePath ? path12.join(sourceRelativePath, entry.name) : entry.name;
+    const executionFromRelativePath = executionRelativePath ? path12.join(executionRelativePath, entry.name) : entry.name;
     const renamedEntry = renameLeadingPhaseToken(
       entry.name,
       options.oldPhaseNumber,
       options.newPhasePrefix
     );
-    const executionToRelativePath = executionRelativePath ? path11.join(executionRelativePath, renamedEntry ?? entry.name) : renamedEntry ?? entry.name;
+    const executionToRelativePath = executionRelativePath ? path12.join(executionRelativePath, renamedEntry ?? entry.name) : renamedEntry ?? entry.name;
     if (renamedEntry) {
-      const fromPath = path11.join(options.destinationRootPath, executionFromRelativePath);
-      const toPath = path11.join(options.destinationRootPath, executionToRelativePath);
+      const fromPath = path12.join(options.destinationRootPath, executionFromRelativePath);
+      const toPath = path12.join(options.destinationRootPath, executionToRelativePath);
       plans.push({
         fromPath,
         toPath,
-        originalPath: path11.join(options.sourceRootPath, originalRelativePath),
-        originalDestinationPath: path11.join(options.sourceRootPath, executionToRelativePath),
+        originalPath: path12.join(options.sourceRootPath, originalRelativePath),
+        originalDestinationPath: path12.join(options.sourceRootPath, executionToRelativePath),
         from: toRepoRelativePath(options.projectRoot, fromPath),
         to: toRepoRelativePath(options.projectRoot, toPath)
       });
@@ -39646,14 +39797,14 @@ async function collectPhaseArtifactRenamePlans(options) {
 async function preflightPhaseArtifactRenamePlans(plans) {
   const destinationPaths = /* @__PURE__ */ new Set();
   for (const plan of plans) {
-    const normalizedDestinationPath = path11.resolve(plan.toPath);
+    const normalizedDestinationPath = path12.resolve(plan.toPath);
     if (destinationPaths.has(normalizedDestinationPath)) {
       throw new Error(
         `Phase artifact rename plan has a duplicate destination before mutation: ${plan.to}.`
       );
     }
     destinationPaths.add(normalizedDestinationPath);
-    if (path11.resolve(plan.originalDestinationPath) !== path11.resolve(plan.originalPath) && await pathExists(plan.originalDestinationPath)) {
+    if (path12.resolve(plan.originalDestinationPath) !== path12.resolve(plan.originalPath) && await pathExists(plan.originalDestinationPath)) {
       throw new Error(
         `Phase artifact destination already exists before mutation: ${plan.to}. Resolve the collision before mutating the roadmap.`
       );
@@ -39661,7 +39812,7 @@ async function preflightPhaseArtifactRenamePlans(plans) {
   }
 }
 async function renameWithPhaseTopologyRollback(fromPath, toPath, journal) {
-  await fs12.rename(fromPath, toPath);
+  await fs13.rename(fromPath, toPath);
   journal.push({ fromPath, toPath });
 }
 async function rollbackPhaseTopologyMoves(journal) {
@@ -39677,16 +39828,16 @@ async function rollbackPhaseTopologyMoves(journal) {
       continue;
     }
     const failureCountBeforeMkdir = failures.length;
-    await fs12.mkdir(path11.dirname(entry.fromPath), { recursive: true }).catch((error2) => {
+    await fs13.mkdir(path12.dirname(entry.fromPath), { recursive: true }).catch((error2) => {
       failures.push(
-        `Could not recreate rollback parent ${path11.dirname(entry.fromPath)}: ${error2 instanceof Error ? error2.message : String(error2)}`
+        `Could not recreate rollback parent ${path12.dirname(entry.fromPath)}: ${error2 instanceof Error ? error2.message : String(error2)}`
       );
     });
     if (failures.length > failureCountBeforeMkdir) {
       continue;
     }
     try {
-      await fs12.rename(entry.toPath, entry.fromPath);
+      await fs13.rename(entry.toPath, entry.fromPath);
     } catch (error2) {
       failures.push(
         `Could not roll back ${entry.toPath} to ${entry.fromPath}: ${error2 instanceof Error ? error2.message : String(error2)}`
@@ -39866,7 +40017,7 @@ async function blueprintRoadmapRemovePhase(args) {
       ])
     );
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-    const rawRoadmap = await fs12.readFile(roadmapPath, "utf8");
+    const rawRoadmap = await fs13.readFile(roadmapPath, "utf8");
     const removedPhaseLine = removePhaseLineFromRoadmap(rawRoadmap, targetPhaseNumber);
     if (!removedPhaseLine.removed) {
       throw new Error(
@@ -39897,7 +40048,7 @@ async function blueprintRoadmapRemovePhase(args) {
       }
       const previousPhaseDir = locatedPhaseDirectory.phaseDir;
       const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
-      const previousDirectoryName = path11.basename(previousPhaseDirPath);
+      const previousDirectoryName = path12.basename(previousPhaseDirPath);
       const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
       const renamedDirectoryName = renameLeadingPhaseToken(
         previousDirectoryName,
@@ -39909,10 +40060,10 @@ async function blueprintRoadmapRemovePhase(args) {
           `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
         );
       }
-      const newPhaseDirPath = path11.join(path11.dirname(previousPhaseDirPath), renamedDirectoryName);
+      const newPhaseDirPath = path12.join(path12.dirname(previousPhaseDirPath), renamedDirectoryName);
       const newPhaseDir = toRepoRelativePath(projectRoot, newPhaseDirPath);
       await assertExistingPhaseTopologyDirectory(previousPhaseDirPath, previousPhaseDir);
-      if (path11.resolve(newPhaseDirPath) !== path11.resolve(targetPhaseDirPath)) {
+      if (path12.resolve(newPhaseDirPath) !== path12.resolve(targetPhaseDirPath)) {
         await assertPhaseTopologyDestinationAvailable(newPhaseDirPath, newPhaseDir);
       }
       const artifactRenamePlans = await collectPhaseArtifactRenamePlans({
@@ -39940,9 +40091,9 @@ async function blueprintRoadmapRemovePhase(args) {
       targetPhaseNumber
     );
     const transactionRootRelativePath = toRepoRelativePath(projectRoot, transactionRootPath);
-    const tombstonePhaseDirPath = path11.join(
+    const tombstonePhaseDirPath = path12.join(
       transactionRootPath,
-      path11.basename(targetPhaseDirPath)
+      path12.basename(targetPhaseDirPath)
     );
     const journal = [];
     let committed = false;
@@ -39951,7 +40102,7 @@ async function blueprintRoadmapRemovePhase(args) {
       transactionRootRelativePath
     );
     try {
-      await fs12.mkdir(transactionRootPath, { recursive: true });
+      await fs13.mkdir(transactionRootPath, { recursive: true });
       await renameWithPhaseTopologyRollback(
         targetPhaseDirPath,
         tombstonePhaseDirPath,
@@ -39987,7 +40138,7 @@ async function blueprintRoadmapRemovePhase(args) {
     } catch (error2) {
       const rollbackFailures = await rollbackPhaseTopologyMoves(journal);
       if (rollbackFailures.length === 0) {
-        await fs12.rm(transactionRootPath, { recursive: true, force: true }).catch(() => void 0);
+        await fs13.rm(transactionRootPath, { recursive: true, force: true }).catch(() => void 0);
         throw error2;
       }
       throw new Error(
@@ -39999,7 +40150,7 @@ async function blueprintRoadmapRemovePhase(args) {
       );
     }
     if (committed) {
-      await fs12.rm(transactionRootPath, { recursive: true, force: true }).catch((error2) => {
+      await fs13.rm(transactionRootPath, { recursive: true, force: true }).catch((error2) => {
         warnings.push(
           `Phase ${targetPhaseNumber} was removed, but cleanup of transaction tombstone ${transactionRootRelativePath} failed: ${error2 instanceof Error ? error2.message : String(error2)}`
         );
@@ -40035,7 +40186,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
     if (reservedDirectory.phaseDir) {
       const reservedPhaseDirPath = resolveBlueprintPath(projectRoot, reservedDirectory.phaseDir);
       const renamedDirectoryName = renameLeadingPhaseToken(
-        path11.basename(reservedPhaseDirPath),
+        path12.basename(reservedPhaseDirPath),
         item.reservedPhase,
         phasePrefix2
       );
@@ -40044,8 +40195,8 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
           `Reserved phase directory ${reservedDirectory.phaseDir} does not start with ${item.reservedPhase}.`
         );
       }
-      const promotedPhaseDirPath = path11.join(
-        path11.dirname(reservedPhaseDirPath),
+      const promotedPhaseDirPath = path12.join(
+        path12.dirname(reservedPhaseDirPath),
         renamedDirectoryName
       );
       if (promotedPhaseDirPath !== reservedPhaseDirPath && await pathExists(promotedPhaseDirPath)) {
@@ -40101,7 +40252,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
       warnings
     };
   }
-  await fs12.mkdir(desiredPhaseDirPath, { recursive: true });
+  await fs13.mkdir(desiredPhaseDirPath, { recursive: true });
   return {
     phaseDir: desiredPhaseDir,
     createdPhaseDir: true,
@@ -40182,7 +40333,7 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
   return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
     const roadmap = await readRoadmap(projectRoot);
     const roadmapAbsolutePath = resolveBlueprintPath(projectRoot, roadmap.path);
-    let roadmapBody = await fs12.readFile(roadmapAbsolutePath, "utf8");
+    let roadmapBody = await fs13.readFile(roadmapAbsolutePath, "utf8");
     const roadmapPhases = [...roadmap.phases];
     const promotedItems = [];
     const createdPhaseDirs = [];
@@ -40281,13 +40432,13 @@ async function buildPhasePlanIndexFromResolved(input) {
   for (const planPath of planPaths) {
     const planId2 = parseCanonicalPlanArtifactPath(planPath, resolved);
     if (!planId2) {
-      if (path11.posix.dirname(planPath) === resolved.phaseDir) {
+      if (path12.posix.dirname(planPath) === resolved.phaseDir) {
         warnings.push(`Ignoring non-canonical plan artifact name: ${planPath}`);
       }
       continue;
     }
     knownPlanIds.add(planId2);
-    const content = input.planContents?.get(planPath) ?? await fs12.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = input.planContents?.get(planPath) ?? await fs13.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record2 = toPhasePlanRecord(planId2, planPath, content, resolved.phaseNumber);
     const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record2.dependsOn);
     if (dependencyIssues.length > 0) {
@@ -40404,7 +40555,7 @@ async function readPhasePlanFromResolved(args) {
       reason: `${pathValue} does not exist yet.`
     };
   }
-  const content = await fs12.readFile(absolutePath, "utf8");
+  const content = await fs13.readFile(absolutePath, "utf8");
   const record2 = toPhasePlanRecord(planId2, pathValue, content, resolved.phaseNumber);
   const dependencyIssues = collectInvalidPlanDependencyIssues(pathValue, record2.dependsOn);
   return {
@@ -41217,7 +41368,7 @@ async function blueprintPhasePlanWrite(args) {
       const exists3 = await pathExists(absolutePath);
       const normalizePersistedText = (value) => value.replace(/\r\n/g, "\n").replace(/^---\n([\s\S]*?)\n---\n+/, "---\n$1\n---\n").trimEnd();
       if (exists3) {
-        const existingContent = await fs12.readFile(absolutePath, "utf8");
+        const existingContent = await fs13.readFile(absolutePath, "utf8");
         if (normalizePersistedText(existingContent) === normalizePersistedText(preparedContent.content)) {
           warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
           return {
@@ -41818,13 +41969,13 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   const includeConflicts = args.includeConflicts ?? true;
   const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
   const planPaths = located.artifacts.filter(
-    (artifactPath) => path11.posix.dirname(artifactPath) === resolved.phaseDir && artifactPath.endsWith("-PLAN.md")
+    (artifactPath) => path12.posix.dirname(artifactPath) === resolved.phaseDir && artifactPath.endsWith("-PLAN.md")
   );
   const planContents = new Map(
     await Promise.all(
       planPaths.map(async (planPath) => [
         planPath,
-        await fs12.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8")
+        await fs13.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8")
       ])
     )
   );
@@ -42437,7 +42588,7 @@ async function blueprintPhaseSummaryWrite(args) {
       const absolutePath = resolveBlueprintPath(projectRoot, lockedPathValue);
       const exists3 = await pathExists(absolutePath);
       if (exists3) {
-        const existingContent = await fs12.readFile(absolutePath, "utf8");
+        const existingContent = await fs13.readFile(absolutePath, "utf8");
         if (existingContent === normalizedContent) {
           warnings.push(`Preserved existing summary artifact because the content was unchanged.`);
           return {
@@ -42817,9 +42968,9 @@ __export(artifacts_exports, {
   writeTextFile: () => writeTextFile
 });
 import { execFile } from "node:child_process";
-import { createHash as createHash4 } from "node:crypto";
-import { promises as fs13 } from "node:fs";
-import path12 from "node:path";
+import { createHash as createHash5 } from "node:crypto";
+import { promises as fs14 } from "node:fs";
+import path13 from "node:path";
 import { promisify } from "node:util";
 function normalizeBlueprintArtifactPathForClassification(relativePath) {
   return relativePath.replace(/\\/g, "/").replace(/\/+$/g, "");
@@ -42837,7 +42988,7 @@ function isOperationalOnlyBlueprintArtifact(relativePath) {
   if (blueprintLocalPath === "locks" || blueprintLocalPath.startsWith("locks/")) {
     return true;
   }
-  const artifactName = path12.posix.basename(artifact);
+  const artifactName = path13.posix.basename(artifact);
   return /^\.?.+\.\d+\.\d+\.[a-z0-9]+\.tmp$/i.test(artifactName) || /^.+\.tmp-\d+-\d+$/i.test(artifactName);
 }
 function isScaffoldGeneratedArtifact(content) {
@@ -42860,22 +43011,22 @@ function isDocumentationLikeFile(entryName) {
   if (normalized === "license" || normalized.startsWith("license.")) {
     return true;
   }
-  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path12.extname(normalized));
+  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path13.extname(normalized));
 }
 function isImplementationLikeFile(entryName) {
   if (isBootstrapStarterFile(entryName) || isDocumentationLikeFile(entryName)) {
     return false;
   }
-  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path12.extname(entryName).toLowerCase());
+  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path13.extname(entryName).toLowerCase());
 }
 async function directoryHasImplementationEvidence(directoryPath) {
-  const entries = await fs13.readdir(directoryPath, { withFileTypes: true });
+  const entries = await fs14.readdir(directoryPath, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.isDirectory()) {
       if (entry.name.startsWith(".") || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
         continue;
       }
-      if (await directoryHasImplementationEvidence(path12.join(directoryPath, entry.name))) {
+      if (await directoryHasImplementationEvidence(path13.join(directoryPath, entry.name))) {
         return true;
       }
       continue;
@@ -42887,7 +43038,7 @@ async function directoryHasImplementationEvidence(directoryPath) {
   return false;
 }
 async function assessRootBootstrapShape(projectRoot) {
-  const entries = await fs13.readdir(projectRoot, { withFileTypes: true });
+  const entries = await fs14.readdir(projectRoot, { withFileTypes: true });
   const substantiveEntries = entries.filter(
     (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
   );
@@ -42910,7 +43061,7 @@ async function assessRootBootstrapShape(projectRoot) {
       if (!entry.isDirectory() || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
         continue;
       }
-      if (await directoryHasImplementationEvidence(path12.join(projectRoot, entry.name))) {
+      if (await directoryHasImplementationEvidence(path13.join(projectRoot, entry.name))) {
         hasImplementationEvidence = true;
         break;
       }
@@ -43146,15 +43297,15 @@ function buildReservedBacklogPhase(rows, description) {
 }
 function renderCaptureIndexRow(target, row) {
   const config2 = CAPTURE_INDEX_CONFIG[target];
-  const lines2 = [`### ${row.id}`, `- Added: ${row.added}`];
+  const lines3 = [`### ${row.id}`, `- Added: ${row.added}`];
   if (config2.defaultStatus !== null) {
-    lines2.push(`- Status: ${row.status ?? config2.defaultStatus}`);
+    lines3.push(`- Status: ${row.status ?? config2.defaultStatus}`);
   }
   if (config2.supportsReservedPhase && row.reservedPhase) {
-    lines2.push(`- Reserved Phase: ${row.reservedPhase}`);
+    lines3.push(`- Reserved Phase: ${row.reservedPhase}`);
   }
-  lines2.push(`- Description: ${row.description}`);
-  return lines2.join("\n");
+  lines3.push(`- Description: ${row.description}`);
+  return lines3.join("\n");
 }
 function renderCaptureIndexDocument(target, rows, recoveryContent) {
   const config2 = CAPTURE_INDEX_CONFIG[target];
@@ -43338,24 +43489,24 @@ function parseCaptureIndexDocument(content, target) {
     recoveryContent: malformed ? content : null
   };
 }
-function buildDefaultBootstrapSeed(projectName, assessment, seed) {
-  const defaultVision = assessment.repoShape === "brownfield" ? `Bring ${projectName} under Blueprint with the saved codebase map, durable requirements, and a roadmap grounded in current repo evidence.` : `Establish ${projectName} with a durable Blueprint bootstrap draft so later discovery, planning, and execution commands inherit clear project intent and requirement traceability.`;
-  const defaultPrimaryAudience = assessment.repoShape === "brownfield" ? ["Maintainers aligning an existing codebase with Blueprint-managed planning."] : ["Maintainers shaping the first milestone and execution path for the repo."];
+function buildDefaultBootstrapSeed(projectName, assessment2, seed) {
+  const defaultVision = assessment2.repoShape === "brownfield" ? `Bring ${projectName} under Blueprint with the saved codebase map, durable requirements, and a roadmap grounded in current repo evidence.` : `Establish ${projectName} with a durable Blueprint bootstrap draft so later discovery, planning, and execution commands inherit clear project intent and requirement traceability.`;
+  const defaultPrimaryAudience = assessment2.repoShape === "brownfield" ? ["Maintainers aligning an existing codebase with Blueprint-managed planning."] : ["Maintainers shaping the first milestone and execution path for the repo."];
   const defaultSecondaryAudience = [
     "Future contributors who need durable project context before they plan or implement changes."
   ];
   const defaultConstraints = [
     "Project state lives in `.blueprint/`.",
     "Persistent mutations must flow through Blueprint MCP tools.",
-    assessment.repoShape === "brownfield" ? "Existing repo behavior should be preserved while Blueprint planning is introduced." : "Bootstrap artifacts should be specific enough to guide later commands without pretending every product decision is already final."
+    assessment2.repoShape === "brownfield" ? "Existing repo behavior should be preserved while Blueprint planning is introduced." : "Bootstrap artifacts should be specific enough to guide later commands without pretending every product decision is already final."
   ];
-  const defaultMilestone = seed?.currentMilestone?.trim() || (assessment.repoShape === "brownfield" ? "v1-existing-repo-alignment" : "v1");
+  const defaultMilestone = seed?.currentMilestone?.trim() || (assessment2.repoShape === "brownfield" ? "v1-existing-repo-alignment" : "v1");
   const defaultNonGoals = [
     "Hidden runtime conventions.",
     "Undocumented aliases.",
-    assessment.repoShape === "brownfield" ? "Replacing or ignoring the saved `.blueprint/codebase/` mapping during bootstrap." : "Prompt-only bootstrap artifacts that skip requirement or roadmap traceability."
+    assessment2.repoShape === "brownfield" ? "Replacing or ignoring the saved `.blueprint/codebase/` mapping during bootstrap." : "Prompt-only bootstrap artifacts that skip requirement or roadmap traceability."
   ];
-  const defaultRequirements = assessment.repoShape === "brownfield" ? [
+  const defaultRequirements = assessment2.repoShape === "brownfield" ? [
     {
       id: "RQ-01",
       scope: "committed",
@@ -43422,7 +43573,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       notes: "Keeps v1 bootstrap narrower than later work streams."
     }
   ];
-  const defaultRoadmapPhases = assessment.repoShape === "brownfield" ? [
+  const defaultRoadmapPhases = assessment2.repoShape === "brownfield" ? [
     {
       phase: "1",
       title: "Align Requirements With Mapped Codebase",
@@ -43465,7 +43616,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       ]
     }
   ];
-  const defaultAssumptions = assessment.repoShape === "brownfield" ? [
+  const defaultAssumptions = assessment2.repoShape === "brownfield" ? [
     "The saved codebase mapping is the baseline for bootstrap scope.",
     "Bootstrap artifacts should preserve mapped evidence rather than replacing it."
   ] : [
@@ -43494,7 +43645,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
         "Maintainers can validate the phase outcome through `.blueprint/ROADMAP.md` and `.blueprint/STATE.md`."
       ])
     })),
-    brownfieldMode: seed?.brownfieldMode ?? assessment.repoShape,
+    brownfieldMode: seed?.brownfieldMode ?? assessment2.repoShape,
     assumptions: normalizeList(seed?.assumptions, defaultAssumptions)
   };
 }
@@ -43679,7 +43830,7 @@ async function assertReportCompareAndSwap(absolutePath, expectedExistingContentS
   if (!exists3) {
     throw new Error("Report compare-and-swap failed because the approved report disappeared.");
   }
-  const actualSha256 = createHash4("sha256").update(await fs13.readFile(absolutePath)).digest("hex");
+  const actualSha256 = createHash5("sha256").update(await fs14.readFile(absolutePath)).digest("hex");
   if (actualSha256 !== expectedExistingContentSha256) {
     throw new Error("Report compare-and-swap failed because report content changed after approval.");
   }
@@ -43717,7 +43868,7 @@ function milestoneReportPrefix(reportName2) {
 }
 async function readActiveMilestone(projectRoot) {
   try {
-    const roadmap = await fs13.readFile(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`), "utf8");
+    const roadmap = await fs14.readFile(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`), "utf8");
     return roadmap.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
   } catch {
     return null;
@@ -43803,20 +43954,20 @@ function isPlainObject5(value) {
 }
 async function pathExists2(targetPath) {
   try {
-    await fs13.access(targetPath);
+    await fs14.access(targetPath);
     return true;
   } catch {
     return false;
   }
 }
 function toPosixPath(relativePath) {
-  return relativePath.split(path12.sep).join("/");
+  return relativePath.split(path13.sep).join("/");
 }
 function getProjectRoot(cwd) {
-  return path12.resolve(cwd ?? process.cwd());
+  return path13.resolve(cwd ?? process.cwd());
 }
 function getBlueprintRoot(cwd) {
-  return path12.join(getProjectRoot(cwd), BLUEPRINT_DIR);
+  return path13.join(getProjectRoot(cwd), BLUEPRINT_DIR);
 }
 async function blueprintPathExists(targetPath) {
   return pathExists2(targetPath);
@@ -43838,7 +43989,7 @@ async function resolveGitTopLevel(projectRoot) {
 }
 async function ensureRepoRoot(cwd) {
   const projectRoot = getProjectRoot(cwd);
-  const gitPath = path12.join(projectRoot, ".git");
+  const gitPath = path13.join(projectRoot, ".git");
   if (!await pathExists2(gitPath)) {
     throw new Error(
       "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
@@ -43846,8 +43997,8 @@ async function ensureRepoRoot(cwd) {
   }
   const gitTopLevel = await resolveGitTopLevel(projectRoot);
   const [resolvedProjectRoot, resolvedGitTopLevel] = await Promise.all([
-    fs13.realpath(projectRoot),
-    fs13.realpath(gitTopLevel)
+    fs14.realpath(projectRoot),
+    fs14.realpath(gitTopLevel)
   ]);
   if (resolvedProjectRoot !== resolvedGitTopLevel) {
     throw new Error(
@@ -43857,7 +44008,7 @@ async function ensureRepoRoot(cwd) {
   return projectRoot;
 }
 function toRepoRelativePath(projectRoot, absolutePath) {
-  return toPosixPath(path12.relative(projectRoot, absolutePath));
+  return toPosixPath(path13.relative(projectRoot, absolutePath));
 }
 function resolveRepoRelativePath(projectRoot, relativePath) {
   try {
@@ -43873,7 +44024,7 @@ function resolveRepoRelativePath(projectRoot, relativePath) {
 }
 function resolveBlueprintPath(projectRoot, relativePath) {
   assertNoNullBytes(relativePath, "Blueprint path");
-  if (path12.isAbsolute(relativePath)) {
+  if (path13.isAbsolute(relativePath)) {
     throw new Error(`Blueprint paths must be repo-relative, not absolute: ${relativePath}`);
   }
   if (!relativePath.startsWith(`${BLUEPRINT_DIR}/`)) {
@@ -43892,15 +44043,15 @@ function resolveBlueprintPath(projectRoot, relativePath) {
   return absolutePath;
 }
 async function ensureParentDirectory2(targetPath) {
-  await fs13.mkdir(path12.dirname(targetPath), { recursive: true });
+  await fs14.mkdir(path13.dirname(targetPath), { recursive: true });
 }
 function activeJsonFileSystem() {
   return jsonFileSystemForTest ?? defaultJsonFileSystem;
 }
 function tempSiblingPath(filePath) {
-  return path12.join(
-    path12.dirname(filePath),
-    `.${path12.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  return path13.join(
+    path13.dirname(filePath),
+    `.${path13.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
   );
 }
 function blueprintRepoLockNameSegment(value) {
@@ -43935,12 +44086,12 @@ async function readJsonIfPresent(filePath) {
   if (!await pathExists2(filePath)) {
     return null;
   }
-  const raw = await fs13.readFile(filePath, "utf8");
+  const raw = await fs14.readFile(filePath, "utf8");
   return safeJsonParseObject(raw, { label: filePath });
 }
 async function existingRegularFileMode(filePath) {
   try {
-    const stats = await fs13.lstat(filePath);
+    const stats = await fs14.lstat(filePath);
     if (!stats.isFile()) {
       throw new Error(`Atomic file target must be a regular file: ${filePath}`);
     }
@@ -43961,7 +44112,7 @@ async function writeJsonFile(filePath, value) {
     await fileSystem.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
     if (existingMode !== null) {
-      await fs13.chmod(tempPath, existingMode);
+      await fs14.chmod(tempPath, existingMode);
     }
     await existingRegularFileMode(filePath);
     await fileSystem.rename(tempPath, filePath);
@@ -43975,44 +44126,44 @@ async function writeTextFile(filePath, value, options = {}) {
     content: value.replace(/\r\n/g, "\n"),
     warnings: []
   } : prepareTextForPersistence(value, {
-    label: options.label ?? path12.basename(filePath)
+    label: options.label ?? path13.basename(filePath)
   });
   await ensureParentDirectory2(filePath);
   const tempPath = tempSiblingPath(filePath);
   const existingMode = await existingRegularFileMode(filePath);
   try {
-    await fs13.writeFile(tempPath, prepared.content, "utf8");
+    await fs14.writeFile(tempPath, prepared.content, "utf8");
     if (existingMode !== null) {
-      await fs13.chmod(tempPath, existingMode);
+      await fs14.chmod(tempPath, existingMode);
     }
     await existingRegularFileMode(filePath);
-    await fs13.rename(tempPath, filePath);
+    await fs14.rename(tempPath, filePath);
   } catch (error2) {
-    await fs13.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs14.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
   return prepared.warnings;
 }
 function blueprintRepoLockOwnerPath(lockPath) {
-  return path12.join(lockPath, BLUEPRINT_REPO_LOCK_OWNER_FILE);
+  return path13.join(lockPath, BLUEPRINT_REPO_LOCK_OWNER_FILE);
 }
 function blueprintRepoLockLeasePath(lockPath) {
-  return path12.join(lockPath, BLUEPRINT_REPO_LOCK_LEASE_FILE);
+  return path13.join(lockPath, BLUEPRINT_REPO_LOCK_LEASE_FILE);
 }
 function blueprintRepoLockRecoveryPath(lockPath) {
   return `${lockPath}.recovery`;
 }
 function blueprintRepoLockRecoveryGuardOwnerPath(recoveryPath, token) {
-  return path12.join(recoveryPath, `${BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+  return path13.join(recoveryPath, `${BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
 }
 function blueprintRepoLockQuarantinePath(lockPath) {
-  return path12.join(
-    path12.dirname(lockPath),
-    `.${path12.basename(lockPath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.stale`
+  return path13.join(
+    path13.dirname(lockPath),
+    `.${path13.basename(lockPath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.stale`
   );
 }
 async function writeBlueprintRepoLockFile(filePath, contents) {
-  await fs13.writeFile(filePath, `${contents}
+  await fs14.writeFile(filePath, `${contents}
 `, "utf8");
 }
 async function readBlueprintRepoLockOwner(lockHandle) {
@@ -44020,7 +44171,7 @@ async function readBlueprintRepoLockOwner(lockHandle) {
 }
 async function readBlueprintRepoLockOwnerAtPath(ownerPath) {
   try {
-    return (await fs13.readFile(ownerPath, "utf8")).trim();
+    return (await fs14.readFile(ownerPath, "utf8")).trim();
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -44038,7 +44189,7 @@ async function refreshBlueprintRepoLockLease(lockHandle) {
 }
 async function getBlueprintRepoLockPathAgeMs(targetPath) {
   try {
-    const stats = await fs13.stat(targetPath);
+    const stats = await fs14.stat(targetPath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code === "ENOENT") {
@@ -44050,7 +44201,7 @@ async function getBlueprintRepoLockPathAgeMs(targetPath) {
 async function getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath) {
   let entries;
   try {
-    entries = await fs13.readdir(recoveryPath);
+    entries = await fs14.readdir(recoveryPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -44063,7 +44214,7 @@ async function getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath) {
       continue;
     }
     try {
-      const stats = await fs13.stat(path12.join(recoveryPath, entry));
+      const stats = await fs14.stat(path13.join(recoveryPath, entry));
       newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
@@ -44079,7 +44230,7 @@ async function getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath) {
 async function getBlueprintRepoLockAgeMs(lockPath) {
   const leasePath = blueprintRepoLockLeasePath(lockPath);
   try {
-    const stats = await fs13.stat(leasePath);
+    const stats = await fs14.stat(leasePath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code !== "ENOENT") {
@@ -44102,7 +44253,7 @@ async function createBlueprintRepoLockRecoveryGuardHandle(lockPath, recoveryPath
   try {
     await writeBlueprintRepoLockFile(recoveryGuard.ownerPath, token);
   } catch (error2) {
-    await fs13.rmdir(recoveryPath).catch(() => void 0);
+    await fs14.rmdir(recoveryPath).catch(() => void 0);
     throw error2;
   }
   return recoveryGuard;
@@ -44110,7 +44261,7 @@ async function createBlueprintRepoLockRecoveryGuardHandle(lockPath, recoveryPath
 async function refreshOwnedBlueprintRepoLockRecoveryGuard(recoveryGuard) {
   let stats;
   try {
-    stats = await fs13.stat(recoveryGuard.ownerPath);
+    stats = await fs14.stat(recoveryGuard.ownerPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return false;
@@ -44122,7 +44273,7 @@ async function refreshOwnedBlueprintRepoLockRecoveryGuard(recoveryGuard) {
   }
   try {
     const now = /* @__PURE__ */ new Date();
-    await fs13.utimes(recoveryGuard.ownerPath, now, now);
+    await fs14.utimes(recoveryGuard.ownerPath, now, now);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return false;
@@ -44136,14 +44287,14 @@ async function releaseBlueprintRepoLockRecoveryGuard(recoveryGuard) {
     return;
   }
   try {
-    await fs13.unlink(recoveryGuard.ownerPath);
+    await fs14.unlink(recoveryGuard.ownerPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return;
     }
     throw error2;
   }
-  await fs13.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
+  await fs14.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
 }
 async function createBlueprintRepoLockHandle(lockPath) {
   const token = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -44157,7 +44308,7 @@ async function createBlueprintRepoLockHandle(lockPath) {
     await writeBlueprintRepoLockFile(lockHandle.ownerPath, token);
     await writeBlueprintRepoLockFile(lockHandle.leasePath, token);
   } catch (error2) {
-    await fs13.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    await fs14.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   return lockHandle;
@@ -44172,21 +44323,21 @@ async function reclaimStaleBlueprintRepoLockRecoveryGuard(recoveryPath) {
   }
   const quarantinePath = blueprintRepoLockQuarantinePath(recoveryPath);
   try {
-    await fs13.rename(recoveryPath, quarantinePath);
+    await fs14.rename(recoveryPath, quarantinePath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return true;
     }
     throw error2;
   }
-  await fs13.rm(quarantinePath, { recursive: true, force: true });
+  await fs14.rm(quarantinePath, { recursive: true, force: true });
   return true;
 }
 async function tryAcquireBlueprintRepoLockRecoveryGuard(lockPath) {
   const recoveryPath = blueprintRepoLockRecoveryPath(lockPath);
   for (; ; ) {
     try {
-      await fs13.mkdir(recoveryPath);
+      await fs14.mkdir(recoveryPath);
       return createBlueprintRepoLockRecoveryGuardHandle(lockPath, recoveryPath);
     } catch (error2) {
       if (error2.code !== "EEXIST") {
@@ -44230,14 +44381,14 @@ async function recoverStaleBlueprintRepoLock(lockPath) {
     }
     const quarantinePath = blueprintRepoLockQuarantinePath(lockPath);
     try {
-      await fs13.rename(lockPath, quarantinePath);
+      await fs14.rename(lockPath, quarantinePath);
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return true;
       }
       throw error2;
     }
-    await fs13.rm(quarantinePath, { recursive: true, force: true });
+    await fs14.rm(quarantinePath, { recursive: true, force: true });
     return true;
   } finally {
     await releaseBlueprintRepoLockRecoveryGuard(recoveryGuard).catch(() => void 0);
@@ -44249,7 +44400,7 @@ async function acquireBlueprintRepoLock(lockPath) {
   await ensureParentDirectory2(lockPath);
   for (; ; ) {
     try {
-      await fs13.mkdir(lockPath);
+      await fs14.mkdir(lockPath);
       return createBlueprintRepoLockHandle(lockPath);
     } catch (error2) {
       const lockError = error2;
@@ -44294,9 +44445,9 @@ async function releaseBlueprintRepoLock(lockHandle) {
   if (ownerToken !== lockHandle.token) {
     return;
   }
-  await fs13.rm(lockHandle.ownerPath, { force: true }).catch(() => void 0);
-  await fs13.rm(lockHandle.leasePath, { force: true }).catch(() => void 0);
-  await fs13.rmdir(lockHandle.lockPath).catch(() => void 0);
+  await fs14.rm(lockHandle.ownerPath, { force: true }).catch(() => void 0);
+  await fs14.rm(lockHandle.leasePath, { force: true }).catch(() => void 0);
+  await fs14.rmdir(lockHandle.lockPath).catch(() => void 0);
 }
 async function withBlueprintRepoLock(projectRoot, lockName, task) {
   const lockPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/locks/${lockName}.lock`);
@@ -44517,32 +44668,32 @@ function externalSourceRowHasCurrentAccessEvidence(row) {
   return RESEARCH_ISO_DATE_PATTERN.test(row.accessed || "") && RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN.test(row.source_ref || "") && /\b(?:directly_supported|partially_supported|inferred_from_supported)\b/i.test(row.claim_class || "") && hasPlannerRelevantDownstreamUse(row.downstream_use || "");
 }
 function hasLiveExternalAccessDateEvidence(sources) {
-  const sourceRegister = extractMarkdownSubsection2(sources, "Source Register");
+  const sourceRegister = extractResearchMarkdownSubsection(sources, "Source Register");
   if (/### External Sources/i.test(sources) && /\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources)) {
     return true;
   }
   if (/\|\s*(?:external|supplied)\s*\|[\s\S]*\|\s*\d{4}-\d{2}-\d{2}\s*\|/i.test(sourceRegister)) {
     return true;
   }
-  return parseResearchMarkdownTable(extractMarkdownSubsection2(sources, "External Sources")).some(
+  return parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "External Sources")).some(
     externalSourceRowHasCurrentAccessEvidence
   );
 }
 function usesLiveVerificationLanguageWithoutExternalEvidence(content) {
   const claimText = [
-    extractMarkdownSection5(content, "Summary"),
-    extractMarkdownSection5(content, "State Of The Art"),
-    extractMarkdownSection5(content, "Recommendations")
+    extractResearchMarkdownSection(content, "Summary"),
+    extractResearchMarkdownSection(content, "State Of The Art"),
+    extractResearchMarkdownSection(content, "Recommendations")
   ].join("\n");
   const currentExternalClaimPattern = /\b(?:latest|current official|official docs confirm|upstream confirms|current upstream|live external verification|current vendor docs|official documentation currently)\b/i;
   if (!currentExternalClaimPattern.test(claimText)) {
     return false;
   }
-  const sources = extractMarkdownSection5(content, "Sources");
+  const sources = extractResearchMarkdownSection(content, "Sources");
   return !hasLiveExternalAccessDateEvidence(sources);
 }
 function hasHighConfidenceWithUnsupportedEvidenceClaims(content) {
-  const highConfidence = /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) || /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractMarkdownSection5(content, "Confidence Breakdown"));
+  const highConfidence = /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) || /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractResearchMarkdownSection(content, "Confidence Breakdown"));
   if (!highConfidence) {
     return false;
   }
@@ -44559,13 +44710,14 @@ function normalizeResearchTableHeader(value) {
   return value.trim().replace(/`/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 function splitResearchTableLine(line) {
-  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+  const trimmed = line.trim();
+  return parseMarkdownTableCells(`${trimmed.startsWith("|") ? "" : "|"}${trimmed}${trimmed.endsWith("|") ? "" : "|"}`);
 }
 function parseResearchMarkdownTable(section) {
-  const lines2 = section.split("\n");
-  for (let index = 0; index < lines2.length - 1; index += 1) {
-    const headerLine = lines2[index]?.trim() ?? "";
-    const dividerLine = lines2[index + 1]?.trim() ?? "";
+  const lines3 = stripResearchFencedCodeBlocks(section).split("\n");
+  for (let index = 0; index < lines3.length - 1; index += 1) {
+    const headerLine = lines3[index]?.trim() ?? "";
+    const dividerLine = lines3[index + 1]?.trim() ?? "";
     if (!headerLine.startsWith("|") || !dividerLine.startsWith("|")) {
       continue;
     }
@@ -44574,7 +44726,7 @@ function parseResearchMarkdownTable(section) {
     }
     const headers = splitResearchTableLine(headerLine).map(normalizeResearchTableHeader);
     const rows = [];
-    for (const rowLine of lines2.slice(index + 2)) {
+    for (const rowLine of lines3.slice(index + 2)) {
       const trimmed = rowLine.trim();
       if (!trimmed.startsWith("|")) {
         break;
@@ -44590,10 +44742,8 @@ function parseResearchMarkdownTable(section) {
   }
   return [];
 }
-function extractMarkdownSubsection2(section, subheading) {
-  const escaped = subheading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = section.match(new RegExp(`(?:^|\\n)### ${escaped}\\s*\\n([\\s\\S]*?)(?=\\n### |\\n## |$)`));
-  return match?.[1] ?? "";
+function extractResearchMarkdownSubsection(section, subheading) {
+  return extractResearchMarkdownSection(section, subheading, 3);
 }
 function splitResearchReferenceIds(value) {
   return uniqueStrings(value.match(/\b(?:SRC|EVID|CLM|REC)-\d{3}\b/g) ?? []);
@@ -44602,25 +44752,25 @@ function isBackgroundSourceUse(value) {
   return /\b(?:background|do not use as support|out_of_scope)\b/i.test(value);
 }
 function collectResearchClaimRows(content) {
-  return parseResearchMarkdownTable(extractMarkdownSection5(content, "Claim Support Ledger"));
+  return parseResearchMarkdownTable(extractResearchMarkdownSection(content, "Claim Support Ledger"));
 }
 function collectResearchRecommendationRows(content) {
-  return parseResearchMarkdownTable(extractMarkdownSection5(content, "Recommendations"));
+  return parseResearchMarkdownTable(extractResearchMarkdownSection(content, "Recommendations"));
 }
 function collectResearchSourceRegisterRows(content) {
   return parseResearchMarkdownTable(
-    extractMarkdownSubsection2(extractMarkdownSection5(content, "Sources"), "Source Register")
+    extractResearchMarkdownSubsection(extractResearchMarkdownSection(content, "Sources"), "Source Register")
   );
 }
 function sourceRegisterRowId(row) {
   return row.source_id || row.evidence_id || "";
 }
 function collectResearchEvidenceRows(content) {
-  const sources = extractMarkdownSection5(content, "Sources");
+  const sources = extractResearchMarkdownSection(content, "Sources");
   return [
-    ...parseResearchMarkdownTable(extractMarkdownSubsection2(sources, "Repo Evidence")),
-    ...parseResearchMarkdownTable(extractMarkdownSubsection2(sources, "External Sources")),
-    ...parseResearchMarkdownTable(extractMarkdownSubsection2(sources, "Inference Notes"))
+    ...parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "Repo Evidence")),
+    ...parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "External Sources")),
+    ...parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "Inference Notes"))
   ];
 }
 function hasConcreteStructuredSourceReference(text) {
@@ -44729,7 +44879,7 @@ ${sourceText}`;
 }
 function researchEvidenceWarningDiagnostics(content) {
   const diagnostics = [];
-  const sources = extractMarkdownSection5(content, "Sources");
+  const sources = extractResearchMarkdownSection(content, "Sources");
   const sourceRows = collectResearchSourceRegisterRows(content);
   const sourceRowsById = new Map(
     sourceRows.map((row) => [sourceRegisterRowId(row), row]).filter(([id]) => id.length > 0)
@@ -44838,28 +44988,38 @@ function researchEvidenceWarningDiagnostics(content) {
   }
   return diagnostics;
 }
-function stripTripleFencedCodeBlocks(content) {
-  const strippedLines = [];
+function scanResearchMarkdown(content) {
   let activeFence = null;
-  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-    const trimmedLine = line.trimStart();
+  return content.split("\n").map((text) => {
     if (activeFence) {
-      if (trimmedLine.startsWith(activeFence)) {
+      const closing = text.match(/^ {0,3}(`+|~+)[ \t]*\r?$/u);
+      if (closing && closing[1][0] === activeFence.marker && closing[1].length >= activeFence.length) {
         activeFence = null;
       }
-      continue;
+      return { text, fenced: true };
     }
-    if (trimmedLine.startsWith("```")) {
-      activeFence = "```";
-      continue;
+    const opening = text.match(/^ {0,3}(`{3,}|~{3,})([^\r]*)\r?$/u);
+    if (opening && (opening[1][0] !== "`" || !opening[2].includes("`"))) {
+      activeFence = { marker: opening[1][0], length: opening[1].length };
+      return { text, fenced: true };
     }
-    if (trimmedLine.startsWith("~~~")) {
-      activeFence = "~~~";
-      continue;
-    }
-    strippedLines.push(line);
-  }
-  return strippedLines.join("\n");
+    const heading = text.match(/^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*\r?$/u);
+    return {
+      text,
+      fenced: false,
+      ...heading ? { heading: { level: heading[1].length, title: stripResearchHeadingAdornment(heading[2]) } } : {}
+    };
+  });
+}
+function extractResearchMarkdownSection(content, heading, level = 2) {
+  const lines3 = scanResearchMarkdown(content);
+  const start = lines3.findIndex((line) => line.heading?.level === level && line.heading.title === heading);
+  if (start === -1) return "";
+  const next = lines3.findIndex((line, index) => index > start && line.heading !== void 0 && line.heading.level <= level);
+  return lines3.slice(start + 1, next === -1 ? void 0 : next).map((line) => line.text).join("\n").trim();
+}
+function stripResearchFencedCodeBlocks(content) {
+  return scanResearchMarkdown(content).map((line) => line.fenced ? "" : line.text).join("\n");
 }
 function stripResearchPlaceholderSignals(section) {
   return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
@@ -44918,13 +45078,9 @@ function canonicalizeResearchRequiredHeadings(content) {
   );
   const canonicalizedHeadings = [];
   const unmatchedTopLevelHeadings = [];
-  const lines2 = content.replace(/\r\n/g, "\n").split("\n");
-  const canonicalizedLines = lines2.map((line) => {
-    const match = line.match(/^(##)(?!#)\s+(.+?)\s*$/u);
-    if (!match) {
-      return line;
-    }
-    const originalHeading = stripResearchHeadingAdornment(match[2] ?? "");
+  const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line, heading }) => {
+    if (heading?.level !== 2) return line;
+    const originalHeading = heading.title;
     const canonicalHeading = canonicalHeadingByKey.get(normalizeResearchHeadingKey(originalHeading));
     if (!canonicalHeading) {
       unmatchedTopLevelHeadings.push(originalHeading);
@@ -44936,7 +45092,7 @@ function canonicalizeResearchRequiredHeadings(content) {
         to: canonicalHeading
       });
     }
-    return `## ${canonicalHeading}`;
+    return `## ${canonicalHeading}${line.endsWith("\r") ? "\r" : ""}`;
   });
   return {
     content: canonicalizedLines.join("\n"),
@@ -44945,21 +45101,36 @@ function canonicalizeResearchRequiredHeadings(content) {
   };
 }
 function canonicalizeResearchHeadingLines(content) {
-  return canonicalizeResearchRequiredHeadings(content).content;
-}
-function countResearchContentWords(section) {
-  return section.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g)?.length ?? 0;
+  const normalized = canonicalizeResearchRequiredHeadings(content).content;
+  const lines3 = scanResearchMarkdown(normalized);
+  for (let index = 0; index < lines3.length; index += 1) {
+    const heading = lines3[index].heading;
+    if (heading?.level !== 2) continue;
+    const sentinel = RESEARCH_SECTION_VALIDATIONS?.[heading.title]?.exactEmptySentinel;
+    if (!sentinel) continue;
+    let end = index + 1;
+    while (end < lines3.length && (!lines3[end].heading || lines3[end].heading.level > 2)) end += 1;
+    const section = lines3.slice(index + 1, end).map((line) => line.text).join("\n");
+    if (!matchesFuzzyEmptySentinel(section, sentinel)) continue;
+    const contentLine = lines3.slice(index + 1, end).find((line) => line.text.trim().length > 0);
+    if (contentLine) contentLine.text = `${sentinel}${contentLine.text.endsWith("\r") ? "\r" : ""}`;
+  }
+  return lines3.map((line) => line.text).join("\n");
 }
 function uniqueStrings(values) {
   return [...new Set(values)];
 }
-function hasSubstantiveResearchSection(section, heading) {
+function hasSubstantiveResearchSection(section) {
   const normalized = stripResearchPlaceholderSignals(section);
-  const meaningfulLines = normalized.split("\n").map((line) => line.trim()).map((line) => line.replace(/^(?:[-*]\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line)).filter((line) => !/^why it matters\.?$/i.test(line));
-  if (meaningfulLines.length === 0) {
-    return false;
-  }
-  return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
+  const lines3 = normalized.split("\n").map((line) => line.trim());
+  const tableDivider = /^\|?[\s:-]+\|[\s|:-]*$/;
+  return lines3.some((rawLine, index) => {
+    if (tableDivider.test(rawLine) || rawLine.startsWith("|") && tableDivider.test(lines3[index + 1] ?? "")) return false;
+    if (/^#{1,6}\s|^(?:`{3,}|~{3,})/.test(rawLine)) return false;
+    const line = rawLine.replace(/^(?:[-*+]\s*)+/, "").replace(/[*_`]/g, "").trim();
+    if (/^(?:why it matters|none|null|undefined|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)[.!]?$/i.test(line)) return false;
+    return /[\p{L}\p{N}]/u.test(line);
+  });
 }
 function matchedScaffoldPlaceholderSignals(content, placeholderSignals, options = {}) {
   const matchedSignals = uniqueStrings(
@@ -44979,13 +45150,13 @@ function validateResearchArtifactContent(content) {
   const warnings = [];
   const diagnostics = [];
   const canonicalizedHeadings = canonicalizeResearchRequiredHeadings(content);
-  const normalizedContent = canonicalizedHeadings.content;
-  const contentWithoutFencedCodeBlocks = stripTripleFencedCodeBlocks(normalizedContent);
+  const normalizedContent = canonicalizeResearchHeadingLines(content);
+  const contentWithoutFencedCodeBlocks = stripResearchFencedCodeBlocks(normalizedContent);
   const pushResearchIssue = (message, diagnostic) => {
     issues.push(message);
     diagnostics.push(diagnostic);
   };
-  if (!/^# .+ - Research\s*$/m.test(content)) {
+  if (!/^# .+ - Research[ \t]*\r?(?:\n|$)/.test(contentWithoutFencedCodeBlocks.trimStart())) {
     pushResearchIssue(
       "Research artifact must start with a '# ... - Research' heading.",
       phaseArtifactDiagnostic({
@@ -45011,7 +45182,7 @@ function validateResearchArtifactContent(content) {
       })
     );
   }
-  const confidenceMatch = normalizedContent.match(
+  const confidenceMatch = contentWithoutFencedCodeBlocks.match(
     /^\*\*Confidence:\*\*\s*(LOW|MEDIUM|HIGH)\s*$/m
   );
   if (!confidenceMatch) {
@@ -45029,7 +45200,7 @@ function validateResearchArtifactContent(content) {
   }
   for (const heading of REQUIRED_RESEARCH_SECTIONS) {
     const hasHeading = new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(
-      normalizedContent
+      contentWithoutFencedCodeBlocks
     );
     const exactEmptySentinel = RESEARCH_SECTION_VALIDATIONS?.[heading]?.exactEmptySentinel;
     if (!hasHeading) {
@@ -45053,7 +45224,7 @@ function validateResearchArtifactContent(content) {
       );
       continue;
     }
-    const section = extractMarkdownSection5(normalizedContent, heading);
+    const section = extractResearchMarkdownSection(normalizedContent, heading);
     if (section.trim().length === 0) {
       const message = `Research artifact section ${heading} must not be empty.`;
       pushResearchIssue(
@@ -45088,7 +45259,7 @@ function validateResearchArtifactContent(content) {
       );
       continue;
     }
-    if (!hasSubstantiveResearchSection(section, heading)) {
+    if (!hasSubstantiveResearchSection(section)) {
       const message = exactEmptySentinel ? `Research artifact section ${heading} must contain substantive content after placeholders are removed or use exactly \`${exactEmptySentinel}\`.` : `Research artifact section ${heading} must contain substantive content after placeholders are removed.`;
       pushResearchIssue(
         message,
@@ -45103,7 +45274,7 @@ function validateResearchArtifactContent(content) {
       );
     }
   }
-  const phaseRequirements = extractMarkdownSection5(normalizedContent, "Phase Requirements");
+  const phaseRequirements = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Phase Requirements");
   if (!hasRequirementTableRows(phaseRequirements)) {
     pushResearchIssue(
       "Research artifact section Phase Requirements must include at least one populated requirement row.",
@@ -45117,7 +45288,7 @@ function validateResearchArtifactContent(content) {
       })
     );
   }
-  const recommendations = extractMarkdownSection5(normalizedContent, "Recommendations");
+  const recommendations = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Recommendations");
   if (!/^- /m.test(recommendations) && collectResearchRecommendationRows(normalizedContent).length === 0) {
     pushResearchIssue(
       "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
@@ -45131,7 +45302,7 @@ function validateResearchArtifactContent(content) {
       })
     );
   }
-  const sources = extractMarkdownSection5(normalizedContent, "Sources");
+  const sources = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Sources");
   if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence(normalizedContent)) {
     pushResearchIssue(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
@@ -45220,7 +45391,7 @@ function isRepoRelativePlanPath(value) {
   if (rawValue.length === 0) {
     return false;
   }
-  if (path12.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
+  if (path13.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
     return false;
   }
   const normalized = normalizePlanPathForValidation(rawValue);
@@ -45397,8 +45568,8 @@ function validateObjectivePlanBulletList(section, artifactLabel) {
 function validatePlanTaskBlock(taskBlock, taskNumber) {
   const issues = [];
   const warnings = [];
-  const lines2 = taskBlock.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
-  const heading = lines2[0] ?? "";
+  const lines3 = taskBlock.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  const heading = lines3[0] ?? "";
   const headingText = heading.replace(/^###\s+/, "").trim();
   if (headingText.length === 0 || /^Task\s+\d+(?::\s*)?$/i.test(headingText) || isPlaceholderOnlyTaskHeading(headingText)) {
     issues.push(`Task ${taskNumber} must use a concrete heading.`);
@@ -45635,30 +45806,30 @@ function scoreDigestSectionHeading(heading) {
   return 0;
 }
 function summarizeMarkdownSectionBody(section) {
-  const lines2 = section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("## "));
-  if (lines2.length === 0) {
+  const lines3 = section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("## "));
+  if (lines3.length === 0) {
     return "";
   }
-  const verdictLine = lines2.find((line) => /^[-*+]\s+Verdict:/i.test(line) || /^Verdict:/i.test(line));
+  const verdictLine = lines3.find((line) => /^[-*+]\s+Verdict:/i.test(line) || /^Verdict:/i.test(line));
   if (verdictLine) {
     return verdictLine.replace(/^[-*+]\s*/, "").trim();
   }
-  const tableRows = lines2.filter(
+  const tableRows = lines3.filter(
     (line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)
   );
   if (tableRows.length > 0) {
     return tableRows.slice(0, 4).map((line) => summarizeMarkdownTableRow(line)).filter((line) => line.length > 0).join("; ");
   }
-  const bullets = lines2.filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0);
-  if (bullets.length > 0) {
-    return bullets.slice(0, 2).join("; ");
+  const bullets2 = lines3.filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0);
+  if (bullets2.length > 0) {
+    return bullets2.slice(0, 2).join("; ");
   }
-  return lines2[0] ?? "";
+  return lines3[0] ?? "";
 }
-function splitMarkdownSections(lines2) {
+function splitMarkdownSections(lines3) {
   const sections = [];
   let current = null;
-  for (const line of lines2) {
+  for (const line of lines3) {
     if (/^##\s+/.test(line)) {
       if (current) {
         sections.push(current);
@@ -45679,9 +45850,9 @@ function splitMarkdownSections(lines2) {
   }
   return sections;
 }
-function summarizePreambleLines(lines2) {
+function summarizePreambleLines(lines3) {
   const synopsis = [];
-  for (const line of lines2) {
+  for (const line of lines3) {
     if (line.startsWith("**") && /:\s*/.test(line)) {
       synopsis.push(line.replace(/^\*\*(.+?)\*\*:\s*/, "$1: ").trim());
       continue;
@@ -45693,7 +45864,7 @@ function summarizePreambleLines(lines2) {
   if (synopsis.length > 0) {
     return synopsis;
   }
-  return lines2.map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).slice(0, 2);
+  return lines3.map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).slice(0, 2);
 }
 function validateValidationScaffoldPlaceholders(content, artifactLabel) {
   return VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS.filter(({ pattern }) => pattern.test(content)).map(
@@ -46639,14 +46810,14 @@ function researchEvidenceWarningDiagnostic(args) {
   };
 }
 function hasRequirementTableRows(section) {
-  const lines2 = section.split("\n").map((line) => line.trim()).filter((line) => /^\|.*\|$/.test(line));
-  return lines2.some((line, index) => {
+  const lines3 = section.split("\n").map((line) => line.trim()).filter((line) => /^\|.*\|$/.test(line));
+  return lines3.some((line, index) => {
     const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
     if (cells.length < 3) {
       return false;
     }
     const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
-    const nextLine = lines2[index + 1] ?? "";
+    const nextLine = lines3[index + 1] ?? "";
     const nextCells = nextLine.slice(1, -1).split("|").map((cell) => cell.trim());
     const isHeader = nextCells.length >= 3 && nextCells.every((cell) => /^:?-{3,}:?$/.test(cell));
     return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
@@ -48186,11 +48357,11 @@ function hasSummaryMarkdownHeading(content, heading) {
 }
 function extractSummaryMarkdownSection(content, heading) {
   const expectedHeading = normalizeSummaryHeading(heading);
-  const lines2 = content.replace(/\r\n/g, "\n").split("\n");
+  const lines3 = content.replace(/\r\n/g, "\n").split("\n");
   let startIndex = -1;
   let startLevel = 0;
-  for (let index = 0; index < lines2.length; index += 1) {
-    const parsed = extractSummaryMarkdownHeadingText(lines2[index].trim());
+  for (let index = 0; index < lines3.length; index += 1) {
+    const parsed = extractSummaryMarkdownHeadingText(lines3[index].trim());
     if (parsed && normalizeSummaryHeading(parsed.text) === expectedHeading) {
       startIndex = index + 1;
       startLevel = parsed.level;
@@ -48200,15 +48371,15 @@ function extractSummaryMarkdownSection(content, heading) {
   if (startIndex < 0) {
     return "";
   }
-  let endIndex = lines2.length;
-  for (let index = startIndex; index < lines2.length; index += 1) {
-    const parsed = extractSummaryMarkdownHeadingText(lines2[index].trim());
+  let endIndex = lines3.length;
+  for (let index = startIndex; index < lines3.length; index += 1) {
+    const parsed = extractSummaryMarkdownHeadingText(lines3[index].trim());
     if (parsed && parsed.level <= startLevel) {
       endIndex = index;
       break;
     }
   }
-  return lines2.slice(startIndex, endIndex).join("\n").trim();
+  return lines3.slice(startIndex, endIndex).join("\n").trim();
 }
 function normalizeSummaryMarkerValue2(value) {
   if (value === null) {
@@ -48464,7 +48635,7 @@ function validateSummaryPlanReference(content, options = {}) {
       issues.push("Summary artifact must reference a matching plan artifact.");
     } else {
       const expectedPlanPath = options.linkedPlanPath;
-      const expectedPlanFile = path12.basename(expectedPlanPath);
+      const expectedPlanFile = path13.basename(expectedPlanPath);
       if (summaryPlanReference !== expectedPlanPath && summaryPlanReference !== expectedPlanFile) {
         warnings.push(
           `Summary artifact Plan marker ${summaryPlanReference} does not match linked plan path ${expectedPlanPath}; canonical filename linkage will be used.`
@@ -48617,10 +48788,10 @@ async function listRelativeFiles(rootPath, projectRoot) {
   if (!await pathExists2(rootPath)) {
     return [];
   }
-  const entries = await fs13.readdir(rootPath, { withFileTypes: true });
+  const entries = await fs14.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path12.join(rootPath, entry.name);
+    const absolutePath = path13.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listRelativeFiles(absolutePath, projectRoot));
       continue;
@@ -48633,7 +48804,7 @@ async function listImmediateDirectories2(rootPath) {
   if (!await pathExists2(rootPath)) {
     return [];
   }
-  const entries = await fs13.readdir(rootPath, { withFileTypes: true });
+  const entries = await fs14.readdir(rootPath, { withFileTypes: true });
   return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
 }
 async function inspectBlueprintArtifacts(projectRoot) {
@@ -48673,7 +48844,7 @@ async function inspectBlueprintArtifacts(projectRoot) {
     if (await pathExists2(artifactPath)) {
       codebasePresent.push(artifact);
       const contractId = resolveCodebaseArtifactPathContractId(artifact);
-      const raw = await fs13.readFile(artifactPath, "utf8");
+      const raw = await fs14.readFile(artifactPath, "utf8");
       const validation = validateCodebaseArtifactContent(raw, contractId);
       if (validation.valid) {
         codebaseValid.push(artifact);
@@ -48784,16 +48955,16 @@ function extractBootstrapRoadmapPhaseRequirementIds(phaseBlock) {
   return extractRequirementIdsFromMarkdownAll(requirementClause);
 }
 function extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock) {
-  const lines2 = phaseBlock.replace(/\r\n/g, "\n").split("\n");
-  for (let index = 0; index < lines2.length; index += 1) {
-    const match = lines2[index].match(/^(\s*)-\s*Success Criteria:\s*$/i);
+  const lines3 = phaseBlock.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines3.length; index += 1) {
+    const match = lines3[index].match(/^(\s*)-\s*Success Criteria:\s*$/i);
     if (!match) {
       continue;
     }
     const labelIndent = match[1].length;
     const items = [];
-    for (let lineIndex = index + 1; lineIndex < lines2.length; lineIndex += 1) {
-      const line = lines2[lineIndex];
+    for (let lineIndex = index + 1; lineIndex < lines3.length; lineIndex += 1) {
+      const line = lines3[lineIndex];
       if (line.trim().length === 0) {
         continue;
       }
@@ -48869,7 +49040,7 @@ async function inspectBootstrapArtifacts(projectRoot) {
     if (!await pathExists2(absolutePath)) {
       continue;
     }
-    const raw = await fs13.readFile(absolutePath, "utf8");
+    const raw = await fs14.readFile(absolutePath, "utf8");
     contents.set(artifact, raw);
     if (BOOTSTRAP_PLACEHOLDER_SIGNALS[artifact]?.some((signal) => raw.includes(signal))) {
       placeholderArtifacts.push(artifact);
@@ -48926,7 +49097,7 @@ function inferProjectName(projectRoot, requestedName) {
   if (trimmed) {
     return trimmed;
   }
-  return path12.basename(projectRoot);
+  return path13.basename(projectRoot);
 }
 function emptyCarryForwardBootstrapReceipt() {
   return {
@@ -48950,7 +49121,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
   if (!args.bootstrapSeed || requestedContextArtifact === null || !await pathExists2(roadmapPath)) {
     return receipt;
   }
-  const roadmap = parseRoadmapDocument(await fs13.readFile(roadmapPath, "utf8"));
+  const roadmap = parseRoadmapDocument(await fs14.readFile(roadmapPath, "utf8"));
   const firstPhaseNumber = computeNextWholePhaseNumber(roadmap.phases);
   const firstPhasePrefix = formatPhasePrefix3(firstPhaseNumber);
   const firstPhaseTitle = args.bootstrapSeed.roadmapPhases?.[0]?.title?.trim() || requestedContextArtifact.phaseName;
@@ -48978,7 +49149,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
     const directoryPhaseNumber = phaseDir2.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
     return directoryPhaseNumber !== void 0 && normalizePhaseNumber3(directoryPhaseNumber) === firstPhaseNumber;
   });
-  const computedPhaseDirName = path12.basename(firstPhaseDir);
+  const computedPhaseDirName = path13.basename(firstPhaseDir);
   if (matchingPhaseDirs.length > 1) {
     throw new Error(
       `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs.map((phaseDir2) => `${BLUEPRINT_PHASES_PATH}/${phaseDir2}`).join(", ")}.`
@@ -48991,7 +49162,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
   }
   const firstContextAbsolutePath = resolveBlueprintPath(args.projectRoot, firstContextPath);
   if (await pathExists2(firstContextAbsolutePath)) {
-    const existingContext = await fs13.readFile(firstContextAbsolutePath, "utf8");
+    const existingContext = await fs14.readFile(firstContextAbsolutePath, "utf8");
     if (!args.overwrite && !isScaffoldGeneratedArtifact(existingContext) && !isBootstrapStarterContext(existingContext)) {
       throw new Error(
         `Carry-forward scaffold is blocked because ${firstContextPath} already contains user-authored context. Re-run with explicit overwrite approval before replacing the saved phase context.`
@@ -49030,7 +49201,7 @@ async function blueprintArtifactScaffold(args = {}) {
     bootstrapSeed: args.bootstrapSeed,
     bootstrapAssessment: bootstrapDiagnostics.brownfield
   };
-  await fs13.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
+  await fs14.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
   for (const artifact of artifacts) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const exists3 = await pathExists2(absolutePath);
@@ -49039,7 +49210,7 @@ async function blueprintArtifactScaffold(args = {}) {
       if (exists3) {
         reusedFiles.push(artifact);
       } else {
-        await fs13.mkdir(absolutePath, { recursive: true });
+        await fs14.mkdir(absolutePath, { recursive: true });
         createdFiles.push(artifact);
       }
       continue;
@@ -49154,7 +49325,7 @@ async function blueprintArtifactMutateIndexUnlocked(args) {
   }
   const absolutePath = resolveBlueprintPath(projectRoot, targetPath);
   const exists3 = await pathExists2(absolutePath);
-  const raw = exists3 ? await fs13.readFile(absolutePath, "utf8") : "";
+  const raw = exists3 ? await fs14.readFile(absolutePath, "utf8") : "";
   const parsed = parseCaptureIndexDocument(raw, args.target);
   if (parsed.malformed) {
     warnings.push(
@@ -49595,7 +49766,7 @@ async function isActiveDiscussPhaseDraft(projectRoot, inspection) {
     return false;
   }
   try {
-    const raw = await fs13.readFile(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH), "utf8");
+    const raw = await fs14.readFile(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH), "utf8");
     const activeCommand2 = readStateLineValue(raw, "Active command");
     return activeCommand2 === blueprintDirectCommand("discuss-phase");
   } catch {
@@ -49808,7 +49979,7 @@ async function blueprintArtifactValidate(args = {}) {
         continue;
       }
       const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-      const raw = await fs13.readFile(absolutePath, "utf8");
+      const raw = await fs14.readFile(absolutePath, "utf8");
       if (target.kind === "context" && isLegacyPhaseContextShell(raw)) {
         continue;
       }
@@ -49847,7 +50018,7 @@ async function blueprintArtifactValidate(args = {}) {
     if (!await pathExists2(absolutePath)) {
       continue;
     }
-    const raw = await fs13.readFile(absolutePath, "utf8");
+    const raw = await fs14.readFile(absolutePath, "utf8");
     bootstrapContents.set(artifact, raw);
     const validation = artifact.endsWith("PROJECT.md") ? validateBootstrapProjectArtifact(raw, { allowLegacyShell: allowLegacyBootstrapShell }) : artifact.endsWith("REQUIREMENTS.md") ? validateBootstrapRequirementsArtifact(raw, {
       allowLegacyShell: allowLegacyBootstrapShell
@@ -49887,7 +50058,7 @@ async function blueprintArtifactValidate(args = {}) {
   }
   for (const artifact of inspection.phases.filter((value) => value.endsWith("-VERIFICATION.md"))) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-    const raw = await fs13.readFile(absolutePath, "utf8");
+    const raw = await fs14.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
     const validation = validateVerificationArtifactContent(raw, summaryPaths, { noUat });
     for (const issue2 of validation.issues) {
@@ -49904,7 +50075,7 @@ async function blueprintArtifactValidate(args = {}) {
   }
   for (const artifact of inspection.phases.filter((value) => value.endsWith("-UAT.md"))) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-    const raw = await fs13.readFile(absolutePath, "utf8");
+    const raw = await fs14.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
     const validation = validateUatArtifactContent(raw, summaryPaths, {
       requireReadyVerificationEvidence: true
@@ -49925,7 +50096,7 @@ async function blueprintArtifactValidate(args = {}) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const phaseMatch = artifact.match(/\/(\d+(?:\.\d+)?)-\d+-PLAN\.md$/);
     const expectedPhase = phaseMatch?.[1];
-    const raw = await fs13.readFile(absolutePath, "utf8");
+    const raw = await fs14.readFile(absolutePath, "utf8");
     const validation = validatePlanArtifactContent(raw, expectedPhase);
     for (const issue2 of validation.issues) {
       issues.push(`${artifact}: ${issue2}`);
@@ -49943,7 +50114,7 @@ async function blueprintArtifactValidate(args = {}) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const linkedPlanPath = artifact.replace(/-SUMMARY\.md$/, "-PLAN.md");
     const linkedPlanExists = await pathExists2(resolveBlueprintPath(projectRoot, linkedPlanPath));
-    const raw = await fs13.readFile(absolutePath, "utf8");
+    const raw = await fs14.readFile(absolutePath, "utf8");
     const validation = validateStrictSummaryArtifactContent(raw, {
       linkedPlanPath: linkedPlanExists ? linkedPlanPath : null
     });
@@ -50254,11 +50425,11 @@ async function buildArtifactDigestSections(projectRoot, artifactPaths) {
   const digest2 = [];
   for (const artifactPath of artifactPaths) {
     const absolutePath = resolveRepoRelativePath(projectRoot, artifactPath);
-    const raw = await fs13.readFile(absolutePath, "utf8");
+    const raw = await fs14.readFile(absolutePath, "utf8");
     const summary = summarizeArtifactContent(raw);
     digest2.push({
       artifact: artifactPath,
-      title: summary.title.length > 0 ? summary.title : path12.basename(artifactPath, path12.extname(artifactPath)),
+      title: summary.title.length > 0 ? summary.title : path13.basename(artifactPath, path13.extname(artifactPath)),
       summary: summary.summary,
       evidence: [artifactPath]
     });
@@ -50827,7 +50998,7 @@ async function collectValidAddTestsValidationEvidencePaths(args) {
   const warnings = [];
   const noUat = await readWorkflowNoUat2(args.projectRoot);
   for (const artifactPath of args.phaseFiles.filter((entry) => entry.endsWith("-VERIFICATION.md") || entry.endsWith("-UAT.md")).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs13.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs14.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = artifactPath.endsWith("-VERIFICATION.md") ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat }) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
@@ -50854,7 +51025,7 @@ function normalizeSummaryLinkedPlanPath(summaryPath2, planReference) {
     return planReference;
   }
   if (!planReference.includes("/") && /-PLAN\.md$/.test(planReference)) {
-    return `${path12.posix.dirname(summaryPath2)}/${planReference}`;
+    return `${path13.posix.dirname(summaryPath2)}/${planReference}`;
   }
   return planReference;
 }
@@ -50881,7 +51052,7 @@ async function resolveAddTestsSummaryLinkedPlan(args) {
 async function collectValidAddTestsReviewPath(args) {
   const warnings = [];
   for (const artifactPath of args.phaseFiles.filter((entry) => isNormalReviewArtifactPath(entry)).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs13.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs14.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = validateReviewArtifactContent(raw, "code-review");
     if (validation.valid) {
       return { path: artifactPath, warnings };
@@ -50923,13 +51094,13 @@ async function collectAddTestsReportContext(projectRoot, reportName2) {
     };
   }
   const phaseDirAbs = resolveBlueprintPath(projectRoot, phase.phaseDir);
-  const entries = await fs13.readdir(phaseDirAbs).catch(() => []);
+  const entries = await fs14.readdir(phaseDirAbs).catch(() => []);
   const phaseFiles = entries.map((entry) => `${phase.phaseDir}/${entry}`);
   const planPaths = phaseFiles.filter((entry) => /-\d{2,}-PLAN\.md$/.test(entry)).sort((left, right) => left.localeCompare(right));
   const completedSummaries = [];
   const dependencyPlanMap = /* @__PURE__ */ new Map();
   for (const summaryPath2 of phaseFiles.filter((entry) => /-\d{2,}-SUMMARY\.md$/.test(entry)).sort((left, right) => left.localeCompare(right))) {
-    const content = await fs13.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const content = await fs14.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
     const { linkedPlanPath, linkedPlanExists } = await resolveAddTestsSummaryLinkedPlan({
       projectRoot,
       summaryPath: summaryPath2,
@@ -51119,7 +51290,7 @@ async function validateAuditFixScopeFiles(args) {
       continue;
     }
     try {
-      const stats = await fs13.stat(absolutePath);
+      const stats = await fs14.stat(absolutePath);
       if (!stats.isFile()) {
         warnings.push(
           `Audit-fix scope file ${file2} is no longer a regular file; keeping it in scope because blueprint_review_scope captured the pre-fix path.`
@@ -51240,7 +51411,7 @@ async function collectValidAuditFixArtifactPath(args) {
   for (const artifactPath of args.phaseFiles.filter(
     (entry) => args.suffix === "-REVIEW.md" ? isNormalReviewArtifactPath(entry) : entry.endsWith(args.suffix)
   ).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs13.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs14.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = args.suffix === "-REVIEW.md" ? validateReviewArtifactContent(raw, "code-review") : args.suffix === "-SECURITY.md" ? validateReviewArtifactContent(raw, "security") : args.suffix === "-VERIFICATION.md" ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat }) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
@@ -51259,7 +51430,7 @@ async function collectAuditFixSelectedEvidencePaths(args) {
   const warnings = [];
   const blockers = [];
   const phaseDirAbs = resolveBlueprintPath(args.projectRoot, args.phaseDir);
-  const entries = await fs13.readdir(phaseDirAbs).catch(() => []);
+  const entries = await fs14.readdir(phaseDirAbs).catch(() => []);
   const phaseFiles = entries.map((entry) => `${args.phaseDir}/${entry}`);
   const review = await collectValidAuditFixArtifactPath({
     projectRoot: args.projectRoot,
@@ -53762,7 +53933,7 @@ async function blueprintArtifactReportWriteUnlocked(args) {
       task: async () => {
         const exists4 = await pathExists2(absolutePath);
         if (exists4) {
-          const existingContent = await fs13.readFile(absolutePath, "utf8");
+          const existingContent = await fs14.readFile(absolutePath, "utf8");
           const reusableContents = ["created", "updated", "reused"].map(contentForStatus);
           if (reusableContents.includes(existingContent)) {
             warnings2.push("Preserved existing report because the model-rendered content was unchanged.");
@@ -53846,7 +54017,7 @@ async function blueprintArtifactReportWriteUnlocked(args) {
     );
   }
   if (exists3) {
-    const existingContent = await fs13.readFile(absolutePath, "utf8");
+    const existingContent = await fs14.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
       warnings.push("Preserved existing report because the content was unchanged.");
       return {
@@ -53952,7 +54123,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     };
   }
   if (exists3) {
-    const existingContent = await fs13.readFile(absolutePath, "utf8");
+    const existingContent = await fs14.readFile(absolutePath, "utf8");
     const existingValidation = validateCodebaseArtifactContent(existingContent, args.artifactId);
     if (existingContent === normalizedContent) {
       warnings.push("Preserved existing codebase artifact because the content was unchanged.");
@@ -54419,9 +54590,9 @@ var init_artifacts = __esm({
       "milestone-summary-"
     ];
     defaultJsonFileSystem = {
-      writeFile: (filePath, contents, encoding) => fs13.writeFile(filePath, contents, encoding),
-      rename: (oldPath, newPath) => fs13.rename(oldPath, newPath),
-      rm: (filePath, options) => fs13.rm(filePath, options)
+      writeFile: (filePath, contents, encoding) => fs14.writeFile(filePath, contents, encoding),
+      rename: (oldPath, newPath) => fs14.rename(oldPath, newPath),
+      rm: (filePath, options) => fs14.rm(filePath, options)
     };
     jsonFileSystemForTest = null;
     repoLockTimingForTest = null;
@@ -54700,11 +54871,11 @@ var init_artifacts = __esm({
 });
 
 // src/mcp/tools/discuss-evidence.ts
-import { createHash as createHash5 } from "node:crypto";
-import { promises as fs14 } from "node:fs";
+import { createHash as createHash6 } from "node:crypto";
+import { promises as fs15 } from "node:fs";
 async function readDiscussEvidence(root, relative) {
   try {
-    const bytes = await fs14.readFile(
+    const bytes = await fs15.readFile(
       resolveRepoRelativeInputPathSync(root, relative)
     );
     if (bytes.length > 256 * 1024)
@@ -54723,7 +54894,7 @@ async function readDiscussEvidence(root, relative) {
   }
 }
 async function discussPlanInventory(root, phaseDir2) {
-  return (await fs14.readdir(resolveRepoRelativeInputPathSync(root, phaseDir2))).filter((name) => /(?:^|-)PLAN(?:\.json|\.md)$/.test(name)).sort();
+  return (await fs15.readdir(resolveRepoRelativeInputPathSync(root, phaseDir2))).filter((name) => /(?:^|-)PLAN(?:\.json|\.md)$/.test(name)).sort();
 }
 async function discussEvidenceHash(root, relative) {
   if (relative === "@discuss/effective-config") {
@@ -54851,9 +55022,9 @@ async function collectDiscussEvidence(args) {
       status: "blocked",
       reason: "Evidence packet exceeds 512 KiB; narrow source inputs before preparing."
     };
-  const readSet = [roadmap, spec, ...sources].map(({ path: path29, hash: hash2 }) => ({
-    path: path29,
-    hash: hash2
+  const readSet = [roadmap, spec, ...sources].map(({ path: path30, hash: hash3 }) => ({
+    path: path30,
+    hash: hash3
   }));
   readSet.push(...priorSnapshots.map((snapshot4, index) => ({
     path: `@discuss/prior/${prior[index].phaseNumber}`,
@@ -54941,7 +55112,7 @@ var init_discuss_evidence = __esm({
     init_phase_artifacts();
     init_state();
     init_artifacts();
-    evidenceDigest = (value) => createHash5("sha256").update(value).digest("hex");
+    evidenceDigest = (value) => createHash6("sha256").update(value).digest("hex");
     stableEvidence = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
@@ -54952,12 +55123,12 @@ var init_discuss_evidence = __esm({
 });
 
 // src/mcp/tools/discuss.ts
-import { createHash as createHash6 } from "node:crypto";
-import { promises as fs15 } from "node:fs";
+import { createHash as createHash7 } from "node:crypto";
+import { promises as fs16 } from "node:fs";
 async function hashPath(root, relative) {
   try {
     return digest(
-      await fs15.readFile(resolveRepoRelativeInputPathSync(root, relative))
+      await fs16.readFile(resolveRepoRelativeInputPathSync(root, relative))
     );
   } catch (error2) {
     if (error2.code === "ENOENT") return null;
@@ -55014,7 +55185,7 @@ async function basisFreshness(root, readSet) {
 async function readSession(root, relative) {
   try {
     const parsed = safeJsonParseObject(
-      await fs15.readFile(resolveBlueprintPath(root, relative), "utf8"),
+      await fs16.readFile(resolveBlueprintPath(root, relative), "utf8"),
       { label: relative, maxBytes: 32 * 1024 * 1024 }
     );
     sessionSchema.parse(parsed);
@@ -55126,7 +55297,7 @@ async function prepareDiscussInputBasis(args) {
         ...args.readSet.map((i) => i.path)
       ])
     ].filter(
-      (path29) => session.basis.readSet.find((i) => i.path === path29)?.hash !== args.readSet.find((i) => i.path === path29)?.hash
+      (path30) => session.basis.readSet.find((i) => i.path === path30)?.hash !== args.readSet.find((i) => i.path === path30)?.hash
     );
     if (session.basis.prepared && changedPaths.length && !args.acknowledgeChangedInputs)
       return {
@@ -55272,11 +55443,11 @@ function assess(session, resolved) {
     content
   };
 }
-function compactReadiness(assessment) {
+function compactReadiness(assessment2) {
   return {
-    ready: assessment.ready,
-    blockers: assessment.blockers,
-    validation: assessment.validation
+    ready: assessment2.ready,
+    blockers: assessment2.blockers,
+    validation: assessment2.validation
   };
 }
 async function blueprintDiscussRecord(raw) {
@@ -55365,14 +55536,14 @@ async function blueprintDiscussRecord(raw) {
       revision: session.revision
     };
     await save(loc.projectRoot, loc.sessionPath, session);
-    const assessment = assess(session, loc.resolved);
+    const assessment2 = assess(session, loc.resolved);
     return {
       status: "recorded",
       revision: session.revision,
       path: loc.sessionPath,
       candidateSaved: session.candidate !== void 0,
-      readiness: compactReadiness(assessment),
-      nextAction: assessment.ready ? "Call blueprint_discuss_finalize after preparing fresh inputs." : "Repair fields or resolve blocking questions using blueprint_discuss_record."
+      readiness: compactReadiness(assessment2),
+      nextAction: assessment2.ready ? "Call blueprint_discuss_finalize after preparing fresh inputs." : "Repair fields or resolve blocking questions using blueprint_discuss_record."
     };
   });
 }
@@ -55451,12 +55622,12 @@ async function blueprintDiscussFinalize(raw) {
           reason: "Phase topology changed",
           nextAction: "Run blueprint_discuss_prepare with explicit target reconciliation."
         };
-      const assessment = assess(session, loc.resolved);
-      if (!assessment.ready || !assessment.model || !assessment.content)
+      const assessment2 = assess(session, loc.resolved);
+      if (!assessment2.ready || !assessment2.model || !assessment2.content)
         return {
           status: "blocked",
           draftPersisted: true,
-          readiness: compactReadiness(assessment),
+          readiness: compactReadiness(assessment2),
           nextAction: "Repair the saved candidate or blocking records using blueprint_discuss_record."
         };
       const freshness = await basisFreshness(
@@ -55471,7 +55642,7 @@ async function blueprintDiscussFinalize(raw) {
           nextAction: "Run blueprint_discuss_prepare to refresh the authoritative input packet and reconcile affected decisions."
         };
       const content = prepareTextForPersistence(
-        assessment.content
+        assessment2.content
       ).content.replace(/\r\n/g, "\n");
       const logNeeded = args.includeLog ?? (session.records.length > 1 || session.records.some((r) => r.rejectedOptions?.length) || session.history.filter((e) => e.kind === "record").length > 1);
       const log = logNeeded ? prepareTextForPersistence(
@@ -55490,7 +55661,7 @@ async function blueprintDiscussFinalize(raw) {
             nextAction: "Run blueprint_discuss_prepare with explicit target reconciliation after reviewing changed canonical artifacts; the saved draft remains editable."
           };
         if (observed && !args.overwrite) {
-          const existing = await fs15.readFile(
+          const existing = await fs16.readFile(
             resolveBlueprintPath(loc.projectRoot, target),
             "utf8"
           );
@@ -55515,7 +55686,7 @@ async function blueprintDiscussFinalize(raw) {
         context: {
           path: artifactPathFor(loc.resolved, "context"),
           hash: digest(content),
-          model: assessment.model
+          model: assessment2.model
         },
         ...log ? {
           log: {
@@ -55765,7 +55936,7 @@ var init_discuss = __esm({
       overwrite: boolean2().optional(),
       includeLog: boolean2().optional()
     });
-    digest = (value) => createHash6("sha256").update(value).digest("hex");
+    digest = (value) => createHash7("sha256").update(value).digest("hex");
     stable = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
@@ -55882,12 +56053,811 @@ var init_discuss = __esm({
   }
 });
 
+// src/mcp/tools/phase-research-model.ts
+function validatePhaseResearchModelInput(raw, context = {}) {
+  const validation = { valid: true, issues: [], warnings: [], diagnostics: [] };
+  const issue2 = (path30, code, message, repair, warning = false) => {
+    (warning ? validation.warnings : validation.issues).push(message);
+    validation.diagnostics.push({
+      path: path30,
+      code,
+      message,
+      repair,
+      severity: warning ? "warning" : "error",
+      retryable: true,
+      nextTool: "blueprint_research_submit"
+    });
+    validation.valid = validation.issues.length === 0;
+  };
+  let object3;
+  try {
+    object3 = asJsonObject(typeof raw === "string" ? safeJsonParse(raw, { label: "Research candidate", maxBytes: 1024 * 1024 }) : structuredClone(raw));
+  } catch (error2) {
+    issue2(
+      "model",
+      "schema.json",
+      error2 instanceof Error ? error2.message : "Research candidate is not JSON.",
+      "Correct the saved candidate's JSON syntax and resubmit that revision."
+    );
+    return { model: null, validation };
+  }
+  if (!object3) {
+    issue2(
+      "model",
+      "schema.type",
+      "Research candidate must be a JSON object.",
+      "Supply the structured research core from phase.research.modelContract."
+    );
+    return { model: null, validation };
+  }
+  if (object3.openQuestions === void 0) object3.openQuestions = [];
+  if (object3.sections === void 0) object3.sections = {};
+  const validate = researchModelValidator ??= createAjvValidator().compile(
+    readArtifactContract("phase.research").modelContract.jsonSchema
+  );
+  if (!validate(object3)) {
+    for (const error2 of validate.errors ?? []) {
+      const property = error2.params.missingProperty ?? error2.params.additionalProperty;
+      const fieldPath = `model${error2.instancePath.replace(/\//g, ".")}${typeof property === "string" ? `.${property}` : ""}`;
+      issue2(
+        fieldPath,
+        `schema.${error2.keyword}`,
+        `Research candidate ${fieldPath} ${error2.message ?? error2.keyword}.`,
+        `Correct only ${fieldPath} using phase.research.modelContract; retain the remaining saved candidate.`
+      );
+    }
+    return { model: null, validation };
+  }
+  const model = object3;
+  const ids = /* @__PURE__ */ new Set();
+  for (const field of ["sources", "findings", "recommendations"]) {
+    model[field].forEach((row, index) => {
+      if (ids.has(row.id)) issue2(
+        `model.${field}.${index}.id`,
+        "research.duplicate_id",
+        `Research id ${row.id} is duplicated.`,
+        "Give each source, finding and recommendation a unique id and update its references."
+      );
+      ids.add(row.id);
+    });
+  }
+  const sources = new Map(model.sources.map((source) => [source.id, source]));
+  const findings = new Map(model.findings.map((finding) => [finding.id, finding]));
+  const known = context.knownRequirementIds === void 0 ? null : new Set(context.knownRequirementIds);
+  const covered = /* @__PURE__ */ new Set();
+  const checkRequirements = (values, fieldPath, providesCoverage) => {
+    for (const id of values) {
+      if (providesCoverage) covered.add(id);
+      if (known && !known.has(id)) issue2(
+        fieldPath,
+        "research.unknown_requirement",
+        `Research references requirement ${id}, which is absent from the prepared input basis.`,
+        "Use an existing prepared requirement id or prepare again after an authorized requirements change."
+      );
+    }
+  };
+  model.sources.forEach((source, index) => {
+    if (source.lane === "external" && !isExternalReference(source.reference)) issue2(
+      `model.sources.${index}.reference`,
+      "research.external_reference_invalid",
+      `External source ${source.id} needs an HTTP(S) URL or DOI.`,
+      "Provide the observed external source URL or DOI; label user-supplied material with the supplied lane."
+    );
+    if (source.lane === "external" && !source.accessed) issue2(
+      `model.sources.${index}.accessed`,
+      "research.external_access_date_missing",
+      `External source ${source.id} has no recorded access date.`,
+      "Record when this source was accessed if known; do not invent a date.",
+      true
+    );
+  });
+  model.findings.forEach((finding, index) => {
+    const field = `model.findings.${index}`;
+    for (const id of finding.sourceIds) {
+      if (!sources.has(id)) issue2(
+        `${field}.sourceIds`,
+        "research.source_reference_missing",
+        `Finding ${finding.id} references missing source ${id}.`,
+        "Add the observed source or correct this finding's sourceIds."
+      );
+    }
+    if (finding.status !== "unsupported" && finding.sourceIds.length === 0) issue2(
+      `${field}.sourceIds`,
+      "research.finding_support_missing",
+      `Finding ${finding.id} has no source support.`,
+      "Link its observed evidence or mark the finding unsupported until evidence is available."
+    );
+    if (finding.confidence === "HIGH" && (finding.status !== "supported" || finding.sourceIds.length === 0)) issue2(
+      `${field}.confidence`,
+      "research.high_confidence_unsupported",
+      `Finding ${finding.id} cannot claim HIGH confidence without supported evidence.`,
+      "Supply source support and supported status, or lower confidence to reflect uncertainty."
+    );
+    if (finding.status === "unsupported") issue2(
+      `${field}.status`,
+      "research.unsupported_finding",
+      `Finding ${finding.id} is explicitly unsupported.`,
+      "Keep it separate from ready recommendations until investigated.",
+      true
+    );
+    checkRequirements(finding.requirementIds, `${field}.requirementIds`, finding.status !== "unsupported" && finding.sourceIds.length > 0);
+  });
+  model.recommendations.forEach((recommendation, index) => {
+    const field = `model.recommendations.${index}`;
+    for (const id of recommendation.findingIds) {
+      if (!findings.has(id)) issue2(
+        `${field}.findingIds`,
+        "research.finding_reference_missing",
+        `Recommendation ${recommendation.id} references missing finding ${id}.`,
+        "Add the finding or correct this recommendation's findingIds."
+      );
+    }
+    if (recommendation.status === "blocked") issue2(
+      `${field}.status`,
+      "research.recommendation_blocked",
+      `Recommendation ${recommendation.id} is blocked.`,
+      "Resolve the implementation blocker and revise this recommendation before publication."
+    );
+    if (recommendation.status === "ready") {
+      const unsupported = recommendation.findingIds.length === 0 || recommendation.findingIds.some((id) => {
+        const finding = findings.get(id);
+        return !finding || finding.status === "unsupported" || finding.sourceIds.length === 0 || finding.sourceIds.some((source) => !sources.has(source));
+      });
+      if (unsupported) issue2(
+        `${field}.findingIds`,
+        "research.recommendation_unsupported",
+        `Ready recommendation ${recommendation.id} lacks supported findings.`,
+        "Supply evidence-linked findings or mark this recommendation blocked."
+      );
+      if (recommendation.affectedSurfaces.length === 0) issue2(
+        `${field}.affectedSurfaces`,
+        "research.affected_surfaces_missing",
+        `Ready recommendation ${recommendation.id} does not identify affected surfaces.`,
+        "Name the files, modules, contracts, product surfaces or interfaces affected."
+      );
+      if (recommendation.verification.length === 0) issue2(
+        `${field}.verification`,
+        "research.verification_missing",
+        `Ready recommendation ${recommendation.id} lacks a verification approach.`,
+        "Describe a meaningful check of the resulting behavior."
+      );
+    }
+    checkRequirements(recommendation.requirementIds, `${field}.requirementIds`, recommendation.status === "ready");
+  });
+  model.openQuestions.forEach((question, index) => {
+    if (question.blocking) issue2(
+      `model.openQuestions.${index}.blocking`,
+      "research.question_blocking",
+      `Research has a blocking question: ${question.question}`,
+      "Resolve this question or explain why it no longer blocks planning and revise its status."
+    );
+  });
+  for (const id of context.requiredRequirementIds ?? []) {
+    if (!covered.has(id)) issue2(
+      "model.findings",
+      "research.requirement_uncovered",
+      `Required research coverage for ${id} is missing.`,
+      "Tie an evidence-backed finding or recommendation to this prepared requirement."
+    );
+  }
+  return { model, validation };
+}
+function isExternalReference(reference) {
+  if (/^(?:doi:\s*)?10\.\d{4,9}\/\S+$/i.test(reference)) return true;
+  try {
+    const url2 = new URL(reference);
+    return ["http:", "https:"].includes(url2.protocol) && url2.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
+function table(headers, rows) {
+  return [headers, headers.map(() => "---"), ...rows].map((row) => `| ${row.map(markdownTableCell).join(" | ")} |`).join("\n");
+}
+function prose(value) {
+  let fence = null;
+  const lines3 = value.replace(/\r\n?/g, "\n").trim().split("\n").map((line) => {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      if (marker && marker[1][0] === fence.marker && marker[1].length >= fence.length && marker[2].trim() === "") fence = null;
+      return line;
+    }
+    if (marker && !(marker[1][0] === "`" && marker[2].includes("`"))) {
+      fence = { marker: marker[1][0], length: marker[1].length };
+      return line;
+    }
+    return line.replace(/^( {0,3})#{1,2}(?=\s)/, "$1###");
+  });
+  if (fence) {
+    const unclosed = fence;
+    lines3.push(unclosed.marker.repeat(unclosed.length));
+  }
+  return lines3.join("\n");
+}
+function sectionProse(value) {
+  if (value === void 0 || Array.isArray(value) && value.length === 0) return "No section-specific detail was supplied in this research.";
+  return (Array.isArray(value) ? value : [value]).map(prose).join("\n\n");
+}
+function bullets(values, fallback) {
+  return values?.length ? values.map((value) => `- ${prose(value).replace(/\n/g, "\n  ")}`).join("\n") : fallback;
+}
+function renderPhaseResearchModelContent(args) {
+  const { model } = args;
+  const sourceIdsForFinding = new Map(model.findings.map((finding) => [finding.id, finding.sourceIds]));
+  const confidence = model.findings.some((finding) => finding.confidence === "LOW" || finding.status === "unsupported") ? "LOW" : model.findings.every((finding) => finding.confidence === "HIGH" && finding.status === "supported") ? "HIGH" : "MEDIUM";
+  const requirementIds = [...new Set([...model.findings, ...model.recommendations].flatMap((row) => row.requirementIds))];
+  const requirements = args.requirements ?? requirementIds.map((id) => ({ id, description: "Requirement referenced by the research; see prepared phase evidence for its definition." }));
+  const requirementRows = requirements.map((requirement) => [
+    requirement.id,
+    requirement.description,
+    [...model.findings, ...model.recommendations].filter((row) => row.requirementIds.includes(requirement.id)).map((row) => row.id).join(", ") || "No specific research finding supplied."
+  ]);
+  if (requirementRows.length === 0) requirementRows.push(["Phase scope", "No numbered requirement grounding was supplied to the renderer.", "See the research summary and prepared phase context."]);
+  const optional2 = (key) => `## ${OPTIONAL_HEADINGS[key]}
+
+${sectionProse(model.sections?.[key])}`;
+  const sections = [
+    `# Phase ${args.resolved.phasePrefix.replace(/[\r\n]/g, " ")}: ${args.resolved.phaseName.replace(/[\r\n]/g, " ")} - Research
+
+**Researched:** ${args.researchedAt ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}
+**Confidence:** ${confidence}`,
+    `## Phase Requirements
+
+${table(["ID", "Description", "Research Support"], requirementRows)}`,
+    `## Summary
+
+${prose(model.summary)}`,
+    `## Locked Decisions From Context
+
+${bullets(args.lockedDecisions, "No locked-decision grounding was supplied to the renderer.")}`,
+    `## User Constraints
+
+${bullets(args.userConstraints, "No user-constraint grounding was supplied to the renderer.")}`,
+    ...Object.keys(OPTIONAL_HEADINGS).filter((key) => key !== "codeExamples").map((key) => optional2(key)),
+    `## Open Questions
+
+${model.openQuestions.length === 0 ? "- none" : model.openQuestions.map((question) => `- ${question.blocking ? "Blocking" : "Nonblocking"}: ${prose(question.question).replace(/\n/g, "\n  ")}`).join("\n")}`,
+    `## Confidence Breakdown
+
+${table(["Finding ID", "Finding", "Support Status", "Confidence", "Source IDs", "Requirement IDs"], model.findings.map((finding) => [finding.id, finding.finding, finding.status, finding.confidence, finding.sourceIds.join(", ") || "No sources supplied", finding.requirementIds.join(", ") || "Phase scope"]))}`,
+    optional2("codeExamples"),
+    `## Recommendations
+
+${table(["Recommendation ID", "Recommendation", "Supporting Claim IDs", "Evidence IDs", "Affected Surfaces", "Tests / Checks", "Requirement IDs", "Status"], model.recommendations.map((row) => [row.id, row.recommendation, row.findingIds.join(", "), [...new Set(row.findingIds.flatMap((id) => sourceIdsForFinding.get(id) ?? []))].join(", "), row.affectedSurfaces.join("; "), row.verification.join("; "), row.requirementIds.join(", ") || "Phase scope", row.status]))}`,
+    `## Sources
+
+### Source Register
+
+${model.sources.length ? table(["Source ID", "Lane", "Path Or URL", "Title", "Access Date", "Support Span", "Limitations"], model.sources.map((source) => [source.id, source.lane, source.reference, source.title ?? "Title not supplied", source.accessed ?? "Not recorded", source.excerpt ?? "No excerpt supplied", source.limitations ?? "No limitations recorded"])) : "No source evidence has been supplied."}`
+  ];
+  return `${sections.join("\n\n")}
+`;
+}
+var phaseResearchAuthoringSchema, OPTIONAL_HEADINGS, researchModelValidator;
+var init_phase_research_model = __esm({
+  "src/mcp/tools/phase-research-model.ts"() {
+    "use strict";
+    init_v4();
+    init_security();
+    init_artifact_contracts();
+    init_phase_json_helpers();
+    init_phase_markdown();
+    phaseResearchAuthoringSchema = fromJSONSchema(
+      readArtifactContract("phase.research").modelContract.jsonSchema
+    );
+    OPTIONAL_HEADINGS = {
+      standardStack: "Standard Stack",
+      installationAndSetup: "Installation And Setup",
+      alternativesConsidered: "Alternatives Considered",
+      architecturePatterns: "Architecture Patterns",
+      dontHandRoll: "Don't Hand-Roll",
+      antiPatterns: "Anti-Patterns",
+      stateOfTheArt: "State Of The Art",
+      commonPitfalls: "Common Pitfalls",
+      codeExamples: "Code Examples"
+    };
+  }
+});
+
+// src/mcp/tools/research-session.ts
+import { promises as fs17 } from "node:fs";
+async function researchLocation(args) {
+  const located = await resolveLocatedPhaseForMutation(args);
+  return { ...located, sessionPath: `${located.resolved.phaseDir}/${located.resolved.phasePrefix}-RESEARCH-SESSION.json` };
+}
+function checkedResearchPayload(value) {
+  const serialized = JSON.stringify(value);
+  if (serialized === void 0 || Buffer.byteLength(serialized) > 1024 * 1024) throw new Error("Research candidate must be JSON-compatible and at most 1 MiB.");
+  const inspect = (item, depth) => {
+    if (depth > 40) throw new Error("Research candidate is too deeply nested.");
+    if (typeof item === "string") prepareTextForPersistence(item, { label: "Research candidate" });
+    else if (item && typeof item === "object") for (const [key, val] of Object.entries(item)) {
+      if (["__proto__", "prototype", "constructor"].includes(key)) throw new Error("Unsafe research candidate key.");
+      prepareTextForPersistence(key, { label: "Research candidate key" });
+      inspect(val, depth + 1);
+    }
+  };
+  inspect(value, 0);
+  return JSON.parse(serialized);
+}
+async function readResearchSession(loc) {
+  try {
+    const session = sessionSchema2.parse(safeJsonParseObject(await fs17.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 }));
+    if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseNumber !== session.phase || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Research session phase/path identity mismatch.");
+    if (session.journal) {
+      const j = session.journal;
+      const request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : void 0;
+      const provenance = safeJsonParseObject(j.provenance, { label: "Research journal provenance" });
+      if (!request || request.hash !== j.requestHash || j.revision > session.revision || researchDigest(j.content) !== j.contentHash || researchDigest(j.provenance) !== j.provenanceHash || provenance.researchHash !== j.contentHash || stableResearchValue(provenance.readSet) !== stableResearchValue(j.readSet)) throw new Error("Research publication journal integrity mismatch.");
+    }
+    return session;
+  } catch (error2) {
+    if (error2.code === "ENOENT") return null;
+    throw error2;
+  }
+}
+async function saveResearchSession(loc, session) {
+  sessionSchema2.parse(session);
+  const text = JSON.stringify(session, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
+  if (Buffer.byteLength(text) > 32 * 1024 * 1024) throw new Error("Research session exceeds 32 MiB; retained history must be archived through runtime maintenance.");
+  await withBlueprintRepoLock(loc.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
+    const current = await researchLocation({ cwd: loc.projectRoot, phase: session.phase });
+    if (current.sessionPath !== loc.sessionPath || !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) throw new Error("Phase topology changed; refresh research preparation before saving.");
+    await writeTextFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), text);
+  });
+}
+async function withResearchSession(args, task) {
+  const root = await ensureRepoRoot(args.cwd);
+  return withBlueprintRepoLock(root, "research-session", async () => task(await researchLocation({ ...args, cwd: root })));
+}
+function initialResearchSession(loc) {
+  return { version: 1, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, readSet: [], evidencePaths: [], baselineHash: null, baselineProvenanceHash: null, grounding: { requirements: [], lockedDecisions: [], userConstraints: [] }, notes: [], history: [], requests: {} };
+}
+var researchNumericPhase, researchLookup, researchRequestId, hash2, readSetSchema, topologySchema, receiptSchema, journalSchema, sessionSchema2;
+var init_research_session = __esm({
+  "src/mcp/tools/research-session.ts"() {
+    "use strict";
+    init_v4();
+    init_security();
+    init_artifacts();
+    init_phase_resolution();
+    init_phase_topology_lock();
+    init_research_evidence();
+    researchNumericPhase = union([string2().regex(/^\d+(?:\.\d+)*$/), number2().nonnegative()]);
+    researchLookup = { cwd: string2().optional(), phase: researchNumericPhase };
+    researchRequestId = string2().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/).refine((value) => !["constructor", "prototype", "__proto__"].includes(value), "Reserved request ID.");
+    hash2 = string2().regex(/^[a-f0-9]{64}$/);
+    readSetSchema = array(object2({ path: string2(), hash: hash2.nullable() })).max(100);
+    topologySchema = object2({
+      phaseNumber: string2(),
+      phasePrefix: string2(),
+      phaseName: string2().nullable(),
+      phaseDir: string2(),
+      roadmapEntry: object2({ phaseNumber: string2(), phasePrefix: string2(), phaseName: string2(), completed: boolean2(), summary: string2().nullable(), goal: string2().nullable(), successCriteria: string2().nullable(), requirements: array(string2()) }).nullable()
+    });
+    receiptSchema = record(string2(), unknown());
+    journalSchema = object2({
+      requestId: researchRequestId,
+      requestHash: hash2,
+      revision: number2().int().min(0),
+      content: string2(),
+      contentHash: hash2,
+      baselineHash: hash2.nullable(),
+      provenance: string2(),
+      provenanceHash: hash2,
+      baselineProvenanceHash: hash2.nullable(),
+      readSet: readSetSchema,
+      reuse: boolean2(),
+      stages: partialRecord(_enum(["artifact", "provenance", "state", "routing", "cleanup"]), _enum(["intent", "complete"])),
+      receipt: receiptSchema.optional()
+    });
+    sessionSchema2 = object2({
+      version: literal(1),
+      phase: string2(),
+      topology: topologySchema,
+      revision: number2().int().min(0),
+      prepared: boolean2(),
+      readSet: readSetSchema,
+      evidencePaths: array(string2()),
+      baselineHash: hash2.nullable(),
+      baselineProvenanceHash: hash2.nullable(),
+      grounding: object2({ requirements: array(object2({ id: string2(), description: string2() })), lockedDecisions: array(string2()), userConstraints: array(string2()) }),
+      candidate: unknown().optional(),
+      notes: array(string2()),
+      history: array(object2({ revision: number2().int(), kind: string2(), candidate: unknown().optional(), journal: journalSchema.optional() })),
+      requests: record(string2(), object2({ hash: hash2, revision: number2().int().min(0), operation: _enum(["record", "submit"]), receipt: receiptSchema.optional() })),
+      journal: journalSchema.optional()
+    });
+  }
+});
+
+// src/mcp/tools/research.ts
+import { promises as fs18 } from "node:fs";
+async function safeNextAction(proposed) {
+  const catalog = await blueprintCommandCatalog();
+  const command = proposed?.match(/\/blu-([a-z][a-z-]*)\b/)?.[1];
+  if (command && catalog.commands[command]?.implemented) return proposed;
+  return catalog.commands.progress?.implemented ? "Run /blu-progress to review the next safe action." : null;
+}
+function lines(section) {
+  return section.split("\n").map((line) => line.trim()).filter((line) => line && !/^\|?[-| :]+\|?$/.test(line));
+}
+function contextGrounding(content, projectConstraints) {
+  const decisions = extractMarkdownSection3(content, "Implementation Decisions");
+  const decisionRows = extractMarkdownTableRows(decisions).filter((row) => row[0]?.toLowerCase() !== "decision");
+  const discovery = extractMarkdownSection3(content, "Discovery Grounding");
+  const confirmed = discovery.match(/^- \*\*Confirmed decisions\*\*\s*\n([\s\S]*)/m)?.[1] ?? "";
+  const dependencies2 = extractMarkdownSection3(content, "Dependencies");
+  const externalConstraints = dependencies2.match(/^- External constraints:[ \t]*\n([\s\S]*?)(?=^- (?:Required follow-up reads|Prior phase artifacts):|(?![\s\S]))/m)?.[1] ?? "";
+  return {
+    lockedDecisions: [...decisionRows.length ? decisionRows.map((row) => row.join(" \u2014 ")) : lines(decisions), ...lines(confirmed)],
+    userConstraints: [...projectConstraints, ...lines(extractMarkdownSection3(content, "Phase Boundary")), ...lines(externalConstraints)]
+  };
+}
+function requirementDescriptions(content, ids) {
+  const rows = extractMarkdownTableRows(content);
+  return ids.map((id) => {
+    const row = rows.find((cells) => cells[0]?.replace(/[`*]/g, "").trim() === id);
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const bullet = content.match(new RegExp(`^.*?(?:\\*\\*|\\x60)?${escaped}(?:\\*\\*|\\x60)?\\s*[:\u2014-]\\s*(.+)$`, "m"));
+    return { id, description: row?.[1] || bullet?.[1] || "See the saved phase requirements and context for this requirement's definition." };
+  });
+}
+function requestKey(args) {
+  const { cwd: _cwd, ...input } = args;
+  return researchDigest(stableResearchValue(input));
+}
+function requestReplay(session, requestId, hash3) {
+  const previous = Object.hasOwn(session.requests, requestId) ? session.requests[requestId] : void 0;
+  if (!previous) return null;
+  if (previous.hash !== hash3) return { status: "rejected", reason: "Request ID conflict", revision: session.revision };
+  return previous.receipt ?? null;
+}
+async function saveReceipt(loc, session, requestId, receipt) {
+  session.requests[requestId].receipt = receipt;
+  await saveResearchSession(loc, session);
+  return receipt;
+}
+function assessment(session) {
+  const ids = session.grounding.requirements.map((item) => item.id);
+  return validatePhaseResearchModelInput(session.candidate, { knownRequirementIds: ids, requiredRequirementIds: ids });
+}
+async function blueprintResearchPrepare(raw = {}) {
+  const args = prepareInput2.parse(raw);
+  try {
+    return await withResearchSession(args, async (loc) => {
+      const session = await readResearchSession(loc) ?? initialResearchSession(loc);
+      const researchPath = artifactPathFor(loc.resolved, "research");
+      const contextPath = artifactPathFor(loc.resolved, "context");
+      const specPath = artifactPathFor(loc.resolved, "spec");
+      const evidencePaths = [...new Set((args.evidencePaths ?? session.evidencePaths).map((p) => canonicalResearchEvidencePath(loc.projectRoot, p)))];
+      const excluded = /* @__PURE__ */ new Set([researchPath, researchProvenancePath(researchPath), loc.sessionPath, ".blueprint/STATE.md"]);
+      if (evidencePaths.some((p) => excluded.has(p) || /-CHECKPOINT\.json$/.test(p) || p.startsWith("@"))) throw new Error("Select repository evidence, not this phase's research outputs, state, checkpoints, or virtual paths.");
+      const paths = [.../* @__PURE__ */ new Set([".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", contextPath, specPath, ...CODEBASE_ARTIFACTS, ...evidencePaths])];
+      const [inputs, config2, existing, provenance] = await Promise.all([
+        Promise.all(paths.map((p) => readResearchEvidence(loc.projectRoot, p))),
+        blueprintConfigGet({ cwd: loc.projectRoot, scope: "effective" }),
+        readResearchEvidence(loc.projectRoot, researchPath, 4 * 1024 * 1024),
+        readResearchEvidence(loc.projectRoot, researchProvenancePath(researchPath))
+      ]);
+      const readSet = inputs.map(({ path: path30, hash: hash3 }) => ({ path: path30, hash: hash3 }));
+      readSet.push({ path: "@research/effective-config", hash: researchDigest(stableResearchValue({ config: config2.config, provenance: config2.provenance })) });
+      const context = inputs.find((item) => item.path === contextPath);
+      const spec = inputs.find((item) => item.path === specPath);
+      const phaseContext = await blueprintPhaseContext({ cwd: loc.projectRoot, phase: session.phase });
+      const fresh = await researchBasisFreshness(loc.projectRoot, readSet);
+      const current = await researchLocation({ cwd: loc.projectRoot, phase: session.phase });
+      if (fresh.status !== "fresh" || !phaseTopologyFingerprintsMatch(phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase)))
+        return { status: "stale", freshness: fresh, nextAction: "Retry blueprint_research_prepare; inputs changed during collection." };
+      const contextValidation = context.content === null ? null : validatePhaseArtifactContent(context.content, "context");
+      const specValidation = spec.content === null ? null : validatePhaseArtifactContent(spec.content, "spec");
+      const existingValidation = existing.content === null ? null : validatePhaseArtifactContent(existing.content, "research");
+      const existingFreshness = existing.content === null ? null : await readPublishedResearchFreshness(loc.projectRoot, researchPath);
+      const packet = {
+        phase: phaseContext.phase,
+        context,
+        spec,
+        requirements: phaseContext.requirements,
+        projectBrief: phaseContext.projectBrief,
+        config: config2.config,
+        codebase: phaseContext.codebase,
+        evidence: inputs.filter((item) => item.path !== contextPath && item.path !== specPath),
+        readSet,
+        existing: { path: researchPath, hash: existing.hash, valid: existingValidation?.valid ?? false, freshness: existingFreshness, ...existingFreshness?.status === "fresh" ? {} : { content: existing.content } },
+        schema: readArtifactContract("phase.research").modelContract?.jsonSchema,
+        checkpoint: await blueprintPhaseCheckpointGet({ cwd: loc.projectRoot, phase: session.phase, expectedOwnerCommand: "/blu-research-phase", expectedMode: "research" })
+      };
+      if (args.expectedRevision !== void 0 && session.revision !== args.expectedRevision) return { ...packet, status: "stale", revision: session.revision, reason: "Revision conflict" };
+      const changed = session.prepared ? await researchBasisFreshness(loc.projectRoot, session.readSet) : null;
+      const topologyChanged = !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase));
+      const targetChanged = session.prepared && (existing.hash !== session.baselineHash || provenance.hash !== session.baselineProvenanceHash);
+      const pending = session.journal && !session.journal.receipt;
+      const pendingRequest = Object.entries(session.requests).find(([, request]) => !request.receipt);
+      if (pendingRequest && !pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_${pendingRequest[1].operation} with requestId ${pendingRequest[0]} and identical arguments.` };
+      if ((targetChanged || topologyChanged || pending && args.reconcile) && (!args.reconcile || args.reconcile.researchHash !== existing.hash || args.expectedRevision !== session.revision)) return { ...packet, status: "reconciliation_required", revision: session.revision, reason: "Review changed publication targets, then prepare with expectedRevision and reconcile containing the observed research hash." };
+      if (pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_submit with requestId ${session.journal.requestId} and identical arguments.` };
+      if (changed && changed.status !== "fresh" && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", revision: session.revision, freshness: changed, nextAction: "Review changed inputs, then prepare with expectedRevision and acknowledgeChangedInputs=true; preserve and correct the saved candidate." };
+      if (args.reconcile && session.journal) {
+        session.history.push({ revision: session.revision, kind: "publication-reconciled", journal: session.journal });
+        session.requests[session.journal.requestId].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision; this publication attempt was reconciled." };
+        delete session.journal;
+      }
+      if (args.reconcile && pendingRequest) {
+        if (args.expectedRevision !== session.revision || args.reconcile.researchHash !== existing.hash) return { ...packet, status: "reconciliation_required", revision: session.revision };
+        pendingRequest[1].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision." };
+      }
+      session.topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
+      session.readSet = readSet;
+      session.evidencePaths = evidencePaths;
+      session.baselineHash = existing.hash;
+      session.baselineProvenanceHash = provenance.hash;
+      const contextUsable = contextValidation?.valid === true && !isBootstrapStarterContext(context.content ?? "");
+      session.prepared = contextUsable && (!specValidation || specValidation.valid);
+      session.grounding = {
+        requirements: requirementDescriptions(inputs.find((item) => item.path === ".blueprint/REQUIREMENTS.md")?.content ?? "", [...new Set(phaseContext.requirements)]),
+        ...contextGrounding(context.content ?? "", phaseContext.projectBrief.constraints)
+      };
+      session.revision++;
+      await saveResearchSession(loc, session);
+      return { ...packet, status: session.prepared ? "prepared" : "blocked", revision: session.revision, sessionPath: loc.sessionPath, candidateSaved: session.candidate !== void 0, diagnostics: [...contextValidation?.diagnostics ?? [], ...specValidation?.diagnostics ?? []], nextAction: session.prepared ? "Investigate unresolved planning decisions; submit the candidate once using this revision. Prepare with evidencePaths before relying on additional repository sources." : await safeNextAction(`Run /blu-${contextUsable ? "spec" : "discuss"}-phase ${session.phase} to repair saved phase evidence.`) };
+    });
+  } catch (error2) {
+    return { status: "blocked", reason: error2.message, nextAction: await safeNextAction("Run /blu-progress to resolve the research preparation blocker.") };
+  }
+}
+async function blueprintResearchRecord(raw) {
+  const args = recordInput2.parse(raw);
+  if (args.candidate !== void 0 && args.corrections?.length) throw new Error("Pass candidate or field corrections, not both.");
+  checkedResearchPayload(args);
+  return withResearchSession(args, async (loc) => {
+    const session = await readResearchSession(loc);
+    if (!session) return { status: "not_found", nextAction: "Call blueprint_research_prepare first." };
+    const hash3 = requestKey(args);
+    const replay = requestReplay(session, args.requestId, hash3);
+    if (replay) return replay;
+    const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
+    const pendingRequest = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
+    if (pendingRequest) return { status: "partial", nextAction: `Retry blueprint_research_${pendingRequest[1].operation} requestId ${pendingRequest[0]} first.` };
+    if (session.journal && !session.journal.receipt) return { status: "partial", nextAction: `Retry blueprint_research_submit requestId ${session.journal.requestId} before changing the candidate.` };
+    if (accepted) {
+      if (accepted.revision !== session.revision || accepted.operation !== "record") return { status: "stale", revision: session.revision, reason: "Accepted request was superseded." };
+      const result2 = assessment(session);
+      return saveReceipt(loc, session, args.requestId, { status: "recorded", saved: true, candidateSaved: session.candidate !== void 0, revision: session.revision, sessionPath: loc.sessionPath, validation: result2.validation });
+    }
+    if (session.revision !== args.expectedRevision) return { status: "stale", revision: session.revision, reason: "Revision conflict" };
+    if (args.candidate !== void 0) session.candidate = checkedResearchPayload(args.candidate);
+    for (const correction of args.corrections ?? []) {
+      correction.path.forEach((segment) => {
+        validateFieldNameSegment(segment);
+        if (["__proto__", "constructor", "prototype"].includes(segment)) throw new Error("Unsafe correction path.");
+      });
+      let target = session.candidate;
+      for (const segment of correction.path.slice(0, -1)) {
+        if (!target || typeof target !== "object" || !Object.hasOwn(target, segment)) throw new Error("Correction parent does not exist.");
+        target = target[segment];
+      }
+      if (!target || typeof target !== "object") throw new Error("Correction target is not an object.");
+      const field = correction.path.at(-1);
+      if (Array.isArray(target) && (!/^(0|[1-9]\d*)$/.test(field) || Number(field) > target.length)) throw new Error("Array correction requires an in-range index.");
+      if (correction.operation === "remove") {
+        if (Array.isArray(target)) target.splice(Number(field), 1);
+        else delete target[field];
+      } else target[field] = checkedResearchPayload(correction.value);
+    }
+    if (args.notes !== void 0) session.notes.push(args.notes);
+    checkedResearchPayload(session.candidate ?? null);
+    session.revision++;
+    session.history.push({ revision: session.revision, kind: "record", ...session.candidate !== void 0 ? { candidate: session.candidate } : {} });
+    session.requests[args.requestId] = { hash: hash3, revision: session.revision, operation: "record" };
+    await saveResearchSession(loc, session);
+    const result = assessment(session);
+    return saveReceipt(loc, session, args.requestId, { status: "recorded", saved: true, candidateSaved: session.candidate !== void 0, revision: session.revision, sessionPath: loc.sessionPath, validation: result.validation, nextAction: result.validation.valid ? "Call blueprint_research_submit using this saved revision." : "Correct only the saved fields identified in diagnostics." });
+  });
+}
+async function blueprintResearchRead(args) {
+  object2(researchLookup).parse(args);
+  return withResearchSession(args, async (loc) => {
+    const session = await readResearchSession(loc);
+    const publishedPath = artifactPathFor(loc.resolved, "research");
+    const published = await readResearchEvidence(loc.projectRoot, publishedPath, 4 * 1024 * 1024).catch(async (error2) => ({
+      path: publishedPath,
+      hash: await researchInputHash(loc.projectRoot, publishedPath).catch(() => null),
+      content: null,
+      error: error2.message
+    }));
+    return { status: session || published.content ? "found" : "not_found", sessionPath: loc.sessionPath, session, published, freshness: session ? await researchBasisFreshness(loc.projectRoot, session.readSet) : null };
+  });
+}
+async function blueprintResearchSubmit(raw) {
+  const args = submitInput.parse(raw);
+  if (args.reuse && args.candidate !== void 0) throw new Error("A reuse request cannot replace the candidate.");
+  checkedResearchPayload(args);
+  return withResearchSession(args, async (loc) => {
+    const session = await readResearchSession(loc);
+    if (!session) return { status: "not_found", saved: false, nextAction: "Call blueprint_research_prepare before submitting research." };
+    const hash3 = requestKey(args);
+    const replay = requestReplay(session, args.requestId, hash3);
+    if (replay) return replay;
+    const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
+    const pendingRequest = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
+    if (pendingRequest) return { status: "partial", saved: session.candidate !== void 0, nextAction: `Retry blueprint_research_${pendingRequest[1].operation} requestId ${pendingRequest[0]} first.` };
+    let journal = session.journal;
+    if (journal && journal.requestId !== args.requestId && !journal.receipt) return { status: "partial", saved: session.candidate !== void 0, nextAction: `Retry blueprint_research_submit requestId ${journal.requestId} and identical arguments.` };
+    const researchPath = artifactPathFor(loc.resolved, "research");
+    const provenancePath = researchProvenancePath(researchPath);
+    if (!journal || journal.requestId !== args.requestId) {
+      if (accepted) {
+        if (accepted.revision !== session.revision || accepted.operation !== "submit") return { status: "stale", revision: session.revision, reason: "Accepted request was superseded." };
+      } else {
+        if (session.revision !== args.expectedRevision) return { status: "stale", saved: false, revision: session.revision, reason: "Revision conflict" };
+        if (args.candidate !== void 0) session.candidate = checkedResearchPayload(args.candidate);
+        session.revision++;
+        session.history.push({ revision: session.revision, kind: "submit", ...session.candidate !== void 0 ? { candidate: session.candidate } : {} });
+        session.requests[args.requestId] = { hash: hash3, revision: session.revision, operation: "submit" };
+        await saveResearchSession(loc, session);
+      }
+      const fail = (status, details) => saveReceipt(loc, session, args.requestId, { status, saved: session.candidate !== void 0 || Boolean(args.reuse), candidateSaved: session.candidate !== void 0, revision: session.revision, sessionPath: loc.sessionPath, ...details });
+      const freshness = await researchBasisFreshness(loc.projectRoot, session.readSet);
+      if (!session.prepared || freshness.status !== "fresh") return fail("needs_revision", { freshness, nextAction: "Refresh blueprint_research_prepare and reconcile changed inputs; the candidate is saved." });
+      let content;
+      if (args.reuse) {
+        const existing = await readResearchEvidence(loc.projectRoot, researchPath, 4 * 1024 * 1024);
+        const reuseFreshness = await readPublishedResearchFreshness(loc.projectRoot, researchPath);
+        if (existing.content === null || reuseFreshness.status !== "fresh" || !validatePhaseArtifactContent(existing.content, "research").valid) return fail("needs_revision", { freshness: reuseFreshness, nextAction: "Review and submit updated research; only verified-fresh published research can be reused." });
+        content = existing.content;
+      } else {
+        const result = assessment(session);
+        if (!result.model || !result.validation.valid) return fail("needs_revision", { validation: result.validation, nextAction: "Repair the saved fields with blueprint_research_record; resubmit using the returned revision and a new requestId." });
+        const config2 = await blueprintConfigGet({ cwd: loc.projectRoot, scope: "effective" });
+        const external = result.model.sources.some((source) => source.lane === "external");
+        if (external && (config2.config.research.external_sources === "off" || config2.config.research.external_sources === "ask" && !args.externalSourcesApproved)) return fail("needs_revision", { reason: "External source policy does not authorize the candidate's live external evidence.", nextAction: "Honor off/ask/auto policy; record honest supplied or repository evidence, or obtain the ask approval before retrying." });
+        const missing = result.model.sources.filter((source) => source.lane === "repo").map((source) => {
+          const relative = source.reference.replace(/(?::\d+(?:-\d+)?)?(?:#.*)?$/, "");
+          try {
+            return canonicalResearchEvidencePath(loc.projectRoot, relative);
+          } catch {
+            return relative;
+          }
+        }).filter((p) => !session.readSet.some((item) => item.path === p && item.hash !== null));
+        if (missing.length) return fail("needs_revision", { missingEvidencePaths: [...new Set(missing)], nextAction: "Call blueprint_research_prepare with these evidencePaths, review the captured evidence, then resubmit the saved candidate." });
+        content = renderPhaseResearchModelContent({ resolved: loc.resolved, model: result.model, ...session.grounding, researchedAt: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) });
+      }
+      content = prepareTextForPersistence(content).content.replace(/\r\n/g, "\n");
+      if (Buffer.byteLength(content) > 4 * 1024 * 1024) return fail("needs_revision", { reason: "Rendered research exceeds 4 MiB; candidate is saved. Reduce repeated prose before publishing." });
+      const validation = validatePhaseArtifactContent(content, "research");
+      if (!validation.valid) return fail("needs_revision", { validation, reason: "Rendered research did not satisfy the compatibility contract; candidate is retained." });
+      const observed = await researchInputHash(loc.projectRoot, researchPath);
+      const observedProvenance = await researchInputHash(loc.projectRoot, provenancePath);
+      if (observed !== session.baselineHash || observedProvenance !== session.baselineProvenanceHash) return fail("stale", { reason: "Publication targets changed after preparation.", nextAction: "Prepare with explicit reconciliation against the observed target hash." });
+      if (observed && observed !== researchDigest(content) && !args.overwrite) {
+        const existing = await fs18.readFile(resolveBlueprintPath(loc.projectRoot, researchPath), "utf8");
+        if (!isScaffoldGeneratedArtifact(existing)) return fail("needs_revision", { reason: "Explicit update/overwrite authorization is required.", nextAction: "After the user chooses update, submit the saved candidate with overwrite=true." });
+      }
+      const originalProvenance = args.reuse ? await readResearchEvidence(loc.projectRoot, provenancePath) : null;
+      const provenance = originalProvenance?.content ?? JSON.stringify({ version: 1, researchHash: researchDigest(content), readSet: session.readSet, publishedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n";
+      journal = { requestId: args.requestId, requestHash: hash3, revision: session.revision, content, contentHash: researchDigest(content), baselineHash: observed, provenance, provenanceHash: researchDigest(provenance), baselineProvenanceHash: observedProvenance, readSet: args.reuse ? JSON.parse(provenance).readSet : session.readSet, reuse: args.reuse ?? false, stages: {} };
+      session.journal = journal;
+      await saveResearchSession(loc, session);
+    }
+    const checkpoint = () => saveResearchSession(loc, session);
+    const assertFresh = async () => {
+      const current = await researchLocation({ cwd: loc.projectRoot, phase: session.phase });
+      if (!phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) throw new Error("Phase topology changed; explicitly reconcile publication.");
+      const fresh = await researchBasisFreshness(loc.projectRoot, journal.readSet);
+      if (fresh.status !== "fresh") throw new Error(`Research evidence changed: ${[...fresh.stalePaths, ...fresh.unknownPaths].join(", ")}. Prepare and reconcile before publishing.`);
+    };
+    try {
+      await assertFresh();
+      for (const stage of ["artifact", "provenance"]) {
+        const target = stage === "artifact" ? researchPath : provenancePath;
+        const desired = stage === "artifact" ? journal.contentHash : journal.provenanceHash;
+        const baseline = stage === "artifact" ? journal.baselineHash : journal.baselineProvenanceHash;
+        const observed = await researchInputHash(loc.projectRoot, target);
+        if (journal.stages[stage] && observed === desired) {
+          journal.stages[stage] = "complete";
+          await checkpoint();
+          continue;
+        }
+        if (journal.stages[stage] === "complete" || observed !== baseline) throw new Error(`Publication target changed externally: ${target}. Reconcile without overwriting it.`);
+        journal.stages[stage] = "intent";
+        await checkpoint();
+        await assertFresh();
+        if (stage === "artifact") {
+          const result = await researchSubmitDependencies.artifactWrite({ cwd: loc.projectRoot, phase: session.phase, artifact: "research", content: journal.content, overwrite: args.overwrite, expectedContentHash: baseline, expectedTopology: session.topology });
+          if (result.status === "invalid") throw new Error("Research artifact publication failed validation.");
+        } else {
+          await withFreshPhaseTopologyForMutation(loc.projectRoot, { phase: session.phase }, session.topology, "Research provenance publication", async () => {
+            if (await researchInputHash(loc.projectRoot, target) !== baseline) throw new Error("Research provenance changed during publication.");
+            await researchSubmitDependencies.writeText(resolveBlueprintPath(loc.projectRoot, target), journal.provenance);
+          });
+        }
+        if (await researchInputHash(loc.projectRoot, target) !== desired) throw new Error(`Published bytes differ from intent: ${target}.`);
+        journal.stages[stage] = "complete";
+        await checkpoint();
+      }
+      await assertFresh();
+      if (journal.stages.state !== "complete") {
+        journal.stages.state = "intent";
+        await checkpoint();
+        await researchSubmitDependencies.stateUpdate({ cwd: loc.projectRoot, base: "synced", patch: { currentPhase: session.phase, activeCommand: "/blu-research-phase" } });
+        journal.stages.state = "complete";
+        await checkpoint();
+      }
+      const state = await researchSubmitDependencies.stateLoad({ cwd: loc.projectRoot });
+      const nextAction = await safeNextAction(state.derivedStatus.nextAction);
+      if (!nextAction) throw new Error("No implemented follow-up is currently available.");
+      journal.stages.routing = "complete";
+      await checkpoint();
+      const warnings = [...state.warnings ?? []];
+      if (journal.stages.cleanup !== "complete") {
+        journal.stages.cleanup = "intent";
+        await checkpoint();
+        const cleanup = await researchSubmitDependencies.checkpointDelete({ cwd: loc.projectRoot, phase: session.phase, expectedTopology: session.topology, expectedOwnerCommand: "/blu-research-phase", expectedMode: "research" });
+        if (!cleanup.deleted && cleanup.reason) warnings.push(cleanup.reason);
+        journal.stages.cleanup = "complete";
+        await checkpoint();
+      }
+      await assertFresh();
+      if (await researchInputHash(loc.projectRoot, researchPath) !== journal.contentHash) throw new Error("Research changed before final receipt.");
+      if (await researchInputHash(loc.projectRoot, provenancePath) !== journal.provenanceHash) throw new Error("Research provenance changed before final receipt.");
+      journal.receipt = { status: journal.reuse ? "reused" : "published", saved: true, ready: true, revision: session.revision, path: researchPath, sessionPath: loc.sessionPath, provenancePath, stages: { ...journal.stages }, warnings, nextAction };
+      session.baselineHash = journal.contentHash;
+      session.baselineProvenanceHash = journal.provenanceHash;
+      return await saveReceipt(loc, session, args.requestId, journal.receipt);
+    } catch (error2) {
+      return { status: "partial", saved: true, ready: false, revision: session.revision, sessionPath: loc.sessionPath, path: journal.stages.artifact === "complete" ? researchPath : null, stages: journal.stages, reason: error2.message, nextAction: `Retry blueprint_research_submit with requestId ${args.requestId} and identical arguments; if inputs or targets changed, prepare with explicit reconciliation. The candidate is saved.` };
+    }
+  });
+}
+var prepareInput2, correctionSchema, recordInput2, submitInput, researchSubmitDependencies, researchToolDefinitions, researchLookupSchema;
+var init_research = __esm({
+  "src/mcp/tools/research.ts"() {
+    "use strict";
+    init_v4();
+    init_security();
+    init_artifact_contracts();
+    init_artifacts();
+    init_phase_locations();
+    init_phase_artifacts();
+    init_phase_context_tools();
+    init_phase_checkpoints();
+    init_config();
+    init_project();
+    init_state();
+    init_phase_topology_lock();
+    init_phase_resolution();
+    init_phase_markdown();
+    init_phase_research_model();
+    init_research_evidence();
+    init_research_session();
+    prepareInput2 = object2({
+      cwd: string2().optional(),
+      phase: researchNumericPhase.optional(),
+      evidencePaths: array(string2().min(1)).max(60).optional(),
+      expectedRevision: number2().int().min(0).optional(),
+      acknowledgeChangedInputs: boolean2().optional(),
+      reconcile: object2({ confirmed: literal(true), researchHash: string2().nullable() }).optional()
+    });
+    correctionSchema = object2({ path: array(string2()).min(1).max(20), value: unknown().optional(), operation: _enum(["set", "remove"]).default("set") });
+    recordInput2 = object2({ ...researchLookup, requestId: researchRequestId, expectedRevision: number2().int().min(0), candidate: unknown().optional(), corrections: array(correctionSchema).max(50).optional(), notes: string2().max(2e4).optional() });
+    submitInput = object2({ ...researchLookup, requestId: researchRequestId, expectedRevision: number2().int().min(0), candidate: unknown().optional().describe("Complete JSON research candidate or raw string. Durably saved before schema and publication checks; get the compact model schema from prepare."), overwrite: boolean2().optional(), reuse: boolean2().optional(), externalSourcesApproved: boolean2().optional() });
+    researchSubmitDependencies = { artifactWrite: blueprintPhaseArtifactWrite, stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad, checkpointDelete: blueprintPhaseCheckpointDelete, writeText: writeTextFile };
+    researchToolDefinitions = [
+      { name: "blueprint_research_prepare", description: "Prepare one freshness-bound phase research packet and durable session revision with context, optional spec, requirements, source policy, existing research, and compact model schema.", inputSchema: prepareInput2.shape, handler: (args) => blueprintResearchPrepare(args) },
+      { name: "blueprint_research_record", description: "Save a raw research candidate, incremental notes, or narrow field corrections before model validation. Revision CAS and request IDs preserve work across retries.", inputSchema: recordInput2.shape, handler: (args) => blueprintResearchRecord(args) },
+      { name: "blueprint_research_read", description: "Recover the exact saved research candidate, revision, history and publication journal; normal research starts with prepare.", inputSchema: researchLookup, handler: (args) => blueprintResearchRead(args) },
+      { name: "blueprint_research_submit", description: "Durably save a research candidate before validation, then render and publish planner-ready research with freshness checks and resumable state/routing completion. Reuse requires fresh research; overwrite requires user update authorization.", inputSchema: submitInput.shape, handler: (args) => blueprintResearchSubmit(args) }
+    ];
+    researchLookupSchema = object2(researchLookup);
+  }
+});
+
 // src/mcp/tools/workspace.ts
 import { execFile as execFile2 } from "node:child_process";
-import { createHash as createHash7 } from "node:crypto";
-import { promises as fs16 } from "node:fs";
+import { createHash as createHash8 } from "node:crypto";
+import { promises as fs19 } from "node:fs";
 import os3 from "node:os";
-import path13 from "node:path";
+import path14 from "node:path";
 import { promisify as promisify2 } from "node:util";
 function expandHomePath3(value) {
   const trimmed = value.trim();
@@ -55895,7 +56865,7 @@ function expandHomePath3(value) {
     return os3.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path13.join(os3.homedir(), trimmed.slice(2));
+    return path14.join(os3.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -55926,7 +56896,7 @@ function slugifyRepoName(value) {
 }
 async function pathExists3(targetPath) {
   try {
-    await fs16.access(targetPath);
+    await fs19.access(targetPath);
     return true;
   } catch {
     return false;
@@ -55934,9 +56904,9 @@ async function pathExists3(targetPath) {
 }
 async function canonicalizePath(candidatePath) {
   try {
-    return await fs16.realpath(candidatePath);
+    return await fs19.realpath(candidatePath);
   } catch {
-    return path13.resolve(candidatePath);
+    return path14.resolve(candidatePath);
   }
 }
 function normalizeTextForComparison(value) {
@@ -55980,7 +56950,7 @@ async function readCurrentStateSnapshot(projectRoot) {
   if (!await pathExists3(statePath)) {
     return null;
   }
-  const raw = await fs16.readFile(statePath, "utf8");
+  const raw = await fs19.readFile(statePath, "utf8");
   return parseStateSnapshot(raw);
 }
 async function readRequiredCurrentStateSnapshot(projectRoot) {
@@ -56142,9 +57112,9 @@ async function writeFileAtomically(filePath, content) {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
   let existingMode = null;
   try {
-    await fs16.mkdir(path13.dirname(filePath), { recursive: true });
+    await fs19.mkdir(path14.dirname(filePath), { recursive: true });
     try {
-      const stats = await fs16.lstat(filePath);
+      const stats = await fs19.lstat(filePath);
       if (!stats.isFile()) {
         throw new Error(`Atomic file target must be a regular file: ${filePath}`);
       }
@@ -56154,21 +57124,21 @@ async function writeFileAtomically(filePath, content) {
         throw error2;
       }
     }
-    await fs16.writeFile(tempPath, content, "utf8");
+    await fs19.writeFile(tempPath, content, "utf8");
     if (existingMode !== null) {
-      await fs16.chmod(tempPath, existingMode);
+      await fs19.chmod(tempPath, existingMode);
     }
     try {
-      const stats = await fs16.lstat(filePath);
+      const stats = await fs19.lstat(filePath);
       if (!stats.isFile()) {
         throw new Error(`Atomic file target must be a regular file: ${filePath}`);
       }
     } catch (error2) {
       if (error2.code !== "ENOENT") throw error2;
     }
-    await fs16.rename(tempPath, filePath);
+    await fs19.rename(tempPath, filePath);
   } catch (error2) {
-    await fs16.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs19.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -56189,7 +57159,7 @@ async function snapshotFiles(paths) {
       return {
         path: targetPath,
         existed: true,
-        content: await fs16.readFile(targetPath, "utf8")
+        content: await fs19.readFile(targetPath, "utf8")
       };
     })
   );
@@ -56205,17 +57175,17 @@ async function snapshotDirectories(paths) {
 async function restoreFileSnapshots(snapshots) {
   for (const snapshot3 of snapshots) {
     if (!snapshot3.existed) {
-      await fs16.rm(snapshot3.path, { force: true }).catch(() => void 0);
+      await fs19.rm(snapshot3.path, { force: true }).catch(() => void 0);
       continue;
     }
-    await fs16.mkdir(path13.dirname(snapshot3.path), { recursive: true });
-    await fs16.writeFile(snapshot3.path, snapshot3.content ?? "", "utf8");
+    await fs19.mkdir(path14.dirname(snapshot3.path), { recursive: true });
+    await fs19.writeFile(snapshot3.path, snapshot3.content ?? "", "utf8");
   }
 }
 async function snapshotRepoFiles(repoRoot, relativePaths) {
   const snapshots = [];
   for (const relativePath of [...new Set(relativePaths)]) {
-    const targetPath = path13.resolve(repoRoot, relativePath);
+    const targetPath = path14.resolve(repoRoot, relativePath);
     ensurePathWithinRootSync(repoRoot, targetPath, {
       label: "Patch replay tracked file"
     });
@@ -56232,7 +57202,7 @@ async function snapshotRepoFiles(repoRoot, relativePaths) {
       path: targetPath,
       relativePath,
       existed: true,
-      content: await fs16.readFile(targetPath)
+      content: await fs19.readFile(targetPath)
     });
   }
   return snapshots;
@@ -56241,12 +57211,12 @@ async function restoreRepoFileSnapshots(snapshots) {
   const restoredFiles = [];
   for (const snapshot3 of snapshots) {
     if (!snapshot3.existed) {
-      await fs16.rm(snapshot3.path, { force: true }).catch(() => void 0);
+      await fs19.rm(snapshot3.path, { force: true }).catch(() => void 0);
       restoredFiles.push(snapshot3.relativePath);
       continue;
     }
-    await fs16.mkdir(path13.dirname(snapshot3.path), { recursive: true });
-    await fs16.writeFile(snapshot3.path, snapshot3.content ?? Buffer.alloc(0));
+    await fs19.mkdir(path14.dirname(snapshot3.path), { recursive: true });
+    await fs19.writeFile(snapshot3.path, snapshot3.content ?? Buffer.alloc(0));
     restoredFiles.push(snapshot3.relativePath);
   }
   return restoredFiles;
@@ -56254,7 +57224,7 @@ async function restoreRepoFileSnapshots(snapshots) {
 async function restoreDirectorySnapshots(snapshots) {
   const missingDirectories = snapshots.filter((snapshot3) => !snapshot3.existed).sort((left, right) => right.path.length - left.path.length);
   for (const snapshot3 of missingDirectories) {
-    await fs16.rm(snapshot3.path, { recursive: true, force: true }).catch(() => void 0);
+    await fs19.rm(snapshot3.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function workstreamsRootAbsolute(projectRoot) {
@@ -56264,7 +57234,7 @@ function workstreamsIndexAbsolute(projectRoot) {
   return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
 }
 function workstreamStateAbsolute(projectRoot, slug) {
-  return path13.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+  return path14.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
 }
 function workstreamSummary(projectRoot, entry) {
   return {
@@ -56305,7 +57275,7 @@ function buildResumeStatePatch(snapshot3) {
   };
 }
 async function loadWorkstreamStore(projectRoot) {
-  const blueprintRoot = path13.join(projectRoot, BLUEPRINT_DIR);
+  const blueprintRoot = path14.join(projectRoot, BLUEPRINT_DIR);
   const rootPath = workstreamsRootAbsolute(projectRoot);
   const indexPath = workstreamsIndexAbsolute(projectRoot);
   if (!await pathExists3(blueprintRoot)) {
@@ -56323,7 +57293,7 @@ async function loadWorkstreamStore(projectRoot) {
   }
   let entries;
   try {
-    entries = await fs16.readdir(rootPath, {
+    entries = await fs19.readdir(rootPath, {
       encoding: "utf8",
       withFileTypes: true
     });
@@ -56350,11 +57320,11 @@ async function loadWorkstreamStore(projectRoot) {
       if (!entry.isDirectory()) {
         continue;
       }
-      const statePath = path13.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      const statePath = path14.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
       if (!await pathExists3(statePath)) {
         throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
       }
-      const raw = await fs16.readFile(statePath, "utf8");
+      const raw = await fs19.readFile(statePath, "utf8");
       const parsed = safeJsonParseObject(raw, {
         label: statePath
       });
@@ -56371,7 +57341,7 @@ async function loadWorkstreamStore(projectRoot) {
       throw new Error("The workstream index is missing while workstream state files exist.");
     }
     if (indexExists) {
-      const actualIndex = await fs16.readFile(indexPath, "utf8");
+      const actualIndex = await fs19.readFile(indexPath, "utf8");
       if (normalizeTextForComparison(actualIndex) !== normalizeTextForComparison(expectedIndex)) {
         throw new Error("The workstream index is stale relative to the canonical state files.");
       }
@@ -56482,7 +57452,7 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(projectRoot),
-    ...uniqueSlugs.map((slug) => path13.dirname(workstreamStateAbsolute(projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path14.dirname(workstreamStateAbsolute(projectRoot, slug)))
   ]);
   try {
     for (const slug of uniqueSlugs) {
@@ -56515,7 +57485,7 @@ async function persistWorkstreamStateWithPreparedStateUpdate(args) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(args.projectRoot),
-    ...uniqueSlugs.map((slug) => path13.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path14.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
   ]);
   try {
     const affectedPaths = await persistWorkstreamState(
@@ -56565,7 +57535,7 @@ function maybeFailWorkspaceRegistryWrite(registryPath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesRegistry = injectedFailure === "1" || path13.resolve(injectedFailure) === path13.resolve(registryPath);
+  const matchesRegistry = injectedFailure === "1" || path14.resolve(injectedFailure) === path14.resolve(registryPath);
   if (!matchesRegistry) {
     return;
   }
@@ -56578,7 +57548,7 @@ function maybeFailPatchRegistryWrite(registryPath) {
     return;
   }
   const indexPath = patchIndexPath(registryPath);
-  const matchesRegistry = injectedFailure === "1" || path13.resolve(injectedFailure) === path13.resolve(registryPath) || path13.resolve(injectedFailure) === path13.resolve(indexPath);
+  const matchesRegistry = injectedFailure === "1" || path14.resolve(injectedFailure) === path14.resolve(registryPath) || path14.resolve(injectedFailure) === path14.resolve(indexPath);
   if (!matchesRegistry) {
     return;
   }
@@ -56611,12 +57581,12 @@ async function maybeDelayWorkspaceRemoveForTest() {
 }
 async function maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath) {
   const injectedTarget = process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
-  if (!injectedTarget || path13.resolve(injectedTarget) !== path13.resolve(workspacePath)) {
+  if (!injectedTarget || path14.resolve(injectedTarget) !== path14.resolve(workspacePath)) {
     return;
   }
   delete process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
-  await fs16.mkdir(workspacePath, { recursive: true });
-  await fs16.writeFile(path13.join(workspacePath, "foreign-content.txt"), "preserve\n", "utf8");
+  await fs19.mkdir(workspacePath, { recursive: true });
+  await fs19.writeFile(path14.join(workspacePath, "foreign-content.txt"), "preserve\n", "utf8");
 }
 async function maybeDelayPatchRecordBeforeIndexForTest() {
   const delayMs = parsePositiveIntegerEnv2("BLUEPRINT_TEST_PATCH_RECORD_BEFORE_INDEX_DELAY_MS");
@@ -56632,8 +57602,8 @@ async function maybeDelayPatchRecordAfterPatchWriteForTest() {
   }
   const markerPath = process.env.BLUEPRINT_TEST_PATCH_RECORD_AFTER_PATCH_WRITE_MARKER;
   if (markerPath) {
-    await fs16.mkdir(path13.dirname(markerPath), { recursive: true });
-    await fs16.writeFile(markerPath, "patch-written\n", "utf8");
+    await fs19.mkdir(path14.dirname(markerPath), { recursive: true });
+    await fs19.writeFile(markerPath, "patch-written\n", "utf8");
   }
   await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
@@ -56762,7 +57732,7 @@ async function readWorkspaceRegistryDocument(registryPath) {
       workspaces: []
     };
   }
-  const raw = await fs16.readFile(registryPath, "utf8");
+  const raw = await fs19.readFile(registryPath, "utf8");
   return parseWorkspaceRegistryDocument(raw, registryPath);
 }
 function normalizeRegistryEntry(value) {
@@ -56810,15 +57780,15 @@ function normalizeWorkspaceRepoMember(value, fallbackStrategy) {
   };
 }
 async function writeWorkspaceRegistryDocument(registryPath, document) {
-  const directory = path13.dirname(registryPath);
-  const tempPath = path13.join(
+  const directory = path14.dirname(registryPath);
+  const tempPath = path14.join(
     directory,
-    `${path13.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
+    `${path14.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
   let existingMode = null;
-  await fs16.mkdir(directory, { recursive: true });
+  await fs19.mkdir(directory, { recursive: true });
   try {
-    const stats = await fs16.lstat(registryPath);
+    const stats = await fs19.lstat(registryPath);
     if (!stats.isFile()) {
       throw new Error(`Workspace registry target must be a regular file: ${registryPath}`);
     }
@@ -56828,37 +57798,37 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
       throw error2;
     }
   }
-  await fs16.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
+  await fs19.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
 `, "utf8");
   if (existingMode !== null) {
-    await fs16.chmod(tempPath, existingMode);
+    await fs19.chmod(tempPath, existingMode);
   }
   try {
     maybeFailWorkspaceRegistryWrite(registryPath);
   } catch (error2) {
-    await fs16.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs19.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
   if (!await pathExists3(registryPath)) {
-    await fs16.rename(tempPath, registryPath);
+    await fs19.rename(tempPath, registryPath);
     return;
   }
-  const backupPath = path13.join(
+  const backupPath = path14.join(
     directory,
-    `${path13.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
+    `${path14.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
   );
   let restoredOriginal = false;
   try {
-    const currentStats = await fs16.lstat(registryPath);
+    const currentStats = await fs19.lstat(registryPath);
     if (!currentStats.isFile()) {
       throw new Error(`Workspace registry target must be a regular file: ${registryPath}`);
     }
-    await fs16.copyFile(registryPath, backupPath);
-    await fs16.rename(tempPath, registryPath);
+    await fs19.copyFile(registryPath, backupPath);
+    await fs19.rename(tempPath, registryPath);
   } catch (error2) {
-    await fs16.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs19.rm(tempPath, { force: true }).catch(() => void 0);
     if (!await pathExists3(registryPath) && await pathExists3(backupPath)) {
-      await fs16.copyFile(backupPath, registryPath).then(() => {
+      await fs19.copyFile(backupPath, registryPath).then(() => {
         restoredOriginal = true;
       }).catch(() => void 0);
     }
@@ -56867,30 +57837,30 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     }
     throw error2;
   }
-  await fs16.rm(backupPath, { force: true }).catch(() => void 0);
+  await fs19.rm(backupPath, { force: true }).catch(() => void 0);
 }
 function workspaceRegistryLockOwnerPath(lockPath) {
-  return path13.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
+  return path14.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
 }
 function workspaceRegistryLockLeasePath(lockPath) {
-  return path13.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+  return path14.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
 }
 function workspaceRegistryLockRecoveryPath(lockPath) {
   return `${lockPath}.recovery`;
 }
 function workspaceRegistryLockRecoveryGuardOwnerPath(recoveryPath, token) {
-  return path13.join(recoveryPath, `${WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+  return path14.join(recoveryPath, `${WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
 }
 function workspaceRegistryLockQuarantinePath(targetPath) {
   return `${targetPath}.reclaimed-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 async function writeWorkspaceRegistryLockFile(filePath, contents) {
-  await fs16.writeFile(filePath, `${contents}
+  await fs19.writeFile(filePath, `${contents}
 `, "utf8");
 }
 async function readWorkspaceRegistryLockOwnerAtPath(lockPath) {
   try {
-    return (await fs16.readFile(workspaceRegistryLockOwnerPath(lockPath), "utf8")).trim();
+    return (await fs19.readFile(workspaceRegistryLockOwnerPath(lockPath), "utf8")).trim();
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -56911,7 +57881,7 @@ async function refreshWorkspaceRegistryLockLease(lockHandle) {
 }
 async function getWorkspaceRegistryLockPathAgeMs(targetPath) {
   try {
-    const stats = await fs16.stat(targetPath);
+    const stats = await fs19.stat(targetPath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code === "ENOENT") {
@@ -56923,7 +57893,7 @@ async function getWorkspaceRegistryLockPathAgeMs(targetPath) {
 async function getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath) {
   let entries;
   try {
-    entries = await fs16.readdir(recoveryPath);
+    entries = await fs19.readdir(recoveryPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -56936,7 +57906,7 @@ async function getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath) {
       continue;
     }
     try {
-      const stats = await fs16.stat(path13.join(recoveryPath, entry));
+      const stats = await fs19.stat(path14.join(recoveryPath, entry));
       newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
@@ -56968,7 +57938,7 @@ async function createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recovery
   try {
     await writeWorkspaceRegistryLockFile(recoveryGuard.ownerPath, token);
   } catch (error2) {
-    await fs16.rmdir(recoveryPath).catch(() => void 0);
+    await fs19.rmdir(recoveryPath).catch(() => void 0);
     throw error2;
   }
   return recoveryGuard;
@@ -56976,7 +57946,7 @@ async function createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recovery
 async function refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard) {
   let stats;
   try {
-    stats = await fs16.stat(recoveryGuard.ownerPath);
+    stats = await fs19.stat(recoveryGuard.ownerPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return false;
@@ -56988,7 +57958,7 @@ async function refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard) {
   }
   try {
     const now = /* @__PURE__ */ new Date();
-    await fs16.utimes(recoveryGuard.ownerPath, now, now);
+    await fs19.utimes(recoveryGuard.ownerPath, now, now);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return false;
@@ -57002,14 +57972,14 @@ async function releaseWorkspaceRegistryLockRecoveryGuard(recoveryGuard) {
     return;
   }
   try {
-    await fs16.unlink(recoveryGuard.ownerPath);
+    await fs19.unlink(recoveryGuard.ownerPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return;
     }
     throw error2;
   }
-  await fs16.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
+  await fs19.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
 }
 async function reclaimStaleWorkspaceRegistryLockRecoveryGuard(recoveryPath) {
   const ageMs = await getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath);
@@ -57021,21 +57991,21 @@ async function reclaimStaleWorkspaceRegistryLockRecoveryGuard(recoveryPath) {
   }
   const quarantinePath = workspaceRegistryLockQuarantinePath(recoveryPath);
   try {
-    await fs16.rename(recoveryPath, quarantinePath);
+    await fs19.rename(recoveryPath, quarantinePath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return true;
     }
     throw error2;
   }
-  await fs16.rm(quarantinePath, { recursive: true, force: true });
+  await fs19.rm(quarantinePath, { recursive: true, force: true });
   return true;
 }
 async function tryAcquireWorkspaceRegistryLockRecoveryGuard(lockPath) {
   const recoveryPath = workspaceRegistryLockRecoveryPath(lockPath);
   for (; ; ) {
     try {
-      await fs16.mkdir(recoveryPath);
+      await fs19.mkdir(recoveryPath);
       return createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recoveryPath);
     } catch (error2) {
       if (error2.code !== "EEXIST") {
@@ -57079,14 +58049,14 @@ async function recoverStaleWorkspaceRegistryLock(lockPath) {
     }
     const quarantinePath = workspaceRegistryLockQuarantinePath(lockPath);
     try {
-      await fs16.rename(lockPath, quarantinePath);
+      await fs19.rename(lockPath, quarantinePath);
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return true;
       }
       throw error2;
     }
-    await fs16.rm(quarantinePath, { recursive: true, force: true });
+    await fs19.rm(quarantinePath, { recursive: true, force: true });
     return true;
   } finally {
     await releaseWorkspaceRegistryLockRecoveryGuard(recoveryGuard).catch(() => void 0);
@@ -57105,16 +58075,16 @@ async function createWorkspaceRegistryLockHandle(lockPath) {
     await writeWorkspaceRegistryLockFile(lockHandle.ownerPath, token);
     await writeWorkspaceRegistryLockFile(lockHandle.leasePath, token);
   } catch (error2) {
-    await fs16.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    await fs19.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   return lockHandle;
 }
 async function acquireWorkspaceRegistryLock(lockPath) {
-  await fs16.mkdir(path13.dirname(lockPath), { recursive: true });
+  await fs19.mkdir(path14.dirname(lockPath), { recursive: true });
   for (; ; ) {
     try {
-      await fs16.mkdir(lockPath);
+      await fs19.mkdir(lockPath);
       const lockHandle = await createWorkspaceRegistryLockHandle(lockPath);
       if (await pathExists3(workspaceRegistryLockRecoveryPath(lockPath))) {
         if (await reclaimStaleWorkspaceRegistryLockRecoveryGuard(
@@ -57169,7 +58139,7 @@ async function releaseWorkspaceRegistryLock(lockHandle) {
   if (ownerToken !== lockHandle.token) {
     return;
   }
-  await fs16.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
+  await fs19.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
 }
 async function withWorkspaceRegistryLock(registryPath, callback) {
   const lockPath = `${registryPath}.lock`;
@@ -57224,23 +58194,23 @@ function normalizeRecordedPatchId(value, indexPath) {
   }
 }
 function patchIndexPath(registryPath) {
-  return path13.join(registryPath, "index.json");
+  return path14.join(registryPath, "index.json");
 }
 function patchManifestPath(registryPath, patchId) {
-  return path13.join(registryPath, `${patchId}.json`);
+  return path14.join(registryPath, `${patchId}.json`);
 }
 function patchContentPath(registryPath, patchId) {
-  return path13.join(registryPath, `${patchId}.patch`);
+  return path14.join(registryPath, `${patchId}.patch`);
 }
 function patchAuditPath(registryPath, patchId) {
-  return path13.join(registryPath, `${patchId}.audit.ndjson`);
+  return path14.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
-  return createHash7("sha256").update(value).digest("hex");
+  return createHash8("sha256").update(value).digest("hex");
 }
 async function fileContentHash(filePath) {
   try {
-    return sha256(await fs16.readFile(filePath));
+    return sha256(await fs19.readFile(filePath));
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -57269,11 +58239,11 @@ function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
   for (const trackedFile of trackedFiles) {
     assertNoNullBytes(trackedFile, "Patch tracked file");
-    const candidatePath = path13.isAbsolute(trackedFile) ? path13.resolve(trackedFile) : path13.resolve(repoRoot, trackedFile);
+    const candidatePath = path14.isAbsolute(trackedFile) ? path14.resolve(trackedFile) : path14.resolve(repoRoot, trackedFile);
     ensurePathWithinRootSync(repoRoot, candidatePath, {
       label: "Patch tracked file"
     });
-    const relativePath = path13.relative(repoRoot, candidatePath).replaceAll(path13.sep, "/");
+    const relativePath = path14.relative(repoRoot, candidatePath).replaceAll(path14.sep, "/");
     if (!relativePath || relativePath === ".") {
       throw new Error("Patch tracked file must resolve to a file path inside the repo.");
     }
@@ -57345,7 +58315,7 @@ async function readPatchRegistryDocument(registryPath) {
       patches: []
     };
   }
-  const raw = await fs16.readFile(indexPath, "utf8");
+  const raw = await fs19.readFile(indexPath, "utf8");
   const parsed = safeJsonParseObject(raw, {
     label: indexPath
   });
@@ -57375,7 +58345,7 @@ async function readPatchRegistryDocument(registryPath) {
   };
 }
 async function writePatchRegistryDocument(registryPath, document) {
-  await fs16.mkdir(registryPath, { recursive: true });
+  await fs19.mkdir(registryPath, { recursive: true });
   maybeFailPatchRegistryWrite(registryPath);
   await writeJsonAtomically(
     patchIndexPath(registryPath),
@@ -57387,15 +58357,15 @@ async function readPatchManifest(registryPath, patchId) {
   if (!await pathExists3(manifestPath)) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
-  const raw = await fs16.readFile(manifestPath, "utf8");
+  const raw = await fs19.readFile(manifestPath, "utf8");
   const parsed = safeJsonParseObject(raw, {
     label: manifestPath
   });
   return normalizePatchManifest(parsed, patchId);
 }
 async function appendPatchAuditEntry(registryPath, patchId, entry) {
-  await fs16.mkdir(registryPath, { recursive: true });
-  await fs16.appendFile(
+  await fs19.mkdir(registryPath, { recursive: true });
+  await fs19.appendFile(
     patchAuditPath(registryPath, patchId),
     `${JSON.stringify(entry)}
 `,
@@ -57412,7 +58382,7 @@ async function loadPatchContent(registryPath, patchId, manifest) {
   if (!await pathExists3(contentPath)) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
-  const patch = await fs16.readFile(contentPath, "utf8");
+  const patch = await fs19.readFile(contentPath, "utf8");
   if (sha256(patch) !== manifest.patchHash) {
     throw new Error(
       `Patch registry is malformed for ${patchId}; recorded patch content does not match its manifest.`
@@ -57475,9 +58445,9 @@ function assertNotInstalledExtensionTarget(repoRoot) {
   if (!extensionPath) {
     return;
   }
-  const resolvedRepoRoot = path13.resolve(repoRoot);
-  const resolvedExtensionPath = path13.resolve(extensionPath);
-  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path13.sep}`)) {
+  const resolvedRepoRoot = path14.resolve(repoRoot);
+  const resolvedExtensionPath = path14.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path14.sep}`)) {
     throw new Error(
       `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
     );
@@ -57497,7 +58467,7 @@ async function buildPatchCompatibilityStatus(manifest, repoRoot) {
   }
   const runtimeHost = resolveBlueprintRuntimeHost();
   const reasons = [];
-  const repoName = path13.basename(repoRoot);
+  const repoName = path14.basename(repoRoot);
   if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
     reasons.push(
       `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
@@ -57558,14 +58528,14 @@ async function resolveDefaultWorkspaceRoot(cwd) {
       throw error2;
     }
   }
-  return path13.join(os3.homedir(), "blueprint-workspaces");
+  return path14.join(os3.homedir(), "blueprint-workspaces");
 }
 async function resolveWorkspacePath(args) {
   if (args.path) {
-    return path13.resolve(expandHomePath3(args.path));
+    return path14.resolve(expandHomePath3(args.path));
   }
   const workspaceRoot = await resolveDefaultWorkspaceRoot(args.cwd);
-  return path13.join(workspaceRoot, normalizeWorkspaceName(args.name));
+  return path14.join(workspaceRoot, normalizeWorkspaceName(args.name));
 }
 async function validateWorkspaceBranchName(branch) {
   const trimmed = branch.trim();
@@ -57595,18 +58565,18 @@ async function resolveSourceRepos(repoInputs, cwd) {
   const seen = /* @__PURE__ */ new Set();
   for (const repoInput of repoInputs) {
     assertNoNullBytes(repoInput, "Workspace repo");
-    const candidatePath = path13.resolve(cwd ?? process.cwd(), expandHomePath3(repoInput));
+    const candidatePath = path14.resolve(cwd ?? process.cwd(), expandHomePath3(repoInput));
     const sourcePath = await resolveGitRepoRoot(candidatePath);
     if (seen.has(sourcePath)) {
       continue;
     }
     seen.add(sourcePath);
     resolved.push({
-      name: slugifyRepoName(path13.basename(sourcePath)),
+      name: slugifyRepoName(path14.basename(sourcePath)),
       sourcePath,
       defaultBranch: await gitCurrentBranch(sourcePath),
       head: await gitHeadSha(sourcePath),
-      blueprintProject: await pathExists3(path13.join(sourcePath, ".blueprint"))
+      blueprintProject: await pathExists3(path14.join(sourcePath, ".blueprint"))
     });
   }
   if (resolved.length === 0) {
@@ -57628,10 +58598,10 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
 }
 function resolveWorkspaceTargetPath(value, cwd) {
   assertNoNullBytes(value, "Workspace path");
-  return path13.resolve(cwd ?? process.cwd(), expandHomePath3(value));
+  return path14.resolve(cwd ?? process.cwd(), expandHomePath3(value));
 }
 function buildWorkspaceManifestPath(workspacePath) {
-  return path13.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+  return path14.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
 function assertNotInstalledExtensionPath(candidatePath, label) {
   const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
@@ -57640,7 +58610,7 @@ function assertNotInstalledExtensionPath(candidatePath, label) {
   }
   if (isPathWithinRootSync(extensionPath, candidatePath)) {
     throw new Error(
-      `${label} must not target the installed extension directory: ${path13.resolve(extensionPath)}`
+      `${label} must not target the installed extension directory: ${path14.resolve(extensionPath)}`
     );
   }
 }
@@ -57648,7 +58618,7 @@ async function rollbackPartialWorktreeAdd(sourceRepoPath, memberPath, createdSou
   await runGit(["-C", sourceRepoPath, "worktree", "remove", "--force", memberPath], {
     allowFailure: true
   });
-  await fs16.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
+  await fs19.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
   if (createdSourceBranch) {
     await runGit(
       ["-C", sourceRepoPath, "branch", "--delete", "--force", createdSourceBranch],
@@ -57667,7 +58637,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
     duplicateIndex += 1;
   }
   usedTargetNames.add(candidateName);
-  const memberPath = path13.join(workspacePath, candidateName);
+  const memberPath = path14.join(workspacePath, candidateName);
   if (strategy === "worktree") {
     const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
     const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
@@ -57780,7 +58750,7 @@ async function rollbackCreatedMembers(createdMembers) {
       }
     } catch {
     }
-    await fs16.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+    await fs19.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
@@ -57790,7 +58760,7 @@ function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
   }
   if (workspacePath) {
     const exactMatches = nameMatches.filter(
-      (workspace) => path13.resolve(workspace.path) === workspacePath
+      (workspace) => path14.resolve(workspace.path) === workspacePath
     );
     if (exactMatches.length > 1) {
       throw new Error(
@@ -57819,17 +58789,17 @@ async function ensurePathRemoved(targetPath, label) {
   }
 }
 function workspaceEntriesMatch(registryEntry, manifestEntry) {
-  if (registryEntry.name !== manifestEntry.name || path13.resolve(registryEntry.path) !== path13.resolve(manifestEntry.path) || path13.resolve(registryEntry.manifestPath) !== path13.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
+  if (registryEntry.name !== manifestEntry.name || path14.resolve(registryEntry.path) !== path14.resolve(manifestEntry.path) || path14.resolve(registryEntry.manifestPath) !== path14.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
     return false;
   }
   return registryEntry.repos.every((member, index) => {
     const manifestMember = manifestEntry.repos[index];
-    return manifestMember !== void 0 && member.name === manifestMember.name && path13.resolve(member.sourcePath) === path13.resolve(manifestMember.sourcePath) && path13.resolve(member.path) === path13.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
+    return manifestMember !== void 0 && member.name === manifestMember.name && path14.resolve(member.sourcePath) === path14.resolve(manifestMember.sourcePath) && path14.resolve(member.path) === path14.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
   });
 }
 async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryPath) {
   try {
-    const raw = await fs16.readFile(manifestPath, "utf8");
+    const raw = await fs19.readFile(manifestPath, "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: manifestPath
     });
@@ -57842,9 +58812,9 @@ async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryP
   }
 }
 async function verifyWorkspaceRemovalEntry(entry, registryPath) {
-  const workspacePath = path13.resolve(entry.path);
-  const manifestPath = path13.resolve(entry.manifestPath);
-  const expectedManifestPath = path13.resolve(buildWorkspaceManifestPath(workspacePath));
+  const workspacePath = path14.resolve(entry.path);
+  const manifestPath = path14.resolve(entry.manifestPath);
+  const expectedManifestPath = path14.resolve(buildWorkspaceManifestPath(workspacePath));
   assertNotInstalledExtensionPath(workspacePath, "Workspace removal target");
   if (manifestPath !== expectedManifestPath) {
     throw new Error(
@@ -57868,7 +58838,7 @@ async function verifyWorkspaceRemovalEntry(entry, registryPath) {
     );
   }
   for (const member of entry.repos) {
-    const memberPath = path13.resolve(member.path);
+    const memberPath = path14.resolve(member.path);
     ensurePathWithinRootSync(workspacePath, memberPath, {
       label: "Workspace repo member"
     });
@@ -57923,7 +58893,7 @@ async function removeWorkspaceMember(member) {
       );
     }
   }
-  await fs16.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+  await fs19.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   await ensurePathRemoved(member.path, "Workspace repo member");
 }
 async function listGitWorktreePaths(repoPath) {
@@ -57995,7 +58965,7 @@ async function rollbackWorkspaceRemoval({
 }) {
   const rollbackErrors = [];
   if (rollbackWorkspacePath && await pathExists3(rollbackWorkspacePath) && !await pathExists3(entry.path)) {
-    await fs16.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
+    await fs19.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
       const reason = error2 instanceof Error ? error2.message : String(error2);
       rollbackErrors.push(
         `unable to restore workspace root ${entry.path} from ${rollbackWorkspacePath}: ${reason}`
@@ -58055,7 +59025,7 @@ async function blueprintWorkspaceCreate(args) {
   return withWorkspaceRegistryLock(registryPath, async () => {
     const registry2 = await readWorkspaceRegistryDocument(registryPath);
     if (registry2.workspaces.some(
-      (workspace) => workspace.name === normalizedName || path13.resolve(workspace.path) === path13.resolve(workspacePath)
+      (workspace) => workspace.name === normalizedName || path14.resolve(workspace.path) === path14.resolve(workspacePath)
     )) {
       throw new Error(
         `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
@@ -58066,10 +59036,10 @@ async function blueprintWorkspaceCreate(args) {
     const createdAt = (/* @__PURE__ */ new Date()).toISOString();
     let createdWorkspaceRoot = false;
     try {
-      await fs16.mkdir(path13.dirname(workspacePath), { recursive: true });
+      await fs19.mkdir(path14.dirname(workspacePath), { recursive: true });
       await ensureWorkspaceTargetDoesNotExist(workspacePath);
       await maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath);
-      await fs16.mkdir(workspacePath, { recursive: false });
+      await fs19.mkdir(workspacePath, { recursive: false });
       createdWorkspaceRoot = true;
       for (const sourceRepo of sourceRepos) {
         const createdMember = await createWorkspaceMember(
@@ -58105,7 +59075,7 @@ async function blueprintWorkspaceCreate(args) {
     } catch (error2) {
       await rollbackCreatedMembers(createdMembers);
       if (createdWorkspaceRoot) {
-        await fs16.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
+        await fs19.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
       }
       if (error2 instanceof Error) {
         throw error2;
@@ -58144,11 +59114,11 @@ async function blueprintWorkspaceRemove(args) {
         await removeWorkspaceMember(member);
       }
       rollbackWorkspacePath = workspaceRemovalRollbackPath(entry.path);
-      await fs16.rename(entry.path, rollbackWorkspacePath);
+      await fs19.rename(entry.path, rollbackWorkspacePath);
       await maybeDelayWorkspaceRemoveForTest();
       await ensurePathRemoved(entry.path, "Workspace root");
       await writeWorkspaceRegistryDocument(registryPath, nextRegistryDocument);
-      await fs16.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
+      await fs19.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
       await ensurePathRemoved(rollbackWorkspacePath, "Workspace removal rollback root");
       return {
         removedPath: entry.path,
@@ -58183,7 +59153,7 @@ async function blueprintWorkstreamList(args = {}) {
 }
 async function blueprintWorkstreamMutate(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  if (!await pathExists3(path13.join(projectRoot, BLUEPRINT_DIR))) {
+  if (!await pathExists3(path14.join(projectRoot, BLUEPRINT_DIR))) {
     return blueprintWorkstreamMutateLocked(projectRoot, args);
   }
   return withWorkstreamTransitionLock(
@@ -58587,7 +59557,7 @@ async function blueprintPatchRecord(args, options = {}) {
       sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
       compatibility = {
         host: args.compatibility?.host ?? runtimeHost.host,
-        repoRootName: args.compatibility?.repoRootName ?? path13.basename(repoRoot),
+        repoRootName: args.compatibility?.repoRootName ?? path14.basename(repoRoot),
         remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
       };
     }
@@ -58597,9 +59567,9 @@ async function blueprintPatchRecord(args, options = {}) {
       label: args.label?.trim() || null,
       createdAt: existingManifest?.createdAt ?? createdAt,
       sourceVersion,
-      repoRootName: path13.basename(repoRoot),
+      repoRootName: path14.basename(repoRoot),
       repoRemote,
-      patchFile: path13.basename(patchPath),
+      patchFile: path14.basename(patchPath),
       patchHash,
       trackedFiles,
       compatibility,
@@ -58619,7 +59589,7 @@ async function blueprintPatchRecord(args, options = {}) {
     }) : null;
     let rollbackSnapshot = null;
     try {
-      await fs16.mkdir(registryPath, { recursive: true });
+      await fs19.mkdir(registryPath, { recursive: true });
       await writeFileAtomically(patchPath, normalizedPatch);
       await maybeDelayPatchRecordAfterPatchWriteForTest();
       await writeJsonFile(manifestPath, manifest);
@@ -58635,7 +59605,7 @@ async function blueprintPatchRecord(args, options = {}) {
         timestamp: createdAt,
         action: args.audit?.action ?? "record",
         outcome: args.audit?.outcome ?? "recorded",
-        cwd: path13.resolve(args.cwd ?? process.cwd()),
+        cwd: path14.resolve(args.cwd ?? process.cwd()),
         repoRoot,
         targetHead: args.audit?.targetHead ?? sourceVersion,
         trackedFiles,
@@ -58723,12 +59693,12 @@ async function blueprintPatchReapply(args = {}) {
     throw new Error(`Patch replay requires a clean working tree: ${repoRoot}`);
   }
   const conflicts = [];
-  const tempDir = await fs16.mkdtemp(path13.join(os3.tmpdir(), "blueprint-patch-reapply-"));
+  const tempDir = await fs19.mkdtemp(path14.join(os3.tmpdir(), "blueprint-patch-reapply-"));
   try {
     const patchFiles = await Promise.all(
       replaySnapshot.map(async (snapshot3, index) => {
-        const patchFile = path13.join(tempDir, `${index}-${snapshot3.patchId}.patch`);
-        await fs16.writeFile(patchFile, snapshot3.patch, "utf8");
+        const patchFile = path14.join(tempDir, `${index}-${snapshot3.patchId}.patch`);
+        await fs19.writeFile(patchFile, snapshot3.patch, "utf8");
         return patchFile;
       })
     );
@@ -58828,7 +59798,7 @@ async function blueprintPatchReapply(args = {}) {
       targetHead
     };
   } finally {
-    await fs16.rm(tempDir, { recursive: true, force: true }).catch(() => void 0);
+    await fs19.rm(tempDir, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, WORKSTREAM_TRANSITION_LOCK_PATH, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceRegistryLockRecoveryHooksForTest, workspaceToolDefinitions;
@@ -58976,9 +59946,9 @@ var init_workspace = __esm({
 
 // src/mcp/tools/plan-run.ts
 import { execFile as execFile3 } from "node:child_process";
-import { promises as fs17 } from "node:fs";
+import { promises as fs20 } from "node:fs";
 import os4 from "node:os";
-import path14 from "node:path";
+import path15 from "node:path";
 import { promisify as promisify3 } from "node:util";
 function normalizePlanRunPhase(value) {
   return normalizePhaseNumber(value);
@@ -59005,7 +59975,7 @@ function planRunRelativeRootPath(phase, planId2) {
 }
 function resolvePlanRunPath(projectRoot, relativePath) {
   const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
-  const planRunsRoot = path14.join(projectRoot, PLAN_RUNS_ROOT_PATH);
+  const planRunsRoot = path15.join(projectRoot, PLAN_RUNS_ROOT_PATH);
   return ensurePathWithinRootSync(planRunsRoot, absolutePath, {
     label: "PlanRun path"
   });
@@ -59103,7 +60073,7 @@ function uniqueSortedStrings2(values) {
 }
 function normalizeRepoRelativePlanRunPath(projectRoot, value, label) {
   const absolutePath = resolveRepoRelativePath(projectRoot, value);
-  return path14.relative(projectRoot, absolutePath).split(path14.sep).join("/");
+  return path15.relative(projectRoot, absolutePath).split(path15.sep).join("/");
 }
 function normalizeRepoRelativePlanRunPaths(projectRoot, values, label) {
   return uniqueSortedStrings2(
@@ -59126,7 +60096,7 @@ function normalizePersistedRepoRelativePlanRunPaths(projectRoot, values, label) 
 function normalizeBlueprintArtifactPath(projectRoot, value, label) {
   const normalized = normalizeRequiredStringValue(value, label);
   const absolutePath = resolveBlueprintPath(projectRoot, normalized);
-  return path14.relative(projectRoot, absolutePath).split(path14.sep).join("/");
+  return path15.relative(projectRoot, absolutePath).split(path15.sep).join("/");
 }
 function normalizeNullableBlueprintArtifactPath(projectRoot, value, label) {
   if (value === null) {
@@ -59146,13 +60116,13 @@ function normalizeOptionalFilesystemPath(projectRoot, value, label) {
   if (!normalized) {
     return null;
   }
-  return path14.resolve(projectRoot, normalized);
+  return path15.resolve(projectRoot, normalized);
 }
 function normalizePersistedFilesystemPath(projectRoot, value, label) {
   if (value === null) {
     return null;
   }
-  return path14.resolve(projectRoot, normalizeRequiredStringValue(value, label));
+  return path15.resolve(projectRoot, normalizeRequiredStringValue(value, label));
 }
 function expandHomePath4(value) {
   const trimmed = value.trim();
@@ -59160,7 +60130,7 @@ function expandHomePath4(value) {
     return os4.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path14.join(os4.homedir(), trimmed.slice(2));
+    return path15.join(os4.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -59456,9 +60426,9 @@ async function resolvePlanRunDiffProjectRoot(args) {
 }
 async function realpathOrResolve(targetPath) {
   try {
-    return await fs17.realpath(targetPath);
+    return await fs20.realpath(targetPath);
   } catch {
-    return path14.resolve(targetPath);
+    return path15.resolve(targetPath);
   }
 }
 async function gitCommonDir(projectRoot) {
@@ -59472,7 +60442,7 @@ async function gitCommonDir(projectRoot) {
     };
   }
   const rawCommonDir = result.stdout.trim();
-  const commonDir = path14.isAbsolute(rawCommonDir) ? rawCommonDir : path14.resolve(projectRoot, rawCommonDir);
+  const commonDir = path15.isAbsolute(rawCommonDir) ? rawCommonDir : path15.resolve(projectRoot, rawCommonDir);
   return {
     path: await realpathOrResolve(commonDir),
     warning: null
@@ -59652,7 +60622,7 @@ function countTextLines(content) {
   return content.endsWith("\n") ? content.slice(0, -1).split("\n").length : content.split("\n").length;
 }
 async function readUntrackedFileForDiff(projectRoot, filePath) {
-  const fileBuffer = await fs17.readFile(path14.join(projectRoot, filePath));
+  const fileBuffer = await fs20.readFile(path15.join(projectRoot, filePath));
   if (fileBuffer.includes(0)) {
     return {
       kind: "binary",
@@ -59667,14 +60637,14 @@ async function readUntrackedFileForDiff(projectRoot, filePath) {
   };
 }
 async function renderUntrackedDiffStat(projectRoot, untrackedFiles) {
-  const lines2 = [];
+  const lines3 = [];
   for (const filePath of untrackedFiles) {
     try {
       const file2 = await readUntrackedFileForDiff(projectRoot, filePath);
       if (file2.kind === "binary") {
-        lines2.push(` ${filePath} | Bin 0 -> ${file2.bytes} bytes`);
+        lines3.push(` ${filePath} | Bin 0 -> ${file2.bytes} bytes`);
       } else {
-        lines2.push(` ${filePath} | ${file2.additions} ${"+".repeat(Math.min(file2.additions, 60))}`);
+        lines3.push(` ${filePath} | ${file2.additions} ${"+".repeat(Math.min(file2.additions, 60))}`);
       }
     } catch (error2) {
       return {
@@ -59684,14 +60654,14 @@ async function renderUntrackedDiffStat(projectRoot, untrackedFiles) {
     }
   }
   return {
-    stat: lines2.join("\n"),
+    stat: lines3.join("\n"),
     warning: null
   };
 }
 function renderUntrackedTextPatch(filePath, content) {
-  const lines2 = content.length > 0 ? content.split("\n") : [];
+  const lines3 = content.length > 0 ? content.split("\n") : [];
   const endsWithNewline = content.endsWith("\n");
-  const contentLines = endsWithNewline ? lines2.slice(0, -1) : lines2;
+  const contentLines = endsWithNewline ? lines3.slice(0, -1) : lines3;
   const hunkLength = Math.max(contentLines.length, 1);
   const patchLines = [
     `diff --git a/${filePath} b/${filePath}`,
@@ -60044,7 +61014,7 @@ function normalizePlanRunRecord(value, expected) {
   if (!Array.isArray(record2.verification)) {
     throw new Error(`${expected.label}.verification must be an array.`);
   }
-  const sourceRepoRoot = path14.resolve(
+  const sourceRepoRoot = path15.resolve(
     normalizeRequiredStringValue(source.repoRoot, `${expected.label}.source.repoRoot`)
   );
   if (sourceRepoRoot !== expected.projectRoot) {
@@ -60181,7 +61151,7 @@ async function readJsonObjectIfPresent(filePath, label) {
     return null;
   }
   try {
-    return safeJsonParseObject(await fs17.readFile(filePath, "utf8"), { label });
+    return safeJsonParseObject(await fs20.readFile(filePath, "utf8"), { label });
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -60191,7 +61161,7 @@ async function readJsonObjectIfPresent(filePath, label) {
 }
 async function inspectPlanRunFileTarget(filePath) {
   try {
-    const stats = await fs17.lstat(filePath);
+    const stats = await fs20.lstat(filePath);
     if (!stats.isFile()) {
       throw new Error(`PlanRun persistence target must be a regular file: ${filePath}`);
     }
@@ -60208,7 +61178,7 @@ function maybeFailPlanRunRecordWrite(filePath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesPath = injectedFailure === "1" || path14.resolve(injectedFailure) === path14.resolve(filePath);
+  const matchesPath = injectedFailure === "1" || path15.resolve(injectedFailure) === path15.resolve(filePath);
   if (!matchesPath) {
     return;
   }
@@ -60220,7 +61190,7 @@ function maybeFailPlanRunRecordRestore(filePath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesPath = injectedFailure === "1" || path14.resolve(injectedFailure) === path14.resolve(filePath);
+  const matchesPath = injectedFailure === "1" || path15.resolve(injectedFailure) === path15.resolve(filePath);
   if (!matchesPath) {
     return;
   }
@@ -60247,7 +61217,7 @@ async function waitForPlanRunTestPath(filePath, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      await fs17.access(filePath);
+      await fs20.access(filePath);
       return;
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -60265,8 +61235,8 @@ async function maybeDelayPlanRunPatchRollbackForTest() {
     return;
   }
   if (markerPath) {
-    await fs17.mkdir(path14.dirname(markerPath), { recursive: true });
-    await fs17.writeFile(markerPath, "rollback-pending\n", "utf8");
+    await fs20.mkdir(path15.dirname(markerPath), { recursive: true });
+    await fs20.writeFile(markerPath, "rollback-pending\n", "utf8");
   }
   if (releasePath) {
     await waitForPlanRunTestPath(releasePath, delayMs ?? 5e3);
@@ -60280,20 +61250,20 @@ async function writeAtomicJsonFile(filePath, value) {
   await ensureParentDirectory2(filePath);
   maybeFailPlanRunRecordWrite(filePath);
   const existingMode = await inspectPlanRunFileTarget(filePath);
-  const tempPath = path14.join(
-    path14.dirname(filePath),
-    `.${path14.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  const tempPath = path15.join(
+    path15.dirname(filePath),
+    `.${path15.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
   );
   try {
-    await fs17.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
+    await fs20.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
     if (existingMode !== null) {
-      await fs17.chmod(tempPath, existingMode);
+      await fs20.chmod(tempPath, existingMode);
     }
     await inspectPlanRunFileTarget(filePath);
-    await fs17.rename(tempPath, filePath);
+    await fs20.rename(tempPath, filePath);
   } catch (error2) {
-    await fs17.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs20.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -60303,7 +61273,7 @@ async function readPlanRunFileSnapshot(filePath) {
     return null;
   }
   return {
-    content: await fs17.readFile(filePath, "utf8"),
+    content: await fs20.readFile(filePath, "utf8"),
     mode
   };
 }
@@ -60311,21 +61281,21 @@ async function restorePlanRunFileSnapshot(filePath, snapshot3) {
   maybeFailPlanRunRecordRestore(filePath);
   if (snapshot3 === null) {
     await inspectPlanRunFileTarget(filePath);
-    await fs17.rm(filePath, { force: true });
+    await fs20.rm(filePath, { force: true });
     return;
   }
   await ensureParentDirectory2(filePath);
-  const tempPath = path14.join(
-    path14.dirname(filePath),
-    `.${path14.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.rollback.tmp`
+  const tempPath = path15.join(
+    path15.dirname(filePath),
+    `.${path15.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.rollback.tmp`
   );
   try {
-    await fs17.writeFile(tempPath, snapshot3.content, "utf8");
-    await fs17.chmod(tempPath, snapshot3.mode);
+    await fs20.writeFile(tempPath, snapshot3.content, "utf8");
+    await fs20.chmod(tempPath, snapshot3.mode);
     await inspectPlanRunFileTarget(filePath);
-    await fs17.rename(tempPath, filePath);
+    await fs20.rename(tempPath, filePath);
   } catch (error2) {
-    await fs17.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs20.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -61015,7 +61985,7 @@ async function blueprintPlanRunPatchRecord(args) {
       label: `Plan run ${phase}/${planId2}`,
       sourceVersion: diffBaseHead,
       compatibility: {
-        repoRootName: path14.basename(projectRoot)
+        repoRootName: path15.basename(projectRoot)
       },
       audit: {
         action: "record",
@@ -61171,9 +62141,9 @@ async function blueprintPlanRunPrepare(args) {
   const workspaceName = normalizePlanRunWorkspaceName(
     args.workspaceName ?? `phase-${phase}-plan-${planId2}-${slug}`
   );
-  const workspacePath = path14.resolve(
+  const workspacePath = path15.resolve(
     expandHomePath4(
-      args.workspacePath ?? path14.join(configResult.config.maintenance.workspace_root, workspaceName)
+      args.workspacePath ?? path15.join(configResult.config.maintenance.workspace_root, workspaceName)
     )
   );
   const strategy = configResult.config.workflow.use_worktrees ? "worktree" : "same-tree";
@@ -61447,14 +62417,14 @@ var init_plan_run = __esm({
 
 // src/mcp/tools/phase-execution-control.ts
 import { execFile as execFile4 } from "node:child_process";
-import { createHash as createHash8, randomUUID as randomUUID2 } from "node:crypto";
-import { promises as fs18 } from "node:fs";
-import path15 from "node:path";
+import { createHash as createHash9, randomUUID as randomUUID2 } from "node:crypto";
+import { promises as fs21 } from "node:fs";
+import path16 from "node:path";
 function dependencies(overrides) {
   return { ...defaultDependencies, ...overrides };
 }
 function sha2562(value) {
-  return createHash8("sha256").update(value).digest("hex");
+  return createHash9("sha256").update(value).digest("hex");
 }
 function canonicalize(value) {
   if (Array.isArray(value)) {
@@ -61489,13 +62459,13 @@ function extractBoundVerificationCommands(planContent) {
   return unique2(commands);
 }
 function isInside(root, candidate) {
-  return candidate === root || candidate.startsWith(`${root}${path15.sep}`);
+  return candidate === root || candidate.startsWith(`${root}${path16.sep}`);
 }
 function assertSafeRelativePath(relativePath, options) {
-  if (!relativePath || path15.isAbsolute(relativePath) || relativePath.includes("\0") || relativePath.includes("\\")) {
+  if (!relativePath || path16.isAbsolute(relativePath) || relativePath.includes("\0") || relativePath.includes("\\")) {
     throw new Error(`Unsafe execution path: ${JSON.stringify(relativePath)}.`);
   }
-  const normalized = path15.posix.normalize(relativePath.replace(/^\.\//, ""));
+  const normalized = path16.posix.normalize(relativePath.replace(/^\.\//, ""));
   if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized !== relativePath.replace(/^\.\//, "") || normalized === ".git" || normalized.startsWith(".git/") || !options.allowBlueprint && (normalized === BLUEPRINT_DIR || normalized.startsWith(`${BLUEPRINT_DIR}/`))) {
     throw new Error(`Unsafe execution path: ${JSON.stringify(relativePath)}.`);
   }
@@ -61505,9 +62475,9 @@ async function readRepoFile(projectRoot, canonicalRoot, relativePath) {
   const safePath = assertSafeRelativePath(relativePath, { allowBlueprint: true });
   const absolutePath = resolveBlueprintPath(projectRoot, safePath);
   const [stats, realPath, bytes] = await Promise.all([
-    fs18.lstat(absolutePath),
-    fs18.realpath(absolutePath),
-    fs18.readFile(absolutePath)
+    fs21.lstat(absolutePath),
+    fs21.realpath(absolutePath),
+    fs21.readFile(absolutePath)
   ]);
   if (!stats.isFile() || !isInside(canonicalRoot, realPath)) {
     throw new Error(`Execution authority path is not a regular repo file: ${safePath}.`);
@@ -61577,13 +62547,13 @@ async function digestRepoBoundaryPath(args) {
   const safePath = assertSafeRelativePath(args.relativePath, {
     allowBlueprint: args.allowBlueprint
   });
-  const absolutePath = path15.resolve(args.projectRoot, ...safePath.split("/"));
+  const absolutePath = path16.resolve(args.projectRoot, ...safePath.split("/"));
   const segments = safePath.split("/");
   let current = args.canonicalRoot;
   for (let index = 0; index < segments.length; index += 1) {
-    current = path15.join(current, segments[index] ?? "");
+    current = path16.join(current, segments[index] ?? "");
     try {
-      const stats2 = await fs18.lstat(current);
+      const stats2 = await fs21.lstat(current);
       if (stats2.isSymbolicLink()) {
         throw new Error(`Execution boundary path traverses a symbolic link: ${safePath}.`);
       }
@@ -61595,8 +62565,8 @@ async function digestRepoBoundaryPath(args) {
       }
     } catch (error2) {
       if (error2.code === "ENOENT" && args.allowMissing) {
-        const existingParent = path15.dirname(current);
-        const realParent = await fs18.realpath(existingParent);
+        const existingParent = path16.dirname(current);
+        const realParent = await fs21.realpath(existingParent);
         if (!isInside(args.canonicalRoot, realParent)) {
           throw new Error(`Execution boundary path escapes the repository: ${safePath}.`);
         }
@@ -61606,9 +62576,9 @@ async function digestRepoBoundaryPath(args) {
     }
   }
   const [realPath, stats, bytes] = await Promise.all([
-    fs18.realpath(absolutePath),
-    fs18.lstat(absolutePath),
-    fs18.readFile(absolutePath)
+    fs21.realpath(absolutePath),
+    fs21.lstat(absolutePath),
+    fs21.readFile(absolutePath)
   ]);
   if (!isInside(args.canonicalRoot, realPath)) {
     throw new Error(`Execution boundary path escapes the repository: ${safePath}.`);
@@ -61644,7 +62614,7 @@ async function gitSnapshot(projectRoot, deps) {
       ["-c", "core.quotepath=false", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
       projectRoot
     ),
-    fs18.realpath(projectRoot)
+    fs21.realpath(projectRoot)
   ]);
   const head = headResult.stdout.trim();
   if (headResult.exitCode !== 0 || headResult.signal !== null || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(head)) {
@@ -61672,11 +62642,11 @@ async function artifactInventory(projectRoot, canonicalRoot, phaseDir2) {
     throw new Error(`Unsafe phase directory: ${phaseDir2}.`);
   }
   const phaseAbsolute = resolveBlueprintPath(projectRoot, safePhaseDir);
-  const realPhaseDir = await fs18.realpath(phaseAbsolute);
+  const realPhaseDir = await fs21.realpath(phaseAbsolute);
   if (!isInside(canonicalRoot, realPhaseDir)) {
     throw new Error(`Phase directory escapes the canonical repository: ${phaseDir2}.`);
   }
-  const entries = await fs18.readdir(phaseAbsolute, { withFileTypes: true });
+  const entries = await fs21.readdir(phaseAbsolute, { withFileTypes: true });
   const paths = [
     `${BLUEPRINT_DIR}/ROADMAP.md`,
     BLUEPRINT_STATE_PATH,
@@ -62043,9 +63013,9 @@ async function assertControlStorageSafe(projectRoot, relativePath) {
   const segments = safePath.split("/");
   let cursor = projectRoot;
   for (const segment of segments.slice(0, -1)) {
-    cursor = path15.join(cursor, segment);
+    cursor = path16.join(cursor, segment);
     try {
-      const stats = await fs18.lstat(cursor);
+      const stats = await fs21.lstat(cursor);
       if (stats.isSymbolicLink() || !stats.isDirectory()) {
         throw new Error(`Execute-phase control storage has an unsafe ancestor: ${safePath}.`);
       }
@@ -62056,7 +63026,7 @@ async function assertControlStorageSafe(projectRoot, relativePath) {
   }
   const target = resolveBlueprintPath(projectRoot, safePath);
   try {
-    const stats = await fs18.lstat(target);
+    const stats = await fs21.lstat(target);
     if (stats.isSymbolicLink() || !stats.isFile()) {
       throw new Error(`Execute-phase control storage is not a regular file: ${safePath}.`);
     }
@@ -62065,19 +63035,19 @@ async function assertControlStorageSafe(projectRoot, relativePath) {
   }
 }
 async function assertExecutionLockStorageSafe(projectRoot) {
-  const canonicalRoot = await fs18.realpath(projectRoot);
-  const blueprintRoot = path15.join(canonicalRoot, BLUEPRINT_DIR);
-  const locksRoot = path15.join(blueprintRoot, "locks");
-  const blueprintStats = await fs18.lstat(blueprintRoot);
+  const canonicalRoot = await fs21.realpath(projectRoot);
+  const blueprintRoot = path16.join(canonicalRoot, BLUEPRINT_DIR);
+  const locksRoot = path16.join(blueprintRoot, "locks");
+  const blueprintStats = await fs21.lstat(blueprintRoot);
   if (blueprintStats.isSymbolicLink() || !blueprintStats.isDirectory()) {
     throw new Error("Execute-phase lock storage has an unsafe .blueprint ancestor.");
   }
   try {
-    const lockStats = await fs18.lstat(locksRoot);
+    const lockStats = await fs21.lstat(locksRoot);
     if (lockStats.isSymbolicLink() || !lockStats.isDirectory()) {
       throw new Error("Execute-phase lock storage must be a real repository directory.");
     }
-    const realLocksRoot = await fs18.realpath(locksRoot);
+    const realLocksRoot = await fs21.realpath(locksRoot);
     if (!isInside(canonicalRoot, realLocksRoot)) {
       throw new Error("Execute-phase lock storage escapes the canonical repository.");
     }
@@ -62088,7 +63058,7 @@ async function assertExecutionLockStorageSafe(projectRoot) {
 async function readJsonIfPresent2(projectRoot, relativePath) {
   await assertControlStorageSafe(projectRoot, relativePath);
   try {
-    const raw = await fs18.readFile(resolveBlueprintPath(projectRoot, relativePath), "utf8");
+    const raw = await fs21.readFile(resolveBlueprintPath(projectRoot, relativePath), "utf8");
     return JSON.parse(raw);
   } catch (error2) {
     if (error2.code === "ENOENT") return null;
@@ -62120,13 +63090,13 @@ function isArtifactDigest(value) {
 function isVerificationOutputValid(receipt, channel) {
   const text = receipt[channel];
   const bytes = receipt[`${channel}Bytes`];
-  const hash2 = receipt[`${channel}Hash`];
+  const hash3 = receipt[`${channel}Hash`];
   const truncated = receipt[`${channel}Truncated`];
-  if (typeof text !== "string" || !Number.isInteger(bytes) || bytes < Buffer.byteLength(text) || typeof hash2 !== "string" || !/^[0-9a-f]{64}$/.test(hash2) || typeof truncated !== "boolean") {
+  if (typeof text !== "string" || !Number.isInteger(bytes) || bytes < Buffer.byteLength(text) || typeof hash3 !== "string" || !/^[0-9a-f]{64}$/.test(hash3) || typeof truncated !== "boolean") {
     return false;
   }
   if (truncated) return bytes > Buffer.byteLength(text);
-  return bytes === Buffer.byteLength(text) && hash2 === sha2562(text);
+  return bytes === Buffer.byteLength(text) && hash3 === sha2562(text);
 }
 function isValidPhaseExecutionVerificationReceipt(value, command) {
   if (!value || typeof value !== "object") return false;
@@ -62151,7 +63121,7 @@ function isPreparedStateUpdate(value, packet) {
   if (!isArtifactDigest(effect.preimage) || !isArtifactDigest(effect.postimage)) return false;
   const prepared = effect.prepared;
   if (!prepared) return false;
-  const expectedAbsolutePath = path15.join(packet.repository.canonicalRoot, ...BLUEPRINT_STATE_PATH.split("/"));
+  const expectedAbsolutePath = path16.join(packet.repository.canonicalRoot, ...BLUEPRINT_STATE_PATH.split("/"));
   const expectedStateContent = prepared.expectedStateContent;
   if (!(expectedStateContent === null || typeof expectedStateContent === "string")) return false;
   if (prepared.projectRoot !== packet.repository.canonicalRoot || prepared.statePath !== BLUEPRINT_STATE_PATH || prepared.absoluteStatePath !== expectedAbsolutePath || typeof prepared.content !== "string" || typeof prepared.updated !== "boolean" || !Array.isArray(prepared.updatedFields) || !prepared.updatedFields.every((entry) => typeof entry === "string") || !Array.isArray(prepared.warnings) || !prepared.warnings.every((entry) => typeof entry === "string") || effect.preimage.path !== BLUEPRINT_STATE_PATH || effect.postimage.path !== BLUEPRINT_STATE_PATH || effect.preimage.sha256 !== (expectedStateContent === null ? null : sha2562(expectedStateContent)) || effect.preimage.sizeBytes !== (expectedStateContent === null ? null : Buffer.byteLength(expectedStateContent)) || effect.postimage.sha256 !== sha2562(prepared.content) || effect.postimage.sizeBytes !== Buffer.byteLength(prepared.content)) {
@@ -62237,14 +63207,14 @@ async function loadDurableSessions(projectRoot) {
   let names;
   try {
     const [stats, canonicalProjectRoot, canonicalSessionRoot] = await Promise.all([
-      fs18.lstat(absoluteRoot),
-      fs18.realpath(projectRoot),
-      fs18.realpath(absoluteRoot)
+      fs21.lstat(absoluteRoot),
+      fs21.realpath(projectRoot),
+      fs21.realpath(absoluteRoot)
     ]);
     if (stats.isSymbolicLink() || !stats.isDirectory() || !isInside(canonicalProjectRoot, canonicalSessionRoot)) {
       throw new Error("Execute-phase session storage is unsafe.");
     }
-    names = await fs18.readdir(absoluteRoot);
+    names = await fs21.readdir(absoluteRoot);
   } catch (error2) {
     if (error2.code === "ENOENT") return /* @__PURE__ */ new Map();
     throw error2;
@@ -62438,7 +63408,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
         if (index.activeSessionId !== session.sessionId) {
           return failure(mode, projectRoot, "The requested session is not the active execute-phase session.");
         }
-        if (session.packet.repository.canonicalRoot !== await fs18.realpath(projectRoot)) {
+        if (session.packet.repository.canonicalRoot !== await fs21.realpath(projectRoot)) {
           return failure(mode, projectRoot, "The durable session belongs to a different canonical repository.", "stale");
         }
         const current = session.status === "claimed" ? await buildPacket(projectRoot, {
@@ -62667,12 +63637,12 @@ var init_phase_execution_control = __esm({
 
 // src/mcp/tools/phase-execution-runtime.ts
 import { spawn } from "node:child_process";
-import { createHash as createHash9, randomUUID as randomUUID3 } from "node:crypto";
-import { promises as fs19 } from "node:fs";
-import path16 from "node:path";
+import { createHash as createHash10, randomUUID as randomUUID3 } from "node:crypto";
+import { promises as fs22 } from "node:fs";
+import path17 from "node:path";
 import { createInterface } from "node:readline";
 function sha2563(value) {
-  return createHash9("sha256").update(value).digest("hex");
+  return createHash10("sha256").update(value).digest("hex");
 }
 function uniqueSorted2(values) {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
@@ -62685,7 +63655,7 @@ function normalizeRepoRelativePath(value, label) {
     throw new Error(`${label} must be a non-empty repo-relative path without NUL bytes.`);
   }
   const normalized = value.trim();
-  if (normalized.includes("\\") || path16.posix.isAbsolute(normalized) || normalized === "." || normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
+  if (normalized.includes("\\") || path17.posix.isAbsolute(normalized) || normalized === "." || normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
     throw new Error(`${label} must be a canonical repo-relative path.`);
   }
   const firstSegment = normalized.split("/")[0]?.toLowerCase();
@@ -62695,7 +63665,7 @@ function normalizeRepoRelativePath(value, label) {
   return normalized;
 }
 function normalizeObservedRepoPath(value) {
-  if (typeof value !== "string" || value.length === 0 || value.includes("\0") || value.includes("\\") || path16.posix.isAbsolute(value) || value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") || value === ".git" || value.startsWith(".git/")) {
+  if (typeof value !== "string" || value.length === 0 || value.includes("\0") || value.includes("\\") || path17.posix.isAbsolute(value) || value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") || value === ".git" || value.startsWith(".git/")) {
     throw new Error("git.changedPath must be a canonical repo-relative path.");
   }
   return value;
@@ -62717,7 +63687,7 @@ async function assertNoSymlinkTraversal(root, relativePath, fileSystem) {
   const segments = relativePath.split("/");
   let current = root;
   for (let index = 0; index < segments.length; index += 1) {
-    current = path16.join(current, segments[index] ?? "");
+    current = path17.join(current, segments[index] ?? "");
     try {
       const stats = await fileSystem.lstat(current);
       if (stats.isSymbolicLink()) {
@@ -62738,8 +63708,8 @@ async function assertNoSymlinkTraversal(root, relativePath, fileSystem) {
   }
 }
 async function assertMutationParentContained(root, absolutePath, relativePath, fileSystem) {
-  const realParent = await fileSystem.realpath(path16.dirname(absolutePath));
-  if (realParent !== root && !realParent.startsWith(`${root}${path16.sep}`)) {
+  const realParent = await fileSystem.realpath(path17.dirname(absolutePath));
+  if (realParent !== root && !realParent.startsWith(`${root}${path17.sep}`)) {
     throw new Error(`Mutation parent escapes the canonical repository: ${relativePath}`);
   }
 }
@@ -62761,13 +63731,13 @@ async function readExistingFile(filePath, fileSystem) {
   }
 }
 function tempSibling(filePath, kind) {
-  return path16.join(
-    path16.dirname(filePath),
-    `.${path16.basename(filePath)}.blueprint-execute-${kind}-${process.pid}-${randomUUID3()}`
+  return path17.join(
+    path17.dirname(filePath),
+    `.${path17.basename(filePath)}.blueprint-execute-${kind}-${process.pid}-${randomUUID3()}`
   );
 }
 async function applyPinnedPhaseExecutionMutations(args) {
-  const realRoot = await fs19.realpath(path16.resolve(args.projectRoot));
+  const realRoot = await fs22.realpath(path17.resolve(args.projectRoot));
   const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
   if (authorized.length === 0) throw new Error("At least one authorized file or directory is required.");
   if (args.mutations.length === 0) throw new Error("At least one file mutation is required.");
@@ -62794,21 +63764,21 @@ async function applyPinnedPhaseExecutionMutations(args) {
     } else if (mutation.content !== void 0) {
       throw new Error(`Delete mutation must not include content: ${mutation.path}`);
     }
-    const absolutePath = path16.resolve(realRoot, ...mutation.path.split("/"));
-    if (!absolutePath.startsWith(`${realRoot}${path16.sep}`)) {
+    const absolutePath = path17.resolve(realRoot, ...mutation.path.split("/"));
+    if (!absolutePath.startsWith(`${realRoot}${path17.sep}`)) {
       throw new Error(`Mutation path escapes the repository: ${mutation.path}`);
     }
-    await assertNoSymlinkTraversal(realRoot, mutation.path, fs19);
-    const parentPath = path16.dirname(absolutePath);
+    await assertNoSymlinkTraversal(realRoot, mutation.path, fs22);
+    const parentPath = path17.dirname(absolutePath);
     const [parentLstat, realParent, parentStats] = await Promise.all([
-      fs19.lstat(parentPath),
-      fs19.realpath(parentPath),
-      fs19.stat(parentPath)
+      fs22.lstat(parentPath),
+      fs22.realpath(parentPath),
+      fs22.stat(parentPath)
     ]);
-    if (parentLstat.isSymbolicLink() || !parentLstat.isDirectory() || realParent !== realRoot && !realParent.startsWith(`${realRoot}${path16.sep}`)) {
+    if (parentLstat.isSymbolicLink() || !parentLstat.isDirectory() || realParent !== realRoot && !realParent.startsWith(`${realRoot}${path17.sep}`)) {
       throw new Error(`Mutation parent is not a contained real directory: ${mutation.path}`);
     }
-    const parentRelativePath = path16.relative(realRoot, realParent).replaceAll(path16.sep, "/");
+    const parentRelativePath = path17.relative(realRoot, realParent).replaceAll(path17.sep, "/");
     const key = `${parentStats.dev}:${parentStats.ino}`;
     const group = groups.get(key) ?? {
       parentPath: realParent,
@@ -62817,7 +63787,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
       ino: String(parentStats.ino),
       mutations: []
     };
-    const basename = path16.basename(absolutePath);
+    const basename = path17.basename(absolutePath);
     const nonce = `${process.pid}-${randomUUID3()}`;
     group.mutations.push({
       path: mutation.path,
@@ -62847,7 +63817,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
   }));
   const committed = [];
   const recoveryCandidates = (item) => uniqueSorted2(item.group.mutations.flatMap(
-    (mutation) => [mutation.backup, mutation.staged, mutation.quarantine].filter((value) => typeof value === "string").map((fileName) => path16.join(item.group.parentPath, fileName))
+    (mutation) => [mutation.backup, mutation.staged, mutation.quarantine].filter((value) => typeof value === "string").map((fileName) => path17.join(item.group.parentPath, fileName))
   ));
   const rollbackCommitted = async (failure2) => {
     const rollbackFailures = [];
@@ -62857,7 +63827,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
         const rollback = await item.worker.request({ action: "rollback" });
         rollbackFailures.push(...rollback.rollbackFailures ?? []);
         cleanupPaths.push(...(rollback.cleanupPaths ?? []).map(
-          (fileName) => path16.join(item.group.parentPath, fileName)
+          (fileName) => path17.join(item.group.parentPath, fileName)
         ));
       } catch (error2) {
         rollbackFailures.push(
@@ -62910,7 +63880,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
           result.failure ?? "Pinned mutation commit failed."
         );
         const currentCleanup = (result.cleanupPaths ?? []).map(
-          (fileName) => path16.join(item.group.parentPath, fileName)
+          (fileName) => path17.join(item.group.parentPath, fileName)
         );
         return {
           ...previousRollback,
@@ -62928,8 +63898,8 @@ async function applyPinnedPhaseExecutionMutations(args) {
     for (const { group } of workers) {
       try {
         const [stats, realParent] = await Promise.all([
-          fs19.stat(group.parentPath),
-          fs19.realpath(group.parentPath)
+          fs22.stat(group.parentPath),
+          fs22.realpath(group.parentPath)
         ]);
         if (String(stats.dev) !== group.dev || String(stats.ino) !== group.ino || realParent !== group.parentPath) {
           containmentFailure = `Mutation parent identity changed during commit: ${group.parentRelativePath}.`;
@@ -63003,7 +63973,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
       }
     }));
     const cleanupPaths = cleanups.flatMap(
-      (result, index) => (result.cleanupPaths ?? []).map((fileName) => path16.join(workers[index].group.parentPath, fileName))
+      (result, index) => (result.cleanupPaths ?? []).map((fileName) => path17.join(workers[index].group.parentPath, fileName))
     );
     const cleanupFailures = cleanups.flatMap((result) => result.failure ? [result.failure] : []);
     return {
@@ -63023,8 +63993,8 @@ async function applyPhaseExecutionMutations(args) {
   if (args.fileSystem === void 0) {
     return applyPinnedPhaseExecutionMutations(args);
   }
-  const fileSystem = args.fileSystem ?? fs19;
-  const realRoot = await fileSystem.realpath(path16.resolve(args.projectRoot));
+  const fileSystem = args.fileSystem ?? fs22;
+  const realRoot = await fileSystem.realpath(path17.resolve(args.projectRoot));
   const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
   if (authorized.length === 0) {
     throw new Error("At least one authorized file or directory is required.");
@@ -63059,8 +64029,8 @@ async function applyPhaseExecutionMutations(args) {
       } else if (mutation.content !== void 0) {
         throw new Error(`Delete mutation must not include content: ${mutation.path}`);
       }
-      const absolutePath = path16.resolve(realRoot, ...mutation.path.split("/"));
-      if (!absolutePath.startsWith(`${realRoot}${path16.sep}`)) {
+      const absolutePath = path17.resolve(realRoot, ...mutation.path.split("/"));
+      if (!absolutePath.startsWith(`${realRoot}${path17.sep}`)) {
         throw new Error(`Mutation path escapes the repository: ${mutation.path}`);
       }
       await assertNoSymlinkTraversal(realRoot, mutation.path, fileSystem);
@@ -63074,7 +64044,7 @@ async function applyPhaseExecutionMutations(args) {
       if (mutation.operation === "delete" && existing.content === null) {
         throw new Error(`Delete mutation target does not exist: ${mutation.path}`);
       }
-      await fileSystem.mkdir(path16.dirname(absolutePath), { recursive: true });
+      await fileSystem.mkdir(path17.dirname(absolutePath), { recursive: true });
       await assertMutationParentContained(realRoot, absolutePath, mutation.path, fileSystem);
       const stagedPath = mutation.operation === "write" ? tempSibling(absolutePath, "staged") : null;
       if (stagedPath && mutation.content !== void 0) {
@@ -63682,8 +64652,8 @@ if (!finalized) await rollback();
             }
           });
         });
-        const lines2 = createInterface({ input: this.child.stdout, crlfDelay: Infinity });
-        lines2.on("line", (line) => {
+        const lines3 = createInterface({ input: this.child.stdout, crlfDelay: Infinity });
+        lines3.on("line", (line) => {
           try {
             const message = JSON.parse(line);
             const waiter = this.pending.get(message.id);
@@ -63880,11 +64850,11 @@ if (!finalized) await rollback();
 });
 
 // src/mcp/tools/phase-execution-tools.ts
-import { createHash as createHash10 } from "node:crypto";
-import { promises as fs20 } from "node:fs";
-import path17 from "node:path";
+import { createHash as createHash11 } from "node:crypto";
+import { promises as fs23 } from "node:fs";
+import path18 from "node:path";
 function sha2564(value) {
-  return createHash10("sha256").update(value).digest("hex");
+  return createHash11("sha256").update(value).digest("hex");
 }
 function canonicalize2(value) {
   if (Array.isArray(value)) return value.map(canonicalize2);
@@ -63899,16 +64869,16 @@ function canonicalJson2(value) {
   return JSON.stringify(canonicalize2(value));
 }
 async function readRepoHash(projectRoot, relativePath) {
-  const absolutePath = path17.resolve(projectRoot, ...relativePath.split("/"));
-  if (!absolutePath.startsWith(`${path17.resolve(projectRoot)}${path17.sep}`)) {
+  const absolutePath = path18.resolve(projectRoot, ...relativePath.split("/"));
+  if (!absolutePath.startsWith(`${path18.resolve(projectRoot)}${path18.sep}`)) {
     throw new Error(`Execution authority path escapes the repository: ${relativePath}.`);
   }
   try {
-    const stats = await fs20.lstat(absolutePath);
+    const stats = await fs23.lstat(absolutePath);
     if (stats.isSymbolicLink() || !stats.isFile()) {
       throw new Error(`Execution authority path is not a regular file: ${relativePath}.`);
     }
-    const content = await fs20.readFile(absolutePath);
+    const content = await fs23.readFile(absolutePath);
     return { hash: sha2564(content), bytes: content.byteLength, mode: stats.mode & 4095 };
   } catch (error2) {
     if (error2.code === "ENOENT") {
@@ -64566,14 +65536,14 @@ async function blueprintPhaseExecutionFinalize(args, dependencyOverrides = {}) {
         if (progress.pendingStateUpdate === null) {
           const prepared = await deps.statePrepare({ cwd: context.projectRoot, base: "synced" });
           const observed = await readRepoHash(context.projectRoot, ".blueprint/STATE.md");
-          const currentContent = observed.hash === null ? null : await fs20.readFile(path17.join(context.projectRoot, ".blueprint/STATE.md"), "utf8");
+          const currentContent = observed.hash === null ? null : await fs23.readFile(path18.join(context.projectRoot, ".blueprint/STATE.md"), "utf8");
           if (prepared.expectedStateContent !== currentContent) {
             throw new Error("Execute-phase STATE authority changed while its deterministic update was prepared.");
           }
           const canonicalPrepared = {
             ...prepared,
             projectRoot: session.packet.repository.canonicalRoot,
-            absoluteStatePath: path17.join(
+            absoluteStatePath: path18.join(
               session.packet.repository.canonicalRoot,
               ".blueprint/STATE.md"
             )
@@ -64731,15 +65701,15 @@ var init_phase_execution_tools = __esm({
 
 // src/mcp/tools/cleanup.ts
 import { execFile as execFile5 } from "node:child_process";
-import { promises as fs21 } from "node:fs";
-import path18 from "node:path";
+import { promises as fs24 } from "node:fs";
+import path19 from "node:path";
 import { promisify as promisify4 } from "node:util";
 function activeCleanupArchiveFileSystem() {
   return cleanupArchiveFileSystemForTest ?? defaultCleanupArchiveFileSystem;
 }
 async function pathExists4(targetPath) {
   try {
-    await fs21.access(targetPath);
+    await fs24.access(targetPath);
     return true;
   } catch {
     return false;
@@ -64852,28 +65822,28 @@ async function listPhaseDirectories(projectRoot) {
   if (!await pathExists4(phasesRoot)) {
     throw new Error(`Missing ${BLUEPRINT_PHASES_PATH}.`);
   }
-  const entries = await fs21.readdir(phasesRoot, { withFileTypes: true });
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => path18.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
+  const entries = await fs24.readdir(phasesRoot, { withFileTypes: true });
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => path19.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
 }
 async function listPhaseArtifactPaths(projectRoot, phaseDir2) {
   const absolutePhaseDir = resolveBlueprintPath(projectRoot, phaseDir2);
-  const entries = await fs21.readdir(absolutePhaseDir, { withFileTypes: true });
-  return entries.filter((entry) => entry.isFile()).map((entry) => path18.posix.join(phaseDir2, entry.name)).sort();
+  const entries = await fs24.readdir(absolutePhaseDir, { withFileTypes: true });
+  return entries.filter((entry) => entry.isFile()).map((entry) => path19.posix.join(phaseDir2, entry.name)).sort();
 }
 function milestoneFromSummaryReportPath(reportPath) {
-  const match = path18.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
+  const match = path19.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
   return match?.[1] ?? null;
 }
 async function completedMilestoneEvidenceForPhase(projectRoot, phaseDir2, reportPaths, activeMilestone) {
   const matches = [];
   for (const reportPath of reportPaths.filter(
-    (value) => path18.posix.basename(value).startsWith("milestone-summary-")
+    (value) => path19.posix.basename(value).startsWith("milestone-summary-")
   )) {
     const evidenceMilestone = milestoneFromSummaryReportPath(reportPath);
     if (!evidenceMilestone || evidenceMilestone === activeMilestone) {
       continue;
     }
-    const reportContent = await fs21.readFile(resolveBlueprintPath(projectRoot, reportPath), "utf8");
+    const reportContent = await fs24.readFile(resolveBlueprintPath(projectRoot, reportPath), "utf8");
     const archivalEvidencePattern = new RegExp(
       `${escapeRegExp2(phaseDir2)}[^\\n]*safe to archive`,
       "i"
@@ -65025,7 +65995,7 @@ async function executeCleanupArchiveMutation(args) {
   const skippedPhaseDirs = [];
   const failureReasons = {};
   for (const phaseDir2 of args.selectedPhaseDirs) {
-    const destinationPhaseDir = path18.posix.join(args.archiveDestination, path18.posix.basename(phaseDir2));
+    const destinationPhaseDir = path19.posix.join(args.archiveDestination, path19.posix.basename(phaseDir2));
     try {
       await archivePhaseDirectory({
         projectRoot: args.projectRoot,
@@ -65111,7 +66081,7 @@ function cleanupArchiveStatusForOutcome(outcome) {
 async function rejectDestinationCollisions(args) {
   const collisions = [];
   for (const phaseDir2 of args.selectedPhaseDirs) {
-    const destinationPhaseDir = path18.posix.join(args.archiveDestination, path18.posix.basename(phaseDir2));
+    const destinationPhaseDir = path19.posix.join(args.archiveDestination, path19.posix.basename(phaseDir2));
     if (await pathExists4(resolveBlueprintPath(args.projectRoot, destinationPhaseDir))) {
       collisions.push(destinationPhaseDir);
     }
@@ -65498,10 +66468,10 @@ var init_cleanup = __esm({
       expectedProtectedPhaseDirs: array(string2()).optional()
     };
     defaultCleanupArchiveFileSystem = {
-      mkdir: (targetPath, options) => fs21.mkdir(targetPath, options),
-      rename: (sourcePath, destinationPath) => fs21.rename(sourcePath, destinationPath),
-      cp: (sourcePath, destinationPath, options) => fs21.cp(sourcePath, destinationPath, options),
-      rm: (targetPath, options) => fs21.rm(targetPath, options)
+      mkdir: (targetPath, options) => fs24.mkdir(targetPath, options),
+      rename: (sourcePath, destinationPath) => fs24.rename(sourcePath, destinationPath),
+      cp: (sourcePath, destinationPath, options) => fs24.cp(sourcePath, destinationPath, options),
+      rm: (targetPath, options) => fs24.rm(targetPath, options)
     };
     cleanupArchiveFileSystemForTest = null;
     cleanupToolDefinitions = [
@@ -65516,9 +66486,9 @@ var init_cleanup = __esm({
 });
 
 // src/mcp/tools/review.ts
-import { createHash as createHash11 } from "node:crypto";
-import { promises as fs22 } from "node:fs";
-import path19 from "node:path";
+import { createHash as createHash12 } from "node:crypto";
+import { promises as fs25 } from "node:fs";
+import path20 from "node:path";
 function createAjvValidator2() {
   return new import__3.Ajv2020({
     allErrors: true,
@@ -65654,11 +66624,11 @@ function explicitReviewFilesRequested(files) {
   return (files ?? []).some((candidate) => candidate.trim().length > 0);
 }
 function renderBulletList3(items, fallback = "none") {
-  const lines2 = items.map((item) => item.trim()).filter((item) => item.length > 0);
-  if (lines2.length === 0) {
+  const lines3 = items.map((item) => item.trim()).filter((item) => item.length > 0);
+  if (lines3.length === 0) {
     return `- ${fallback}`;
   }
-  return lines2.map((item) => `- ${item}`).join("\n");
+  return lines3.map((item) => `- ${item}`).join("\n");
 }
 function formatReviewTargetId(prefix, index) {
   return `${prefix}-${String(index + 1).padStart(2, "0")}`;
@@ -65678,18 +66648,18 @@ function stripVisibleReviewTargetId2(value) {
   return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
 }
 function buildLegacyReviewTargetId(prefix, sourceSection, value) {
-  const digest2 = createHash11("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
+  const digest2 = createHash12("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
   return `${prefix}-LEGACY-${digest2}`;
 }
 function sanitizeMarkdownScalar(value) {
   return value.replace(/\r\n|\r|\n/g, " ").replace(/\s+/g, " ").trim();
 }
 function renderIdentifiedBulletList(items, prefix, fallback = "none") {
-  const lines2 = items.map((item) => stripVisibleReviewTargetId2(item.trim())).filter((item) => item.length > 0 && !isPlaceholderReviewListItem(item));
-  if (lines2.length === 0) {
+  const lines3 = items.map((item) => stripVisibleReviewTargetId2(item.trim())).filter((item) => item.length > 0 && !isPlaceholderReviewListItem(item));
+  if (lines3.length === 0) {
     return `- ${fallback}`;
   }
-  return lines2.map((item, index) => `- \`${formatReviewTargetId(prefix, index)}\` - ${item}`).join("\n");
+  return lines3.map((item, index) => `- \`${formatReviewTargetId(prefix, index)}\` - ${item}`).join("\n");
 }
 function isGenericNoneValue3(value) {
   return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
@@ -66082,7 +67052,7 @@ async function buildPeerReviewAuthoringContext(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -66560,7 +67530,7 @@ async function buildReviewFixAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -66774,7 +67744,7 @@ async function inspectUatRoutingState(args) {
     };
   }
   try {
-    const content = await fs22.readFile(
+    const content = await fs25.readFile(
       resolveBlueprintPath(args.projectRoot, args.artifactPath),
       "utf8"
     );
@@ -66975,8 +67945,8 @@ function parseThreatRowsFromPlanContent(content, sourcePlan) {
       });
       continue;
     }
-    const bullets = collectListItems2(section);
-    bullets.forEach((item, index) => {
+    const bullets2 = collectListItems2(section);
+    bullets2.forEach((item, index) => {
       const rawMatch = item.match(/^`?([^`:\-]+?)`?\s*[:\-]\s*(.+)$/);
       if (rawMatch && isThreatIdSentinel(rawMatch[1])) {
         return;
@@ -67243,7 +68213,7 @@ async function buildSecurityAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -67604,7 +68574,7 @@ async function buildUiReviewAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -67750,7 +68720,7 @@ async function buildUiReviewAuthoringContext(args) {
 }
 async function pathExists5(targetPath) {
   try {
-    await fs22.access(targetPath);
+    await fs25.access(targetPath);
     return true;
   } catch {
     return false;
@@ -67774,21 +68744,21 @@ function collectListItems2(block) {
   }).filter((item) => item.length > 0);
 }
 function extractMarkdownSectionRawItems(content, headingPattern) {
-  const lines2 = content.split("\n");
+  const lines3 = content.split("\n");
   const entries = [];
-  for (let index = 0; index < lines2.length; index += 1) {
-    const headingMatch = lines2[index].match(/^(##+)\s+(.+)$/);
+  for (let index = 0; index < lines3.length; index += 1) {
+    const headingMatch = lines3[index].match(/^(##+)\s+(.+)$/);
     if (!headingMatch || !headingPattern.test(headingMatch[2].trim())) {
       continue;
     }
     const sectionLevel = headingMatch[1].length;
     const sectionLines = [];
-    for (let innerIndex = index + 1; innerIndex < lines2.length; innerIndex += 1) {
-      const nextHeadingMatch = lines2[innerIndex].match(/^(##+)\s+(.+)$/);
+    for (let innerIndex = index + 1; innerIndex < lines3.length; innerIndex += 1) {
+      const nextHeadingMatch = lines3[innerIndex].match(/^(##+)\s+(.+)$/);
       if (nextHeadingMatch && nextHeadingMatch[1].length <= sectionLevel) {
         break;
       }
-      sectionLines.push(lines2[innerIndex]);
+      sectionLines.push(lines3[innerIndex]);
     }
     entries.push({
       heading: headingMatch[2].trim(),
@@ -67820,21 +68790,21 @@ function collectSubstantiveReviewItems(content, headingPattern) {
   );
 }
 function extractMarkdownSectionContent(content, headingPattern) {
-  const lines2 = content.split("\n");
+  const lines3 = content.split("\n");
   const sections = [];
-  for (let index = 0; index < lines2.length; index += 1) {
-    const headingMatch = lines2[index].match(/^(##+)\s+(.+)$/);
+  for (let index = 0; index < lines3.length; index += 1) {
+    const headingMatch = lines3[index].match(/^(##+)\s+(.+)$/);
     if (!headingMatch || !headingPattern.test(headingMatch[2].trim())) {
       continue;
     }
     const sectionLevel = headingMatch[1].length;
     const sectionLines = [];
-    for (let innerIndex = index + 1; innerIndex < lines2.length; innerIndex += 1) {
-      const nextHeadingMatch = lines2[innerIndex].match(/^(##+)\s+(.+)$/);
+    for (let innerIndex = index + 1; innerIndex < lines3.length; innerIndex += 1) {
+      const nextHeadingMatch = lines3[innerIndex].match(/^(##+)\s+(.+)$/);
       if (nextHeadingMatch && nextHeadingMatch[1].length <= sectionLevel) {
         break;
       }
-      sectionLines.push(lines2[innerIndex]);
+      sectionLines.push(lines3[innerIndex]);
     }
     sections.push(sectionLines.join("\n"));
   }
@@ -67891,21 +68861,21 @@ function parseSecurityThreatRegisterFindings(content) {
   return findings;
 }
 function extractMarkdownSectionEntries(content, headingPattern) {
-  const lines2 = content.split("\n");
+  const lines3 = content.split("\n");
   const entries = [];
-  for (let index = 0; index < lines2.length; index += 1) {
-    const headingMatch = lines2[index].match(/^(##+)\s+(.+)$/);
+  for (let index = 0; index < lines3.length; index += 1) {
+    const headingMatch = lines3[index].match(/^(##+)\s+(.+)$/);
     if (!headingMatch || !headingPattern.test(headingMatch[2].trim())) {
       continue;
     }
     const sectionLevel = headingMatch[1].length;
     const sectionLines = [];
-    for (let innerIndex = index + 1; innerIndex < lines2.length; innerIndex += 1) {
-      const nextHeadingMatch = lines2[innerIndex].match(/^(##+)\s+(.+)$/);
+    for (let innerIndex = index + 1; innerIndex < lines3.length; innerIndex += 1) {
+      const nextHeadingMatch = lines3[innerIndex].match(/^(##+)\s+(.+)$/);
       if (nextHeadingMatch && nextHeadingMatch[1].length <= sectionLevel) {
         break;
       }
-      sectionLines.push(lines2[innerIndex]);
+      sectionLines.push(lines3[innerIndex]);
     }
     const items = [...new Set(collectListItems2(sectionLines.join("\n")))];
     if (items.length > 0) {
@@ -68565,9 +69535,9 @@ function parseFindingsFromArtifact(content, artifact) {
     }
   }
   if (artifact === "ui-review") {
-    const table = parseUiReviewFindingsTable(content);
-    parsedFollowUps.push(...table.followUps);
-    for (const tableFinding of table.findings) {
+    const table2 = parseUiReviewFindingsTable(content);
+    parsedFollowUps.push(...table2.followUps);
+    for (const tableFinding of table2.findings) {
       if (seenFindingKeys.has(tableFinding.summary)) {
         continue;
       }
@@ -69874,7 +70844,7 @@ function parseCodeReviewLocation(location2) {
   };
 }
 async function countFileLines(filePath) {
-  const content = await fs22.readFile(filePath, "utf8");
+  const content = await fs25.readFile(filePath, "utf8");
   const contentWithoutTerminalNewline = content.replace(/(?:\r\n|\r|\n)$/, "");
   if (contentWithoutTerminalNewline.length === 0) {
     return content.length === 0 ? 0 : 1;
@@ -70049,7 +71019,7 @@ async function addFindingLocationDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs22.stat(absolutePath);
+      const stats = await fs25.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -70597,7 +71567,7 @@ async function addReviewFixChangedFileDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs22.stat(absolutePath);
+      const stats = await fs25.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -71230,7 +72200,7 @@ async function addUiReviewRepoCitationDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs22.stat(absolutePath);
+      const stats = await fs25.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -71333,7 +72303,7 @@ function findPhaseArtifact3(artifacts, suffix) {
 async function readRepoFileIfPresent(projectRoot, relativePath) {
   try {
     const absolutePath = resolveRepoRelativePath(projectRoot, relativePath);
-    return await fs22.readFile(absolutePath, "utf8");
+    return await fs25.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -71349,7 +72319,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     if (requestedPath.length === 0) {
       continue;
     }
-    if (path19.isAbsolute(requestedPath)) {
+    if (path20.isAbsolute(requestedPath)) {
       warnings.push(
         `Invalid ${sourceLabel} path: ${requestedPath} (absolute filesystem paths are not allowed).`
       );
@@ -71383,7 +72353,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     }
     let stats;
     try {
-      stats = await fs22.stat(absolutePath);
+      stats = await fs25.stat(absolutePath);
     } catch {
       warnings.push(`Invalid ${sourceLabel} path: ${relativePath} (file does not exist).`);
       rejected = true;
@@ -71461,7 +72431,7 @@ async function deriveReviewFilesFromSummaries(projectRoot, located, warnings) {
         }
         let stats;
         try {
-          stats = await fs22.stat(absolutePath);
+          stats = await fs25.stat(absolutePath);
         } catch {
           warnings.push(
             `Skipped missing repo path from ${summaryPath2} review scope: ${relativePath}`
@@ -71549,7 +72519,7 @@ async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
       }
       let stats;
       try {
-        stats = await fs22.stat(absolutePath);
+        stats = await fs25.stat(absolutePath);
       } catch {
         warnings.push(
           `Skipped missing repo path from ${planPath} review scope: ${relativePath}`
@@ -71691,7 +72661,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -71725,7 +72695,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -71793,7 +72763,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -71817,7 +72787,7 @@ async function blueprintReviewScope(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path19.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -72523,7 +73493,7 @@ async function blueprintReviewRecordUnlocked(args, expectedTopology) {
   const { counts, followUps } = modelCountsOverride ?? parsedCounts;
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   const exists3 = await pathExists5(absolutePath);
-  const existingContent = exists3 ? await fs22.readFile(absolutePath, "utf8") : null;
+  const existingContent = exists3 ? await fs25.readFile(absolutePath, "utf8") : null;
   warnings.push(...prepared.warnings);
   const validation = validateReviewArtifactContent(normalizedContent, args.artifact);
   const evidenceCoverageIssues = args.artifact === "code-review" ? validateCodeReviewEvidenceCoverage(
@@ -72703,7 +73673,7 @@ async function blueprintReviewLoadFindings(args) {
       warnings: located.warnings
     };
   }
-  const content = await fs22.readFile(
+  const content = await fs25.readFile(
     resolveBlueprintPath(projectRoot, artifactPath),
     "utf8"
   );
@@ -72909,9 +73879,9 @@ var init_review = __esm({
 // src/mcp/tools/update.ts
 import { execFile as execFile6 } from "node:child_process";
 import { randomUUID as randomUUID4 } from "node:crypto";
-import { promises as fs23 } from "node:fs";
+import { promises as fs26 } from "node:fs";
 import os5 from "node:os";
-import path20 from "node:path";
+import path21 from "node:path";
 import { promisify as promisify5 } from "node:util";
 function positiveTimingOverride2(value, fallback) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -72945,7 +73915,7 @@ function expandHomePath5(value) {
     return os5.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path20.join(os5.homedir(), trimmed.slice(2));
+    return path21.join(os5.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -72957,7 +73927,7 @@ function normalizeOptionalString(value) {
 }
 async function pathExists6(targetPath) {
   try {
-    await fs23.access(targetPath);
+    await fs26.access(targetPath);
     return true;
   } catch {
     return false;
@@ -73004,7 +73974,7 @@ async function readJsonObject(filePath) {
     };
   }
   try {
-    const raw = await fs23.readFile(filePath, "utf8");
+    const raw = await fs26.readFile(filePath, "utf8");
     return {
       value: safeJsonParseObject(raw, { label: filePath }),
       warning: null
@@ -73028,19 +73998,19 @@ async function resolveInstalledVersion(extensionPath, manifestFileName) {
       warnings
     };
   }
-  const normalizedExtensionPath = path20.resolve(extensionPath);
+  const normalizedExtensionPath = path21.resolve(extensionPath);
   if (!await pathExists6(normalizedExtensionPath)) {
     warnings.push(`Configured extension path does not exist: ${normalizedExtensionPath}`);
     return {
       extensionPathState: "missing",
-      extensionManifestPath: path20.join(normalizedExtensionPath, manifestFileName),
+      extensionManifestPath: path21.join(normalizedExtensionPath, manifestFileName),
       installedVersion: null,
       warnings
     };
   }
-  const extensionManifestPath = path20.join(normalizedExtensionPath, manifestFileName);
+  const extensionManifestPath = path21.join(normalizedExtensionPath, manifestFileName);
   const manifestResult = await readJsonObject(extensionManifestPath);
-  const packageJsonResult = await readJsonObject(path20.join(normalizedExtensionPath, "package.json"));
+  const packageJsonResult = await readJsonObject(path21.join(normalizedExtensionPath, "package.json"));
   const manifest = manifestResult.value;
   const packageJson = packageJsonResult.value;
   if (manifestResult.warning) {
@@ -73298,7 +74268,7 @@ function compareSemver(left, right) {
 async function resolveUpdateCheck(args = {}, env2 = process.env) {
   const cwd = normalizeOptionalString(args.cwd) ?? process.cwd();
   const runtimeHost = resolveBlueprintRuntimeHost(env2);
-  const extensionPath = runtimeHost.extensionPath ? path20.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
+  const extensionPath = runtimeHost.extensionPath ? path21.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
   const warnings = [];
   if (extensionPath) {
     assertNoNullBytes(extensionPath, "Blueprint extension path");
@@ -73470,7 +74440,7 @@ function renderProvenanceMarkdown(provenance) {
   ];
 }
 function renderChecklistMarkdown(generatedAt, plan) {
-  const lines2 = [
+  const lines3 = [
     "# Blueprint Update Plan",
     "",
     `- Generated: ${generatedAt}`,
@@ -73487,20 +74457,20 @@ function renderChecklistMarkdown(generatedAt, plan) {
     ""
   ];
   for (const [index, step] of plan.steps.entries()) {
-    lines2.push(`${index + 1}. **${step.stage}: ${step.title}**`);
-    lines2.push(`   ${step.detail}`);
+    lines3.push(`${index + 1}. **${step.stage}: ${step.title}**`);
+    lines3.push(`   ${step.detail}`);
   }
-  lines2.push("", "## Notes", "");
+  lines3.push("", "## Notes", "");
   for (const note of plan.notes) {
-    lines2.push(`- ${note}`);
+    lines3.push(`- ${note}`);
   }
   if (plan.warnings.length > 0) {
-    lines2.push("", "## Warnings", "");
+    lines3.push("", "## Warnings", "");
     for (const warning of plan.warnings) {
-      lines2.push(`- ${warning}`);
+      lines3.push(`- ${warning}`);
     }
   }
-  return `${lines2.join("\n")}
+  return `${lines3.join("\n")}
 `;
 }
 function serializeUpdatePlan(generatedAt, plan) {
@@ -73510,7 +74480,7 @@ function serializeUpdatePlan(generatedAt, plan) {
   };
 }
 async function removeIfExists(targetPath) {
-  await fs23.rm(targetPath, { force: true });
+  await fs26.rm(targetPath, { force: true });
 }
 async function removeIfExistsSafely(targetPath, label) {
   try {
@@ -73524,7 +74494,7 @@ function createUpdatePlanNonce() {
   return `${process.pid}-${Date.now()}-${randomUUID4()}`;
 }
 async function withUpdatePlanLock(updatesDir, callback) {
-  const lockPath = path20.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
+  const lockPath = path21.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
   const lockOptions = {
     lockPath,
     timing: updatePlanLockTiming()
@@ -73555,7 +74525,7 @@ async function restoreFromBackup(backupPath, targetPath) {
   }
   try {
     await removeIfExists(targetPath);
-    await fs23.rename(backupPath, targetPath);
+    await fs26.rename(backupPath, targetPath);
     return {
       backupExisted: true,
       restored: true,
@@ -73591,7 +74561,7 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     const existingModes = await Promise.all(
       [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
         try {
-          const stats = await fs23.lstat(targetPath);
+          const stats = await fs26.lstat(targetPath);
           if (!stats.isFile()) {
             throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
           }
@@ -73607,18 +74577,18 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
-      label: path20.basename(plan.savedPaths.checklistPath)
+      label: path21.basename(plan.savedPaths.checklistPath)
     });
     if (existingModes[0] !== null) {
-      await fs23.chmod(metadataTmpPath, existingModes[0]);
+      await fs26.chmod(metadataTmpPath, existingModes[0]);
     }
     if (existingModes[1] !== null) {
-      await fs23.chmod(checklistTmpPath, existingModes[1]);
+      await fs26.chmod(checklistTmpPath, existingModes[1]);
     }
     const promotionModes = await Promise.all(
       [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
         try {
-          const stats = await fs23.lstat(targetPath);
+          const stats = await fs26.lstat(targetPath);
           if (!stats.isFile()) {
             throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
           }
@@ -73630,16 +74600,16 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
       })
     );
     if (promotionModes[0] !== null) {
-      await fs23.rename(plan.savedPaths.metadataPath, metadataBackupPath);
+      await fs26.rename(plan.savedPaths.metadataPath, metadataBackupPath);
       metadataBackupCreated = true;
     }
     if (promotionModes[1] !== null) {
-      await fs23.rename(plan.savedPaths.checklistPath, checklistBackupPath);
+      await fs26.rename(plan.savedPaths.checklistPath, checklistBackupPath);
       checklistBackupCreated = true;
     }
-    await fs23.rename(metadataTmpPath, plan.savedPaths.metadataPath);
+    await fs26.rename(metadataTmpPath, plan.savedPaths.metadataPath);
     metadataPromoted = true;
-    await fs23.rename(checklistTmpPath, plan.savedPaths.checklistPath);
+    await fs26.rename(checklistTmpPath, plan.savedPaths.checklistPath);
     checklistPromoted = true;
     for (const [backupPath, label] of [
       [metadataBackupPath, "update metadata backup"],
@@ -73725,9 +74695,9 @@ async function blueprintUpdatePlan(args = {}, env2 = process.env) {
   const runtimeHost = resolveBlueprintRuntimeHost(env2);
   const mode = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
   const check2 = await resolveUpdateCheck(args, env2);
-  const updatesDir = path20.resolve(expandHomePath5(runtimeHost.updatesDir));
-  const metadataPath = path20.join(updatesDir, UPDATE_PLAN_FILE);
-  const checklistPath = path20.join(updatesDir, UPDATE_CHECKLIST_FILE);
+  const updatesDir = path21.resolve(expandHomePath5(runtimeHost.updatesDir));
+  const metadataPath = path21.join(updatesDir, UPDATE_PLAN_FILE);
+  const checklistPath = path21.join(updatesDir, UPDATE_CHECKLIST_FILE);
   const savedPaths = {
     updatesDir,
     metadataPath,
@@ -73820,13 +74790,13 @@ var init_update = __esm({
 
 // src/mcp/tools/impact.ts
 import { execFile as execFile7 } from "node:child_process";
-import { createHash as createHash12 } from "node:crypto";
-import { promises as fs24 } from "node:fs";
+import { createHash as createHash13 } from "node:crypto";
+import { promises as fs27 } from "node:fs";
 import os6 from "node:os";
-import path21 from "node:path";
+import path22 from "node:path";
 import { promisify as promisify6 } from "node:util";
 function stableHash(value) {
-  return createHash12("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
+  return createHash13("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
 }
 function stableStringify(value) {
   if (Array.isArray(value)) {
@@ -73898,7 +74868,7 @@ function hasPathSegment(filePath, segment) {
   return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
 }
 function hasConfigName(filePath) {
-  const basename = path21.posix.basename(filePath);
+  const basename = path22.posix.basename(filePath);
   return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
 }
 function isGeneratedPath(filePath) {
@@ -73908,7 +74878,7 @@ function isTestPath(filePath) {
   return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 function isDocsPath(filePath) {
-  const extension = path21.posix.extname(filePath).toLowerCase();
+  const extension = path22.posix.extname(filePath).toLowerCase();
   return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
 }
 function areaForSurface(surface) {
@@ -73953,8 +74923,8 @@ function areaForSurface(surface) {
 }
 function classifyImpactFile(filePath) {
   const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const basename = path21.posix.basename(normalizedPath);
-  const extension = path21.posix.extname(normalizedPath).toLowerCase();
+  const basename = path22.posix.basename(normalizedPath);
+  const extension = path22.posix.extname(normalizedPath).toLowerCase();
   const rules = [];
   if (SECRET_PATH_PATTERN.test(normalizedPath)) {
     addSurfaceRule(
@@ -74640,7 +75610,7 @@ function matchesRepoPattern(filePath, pattern) {
     return false;
   }
   if (!normalizedPattern.includes("/")) {
-    return globPatternToRegExp(normalizedPattern).test(path21.posix.basename(normalizedPath));
+    return globPatternToRegExp(normalizedPattern).test(path22.posix.basename(normalizedPath));
   }
   return globPatternToRegExp(normalizedPattern).test(normalizedPath);
 }
@@ -74681,13 +75651,13 @@ function expandHomePath6(value) {
     return os6.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path21.join(os6.homedir(), trimmed.slice(2));
+    return path22.join(os6.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
 async function pathExists7(targetPath) {
   try {
-    await fs24.access(targetPath);
+    await fs27.access(targetPath);
     return true;
   } catch {
     return false;
@@ -74698,7 +75668,7 @@ function resolveContainedInputPath(projectRoot, inputPath, label) {
   if (trimmed.length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  const candidatePath = path21.isAbsolute(trimmed) ? trimmed : path21.resolve(projectRoot, trimmed);
+  const candidatePath = path22.isAbsolute(trimmed) ? trimmed : path22.resolve(projectRoot, trimmed);
   return ensurePathWithinRootSync(projectRoot, candidatePath, { label });
 }
 function toRepoRelativeInputPath(projectRoot, inputPath, label) {
@@ -74763,15 +75733,15 @@ function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
 }
 function getImpactDefaultsPath() {
   const runtimeHost = resolveBlueprintRuntimeHost();
-  return path21.resolve(
+  return path22.resolve(
     expandHomePath6(
-      path21.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
+      path22.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
     )
   );
 }
 function isUnsafeRepoPattern(value) {
   const normalized = value.trim().replaceAll("\\", "/");
-  return normalized.length === 0 || normalized.includes("\0") || path21.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
+  return normalized.length === 0 || normalized.includes("\0") || path22.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
 }
 function validateConfigPathArrays(config2) {
   const errors = [];
@@ -74943,7 +75913,7 @@ async function readConfigLayer(filePath, label, warnings, errors) {
     return null;
   }
   try {
-    return safeJsonParseObject(await fs24.readFile(filePath, "utf8"), { label });
+    return safeJsonParseObject(await fs27.readFile(filePath, "utf8"), { label });
   } catch (error2) {
     errors.push(error2 instanceof Error ? error2.message : `${label} could not be read.`);
     return null;
@@ -75035,7 +76005,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       continue;
     }
     codeownersPath = toRepoRelativePath(projectRoot, absolutePath);
-    const parsedRules = parseCodeownersRules(await fs24.readFile(absolutePath, "utf8"), codeownersPath);
+    const parsedRules = parseCodeownersRules(await fs27.readFile(absolutePath, "utf8"), codeownersPath);
     rules.push(...parsedRules);
     sourcesUsed.push(codeownersPath);
     addEvidence(evidence, {
@@ -75059,7 +76029,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     try {
-      const parsed = safeJsonParseObject(await fs24.readFile(absolutePath, "utf8"), {
+      const parsed = safeJsonParseObject(await fs27.readFile(absolutePath, "utf8"), {
         label: `Impact ownership metadata ${relativePath}`
       });
       const metadataResult = ownershipMetadataSchema.safeParse(parsed);
@@ -75251,7 +76221,7 @@ async function readJsonObjectIfPresent2(filePath, label) {
   if (!await pathExists7(filePath)) {
     return null;
   }
-  return safeJsonParseObject(await fs24.readFile(filePath, "utf8"), { label });
+  return safeJsonParseObject(await fs27.readFile(filePath, "utf8"), { label });
 }
 async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns) {
   const directories = [];
@@ -75261,17 +76231,17 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
       continue;
     }
     const root = normalizedPattern.split("/")[0];
-    const absoluteRoot = path21.join(projectRoot, root);
+    const absoluteRoot = path22.join(projectRoot, root);
     if (!await pathExists7(absoluteRoot)) {
       continue;
     }
-    const entries = await fs24.readdir(absoluteRoot, { withFileTypes: true });
+    const entries = await fs27.readdir(absoluteRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name.startsWith(".")) {
         continue;
       }
       const relativePath = `${root}/${entry.name}`;
-      if (await pathExists7(path21.join(projectRoot, relativePath, "package.json"))) {
+      if (await pathExists7(path22.join(projectRoot, relativePath, "package.json"))) {
         directories.push(relativePath);
       }
     }
@@ -75279,7 +76249,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
   return uniqueSorted4(directories);
 }
 async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
-  const packagePath = path21.join(projectRoot, "package.json");
+  const packagePath = path22.join(projectRoot, "package.json");
   const parsed = await readJsonObjectIfPresent2(packagePath, "Impact package.json");
   const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
   if (!parsed) {
@@ -75316,7 +76286,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   for (const workspacePath of workspaceDirectories) {
     try {
       const workspacePackage = await readJsonObjectIfPresent2(
-        path21.join(projectRoot, workspacePath, "package.json"),
+        path22.join(projectRoot, workspacePath, "package.json"),
         `Impact workspace package ${workspacePath}/package.json`
       );
       if (!workspacePackage) {
@@ -75346,7 +76316,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   }
   for (const workspacePath of workspaceDirectories) {
     const workspacePackage = await readJsonObjectIfPresent2(
-      path21.join(projectRoot, workspacePath, "package.json"),
+      path22.join(projectRoot, workspacePath, "package.json"),
       `Impact workspace package ${workspacePath}/package.json`
     );
     if (!workspacePackage) {
@@ -75380,12 +76350,12 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   return { used: true, packageNameByWorkspacePath };
 }
 async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
-  const lockPath = path21.join(projectRoot, "package-lock.json");
+  const lockPath = path22.join(projectRoot, "package-lock.json");
   if (!await pathExists7(lockPath)) {
     return false;
   }
   try {
-    const parsed = safeJsonParseObject(await fs24.readFile(lockPath, "utf8"), {
+    const parsed = safeJsonParseObject(await fs27.readFile(lockPath, "utf8"), {
       label: "Impact package-lock.json"
     });
     const packages = isPlainObject7(parsed.packages) ? Object.entries(parsed.packages) : [];
@@ -75434,7 +76404,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
   const results = /* @__PURE__ */ new Set();
   const queue = [];
   for (const root of roots) {
-    if (await pathExists7(path21.join(projectRoot, root))) {
+    if (await pathExists7(path22.join(projectRoot, root))) {
       queue.push({ relativePath: root, depth: 0 });
     }
   }
@@ -75443,8 +76413,8 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
     if (!current || current.depth > 8) {
       continue;
     }
-    const absolutePath = path21.join(projectRoot, current.relativePath);
-    const entries = await fs24.readdir(absolutePath, { withFileTypes: true });
+    const absolutePath = path22.join(projectRoot, current.relativePath);
+    const entries = await fs27.readdir(absolutePath, { withFileTypes: true });
     for (const entry of entries) {
       if (results.size >= 600) {
         break;
@@ -75458,13 +76428,13 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
           continue;
         }
         queue.push({ relativePath, depth: current.depth + 1 });
-      } else if (SOURCE_FILE_EXTENSIONS.has(path21.posix.extname(relativePath).toLowerCase())) {
+      } else if (SOURCE_FILE_EXTENSIONS.has(path22.posix.extname(relativePath).toLowerCase())) {
         results.add(relativePath);
       }
     }
   }
   for (const file2 of changedFiles) {
-    if (SOURCE_FILE_EXTENSIONS.has(path21.posix.extname(file2).toLowerCase())) {
+    if (SOURCE_FILE_EXTENSIONS.has(path22.posix.extname(file2).toLowerCase())) {
       results.add(file2);
     }
   }
@@ -75474,7 +76444,7 @@ function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPath
   if (!specifier.startsWith(".")) {
     return null;
   }
-  const base = path21.posix.normalize(path21.posix.join(path21.posix.dirname(importerPath), specifier));
+  const base = path22.posix.normalize(path22.posix.join(path22.posix.dirname(importerPath), specifier));
   const candidates = [
     base,
     `${base}.ts`,
@@ -75520,7 +76490,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
       skippedSecretCount += 1;
       continue;
     }
-    const absolutePath = path21.join(projectRoot, file2);
+    const absolutePath = path22.join(projectRoot, file2);
     if (!await pathExists7(absolutePath)) {
       continue;
     }
@@ -75540,7 +76510,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
         source: TS_IMPORT_SCAN_SOURCE
       });
     }
-    const rawSource = await fs24.readFile(absolutePath, "utf8");
+    const rawSource = await fs27.readFile(absolutePath, "utf8");
     scannedCount += 1;
     for (const specifier of extractImportSpecifiers(rawSource)) {
       const targetPath = resolveImportSpecifierToRepoPath(file2, specifier, sourceFileSet);
@@ -75596,7 +76566,7 @@ async function loadCustomDependencyGraphs(projectRoot, config2, nodes, edges, ev
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     try {
-      const parsed = safeJsonParseObject(await fs24.readFile(absolutePath, "utf8"), {
+      const parsed = safeJsonParseObject(await fs27.readFile(absolutePath, "utf8"), {
         label: `Impact dependency graph ${relativePath}`
       });
       const graphResult = dependencyGraphMetadataSchema.safeParse(parsed);
@@ -76509,7 +77479,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
   const missingMcpRuntimeBundleCoverage = compiledRuntimeOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
-  if (hasRuntimeOrExtension && !await pathExists7(path21.join(projectRoot, "dist/mcp/server.js"))) {
+  if (hasRuntimeOrExtension && !await pathExists7(path22.join(projectRoot, "dist/mcp/server.js"))) {
     const evidenceRef = addEvidence(evidence, {
       kind: "build",
       source: "dist-entrypoint",
@@ -76992,7 +77962,7 @@ async function loadSeededScopeArgs(projectRoot, args) {
     return args;
   }
   const seedPath = resolveContainedInputPath(projectRoot, args.seedFile, "Impact seed file");
-  const parsed = safeJsonParseObject(await fs24.readFile(seedPath, "utf8"), {
+  const parsed = safeJsonParseObject(await fs27.readFile(seedPath, "utf8"), {
     label: "Impact seed file"
   });
   const seedResult = impactScopeSeedSchema.safeParse(parsed);
@@ -77018,7 +77988,7 @@ async function blueprintImpactConfigGet(args = {}) {
   const errors = [];
   const layersApplied = ["built-in"];
   const defaultsPath = getImpactDefaultsPath();
-  const projectConfigPath = path21.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
+  const projectConfigPath = path22.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
   let appliedDefaultsPath = null;
   let appliedProjectPath = null;
   let appliedInvocationPath = null;
@@ -77171,7 +78141,7 @@ async function resolveDiffFileScope(projectRoot, args, mode, description, warnin
     );
   }
   const diffPath = resolveContainedInputPath(projectRoot, args.diffFile, "Impact diff file");
-  const rawDiff = await fs24.readFile(diffPath, "utf8");
+  const rawDiff = await fs27.readFile(diffPath, "utf8");
   const files = parseDiffFilePaths(rawDiff).map((file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact diff path")).sort();
   const stats = parseDiffFileStats(rawDiff);
   const diffFileRelativePath = toRepoRelativePath(projectRoot, diffPath);
@@ -77438,7 +78408,7 @@ async function blueprintImpactScopeResolve(args = {}) {
   return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
 }
 async function readPackageMetadata(projectRoot) {
-  const packageJsonPath = path21.join(projectRoot, "package.json");
+  const packageJsonPath = path22.join(projectRoot, "package.json");
   if (!await pathExists7(packageJsonPath)) {
     return {
       loaded: false,
@@ -77451,7 +78421,7 @@ async function readPackageMetadata(projectRoot) {
     };
   }
   try {
-    const parsed = safeJsonParseObject(await fs24.readFile(packageJsonPath, "utf8"), {
+    const parsed = safeJsonParseObject(await fs27.readFile(packageJsonPath, "utf8"), {
       label: "package.json"
     });
     const scripts = isPlainObject7(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
@@ -77481,7 +78451,7 @@ async function readPackageMetadata(projectRoot) {
 async function listExistingTopLevelPaths(projectRoot, candidates) {
   const existing = [];
   for (const candidate of candidates) {
-    if (await pathExists7(path21.join(projectRoot, candidate))) {
+    if (await pathExists7(path22.join(projectRoot, candidate))) {
       existing.push(candidate);
     }
   }
@@ -78146,7 +79116,7 @@ function canonicalizeImpactReport(report) {
   };
 }
 function normalizeExpectedFilePath(value) {
-  return path21.posix.normalize(value.trim().replaceAll("\\", "/"));
+  return path22.posix.normalize(value.trim().replaceAll("\\", "/"));
 }
 function normalizeExpectedEvidencePathsById(expectedPathsById) {
   if (expectedPathsById === void 0) {
@@ -78445,17 +79415,17 @@ function validateReportRepoRelativePath(projectRoot, value, label, errors) {
     errors.push(`${label} must not contain null bytes.`);
     return;
   }
-  if (path21.isAbsolute(trimmed) || path21.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
+  if (path22.isAbsolute(trimmed) || path22.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
     errors.push(`${label} must be repo-relative, not absolute: ${value}`);
     return;
   }
-  const normalizedPath = path21.posix.normalize(slashNormalized);
+  const normalizedPath = path22.posix.normalize(slashNormalized);
   if (normalizedPath === ".." || normalizedPath.startsWith("../")) {
     errors.push(`${label} escapes the repository: ${value}`);
     return;
   }
   try {
-    ensurePathWithinRootSync(projectRoot, path21.resolve(projectRoot, normalizedPath), {
+    ensurePathWithinRootSync(projectRoot, path22.resolve(projectRoot, normalizedPath), {
       label
     });
   } catch (error2) {
@@ -78476,7 +79446,7 @@ function shouldValidateReportScopeSource(scope) {
   }
   const trimmed = scope.source.trim();
   const slashNormalized = trimmed.replaceAll("\\", "/");
-  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path21.isAbsolute(trimmed) || path21.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
+  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path22.isAbsolute(trimmed) || path22.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
 }
 function validateReportScopeSource(projectRoot, scope, errors) {
   if (!shouldValidateReportScopeSource(scope)) {
@@ -79115,13 +80085,13 @@ function renderImpactSummaryText(report) {
   ].join("\n");
 }
 function renderImpactHumanText(report, verbosity) {
-  const lines2 = [
+  const lines3 = [
     `Impact ${report.impactId}: ${report.status}`,
     `Risk ${report.risk.level}; confidence ${report.confidence.level} (${report.confidence.score}).`,
     report.summary
   ];
   if (verbosity !== "compact") {
-    lines2.push(
+    lines3.push(
       `Top areas: ${sentenceList(
         report.topImpactedAreas.map((area) => `${area.name} (${area.count})`),
         "No impacted areas because the scope had no changed files."
@@ -79137,7 +80107,7 @@ function renderImpactHumanText(report, verbosity) {
     );
   }
   if (verbosity === "detailed") {
-    lines2.push(
+    lines3.push(
       `Required actions: ${sentenceList(
         report.requiredActions,
         "No actions because no findings, obligations, or unknowns required follow-up."
@@ -79148,17 +80118,17 @@ function renderImpactHumanText(report, verbosity) {
       )}`
     );
   }
-  return `${lines2.join("\n")}
+  return `${lines3.join("\n")}
 `;
 }
 function ensureImpactReportRoot(projectRoot) {
-  return ensurePathWithinRootSync(projectRoot, path21.join(projectRoot, IMPACT_REPORT_ROOT), {
+  return ensurePathWithinRootSync(projectRoot, path22.join(projectRoot, IMPACT_REPORT_ROOT), {
     label: "impact report root"
   });
 }
 function ensureImpactBundleDir(projectRoot, impactId) {
   const impactRoot = ensureImpactReportRoot(projectRoot);
-  const impactDir = ensurePathWithinRootSync(impactRoot, path21.join(impactRoot, impactId), {
+  const impactDir = ensurePathWithinRootSync(impactRoot, path22.join(impactRoot, impactId), {
     label: "impact report directory"
   });
   ensurePathWithinRootSync(projectRoot, impactDir, { label: "impact report directory" });
@@ -79170,18 +80140,18 @@ async function compareImpactBundle(projectRoot, impactDir, files) {
     return { existing: false, identical: false };
   }
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path21.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path22.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
     if (!await pathExists7(filePath)) {
       return { existing: true, identical: false };
     }
-    if (await fs24.readFile(filePath, "utf8") !== content) {
+    if (await fs27.readFile(filePath, "utf8") !== content) {
       return { existing: true, identical: false };
     }
   }
-  const existingEntries = await fs24.readdir(impactDir, { withFileTypes: true });
+  const existingEntries = await fs27.readdir(impactDir, { withFileTypes: true });
   for (const entry of existingEntries) {
     if (!IMPACT_ALLOWED_BUNDLE_FILES.has(entry.name) || !files.has(entry.name)) {
       return { existing: true, identical: false };
@@ -79193,7 +80163,7 @@ function uniqueImpactBundleWorkDir(impactRoot, impactId, purpose) {
   const suffix = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return ensurePathWithinRootSync(
     impactRoot,
-    path21.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
+    path22.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
     { label: `impact report ${purpose} directory` }
   );
 }
@@ -79203,19 +80173,19 @@ function persistenceErrorMessage(error2) {
 async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files, existingDirectoryMode, existingFileModes) {
   const stagingDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "staging");
   try {
-    await fs24.mkdir(stagingDir);
+    await fs27.mkdir(stagingDir);
     if (existingDirectoryMode !== null) {
-      await fs24.chmod(stagingDir, existingDirectoryMode);
+      await fs27.chmod(stagingDir, existingDirectoryMode);
     }
     for (const [fileName, content] of files) {
-      const filePath = ensurePathWithinRootSync(stagingDir, path21.join(stagingDir, fileName), {
+      const filePath = ensurePathWithinRootSync(stagingDir, path22.join(stagingDir, fileName), {
         label: "staged impact report file"
       });
       ensurePathWithinRootSync(projectRoot, filePath, { label: "staged impact report file" });
-      await fs24.writeFile(filePath, content, "utf8");
+      await fs27.writeFile(filePath, content, "utf8");
       const existingMode = existingFileModes.get(fileName);
       if (existingMode !== void 0) {
-        await fs24.chmod(filePath, existingMode);
+        await fs27.chmod(filePath, existingMode);
       }
     }
     const stagedComparison = await compareImpactBundle(projectRoot, stagingDir, files);
@@ -79224,7 +80194,7 @@ async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files, 
     }
     return stagingDir;
   } catch (error2) {
-    await fs24.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+    await fs27.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -79233,7 +80203,7 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
   const backupDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "backup");
   let hadExistingBundle = false;
   try {
-    const stats = await fs24.lstat(impactDir);
+    const stats = await fs27.lstat(impactDir);
     if (!stats.isDirectory()) {
       throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
     }
@@ -79245,29 +80215,29 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
   let promoted = false;
   try {
     if (hadExistingBundle) {
-      await fs24.rename(impactDir, backupDir);
+      await fs27.rename(impactDir, backupDir);
       backupCreated = true;
     }
-    await fs24.rename(stagingDir, impactDir);
+    await fs27.rename(stagingDir, impactDir);
     promoted = true;
   } catch (error2) {
     if (backupCreated && !promoted) {
-      await fs24.rm(impactDir, { recursive: true, force: true }).catch(() => void 0);
+      await fs27.rm(impactDir, { recursive: true, force: true }).catch(() => void 0);
       try {
-        await fs24.rename(backupDir, impactDir);
+        await fs27.rename(backupDir, impactDir);
       } catch (restoreError) {
-        await fs24.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+        await fs27.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
         throw new Error(
           `Impact report bundle replacement failed and the previous bundle could not be restored. Replacement error: ${persistenceErrorMessage(error2)}. Restore error: ${persistenceErrorMessage(restoreError)}.`
         );
       }
     }
-    await fs24.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+    await fs27.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   if (backupCreated) {
     try {
-      await fs24.rm(backupDir, { recursive: true, force: true });
+      await fs27.rm(backupDir, { recursive: true, force: true });
     } catch (error2) {
       warnings.push(
         `Impact report bundle was replaced, but cleanup of the previous staged backup failed: ${persistenceErrorMessage(error2)}`
@@ -79278,11 +80248,11 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
 }
 async function replaceImpactBundleTransactionally(projectRoot, impactId, impactDir, files) {
   const impactRoot = ensureImpactReportRoot(projectRoot);
-  await fs24.mkdir(impactRoot, { recursive: true });
+  await fs27.mkdir(impactRoot, { recursive: true });
   let existingDirectoryMode = null;
   const existingFileModes = /* @__PURE__ */ new Map();
   try {
-    const stats = await fs24.lstat(impactDir);
+    const stats = await fs27.lstat(impactDir);
     if (!stats.isDirectory()) {
       throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
     }
@@ -79297,11 +80267,11 @@ async function replaceImpactBundleTransactionally(projectRoot, impactId, impactD
       [...files.keys()].map(async (fileName) => {
         const existingPath = ensurePathWithinRootSync(
           impactDir,
-          path21.join(impactDir, fileName),
+          path22.join(impactDir, fileName),
           { label: "existing impact report file" }
         );
         try {
-          const stats = await fs24.lstat(existingPath);
+          const stats = await fs27.lstat(existingPath);
           if (!stats.isFile()) {
             throw new Error(`Impact bundle file target must be a regular file: ${existingPath}`);
           }
@@ -79326,13 +80296,13 @@ async function replaceImpactBundleTransactionally(projectRoot, impactId, impactD
 }
 async function readSavedImpactReport(projectRoot, impactId) {
   const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const reportPath = ensurePathWithinRootSync(impactDir, path21.join(impactDir, "impact.json"), {
+  const reportPath = ensurePathWithinRootSync(impactDir, path22.join(impactDir, "impact.json"), {
     label: "saved impact report"
   });
   if (!await pathExists7(reportPath)) {
     throw new Error(`${IMPACT_REPORT_ROOT}/${impactId}/impact.json does not exist.`);
   }
-  return safeJsonParseObject(await fs24.readFile(reportPath, "utf8"), {
+  return safeJsonParseObject(await fs27.readFile(reportPath, "utf8"), {
     label: `${IMPACT_REPORT_ROOT}/${impactId}/impact.json`
   });
 }
@@ -79377,9 +80347,9 @@ async function blueprintImpactReportWrite(args = {}) {
     writeEvidenceLog: args.writeEvidenceLog
   });
   return withBlueprintRepoLock(projectRoot, `impact-report-${impactId}`, async () => {
-    const lexicalImpactDir = path21.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
+    const lexicalImpactDir = path22.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
     try {
-      const stats = await fs24.lstat(lexicalImpactDir);
+      const stats = await fs27.lstat(lexicalImpactDir);
       if (!stats.isDirectory()) {
         throw new Error(`Impact bundle target must be a real directory: ${lexicalImpactDir}`);
       }
@@ -79827,7 +80797,7 @@ var init_impact = __esm({
 
 // src/mcp/quality-shipping-safety.ts
 import { execFile as execFile8 } from "node:child_process";
-import { createHash as createHash13 } from "node:crypto";
+import { createHash as createHash14 } from "node:crypto";
 function canonicalize3(value) {
   if (Array.isArray(value)) {
     return value.map(canonicalize3);
@@ -79843,7 +80813,7 @@ function qualityShippingStableSerialize(value) {
   return JSON.stringify(canonicalize3(value));
 }
 function qualityShippingSha256(value) {
-  return createHash13("sha256").update(value).digest("hex");
+  return createHash14("sha256").update(value).digest("hex");
 }
 function qualityShippingFingerprint(value) {
   return qualityShippingSha256(qualityShippingStableSerialize(value));
@@ -79920,7 +80890,7 @@ var init_quality_shipping_safety = __esm({
 import { randomUUID as randomUUID5 } from "node:crypto";
 import { access, lstat, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import os7 from "node:os";
-import path22 from "node:path";
+import path23 from "node:path";
 function pruneApprovals(forInsertion = false) {
   const now = nowProvider();
   for (const [operationId, approval] of approvals) {
@@ -79940,7 +80910,7 @@ function recordTerminalResult(stored, result) {
   stored.lastResult = result;
   stored.terminalExpiresAt = nowProvider() + terminalReceiptTtlMs;
 }
-function lines(value) {
+function lines2(value) {
   return value.split(/\r?\n/).filter((line) => line.length > 0);
 }
 function errorMessage2(error2) {
@@ -79968,14 +80938,14 @@ async function pathExists8(targetPath) {
 }
 async function gitPathExists(repoRoot, name) {
   const gitPath = await requiredGit(repoRoot, ["rev-parse", "--git-path", name]);
-  return pathExists8(path22.isAbsolute(gitPath) ? gitPath : path22.resolve(repoRoot, gitPath));
+  return pathExists8(path23.isAbsolute(gitPath) ? gitPath : path23.resolve(repoRoot, gitPath));
 }
 async function inspectRepository(cwd) {
   const repoRootRaw = await requiredGit(cwd, ["rev-parse", "--show-toplevel"]);
   const repoRoot = await realpath(repoRootRaw);
   const gitCommonDirRaw = await requiredGit(repoRoot, ["rev-parse", "--git-common-dir"]);
   const gitCommonDir2 = await realpath(
-    path22.isAbsolute(gitCommonDirRaw) ? gitCommonDirRaw : path22.resolve(repoRoot, gitCommonDirRaw)
+    path23.isAbsolute(gitCommonDirRaw) ? gitCommonDirRaw : path23.resolve(repoRoot, gitCommonDirRaw)
   );
   const headResult = await runGit5(repoRoot, ["rev-parse", "--verify", "HEAD"]);
   const branchResult = await runGit5(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
@@ -80016,7 +80986,7 @@ async function inspectRepository(cwd) {
   };
 }
 function statusContainsOnlyUndoReport(status) {
-  const entries = lines(status);
+  const entries = lines2(status);
   return entries.length > 0 && entries.every((entry) => {
     const candidatePath = entry.slice(3).replace(/^"|"$/g, "");
     return candidatePath === UNDO_REPORT_PATH;
@@ -80036,12 +81006,12 @@ function repositoryBlockers(snapshot3) {
 }
 function normalizeEvidencePath(repoRoot, value) {
   const trimmed = value.trim().replaceAll("\\", "/");
-  if (!trimmed || path22.isAbsolute(trimmed) || trimmed.split("/").includes("..")) {
+  if (!trimmed || path23.isAbsolute(trimmed) || trimmed.split("/").includes("..")) {
     throw new Error(`Evidence path must be repo-relative and contained: ${value}`);
   }
-  const absolutePath = path22.resolve(repoRoot, trimmed);
-  const relativePath = path22.relative(repoRoot, absolutePath).replaceAll("\\", "/");
-  if (!relativePath || relativePath.startsWith("../") || path22.isAbsolute(relativePath)) {
+  const absolutePath = path23.resolve(repoRoot, trimmed);
+  const relativePath = path23.relative(repoRoot, absolutePath).replaceAll("\\", "/");
+  if (!relativePath || relativePath.startsWith("../") || path23.isAbsolute(relativePath)) {
     throw new Error(`Evidence path must resolve inside the repository: ${value}`);
   }
   if (relativePath !== trimmed) {
@@ -80053,7 +81023,7 @@ async function assertCanonicalEvidenceParents(repoRoot, relativePath) {
   const parentParts = relativePath.split("/").slice(0, -1);
   let currentPath = repoRoot;
   for (const part of parentParts) {
-    currentPath = path22.join(currentPath, part);
+    currentPath = path23.join(currentPath, part);
     let metadata;
     try {
       metadata = await lstat(currentPath);
@@ -80064,8 +81034,8 @@ async function assertCanonicalEvidenceParents(repoRoot, relativePath) {
     if (metadata.isSymbolicLink()) {
       try {
         const linkedPath = await realpath(currentPath);
-        const linkedRelativePath = path22.relative(repoRoot, linkedPath);
-        if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path22.sep}`) || path22.isAbsolute(linkedRelativePath)) {
+        const linkedRelativePath = path23.relative(repoRoot, linkedPath);
+        if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path23.sep}`) || path23.isAbsolute(linkedRelativePath)) {
           throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
         }
       } catch (error2) {
@@ -80085,7 +81055,7 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
   const normalized = [...new Set(evidencePaths.map((value) => normalizeEvidencePath(repoRoot, value)))].sort();
   const receipts = [];
   for (const relativePath of normalized) {
-    const absolutePath = path22.join(repoRoot, relativePath);
+    const absolutePath = path23.join(repoRoot, relativePath);
     let contentSha256 = null;
     if (relativePath === UNDO_REPORT_PATH) {
       throw new Error(`${UNDO_REPORT_PATH} cannot be its own undo evidence input.`);
@@ -80096,8 +81066,8 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
       if (metadata.isSymbolicLink()) {
         try {
           const linkedPath = await realpath(absolutePath);
-          const linkedRelativePath = path22.relative(repoRoot, linkedPath);
-          if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path22.sep}`) || path22.isAbsolute(linkedRelativePath)) {
+          const linkedRelativePath = path23.relative(repoRoot, linkedPath);
+          if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path23.sep}`) || path23.isAbsolute(linkedRelativePath)) {
             throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
           }
         } catch (error2) {
@@ -80112,8 +81082,8 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
         throw new Error(`Evidence path must be a regular file: ${relativePath}`);
       }
       const realEvidencePath = await realpath(absolutePath);
-      const realRelativePath = path22.relative(repoRoot, realEvidencePath);
-      if (realRelativePath === ".." || realRelativePath.startsWith(`..${path22.sep}`) || path22.isAbsolute(realRelativePath)) {
+      const realRelativePath = path23.relative(repoRoot, realEvidencePath);
+      if (realRelativePath === ".." || realRelativePath.startsWith(`..${path23.sep}`) || path23.isAbsolute(realRelativePath)) {
         throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
       }
       if (realEvidencePath !== absolutePath) {
@@ -80128,7 +81098,7 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
   return receipts;
 }
 async function readUndoReportReceipt(repoRoot) {
-  const reportPath = path22.join(repoRoot, UNDO_REPORT_PATH);
+  const reportPath = path23.join(repoRoot, UNDO_REPORT_PATH);
   if (!await pathExists8(reportPath)) {
     return { exists: false, contentSha256: null, content: null, appliedReverts: [] };
   }
@@ -80179,10 +81149,10 @@ async function expectedRevertTree(repoRoot, headBefore, candidate) {
   if (!selectedParent) return null;
   const sourceObjectsRaw = await requiredGit(repoRoot, ["rev-parse", "--git-path", "objects"]);
   const sourceObjects = await realpath(
-    path22.isAbsolute(sourceObjectsRaw) ? sourceObjectsRaw : path22.resolve(repoRoot, sourceObjectsRaw)
+    path23.isAbsolute(sourceObjectsRaw) ? sourceObjectsRaw : path23.resolve(repoRoot, sourceObjectsRaw)
   );
-  const temporaryObjectRoot = await mkdtemp(path22.join(os7.tmpdir(), "blueprint-undo-tree-"));
-  const temporaryObjects = path22.join(temporaryObjectRoot, "objects");
+  const temporaryObjectRoot = await mkdtemp(path23.join(os7.tmpdir(), "blueprint-undo-tree-"));
+  const temporaryObjects = path23.join(temporaryObjectRoot, "objects");
   try {
     await mkdir(temporaryObjects, { recursive: true });
     const result = await processRunner(
@@ -80236,7 +81206,7 @@ async function correlateSemanticRevert(repoRoot, head, target, selectedParent, c
   const reverseTargetExactFingerprint = qualityShippingSha256(reverseTargetDiff);
   const reverseTargetShapeFingerprint = inversePatchShapeFingerprint(reverseTargetDiff);
   if (!reverseTargetShapeFingerprint) return "ambiguous";
-  const descendants = lines(
+  const descendants = lines2(
     await requiredGit(repoRoot, [
       "rev-list",
       "--parents",
@@ -80334,7 +81304,7 @@ async function resolveCandidates(snapshot3, targets, priorAppliedReverts = []) {
       blockers.push(`Invalid mainline parent ${String(target.mainline)} for ${sha}.`);
       continue;
     }
-    const changedPaths = lines(
+    const changedPaths = lines2(
       parents.length > 1 && target.mainline !== void 0 ? await requiredGit(snapshot3.repoRoot, [
         "diff",
         "--name-only",
@@ -80762,7 +81732,7 @@ async function observedConflictState(repoRoot) {
     gitConfigSha256: snapshot3.gitConfigSha256,
     status: snapshot3.status,
     inProgressState: snapshot3.inProgressState,
-    conflictedPaths: lines(conflicts.stdout).sort()
+    conflictedPaths: lines2(conflicts.stdout).sort()
   };
 }
 function reportStatus(result) {
@@ -80880,7 +81850,7 @@ async function blueprintUndoExecute(args) {
         return result;
       }
       const persistedPreReport = await readFile(
-        path22.join(stored.packet.repoRoot, stored.packet.report.path)
+        path23.join(stored.packet.repoRoot, stored.packet.report.path)
       );
       if (qualityShippingSha256(persistedPreReport) !== stored.packet.report.preMutationContentSha256) {
         result.status = "stale";
@@ -81335,7 +82305,7 @@ var init_undo = __esm({
 // src/mcp/tools/pr-branch.ts
 import { randomUUID as randomUUID6 } from "node:crypto";
 import { access as access2, lstat as lstat2, mkdtemp as mkdtemp2, readFile as readFile2, realpath as realpath2, rm as rm2 } from "node:fs/promises";
-import path23 from "node:path";
+import path24 from "node:path";
 function env() {
   return qualityShippingGitEnvironment();
 }
@@ -81383,14 +82353,14 @@ async function inProgressState(commonDir) {
     ["bisect", "BISECT_LOG"]
   ];
   const found = [];
-  for (const [name, marker] of markers) if (await exists(path23.join(commonDir, marker))) found.push(name);
+  for (const [name, marker] of markers) if (await exists(path24.join(commonDir, marker))) found.push(name);
   return found;
 }
 async function snapshot(cwd) {
   const repoRootRaw = await gitText(cwd, ["rev-parse", "--show-toplevel"], "repository discovery");
   const repoRoot = await realpath2(repoRootRaw);
   const commonRaw = await gitText(repoRoot, ["rev-parse", "--git-common-dir"], "git common-dir discovery");
-  const gitCommonDir2 = await realpath2(path23.resolve(repoRoot, commonRaw));
+  const gitCommonDir2 = await realpath2(path24.resolve(repoRoot, commonRaw));
   const branchResult = await git(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
   const headResult = await git(repoRoot, ["rev-parse", "--verify", "HEAD"]);
   const statusResult = await git(repoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
@@ -81499,12 +82469,12 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
   const normalized = [...new Set(evidencePaths.map((value) => value.trim().replaceAll("\\", "/").replace(/^\.\//, "")))].sort();
   const receipts = [];
   for (const relative of normalized) {
-    if (!relative || relative.startsWith("-") || path23.isAbsolute(relative) || relative.split("/").includes("..")) {
+    if (!relative || relative.startsWith("-") || path24.isAbsolute(relative) || relative.split("/").includes("..")) {
       throw new Error(`Evidence path must be a safe repo-relative canonical path: ${relative}`);
     }
-    const absolute = path23.resolve(repoRoot, relative);
-    const lexicalRelative = path23.relative(repoRoot, absolute);
-    if (!lexicalRelative || lexicalRelative === ".." || lexicalRelative.startsWith(`..${path23.sep}`) || path23.isAbsolute(lexicalRelative)) {
+    const absolute = path24.resolve(repoRoot, relative);
+    const lexicalRelative = path24.relative(repoRoot, absolute);
+    if (!lexicalRelative || lexicalRelative === ".." || lexicalRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(lexicalRelative)) {
       throw new Error(`Evidence path escapes the canonical repository: ${relative}`);
     }
     if (lexicalRelative.replaceAll("\\", "/") !== relative) {
@@ -81519,15 +82489,15 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
         } catch {
           throw new Error(`Evidence path ${relative} is a broken or unresolvable symlink.`);
         }
-        const linkedRelative = path23.relative(repoRoot, linkedPath);
-        if (linkedRelative === ".." || linkedRelative.startsWith(`..${path23.sep}`) || path23.isAbsolute(linkedRelative)) {
+        const linkedRelative = path24.relative(repoRoot, linkedPath);
+        if (linkedRelative === ".." || linkedRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(linkedRelative)) {
           throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
         }
         throw new Error(`Evidence path ${relative} is a symlink; evidence inputs must be canonical repository files.`);
       }
       const resolved = await realpath2(absolute);
-      const resolvedRelative = path23.relative(repoRoot, resolved);
-      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path23.sep}`) || path23.isAbsolute(resolvedRelative)) {
+      const resolvedRelative = path24.relative(repoRoot, resolved);
+      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
       }
       const canonical = resolvedRelative.replaceAll("\\", "/");
@@ -81545,7 +82515,7 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
 }
 async function reportReceipt(repoRoot) {
   try {
-    return { exists: true, sha256: qualityShippingSha256(await readFile2(path23.join(repoRoot, REPORT_PATH))) };
+    return { exists: true, sha256: qualityShippingSha256(await readFile2(path24.join(repoRoot, REPORT_PATH))) };
   } catch (error2) {
     if (error2.code === "ENOENT") return { exists: false, sha256: null };
     throw error2;
@@ -81733,7 +82703,7 @@ function baseResult(packet, operationId, fingerprint) {
 async function existingBranchDisposition(repoRoot, reviewBranch, report, request) {
   if (await localBranchDisposition(repoRoot, reviewBranch) === "absent") return null;
   if (!report.exists) return "divergent";
-  const content = await readFile2(path23.join(repoRoot, REPORT_PATH), "utf8");
+  const content = await readFile2(path24.join(repoRoot, REPORT_PATH), "utf8");
   const escaped = reviewBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const createdOid = content.match(new RegExp(`^- Created branch: ${escaped} \\(([0-9a-f]{40}|[0-9a-f]{64})\\)$`, "m"))?.[1] ?? null;
   const sourceBranch = content.match(/^- Source branch: (.+)$/m)?.[1] ?? null;
@@ -82143,8 +83113,8 @@ async function blueprintPrBranchExecute(args) {
           break;
         }
         try {
-          ownedTempDir = await mkdtemp2(path23.join(stored.packet.gitCommonDir, "blueprint-pr-branch-"));
-          const mixedPatchPath = path23.join(ownedTempDir, "replay.patch");
+          ownedTempDir = await mkdtemp2(path24.join(stored.packet.gitCommonDir, "blueprint-pr-branch-"));
+          const mixedPatchPath = path24.join(ownedTempDir, "replay.patch");
           const patchResult = await recordProcess(result, `filter-diff:${commit.sourceCommit}`, ["diff", "--binary", "--full-index", `--output=${mixedPatchPath}`, parent, commit.sourceCommit, "--", ".", ":(exclude).blueprint", ":(exclude).blueprint/**"]);
           if (!succeeded(patchResult)) {
             result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
@@ -82178,7 +83148,7 @@ async function blueprintPrBranchExecute(args) {
         result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
         result.status = abnormal(replay) ? "outcome-unknown" : "partial";
         result.blockers.push(`Replay failed at ${commit.sourceCommit}; conflicts were not resolved automatically.`);
-        const cherryPickHead = path23.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
+        const cherryPickHead = path24.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
         if (!mixed && await exists(cherryPickHead)) await recordProcess(result, "abort-cherry-pick", ["cherry-pick", "--abort"]);
         break;
       }
@@ -82491,7 +83461,7 @@ var init_pr_branch = __esm({
 // src/mcp/tools/ship.ts
 import { randomUUID as randomUUID7 } from "node:crypto";
 import { access as access3, lstat as lstat3, readFile as readFile3, readdir, realpath as realpath3 } from "node:fs/promises";
-import path24 from "node:path";
+import path25 from "node:path";
 function pruneApprovals3(forInsertion = false) {
   const now = nowProvider3();
   for (const [id, stored] of approvals3) {
@@ -82534,13 +83504,13 @@ function rejectLiteral(value, label) {
 async function inProgressState2(commonDir) {
   const markers = [["merge", "MERGE_HEAD"], ["cherry-pick", "CHERRY_PICK_HEAD"], ["revert", "REVERT_HEAD"], ["rebase-merge", "rebase-merge"], ["rebase-apply", "rebase-apply"], ["sequencer", "sequencer"], ["bisect", "BISECT_LOG"]];
   const found = [];
-  for (const [label, marker] of markers) if (await exists2(path24.join(commonDir, marker))) found.push(label);
+  for (const [label, marker] of markers) if (await exists2(path25.join(commonDir, marker))) found.push(label);
   return found;
 }
 async function snapshot2(cwd) {
   const root = await realpath3(await gitText2(cwd, ["rev-parse", "--show-toplevel"], "repository discovery"));
   const commonRaw = await gitText2(root, ["rev-parse", "--git-common-dir"], "git common-dir discovery");
-  const common = await realpath3(path24.resolve(root, commonRaw));
+  const common = await realpath3(path25.resolve(root, commonRaw));
   const [branch, head, status, config2] = await Promise.all([
     run("git", root, ["symbolic-ref", "--quiet", "--short", "HEAD"]),
     run("git", root, ["rev-parse", "--verify", "HEAD"]),
@@ -82594,16 +83564,16 @@ async function evidenceReceipts3(repoRoot, inputs) {
   const seen = /* @__PURE__ */ new Set();
   for (const input of inputs) {
     rejectLiteral(input.path, "Evidence path");
-    if (path24.isAbsolute(input.path) || input.path.split(/[\\/]+/).includes("..")) throw new Error("Evidence paths must be safe repo-relative paths.");
+    if (path25.isAbsolute(input.path) || input.path.split(/[\\/]+/).includes("..")) throw new Error("Evidence paths must be safe repo-relative paths.");
     const normalized = input.path.replaceAll("\\", "/").replace(/^\.\//, "");
     if (seen.has(normalized)) throw new Error("Each evidence path may be supplied only once.");
     seen.add(normalized);
     const role = canonicalEvidenceRole(normalized);
     if (!role) throw new Error(`Evidence path ${normalized} is not a canonical phase quality artifact or pr-branch-latest receipt.`);
     if (role.kind !== input.kind) throw new Error(`Evidence kind ${input.kind} does not match the canonical ${role.kind} role derived from ${normalized}.`);
-    const absolutePath = path24.resolve(repoRoot, normalized);
-    const lexicalRelative = path24.relative(repoRoot, absolutePath);
-    if (lexicalRelative === ".." || lexicalRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(lexicalRelative)) {
+    const absolutePath = path25.resolve(repoRoot, normalized);
+    const lexicalRelative = path25.relative(repoRoot, absolutePath);
+    if (lexicalRelative === ".." || lexicalRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(lexicalRelative)) {
       throw new Error(`Evidence path ${normalized} escapes the canonical repository.`);
     }
     try {
@@ -82611,8 +83581,8 @@ async function evidenceReceipts3(repoRoot, inputs) {
       if (metadata.isSymbolicLink()) {
         try {
           const linkedPath = await realpath3(absolutePath);
-          const linkedRelative = path24.relative(repoRoot, linkedPath);
-          if (linkedRelative === ".." || linkedRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(linkedRelative)) {
+          const linkedRelative = path25.relative(repoRoot, linkedPath);
+          if (linkedRelative === ".." || linkedRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(linkedRelative)) {
             throw new Error(`Evidence path ${normalized} resolves outside the canonical repository.`);
           }
         } catch (error2) {
@@ -82622,8 +83592,8 @@ async function evidenceReceipts3(repoRoot, inputs) {
         throw new Error(`Evidence path ${normalized} is a symlink; evidence inputs must be canonical repository files.`);
       }
       const resolvedPath = await realpath3(absolutePath);
-      const resolvedRelative = path24.relative(repoRoot, resolvedPath);
-      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(resolvedRelative)) {
+      const resolvedRelative = path25.relative(repoRoot, resolvedPath);
+      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${normalized} resolves outside the canonical repository.`);
       }
       const canonicalPath = resolvedRelative.replaceAll("\\", "/");
@@ -82678,7 +83648,7 @@ function parsePrBranchDigestInputs(content) {
   return entries;
 }
 async function loadQualityGateInventory(repoRoot, phaseDir2) {
-  const absoluteDir = path24.resolve(repoRoot, phaseDir2);
+  const absoluteDir = path25.resolve(repoRoot, phaseDir2);
   const metadata = await lstat3(absoluteDir);
   if (!metadata.isDirectory() || metadata.isSymbolicLink()) throw new Error(`Canonical phase directory ${phaseDir2} must be one real directory.`);
   const resolvedDir = await realpath3(absoluteDir);
@@ -82689,7 +83659,7 @@ async function loadQualityGateInventory(repoRoot, phaseDir2) {
     if (!entry.isFile() || entry.isSymbolicLink()) {
       throw new Error(`Canonical phase inventory entry ${phaseDir2}/${entry.name} must be one regular non-symlink file.`);
     }
-    const absolute = path24.join(resolvedDir, entry.name);
+    const absolute = path25.join(resolvedDir, entry.name);
     const resolved = await realpath3(absolute);
     if (resolved !== absolute) throw new Error(`Canonical phase inventory entry ${phaseDir2}/${entry.name} resolves through a non-canonical alias.`);
     const inventoryPath = `${phaseDir2}/${entry.name}`;
@@ -82803,7 +83773,7 @@ async function configReceipt(repoRoot) {
 }
 async function reportReceipt2(repoRoot) {
   try {
-    const content = await readFile3(path24.join(repoRoot, REPORT_PATH2));
+    const content = await readFile3(path25.join(repoRoot, REPORT_PATH2));
     return { exists: true, sha256: qualityShippingSha256(content) };
   } catch {
     return { exists: false, sha256: null };
@@ -83839,7 +84809,7 @@ function parseScalar(value) {
   }
   return value;
 }
-function foldBlockLines(lines2) {
+function foldBlockLines(lines3) {
   const paragraphs = [];
   let paragraph = [];
   const flushParagraph = () => {
@@ -83848,7 +84818,7 @@ function foldBlockLines(lines2) {
       paragraph = [];
     }
   };
-  for (const line of lines2) {
+  for (const line of lines3) {
     if (line.length === 0) {
       flushParagraph();
       continue;
@@ -83862,11 +84832,11 @@ function foldBlockLines(lines2) {
   return `${paragraphs.join("\n\n")}
 `;
 }
-function parseBlockScalar(lines2, startIndex, indent, indicator) {
+function parseBlockScalar(lines3, startIndex, indent, indicator) {
   const blockLines = [];
   let index = startIndex;
-  while (index < lines2.length) {
-    const line = lines2[index];
+  while (index < lines3.length) {
+    const line = lines3[index];
     if (line.trim().length === 0) {
       blockLines.push("");
       index += 1;
@@ -83884,12 +84854,12 @@ function parseBlockScalar(lines2, startIndex, indent, indicator) {
     issues: []
   };
 }
-function parseArray2(lines2, startIndex, indent) {
+function parseArray2(lines3, startIndex, indent) {
   const issues = [];
   const values = [];
   let index = startIndex;
-  while (index < lines2.length) {
-    const line = lines2[index];
+  while (index < lines3.length) {
+    const line = lines3[index];
     if (line.trim().length === 0) {
       index += 1;
       continue;
@@ -83910,16 +84880,16 @@ function parseArray2(lines2, startIndex, indent) {
     const remainder = trimmed.slice(2).trimStart();
     if (remainder.length === 0) {
       let nextIndex = index + 1;
-      while (nextIndex < lines2.length && lines2[nextIndex].trim().length === 0) {
+      while (nextIndex < lines3.length && lines3[nextIndex].trim().length === 0) {
         nextIndex += 1;
       }
-      if (nextIndex >= lines2.length || countIndent(lines2[nextIndex]) <= indent) {
+      if (nextIndex >= lines3.length || countIndent(lines3[nextIndex]) <= indent) {
         values.push(null);
         index += 1;
         continue;
       }
-      const childIndent = countIndent(lines2[nextIndex]);
-      const parsed = lines2[nextIndex].trim().startsWith("- ") ? parseArray2(lines2, nextIndex, childIndent) : parseObject2(lines2, nextIndex, childIndent);
+      const childIndent = countIndent(lines3[nextIndex]);
+      const parsed = lines3[nextIndex].trim().startsWith("- ") ? parseArray2(lines3, nextIndex, childIndent) : parseObject2(lines3, nextIndex, childIndent);
       values.push(parsed.value);
       issues.push(...parsed.issues);
       index = parsed.nextIndex;
@@ -83934,12 +84904,12 @@ function parseArray2(lines2, startIndex, indent) {
     issues
   };
 }
-function parseObject2(lines2, startIndex, indent) {
+function parseObject2(lines3, startIndex, indent) {
   const issues = [];
   const value = {};
   let index = startIndex;
-  while (index < lines2.length) {
-    const line = lines2[index];
+  while (index < lines3.length) {
+    const line = lines3[index];
     if (line.trim().length === 0) {
       index += 1;
       continue;
@@ -83963,7 +84933,7 @@ function parseObject2(lines2, startIndex, indent) {
     const [, key, rawRemainder] = keyMatch;
     const remainder = rawRemainder.trimStart();
     if (remainder === ">" || remainder === "|") {
-      const parsed = parseBlockScalar(lines2, index + 1, indent + 2, remainder);
+      const parsed = parseBlockScalar(lines3, index + 1, indent + 2, remainder);
       value[key] = parsed.value;
       issues.push(...parsed.issues);
       index = parsed.nextIndex;
@@ -83971,16 +84941,16 @@ function parseObject2(lines2, startIndex, indent) {
     }
     if (remainder.length === 0) {
       let nextIndex = index + 1;
-      while (nextIndex < lines2.length && lines2[nextIndex].trim().length === 0) {
+      while (nextIndex < lines3.length && lines3[nextIndex].trim().length === 0) {
         nextIndex += 1;
       }
-      if (nextIndex >= lines2.length || countIndent(lines2[nextIndex]) <= indent) {
+      if (nextIndex >= lines3.length || countIndent(lines3[nextIndex]) <= indent) {
         value[key] = null;
         index += 1;
         continue;
       }
-      const childIndent = countIndent(lines2[nextIndex]);
-      const parsed = lines2[nextIndex].trim().startsWith("- ") ? parseArray2(lines2, nextIndex, childIndent) : parseObject2(lines2, nextIndex, childIndent);
+      const childIndent = countIndent(lines3[nextIndex]);
+      const parsed = lines3[nextIndex].trim().startsWith("- ") ? parseArray2(lines3, nextIndex, childIndent) : parseObject2(lines3, nextIndex, childIndent);
       value[key] = parsed.value;
       issues.push(...parsed.issues);
       index = parsed.nextIndex;
@@ -84123,8 +85093,8 @@ __export(project_exports, {
   blueprintRuntimeOwnedCommandCatalog: () => blueprintRuntimeOwnedCommandCatalog,
   projectToolDefinitions: () => projectToolDefinitions
 });
-import { promises as fs25 } from "node:fs";
-import path25 from "node:path";
+import { promises as fs28 } from "node:fs";
+import path26 from "node:path";
 function bundledUrl(relativePath) {
   const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
   return new URL(`${rootDepth}${relativePath}`, import.meta.url);
@@ -84195,7 +85165,7 @@ ${BOOTSTRAP_STARTER_CONTEXT_MARKER}
 }
 async function pathExists9(targetPath) {
   try {
-    await fs25.access(targetPath);
+    await fs28.access(targetPath);
     return true;
   } catch {
     return false;
@@ -84203,7 +85173,7 @@ async function pathExists9(targetPath) {
 }
 async function readPackageProjectName(projectRoot) {
   try {
-    const raw = await fs25.readFile(path25.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs28.readFile(path26.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -84215,7 +85185,7 @@ async function readPackageProjectName(projectRoot) {
 }
 async function readPackageDescription(projectRoot) {
   try {
-    const raw = await fs25.readFile(path25.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs28.readFile(path26.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -84230,13 +85200,13 @@ async function inferProjectName2(projectRoot, requestedName) {
   if (explicit) {
     return explicit;
   }
-  return await readPackageProjectName(projectRoot) ?? path25.basename(projectRoot);
+  return await readPackageProjectName(projectRoot) ?? path26.basename(projectRoot);
 }
 async function readRepoSummary(projectRoot) {
   const readmePaths = ["README.md", "README"];
   for (const candidate of readmePaths) {
     try {
-      const raw = await fs25.readFile(path25.join(projectRoot, candidate), "utf8");
+      const raw = await fs28.readFile(path26.join(projectRoot, candidate), "utf8");
       const summary = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith("#"));
       if (summary) {
         return summary;
@@ -84597,7 +85567,7 @@ async function buildCommandCatalogEntry(parsedRow) {
       blockedBy.push(`Missing runtime input: ${inputPath}`);
     }
   }
-  const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName));
+  const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName) && !researchToolDefinitions.some((definition) => definition.name === toolName));
   const requiredToolsSatisfied = missingTools.length === 0;
   const runtimeInputsSatisfied = missingRuntimeInputs.length === 0;
   for (const toolName of missingTools) {
@@ -84606,7 +85576,7 @@ async function buildCommandCatalogEntry(parsedRow) {
   availableOptionalAgents.push(
     ...await resolveAvailableOptionalAgents(optionalAgents, async (relativePath) => {
       try {
-        return await fs25.readFile(bundledUrl(relativePath), "utf8");
+        return await fs28.readFile(bundledUrl(relativePath), "utf8");
       } catch {
         return null;
       }
@@ -84902,7 +85872,7 @@ async function blueprintProjectInit(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   return withDirectoryLock(
     {
-      lockPath: path25.join(projectRoot, ".blueprint-project-init.lock"),
+      lockPath: path26.join(projectRoot, ".blueprint-project-init.lock"),
       timing: {
         retryMs: 25,
         staleMs: 3e4,
@@ -84994,6 +85964,7 @@ var init_project = __esm({
   "src/mcp/tools/project.ts"() {
     "use strict";
     init_discuss();
+    init_research();
     init_v4();
     init_artifacts();
     init_directory_lock();
@@ -85483,8 +86454,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path29, errorMaps, issueData } = params;
-  const fullPath = [...path29, ...issueData.path || []];
+  const { data, path: path30, errorMaps, issueData } = params;
+  const fullPath = [...path30, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -85599,11 +86570,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path29, key) {
+  constructor(parent, value, path30, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path29;
+    this._path = path30;
     this._key = key;
   }
   get path() {
@@ -94941,7 +95912,7 @@ var StdioServerTransport = class {
 };
 
 // src/mcp/command-resources.ts
-import { promises as fs26 } from "node:fs";
+import { promises as fs29 } from "node:fs";
 init_command_runtime_metadata();
 
 // src/mcp/skill-metadata.ts
@@ -94967,22 +95938,22 @@ function normalizeFrontmatterKey(rawKey) {
   }
   return trimmed;
 }
-function collapseBlockLines(lines2) {
-  return lines2.map((line) => line.trim()).join(" ").replace(/\s+/g, " ").trim();
+function collapseBlockLines(lines3) {
+  return lines3.map((line) => line.trim()).join(" ").replace(/\s+/g, " ").trim();
 }
-function findNextMeaningfulLine(lines2, startIndex) {
-  for (let index = startIndex; index < lines2.length; index += 1) {
-    if (lines2[index].trim().length > 0) {
+function findNextMeaningfulLine(lines3, startIndex) {
+  for (let index = startIndex; index < lines3.length; index += 1) {
+    if (lines3[index].trim().length > 0) {
       return index;
     }
   }
   return -1;
 }
-function parseArray(lines2, startIndex, indent) {
+function parseArray(lines3, startIndex, indent) {
   const value = [];
   let index = startIndex;
-  while (index < lines2.length) {
-    const rawLine = lines2[index];
+  while (index < lines3.length) {
+    const rawLine = lines3[index];
     const trimmed = rawLine.trim();
     if (trimmed.length === 0) {
       index += 1;
@@ -95000,11 +95971,11 @@ function parseArray(lines2, startIndex, indent) {
     nextIndex: index
   };
 }
-function parseObject(lines2, startIndex, indent) {
+function parseObject(lines3, startIndex, indent) {
   const value = {};
   let index = startIndex;
-  while (index < lines2.length) {
-    const rawLine = lines2[index];
+  while (index < lines3.length) {
+    const rawLine = lines3[index];
     const trimmed = rawLine.trim();
     if (trimmed.length === 0) {
       index += 1;
@@ -95029,8 +96000,8 @@ function parseObject(lines2, startIndex, indent) {
       const blockLines = [];
       let blockIndent = null;
       index += 1;
-      while (index < lines2.length) {
-        const blockLine = lines2[index];
+      while (index < lines3.length) {
+        const blockLine = lines3[index];
         const blockTrimmed = blockLine.trim();
         if (blockTrimmed.length === 0) {
           blockLines.push("");
@@ -95053,13 +96024,13 @@ function parseObject(lines2, startIndex, indent) {
       index += 1;
       continue;
     }
-    const nextIndex = findNextMeaningfulLine(lines2, index + 1);
+    const nextIndex = findNextMeaningfulLine(lines3, index + 1);
     if (nextIndex === -1) {
       value[key] = "";
       index += 1;
       continue;
     }
-    const nextLine = lines2[nextIndex];
+    const nextLine = lines3[nextIndex];
     const nextIndent = countLeadingSpaces(nextLine);
     const nextTrimmed = nextLine.trim();
     if (nextIndent <= lineIndent) {
@@ -95068,12 +96039,12 @@ function parseObject(lines2, startIndex, indent) {
       continue;
     }
     if (nextTrimmed.startsWith("- ")) {
-      const parsedArray = parseArray(lines2, nextIndex, nextIndent);
+      const parsedArray = parseArray(lines3, nextIndex, nextIndent);
       value[key] = parsedArray.value;
       index = parsedArray.nextIndex;
       continue;
     }
-    const parsedObject = parseObject(lines2, nextIndex, nextIndent);
+    const parsedObject = parseObject(lines3, nextIndex, nextIndent);
     value[key] = parsedObject.value;
     index = parsedObject.nextIndex;
   }
@@ -95162,7 +96133,7 @@ async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath
       preferredPath ?? null,
       blueprintDiscoverableSkillPath(skillName),
       blueprintLegacySkillPath(skillName)
-    ].filter((path29) => typeof path29 === "string" && path29.length > 0)
+    ].filter((path30) => typeof path30 === "string" && path30.length > 0)
   );
   for (const candidatePath of candidatePaths) {
     const content = await readRelativePath(candidatePath);
@@ -95187,7 +96158,7 @@ function bundledUrl2(relativePath) {
 }
 async function readBundledFile(relativePath) {
   try {
-    return await fs26.readFile(bundledUrl2(relativePath), "utf8");
+    return await fs29.readFile(bundledUrl2(relativePath), "utf8");
   } catch {
     return null;
   }
@@ -95340,7 +96311,7 @@ function registerBlueprintCommandResources(server) {
 }
 
 // src/mcp/response-sanitizer.ts
-import path26 from "node:path";
+import path27 from "node:path";
 
 // src/mcp/tool-result-utils.ts
 function getString(result, key) {
@@ -95472,7 +96443,7 @@ function trimUpdatePlanPublicFields(result) {
   const updatesDir = typeof savedPaths?.updatesDir === "string" ? savedPaths.updatesDir : null;
   const metadataPath = typeof savedPaths?.metadataPath === "string" ? savedPaths.metadataPath : null;
   const checklistPath = typeof savedPaths?.checklistPath === "string" ? savedPaths.checklistPath : null;
-  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path26.dirname(metadataPath) === updatesDir && path26.dirname(checklistPath) === updatesDir;
+  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path27.dirname(metadataPath) === updatesDir && path27.dirname(checklistPath) === updatesDir;
   if (shouldTrimUpdatesDir && savedPaths !== null) {
     const { updatesDir: _updatesDir, ...trimmedSavedPaths } = savedPaths;
     trimmedResult = {
@@ -96270,6 +97241,7 @@ function createToolResponseContent(toolName, result) {
 
 // src/mcp/tool-definitions.ts
 init_discuss();
+init_research();
 init_artifacts();
 init_cleanup();
 init_config();
@@ -96281,9 +97253,9 @@ init_phase_topology_lock();
 init_artifacts();
 init_review();
 import { execFile as execFile9 } from "node:child_process";
-import { createHash as createHash14, randomBytes } from "node:crypto";
-import { promises as fs27 } from "node:fs";
-import path27 from "node:path";
+import { createHash as createHash15, randomBytes } from "node:crypto";
+import { promises as fs30 } from "node:fs";
+import path28 from "node:path";
 import { promisify as promisify7 } from "node:util";
 var execFileAsync7 = promisify7(execFile9);
 var GOD_REVIEW_FLAG = "--feels-like-god";
@@ -96614,7 +97586,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Path must not be empty." };
   }
-  if (path27.isAbsolute(requestedPath)) {
+  if (path28.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -96627,7 +97599,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.endsWith("/")) {
     return { valid: false, path: null, reason: "Directories are not allowed." };
   }
-  const normalizedPath = path27.posix.normalize(requestedPath);
+  const normalizedPath = path28.posix.normalize(requestedPath);
   if (normalizedPath === "." || normalizedPath === ".." || normalizedPath.startsWith("../")) {
     return {
       valid: false,
@@ -96655,15 +97627,15 @@ function hashGodReviewFileSet(args) {
       (left, right) => left.path.localeCompare(right.path)
     )
   });
-  return `sha256:${createHash14("sha256").update(payload).digest("hex")}`;
+  return `sha256:${createHash15("sha256").update(payload).digest("hex")}`;
 }
 async function hashGodReviewResolvedFileSet(args) {
   const contentHashes = await Promise.all(
     stableUniqueSorted(args.files).map(async (file2) => {
-      const content = await fs27.readFile(resolveRepoRelativePath(args.projectRoot, file2));
+      const content = await fs30.readFile(resolveRepoRelativePath(args.projectRoot, file2));
       return {
         path: file2,
-        hash: `sha256:${createHash14("sha256").update(content).digest("hex")}`
+        hash: `sha256:${createHash15("sha256").update(content).digest("hex")}`
       };
     })
   );
@@ -96706,7 +97678,7 @@ function isGeneratedReportReportPath(value) {
   return /^\.blueprint\/reports\/god-review-[A-Za-z0-9._-]+\.md$/.test(value);
 }
 function normalizeSessionOwnedPath(value) {
-  return path27.posix.normalize(normalizePathSeparators(value.trim()));
+  return path28.posix.normalize(normalizePathSeparators(value.trim()));
 }
 function validateGodReviewSessionPaths(session) {
   const issues = [];
@@ -96773,20 +97745,20 @@ function buildInitialGodReviewGroups() {
   }));
 }
 function stableHash2(value) {
-  return `sha256:${createHash14("sha256").update(value).digest("hex")}`;
+  return `sha256:${createHash15("sha256").update(value).digest("hex")}`;
 }
 function isValidRunId(value) {
   return /^[A-Za-z0-9._-]+$/.test(value) && !value.includes("..");
 }
 function generateGodReviewRunId(args) {
   const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const scopeHash = createHash14("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
+  const scopeHash = createHash15("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
   const entropy = randomBytes(3).toString("hex");
   return `god-${day}-${scopeHash}-${entropy}`;
 }
 async function pathExists10(absolutePath) {
   try {
-    await fs27.access(absolutePath);
+    await fs30.access(absolutePath);
     return true;
   } catch {
     return false;
@@ -96794,7 +97766,7 @@ async function pathExists10(absolutePath) {
 }
 async function readTextIfPresent(absolutePath) {
   try {
-    return await fs27.readFile(absolutePath, "utf8");
+    return await fs30.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -96847,7 +97819,7 @@ async function resolveExistingRepoFiles2(args) {
     }
     let stats;
     try {
-      stats = await fs27.stat(absolutePath);
+      stats = await fs30.stat(absolutePath);
     } catch {
       if (deletedFiles.has(normalized.path)) {
         resolvedFiles.add(normalized.path);
@@ -96888,18 +97860,18 @@ function parseGitNameStatusDeletedFiles(output) {
 }
 function parseUnifiedDiffDeletedFiles(diff) {
   const deletedFiles = [];
-  const lines2 = diff.split("\n");
-  for (let index = 0; index < lines2.length; index += 1) {
-    const header = lines2[index].match(/^diff --git a\/(.+) b\/(.+)$/);
+  const lines3 = diff.split("\n");
+  for (let index = 0; index < lines3.length; index += 1) {
+    const header = lines3[index].match(/^diff --git a\/(.+) b\/(.+)$/);
     if (!header) {
       continue;
     }
     let deleted = false;
-    for (let cursor = index + 1; cursor < lines2.length; cursor += 1) {
-      if (/^diff --git /.test(lines2[cursor])) {
+    for (let cursor = index + 1; cursor < lines3.length; cursor += 1) {
+      if (/^diff --git /.test(lines3[cursor])) {
         break;
       }
-      if (/^deleted file mode /.test(lines2[cursor])) {
+      if (/^deleted file mode /.test(lines3[cursor])) {
         deleted = true;
         break;
       }
@@ -96931,7 +97903,7 @@ async function hashCurrentDiff(projectRoot, files) {
         if (trackedStatus === "tracked") {
           return null;
         }
-        const content = await fs27.readFile(
+        const content = await fs30.readFile(
           resolveRepoRelativePath(projectRoot, file2),
           "utf8"
         );
@@ -96983,7 +97955,7 @@ async function beforeGodReviewPersistenceBundleWrite(args) {
 }
 async function restoreGodReviewBundleFile(args) {
   if (args.previousContent === null) {
-    await fs27.rm(args.absolutePath, { force: true }).catch(() => void 0);
+    await fs30.rm(args.absolutePath, { force: true }).catch(() => void 0);
     return;
   }
   await writeTextFile(args.absolutePath, args.previousContent, {
@@ -97458,7 +98430,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Session path must not be empty." };
   }
-  if (path27.isAbsolute(requestedPath)) {
+  if (path28.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -97468,7 +98440,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path27.posix.normalize(requestedPath);
+  const normalizedPath = path28.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -97497,7 +98469,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Report path must not be empty." };
   }
-  if (path27.isAbsolute(requestedPath)) {
+  if (path28.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -97507,7 +98479,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path27.posix.normalize(requestedPath);
+  const normalizedPath = path28.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -98087,7 +99059,7 @@ function renderFindingFileList(files) {
   return files.length === 0 ? "none" : files.map((file2) => `\`${file2}\``).join(", ");
 }
 function renderGodReviewGroupSection(args) {
-  const lines2 = [
+  const lines3 = [
     "",
     `## GOD-${args.group.prefix} ${args.group.title}`,
     "",
@@ -98099,11 +99071,11 @@ function renderGodReviewGroupSection(args) {
     ""
   ];
   if (args.findings.length === 0) {
-    lines2.push("- none", "");
-    return lines2.join("\n");
+    lines3.push("- none", "");
+    return lines3.join("\n");
   }
   for (const finding of args.findings) {
-    lines2.push(
+    lines3.push(
       `#### ${finding.id}: ${finding.title}`,
       `- Severity: ${finding.severity}`,
       `- Disposition: ${finding.disposition}`,
@@ -98116,7 +99088,7 @@ function renderGodReviewGroupSection(args) {
       ""
     );
   }
-  return lines2.join("\n");
+  return lines3.join("\n");
 }
 function nextGroupIdAfterAppend(groups) {
   return groups.find(
@@ -98343,7 +99315,7 @@ async function validateGodReviewFixTargetEvidence(args) {
     }
     let stats;
     try {
-      stats = await fs27.stat(absolutePath);
+      stats = await fs30.stat(absolutePath);
     } catch {
       staleReasons.push(`${args.target.id} references missing file ${parsedReference.path}.`);
       continue;
@@ -98352,7 +99324,7 @@ async function validateGodReviewFixTargetEvidence(args) {
       staleReasons.push(`${args.target.id} references non-file path ${parsedReference.path}.`);
       continue;
     }
-    const fileText = await fs27.readFile(absolutePath, "utf8");
+    const fileText = await fs30.readFile(absolutePath, "utf8");
     readableFileTexts.set(parsedReference.path, fileText);
     if (parsedReference.line !== null) {
       const lineCount = fileText.split("\n").length;
@@ -98891,7 +99863,7 @@ async function startGodReviewSessionWithResolvedScope(args) {
       });
     }
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path27.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
+    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path28.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
     const groups = buildInitialGodReviewGroups();
     const nextGroupId = groups[0]?.id ?? null;
     const session = {
@@ -99984,7 +100956,7 @@ async function blueprintGodReviewCleanup(rawArgs) {
       [session.humanStatePath, humanStateAbsolutePath]
     ]) {
       if (await pathExists10(absolutePath)) {
-        await fs27.rm(absolutePath, { force: true });
+        await fs30.rm(absolutePath, { force: true });
         deletedPaths.push(relativePath);
       }
     }
@@ -100005,10 +100977,10 @@ async function blueprintGodReviewCleanup(rawArgs) {
     };
   });
 }
-function parseBulletValue(lines2, label) {
+function parseBulletValue(lines3, label) {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^- ${escapedLabel}:\\s*(.+)$`, "i");
-  const match = lines2.map((line) => line.trim()).find((line) => pattern.test(line));
+  const match = lines3.map((line) => line.trim()).find((line) => pattern.test(line));
   return match?.match(pattern)?.[1]?.trim() ?? null;
 }
 function parseBacktickedList(value) {
@@ -100028,14 +101000,14 @@ function parseGodReviewReportShell(content) {
   const findings = [];
   const remediations = [];
   const warnings = [];
-  const lines2 = content.split("\n");
-  for (let index = 0; index < lines2.length; index += 1) {
-    const findingMatch = lines2[index].match(/^#### (GOD-[A-Z]{3}-\d{3}):\s*(.+)$/);
+  const lines3 = content.split("\n");
+  for (let index = 0; index < lines3.length; index += 1) {
+    const findingMatch = lines3[index].match(/^#### (GOD-[A-Z]{3}-\d{3}):\s*(.+)$/);
     if (findingMatch) {
       const bodyLines = [];
       index += 1;
-      while (index < lines2.length && !/^#### |^## |^### /.test(lines2[index])) {
-        bodyLines.push(lines2[index]);
+      while (index < lines3.length && !/^#### |^## |^### /.test(lines3[index])) {
+        bodyLines.push(lines3[index]);
         index += 1;
       }
       index -= 1;
@@ -100072,14 +101044,14 @@ function parseGodReviewReportShell(content) {
       });
       continue;
     }
-    const remediationMatch = lines2[index].match(
+    const remediationMatch = lines3[index].match(
       /^### (GOD-FIX-\d{3}):\s*(GOD-[A-Z]{3}-\d{3})$/
     );
     if (remediationMatch) {
       const bodyLines = [];
       index += 1;
-      while (index < lines2.length && !/^### |^## /.test(lines2[index])) {
-        bodyLines.push(lines2[index]);
+      while (index < lines3.length && !/^### |^## /.test(lines3[index])) {
+        bodyLines.push(lines3[index]);
         index += 1;
       }
       index -= 1;
@@ -100151,7 +101123,7 @@ init_impact();
 
 // src/mcp/tools/lightweight.ts
 init_v4();
-import { promises as fs28 } from "node:fs";
+import { promises as fs31 } from "node:fs";
 
 // src/mcp/lightweight-classifier.ts
 var VAGUE_TASK_PATTERNS = [
@@ -100632,7 +101604,7 @@ async function quickRunReportStatus(projectRoot) {
   const reportPath = buildBlueprintReportPath("quick-run-latest");
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   try {
-    const stats = await fs28.stat(absolutePath);
+    const stats = await fs31.stat(absolutePath);
     return {
       name: "quick-run-latest",
       exists: true,
@@ -100751,6 +101723,7 @@ init_workspace();
 var TOOL_DEFINITIONS = [
   ...projectToolDefinitions,
   ...discussToolDefinitions,
+  ...researchToolDefinitions,
   ...lightweightToolDefinitions,
   ...configToolDefinitions,
   ...stateToolDefinitions,
@@ -100808,8 +101781,8 @@ var blueprintToolNames = TOOL_DEFINITIONS.map(
 
 // src/mcp/write-failure-log.ts
 init_artifacts();
-import { promises as fs29 } from "node:fs";
-import path28 from "node:path";
+import { promises as fs32 } from "node:fs";
+import path29 from "node:path";
 var BLUEPRINT_DIR2 = ".blueprint";
 var MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
 var LOG_SCHEMA_VERSION = 1;
@@ -100889,9 +101862,9 @@ function toLoggedError(error2) {
 async function appendFailureEntry(cwd, entry) {
   try {
     const projectRoot = await ensureRepoRoot(cwd);
-    const absoluteLogPath = path28.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
-    await fs29.mkdir(path28.dirname(absoluteLogPath), { recursive: true });
-    await fs29.appendFile(
+    const absoluteLogPath = path29.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+    await fs32.mkdir(path29.dirname(absoluteLogPath), { recursive: true });
+    await fs32.appendFile(
       absoluteLogPath,
       `${JSON.stringify({
         ...entry,
@@ -100934,6 +101907,9 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_discuss_prepare",
   "blueprint_discuss_record",
   "blueprint_discuss_finalize",
+  "blueprint_research_prepare",
+  "blueprint_research_record",
+  "blueprint_research_submit",
   "blueprint_config_set",
   "blueprint_config_set_profile",
   "blueprint_state_update",
@@ -100984,6 +101960,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
 ]);
 var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
   "reconciliation_required",
+  "needs_revision",
   "invalid",
   "project_missing",
   "not_found",
@@ -101382,13 +102359,13 @@ function getNonSuccessSummaryVerb(status, preferredVerb) {
 function buildNonSuccessStatusSummary(toolName, subject, status, result, preferredVerb) {
   const reason = getString(result, "reason");
   const waitingState = getString(result, "waitingState");
-  const path29 = findSummaryPath(result);
+  const path30 = findSummaryPath(result);
   const content = getString(result, "content");
   const mutationFlags = buildMutationFlags(toolName, result);
   const countSummary = buildCountSummary(result);
   const details = [];
-  if (path29) {
-    details.push(`at \`${path29}\``);
+  if (path30) {
+    details.push(`at \`${path30}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
@@ -101415,8 +102392,8 @@ function buildStateNoopSummary(toolName, result) {
   const synced = getBoolean(result, "synced");
   const updatedFieldCount = getArrayCount(result, "updatedFields");
   const syncedFieldCount = getArrayCount(result, "syncedFields");
-  const path29 = findSummaryPath(result);
-  const location2 = path29 ? ` at \`${path29}\`` : "";
+  const path30 = findSummaryPath(result);
+  const location2 = path30 ? ` at \`${path30}\`` : "";
   if (toolName === "blueprint_state_update" && (updated === false || updatedFieldCount === 0)) {
     return `No state changes${location2}.`;
   }
@@ -101500,7 +102477,7 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path29 = findSummaryPath(result);
+  const path30 = findSummaryPath(result);
   const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
@@ -101541,8 +102518,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path29) {
-    details.push(`at \`${path29}\``);
+  if (path30) {
+    details.push(`at \`${path30}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);

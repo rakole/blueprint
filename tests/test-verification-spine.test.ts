@@ -18,7 +18,7 @@ const repoRoot = process.cwd();
 test("canonical discovery includes root and nested tests while excluding fixtures", async () => {
   const discovered = await discoverTestFiles(repoRoot);
 
-  assert.equal(discovered.length, 160);
+  assert.equal(discovered.length, 163);
   for (const added of ["tests/phase-checkpoint-freshness.test.ts", "tests/discuss-prepare.test.ts", "tests/discuss-persistence.test.ts"]) {
     assert.ok(discovered.includes(added), `Canonical discovery must include ${added}`);
   }

@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { readPublishedResearchFreshness } from "./research-evidence.js";
 
 import {
   BLUEPRINT_DIR,
@@ -752,6 +753,13 @@ export async function buildPhaseResearchStatusFromContext(
       researchIssues = validation.issues;
       researchDiagnostics = validation.diagnostics;
       warnings.push(...validation.warnings);
+      const freshness = await readPublishedResearchFreshness(projectRoot, researchPath);
+      if (freshness.status !== "fresh" && !(freshness.status === "unknown" && freshness.unknownPaths.length === 1 && freshness.unknownPaths[0] === "provenance")) {
+        researchValid = false;
+        const message = `Saved research inputs are ${freshness.status}: ${[...freshness.stalePaths, ...freshness.unknownPaths].join(", ")}.`;
+        researchIssues.push(message);
+        researchDiagnostics.push({ path: researchPath, code: "research.inputs_stale", message, repair: "Use /blu-research-phase to review changed inputs and update the saved candidate.", retryable: true, nextTool: "blueprint_research_prepare" });
+      }
     } catch (error) {
       researchValid = false;
       const reason =
