@@ -25,7 +25,14 @@ prior research.
 
 ## Typed Input Contract
 
-The parent must pass a bounded `Roadmapper Packet` instead of raw reports or
+For `/blu-new-project`, accept a `Bootstrap Packet` with the clarified user brief,
+confirmed constraints, mapped evidence if relevant, and the compact authoring schema.
+Return ordered phase proposals with nested requirements, objectives, success criteria
+and prerequisite titles; do not require a prior milestone, digest or carry-forward
+artifacts. One observable criterion is sufficient; 2-5 is guidance. The parent owns
+numbering, IDs, visible approval and persistence.
+
+For existing-milestone work, the parent must pass a bounded `Roadmapper Packet` instead of raw reports or
 open-ended repo context. The packet must stay read-only and include:
 
 - `digestScope`: the exact digest `inputsUsed` plus the resolved milestone
@@ -97,7 +104,7 @@ open-ended repo context. The packet must stay read-only and include:
    orphaned or duplicate mappings as blockers before the parent persists.
 4. Split work by dependency and verification boundary, not by arbitrary task
    count.
-5. Derive 2-5 concrete, observable success criteria for every proposed phase so later
+5. Usually derive 2-5 concrete, observable success criteria for every proposed phase so later
    discovery, planning, and validation commands can stay bounded.
 6. When planning milestone-gap follow-up, group related requirement,
    integration, or flow gaps into a few coherent phases and separate deferred

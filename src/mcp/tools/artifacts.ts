@@ -171,6 +171,7 @@ export type BootstrapRoadmapPhase = {
   objective: string;
   requirementIds?: string[];
   successCriteria?: string[];
+  dependencies?: string[];
   notes?: string[];
 };
 export type BootstrapSeed = {
@@ -220,6 +221,9 @@ export type NormalizedBootstrapSeed = Omit<Required<BootstrapSeed>, "requirement
 };
 
 type ArtifactScaffoldArgs = {
+  /** Internal project-init path; milestone carry-forward uses the default guard. */
+  bootstrapInitialization?: boolean;
+  preparedBootstrapContents?: Record<string, string>;
   cwd?: string;
   artifacts?: string[];
   overwrite?: boolean;
@@ -1996,15 +2000,18 @@ export function buildDefaultBootstrapSeed(
       (phase) => phase.phase.trim().length > 0 && phase.title.trim().length > 0
     ) ?? defaultRoadmapPhases;
 
+  const optionalBootstrapList = (values: string[] | undefined, fallback: string[]) =>
+    values === undefined ? fallback : normalizeList(values, []);
+
   return {
     vision: seed?.vision?.trim() || defaultVision,
     audience: {
-      primary: normalizeList(seed?.audience?.primary, defaultPrimaryAudience),
-      secondary: normalizeList(seed?.audience?.secondary, defaultSecondaryAudience)
+      primary: optionalBootstrapList(seed?.audience?.primary, defaultPrimaryAudience),
+      secondary: optionalBootstrapList(seed?.audience?.secondary, defaultSecondaryAudience)
     },
-    constraints: normalizeList(seed?.constraints, defaultConstraints),
+    constraints: optionalBootstrapList(seed?.constraints, defaultConstraints),
     currentMilestone: defaultMilestone,
-    nonGoals: normalizeList(seed?.nonGoals, defaultNonGoals),
+    nonGoals: optionalBootstrapList(seed?.nonGoals, defaultNonGoals),
     requirements: normalizedRequirements,
     roadmapPhases: sourceRoadmapPhases.map((phase, index) => ({
       ...phase,
@@ -2015,7 +2022,7 @@ export function buildDefaultBootstrapSeed(
       ])
     })),
     brownfieldMode: seed?.brownfieldMode ?? assessment.repoShape,
-    assumptions: normalizeList(seed?.assumptions, defaultAssumptions)
+    assumptions: optionalBootstrapList(seed?.assumptions, defaultAssumptions)
   };
 }
 
@@ -2055,7 +2062,7 @@ ${secondaryAudience.map((value) => `- Secondary: ${value}`).join("\n")}
 
 ## Constraints
 
-${seed.constraints.map((value) => `- ${value}`).join("\n")}
+${seed.constraints.map((value) => `- ${value}`).join("\n") || "- none"}
 
 ## Current Milestone
 
@@ -2073,11 +2080,11 @@ ${requirementSummary}
 
 ## Non-Goals
 
-${seed.nonGoals.map((value) => `- ${value}`).join("\n")}
+${seed.nonGoals.map((value) => `- ${value}`).join("\n") || "- none"}
 
 ## Assumptions
 
-${seed.assumptions.map((value) => `- ${value}`).join("\n")}
+${seed.assumptions.map((value) => `- ${value}`).join("\n") || "- none"}
 `;
 }
 
@@ -2184,7 +2191,7 @@ ${scopeSections}
 
 ## Open Questions
 
-${seed.assumptions.map((value) => `- Revisit: ${value}`).join("\n")}
+${seed.assumptions.map((value) => `- Revisit: ${value}`).join("\n") || "- none"}
 `;
 }
 
@@ -2210,11 +2217,22 @@ function renderRoadmapArtifact(context: BootstrapRenderContext): string {
           ? `  - Success Criteria:\n${successCriteria.map((value) => `    - ${value}`).join("\n")}`
           : "";
       const notes = normalizeList(phase.notes, []).map((value) => `  - ${value}`).join("\n");
+      const dependencies = (phase.dependencies ?? []).map(normalizePhaseNumber);
+      const dependencyLine = dependencies.length ? `\n  - Depends on: ${dependencies.join(", ")}` : "";
 
       return `- [${marker}] Phase ${normalizedPhaseNumber}: ${phase.title}${requirementClause}
-  - Objective: ${phase.objective}${successCriteriaBlock ? `\n${successCriteriaBlock}` : ""}${notes ? `\n${notes}` : ""}`;
+  - Objective: ${phase.objective}${dependencyLine}${successCriteriaBlock ? `\n${successCriteriaBlock}` : ""}${notes ? `\n${notes}` : ""}`;
     })
     .join("\n");
+
+  const details = seed.roadmapPhases.some(phase => phase.dependencies !== undefined)
+    ? "\n## Phase Details\n\n" + seed.roadmapPhases.map(phase => `### Phase ${normalizePhaseNumber(phase.phase)}: ${phase.title}
+**Goal**: ${phase.objective}
+**Requirements**: ${(phase.requirementIds ?? []).join(", ")}
+**Depends on**: ${(phase.dependencies ?? []).map(ref => `Phase ${normalizePhaseNumber(ref)}`).join(", ") || "none"}
+**Success Criteria**: ${(phase.successCriteria ?? []).join("; ")}
+**Status**: ${phase.status ?? "planned"}`).join("\n\n") + "\n"
+    : "";
 
   return `# Roadmap: ${context.projectName}
 
@@ -2240,10 +2258,10 @@ ${BOOTSTRAP_REQUIREMENT_SCOPE_ORDER.map((scope) => {
 ## Phases
 
 ${phases}
-
+${details}
 ## Notes
 
-${seed.assumptions.map((value) => `- ${value}`).join("\n")}
+${seed.assumptions.map((value) => `- ${value}`).join("\n") || "- none"}
 `;
 }
 
@@ -5939,13 +5957,13 @@ function validateBootstrapProjectArtifact(
       )
     );
 
-    if (!hasBootstrapText(vision)) {
+    if (vision.trim().length === 0) {
       issues.push("Project artifact section Vision must contain substantive project direction.");
     }
 
-    if (!/- Primary:\s*\S+/m.test(audience) || !/- Secondary:\s*\S+/m.test(audience)) {
+    if (!/- Primary:[ \t]*\S+/m.test(audience)) {
       issues.push(
-        "Project artifact section Audience must include primary and secondary audience bullets."
+        "Project artifact section Audience must include at least one primary audience bullet."
       );
     }
 
@@ -6385,6 +6403,14 @@ function validateBootstrapRoadmapArtifact(
       : (phaseDetailByNumber.get(phaseBlock.phaseNumber)?.requirementIds ?? [])
   );
   const duplicatePhaseRequirementRefs = valuesWithDuplicates(phaseRequirementRefs);
+  const phaseNumbers = parsedPhaseBlocks.map(phase => normalizePhaseNumber(phase.phaseNumber));
+  if (new Set(phaseNumbers).size !== phaseNumbers.length) {
+    issues.push("Roadmap artifact contains duplicate normalized phase numbers.");
+  }
+  const excludedIds = extractBootstrapRoadmapScopedRequirementIds(requirementCoverage, /out.of.scope/i);
+  for (const id of phaseRequirementRefs.filter(id => excludedIds.includes(id))) {
+    issues.push(`Roadmap artifact schedules out-of-scope requirement ${id}. Remove it from active phases.`);
+  }
 
   if (isBootstrapRoadmapArtifact(content)) {
     if (!hasBootstrapText(milestone)) {
@@ -6430,7 +6456,7 @@ function validateBootstrapRoadmapArtifact(
       const detail = parsedPhaseBlock
         ? phaseDetailByNumber.get(parsedPhaseBlock.phaseNumber)
         : undefined;
-      const objective = phaseBlock.match(/Objective:\s*(\S.+)$/im)?.[1]?.trim() ?? detail?.goal ?? "";
+      const objective = phaseBlock.match(/Objective:[ \t]*(\S[^\r\n]*)$/im)?.[1]?.trim() ?? detail?.goal ?? "";
 
       if (objective.length === 0) {
         issues.push(
@@ -6477,30 +6503,8 @@ function validateBootstrapRoadmapArtifact(
         }
       }
 
-      if (successCriteria.length < 2 || successCriteria.length > 5) {
-        issues.push("Roadmap artifact phase entries must include 2-5 success criteria bullets.");
-
-        if (successCriteria.length === 0) {
-          issues.push(
-            "Roadmap artifact phase entries must include at least one success criteria bullet."
-          );
-        }
-
-        if (parsedPhaseBlock) {
-          issues.push(
-            `Roadmap artifact ${phaseLabel} field Success Criteria has ${successCriteria.length} item(s). Repair by listing 2-5 observable success criteria under ${phaseLabel}.`
-          );
-          issues.push(
-            successCriteria.length < 2
-              ? `${phaseLabel} (${parsedPhaseBlock.phaseName}) must include at least two success criteria. Repair ${phaseLabel} field Success Criteria by listing 2-5 observable criteria.`
-              : `${phaseLabel} (${parsedPhaseBlock.phaseName}) must include no more than five success criteria. Repair ${phaseLabel} field Success Criteria by trimming it to 2-5 observable criteria.`
-          );
-          continue;
-        }
-
-        issues.push(
-          `Roadmap artifact ${phaseLabel} field Success Criteria has ${successCriteria.length} item(s). Repair by listing 2-5 observable success criteria under ${phaseLabel}.`
-        );
+      if (successCriteria.length === 0) {
+        issues.push(`Roadmap artifact ${phaseLabel} field Success Criteria must include at least one observable success criterion.`);
       }
     }
 
@@ -6557,9 +6561,9 @@ function validateBootstrapRoadmapArtifact(
         );
       }
 
-      if (detail.successCriteria.length < 2 || detail.successCriteria.length > 5) {
+      if (detail.successCriteria.length === 0) {
         issues.push(
-          `Roadmap artifact ${detailLabel} field Phase Details Success Criteria has ${detail.successCriteria.length} item(s). Repair by recording 2-5 semicolon-separated observable criteria.`
+          `Roadmap artifact ${detailLabel} field Phase Details Success Criteria has ${detail.successCriteria.length} item(s). Repair by recording at least one observable criterion.`
         );
       }
 
@@ -10442,6 +10446,30 @@ async function prepareCarryForwardBootstrapReceipt(args: {
   return receipt;
 }
 
+export function prepareBootstrapArtifactContents(context: BootstrapRenderContext): {
+  contents: Record<string, string>;
+  issues: string[];
+  warnings: string[];
+} {
+  const contents = {
+    ".blueprint/PROJECT.md": renderProjectArtifact(context),
+    ".blueprint/REQUIREMENTS.md": renderRequirementsArtifact(context),
+    ".blueprint/ROADMAP.md": renderRoadmapArtifact(context)
+  };
+  const warnings: string[] = [];
+  for (const artifact of Object.keys(contents) as (keyof typeof contents)[]) {
+    const prepared = prepareTextForPersistence(contents[artifact], { label: artifact });
+    contents[artifact] = prepared.content;
+    warnings.push(...prepared.warnings);
+  }
+  const checks = [
+    validateBootstrapProjectArtifact(contents[".blueprint/PROJECT.md"]),
+    validateBootstrapRequirementsArtifact(contents[".blueprint/REQUIREMENTS.md"]),
+    validateBootstrapRoadmapArtifact(contents[".blueprint/ROADMAP.md"])
+  ];
+  return { contents, issues: checks.flatMap(check => check.issues), warnings };
+}
+
 export async function blueprintArtifactScaffold(
   args: ArtifactScaffoldArgs = {}
 ): Promise<ArtifactScaffoldResult> {
@@ -10459,7 +10487,7 @@ export async function blueprintArtifactScaffold(
   const createdFiles: string[] = [];
   const reusedFiles: string[] = [];
   const warnings: string[] = [];
-  const carryForwardReceipt = await prepareCarryForwardBootstrapReceipt({
+  const carryForwardReceipt = args.bootstrapInitialization ? emptyCarryForwardBootstrapReceipt() : await prepareCarryForwardBootstrapReceipt({
     projectRoot,
     artifacts,
     bootstrapSeed: args.bootstrapSeed,
@@ -10512,7 +10540,7 @@ export async function blueprintArtifactScaffold(
     }
 
     warnings.push(
-      ...await writeTextFile(absolutePath, renderArtifact(renderContext), {
+      ...await writeTextFile(absolutePath, args.preparedBootstrapContents?.[artifact] ?? renderArtifact(renderContext), {
         label: artifact
       })
     );
@@ -11270,7 +11298,7 @@ function expectedFromBootstrapIssue(message: string): string | undefined {
   }
 
   if (/success criteria/i.test(message)) {
-    return "Each roadmap phase has a Success Criteria list with 2-5 concrete bullets.";
+    return "Each roadmap phase has at least one observable success criterion.";
   }
 
   if (/concrete phase entry|numbered phase title|objective/i.test(message)) {

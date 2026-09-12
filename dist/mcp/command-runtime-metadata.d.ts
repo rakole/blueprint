@@ -46,9 +46,9 @@ export declare const NEW_PROJECT_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: deep-questioning bootstrap that creates the initial planning tree, seeds normalized repo config, and leaves a traceable first roadmap.";
     };
-    readonly requiredTools: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
+    readonly requiredTools: readonly ["blueprint_project_prepare", "blueprint_project_init", "blueprint_project_status", "blueprint_config_set", "blueprint_artifact_validate"];
     readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
-    readonly requiredInputPaths: readonly ["skills/blueprint-bootstrap/references/questioning.md", "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md", "skills/blueprint-bootstrap/references/runtime-guardrails.md"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"];
     readonly spec: {
         readonly path: "src/mcp/command-runtime-metadata.ts#new-project";
         readonly title: "`/blu-new-project`";
@@ -63,10 +63,10 @@ export declare const NEW_PROJECT_RUNTIME_METADATA: {
         readonly waveTitle: "Foundation";
         readonly command: "new-project";
         readonly primarySkill: "blueprint-bootstrap";
-        readonly exactMcpDestination: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
+        readonly exactMcpDestination: readonly ["blueprint_project_prepare", "blueprint_project_init", "blueprint_project_status", "blueprint_config_set", "blueprint_artifact_validate"];
         readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.";
+        readonly contractNotes: "Gemini-native bootstrap: blueprint_project_prepare returns effective config, readiness and the compact authoring schema. Ask a clarifying question on first run and wait for the user even without config; only explicit --auto bypasses clarification. Config defaults remain mode=interactive and workflow.auto_advance=false. Author requirements once inside phases through bootstrapModel; MCP derives IDs, phase numbers, statuses and Markdown. Read only the compact bootstrap-runtime-contract.md on the normal path. Preserve map-first gating, visible approval, saved-default provenance and implemented-only routing.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -1911,9 +1911,9 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: deep-questioning bootstrap that creates the initial planning tree, seeds normalized repo config, and leaves a traceable first roadmap.";
         };
-        readonly requiredTools: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
+        readonly requiredTools: readonly ["blueprint_project_prepare", "blueprint_project_init", "blueprint_project_status", "blueprint_config_set", "blueprint_artifact_validate"];
         readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
-        readonly requiredInputPaths: readonly ["skills/blueprint-bootstrap/references/questioning.md", "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md", "skills/blueprint-bootstrap/references/runtime-guardrails.md"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"];
         readonly spec: {
             readonly path: "src/mcp/command-runtime-metadata.ts#new-project";
             readonly title: "`/blu-new-project`";
@@ -1928,10 +1928,10 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Foundation";
             readonly command: "new-project";
             readonly primarySkill: "blueprint-bootstrap";
-            readonly exactMcpDestination: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
+            readonly exactMcpDestination: readonly ["blueprint_project_prepare", "blueprint_project_init", "blueprint_project_status", "blueprint_config_set", "blueprint_artifact_validate"];
             readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.";
+            readonly contractNotes: "Gemini-native bootstrap: blueprint_project_prepare returns effective config, readiness and the compact authoring schema. Ask a clarifying question on first run and wait for the user even without config; only explicit --auto bypasses clarification. Config defaults remain mode=interactive and workflow.auto_advance=false. Author requirements once inside phases through bootstrapModel; MCP derives IDs, phase numbers, statuses and Markdown. Read only the compact bootstrap-runtime-contract.md on the normal path. Preserve map-first gating, visible approval, saved-default provenance and implemented-only routing.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

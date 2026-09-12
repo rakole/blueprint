@@ -1180,8 +1180,8 @@ test("bootstrap PROJECT.md docs stay aligned with the runtime Markdown contract"
     "bootstrap.project should keep its bootstrap scope-posture guidance"
   );
   assert.ok(
-    projectContract.notes.some((note) => /Validation expects substantive content/i.test(note)),
-    "bootstrap.project should keep substantive validation guidance in the runtime contract"
+    projectContract.notes.some((note) => /Validation requires a primary audience and project intent/i.test(note)),
+    "bootstrap.project should require product intent without forcing invented optional content"
   );
 });
 

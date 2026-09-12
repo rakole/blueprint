@@ -399,6 +399,7 @@ async function maybeDelayConfigSetBeforeWriteForTest(): Promise<void> {
 function getHardCodedConfig(): BlueprintConfig {
   return {
     version: HARD_CODED_CONFIG_VERSION,
+    // Missing project config must never imply automatic bootstrap.
     mode: "interactive",
     granularity: "standard",
     model_profile: "balanced",
@@ -431,6 +432,7 @@ function getHardCodedConfig(): BlueprintConfig {
       no_uat: false,
       code_review: true,
       code_review_depth: "standard",
+      // Opt-in workflow automation; bootstrap also requires an explicit --auto request.
       auto_advance: false,
       research_before_questions: false,
       discuss_mode: "discuss",

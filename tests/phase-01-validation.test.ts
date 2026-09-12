@@ -23,7 +23,7 @@ import {
   type BootstrapSeed
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintConfigSet } from "../src/mcp/tools/config.js";
-import { blueprintProjectInit, blueprintProjectStatus } from "../src/mcp/tools/project.js";
+import { blueprintProjectInit as initializeProject, blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintStateLoad,
   blueprintStateSync,
@@ -35,6 +35,10 @@ import {
   type ExtensionHost
 } from "./helpers/extension-hosts.ts";
 import { createGitRepo } from "./helpers/git-fixtures.js";
+
+// These legacy fixtures start after the host has captured a clarification response.
+const blueprintProjectInit = (args: Parameters<typeof initializeProject>[0] = {}) =>
+  initializeProject({ clarification: "The first release should deliver the capabilities in this fixture.", ...args });
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/new-project");

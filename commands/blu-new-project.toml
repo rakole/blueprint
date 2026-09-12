@@ -1,40 +1,13 @@
-description = "Initialize a repository with deep questioning, MCP-owned bootstrap artifacts, and approval-gated roadmap shaping."
+description = "Clarify a project idea, agree the first milestone, and create consistent Blueprint documents."
 prompt = """
 You are the `/blu-new-project` command for Blueprint.
+Use the `blueprint-bootstrap` skill and its compact bootstrap-runtime-contract.md.
 
-This manifest is a thin command envelope. Use the `blueprint-bootstrap` skill as the primary orchestration contract.
-Runtime contract references:
-- `skills/blueprint-bootstrap/references/questioning.md`
-- `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`
-- `skills/blueprint-bootstrap/references/runtime-guardrails.md`
-
-Keep this manifest focused on host entrypoint routing:
-- Apply `runtime-guardrails.md` as the canonical host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrail source instead of duplicating those rules here.
-- Use the required MCP tool set and optional agent names declared by the `blueprint-bootstrap` skill package.
-- Read effective config before any optional project-research or roadmapping sidecar decision. Use those subagents only when the runtime contract allows them and `workflow.subagents` is enabled; otherwise follow the documented no-subagent fallback.
-- Do not require a command-spec doc before running the command.
-- Do not generate project instruction files such as `CLAUDE.md` or `AGENTS.md`.
-- Do not create, repair, or recommend repo-root `CONTEXT.md`; Blueprint-managed context is either the brownfield `.blueprint/codebase/*.md` bundle or phase-scoped `.blueprint/phases/<phase>/<XX>-CONTEXT.md` authored by `/blu-discuss-phase`.
-- Avoid invented auto-advance chaining or slash-command self-invocation.
-- Keep persistent writes inside Blueprint MCP runtime tools only.
-
-Optional bounded subagents permitted by the skill contract:
-- `blueprint-project-researcher`
-- `blueprint-roadmapper`
-
-Remember that `bootstrapMode` behavior, brownfield map-first routing, saved-default handling, workflow-preference capture, staged execution, validation, revision loops, and next-safe-action routing now live in the skill package references above.
-- The local runtime contract also owns capability-gated project research and roadmapping paths, plus the sequential no-subagent fallback; do not substitute browser, web-search, or shell-only helpers for Blueprint code/workflow analysis agents.
-- Check project status before the first write. If status shows an unmapped brownfield repo or `mapping-incomplete`, route to `/blu-map-codebase` and do not initialize project artifacts.
-- If status is `mapped-only`, initialize project artifacts without treating the existing `.blueprint/codebase/*.md` bundle as an overwrite conflict; preserve those codebase docs.
-- Do not call scaffold before the project-init MCP write; scaffold is only for deliberate extra artifacts after bootstrap initialization.
-- Pass `bootstrapMode: "interactive"` unless the user explicitly requested automatic synthesis with `--auto`.
-- In interactive mode, initialize only with a sufficient `bootstrapSeed`; do not ask the MCP layer to synthesize purpose, requirements, roadmap, state, config, or phases from a missing or thin seed.
-- In auto mode, call the project-init MCP tool only after you can supply a sufficient `bootstrapSeed`; stop for a missing brief instead of asking the MCP layer to invent one.
-- For the required `bootstrapSeed` field shape, use `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md` as the source of truth instead of inventing a lighter command-local shape.
-
-Response requirements:
-- For the approval gate, show a visible structured approval packet in the main Gemini CLI conversation before asking for approval: project brief, requirement groups, roadmap phase table, assumptions, deferred or out-of-scope items, and defaults provenance.
-- Summarize created `.blueprint/` paths, including `.blueprint/config.json`.
-- Summarize project direction, requirement scope, roadmap stance, defaults provenance, approval posture, explicit assumptions, and whether the result is greenfield-ready or brownfield-provisional.
-- End with the next safe action from project status.
+Start with the skill's project preparation step. A first run is interactive even before config exists.
+Ask a focused clarifying question and wait for the user's answer. Only an explicit
+`--auto` request bypasses questioning; missing config or saved automatic preferences do not.
+Use the returned compact authoring schema to describe product intent and requirements
+inside their owning phases. MCP generates IDs, numbers, statuses, and document formatting.
+Show the project and roadmap proposal in the main conversation and obtain approval
+before interactive creation. Persist through MCP only and finish with its next safe action.
 """

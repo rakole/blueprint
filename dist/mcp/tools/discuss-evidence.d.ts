@@ -66,7 +66,7 @@ export declare function collectDiscussEvidence(args: {
         };
         ambientCurrentPhase: string;
         config: {
-            scope: "effective" | "project" | "defaults";
+            scope: "project" | "defaults" | "effective";
             config: {
                 version: number;
                 mode: string;

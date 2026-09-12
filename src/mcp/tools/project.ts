@@ -1,3 +1,9 @@
+import {
+  bootstrapAuthoringSchema,
+  compileBootstrapAuthoringModel,
+  readPreviousBootstrapRequirementIds,
+  type BootstrapAuthoringModel
+} from "../bootstrap-authoring.js";
 import { discussToolDefinitions } from "./discuss.js";
 import { researchToolDefinitions } from "./research.js";
 import { planningToolDefinitions } from "./plan.js";
@@ -18,6 +24,7 @@ import {
   getBlueprintRoot,
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
+  prepareBootstrapArtifactContents,
   resolveBlueprintPath,
   type BootstrapArtifactDiagnostics,
   type BootstrapAssessment,
@@ -112,6 +119,9 @@ type ProjectInitArgs = {
   projectName?: string;
   bootstrapMode?: "interactive" | "auto";
   bootstrapSeed?: BootstrapSeed;
+  bootstrapModel?: BootstrapAuthoringModel;
+  /** The user response to the first-run clarification, never an inferred answer. */
+  clarification?: string;
 };
 
 type ProjectInitSuccessResult = {
@@ -193,7 +203,9 @@ const projectInitInputSchema = {
   savedDefaultsPolicy: z.enum(["apply", "skip"]).optional(),
   overwrite: z.boolean().optional(),
   projectName: z.string().optional(),
-  bootstrapMode: z.enum(["interactive", "auto"]).optional(),
+  bootstrapMode: z.enum(["interactive", "auto"]).optional().describe("Interactive by default, even with no config. Auto requires an explicit --auto request."),
+  clarification: z.string().trim().min(1).optional().describe("User response to your clarification question; required in interactive mode."),
+  bootstrapModel: bootstrapAuthoringSchema.optional().describe("Preferred authoring input. Runtime derives IDs, numbering, statuses and document formatting."),
   bootstrapSeed: z
     .object({
       vision: z.string().optional(),
@@ -259,6 +271,7 @@ const DOCLESS_FALLBACK_CATALOG_ROWS = [
 ] as const satisfies readonly ParsedCatalogRow[];
 const PROJECT_TOOL_NAMES = [
   "blueprint_command_catalog",
+  "blueprint_project_prepare",
   "blueprint_project_init",
   "blueprint_project_status",
   "blueprint_lightweight_preflight"
@@ -439,30 +452,6 @@ async function readRepoSummary(projectRoot: string): Promise<string | null> {
   return readPackageDescription(projectRoot);
 }
 
-function mergeBootstrapSeed(
-  synthesized: BootstrapSeed,
-  explicit?: BootstrapSeed
-): BootstrapSeed {
-  if (!explicit) {
-    return synthesized;
-  }
-
-  return {
-    vision: explicit.vision ?? synthesized.vision,
-    audience: {
-      primary: explicit.audience?.primary ?? synthesized.audience?.primary,
-      secondary: explicit.audience?.secondary ?? synthesized.audience?.secondary
-    },
-    constraints: explicit.constraints ?? synthesized.constraints,
-    currentMilestone: explicit.currentMilestone ?? synthesized.currentMilestone,
-    nonGoals: explicit.nonGoals ?? synthesized.nonGoals,
-    requirements: explicit.requirements ?? synthesized.requirements,
-    roadmapPhases: explicit.roadmapPhases ?? synthesized.roadmapPhases,
-    brownfieldMode: explicit.brownfieldMode ?? synthesized.brownfieldMode,
-    assumptions: explicit.assumptions ?? synthesized.assumptions
-  };
-}
-
 function bootstrapSeedIsSufficient(seed: BootstrapSeed | undefined): boolean {
   return Boolean(
     seed?.vision?.trim() &&
@@ -474,44 +463,20 @@ function bootstrapSeedIsSufficient(seed: BootstrapSeed | undefined): boolean {
   );
 }
 
-const MIN_SUBSTANTIVE_WORDS = 6;
 const GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
 
-function countWords(value: string): number {
-  return (value.match(/[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)*/g) ?? []).length;
-}
-
-function isSubstantiveText(value: string | undefined, minimumWords = MIN_SUBSTANTIVE_WORDS): boolean {
+function isSubstantiveText(value: string | undefined): boolean {
   const normalized = value?.trim() ?? "";
 
   return (
     normalized.length > 0 &&
-    countWords(normalized) >= minimumWords &&
+    /[\p{L}\p{N}]/u.test(normalized) &&
     !GENERIC_TEXT_PATTERN.test(normalized)
   );
 }
 
-function bootstrapSeedHasAutoContext(seed: BootstrapSeed | undefined, repoSummary: string | null): boolean {
-  if (isSubstantiveText(repoSummary ?? undefined)) {
-    return true;
-  }
-
-  if (isSubstantiveText(seed?.vision)) {
-    return true;
-  }
-
-  const substantiveRequirements =
-    seed?.requirements?.filter((requirement) => isSubstantiveText(requirement.requirement)).length ?? 0;
-  const substantivePhases =
-    seed?.roadmapPhases?.filter(
-      (phase) => isSubstantiveText(phase.title, 2) && isSubstantiveText(phase.objective)
-    ).length ?? 0;
-
-  return substantiveRequirements > 0 && substantivePhases > 0;
-}
-
 function normalizedPhaseRef(value: string): string {
-  return value.trim().replace(/\.0+$/, "").toLowerCase();
+  return normalizeBlueprintPhaseRef(value);
 }
 
 function bootstrapSeedPreflightDiagnostics(seed: NormalizedBootstrapSeed): ProjectInitDiagnostic[] {
@@ -526,11 +491,11 @@ function bootstrapSeedPreflightDiagnostics(seed: NormalizedBootstrapSeed): Proje
       path: "bootstrapSeed.vision",
       code: "seed_vision_not_substantive",
       message: "bootstrapSeed.vision must contain a substantive project brief before the first write.",
-      repair: "Replace placeholder vision text with a concrete project brief of at least six meaningful words."
+      repair: "Replace placeholder vision text with a concrete project brief."
     }));
   }
 
-  if (!isSubstantiveText(seed.currentMilestone, 1)) {
+  if (!isSubstantiveText(seed.currentMilestone)) {
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.currentMilestone",
       code: "seed_current_milestone_missing",
@@ -552,7 +517,7 @@ function bootstrapSeedPreflightDiagnostics(seed: NormalizedBootstrapSeed): Proje
 
     requirementIds.add(requirement.id);
 
-    if (!isSubstantiveText(requirement.requirement, 5)) {
+    if (!isSubstantiveText(requirement.requirement)) {
       diagnostics.push(seedDiagnostic({
         path: `bootstrapSeed.requirements[${requirementIndex}].requirement`,
         code: "seed_requirement_not_substantive",
@@ -579,7 +544,26 @@ function bootstrapSeedPreflightDiagnostics(seed: NormalizedBootstrapSeed): Proje
   }
 
   for (const [phaseIndex, phase] of seed.roadmapPhases.entries()) {
-    const phaseRef = normalizedPhaseRef(phase.phase);
+    let phaseRef: string;
+    try {
+      phaseRef = normalizedPhaseRef(phase.phase);
+    } catch {
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].phase`,
+        code: "seed_phase_ref_invalid",
+        message: `Invalid phase reference: ${phase.phase}`,
+        repair: "Use a numeric phase reference, or bootstrapModel so runtime assigns it."
+      }));
+      continue;
+    }
+    if (!isSubstantiveText(phase.title) || !isSubstantiveText(phase.objective)) {
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].objective`,
+        code: "seed_phase_intent_missing",
+        message: `Phase ${phase.phase} needs a title and objective.`,
+        repair: "Describe the phase outcome."
+      }));
+    }
 
     if (phaseRefs.has(phaseRef)) {
       diagnostics.push(seedDiagnostic({
@@ -608,6 +592,14 @@ function bootstrapSeedPreflightDiagnostics(seed: NormalizedBootstrapSeed): Proje
 
       uniquePhaseRequirementIds.add(requirementId);
 
+      if (seed.requirements.some(row => row.id === requirementId && row.scope === "out_of_scope")) {
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_excluded_requirement_scheduled",
+          message: `Phase ${phase.phase} schedules out-of-scope requirement ${requirementId}.`,
+          repair: "Remove excluded requirements from active phases."
+        }));
+      }
       if (!requirementIds.has(requirementId)) {
         diagnostics.push(seedDiagnostic({
           path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
@@ -624,12 +616,12 @@ function bootstrapSeedPreflightDiagnostics(seed: NormalizedBootstrapSeed): Proje
 
     const successCriteria = phase.successCriteria ?? [];
 
-    if (successCriteria.length < 2 || successCriteria.length > 5) {
+    if (successCriteria.length === 0) {
       diagnostics.push(seedDiagnostic({
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_success_criteria_count_invalid",
-        message: `Phase ${phase.phase} must include 2-5 success criteria before the first write.`,
-        repair: "Provide between 2 and 5 success criteria for the phase."
+        message: `Phase ${phase.phase} must include at least one success criterion before the first write.`,
+        repair: "Provide observable evidence for the phase outcome."
       }));
     }
 
@@ -686,7 +678,7 @@ function bootstrapSeedExplicitGapDiagnostics(seed: BootstrapSeed): ProjectInitDi
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_phase_success_criteria_missing",
         message: `Phase ${phaseLabel} must include explicit successCriteria before the first write.`,
-        repair: "Add at least two success criteria before retrying."
+        repair: "Add at least one observable success criterion before retrying."
       }));
     }
   }
@@ -766,8 +758,6 @@ function assertBootstrapCanWrite(args: {
   inspection: Awaited<ReturnType<typeof inspectBlueprintArtifacts>>;
   bootstrapAssessment: BootstrapAssessment;
   overwrite: boolean;
-  bootstrapMode: "interactive" | "auto";
-  bootstrapSeed?: BootstrapSeed;
 }): void {
   if (args.inspection.readiness === "partial") {
     throw new Error(
@@ -798,13 +788,6 @@ function assertBootstrapCanWrite(args: {
       `Brownfield repos must be mapped before project bootstrap writes. Run ${blueprintRunDirectCommand("map-codebase")} first, then re-run ${blueprintDirectCommand("new-project")}.`
     );
   }
-
-  if (
-    args.bootstrapMode === "interactive" &&
-    !bootstrapSeedIsSufficient(args.bootstrapSeed)
-  ) {
-    return;
-  }
 }
 
 function bootstrapSeedSufficiencyDiagnostics(seed: BootstrapSeed | undefined): ProjectInitDiagnostic[] {
@@ -814,7 +797,7 @@ function bootstrapSeedSufficiencyDiagnostics(seed: BootstrapSeed | undefined): P
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.vision",
       code: "seed_vision_missing",
-      message: "Interactive project bootstrap requires bootstrapSeed.vision before any writes.",
+      message: "Project bootstrap requires bootstrapSeed.vision before any writes.",
       repair: "Ask for or provide a concise project vision before retrying."
     }));
   }
@@ -823,7 +806,7 @@ function bootstrapSeedSufficiencyDiagnostics(seed: BootstrapSeed | undefined): P
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.currentMilestone",
       code: "seed_current_milestone_missing",
-      message: "Interactive project bootstrap requires bootstrapSeed.currentMilestone before any writes.",
+      message: "Project bootstrap requires bootstrapSeed.currentMilestone before any writes.",
       repair: "Set the active milestone label before retrying."
     }));
   }
@@ -832,7 +815,7 @@ function bootstrapSeedSufficiencyDiagnostics(seed: BootstrapSeed | undefined): P
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.requirements",
       code: "seed_requirements_missing",
-      message: "Interactive project bootstrap requires at least one bootstrapSeed.requirements entry before any writes.",
+      message: "Project bootstrap requires at least one bootstrapSeed.requirements entry before any writes.",
       repair: "Capture at least one durable requirement with id, requirement, status, and notes before retrying."
     }));
   }
@@ -841,24 +824,12 @@ function bootstrapSeedSufficiencyDiagnostics(seed: BootstrapSeed | undefined): P
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.roadmapPhases",
       code: "seed_roadmap_phases_missing",
-      message: "Interactive project bootstrap requires at least one bootstrapSeed.roadmapPhases entry before any writes.",
+      message: "Project bootstrap requires at least one bootstrapSeed.roadmapPhases entry before any writes.",
       repair: "Capture at least one roadmap phase with phase, title, objective, requirementIds, and successCriteria before retrying."
     }));
   }
 
   return diagnostics;
-}
-
-function bootstrapSeedAutoContextDiagnostics(): ProjectInitDiagnostic[] {
-  return [
-    seedDiagnostic({
-      path: "bootstrapSeed.vision",
-      code: "seed_auto_context_missing",
-      message:
-        "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes.",
-      repair: "Provide bootstrapSeed.vision or add README/package description context before retrying."
-    })
-  ];
 }
 
 function buildBootstrapStatus(
@@ -1149,51 +1120,86 @@ async function blueprintProjectInitUnlocked(
   assertBootstrapCanWrite({
     inspection,
     bootstrapAssessment: initialBootstrapDiagnostics.brownfield,
-    overwrite,
-    bootstrapMode,
-    bootstrapSeed: args.bootstrapSeed
+    overwrite
   });
 
-  if (
-    bootstrapMode === "interactive" &&
-    !bootstrapSeedIsSufficient(args.bootstrapSeed)
-  ) {
+  if (args.bootstrapModel !== undefined) {
+    if (args.bootstrapSeed !== undefined) {
+      return buildInvalidProjectInitResult({
+        projectRoot,
+        diagnostics: [seedDiagnostic({
+          path: "bootstrapModel",
+          code: "ambiguous_authoring_input",
+          message: "Pass bootstrapModel or legacy bootstrapSeed, not both.",
+          repair: "Use bootstrapModel for new project authoring."
+        })]
+      });
+    }
+    const parsed = bootstrapAuthoringSchema.safeParse(args.bootstrapModel);
+    if (!parsed.success) {
+      return buildInvalidProjectInitResult({
+        projectRoot,
+        diagnostics: parsed.error.issues.map(issue => seedDiagnostic({
+          path: `bootstrapModel.${issue.path.join(".")}`,
+          code: "model_shape_invalid",
+          message: issue.message,
+          repair: "Use the compact authoring schema returned by blueprint_project_prepare."
+        }))
+      });
+    }
+    try {
+      const previous = overwrite && inspection.readiness === "initialized"
+        ? readPreviousBootstrapRequirementIds(await fs.readFile(
+            resolveBlueprintPath(projectRoot, ".blueprint/REQUIREMENTS.md"), "utf8"
+          ))
+        : [];
+      args = { ...args, bootstrapSeed: compileBootstrapAuthoringModel(parsed.data, previous) };
+    } catch (error) {
+      return buildInvalidProjectInitResult({
+        projectRoot,
+        diagnostics: [seedDiagnostic({
+          path: "bootstrapModel.phases",
+          code: "model_scope_invalid",
+          message: (error as Error).message,
+          repair: "Keep requirements in one scope, give phases distinct titles and put prerequisites first."
+        })]
+      });
+    }
+  }
+  if (!bootstrapSeedIsSufficient(args.bootstrapSeed)) {
     return buildInvalidProjectInitResult({
       projectRoot,
       diagnostics: bootstrapSeedSufficiencyDiagnostics(args.bootstrapSeed)
     });
   }
-
-  const projectName = await inferProjectName(projectRoot, args.projectName);
-  const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
-  const repoSummary = await readRepoSummary(projectRoot);
-
-  if (
-    bootstrapMode === "auto" &&
-    !bootstrapSeedHasAutoContext(args.bootstrapSeed, repoSummary)
-  ) {
+  if (bootstrapMode === "interactive" && !args.clarification?.trim()) {
     return buildInvalidProjectInitResult({
       projectRoot,
-      diagnostics: bootstrapSeedAutoContextDiagnostics()
+      diagnostics: [seedDiagnostic({
+        path: "clarification",
+        code: "clarification_required",
+        message: "Ask the user a focused clarifying question before first-run project creation, even when config does not exist.",
+        repair: "Ask about the first user, first useful outcome, or scope boundary; pass the actual user response as clarification. Only an explicit --auto request bypasses this."
+      })]
     });
   }
-
-  const autoBaseSeed =
-    bootstrapMode === "auto"
-      ? buildDefaultBootstrapSeed(
-          projectName,
-          bootstrapAssessment,
-          repoSummary ? { vision: repoSummary } : undefined
-        )
-      : undefined;
-  const seedInput =
-    bootstrapMode === "auto"
-      ? mergeBootstrapSeed(autoBaseSeed!, args.bootstrapSeed)
-      : args.bootstrapSeed!;
+  const projectName = await inferProjectName(projectRoot, args.projectName);
+  const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
+  const seedInput = args.bootstrapSeed!;
   const rawPhaseRequirementDiagnostics = bootstrapSeedRawPhaseRequirementDiagnostics(seedInput);
   const explicitGapDiagnostics = bootstrapSeedExplicitGapDiagnostics(seedInput);
   const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
   const preflightDiagnostics = bootstrapSeedPreflightDiagnostics(bootstrapSeed);
+  for (const [index, phase] of (seedInput.roadmapPhases ?? []).entries()) {
+    if (!phase.title.trim() || !phase.phase.trim()) {
+      preflightDiagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${index}]`,
+        code: "seed_phase_identity_missing",
+        message: "Each phase needs a title and phase reference.",
+        repair: "Supply phase intent or use bootstrapModel."
+      }));
+    }
+  }
   const preWriteDiagnostics = dedupeProjectInitDiagnostics([
     ...rawPhaseRequirementDiagnostics,
     ...explicitGapDiagnostics,
@@ -1204,6 +1210,32 @@ async function blueprintProjectInitUnlocked(
     return buildInvalidProjectInitResult({
       projectRoot,
       diagnostics: preWriteDiagnostics
+    });
+  }
+
+  let prepared: ReturnType<typeof prepareBootstrapArtifactContents>;
+  try {
+    prepared = prepareBootstrapArtifactContents({ projectName, bootstrapSeed, bootstrapAssessment });
+  } catch (error) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: [seedDiagnostic({
+        path: "bootstrapModel",
+        code: "bootstrap_render_invalid",
+        message: (error as Error).message,
+        repair: "Correct the indicated content before creating project files."
+      })]
+    });
+  }
+  if (prepared.issues.length) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: prepared.issues.map(message => seedDiagnostic({
+        path: "bootstrapModel",
+        code: "bootstrap_content_invalid",
+        message,
+        repair: "Correct the indicated product content; runtime owns formatting."
+      }))
     });
   }
 
@@ -1237,6 +1269,8 @@ async function blueprintProjectInitUnlocked(
 
   const scaffold = await blueprintArtifactScaffold({
     cwd: projectRoot,
+    bootstrapInitialization: true,
+    preparedBootstrapContents: prepared.contents,
     overwrite,
     projectName,
     bootstrapSeed,
@@ -1290,6 +1324,7 @@ async function blueprintProjectInitUnlocked(
     seededConfig.configPath
   ];
   const warnings = [
+    ...prepared.warnings,
     ...scaffold.warnings,
     ...bootstrapContextWarnings,
     ...seededConfig.warnings,
@@ -1421,7 +1456,37 @@ export async function blueprintProjectStatus(
   };
 }
 
+export async function blueprintProjectPrepare(args: { cwd?: string; auto?: boolean; defaultsPath?: string } = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const [status, config, repoSummary] = await Promise.all([
+    blueprintProjectStatus({ cwd: projectRoot }),
+    blueprintConfigGet({ cwd: projectRoot, defaultsPath: args.defaultsPath, scope: "effective" }),
+    readRepoSummary(projectRoot)
+  ]);
+  const blocked = status.status === "partial" || status.status === "mapping-incomplete" ||
+    (status.bootstrap.brownfieldDetected && !status.bootstrap.codebaseMapped);
+  return {
+    status: blocked ? "blocked" : "ready",
+    project: status,
+    config,
+    bootstrapMode: args.auto === true ? "auto" : "interactive",
+    clarificationRequired: args.auto !== true,
+    nextAction: blocked ? status.nextAction : args.auto === true
+      ? "Synthesize the supplied brief using authoringSchema; do not invent missing project intent."
+      : "Ask one focused clarifying question and wait for the user's response before proposing project creation.",
+    evidence: { repoSummary, codebaseMapped: status.bootstrap.codebaseMapped },
+    authoringSchema: z.toJSONSchema(bootstrapAuthoringSchema, { target: "draft-7" }),
+    authoringRules: ["Author requirements once inside their owning phase.", "Runtime supplies IDs, phase numbers, statuses and Markdown.", "Empty optional lists are valid; never invent assumptions to fill sections.", "Show the proposal and get approval before interactive initialization."]
+  };
+}
+
 export const projectToolDefinitions = [
+  {
+    name: "blueprint_project_prepare",
+    description: "Read bootstrap readiness, effective config and compact authoring schema. First run asks clarification unless --auto is explicit.",
+    inputSchema: { cwd: z.string().optional(), defaultsPath: z.string().optional(), auto: z.boolean().optional().describe("True only for an explicit --auto user request; default false even without config.") },
+    handler: async (args: Record<string, unknown>) => blueprintProjectPrepare(args)
+  },
   {
     name: "blueprint_command_catalog",
     description: "Return the retained Blueprint command registry and router metadata.",
@@ -1431,7 +1496,7 @@ export const projectToolDefinitions = [
   {
     name: "blueprint_project_init",
     description:
-      "Create the initial .blueprint/ scaffold and seed normalized repo config from defaults.",
+      "Create a project from the compact bootstrapModel after clarification and approval. Runtime derives IDs, numbering and Markdown; legacy bootstrapSeed remains supported.",
     inputSchema: projectInitInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintProjectInit(args as ProjectInitArgs)

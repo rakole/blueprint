@@ -1184,6 +1184,7 @@ test("runtime metadata keeps a config-read path for every optional-subagent comm
 
     const hasConfigReadPath =
       metadata.requiredTools.includes("blueprint_config_get") ||
+      (metadata.commandName === "new-project" && metadata.requiredTools.includes("blueprint_project_prepare")) ||
       (metadata.commandName === "discuss-phase" && metadata.requiredTools.includes("blueprint_discuss_prepare")) ||
       (metadata.commandName === "research-phase" && metadata.requiredTools.includes("blueprint_research_prepare")) ||
       (metadata.commandName === "plan-phase" && metadata.requiredTools.includes("blueprint_plan_prepare")) ||

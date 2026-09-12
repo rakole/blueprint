@@ -21,8 +21,8 @@ declare const journalSchema: z.ZodObject<{
     }, z.core.$strip>>;
     reuse: z.ZodBoolean;
     stages: z.ZodRecord<z.ZodEnum<{
-        cleanup: "cleanup";
         provenance: "provenance";
+        cleanup: "cleanup";
         state: "state";
         artifact: "artifact";
         routing: "routing";
@@ -90,8 +90,8 @@ declare const sessionSchema: z.ZodObject<{
             }, z.core.$strip>>;
             reuse: z.ZodBoolean;
             stages: z.ZodRecord<z.ZodEnum<{
-                cleanup: "cleanup";
                 provenance: "provenance";
+                cleanup: "cleanup";
                 state: "state";
                 artifact: "artifact";
                 routing: "routing";
@@ -127,8 +127,8 @@ declare const sessionSchema: z.ZodObject<{
         }, z.core.$strip>>;
         reuse: z.ZodBoolean;
         stages: z.ZodRecord<z.ZodEnum<{
-            cleanup: "cleanup";
             provenance: "provenance";
+            cleanup: "cleanup";
             state: "state";
             artifact: "artifact";
             routing: "routing";

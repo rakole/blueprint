@@ -118,3 +118,17 @@ ledgers, preserving the existing phase.plan execution shape. Submit retains raw
 candidates before assessment. Review verdicts bind to candidate revision/hash.
 Load planning recovery guidance only for conflicts or interrupted publication.
 Do not reintroduce primitive artifact/state orchestration into the normal prompt.
+
+## Bootstrap input boundary
+
+New-project loads only its compact runtime contract. Project prepare owns readiness,
+effective defaults and the generated authoring schema. First-run clarification is
+required even without config; only an explicit `--auto` request bypasses it. Keep
+config defaults interactive with auto_advance false. The model authors requirements
+inside phases; the compiler assigns stable requirement IDs, phase numbers and
+statuses, then MCP renders the existing canonical documents. Optional empty content
+is valid. Do not reintroduce word-count gates, mandatory secondary audiences or
+mandatory 2-5 criteria counts. Legacy bootstrapSeed callers remain supported but
+must supply clarification in interactive mode. Test first-pass behavior with the
+small corpus in new-project-authoring.test.ts; it is deterministic coverage, not a
+hosted-model accuracy benchmark.

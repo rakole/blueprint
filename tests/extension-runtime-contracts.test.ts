@@ -317,7 +317,7 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
         `${contract.commandName} references unknown optional agent ${agentName}`
       );
       assert.match(
-        raw,
+        runtimeToolReferenceText,
         new RegExp(escapeRegExp(`\`${agentName}\``)),
         `${contract.commandName} should reference ${agentName} by runtime name`
       );
@@ -361,15 +361,17 @@ test("legitimate roadmap-add callers pass the confirmation receipt after approva
 });
 
 test("new-project canonical guardrails forbid shell execution and tool-name drift", async () => {
-  const [manifest, raw] = await Promise.all([
-    readRelativePath("commands/blu-new-project.toml"),
+  const [skill, raw] = await Promise.all([
+    readRelativePath("skills/blueprint-bootstrap/SKILL.md"),
     readRelativePath("skills/blueprint-bootstrap/references/runtime-guardrails.md")
   ]);
 
   assert.match(
-    manifest,
-    /runtime-guardrails\.md` as the canonical host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrail source/
+    skill,
+    /`references\/runtime-guardrails\.md` only for recovery or unfamiliar host behavior/
   );
+  assert.match(skill, /## Runtime Call Rules/);
+  assert.match(skill, /Never invoke MCP tools through shell wrappers or ad-hoc SDK scripts/);
   assert.match(
     raw,
     /Call Blueprint MCP tools only through runtime FQNs such as\s+`mcp_blueprint_blueprint_project_init`/

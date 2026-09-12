@@ -46,9 +46,9 @@ declare const authoringSchema: z.ZodObject<{
             item: z.ZodString;
             disposition: z.ZodEnum<{
                 unknown: "unknown";
-                blocked: "blocked";
                 none: "none";
                 deferred: "deferred";
+                blocked: "blocked";
             }>;
             rationale: z.ZodString;
             followUp: z.ZodString;
