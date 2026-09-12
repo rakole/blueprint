@@ -29,7 +29,7 @@ import {
   blueprintArtifactValidate
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintConfigSetProfile } from "../src/mcp/tools/config.js";
-import { blueprintProjectInit } from "../src/mcp/tools/project.js";
+import { blueprintProjectInit as initializeProject } from "../src/mcp/tools/project.js";
 import { impactToolDefinitions } from "../src/mcp/tools/impact.js";
 import {
   blueprintPhaseArtifactWrite,
@@ -46,6 +46,10 @@ import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const execFileAsync = promisify(execFile);
+// These legacy fixtures start after the host has captured a clarification response.
+const blueprintProjectInit = (args: Parameters<typeof initializeProject>[0] = {}) =>
+  initializeProject({ clarification: "The first release should deliver the capabilities in this fixture.", ...args });
+
 const repoRoot = process.cwd();
 const impactFixtureBaseRepo = path.join(repoRoot, "tests/fixtures/impact/base-repo");
 
@@ -7340,6 +7344,7 @@ test("public project init tool trims redundant success-path diagnostics on live 
           cwd: repoPath,
           defaultsPath,
           bootstrapMode: "interactive",
+          clarification: "The first release validates the public bootstrap response.",
           bootstrapSeed: {
             vision:
               "Create a focused fixture that validates public Blueprint project init MCP responses.",

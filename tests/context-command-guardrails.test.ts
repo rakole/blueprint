@@ -12,7 +12,7 @@ const read = (filePath: string) => readFileSync(join(root, filePath), "utf8");
 test("Blueprint runtime keeps phase context under .blueprint instead of repo-root CONTEXT.md", () => {
   const projectToolSource = read("src/mcp/tools/project.ts");
   const mapManifest = read("commands/blu-map-codebase.toml");
-  const newProjectManifest = read("commands/blu-new-project.toml");
+  const newProjectManifest = [read("commands/blu-new-project.toml"), read("skills/blueprint-bootstrap/SKILL.md")].join("\n");
   const contextContract = readArtifactContract("phase.context");
 
   for (const content of [projectToolSource, mapManifest, newProjectManifest]) {

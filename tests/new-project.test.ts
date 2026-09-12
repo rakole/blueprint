@@ -16,7 +16,7 @@ import {
   executeToolHandlerWithFailureLogging
 } from "../src/mcp/server.js";
 import {
-  blueprintProjectInit,
+  blueprintProjectInit as initializeProject,
   blueprintProjectStatus,
   projectToolDefinitions
 } from "../src/mcp/tools/project.js";
@@ -37,6 +37,10 @@ import {
   blueprintStateUpdate
 } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
+
+// These legacy fixtures start after the host has captured a clarification response.
+const blueprintProjectInit = (args: Parameters<typeof initializeProject>[0] = {}) =>
+  initializeProject({ clarification: "The first release should deliver the capabilities in this fixture.", ...args });
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/new-project");
@@ -851,14 +855,9 @@ test("new-project auto mode rejects missing supplied or repo-derived context bef
 
   assert.equal(result.status, "invalid");
   assert.equal(result.written, false);
-  assert.deepEqual(result.diagnostics![0], {
-    path: "bootstrapSeed.vision",
-    code: "seed_auto_context_missing",
-    message:
-      "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes.",
-    repair: "Provide bootstrapSeed.vision or add README/package description context before retrying.",
-    retryable: true
-  });
+  assert.equal(result.diagnostics![0]?.code, "seed_vision_missing");
+  assert.ok(result.diagnostics!.some(diagnostic => diagnostic.code === "seed_requirements_missing"));
+  assert.ok(result.diagnostics!.some(diagnostic => diagnostic.code === "seed_roadmap_phases_missing"));
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 
@@ -1146,13 +1145,8 @@ test("new-project accepts generic success criterion wording while preserving cou
     }
   });
 
-  assert.equal(countResult.status, "invalid");
-  assert.match(countResult.issues!.join("\n"), /must include 2-5 success criteria/i);
-  assert.equal(
-    countResult.diagnostics!.find((diagnostic) => diagnostic.code === "seed_success_criteria_count_invalid")?.path,
-    "bootstrapSeed.roadmapPhases[0].successCriteria"
-  );
-  assert.equal(await pathExists(path.join(countRepoPath, ".blueprint")), false);
+  assert.equal(countResult.status, undefined);
+  assert.equal((await blueprintArtifactValidate({ cwd: countRepoPath })).valid, true);
 });
 
 test("new-project rejects duplicate raw phase requirement refs before normalization", async (t) => {
@@ -1249,7 +1243,7 @@ test("new-project aggregates raw duplicate phase requirement refs with other pre
           title: "Trace Bootstrap Requirements",
           objective: "Persist a roadmap with traceable requirement evidence.",
           requirementIds: ["PF-71", "PF-72", "PF-72"],
-          successCriteria: ["The preflight reports all relevant seed diagnostics before writing."]
+          successCriteria: []
         }
       ]
     }
@@ -1258,10 +1252,10 @@ test("new-project aggregates raw duplicate phase requirement refs with other pre
   assert.equal(result.status, "invalid");
   assert.equal(result.written, false);
   assert.match(result.issues!.join("\n"), /Phase 1 references requirement PF-72 more than once/i);
-  assert.match(result.issues!.join("\n"), /Phase 1 must include 2-5 success criteria before the first write/i);
+  assert.match(result.issues!.join("\n"), /Phase 1 must include explicit successCriteria before the first write/i);
   assert.deepEqual(
     result.diagnostics!.map((diagnostic) => diagnostic.code),
-    ["seed_duplicate_phase_requirement_ref", "seed_success_criteria_count_invalid"]
+    ["seed_duplicate_phase_requirement_ref", "seed_phase_success_criteria_missing"]
   );
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
@@ -2156,12 +2150,10 @@ test("command contract references the same Phase 1 tool names as the MCP server"
     )
   ]);
   const requiredTools = [
+    "blueprint_project_prepare",
     "blueprint_project_init",
     "blueprint_project_status",
-    "blueprint_config_get",
     "blueprint_config_set",
-    "blueprint_state_update",
-    "blueprint_artifact_contract_read",
     "blueprint_artifact_validate"
   ];
 
@@ -2183,16 +2175,16 @@ test("command contract references the same Phase 1 tool names as the MCP server"
   assert.deepEqual(runtimeContract.runtimeReference?.exactMcpDestination, requiredTools);
 
   assert.match(commandFile, /--auto/);
-  assert.match(commandFile, /\.blueprint\/config\.json/);
+  assert.match(skillFile, /\.blueprint\/config\.json/);
   assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_/);
   assert.match(guardrailsRef, /mcp_blueprint_blueprint_project_init/);
   assert.match(guardrailsRef, /Blueprint MCP server is disconnected or undiscovered/i);
   assert.match(guardrailsRef, /Never try to invoke Blueprint MCP tools through shell/i);
-  assert.match(skillFile, /Execution profile: `long-running-mutation`/);
-  assert.match(contractRef, /Execution profile: `long-running-mutation`/);
+  assert.match(skillFile, /bootstrapModel/);
+  assert.match(contractRef, /Resolve, Read, Decide, Execute, Persist, Validate, Route/);
   assert.match(
     runtimeContract.runtimeReference?.contractNotes ?? "",
-    /Long-running-mutation Gemini-native bootstrap/i
+    /Gemini-native bootstrap: blueprint_project_prepare/i
   );
 });
 

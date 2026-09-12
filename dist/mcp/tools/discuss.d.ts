@@ -352,7 +352,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         };
         ambientCurrentPhase: string;
         config: {
-            scope: "effective" | "project" | "defaults";
+            scope: "project" | "defaults" | "effective";
             config: {
                 version: number;
                 mode: string;
@@ -593,7 +593,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         };
         ambientCurrentPhase: string;
         config: {
-            scope: "effective" | "project" | "defaults";
+            scope: "project" | "defaults" | "effective";
             config: {
                 version: number;
                 mode: string;
@@ -834,7 +834,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         };
         ambientCurrentPhase: string;
         config: {
-            scope: "effective" | "project" | "defaults";
+            scope: "project" | "defaults" | "effective";
             config: {
                 version: number;
                 mode: string;
@@ -1080,7 +1080,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         };
         ambientCurrentPhase: string;
         config: {
-            scope: "effective" | "project" | "defaults";
+            scope: "project" | "defaults" | "effective";
             config: {
                 version: number;
                 mode: string;
@@ -1321,7 +1321,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         };
         ambientCurrentPhase: string;
         config: {
-            scope: "effective" | "project" | "defaults";
+            scope: "project" | "defaults" | "effective";
             config: {
                 version: number;
                 mode: string;
@@ -1562,7 +1562,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         };
         ambientCurrentPhase: string;
         config: {
-            scope: "effective" | "project" | "defaults";
+            scope: "project" | "defaults" | "effective";
             config: {
                 version: number;
                 mode: string;
@@ -1803,7 +1803,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         };
         ambientCurrentPhase: string;
         config: {
-            scope: "effective" | "project" | "defaults";
+            scope: "project" | "defaults" | "effective";
             config: {
                 version: number;
                 mode: string;

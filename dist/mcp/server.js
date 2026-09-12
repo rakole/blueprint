@@ -1700,8 +1700,8 @@ var init_doc = __esm({
         const lines3 = content.split("\n").filter((x) => x);
         const minIndent = Math.min(...lines3.map((x) => x.length - x.trimStart().length));
         const dedented = lines3.map((x) => x.slice(minIndent)).map((x) => " ".repeat(this.indent * 2) + x);
-        for (const line of dedented) {
-          this.content.push(line);
+        for (const line2 of dedented) {
+          this.content.push(line2);
         }
       }
       compile() {
@@ -8200,13 +8200,13 @@ var require_scope = __commonJS({
       }
     };
     exports.ValueScopeName = ValueScopeName;
-    var line = (0, code_1._)`\n`;
+    var line2 = (0, code_1._)`\n`;
     var ValueScope = class extends Scope {
       constructor(opts) {
         super(opts);
         this._values = {};
         this._scope = opts.scope;
-        this.opts = { ...opts, _n: opts.lines ? line : code_1.nil };
+        this.opts = { ...opts, _n: opts.lines ? line2 : code_1.nil };
       }
       get() {
         return this._scope;
@@ -12269,7 +12269,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text, msg) => text + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text2, msg) => text2 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -14925,18 +14925,14 @@ var init_command_runtime_metadata = __esm({
       "blueprint-roadmapper"
     );
     NEW_PROJECT_REQUIRED_TOOLS = [
+      "blueprint_project_prepare",
       "blueprint_project_init",
       "blueprint_project_status",
-      "blueprint_config_get",
       "blueprint_config_set",
-      "blueprint_state_update",
-      "blueprint_artifact_contract_read",
       "blueprint_artifact_validate"
     ];
     NEW_PROJECT_REQUIRED_INPUT_PATHS = [
-      "skills/blueprint-bootstrap/references/questioning.md",
-      "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md",
-      "skills/blueprint-bootstrap/references/runtime-guardrails.md"
+      "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"
     ];
     NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#new-project";
     NEW_PROJECT_RUNTIME_METADATA = {
@@ -14976,7 +14972,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: NEW_PROJECT_REQUIRED_TOOLS,
         optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.",
+        contractNotes: "Gemini-native bootstrap: blueprint_project_prepare returns effective config, readiness and the compact authoring schema. Ask a clarifying question on first run and wait for the user even without config; only explicit --auto bypasses clarification. Config defaults remain mode=interactive and workflow.auto_advance=false. Author requirements once inside phases through bootstrapModel; MCP derives IDs, phase numbers, statuses and Markdown. Read only the compact bootstrap-runtime-contract.md on the normal path. Preserve map-first gating, visible approval, saved-default provenance and implemented-only routing.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -17721,6 +17717,101 @@ var init_runtime_vocabulary = __esm({
   }
 });
 
+// src/mcp/bootstrap-authoring.ts
+function compileBootstrapAuthoringModel(model, previous = []) {
+  const previousIds = new Map(previous.map((row) => [identity(row.requirement), row.id]));
+  const allocated = new Set(previous.map((row) => row.id));
+  let nextId = 1;
+  const requirements = [];
+  const statements = /* @__PURE__ */ new Set();
+  const titles = /* @__PURE__ */ new Map();
+  const addRequirement = (value, scope, group) => {
+    const key2 = identity(value);
+    if (statements.has(key2)) {
+      throw new Error(`Requirement appears more than once or in conflicting scopes: ${line(value)}`);
+    }
+    statements.add(key2);
+    let id = previousIds.get(key2);
+    if (!id) {
+      do {
+        id = `RQ-${String(nextId++).padStart(2, "0")}`;
+      } while (allocated.has(id));
+      allocated.add(id);
+    }
+    requirements.push({ id, requirement: line(value), scope, group, status: "Pending", notes: "" });
+    return id;
+  };
+  const roadmapPhases = model.phases.map((phase, index) => {
+    const key2 = identity(phase.title);
+    if (titles.has(key2)) {
+      throw new Error(`Phase titles must be distinct: ${line(phase.title)}`);
+    }
+    const dependencies2 = (phase.dependsOn ?? []).map((title) => {
+      const ref = titles.get(identity(title));
+      if (!ref) {
+        throw new Error(`Phase ${line(phase.title)} depends on an unknown or later phase: ${line(title)}. Put prerequisites first.`);
+      }
+      return ref;
+    });
+    const number3 = String(index + 1);
+    titles.set(key2, number3);
+    return {
+      phase: number3,
+      title: line(phase.title),
+      objective: line(phase.objective),
+      requirementIds: phase.requirements.map((value) => addRequirement(value, "committed", line(phase.title))),
+      successCriteria: phase.successCriteria.map(line),
+      dependencies: [...new Set(dependencies2)]
+    };
+  });
+  for (const value of model.deferred ?? []) {
+    addRequirement(value, "deferred", "Later milestones");
+  }
+  for (const value of model.outOfScope ?? []) {
+    addRequirement(value, "out_of_scope", "Explicit exclusions");
+  }
+  return {
+    vision: line(model.vision),
+    audience: { primary: model.audience.map(line), secondary: [] },
+    currentMilestone: line(model.milestone),
+    constraints: (model.constraints ?? []).map(line),
+    nonGoals: (model.outOfScope ?? []).map(line),
+    assumptions: (model.assumptions ?? []).map(line),
+    requirements,
+    roadmapPhases
+  };
+}
+function readPreviousBootstrapRequirementIds(markdown) {
+  return [...markdown.matchAll(/^\|\s*([A-Z][A-Z0-9-]*-\d+)\s*\|\s*((?:\\\||[^|])*)\|/gm)].map((match) => ({ id: match[1], requirement: match[2].trim().replace(/\\\|/g, "|") }));
+}
+var text, optionalList, bootstrapAuthoringSchema, line, identity;
+var init_bootstrap_authoring = __esm({
+  "src/mcp/bootstrap-authoring.ts"() {
+    "use strict";
+    init_v4();
+    text = string2().trim().min(1);
+    optionalList = array(text).optional();
+    bootstrapAuthoringSchema = strictObject({
+      vision: text.describe("The product's purpose and the outcome it enables."),
+      audience: array(text).min(1).describe("Actual users; one audience is sufficient."),
+      milestone: text.describe("Name of the first milestone, for example v1."),
+      constraints: optionalList.describe("Only confirmed constraints. Omit or use [] when none are known."),
+      assumptions: optionalList.describe("Unconfirmed assumptions or open questions, explicitly labeled. [] is valid."),
+      phases: array(strictObject({
+        title: text,
+        objective: text,
+        requirements: array(text).min(1).describe("User capabilities owned by this phase. Do not generate IDs or repeat another phase's requirements."),
+        successCriteria: array(text).min(1).describe("Observable evidence of success. Usually 2-5; one precise criterion is sufficient."),
+        dependsOn: optionalList.describe("Exact titles of earlier phases this phase requires. Omit when independent.")
+      })).min(1).describe("Phases in delivery order. Runtime assigns phase numbers."),
+      deferred: optionalList.describe("Capabilities for a later milestone, excluded from these phases."),
+      outOfScope: optionalList.describe("Explicit exclusions, excluded from these phases.")
+    });
+    line = (value) => value.replace(/\s+/g, " ").trim();
+    identity = (value) => line(value).toLocaleLowerCase("en-US");
+  }
+});
+
 // src/shared/security.ts
 import { existsSync, realpathSync } from "node:fs";
 import path from "node:path";
@@ -17764,8 +17855,8 @@ function isEscapingRoot(rootPath, candidatePath2) {
   const relative = path.relative(rootPath, candidatePath2);
   return relative.startsWith("..") || path.isAbsolute(relative);
 }
-function findSuspiciousEncodedPayload(text) {
-  const tokens = text.match(/[A-Za-z0-9+/=]{128,}|[A-Fa-f0-9]{128,}/g) ?? [];
+function findSuspiciousEncodedPayload(text2) {
+  const tokens = text2.match(/[A-Za-z0-9+/=]{128,}|[A-Fa-f0-9]{128,}/g) ?? [];
   for (const token of tokens) {
     const entropy = shannonEntropy(token);
     if (entropy >= 4.4) {
@@ -17871,11 +17962,11 @@ function normalizeNumericArtifactId(value, label = "Artifact id") {
   }
   return trimmed.padStart(2, "0");
 }
-function analyzePromptBoundaryText(text) {
+function analyzePromptBoundaryText(text2) {
   const findings = [];
   const warnings = [];
   const errors = [];
-  let sanitizedText = text.replace(/\r\n/g, "\n");
+  let sanitizedText = text2.replace(/\r\n/g, "\n");
   const removedCharacters = sanitizedText.match(INVISIBLE_OR_CONTROL_CHARACTERS)?.length ?? 0;
   if (removedCharacters > 0) {
     sanitizedText = sanitizedText.replace(INVISIBLE_OR_CONTROL_CHARACTERS, "");
@@ -17942,9 +18033,9 @@ function analyzePromptBoundaryText(text) {
     hasErrors: errors.length > 0
   };
 }
-function prepareTextForPersistence(text, options = {}) {
+function prepareTextForPersistence(text2, options = {}) {
   const label = options.label ?? "Content";
-  const analysis = analyzePromptBoundaryText(text);
+  const analysis = analyzePromptBoundaryText(text2);
   if (analysis.hasErrors) {
     throw new Error(`${label} is unsafe to persist. ${analysis.errors.join(" ")}`);
   }
@@ -21185,11 +21276,11 @@ var init_artifact_contracts = __esm({
       jsonSchema: readJsonSchemaAsset(BOOTSTRAP_ROADMAP_MODEL_SCHEMA_FILE),
       qualityRules: [
         "Author the roadmap as the canonical milestone-to-phase traceability model before rendering Markdown; do not invent phase numbers, requirement ids, status labels, dependency labels, or inserted markers outside the schema vocabulary.",
-        "Every whole-number bootstrap phase must declare durable requirement ids, dependency phase numbers, objective, status, and 2-5 concrete success criteria; inserted decimal phases may temporarily use empty requirement grounding only until discovery assigns it.",
+        "Every whole-number bootstrap phase must declare durable requirement ids, dependency phase numbers, objective, status, and at least one observable success criterion; inserted decimal phases may temporarily use empty requirement grounding only until discovery assigns it.",
         "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
-        "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
+        "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and one or more success criteria as the matching phase entry.",
         "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",
-        "Do not copy minimal example wording, placeholder titles, or static-for-now assumptions into a real project roadmap. Prefer specific success criteria over generic filler, but bootstrap validation itself enforces requirement grounding and 2-5 criteria."
+        "Do not copy minimal example wording, placeholder titles, or static-for-now assumptions into a real project roadmap. Prefer specific success criteria over generic filler, but bootstrap validation itself enforces requirement grounding and at least one success criterion."
       ],
       contextBindings: [
         ".blueprint/PROJECT.md supplies the active milestone, repository shape, codebase mapping posture, and roadmap confidence.",
@@ -22801,7 +22892,7 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Project bootstrap should capture the product direction, milestone framing, and durable scope posture before later lifecycle commands run.",
-          "Validation expects substantive content in the audience, constraints, scope posture, non-goals, and assumptions sections."
+          "Validation requires a primary audience and project intent. Secondary audience is optional; constraints, non-goals and assumptions may explicitly be none."
         ],
         renderScaffoldTemplate: renderBootstrapProjectTemplate,
         renderAuthoringTemplate: renderBootstrapProjectTemplate
@@ -22864,7 +22955,7 @@ var init_artifact_contracts = __esm({
         notes: [
           "Roadmap bootstrap should keep phase ordering, requirement coverage, and confidence posture visible.",
           "Validation expects at least one concrete phase entry with objective, requirement mapping, and success criteria.",
-          "Structured roadmap authoring is schema-first: use bootstrap.roadmap modelContract metadata for milestone, bootstrap status, requirement coverage, phase status, dependencies, inserted markers, requirement ids, and 2-5 success criteria."
+          "Structured roadmap authoring is schema-first: use bootstrap.roadmap modelContract metadata for milestone, bootstrap status, requirement coverage, phase status, dependencies, inserted markers, requirement ids, and one or more success criteria."
         ],
         modelContract: BOOTSTRAP_ROADMAP_MODEL_CONTRACT,
         renderScaffoldTemplate: renderBootstrapRoadmapTemplate,
@@ -24976,6 +25067,7 @@ async function maybeDelayConfigSetBeforeWriteForTest() {
 function getHardCodedConfig() {
   return {
     version: HARD_CODED_CONFIG_VERSION,
+    // Missing project config must never imply automatic bootstrap.
     mode: "interactive",
     granularity: "standard",
     model_profile: "balanced",
@@ -25008,6 +25100,7 @@ function getHardCodedConfig() {
       no_uat: false,
       code_review: true,
       code_review_depth: "standard",
+      // Opt-in workflow automation; bootstrap also requires an explicit --auto request.
       auto_advance: false,
       research_before_questions: false,
       discuss_mode: "discuss",
@@ -25960,8 +26053,8 @@ function parseRoadmapRequirements(value) {
 }
 function extractRoadmapDetailRequirements(body) {
   return uniqueRequirements(
-    body.replace(/\r\n/g, "\n").split("\n").flatMap((line) => {
-      const normalized = line.trim().replace(/^[-*+]\s+/, "").replace(/\*\*/g, "").trim();
+    body.replace(/\r\n/g, "\n").split("\n").flatMap((line2) => {
+      const normalized = line2.trim().replace(/^[-*+]\s+/, "").replace(/\*\*/g, "").trim();
       const match = normalized.match(
         /^(?:mapped\s+)?requirements?(?:\s+ids?)?\s*:\s*(.+)$/i
       );
@@ -25983,8 +26076,8 @@ function parseRoadmapPhaseTitle(value) {
     requirements: parseRoadmapRequirements(requirementsMatch[1] ?? null)
   };
 }
-function parseRoadmapPhaseLine(line) {
-  const match = line.match(
+function parseRoadmapPhaseLine(line2) {
+  const match = line2.match(
     /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)*):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
   );
   if (!match) {
@@ -26031,8 +26124,8 @@ function parseRoadmapPhaseChildLines(lines3) {
     successCriteria: successCriteria.length > 0 ? successCriteria.filter((value) => value.length > 0).join("; ") : null
   };
 }
-function parseSimpleMarkdownTableCells(line) {
-  const trimmed = line.trim();
+function parseSimpleMarkdownTableCells(line2) {
+  const trimmed = line2.trim();
   if (!/^\|.*\|$/.test(trimmed)) {
     return null;
   }
@@ -26468,16 +26561,16 @@ function extractMarkdownSection2(content, heading) {
   return match?.[1]?.trim() ?? "";
 }
 function collectListItems(block) {
-  return block.split("\n").map((line) => line.trim()).flatMap((line) => {
-    const checklistMatch = line.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
+  return block.split("\n").map((line2) => line2.trim()).flatMap((line2) => {
+    const checklistMatch = line2.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
     if (checklistMatch) {
       return [checklistMatch[1].trim()];
     }
-    const bulletMatch = line.match(/^[-*+]\s+(.+)$/);
+    const bulletMatch = line2.match(/^[-*+]\s+(.+)$/);
     if (bulletMatch) {
       return [bulletMatch[1].trim()];
     }
-    const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+    const numberedMatch = line2.match(/^\d+\.\s+(.+)$/);
     return numberedMatch ? [numberedMatch[1].trim()] : [];
   }).filter((item) => item.length > 0);
 }
@@ -26500,8 +26593,8 @@ function extractPathCandidatesFromSection(section) {
   }
   return [...candidates];
 }
-function extractBlueprintCommand(line) {
-  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s`'").,;:!?]+)?/i);
+function extractBlueprintCommand(line2) {
+  const match = line2.match(/\/blu-[a-z0-9-]+(?:\s+[^\s`'").,;:!?]+)?/i);
   return match?.[0]?.trim().replace(/[`'").,;:!?]+$/g, "") ?? null;
 }
 function extractReviewNextSafeAction(content) {
@@ -26607,7 +26700,7 @@ function hasBlockingSecurityState(content, nextSafeAction) {
 }
 function extractNextSafeActionText(content) {
   const section = extractMarkdownSection2(content, "Next Safe Action");
-  return section.split(/\r?\n/).map((line) => line.replace(/^[-*+]\s+/, "").trim()).find((line) => line.length > 0) ?? extractArtifactMarker(content, "Next Safe Action");
+  return section.split(/\r?\n/).map((line2) => line2.replace(/^[-*+]\s+/, "").trim()).find((line2) => line2.length > 0) ?? extractArtifactMarker(content, "Next Safe Action");
 }
 function extractVisibleReviewTargetId(value) {
   const trimmed = value.trim();
@@ -27771,7 +27864,7 @@ var init_phase_locations = __esm({
 
 // src/mcp/tools/phase-markdown.ts
 function summarizeSavedArtifact(raw) {
-  const normalizedLines = raw.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim());
+  const normalizedLines = raw.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim());
   const withoutFrontmatter = [...normalizedLines];
   if (withoutFrontmatter[0] === "---") {
     withoutFrontmatter.shift();
@@ -27783,10 +27876,10 @@ function summarizeSavedArtifact(raw) {
     }
   }
   const meaningfulLines = withoutFrontmatter.filter(
-    (line) => line.length > 0 && !line.startsWith("*Generated by")
+    (line2) => line2.length > 0 && !line2.startsWith("*Generated by")
   );
-  const heading = meaningfulLines.find((line) => line.startsWith("#"));
-  const bodyLine = meaningfulLines.find((line) => !line.startsWith("#"));
+  const heading = meaningfulLines.find((line2) => line2.startsWith("#"));
+  const bodyLine = meaningfulLines.find((line2) => !line2.startsWith("#"));
   return {
     title: heading?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
     summary: bodyLine ?? "Artifact content is present and available for review."
@@ -27803,11 +27896,11 @@ function extractMarkdownHeading(markdown) {
   return markdown.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
 }
 function normalizeMarkdownListItems(section) {
-  return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((line) => line.replace(/^[-*+]\s+/, "").trim()).filter((line) => line.length > 0);
+  return section.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0).map((line2) => line2.replace(/^[-*+]\s+/, "").trim()).filter((line2) => line2.length > 0);
 }
 function sectionToList(section) {
   const lines3 = normalizeMarkdownListItems(section);
-  const bulletLines = lines3.filter((line) => !/^[A-Za-z0-9_.-]+\s*:\s*/.test(line));
+  const bulletLines = lines3.filter((line2) => !/^[A-Za-z0-9_.-]+\s*:\s*/.test(line2));
   return bulletLines.length > 0 ? bulletLines : lines3;
 }
 function summarizeContextPieces(pieces, emptyMessage) {
@@ -27838,21 +27931,21 @@ var init_phase_markdown = __esm({
 });
 
 // src/mcp/tools/phase-no-ui-signals.ts
-function normalizeSignalLine(line) {
-  return line.replace(/\s+/g, " ").trim();
+function normalizeSignalLine(line2) {
+  return line2.replace(/\s+/g, " ").trim();
 }
-function normalizeLineForPrefixMatching(line) {
-  return line.replace(/^(?:[-*+]\s+|\d+\.\s+)/, "").trim();
+function normalizeLineForPrefixMatching(line2) {
+  return line2.replace(/^(?:[-*+]\s+|\d+\.\s+)/, "").trim();
 }
 function collectContextSignalLines(content) {
   const heading = extractMarkdownHeading(content);
-  const contentLines = content.replace(/\r\n/g, "\n").split("\n").map(normalizeSignalLine).filter((line) => line.length > 0 && !line.startsWith("#"));
+  const contentLines = content.replace(/\r\n/g, "\n").split("\n").map(normalizeSignalLine).filter((line2) => line2.length > 0 && !line2.startsWith("#"));
   return [
     ...heading ? [normalizeSignalLine(heading)] : [],
     ...contentLines
   ].filter(
-    (line) => !CONTEXT_LINE_PREFIXES_TO_IGNORE.some(
-      (pattern) => pattern.test(normalizeLineForPrefixMatching(line))
+    (line2) => !CONTEXT_LINE_PREFIXES_TO_IGNORE.some(
+      (pattern) => pattern.test(normalizeLineForPrefixMatching(line2))
     )
   );
 }
@@ -27862,17 +27955,17 @@ function collectSignalLines(args) {
 function detectStrongExplicitNoUiSignal(args) {
   const strongNoUiSignals = /* @__PURE__ */ new Set();
   const positiveUiSignals = /* @__PURE__ */ new Set();
-  for (const line of collectSignalLines(args)) {
-    if (PROCESS_ONLY_LINE_PATTERN.test(line)) {
+  for (const line2 of collectSignalLines(args)) {
+    if (PROCESS_ONLY_LINE_PATTERN.test(line2)) {
       continue;
     }
-    let positiveScanLine = line;
+    let positiveScanLine = line2;
     let matchedStrongNoUiSignal = false;
     for (const pattern of STRONG_NO_UI_PATTERNS) {
       pattern.lastIndex = 0;
       if (pattern.test(positiveScanLine)) {
         matchedStrongNoUiSignal = true;
-        strongNoUiSignals.add(line);
+        strongNoUiSignals.add(line2);
         positiveScanLine = positiveScanLine.replace(pattern, " ");
       }
     }
@@ -27880,7 +27973,7 @@ function detectStrongExplicitNoUiSignal(args) {
       positiveScanLine = normalizeSignalLine(positiveScanLine);
     }
     if (positiveScanLine.length > 0 && POSITIVE_UI_SIGNAL_PATTERN.test(positiveScanLine)) {
-      positiveUiSignals.add(line);
+      positiveUiSignals.add(line2);
     }
   }
   return {
@@ -28088,9 +28181,9 @@ function parseFrontmatter2(raw) {
     return {};
   }
   return Object.fromEntries(
-    match[1].split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && line.includes(":")).map((line) => {
-      const separator = line.indexOf(":");
-      return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+    match[1].split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0 && line2.includes(":")).map((line2) => {
+      const separator = line2.indexOf(":");
+      return [line2.slice(0, separator).trim(), line2.slice(separator + 1).trim()];
     })
   );
 }
@@ -28103,7 +28196,7 @@ function extractMarkdownSection4(markdown, heading) {
 }
 function parseBulletSection(markdown, heading) {
   const section = extractMarkdownSection4(markdown, heading);
-  return section.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
+  return section.split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).filter((line2) => line2.length > 0 && line2.toLowerCase() !== "none");
 }
 function renderBulletSection(title, values) {
   const lines3 = values.length === 0 ? "- none" : values.map((value) => `- ${value}`).join("\n");
@@ -28271,21 +28364,21 @@ function parseStateMetadataFrontmatter(frontmatter) {
   const progress = /* @__PURE__ */ new Map();
   let inProgress = false;
   for (const rawLine of frontmatter.split(/\r?\n/)) {
-    const line = rawLine.trimEnd();
-    if (line.trim().length === 0) {
+    const line2 = rawLine.trimEnd();
+    if (line2.trim().length === 0) {
       continue;
     }
-    if (line === "progress:") {
+    if (line2 === "progress:") {
       inProgress = true;
       continue;
     }
-    const progressMatch = inProgress ? line.match(/^  ([a-z_]+):\s*(.+)$/) : null;
+    const progressMatch = inProgress ? line2.match(/^  ([a-z_]+):\s*(.+)$/) : null;
     if (progressMatch) {
       progress.set(progressMatch[1] ?? "", progressMatch[2] ?? "");
       continue;
     }
     inProgress = false;
-    const scalarMatch = line.match(/^([a-z_]+):\s*(.+)$/);
+    const scalarMatch = line2.match(/^([a-z_]+):\s*(.+)$/);
     if (scalarMatch) {
       scalars.set(scalarMatch[1] ?? "", parseStateMetadataScalar(scalarMatch[2] ?? ""));
     }
@@ -28412,8 +28505,8 @@ function parseStateDocument(raw) {
   }
   const blockersSection = extractMarkdownSection4(body, "Blockers");
   const roadmapEvolutionNotesSection = extractMarkdownSection4(body, "Roadmap Evolution Notes");
-  const blockers = blockersSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line && line !== "none");
-  const roadmapEvolutionNotes = roadmapEvolutionNotesSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line !== "none");
+  const blockers = blockersSection.split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).filter((line2) => line2 && line2 !== "none");
+  const roadmapEvolutionNotes = roadmapEvolutionNotesSection.split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).filter((line2) => line2.length > 0 && line2 !== "none");
   const currentPhaseValue = values["Current phase"] ?? "";
   const normalizedCurrentPhase = normalizeSelectedPhase(currentPhaseValue);
   if (normalizedCurrentPhase === null && currentPhaseValue.length > 0) {
@@ -29795,28 +29888,28 @@ function escapeRegExp(value) {
 function extractMarkdownSectionLines(content, heading) {
   const lines3 = content.split(/\r?\n/);
   const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`);
-  const startIndex = lines3.findIndex((line) => headingPattern.test(line.trim()));
+  const startIndex = lines3.findIndex((line2) => headingPattern.test(line2.trim()));
   if (startIndex === -1) {
     return [];
   }
   const sectionLines = [];
   for (let index = startIndex + 1; index < lines3.length; index += 1) {
-    const line = lines3[index]?.trim() ?? "";
-    if (/^##\s+/.test(line)) {
+    const line2 = lines3[index]?.trim() ?? "";
+    if (/^##\s+/.test(line2)) {
       break;
     }
-    if (line.length === 0) {
+    if (line2.length === 0) {
       continue;
     }
-    sectionLines.push(line);
+    sectionLines.push(line2);
   }
   return sectionLines;
 }
-function normalizeReportSignalLine(line) {
-  return line.replace(/^[*-]\s+/, "").replace(/`/g, "").trim().replace(/[.]+$/, "").toLowerCase();
+function normalizeReportSignalLine(line2) {
+  return line2.replace(/^[*-]\s+/, "").replace(/`/g, "").trim().replace(/[.]+$/, "").toLowerCase();
 }
-function isNoneLikeReportSignal(line) {
-  const normalized = normalizeReportSignalLine(line);
+function isNoneLikeReportSignal(line2) {
+  const normalized = normalizeReportSignalLine(line2);
   return normalized === "none" || normalized === "n/a" || normalized === "na" || normalized.startsWith("no gaps") || normalized.startsWith("no actionable gaps") || normalized.startsWith("no blockers") || normalized.startsWith("no archival blockers");
 }
 function extractLeadingArgumentToken(argumentText) {
@@ -29827,13 +29920,13 @@ function extractLeadingArgumentToken(argumentText) {
   const normalizedToken = token.replace(/^[`"'([{]+/, "").replace(/[)\]}"'`.,;:!?]+$/g, "");
   return normalizedToken.length > 0 ? normalizedToken : null;
 }
-function extractBlueprintCommand2(line, exactMilestoneArgument) {
-  const match = line.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
+function extractBlueprintCommand2(line2, exactMilestoneArgument) {
+  const match = line2.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
   if (!match || match.index === void 0) {
     return null;
   }
   const command = match[0].trim().replace(/^\/blu\s+/i, "/blu-").toLowerCase();
-  let argumentText = line.slice(match.index + match[0].length).trimStart();
+  let argumentText = line2.slice(match.index + match[0].length).trimStart();
   if (exactMilestoneArgument && (command === "/blu-audit-milestone" || command === "/blu-complete-milestone" || command === "/blu-milestone-summary") && extractLeadingArgumentToken(argumentText)?.toLowerCase() === exactMilestoneArgument.trim().toLowerCase()) {
     return `${command} ${exactMilestoneArgument}`;
   }
@@ -29855,7 +29948,7 @@ function extractBlueprintCommand2(line, exactMilestoneArgument) {
   return simpleArgument ? `${command} ${simpleArgument}` : command;
 }
 function extractNextSafeActionCommand(content) {
-  return extractMarkdownSectionLines(content, "Next Safe Action").map((line) => extractBlueprintCommand2(line)).find((command) => command !== null) ?? null;
+  return extractMarkdownSectionLines(content, "Next Safe Action").map((line2) => extractBlueprintCommand2(line2)).find((command) => command !== null) ?? null;
 }
 function extractArtifactMarker2(content, marker) {
   const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -29955,9 +30048,9 @@ async function inspectMilestoneAuditReportStatus(args) {
     const gapsFound = extractMarkdownSectionLines(raw, "Gaps Found");
     const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
     const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
-    const verdict = auditVerdictLines.map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null).find((value) => value !== null) ?? null;
+    const verdict = auditVerdictLines.map((line2) => line2.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null).find((value) => value !== null) ?? null;
     const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
-    const nextSafeAction = nextSafeActionLines.map((line) => extractBlueprintCommand2(line, args.currentMilestone)).find((command) => command !== null) ?? null;
+    const nextSafeAction = nextSafeActionLines.map((line2) => extractBlueprintCommand2(line2, args.currentMilestone)).find((command) => command !== null) ?? null;
     const gapSections = {
       requirement: requirementGapRows,
       integration: integrationGapRows,
@@ -29965,13 +30058,13 @@ async function inspectMilestoneAuditReportStatus(args) {
       optional: optionalGapRows
     };
     const hasStructuredGapSections = Object.values(gapSections).some((rows) => rows.length > 0);
-    const actionableGaps = hasActionableMilestoneAuditGap(requirementGapRows) || hasActionableMilestoneAuditGap(integrationGapRows) || hasActionableMilestoneAuditGap(flowGapRows) || hasActionableMilestoneAuditGap(optionalGapRows) || !hasStructuredGapSections && gapsFound.some((line) => !isNoneLikeReportSignal(line));
+    const actionableGaps = hasActionableMilestoneAuditGap(requirementGapRows) || hasActionableMilestoneAuditGap(integrationGapRows) || hasActionableMilestoneAuditGap(flowGapRows) || hasActionableMilestoneAuditGap(optionalGapRows) || !hasStructuredGapSections && gapsFound.some((line2) => !isNoneLikeReportSignal(line2));
     return {
       found: true,
       verdict,
       gapSections,
       hasActionableGaps: actionableGaps,
-      hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
+      hasArchivalBlockers: archivalBlockers.some((line2) => !isNoneLikeReportSignal(line2)),
       nextSafeAction,
       readyForCompletion: verdict === "READY_TO_CLOSE" && !verdictBlocksCompletion && !actionableGaps && archivalBlockers.every(isNoneLikeReportSignal)
     };
@@ -31267,16 +31360,16 @@ ${phaseBlock}`;
 function splitRoadmapPhaseListBlocks(body) {
   const blocks = [];
   let currentBlock = [];
-  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
-    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line)) {
+  for (const line2 of body.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line2)) {
       if (currentBlock.length > 0) {
         blocks.push(currentBlock.join("\n").trimEnd());
       }
-      currentBlock = [line];
+      currentBlock = [line2];
       continue;
     }
     if (currentBlock.length > 0) {
-      currentBlock.push(line);
+      currentBlock.push(line2);
     }
   }
   if (currentBlock.length > 0) {
@@ -33043,8 +33136,8 @@ function replacePlanSlotLabel(value, fromPlanId, toPlanId) {
   }
   return updated;
 }
-function extractPlanSlotLabelFromFrontmatterLine(line) {
-  const match = line.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
+function extractPlanSlotLabelFromFrontmatterLine(line2) {
+  const match = line2.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
   const rawValue = match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
   const trimmed = rawValue?.trim() ?? "";
   if (!/^\d+$/.test(trimmed)) {
@@ -33055,8 +33148,8 @@ function extractPlanSlotLabelFromFrontmatterLine(line) {
   }
   return normalizePlanId(trimmed);
 }
-function reconcilePlanTitleLine(line, fromPlanId, toPlanId) {
-  const match = line.match(/^(\s*title:\s*)(.+)$/);
+function reconcilePlanTitleLine(line2, fromPlanId, toPlanId) {
+  const match = line2.match(/^(\s*title:\s*)(.+)$/);
   if (!match) {
     return null;
   }
@@ -33071,12 +33164,12 @@ function reconcilePlanTitleLine(line, fromPlanId, toPlanId) {
   }
   return `${prefix}${quote}${updatedValue}${quote}`;
 }
-function reconcilePlanHeadingLine(line, fromPlanId, toPlanId) {
-  if (!/^#\s+/.test(line)) {
+function reconcilePlanHeadingLine(line2, fromPlanId, toPlanId) {
+  if (!/^#\s+/.test(line2)) {
     return null;
   }
-  const updatedLine = replacePlanSlotLabel(line, fromPlanId, toPlanId);
-  return updatedLine === line ? null : updatedLine;
+  const updatedLine = replacePlanSlotLabel(line2, fromPlanId, toPlanId);
+  return updatedLine === line2 ? null : updatedLine;
 }
 function reconcileAutoAssignedPlanContent(content, planId3) {
   const normalizedPlanId = normalizePlanId(planId3);
@@ -33086,19 +33179,19 @@ function reconcileAutoAssignedPlanContent(content, planId3) {
   }
   const frontmatter = frontmatterMatch[1] ?? "";
   const updatedFrontmatterLines = frontmatter.split("\n");
-  const sourcePlanId = updatedFrontmatterLines.map((line) => extractPlanSlotLabelFromFrontmatterLine(line)).find((value) => value !== null) ?? null;
-  const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
+  const sourcePlanId = updatedFrontmatterLines.map((line2) => extractPlanSlotLabelFromFrontmatterLine(line2)).find((value) => value !== null) ?? null;
+  const planIdLineIndex = updatedFrontmatterLines.findIndex((line2) => /^plan_id:\s*/.test(line2));
   if (planIdLineIndex >= 0) {
     updatedFrontmatterLines[planIdLineIndex] = `plan_id: "${normalizedPlanId}"`;
   } else {
-    const phaseLineIndex = updatedFrontmatterLines.findIndex((line) => /^phase:\s*/.test(line));
+    const phaseLineIndex = updatedFrontmatterLines.findIndex((line2) => /^phase:\s*/.test(line2));
     if (phaseLineIndex >= 0) {
       updatedFrontmatterLines.splice(phaseLineIndex + 1, 0, `plan_id: "${normalizedPlanId}"`);
     } else {
       updatedFrontmatterLines.unshift(`plan_id: "${normalizedPlanId}"`);
     }
   }
-  const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
+  const titleLineIndex = updatedFrontmatterLines.findIndex((line2) => /^title:\s*/.test(line2));
   if (titleLineIndex >= 0) {
     const updatedTitleLine = reconcilePlanTitleLine(
       updatedFrontmatterLines[titleLineIndex] ?? "",
@@ -33113,12 +33206,12 @@ function reconcileAutoAssignedPlanContent(content, planId3) {
   const contentAfterFrontmatter = content.slice(contentStart + frontmatterMatch[0].length);
   const reconciledBody = (() => {
     let headingRewritten = false;
-    return contentAfterFrontmatter.split("\n").map((line) => {
-      if (headingRewritten || !/^#\s+/.test(line)) {
-        return line;
+    return contentAfterFrontmatter.split("\n").map((line2) => {
+      if (headingRewritten || !/^#\s+/.test(line2)) {
+        return line2;
       }
       headingRewritten = true;
-      return reconcilePlanHeadingLine(line, sourcePlanId, normalizedPlanId) ?? line;
+      return reconcilePlanHeadingLine(line2, sourcePlanId, normalizedPlanId) ?? line2;
     }).join("\n");
   })();
   return `---
@@ -34581,8 +34674,8 @@ var init_phase_command_actions = __esm({
 import { promises as fs11 } from "node:fs";
 function summarizeMarkdownContent(content) {
   const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
-  const summary = content.split("\n").map((line) => line.trim()).find(
-    (line) => line.length > 0 && !line.startsWith("#") && line !== "---" && !line.startsWith("*Generated by")
+  const summary = content.split("\n").map((line2) => line2.trim()).find(
+    (line2) => line2.length > 0 && !line2.startsWith("#") && line2 !== "---" && !line2.startsWith("*Generated by")
   ) ?? null;
   return {
     title,
@@ -36917,11 +37010,11 @@ var init_phase_plan_diagnostics = __esm({
 
 // src/mcp/tools/phase-roadmap-requirements.ts
 import { promises as fs13 } from "node:fs";
-function parseRequirementTableRow(line) {
-  if (!/^\|.*\|$/.test(line)) {
+function parseRequirementTableRow(line2) {
+  if (!/^\|.*\|$/.test(line2)) {
     return null;
   }
-  const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+  const cells = line2.slice(1, -1).split("|").map((cell) => cell.trim());
   if (cells.length !== 4) {
     return null;
   }
@@ -36952,7 +37045,7 @@ async function readRequirementTable(projectRoot, options) {
   if (!requirementsSectionMatch) {
     throw new Error(options.malformedMessage);
   }
-  const rows = requirementsSectionMatch[2].split("\n").map((line) => parseRequirementTableRow(line)).filter((row) => row !== null);
+  const rows = requirementsSectionMatch[2].split("\n").map((line2) => parseRequirementTableRow(line2)).filter((row) => row !== null);
   return {
     rawRequirements,
     rows
@@ -36990,17 +37083,17 @@ async function repairRequirementsTraceability(projectRoot, requirementIds, phase
   const content = rawRequirements.replace(
     REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header, body) => {
-      const nextBody = body.split("\n").map((line) => {
-        const row = parseRequirementTableRow(line);
+      const nextBody = body.split("\n").map((line2) => {
+        const row = parseRequirementTableRow(line2);
         if (!row || !remainingRequirementIds.has(row.id)) {
-          return line;
+          return line2;
         }
         remainingRequirementIds.delete(row.id);
         const notes = row.notes.trim();
         const nextNotes = notes.includes(reassignmentNote) ? notes : notes.length > 0 ? `${notes} ${reassignmentNote}` : reassignmentNote;
         const nextStatus = "pending";
         if (row.status.trim() === nextStatus && nextNotes === row.notes) {
-          return line;
+          return line2;
         }
         updated = true;
         return renderRequirementTableRow({
@@ -37044,16 +37137,16 @@ async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phase
   const content = rawRequirements.replace(
     REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header, body) => {
-      const nextBody = body.split("\n").map((line) => {
-        const row = parseRequirementTableRow(line);
+      const nextBody = body.split("\n").map((line2) => {
+        const row = parseRequirementTableRow(line2);
         if (!row || !remainingRequirementIds.has(row.id)) {
-          return line;
+          return line2;
         }
         remainingRequirementIds.delete(row.id);
         const notes = row.notes.trim();
         const nextNotes = notes.includes(mappingNote) ? notes : notes.length > 0 ? `${notes} ${mappingNote}` : mappingNote;
         if (nextNotes === row.notes) {
-          return line;
+          return line2;
         }
         mappingUpdated = true;
         return renderRequirementTableRow({
@@ -41134,7 +41227,7 @@ async function blueprintPhasePlanReadiness(args = {}) {
     reviewFindings.severityCounts = countReviewSeverities(raw);
     reviewFindings.findingIds = extractReviewFindingIds(raw);
     if (includeContent) {
-      reviewFindings.findings = raw.replace(/\r\n/g, "\n").split("\n").filter((line) => /\b(?:F|FU)-[A-Z0-9][A-Z0-9._-]*\b/.test(line)).slice(0, 20);
+      reviewFindings.findings = raw.replace(/\r\n/g, "\n").split("\n").filter((line2) => /\b(?:F|FU)-[A-Z0-9][A-Z0-9._-]*\b/.test(line2)).slice(0, 20);
     }
   }
   const savedPlanBodies = [];
@@ -43271,6 +43364,7 @@ __export(artifacts_exports, {
   isVerificationArtifactReadyForUat: () => isVerificationArtifactReadyForUat,
   normalizeReportSlug: () => normalizeReportSlug,
   parseCaptureIndexDocument: () => parseCaptureIndexDocument,
+  prepareBootstrapArtifactContents: () => prepareBootstrapArtifactContents,
   readJsonIfPresent: () => readJsonIfPresent,
   readUatArtifactState: () => readUatArtifactState,
   resolveBlueprintPath: () => resolveBlueprintPath,
@@ -43658,8 +43752,8 @@ function parseCaptureRowBlock(block, target) {
     return null;
   }
   const fields = /* @__PURE__ */ new Map();
-  for (const line of restLines) {
-    const match = line.match(/^- ([A-Za-z ]+):\s*(.+)$/);
+  for (const line2 of restLines) {
+    const match = line2.match(/^- ([A-Za-z ]+):\s*(.+)$/);
     if (!match) {
       continue;
     }
@@ -43952,15 +44046,16 @@ function buildDefaultBootstrapSeed(projectName, assessment2, seed) {
   const sourceRoadmapPhases = seed?.roadmapPhases?.filter(
     (phase) => phase.phase.trim().length > 0 && phase.title.trim().length > 0
   ) ?? defaultRoadmapPhases;
+  const optionalBootstrapList = (values, fallback) => values === void 0 ? fallback : normalizeList(values, []);
   return {
     vision: seed?.vision?.trim() || defaultVision,
     audience: {
-      primary: normalizeList(seed?.audience?.primary, defaultPrimaryAudience),
-      secondary: normalizeList(seed?.audience?.secondary, defaultSecondaryAudience)
+      primary: optionalBootstrapList(seed?.audience?.primary, defaultPrimaryAudience),
+      secondary: optionalBootstrapList(seed?.audience?.secondary, defaultSecondaryAudience)
     },
-    constraints: normalizeList(seed?.constraints, defaultConstraints),
+    constraints: optionalBootstrapList(seed?.constraints, defaultConstraints),
     currentMilestone: defaultMilestone,
-    nonGoals: normalizeList(seed?.nonGoals, defaultNonGoals),
+    nonGoals: optionalBootstrapList(seed?.nonGoals, defaultNonGoals),
     requirements: normalizedRequirements,
     roadmapPhases: sourceRoadmapPhases.map((phase, index) => ({
       ...phase,
@@ -43971,7 +44066,7 @@ function buildDefaultBootstrapSeed(projectName, assessment2, seed) {
       ])
     })),
     brownfieldMode: seed?.brownfieldMode ?? assessment2.repoShape,
-    assumptions: normalizeList(seed?.assumptions, defaultAssumptions)
+    assumptions: optionalBootstrapList(seed?.assumptions, defaultAssumptions)
   };
 }
 function renderProjectArtifact(context) {
@@ -44002,7 +44097,7 @@ ${secondaryAudience.map((value) => `- Secondary: ${value}`).join("\n")}
 
 ## Constraints
 
-${seed.constraints.map((value) => `- ${value}`).join("\n")}
+${seed.constraints.map((value) => `- ${value}`).join("\n") || "- none"}
 
 ## Current Milestone
 
@@ -44020,11 +44115,11 @@ ${requirementSummary}
 
 ## Non-Goals
 
-${seed.nonGoals.map((value) => `- ${value}`).join("\n")}
+${seed.nonGoals.map((value) => `- ${value}`).join("\n") || "- none"}
 
 ## Assumptions
 
-${seed.assumptions.map((value) => `- ${value}`).join("\n")}
+${seed.assumptions.map((value) => `- ${value}`).join("\n") || "- none"}
 `;
 }
 function renderRequirementsArtifact(context) {
@@ -44090,7 +44185,7 @@ ${scopeSections}
 
 ## Open Questions
 
-${seed.assumptions.map((value) => `- Revisit: ${value}`).join("\n")}
+${seed.assumptions.map((value) => `- Revisit: ${value}`).join("\n") || "- none"}
 `;
 }
 function renderRoadmapArtifact(context) {
@@ -44109,11 +44204,20 @@ function renderRoadmapArtifact(context) {
     const successCriteriaBlock = successCriteria.length > 0 ? `  - Success Criteria:
 ${successCriteria.map((value) => `    - ${value}`).join("\n")}` : "";
     const notes = normalizeList(phase.notes, []).map((value) => `  - ${value}`).join("\n");
+    const dependencies2 = (phase.dependencies ?? []).map(normalizePhaseNumber3);
+    const dependencyLine = dependencies2.length ? `
+  - Depends on: ${dependencies2.join(", ")}` : "";
     return `- [${marker}] Phase ${normalizedPhaseNumber}: ${phase.title}${requirementClause}
-  - Objective: ${phase.objective}${successCriteriaBlock ? `
+  - Objective: ${phase.objective}${dependencyLine}${successCriteriaBlock ? `
 ${successCriteriaBlock}` : ""}${notes ? `
 ${notes}` : ""}`;
   }).join("\n");
+  const details = seed.roadmapPhases.some((phase) => phase.dependencies !== void 0) ? "\n## Phase Details\n\n" + seed.roadmapPhases.map((phase) => `### Phase ${normalizePhaseNumber3(phase.phase)}: ${phase.title}
+**Goal**: ${phase.objective}
+**Requirements**: ${(phase.requirementIds ?? []).join(", ")}
+**Depends on**: ${(phase.dependencies ?? []).map((ref) => `Phase ${normalizePhaseNumber3(ref)}`).join(", ") || "none"}
+**Success Criteria**: ${(phase.successCriteria ?? []).join("; ")}
+**Status**: ${phase.status ?? "planned"}`).join("\n\n") + "\n" : "";
   return `# Roadmap: ${context.projectName}
 
 ## Milestone
@@ -44137,10 +44241,10 @@ ${BOOTSTRAP_REQUIREMENT_SCOPE_ORDER.map((scope) => {
 ## Phases
 
 ${phases}
-
+${details}
 ## Notes
 
-${seed.assumptions.map((value) => `- ${value}`).join("\n")}
+${seed.assumptions.map((value) => `- ${value}`).join("\n") || "- none"}
 `;
 }
 async function assertReportCompareAndSwap(absolutePath, expectedExistingContentSha256) {
@@ -44793,7 +44897,7 @@ function extractMarkdownSection5(markdown, heading) {
   return match?.[1]?.trim() ?? "";
 }
 function extractMarkdownTableRows(section) {
-  return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)).map((line) => parseMarkdownTableCells(line));
+  return section.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim()).filter((line2) => isMarkdownTableRow(line2) && !isMarkdownTableHeaderRow(line2)).map((line2) => parseMarkdownTableCells(line2));
 }
 function stripPlanPlaceholderSignals(section) {
   return [...PLAN_PLACEHOLDER_SIGNALS, ...PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS].reduce(
@@ -44804,12 +44908,12 @@ function stripPlanPlaceholderSignals(section) {
 function extractPlanTemplatePlaceholderListItems(template) {
   return ["Verification", "Must Haves"].flatMap((heading) => {
     const section = extractMarkdownSection5(template, heading);
-    return section.split("\n").map((line) => line.trim()).filter((line) => /^[-*+]\s+/.test(line));
+    return section.split("\n").map((line2) => line2.trim()).filter((line2) => /^[-*+]\s+/.test(line2));
   });
 }
 function hasSubstantivePlanListContent(section) {
   const normalizedSection = stripPlanPlaceholderSignals(section);
-  const bulletLines = normalizedSection.split("\n").map((line) => line.trim()).filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line)).filter((line) => !/^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(line));
+  const bulletLines = normalizedSection.split("\n").map((line2) => line2.trim()).filter((line2) => /^[-*+]\s+/.test(line2) || /^\d+\.\s+/.test(line2)).map((line2) => line2.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0).filter((line2) => !/^[#>*`|_\-\s]+$/.test(line2)).filter((line2) => !/^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(line2));
   return bulletLines.length > 0;
 }
 function escapeRegex2(value) {
@@ -44857,16 +44961,16 @@ function parsePlanFrontmatter(content) {
   const arrays = /* @__PURE__ */ new Map();
   let currentArrayKey = null;
   for (const rawLine of frontmatter.split("\n")) {
-    const line = rawLine.trimEnd();
-    if (line.trim().length === 0) {
+    const line2 = rawLine.trimEnd();
+    if (line2.trim().length === 0) {
       continue;
     }
-    const arrayItemMatch = line.match(/^\s*-\s+(.+)$/);
+    const arrayItemMatch = line2.match(/^\s*-\s+(.+)$/);
     if (arrayItemMatch && currentArrayKey) {
       arrays.get(currentArrayKey)?.push(normalizeFrontmatterScalar(arrayItemMatch[1]));
       continue;
     }
-    const keyValueMatch = line.match(/^([a-z_]+):\s*(.*)$/);
+    const keyValueMatch = line2.match(/^([a-z_]+):\s*(.*)$/);
     if (!keyValueMatch) {
       currentArrayKey = null;
       continue;
@@ -45034,8 +45138,8 @@ function hasHighConfidenceWithUnsupportedEvidenceClaims(content) {
 function normalizeResearchTableHeader(value) {
   return value.trim().replace(/`/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
-function splitResearchTableLine(line) {
-  const trimmed = line.trim();
+function splitResearchTableLine(line2) {
+  const trimmed = line2.trim();
   return parseMarkdownTableCells(`${trimmed.startsWith("|") ? "" : "|"}${trimmed}${trimmed.endsWith("|") ? "" : "|"}`);
 }
 function parseResearchMarkdownTable(section) {
@@ -45098,8 +45202,8 @@ function collectResearchEvidenceRows(content) {
     ...parseResearchMarkdownTable(extractResearchMarkdownSubsection(sources, "Inference Notes"))
   ];
 }
-function hasConcreteStructuredSourceReference(text) {
-  const normalized = text.trim();
+function hasConcreteStructuredSourceReference(text2) {
+  const normalized = text2.trim();
   if (!normalized) {
     return false;
   }
@@ -45315,22 +45419,22 @@ function researchEvidenceWarningDiagnostics(content) {
 }
 function scanResearchMarkdown(content) {
   let activeFence = null;
-  return content.split("\n").map((text) => {
+  return content.split("\n").map((text2) => {
     if (activeFence) {
-      const closing = text.match(/^ {0,3}(`+|~+)[ \t]*\r?$/u);
+      const closing = text2.match(/^ {0,3}(`+|~+)[ \t]*\r?$/u);
       if (closing && closing[1][0] === activeFence.marker && closing[1].length >= activeFence.length) {
         activeFence = null;
       }
-      return { text, fenced: true };
+      return { text: text2, fenced: true };
     }
-    const opening = text.match(/^ {0,3}(`{3,}|~{3,})([^\r]*)\r?$/u);
+    const opening = text2.match(/^ {0,3}(`{3,}|~{3,})([^\r]*)\r?$/u);
     if (opening && (opening[1][0] !== "`" || !opening[2].includes("`"))) {
       activeFence = { marker: opening[1][0], length: opening[1].length };
-      return { text, fenced: true };
+      return { text: text2, fenced: true };
     }
-    const heading = text.match(/^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*\r?$/u);
+    const heading = text2.match(/^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*\r?$/u);
     return {
-      text,
+      text: text2,
       fenced: false,
       ...heading ? { heading: { level: heading[1].length, title: stripResearchHeadingAdornment(heading[2]) } } : {}
     };
@@ -45338,13 +45442,13 @@ function scanResearchMarkdown(content) {
 }
 function extractResearchMarkdownSection(content, heading, level = 2) {
   const lines3 = scanResearchMarkdown(content);
-  const start = lines3.findIndex((line) => line.heading?.level === level && line.heading.title === heading);
+  const start = lines3.findIndex((line2) => line2.heading?.level === level && line2.heading.title === heading);
   if (start === -1) return "";
-  const next = lines3.findIndex((line, index) => index > start && line.heading !== void 0 && line.heading.level <= level);
-  return lines3.slice(start + 1, next === -1 ? void 0 : next).map((line) => line.text).join("\n").trim();
+  const next = lines3.findIndex((line2, index) => index > start && line2.heading !== void 0 && line2.heading.level <= level);
+  return lines3.slice(start + 1, next === -1 ? void 0 : next).map((line2) => line2.text).join("\n").trim();
 }
 function stripResearchFencedCodeBlocks(content) {
-  return scanResearchMarkdown(content).map((line) => line.fenced ? "" : line.text).join("\n");
+  return scanResearchMarkdown(content).map((line2) => line2.fenced ? "" : line2.text).join("\n");
 }
 function stripResearchPlaceholderSignals(section) {
   return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
@@ -45403,13 +45507,13 @@ function canonicalizeResearchRequiredHeadings(content) {
   );
   const canonicalizedHeadings = [];
   const unmatchedTopLevelHeadings = [];
-  const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line, heading }) => {
-    if (heading?.level !== 2) return line;
+  const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line2, heading }) => {
+    if (heading?.level !== 2) return line2;
     const originalHeading = heading.title;
     const canonicalHeading = canonicalHeadingByKey.get(normalizeResearchHeadingKey(originalHeading));
     if (!canonicalHeading) {
       unmatchedTopLevelHeadings.push(originalHeading);
-      return line;
+      return line2;
     }
     if (originalHeading !== canonicalHeading) {
       canonicalizedHeadings.push({
@@ -45417,7 +45521,7 @@ function canonicalizeResearchRequiredHeadings(content) {
         to: canonicalHeading
       });
     }
-    return `## ${canonicalHeading}${line.endsWith("\r") ? "\r" : ""}`;
+    return `## ${canonicalHeading}${line2.endsWith("\r") ? "\r" : ""}`;
   });
   return {
     content: canonicalizedLines.join("\n"),
@@ -45435,26 +45539,26 @@ function canonicalizeResearchHeadingLines(content) {
     if (!sentinel) continue;
     let end = index + 1;
     while (end < lines3.length && (!lines3[end].heading || lines3[end].heading.level > 2)) end += 1;
-    const section = lines3.slice(index + 1, end).map((line) => line.text).join("\n");
+    const section = lines3.slice(index + 1, end).map((line2) => line2.text).join("\n");
     if (!matchesFuzzyEmptySentinel(section, sentinel)) continue;
-    const contentLine = lines3.slice(index + 1, end).find((line) => line.text.trim().length > 0);
+    const contentLine = lines3.slice(index + 1, end).find((line2) => line2.text.trim().length > 0);
     if (contentLine) contentLine.text = `${sentinel}${contentLine.text.endsWith("\r") ? "\r" : ""}`;
   }
-  return lines3.map((line) => line.text).join("\n");
+  return lines3.map((line2) => line2.text).join("\n");
 }
 function uniqueStrings(values) {
   return [...new Set(values)];
 }
 function hasSubstantiveResearchSection(section) {
   const normalized = stripResearchPlaceholderSignals(section);
-  const lines3 = normalized.split("\n").map((line) => line.trim());
+  const lines3 = normalized.split("\n").map((line2) => line2.trim());
   const tableDivider = /^\|?[\s:-]+\|[\s|:-]*$/;
   return lines3.some((rawLine, index) => {
     if (tableDivider.test(rawLine) || rawLine.startsWith("|") && tableDivider.test(lines3[index + 1] ?? "")) return false;
     if (/^#{1,6}\s|^(?:`{3,}|~{3,})/.test(rawLine)) return false;
-    const line = rawLine.replace(/^(?:[-*+]\s*)+/, "").replace(/[*_`]/g, "").trim();
-    if (/^(?:why it matters|none|null|undefined|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)[.!]?$/i.test(line)) return false;
-    return /[\p{L}\p{N}]/u.test(line);
+    const line2 = rawLine.replace(/^(?:[-*+]\s*)+/, "").replace(/[*_`]/g, "").trim();
+    if (/^(?:why it matters|none|null|undefined|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)[.!]?$/i.test(line2)) return false;
+    return /[\p{L}\p{N}]/u.test(line2);
   });
 }
 function matchedScaffoldPlaceholderSignals(content, placeholderSignals, options = {}) {
@@ -45691,14 +45795,14 @@ function isPlaceholderOnlyTaskHeading(headingText) {
     title
   );
 }
-function isBlankOrPlaceholderPlanLine(line) {
-  return line.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
-    line
+function isBlankOrPlaceholderPlanLine(line2) {
+  return line2.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
+    line2
   );
 }
-function isSubjectivePlanLine(line) {
+function isSubjectivePlanLine(line2) {
   return /(?:\blooks\b|\bfeels\b|\bsounds\b|\bseems\b|\bgood\b|\bbetter\b|\bnice\b|\bclean\b|\bclear\b|\brobust\b|\bstable\b|\bfast\b|\bsimple\b|\beasy\b|\beasier\b|\bseamless\b|\bhelpful\b|\buseful\b|\bintuitive\b|\bpolished\b|\bworking\b|\bworks\b)/i.test(
-    line
+    line2
   );
 }
 function normalizePlanPathForValidation(value) {
@@ -45751,8 +45855,8 @@ function isRouteLikePlanTaskReference(value) {
   }
   return !/\.[A-Za-z0-9][A-Za-z0-9_-]{0,12}$/.test(lastSegment);
 }
-function isCommandLikePlanTaskLine(line) {
-  const normalizedLine = line.trim().replace(/^(?:[-*+]\s+|\d+\.\s+)+/, "").replace(/^`([^`]+)`$/, "$1").trim();
+function isCommandLikePlanTaskLine(line2) {
+  const normalizedLine = line2.trim().replace(/^(?:[-*+]\s+|\d+\.\s+)+/, "").replace(/^`([^`]+)`$/, "$1").trim();
   return /^(?:run|execute|call|use|verify with|check with|test with)?\s*(?:npm|pnpm|yarn|node|git|bash|sh|rg|grep|find|ls|cat|sed|awk|tsx|tsc|mvn|gradle|curl)\b/i.test(
     normalizedLine
   );
@@ -45790,16 +45894,16 @@ function validatePlanPathList(entries, label) {
 function extractTaskPathReferenceCandidates(section) {
   const candidates = /* @__PURE__ */ new Set();
   let inFencedCodeBlock = false;
-  for (const line of section.replace(/\r\n/g, "\n").split("\n")) {
-    if (/^\s*```/.test(line)) {
+  for (const line2 of section.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*```/.test(line2)) {
       inFencedCodeBlock = !inFencedCodeBlock;
       continue;
     }
     if (inFencedCodeBlock) {
       continue;
     }
-    const commandLikeLine = isCommandLikePlanTaskLine(line);
-    const tokens = line.match(/`[^`]+`|[^\s]+/g) ?? [];
+    const commandLikeLine = isCommandLikePlanTaskLine(line2);
+    const tokens = line2.match(/`[^`]+`|[^\s]+/g) ?? [];
     for (const token of tokens) {
       const normalizedToken = token.trim().replace(/^[`"'([<{]+/, "").replace(/[)`"'\])>.,;:!?]+$/, "");
       if (normalizedToken.length === 0 || /^[a-z][a-z0-9+.-]*:\/\//i.test(normalizedToken)) {
@@ -45841,21 +45945,21 @@ function validatePlanTaskPathList(section, label) {
 }
 function hasConcretePlanSubsectionContent(section) {
   const normalizedSection = stripPlanPlaceholderSignals(section);
-  const meaningfulLines = normalizedSection.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).map((line) => line.replace(/^(?:[-*+]\s+|\d+\.\s+)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
+  const meaningfulLines = normalizedSection.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim()).map((line2) => line2.replace(/^(?:[-*+]\s+|\d+\.\s+)+/, "").trim()).filter((line2) => line2.length > 0).filter((line2) => !/^[#>*`|_\-\s]+$/.test(line2));
   if (meaningfulLines.length === 0) {
     return false;
   }
-  return meaningfulLines.some((line) => {
-    if (isBlankOrPlaceholderPlanLine(line)) {
+  return meaningfulLines.some((line2) => {
+    if (isBlankOrPlaceholderPlanLine(line2)) {
       return false;
     }
-    if (/`[^`]+`/.test(line) || /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line) || /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line) || /\/blu-[\w-]+(?:\b|$)/i.test(line) || /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line) || !isGlobPlanPath(line) && isRepoRelativePlanPath(line)) {
+    if (/`[^`]+`/.test(line2) || /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line2) || /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line2) || /\/blu-[\w-]+(?:\b|$)/i.test(line2) || /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line2) || !isGlobPlanPath(line2) && isRepoRelativePlanPath(line2)) {
       return true;
     }
-    if (isSubjectivePlanLine(line)) {
+    if (isSubjectivePlanLine(line2)) {
       return false;
     }
-    const words = line.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g) ?? [];
+    const words = line2.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g) ?? [];
     return words.length >= 3;
   });
 }
@@ -45863,7 +45967,7 @@ function validateObjectivePlanBulletList(section, artifactLabel) {
   const issues = [];
   const warnings = [];
   const normalizedSection = stripPlanPlaceholderSignals(section);
-  const bulletItems = normalizedSection.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !isBlankOrPlaceholderPlanLine(line));
+  const bulletItems = normalizedSection.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim()).filter((line2) => /^[-*+]\s+/.test(line2) || /^\d+\.\s+/.test(line2)).map((line2) => line2.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0).filter((line2) => !isBlankOrPlaceholderPlanLine(line2));
   if (bulletItems.length === 0) {
     issues.push(`${artifactLabel} must include at least one objective bullet.`);
     return { issues, warnings };
@@ -45893,7 +45997,7 @@ function validateObjectivePlanBulletList(section, artifactLabel) {
 function validatePlanTaskBlock(taskBlock, taskNumber) {
   const issues = [];
   const warnings = [];
-  const lines3 = taskBlock.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  const lines3 = taskBlock.split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0);
   const heading = lines3[0] ?? "";
   const headingText = heading.replace(/^###\s+/, "").trim();
   if (headingText.length === 0 || /^Task\s+\d+(?::\s*)?$/i.test(headingText) || isPlaceholderOnlyTaskHeading(headingText)) {
@@ -45929,7 +46033,7 @@ function validateLockedMarkers(content, artifactLabel, markers) {
 function validateMilestoneEvidenceLedger(content, artifactLabel, sectionHeading, requiredRows) {
   const issues = [];
   const section = extractMarkdownSection5(content, sectionHeading);
-  const evidenceRows = section.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+  const evidenceRows = section.split("\n").map((line2) => line2.trim()).filter((line2) => isMarkdownTableRow(line2) && !isMarkdownTableHeaderRow(line2));
   if (evidenceRows.length < requiredRows.length) {
     issues.push(
       `${artifactLabel} section ${sectionHeading} must include evidence rows for ${requiredRows.map((row) => row.label).join(", ")}.`
@@ -45983,22 +46087,22 @@ function validateMilestoneReportReferences(content, artifactLabel, sectionHeadin
   }
   return issues;
 }
-function isEscapedMarkdownPipe(line, index) {
+function isEscapedMarkdownPipe(line2, index) {
   let backslashCount = 0;
-  for (let cursor = index - 1; cursor >= 0 && line[cursor] === "\\"; cursor -= 1) {
+  for (let cursor = index - 1; cursor >= 0 && line2[cursor] === "\\"; cursor -= 1) {
     backslashCount += 1;
   }
   return backslashCount % 2 === 1;
 }
-function parseMarkdownTableCells(line) {
-  if (!/^\|.*\|$/.test(line)) {
+function parseMarkdownTableCells(line2) {
+  if (!/^\|.*\|$/.test(line2)) {
     return [];
   }
   const cells = [];
   let current = "";
-  for (let index = 1; index < line.length - 1; index += 1) {
-    const character = line[index];
-    if (character === "|" && !isEscapedMarkdownPipe(line, index)) {
+  for (let index = 1; index < line2.length - 1; index += 1) {
+    const character = line2[index];
+    if (character === "|" && !isEscapedMarkdownPipe(line2, index)) {
       cells.push(current.replace(/\\\|/g, "|").trim());
       current = "";
       continue;
@@ -46008,12 +46112,12 @@ function parseMarkdownTableCells(line) {
   cells.push(current.replace(/\\\|/g, "|").trim());
   return cells;
 }
-function isMarkdownTableRow(line) {
-  const cells = parseMarkdownTableCells(line);
+function isMarkdownTableRow(line2) {
+  const cells = parseMarkdownTableCells(line2);
   return cells.length > 0 && !cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
-function isMarkdownTableHeaderRow(line) {
-  const cells = parseMarkdownTableCells(line).map((cell) => cell.toLowerCase());
+function isMarkdownTableHeaderRow(line2) {
+  const cells = parseMarkdownTableCells(line2).map((cell) => cell.toLowerCase());
   if (cells.length === 0) {
     return false;
   }
@@ -46046,7 +46150,7 @@ function isMarkdownTableHeaderRow(line) {
   );
 }
 function extractMarkdownTableDataRows(section) {
-  return section.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)).map((line) => parseMarkdownTableCells(line)).filter((cells) => cells.some((cell) => cell.length > 0));
+  return section.split("\n").map((line2) => line2.trim()).filter((line2) => isMarkdownTableRow(line2) && !isMarkdownTableHeaderRow(line2)).map((line2) => parseMarkdownTableCells(line2)).filter((cells) => cells.some((cell) => cell.length > 0));
 }
 function extractBlueprintCommands(section) {
   const commands = section.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/gi) ?? [];
@@ -46074,8 +46178,8 @@ async function getImplementedCommandNames2() {
   }
   return implementedCommandNamesPromise3;
 }
-function summarizeMarkdownTableRow(line) {
-  const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+function summarizeMarkdownTableRow(line2) {
+  const cells = line2.slice(1, -1).split("|").map((cell) => cell.trim());
   if (cells.length === 0) {
     return "";
   }
@@ -46131,21 +46235,21 @@ function scoreDigestSectionHeading(heading) {
   return 0;
 }
 function summarizeMarkdownSectionBody(section) {
-  const lines3 = section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("## "));
+  const lines3 = section.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0 && !line2.startsWith("## "));
   if (lines3.length === 0) {
     return "";
   }
-  const verdictLine = lines3.find((line) => /^[-*+]\s+Verdict:/i.test(line) || /^Verdict:/i.test(line));
+  const verdictLine = lines3.find((line2) => /^[-*+]\s+Verdict:/i.test(line2) || /^Verdict:/i.test(line2));
   if (verdictLine) {
     return verdictLine.replace(/^[-*+]\s*/, "").trim();
   }
   const tableRows = lines3.filter(
-    (line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)
+    (line2) => isMarkdownTableRow(line2) && !isMarkdownTableHeaderRow(line2)
   );
   if (tableRows.length > 0) {
-    return tableRows.slice(0, 4).map((line) => summarizeMarkdownTableRow(line)).filter((line) => line.length > 0).join("; ");
+    return tableRows.slice(0, 4).map((line2) => summarizeMarkdownTableRow(line2)).filter((line2) => line2.length > 0).join("; ");
   }
-  const bullets2 = lines3.filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0);
+  const bullets2 = lines3.filter((line2) => /^[-*+]\s+/.test(line2) || /^\d+\.\s+/.test(line2)).map((line2) => line2.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0);
   if (bullets2.length > 0) {
     return bullets2.slice(0, 2).join("; ");
   }
@@ -46154,13 +46258,13 @@ function summarizeMarkdownSectionBody(section) {
 function splitMarkdownSections(lines3) {
   const sections = [];
   let current = null;
-  for (const line of lines3) {
-    if (/^##\s+/.test(line)) {
+  for (const line2 of lines3) {
+    if (/^##\s+/.test(line2)) {
       if (current) {
         sections.push(current);
       }
       current = {
-        heading: line.replace(/^##\s+/, "").trim(),
+        heading: line2.replace(/^##\s+/, "").trim(),
         body: []
       };
       continue;
@@ -46168,7 +46272,7 @@ function splitMarkdownSections(lines3) {
     if (!current) {
       continue;
     }
-    current.body.push(line);
+    current.body.push(line2);
   }
   if (current) {
     sections.push(current);
@@ -46177,19 +46281,19 @@ function splitMarkdownSections(lines3) {
 }
 function summarizePreambleLines(lines3) {
   const synopsis = [];
-  for (const line of lines3) {
-    if (line.startsWith("**") && /:\s*/.test(line)) {
-      synopsis.push(line.replace(/^\*\*(.+?)\*\*:\s*/, "$1: ").trim());
+  for (const line2 of lines3) {
+    if (line2.startsWith("**") && /:\s*/.test(line2)) {
+      synopsis.push(line2.replace(/^\*\*(.+?)\*\*:\s*/, "$1: ").trim());
       continue;
     }
-    if (/^[-*+]\s+/.test(line)) {
-      synopsis.push(line.replace(/^[-*+]\s+/, "").trim());
+    if (/^[-*+]\s+/.test(line2)) {
+      synopsis.push(line2.replace(/^[-*+]\s+/, "").trim());
     }
   }
   if (synopsis.length > 0) {
     return synopsis;
   }
-  return lines3.map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).slice(0, 2);
+  return lines3.map((line2) => line2.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0).slice(0, 2);
 }
 function validateValidationScaffoldPlaceholders(content, artifactLabel) {
   return VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS.filter(({ pattern }) => pattern.test(content)).map(
@@ -46266,9 +46370,9 @@ function validateCodebaseArtifactContent(content, artifactId) {
   const populatedRequiredSections = contract.requiredHeadings.filter(
     (heading) => extractMarkdownSection5(content, heading).trim().length > 0
   );
-  const normalizedLines = content.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim());
+  const normalizedLines = content.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim());
   const meaningfulLines = normalizedLines.filter(
-    (line) => line.length > 0 && !line.startsWith("#") && !line.startsWith("*Generated by") && !/^[-*]\s*$/.test(line)
+    (line2) => line2.length > 0 && !line2.startsWith("#") && !line2.startsWith("*Generated by") && !/^[-*]\s*$/.test(line2)
   );
   const hasLegacySummary = countMeaningfulWords(meaningfulLines.join(" ")) >= 1;
   if (!/^# .+\S\s*$/m.test(content)) {
@@ -46311,7 +46415,7 @@ function validateCodebaseArtifactContent(content, artifactId) {
   };
 }
 function hasNonEmptyBulletedList(section) {
-  return section.split("\n").map((line) => line.trim()).some((line) => /^[-*]\s+\S/.test(line));
+  return section.split("\n").map((line2) => line2.trim()).some((line2) => /^[-*]\s+\S/.test(line2));
 }
 function countMeaningfulWords(value) {
   return value.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g)?.length ?? 0;
@@ -46355,12 +46459,12 @@ function validateBootstrapProjectArtifact(content, options = {}) {
         BOOTSTRAP_PROJECT_CONTRACT.requiredHeadings
       )
     );
-    if (!hasBootstrapText(vision)) {
+    if (vision.trim().length === 0) {
       issues.push("Project artifact section Vision must contain substantive project direction.");
     }
-    if (!/- Primary:\s*\S+/m.test(audience) || !/- Secondary:\s*\S+/m.test(audience)) {
+    if (!/- Primary:[ \t]*\S+/m.test(audience)) {
       issues.push(
-        "Project artifact section Audience must include primary and secondary audience bullets."
+        "Project artifact section Audience must include at least one primary audience bullet."
       );
     }
     if (!hasNonEmptyBulletedList(constraints)) {
@@ -46560,16 +46664,16 @@ function extractBootstrapRoadmapPhaseBlocks(content) {
   const phasesSection = extractMarkdownSection5(content, "Phases");
   const blocks = [];
   let currentBlock = [];
-  for (const line of phasesSection.replace(/\r\n/g, "\n").split("\n")) {
-    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line)) {
+  for (const line2 of phasesSection.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line2)) {
       if (currentBlock.length > 0) {
         blocks.push(currentBlock.join("\n").trim());
       }
-      currentBlock = [line];
+      currentBlock = [line2];
       continue;
     }
     if (currentBlock.length > 0) {
-      currentBlock.push(line);
+      currentBlock.push(line2);
     }
   }
   if (currentBlock.length > 0) {
@@ -46578,8 +46682,8 @@ function extractBootstrapRoadmapPhaseBlocks(content) {
   return blocks;
 }
 function parseBootstrapRoadmapPhaseBlock(phaseBlock) {
-  const line = phaseBlock.split("\n")[0] ?? "";
-  const match = line.match(
+  const line2 = phaseBlock.split("\n")[0] ?? "";
+  const match = line2.match(
     /^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+.+)?\s*$/
   );
   if (!match) {
@@ -46595,8 +46699,8 @@ function parseBootstrapRoadmapPhaseBlock(phaseBlock) {
 }
 function extractBootstrapRoadmapScopedRequirementIds(section, scopePattern) {
   const ids = [];
-  for (const line of section.split("\n")) {
-    const match = line.match(/^\s*-\s*([^:]+):\s*(.+)$/);
+  for (const line2 of section.split("\n")) {
+    const match = line2.match(/^\s*-\s*([^:]+):\s*(.+)$/);
     if (!match || !scopePattern.test(match[1] ?? "")) {
       continue;
     }
@@ -46672,6 +46776,14 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
     (phaseBlock) => phaseBlock.requirementIds.length > 0 ? phaseBlock.requirementIds : phaseDetailByNumber.get(phaseBlock.phaseNumber)?.requirementIds ?? []
   );
   const duplicatePhaseRequirementRefs = valuesWithDuplicates(phaseRequirementRefs);
+  const phaseNumbers = parsedPhaseBlocks.map((phase) => normalizePhaseNumber3(phase.phaseNumber));
+  if (new Set(phaseNumbers).size !== phaseNumbers.length) {
+    issues.push("Roadmap artifact contains duplicate normalized phase numbers.");
+  }
+  const excludedIds = extractBootstrapRoadmapScopedRequirementIds(requirementCoverage, /out.of.scope/i);
+  for (const id of phaseRequirementRefs.filter((id2) => excludedIds.includes(id2))) {
+    issues.push(`Roadmap artifact schedules out-of-scope requirement ${id}. Remove it from active phases.`);
+  }
   if (isBootstrapRoadmapArtifact(content)) {
     if (!hasBootstrapText(milestone2)) {
       issues.push("Roadmap artifact section Milestone must name the active bootstrap milestone.");
@@ -46703,7 +46815,7 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
         );
       }
       const detail = parsedPhaseBlock ? phaseDetailByNumber.get(parsedPhaseBlock.phaseNumber) : void 0;
-      const objective = phaseBlock.match(/Objective:\s*(\S.+)$/im)?.[1]?.trim() ?? detail?.goal ?? "";
+      const objective = phaseBlock.match(/Objective:[ \t]*(\S[^\r\n]*)$/im)?.[1]?.trim() ?? detail?.goal ?? "";
       if (objective.length === 0) {
         issues.push(
           `Roadmap artifact ${phaseLabel2} field Objective is missing or empty. Repair by adding an Objective child bullet under ${phaseLabel2} or \`**Goal**: <phase goal>\` in ${phaseLabel2}'s Phase Details block.`
@@ -46734,25 +46846,8 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
           );
         }
       }
-      if (successCriteria.length < 2 || successCriteria.length > 5) {
-        issues.push("Roadmap artifact phase entries must include 2-5 success criteria bullets.");
-        if (successCriteria.length === 0) {
-          issues.push(
-            "Roadmap artifact phase entries must include at least one success criteria bullet."
-          );
-        }
-        if (parsedPhaseBlock) {
-          issues.push(
-            `Roadmap artifact ${phaseLabel2} field Success Criteria has ${successCriteria.length} item(s). Repair by listing 2-5 observable success criteria under ${phaseLabel2}.`
-          );
-          issues.push(
-            successCriteria.length < 2 ? `${phaseLabel2} (${parsedPhaseBlock.phaseName}) must include at least two success criteria. Repair ${phaseLabel2} field Success Criteria by listing 2-5 observable criteria.` : `${phaseLabel2} (${parsedPhaseBlock.phaseName}) must include no more than five success criteria. Repair ${phaseLabel2} field Success Criteria by trimming it to 2-5 observable criteria.`
-          );
-          continue;
-        }
-        issues.push(
-          `Roadmap artifact ${phaseLabel2} field Success Criteria has ${successCriteria.length} item(s). Repair by listing 2-5 observable success criteria under ${phaseLabel2}.`
-        );
+      if (successCriteria.length === 0) {
+        issues.push(`Roadmap artifact ${phaseLabel2} field Success Criteria must include at least one observable success criterion.`);
       }
     }
     if (committedCoverageIds.length > 0) {
@@ -46797,9 +46892,9 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
           `Roadmap artifact ${detailLabel} field Phase Details Requirements does not match Phases. Offending IDs: missing ${missingDetailIds.join(", ") || "none"}; extra ${extraDetailIds.join(", ") || "none"}. Repair by making \`**Requirements**\` match ${detailLabel}'s Requirements clause exactly.`
         );
       }
-      if (detail.successCriteria.length < 2 || detail.successCriteria.length > 5) {
+      if (detail.successCriteria.length === 0) {
         issues.push(
-          `Roadmap artifact ${detailLabel} field Phase Details Success Criteria has ${detail.successCriteria.length} item(s). Repair by recording 2-5 semicolon-separated observable criteria.`
+          `Roadmap artifact ${detailLabel} field Phase Details Success Criteria has ${detail.successCriteria.length} item(s). Repair by recording at least one observable criterion.`
         );
       }
       if (detail.status !== null && !ROADMAP_PHASE_DETAIL_STATUSES.has(normalizeRoadmapPhaseDetailStatus(detail.status))) {
@@ -47068,9 +47163,9 @@ function validateSpecArtifactContent(content) {
   }
   const acceptanceSection = extractMarkdownSection5(content, "Acceptance Criteria");
   if (acceptanceSection.trim().length > 0) {
-    const acceptanceLines = acceptanceSection.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
-    const bulletLines = acceptanceLines.filter((line) => /^[-*+]\s+/.test(line));
-    const checkboxLines = bulletLines.filter((line) => /^[-*+]\s+\[[ xX]\]\s+/.test(line));
+    const acceptanceLines = acceptanceSection.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0);
+    const bulletLines = acceptanceLines.filter((line2) => /^[-*+]\s+/.test(line2));
+    const checkboxLines = bulletLines.filter((line2) => /^[-*+]\s+\[[ xX]\]\s+/.test(line2));
     if (checkboxLines.length === 0) {
       const issue2 = "Spec artifact section Acceptance Criteria must include checkbox bullets.";
       issues.push(issue2);
@@ -47085,7 +47180,7 @@ function validateSpecArtifactContent(content) {
         })
       );
     }
-    if (bulletLines.some((line) => !/^[-*+]\s+\[[ xX]\]\s+/.test(line))) {
+    if (bulletLines.some((line2) => !/^[-*+]\s+\[[ xX]\]\s+/.test(line2))) {
       const issue2 = "Spec artifact section Acceptance Criteria must use checkbox bullets for every listed criterion.";
       issues.push(issue2);
       diagnostics.push(
@@ -47135,9 +47230,9 @@ function researchEvidenceWarningDiagnostic(args) {
   };
 }
 function hasRequirementTableRows(section) {
-  const lines3 = section.split("\n").map((line) => line.trim()).filter((line) => /^\|.*\|$/.test(line));
-  return lines3.some((line, index) => {
-    const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+  const lines3 = section.split("\n").map((line2) => line2.trim()).filter((line2) => /^\|.*\|$/.test(line2));
+  return lines3.some((line2, index) => {
+    const cells = line2.slice(1, -1).split("|").map((cell) => cell.trim());
     if (cells.length < 3) {
       return false;
     }
@@ -47149,11 +47244,11 @@ function hasRequirementTableRows(section) {
   });
 }
 function hasCoverageTableRows(section) {
-  return section.split("\n").map((line) => line.trim()).some((line) => {
-    if (!/^\|.*\|$/.test(line)) {
+  return section.split("\n").map((line2) => line2.trim()).some((line2) => {
+    if (!/^\|.*\|$/.test(line2)) {
       return false;
     }
-    const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+    const cells = line2.slice(1, -1).split("|").map((cell) => cell.trim());
     if (cells.length < 4) {
       return false;
     }
@@ -47171,15 +47266,15 @@ function isExplicitUiSkipRationale(content) {
 function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
   const diagnostics = [];
   const flaggedModes = /* @__PURE__ */ new Set();
-  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-    if (UNSUPPORTED_MODE_NEGATION_PATTERN.test(line)) {
+  for (const line2 of content.replace(/\r\n/g, "\n").split("\n")) {
+    if (UNSUPPORTED_MODE_NEGATION_PATTERN.test(line2)) {
       continue;
     }
-    if (!UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN.test(line)) {
+    if (!UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN.test(line2)) {
       continue;
     }
     for (const { mode: mode2, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
-      if (pattern.test(line) && !flaggedModes.has(mode2)) {
+      if (pattern.test(line2) && !flaggedModes.has(mode2)) {
         diagnostics.push({
           path: "content.unsupportedModeClaims",
           code: "discuss.unsupported_mode_claim",
@@ -47193,16 +47288,16 @@ function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
   return diagnostics;
 }
 function markdownSectionLines(section) {
-  return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
+  return section.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0).filter((line2) => !/^[#>*`|_\-\s]+$/.test(line2));
 }
 function hasConcreteCanonicalReference(section) {
   return markdownSectionLines(section).filter(
-    (line) => !/^(?:none|n\/a|na|not applicable|no canonical references?|no saved references?)\b/i.test(
-      line
+    (line2) => !/^(?:none|n\/a|na|not applicable|no canonical references?|no saved references?)\b/i.test(
+      line2
     )
   ).some(
-    (line) => /https?:\/\/\S+|(?:^|[\s`])(?:\.blueprint|src|tests|docs|commands|skills|agents|hooks|scripts|dist)\/[^\s`,)]+|\b(?:ROADMAP|STATE|PROJECT|REQUIREMENTS|MEMORY|AGENTS|README|CHANGELOG)\.md\b|\b(?:roadmap|requirements?|project brief|state|saved phase artifacts?|phase artifacts?|context artifact|discussion log)\b|\b[\w.-]+\.(?:ts|tsx|js|mjs|json|toml|md|yaml|yml)\b/i.test(
-      line
+    (line2) => /https?:\/\/\S+|(?:^|[\s`])(?:\.blueprint|src|tests|docs|commands|skills|agents|hooks|scripts|dist)\/[^\s`,)]+|\b(?:ROADMAP|STATE|PROJECT|REQUIREMENTS|MEMORY|AGENTS|README|CHANGELOG)\.md\b|\b(?:roadmap|requirements?|project brief|state|saved phase artifacts?|phase artifacts?|context artifact|discussion log)\b|\b[\w.-]+\.(?:ts|tsx|js|mjs|json|toml|md|yaml|yml)\b/i.test(
+      line2
     )
   );
 }
@@ -47213,15 +47308,15 @@ function hasDeferredIdeaSignal(section) {
 }
 function hasConcreteDeferredIdeas(section) {
   return markdownSectionLines(section).filter(
-    (line) => !/^(?:none|n\/a|na|not applicable|no\b.*(?:deferred|follow-?up|ideas?)|nothing deferred)\b/i.test(
-      line
+    (line2) => !/^(?:none|n\/a|na|not applicable|no\b.*(?:deferred|follow-?up|ideas?)|nothing deferred)\b/i.test(
+      line2
     )
-  ).some((line) => countMeaningfulWords(line) >= 3);
+  ).some((line2) => countMeaningfulWords(line2) >= 3);
 }
 function hasConcreteOpenQuestions(section) {
   return markdownSectionLines(section).filter(
-    (line) => !/^(?:none|n\/a|na|not applicable|no open questions?|nothing open)\b/i.test(line)
-  ).some((line) => countMeaningfulWords(line) >= 3);
+    (line2) => !/^(?:none|n\/a|na|not applicable|no open questions?|nothing open)\b/i.test(line2)
+  ).some((line2) => countMeaningfulWords(line2) >= 3);
 }
 function hasCarryForwardRiskSignal(section) {
   return /\b(?:deferred risks?|open risks?|risk watchlist|consequence if wrong)\b/i.test(section);
@@ -47232,15 +47327,15 @@ function hasOpenGrayAreaSignal(section) {
   );
 }
 function hasConcreteRiskCarryForward(section) {
-  return markdownSectionLines(section).filter((line) => !/^(?:none|n\/a|na|not applicable|nothing deferred|nothing open)\b/i.test(line)).some(
-    (line) => /\b(?:risk|uncertain|uncertainty|if wrong|unknown|unresolved|needs confirmation|dependency review)\b/i.test(
-      line
+  return markdownSectionLines(section).filter((line2) => !/^(?:none|n\/a|na|not applicable|nothing deferred|nothing open)\b/i.test(line2)).some(
+    (line2) => /\b(?:risk|uncertain|uncertainty|if wrong|unknown|unresolved|needs confirmation|dependency review)\b/i.test(
+      line2
     )
   );
 }
 function containsRawHandoffPacketLabel(content) {
-  return content.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).some(
-    (line) => RAW_HANDOFF_PACKET_LABEL_PATTERNS.some((pattern) => pattern.test(line))
+  return content.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0).some(
+    (line2) => RAW_HANDOFF_PACKET_LABEL_PATTERNS.some((pattern) => pattern.test(line2))
   );
 }
 function validateDiscussPhaseContextAntiPatterns(content) {
@@ -47585,7 +47680,7 @@ function isNoValidationGapSignal(value) {
   return normalized.length === 0 || normalized === "none" || normalized === "n/a" || normalized === "na" || normalized === "not applicable" || normalized.startsWith("no gaps") || normalized.startsWith("no unresolved gaps") || normalized.startsWith("no blockers") || normalized.startsWith("no repairs") || normalized.startsWith("no suggested repairs") || normalized.startsWith("nothing to repair");
 }
 function hasActionableValidationListSignal(section) {
-  return section.split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("|")).some((line) => !isNoValidationGapSignal(line));
+  return section.split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0 && !line2.startsWith("|")).some((line2) => !isNoValidationGapSignal(line2));
 }
 function isLiteralNoneValidationCell(value) {
   return normalizeValidationSignal(value ?? "") === "none";
@@ -48118,16 +48213,16 @@ function validateReviewArtifactContent(content, artifact) {
   };
 }
 function collectMarkdownListItems(section) {
-  return section.split("\n").map((line) => line.trim()).flatMap((line) => {
-    const checklistMatch = line.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
+  return section.split("\n").map((line2) => line2.trim()).flatMap((line2) => {
+    const checklistMatch = line2.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
     if (checklistMatch) {
       return [checklistMatch[1].trim()];
     }
-    const bulletMatch = line.match(/^[-*+]\s+(.+)$/);
+    const bulletMatch = line2.match(/^[-*+]\s+(.+)$/);
     if (bulletMatch) {
       return [bulletMatch[1].trim()];
     }
-    const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+    const numberedMatch = line2.match(/^\d+\.\s+(.+)$/);
     return numberedMatch ? [numberedMatch[1].trim()] : [];
   }).filter((item) => item.length > 0);
 }
@@ -48166,8 +48261,8 @@ function extractScopeReviewedPaths(section) {
 }
 function parseSeveritySummaryCounts(section) {
   const counts = {};
-  for (const line of section.split("\n")) {
-    const match = line.trim().match(
+  for (const line2 of section.split("\n")) {
+    const match = line2.trim().match(
       /^[-*+]\s*(critical|high|medium|low|unknown)\s*:\s*(\d+)\s*$/i
     );
     if (!match) {
@@ -48297,7 +48392,7 @@ function validateReportArtifactContent(content, reportName2) {
     const optionalGaps = extractMarkdownSection5(content, "Optional Gaps");
     const hasStructuredGapSections = [requirementGaps, integrationGaps, flowGaps, optionalGaps].some((section) => section.length > 0) || hasStructuredMilestoneAuditGapSections;
     const hasLegacyGapSummary = hasLegacyMilestoneAuditGapSummary;
-    const evidenceRows = evidenceDimensions.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+    const evidenceRows = evidenceDimensions.split("\n").map((line2) => line2.trim()).filter((line2) => isMarkdownTableRow(line2) && !isMarkdownTableHeaderRow(line2));
     const gapSections = [
       ["Requirement Gaps", requirementGaps],
       ["Integration Gaps", integrationGaps],
@@ -48625,8 +48720,8 @@ function normalizeSummaryPlanReference(value) {
 function normalizeSummaryHeading(value) {
   return value.replace(/\s+#+\s*$/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
-function parseSummaryMarkerLine(line) {
-  const trimmed = line.trim();
+function parseSummaryMarkerLine(line2) {
+  const trimmed = line2.trim();
   const boldWithInnerColon = trimmed.match(/^\*\*([^:*]+):\*\*\s*(.+)$/);
   const boldWithOuterColon = trimmed.match(/^\*\*([^*]+)\*\*:\s*(.+)$/);
   const plain = trimmed.match(/^([^:#|`*][^:]*):\s*(.+)$/);
@@ -48643,8 +48738,8 @@ function parseSummaryMarkerLine(line) {
 }
 function extractSummaryMarkerValue(content, marker) {
   const expectedMarker = normalizeSummaryHeading(marker);
-  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-    const parsed = parseSummaryMarkerLine(line);
+  for (const line2 of content.replace(/\r\n/g, "\n").split("\n")) {
+    const parsed = parseSummaryMarkerLine(line2);
     if (parsed && normalizeSummaryHeading(parsed.marker) === expectedMarker) {
       return parsed.value.trim();
     }
@@ -48666,8 +48761,8 @@ function extractSummaryStatus(content) {
   }
   return null;
 }
-function extractSummaryMarkdownHeadingText(line) {
-  const match = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+function extractSummaryMarkdownHeadingText(line2) {
+  const match = line2.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
   return match ? {
     level: match[1].length,
     text: match[2].trim()
@@ -48675,8 +48770,8 @@ function extractSummaryMarkdownHeadingText(line) {
 }
 function hasSummaryMarkdownHeading(content, heading) {
   const expectedHeading = normalizeSummaryHeading(heading);
-  return content.replace(/\r\n/g, "\n").split("\n").some((line) => {
-    const parsed = extractSummaryMarkdownHeadingText(line.trim());
+  return content.replace(/\r\n/g, "\n").split("\n").some((line2) => {
+    const parsed = extractSummaryMarkdownHeadingText(line2.trim());
     return parsed ? normalizeSummaryHeading(parsed.text) === expectedHeading : false;
   });
 }
@@ -48713,7 +48808,7 @@ function normalizeSummaryMarkerValue2(value) {
   return normalizeSummaryPlanReference(value.replace(/^`|`$/g, ""));
 }
 function extractMarkdownListItems(section) {
-  return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0);
+  return section.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).filter((line2) => line2.length > 0);
 }
 function isNoneValue(value) {
   return value.trim().toLowerCase() === "none";
@@ -48906,7 +49001,7 @@ function validateSummaryArtifactContent(content) {
   if (normalizedContent.trim().length === 0) {
     issues.push("Summary artifact content must not be empty.");
   }
-  const firstNonEmptyLine = normalizedContent.split("\n").map((line) => line.trim()).find((line) => line.length > 0);
+  const firstNonEmptyLine = normalizedContent.split("\n").map((line2) => line2.trim()).find((line2) => line2.length > 0);
   if (!firstNonEmptyLine || !extractSummaryMarkdownHeadingText(firstNonEmptyLine)) {
     warnings.push("Summary artifact should start with a Markdown heading.");
   }
@@ -49259,8 +49354,8 @@ function extractBootstrapRequirementListIds(section) {
 }
 function extractBootstrapScopedRequirementIds(section) {
   const ids = [];
-  for (const line of section.split("\n")) {
-    const match = line.match(/^\s*-\s*[^:]+:\s*(.+)$/);
+  for (const line2 of section.split("\n")) {
+    const match = line2.match(/^\s*-\s*[^:]+:\s*(.+)$/);
     if (!match) {
       continue;
     }
@@ -49289,16 +49384,16 @@ function extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock) {
     const labelIndent = match[1].length;
     const items = [];
     for (let lineIndex = index + 1; lineIndex < lines3.length; lineIndex += 1) {
-      const line = lines3[lineIndex];
-      if (line.trim().length === 0) {
+      const line2 = lines3[lineIndex];
+      if (line2.trim().length === 0) {
         continue;
       }
-      const lineIndent = line.match(/^(\s*)/)?.[1].length ?? 0;
-      if (lineIndent <= labelIndent && /^\s*-\s+/.test(line)) {
+      const lineIndent = line2.match(/^(\s*)/)?.[1].length ?? 0;
+      if (lineIndent <= labelIndent && /^\s*-\s+/.test(line2)) {
         break;
       }
-      if (lineIndent > labelIndent && /^\s*-\s+\S/.test(line)) {
-        items.push(line.trim().replace(/^\s*-\s+/, ""));
+      if (lineIndent > labelIndent && /^\s*-\s+\S/.test(line2)) {
+        items.push(line2.trim().replace(/^\s*-\s+/, ""));
       }
     }
     return items;
@@ -49501,6 +49596,25 @@ async function prepareCarryForwardBootstrapReceipt(args) {
   }
   return receipt2;
 }
+function prepareBootstrapArtifactContents(context) {
+  const contents = {
+    ".blueprint/PROJECT.md": renderProjectArtifact(context),
+    ".blueprint/REQUIREMENTS.md": renderRequirementsArtifact(context),
+    ".blueprint/ROADMAP.md": renderRoadmapArtifact(context)
+  };
+  const warnings = [];
+  for (const artifact of Object.keys(contents)) {
+    const prepared = prepareTextForPersistence(contents[artifact], { label: artifact });
+    contents[artifact] = prepared.content;
+    warnings.push(...prepared.warnings);
+  }
+  const checks = [
+    validateBootstrapProjectArtifact(contents[".blueprint/PROJECT.md"]),
+    validateBootstrapRequirementsArtifact(contents[".blueprint/REQUIREMENTS.md"]),
+    validateBootstrapRoadmapArtifact(contents[".blueprint/ROADMAP.md"])
+  ];
+  return { contents, issues: checks.flatMap((check2) => check2.issues), warnings };
+}
 async function blueprintArtifactScaffold(args = {}) {
   if (args.phase !== void 0 || args.artifact !== void 0) {
     throw new Error(
@@ -49515,7 +49629,7 @@ async function blueprintArtifactScaffold(args = {}) {
   const createdFiles = [];
   const reusedFiles = [];
   const warnings = [];
-  const carryForwardReceipt = await prepareCarryForwardBootstrapReceipt({
+  const carryForwardReceipt = args.bootstrapInitialization ? emptyCarryForwardBootstrapReceipt() : await prepareCarryForwardBootstrapReceipt({
     projectRoot,
     artifacts,
     bootstrapSeed: args.bootstrapSeed,
@@ -49555,7 +49669,7 @@ async function blueprintArtifactScaffold(args = {}) {
       continue;
     }
     warnings.push(
-      ...await writeTextFile(absolutePath, renderArtifact(renderContext), {
+      ...await writeTextFile(absolutePath, args.preparedBootstrapContents?.[artifact] ?? renderArtifact(renderContext), {
         label: artifact
       })
     );
@@ -50130,7 +50244,7 @@ function expectedFromBootstrapIssue(message) {
     return "Durable requirement IDs such as RQ-01 that are declared in .blueprint/REQUIREMENTS.md.";
   }
   if (/success criteria/i.test(message)) {
-    return "Each roadmap phase has a Success Criteria list with 2-5 concrete bullets.";
+    return "Each roadmap phase has at least one observable success criterion.";
   }
   if (/concrete phase entry|numbered phase title|objective/i.test(message)) {
     return "At least one roadmap phase entry with a numbered title, requirement mapping, objective, and success criteria.";
@@ -50650,7 +50764,7 @@ function buildCodebaseDigestSections(args) {
   ];
 }
 function summarizeArtifactContent(content) {
-  const normalizedLines = content.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim());
+  const normalizedLines = content.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim());
   const withoutFrontmatter = [...normalizedLines];
   if (withoutFrontmatter[0] === "---") {
     withoutFrontmatter.shift();
@@ -50662,14 +50776,14 @@ function summarizeArtifactContent(content) {
     }
   }
   const meaningfulLines = withoutFrontmatter.filter(
-    (line) => line.length > 0 && !line.startsWith("*Generated by")
+    (line2) => line2.length > 0 && !line2.startsWith("*Generated by")
   );
-  const heading = meaningfulLines.find((line) => line.startsWith("#"));
-  const h1Index = meaningfulLines.findIndex((line) => /^#\s+/.test(line));
+  const heading = meaningfulLines.find((line2) => line2.startsWith("#"));
+  const h1Index = meaningfulLines.findIndex((line2) => /^#\s+/.test(line2));
   const firstSectionIndex = meaningfulLines.findIndex(
-    (line, index) => index > h1Index && /^##\s+/.test(line)
+    (line2, index) => index > h1Index && /^##\s+/.test(line2)
   );
-  const preambleLines = h1Index >= 0 ? meaningfulLines.slice(h1Index + 1, firstSectionIndex >= 0 ? firstSectionIndex : meaningfulLines.length).filter((line) => !line.startsWith("#")) : [];
+  const preambleLines = h1Index >= 0 ? meaningfulLines.slice(h1Index + 1, firstSectionIndex >= 0 ? firstSectionIndex : meaningfulLines.length).filter((line2) => !line2.startsWith("#")) : [];
   const sections = splitMarkdownSections(meaningfulLines).map((section, index) => {
     const summary = summarizeMarkdownSectionBody(section.body.join("\n"));
     return {
@@ -55284,7 +55398,7 @@ async function collectDiscussEvidence(args) {
     ).test(part)
   ) ?? "";
   const dependencyText = [
-    detail.split("\n").filter((line) => /depend(?:s|encies|ency)\b/i.test(line)).join("\n"),
+    detail.split("\n").filter((line2) => /depend(?:s|encies|ency)\b/i.test(line2)).join("\n"),
     context.content,
     spec.content
   ].join("\n");
@@ -55713,7 +55827,7 @@ function assemble(session) {
   const model = candidate;
   if (session.records.length) {
     const ids = new Set(session.records.map((r) => r.id));
-    const isOwned = (text) => typeof text === "string" && [...ids].some((id) => text.startsWith(`[${id}] `));
+    const isOwned = (text2) => typeof text2 === "string" && [...ids].some((id) => text2.startsWith(`[${id}] `));
     const decisions = Array.isArray(model.implementationDecisions) ? model.implementationDecisions : [];
     model.implementationDecisions = [
       ...decisions.filter((item) => !isOwned(item?.decision ?? "")),
@@ -56581,17 +56695,17 @@ function table(headers, rows) {
 }
 function prose(value) {
   let fence = null;
-  const lines3 = value.replace(/\r\n?/g, "\n").trim().split("\n").map((line) => {
-    const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+  const lines3 = value.replace(/\r\n?/g, "\n").trim().split("\n").map((line2) => {
+    const marker = line2.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
     if (fence) {
       if (marker && marker[1][0] === fence.marker && marker[1].length >= fence.length && marker[2].trim() === "") fence = null;
-      return line;
+      return line2;
     }
     if (marker && !(marker[1][0] === "`" && marker[2].includes("`"))) {
       fence = { marker: marker[1][0], length: marker[1].length };
-      return line;
+      return line2;
     }
-    return line.replace(/^( {0,3})#{1,2}(?=\s)/, "$1###");
+    return line2.replace(/^( {0,3})#{1,2}(?=\s)/, "$1###");
   });
   if (fence) {
     const unclosed = fence;
@@ -56723,12 +56837,12 @@ async function readResearchSession(loc) {
 }
 async function saveResearchSession(loc, session) {
   sessionSchema2.parse(session);
-  const text = JSON.stringify(session, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
-  if (Buffer.byteLength(text) > 32 * 1024 * 1024) throw new Error("Research session exceeds 32 MiB; retained history must be archived through runtime maintenance.");
+  const text2 = JSON.stringify(session, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
+  if (Buffer.byteLength(text2) > 32 * 1024 * 1024) throw new Error("Research session exceeds 32 MiB; retained history must be archived through runtime maintenance.");
   await withBlueprintRepoLock(loc.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
     const current = await researchLocation({ cwd: loc.projectRoot, phase: session.phase });
     if (current.sessionPath !== loc.sessionPath || !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) throw new Error("Phase topology changed; refresh research preparation before saving.");
-    await writeTextFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), text);
+    await writeTextFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), text2);
   });
 }
 async function withResearchSession(args, task) {
@@ -56805,7 +56919,7 @@ async function safeNextAction(proposed) {
   return catalog.commands.progress?.implemented ? "Run /blu-progress to review the next safe action." : null;
 }
 function lines(section) {
-  return section.split("\n").map((line) => line.trim()).filter((line) => line && !/^\|?[-| :]+\|?$/.test(line));
+  return section.split("\n").map((line2) => line2.trim()).filter((line2) => line2 && !/^\|?[-| :]+\|?$/.test(line2));
 }
 function contextGrounding(content, projectConstraints) {
   const decisions = extractMarkdownSection3(content, "Implementation Decisions");
@@ -57216,20 +57330,20 @@ function compilePlanCandidate(raw, context) {
   const knownEvidence = new Set(evidenceArtifacts);
   const savedByNumber = /* @__PURE__ */ new Map();
   for (const [index, saved] of context.existingPlans.entries()) {
-    const identity = numericIdentity(saved.planId);
-    if (!identity || !Number.isSafeInteger(saved.wave) || saved.wave < 1) {
+    const identity2 = numericIdentity(saved.planId);
+    if (!identity2 || !Number.isSafeInteger(saved.wave) || saved.wave < 1) {
       issue2(`context.existingPlans[${index}]`, "planning.invalid_saved_plan", "Saved plans require a positive numeric id and a positive integer wave.");
-    } else if (savedByNumber.has(identity)) {
-      issue2(`context.existingPlans[${index}].planId`, "planning.ambiguous_saved_slot", `Multiple saved plans resolve to numeric slot ${identity}.`);
+    } else if (savedByNumber.has(identity2)) {
+      issue2(`context.existingPlans[${index}].planId`, "planning.ambiguous_saved_slot", `Multiple saved plans resolve to numeric slot ${identity2}.`);
     } else {
-      savedByNumber.set(identity, { ...saved, planId: normalizePlanId(saved.planId) });
+      savedByNumber.set(identity2, { ...saved, planId: normalizePlanId(saved.planId) });
     }
   }
   const targets = [];
   const requestedTargets = context.mode === "replace" && context.targetPlanIds.length === 0 ? [...savedByNumber.values()].map((plan) => plan.planId) : context.targetPlanIds;
   for (const [index, id] of requestedTargets.entries()) {
-    const identity = numericIdentity(id);
-    const saved = identity ? savedByNumber.get(identity) : void 0;
+    const identity2 = numericIdentity(id);
+    const saved = identity2 ? savedByNumber.get(identity2) : void 0;
     if (!saved) {
       issue2(`context.targetPlanIds[${index}]`, "planning.target_missing", `Target plan ${id} is not an existing saved plan.`);
     } else if (targets.includes(saved.planId)) {
@@ -57259,8 +57373,8 @@ function compilePlanCandidate(raw, context) {
   for (const [index, plan] of candidate.plans.entries()) {
     const resolved = [];
     for (const [dependencyIndex, dependency] of plan.dependsOn.entries()) {
-      const identity = numericIdentity(dependency);
-      const saved = identity ? savedByNumber.get(identity) : void 0;
+      const identity2 = numericIdentity(dependency);
+      const saved = identity2 ? savedByNumber.get(identity2) : void 0;
       const target = localIds.get(dependency) ?? (saved && (context.mode !== "replace" || retainedIds.has(saved.planId)) ? saved.planId : void 0);
       if (!target) {
         issue2(`candidate.plans[${index}].dependsOn[${dependencyIndex}]`, "planning.dependency_missing", `Dependency ${dependency} is not a candidate key or a retained saved plan. Use candidate keys to reference plans in this submission.`);
@@ -57273,8 +57387,8 @@ function compilePlanCandidate(raw, context) {
   for (const saved of retained) {
     const resolved = [];
     for (const dependency of saved.dependsOn ?? []) {
-      const identity = numericIdentity(dependency);
-      const target = identity ? savedByNumber.get(identity)?.planId : void 0;
+      const identity2 = numericIdentity(dependency);
+      const target = identity2 ? savedByNumber.get(identity2)?.planId : void 0;
       if (!target || !retainedIds.has(target) && !candidateIds.has(target)) {
         issue2("context.existingPlans", "planning.saved_dependency_missing", `Saved plan ${saved.planId} depends on missing plan ${dependency}.`);
       } else {
@@ -57534,12 +57648,12 @@ async function readPlanSession(loc) {
 }
 async function savePlanSession(loc, session, topologyLockHeld = false) {
   schema.parse(session);
-  const text = JSON.stringify(session, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
-  if (Buffer.byteLength(text) > 32 * 1024 * 1024) throw new Error("Planning session exceeds 32 MiB; archive retained history through runtime maintenance.");
+  const text2 = JSON.stringify(session, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
+  if (Buffer.byteLength(text2) > 32 * 1024 * 1024) throw new Error("Planning session exceeds 32 MiB; archive retained history through runtime maintenance.");
   const write = async () => {
     const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
     if (current.sessionPath !== loc.sessionPath || current.resolved.phaseNumber !== session.phase) throw new Error("Phase storage identity changed; recover the previous planning session before saving.");
-    await writeTextFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), text);
+    await writeTextFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), text2);
   };
   return topologyLockHeld ? write() : withBlueprintRepoLock(loc.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, write);
 }
@@ -58253,7 +58367,7 @@ function extractMarkdownSection6(markdown, heading) {
   return match?.[1]?.trim() ?? "";
 }
 function parseBulletSection2(markdown, heading) {
-  return extractMarkdownSection6(markdown, heading).split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
+  return extractMarkdownSection6(markdown, heading).split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).filter((line2) => line2.length > 0 && line2.toLowerCase() !== "none");
 }
 function parseStateSnapshot(raw) {
   const getLineValue = (label) => {
@@ -58981,8 +59095,8 @@ async function gitStatusShortPaths(repoPath2) {
   if (!result.success || result.stdout.trim().length === 0) {
     return [];
   }
-  return result.stdout.split("\n").map((line) => line.trimEnd()).filter((line) => line.length > 0).map((line) => {
-    const statusPath = line.length > 3 ? line.slice(3) : line;
+  return result.stdout.split("\n").map((line2) => line2.trimEnd()).filter((line2) => line2.length > 0).map((line2) => {
+    const statusPath = line2.length > 3 ? line2.slice(3) : line2;
     const renameTarget = statusPath.split(" -> ").at(-1);
     return renameTarget ?? statusPath;
   });
@@ -60238,7 +60352,7 @@ async function listGitWorktreePaths(repoPath2) {
       `Unable to inspect recorded worktrees for workspace source repo: ${repoPath2}`
     );
   }
-  const recordedPaths = result.stdout.split("\n").filter((line) => line.startsWith("worktree ")).map((line) => line.slice("worktree ".length).trim());
+  const recordedPaths = result.stdout.split("\n").filter((line2) => line2.startsWith("worktree ")).map((line2) => line2.slice("worktree ".length).trim());
   return Promise.all(recordedPaths.map((recordedPath) => canonicalizePath(recordedPath)));
 }
 function workspaceRemovalRollbackPath(workspacePath) {
@@ -62006,7 +62120,7 @@ function renderUntrackedTextPatch(filePath, content) {
   if (contentLines.length === 0) {
     patchLines.push("+");
   } else {
-    patchLines.push(...contentLines.map((line) => `+${line}`));
+    patchLines.push(...contentLines.map((line2) => `+${line2}`));
   }
   if (!endsWithNewline) {
     patchLines.push("\\ No newline at end of file");
@@ -64421,15 +64535,15 @@ function isArtifactDigest(value) {
   return typeof digest2.path === "string" && (digest2.sha256 === null || typeof digest2.sha256 === "string" && /^[0-9a-f]{64}$/.test(digest2.sha256)) && (digest2.sizeBytes === null || Number.isInteger(digest2.sizeBytes) && (digest2.sizeBytes ?? -1) >= 0) && (digest2.mode === null || Number.isInteger(digest2.mode));
 }
 function isVerificationOutputValid(receipt2, channel) {
-  const text = receipt2[channel];
+  const text2 = receipt2[channel];
   const bytes = receipt2[`${channel}Bytes`];
   const hash4 = receipt2[`${channel}Hash`];
   const truncated = receipt2[`${channel}Truncated`];
-  if (typeof text !== "string" || !Number.isInteger(bytes) || bytes < Buffer.byteLength(text) || typeof hash4 !== "string" || !/^[0-9a-f]{64}$/.test(hash4) || typeof truncated !== "boolean") {
+  if (typeof text2 !== "string" || !Number.isInteger(bytes) || bytes < Buffer.byteLength(text2) || typeof hash4 !== "string" || !/^[0-9a-f]{64}$/.test(hash4) || typeof truncated !== "boolean") {
     return false;
   }
-  if (truncated) return bytes > Buffer.byteLength(text);
-  return bytes === Buffer.byteLength(text) && hash4 === sha2562(text);
+  if (truncated) return bytes > Buffer.byteLength(text2);
+  return bytes === Buffer.byteLength(text2) && hash4 === sha2562(text2);
 }
 function isValidPhaseExecutionVerificationReceipt(value, command) {
   if (!value || typeof value !== "object") return false;
@@ -65986,9 +66100,9 @@ if (!finalized) await rollback();
           });
         });
         const lines3 = createInterface({ input: this.child.stdout, crlfDelay: Infinity });
-        lines3.on("line", (line) => {
+        lines3.on("line", (line2) => {
           try {
-            const message = JSON.parse(line);
+            const message = JSON.parse(line2);
             const waiter = this.pending.get(message.id);
             if (!waiter) return;
             this.pending.delete(message.id);
@@ -67060,7 +67174,7 @@ async function gitStatusShort2(projectRoot) {
       ".",
       `:(exclude)${BLUEPRINT_DIR}/locks/**`
     ]);
-    return stdout.trim().split(/\r?\n/u).map((line) => line.trimEnd()).filter((line) => line.length > 0);
+    return stdout.trim().split(/\r?\n/u).map((line2) => line2.trimEnd()).filter((line2) => line2.length > 0);
   } catch (error2) {
     return [`git status failed: ${errorMessage(error2)}`];
   }
@@ -67833,13 +67947,13 @@ function normalizeTextContent3(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
 }
-function extractBlueprintCommandText(line) {
-  const match = line.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
+function extractBlueprintCommandText(line2) {
+  const match = line2.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
   if (!match || match.index === void 0) {
     return null;
   }
   const command = match[0].trim().replace(/^\/blu\s+/i, "/blu-").toLowerCase();
-  let argumentText = line.slice(match.index + match[0].length).trimStart();
+  let argumentText = line2.slice(match.index + match[0].length).trimStart();
   if (argumentText.length === 0 || /^[`'").,;:!?]/.test(argumentText)) {
     return command;
   }
@@ -69065,7 +69179,7 @@ async function readWorkflowNoUat3(projectRoot) {
   }
 }
 function extractSavedNextSafeAction(content) {
-  return extractMarkdownSectionContent(content, /^Next Safe Action$/i).flatMap((section) => section.split(/\r?\n/)).map((line) => extractBlueprintCommandText(line)).find((command) => command !== null) ?? null;
+  return extractMarkdownSectionContent(content, /^Next Safe Action$/i).flatMap((section) => section.split(/\r?\n/)).map((line2) => extractBlueprintCommandText(line2)).find((command) => command !== null) ?? null;
 }
 async function inspectUatRoutingState(args) {
   if (args.artifactPath === null) {
@@ -69160,8 +69274,8 @@ async function buildAllowedSecurityNextActions(args) {
     ])
   };
 }
-function splitMarkdownTableRow(line) {
-  const trimmed = line.trim();
+function splitMarkdownTableRow(line2) {
+  const trimmed = line2.trim();
   const withoutLeadingPipe = trimmed.startsWith("|") ? trimmed.slice(1) : trimmed;
   const withoutOuterPipes = withoutLeadingPipe.endsWith("|") ? withoutLeadingPipe.slice(0, -1) : withoutLeadingPipe;
   const cells = [];
@@ -69188,7 +69302,7 @@ function isMarkdownTableSeparatorRow(cells) {
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 function parseMarkdownTableRows(section) {
-  return section.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("|")).map(splitMarkdownTableRow).filter((cells) => cells.length > 0).filter((cells) => !isMarkdownTableSeparatorRow(cells));
+  return section.split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("|")).map(splitMarkdownTableRow).filter((cells) => cells.length > 0).filter((cells) => !isMarkdownTableSeparatorRow(cells));
 }
 function normalizeThreatCell(value, fallback) {
   const normalized = value.replace(/\s+/g, " ").trim();
@@ -70063,16 +70177,16 @@ function countMarkdownSections(content) {
   return [...content.matchAll(/^##?\s+.+$/gm)].length;
 }
 function collectListItems2(block) {
-  return block.split("\n").map((line) => line.trim()).flatMap((line) => {
-    const checklistMatch = line.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
+  return block.split("\n").map((line2) => line2.trim()).flatMap((line2) => {
+    const checklistMatch = line2.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
     if (checklistMatch) {
       return [checklistMatch[1].trim()];
     }
-    const bulletMatch = line.match(/^[-*+]\s+(.+)$/);
+    const bulletMatch = line2.match(/^[-*+]\s+(.+)$/);
     if (bulletMatch) {
       return [bulletMatch[1].trim()];
     }
-    const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+    const numberedMatch = line2.match(/^\d+\.\s+(.+)$/);
     return numberedMatch ? [numberedMatch[1].trim()] : [];
   }).filter((item) => item.length > 0);
 }
@@ -73706,15 +73820,15 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     rejected
   };
 }
-function extractPathCandidates(text) {
+function extractPathCandidates(text2) {
   const candidates = /* @__PURE__ */ new Set();
-  for (const match of text.matchAll(/`([^`]+)`/g)) {
+  for (const match of text2.matchAll(/`([^`]+)`/g)) {
     const candidate = match[1].trim();
     if (!isObviouslyNonPathMarkupToken(candidate)) {
       candidates.add(candidate);
     }
   }
-  for (const match of text.matchAll(
+  for (const match of text2.matchAll(
     /(?:^|[\s("'`])((?:\.{1,2}\/)?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)(?=$|[\s"'`),.;:!?])/g
   )) {
     const candidate = match[1].trim();
@@ -77286,11 +77400,11 @@ function resolveAnalyzeImpactConfig(providedConfig, warnings) {
 function parseCodeownersRules(raw, sourcePath) {
   const rules = [];
   for (const [lineIndex, rawLine] of raw.split(/\r?\n/u).entries()) {
-    const line = rawLine.replace(/\s+#.*$/u, "").trim();
-    if (line.length === 0 || line.startsWith("#")) {
+    const line2 = rawLine.replace(/\s+#.*$/u, "").trim();
+    if (line2.length === 0 || line2.startsWith("#")) {
       continue;
     }
-    const [pattern, ...owners] = line.split(/\s+/u);
+    const [pattern, ...owners] = line2.split(/\s+/u);
     if (!pattern) {
       continue;
     }
@@ -79026,8 +79140,8 @@ function parseNumstat(stdout) {
   let additions = 0;
   let deletions = 0;
   let sawBinary = false;
-  for (const line of stdout.split(/\r?\n/u)) {
-    const [rawAdditions, rawDeletions] = line.split("	");
+  for (const line2 of stdout.split(/\r?\n/u)) {
+    const [rawAdditions, rawDeletions] = line2.split("	");
     if (!rawAdditions || !rawDeletions) {
       continue;
     }
@@ -79045,12 +79159,12 @@ function parseNumstat(stdout) {
 }
 function parsePorcelainPaths(stdout) {
   const paths = [];
-  for (const line of stdout.split(/\r?\n/u)) {
-    if (line.trim().length === 0) {
+  for (const line2 of stdout.split(/\r?\n/u)) {
+    if (line2.trim().length === 0) {
       continue;
     }
-    const status = line.slice(0, 2);
-    const rawPath = line.slice(3).trim();
+    const status = line2.slice(0, 2);
+    const rawPath = line2.slice(3).trim();
     const normalizedPath = rawPath.includes(" -> ") ? rawPath.split(" -> ").at(-1) ?? rawPath : rawPath;
     if (status === "??" || status[1] !== " ") {
       paths.push(normalizedPath.replace(/^"|"$/gu, ""));
@@ -79108,16 +79222,16 @@ async function resolveGitDiffMetadata(projectRoot, kind, diffArgs, hashSeed) {
 }
 function parseDiffFilePaths(rawDiff) {
   const paths = [];
-  for (const line of rawDiff.split(/\r?\n/u)) {
-    if (line.startsWith("diff --git ")) {
-      const match = /^diff --git "?a\/(.+?)"? "?b\/(.+?)"?$/u.exec(line);
+  for (const line2 of rawDiff.split(/\r?\n/u)) {
+    if (line2.startsWith("diff --git ")) {
+      const match = /^diff --git "?a\/(.+?)"? "?b\/(.+?)"?$/u.exec(line2);
       if (match?.[2] && match[2] !== "/dev/null") {
         paths.push(match[2]);
       }
       continue;
     }
-    if (line.startsWith("+++ ")) {
-      const nextPath = line.slice(4).trim();
+    if (line2.startsWith("+++ ")) {
+      const nextPath = line2.slice(4).trim();
       if (nextPath !== "/dev/null") {
         paths.push(nextPath.replace(/^"?(?:b\/)?(.+?)"?$/u, "$1"));
       }
@@ -79128,13 +79242,13 @@ function parseDiffFilePaths(rawDiff) {
 function parseDiffFileStats(rawDiff) {
   let additions = 0;
   let deletions = 0;
-  for (const line of rawDiff.split(/\r?\n/u)) {
-    if (line.startsWith("+++") || line.startsWith("---")) {
+  for (const line2 of rawDiff.split(/\r?\n/u)) {
+    if (line2.startsWith("+++") || line2.startsWith("---")) {
       continue;
     }
-    if (line.startsWith("+")) {
+    if (line2.startsWith("+")) {
       additions += 1;
-    } else if (line.startsWith("-")) {
+    } else if (line2.startsWith("-")) {
       deletions += 1;
     }
   }
@@ -81028,9 +81142,9 @@ function validateRenderedImpactMarkdown(markdown, errors, warnings) {
   for (const match of placeholderMatches) {
     errors.push(`IMPACT.md contains unresolved placeholder text: ${match}.`);
   }
-  for (const line of markdown.split(/\r?\n/u)) {
-    if (/\bN\/A\b/iu.test(line) && !/\b(because|reason|not applicable)\b/iu.test(line)) {
-      errors.push(`IMPACT.md contains generic N/A without an explicit reason: ${line.trim()}`);
+  for (const line2 of markdown.split(/\r?\n/u)) {
+    if (/\bN\/A\b/iu.test(line2) && !/\b(because|reason|not applicable)\b/iu.test(line2)) {
+      errors.push(`IMPACT.md contains generic N/A without an explicit reason: ${line2.trim()}`);
     }
   }
   if (!markdown.includes("Impact drivers") || !markdown.includes("Confidence factors")) {
@@ -81041,8 +81155,8 @@ function parseMarkdownSections(markdown) {
   const sections = /* @__PURE__ */ new Map();
   let current = null;
   let content = [];
-  for (const line of markdown.split(/\r?\n/u)) {
-    const match = /^## ([^\n#]+)$/u.exec(line);
+  for (const line2 of markdown.split(/\r?\n/u)) {
+    const match = /^## ([^\n#]+)$/u.exec(line2);
     if (match) {
       if (current) {
         sections.set(current, content.join("\n").trim());
@@ -81052,7 +81166,7 @@ function parseMarkdownSections(markdown) {
       continue;
     }
     if (current) {
-      content.push(line);
+      content.push(line2);
     }
   }
   if (current) {
@@ -82244,7 +82358,7 @@ function recordTerminalResult(stored, result) {
   stored.terminalExpiresAt = nowProvider() + terminalReceiptTtlMs;
 }
 function lines2(value) {
-  return value.split(/\r?\n/).filter((line) => line.length > 0);
+  return value.split(/\r?\n/).filter((line2) => line2.length > 0);
 }
 function errorMessage2(error2) {
   return error2 instanceof Error ? error2.message : String(error2);
@@ -82441,8 +82555,8 @@ async function readUndoReportReceipt(repoRoot) {
   const ledgerSection = content.match(
     /(?:^|\n)## Durable Idempotency Ledger\s*\n([\s\S]*?)(?=\n## |$)/
   )?.[1] ?? "";
-  for (const line of ledgerSection.split(/\r?\n/)) {
-    const match = line.match(
+  for (const line2 of ledgerSection.split(/\r?\n/)) {
+    const match = line2.match(
       /^\|\s*((?:[0-9a-f]{40}|[0-9a-f]{64}))\s*\|\s*((?:[0-9a-f]{40}|[0-9a-f]{64}))\s*\|$/
     );
     if (match) {
@@ -82461,13 +82575,13 @@ async function isAncestor(repoRoot, ancestor, descendant) {
   return result.exitCode === 0;
 }
 function inversePatchShapeFingerprint(diff) {
-  const semanticLines = diff.split(/\r?\n/).filter((line) => {
-    if (!line) return false;
-    if (line.startsWith("index ")) return false;
-    if (line.startsWith("--- ") || line.startsWith("+++ ")) return false;
-    if (line.startsWith("@@")) return false;
-    if (line.startsWith(" ")) return false;
-    if (line === "\\ No newline at end of file") return false;
+  const semanticLines = diff.split(/\r?\n/).filter((line2) => {
+    if (!line2) return false;
+    if (line2.startsWith("index ")) return false;
+    if (line2.startsWith("--- ") || line2.startsWith("+++ ")) return false;
+    if (line2.startsWith("@@")) return false;
+    if (line2.startsWith(" ")) return false;
+    if (line2 === "\\ No newline at end of file") return false;
     return true;
   }).join("\n");
   return semanticLines ? qualityShippingSha256(semanticLines) : null;
@@ -83740,7 +83854,7 @@ function parseCommitIdentity(value) {
   const separator = value.indexOf("\n\n");
   if (separator < 0) throw new Error("Commit object did not contain a header/message separator.");
   const headers = value.slice(0, separator).split("\n");
-  const authorLine = headers.find((line) => line.startsWith("author "));
+  const authorLine = headers.find((line2) => line2.startsWith("author "));
   if (!authorLine) throw new Error("Commit object did not contain author metadata.");
   const message = value.slice(separator + 2);
   return { author: authorLine.slice("author ".length), message, subject: message.split(/\r?\n/, 1)[0] ?? "" };
@@ -83768,8 +83882,8 @@ async function inspectCommit(repoRoot, sha, policy) {
   const tree = metadata[1] ?? "";
   const identityResult = await git(repoRoot, ["cat-file", "commit", sha]);
   if (!succeeded(identityResult)) throw new Error(`Commit identity inspection failed for ${sha}: ${identityResult.stderr || identityResult.stdout}`);
-  const identity = parseCommitIdentity(identityResult.stdout);
-  const subject = metadata[2] ?? identity.subject;
+  const identity2 = parseCommitIdentity(identityResult.stdout);
+  const subject = metadata[2] ?? identity2.subject;
   if (!isCanonicalFullGitHash(tree)) throw new Error(`Commit ${sha} did not expose a canonical tree hash.`);
   const diff = await gitText(
     repoRoot,
@@ -83788,8 +83902,8 @@ async function inspectCommit(repoRoot, sha, policy) {
     parents,
     tree,
     subject,
-    author: identity.author,
-    message: identity.message,
+    author: identity2.author,
+    message: identity2.message,
     filteredDeltaSha256: await filteredDeltaSha256(repoRoot, parent, sha, policy),
     classification,
     action: includedPaths.length === 0 ? "exclude" : "include",
@@ -85624,23 +85738,23 @@ async function freshChanges(stored, afterPreReport = false, expectedRemoteHead =
   return { changes: changed, ghFailure, ghDetail };
 }
 function classifyPushFailure(result) {
-  const text = `${result.stderr}
+  const text2 = `${result.stderr}
 ${result.stdout}`;
-  if (/non-fast-forward|fetch first|rejected/i.test(text)) return "Push was rejected as non-fast-forward or remote-advanced.";
+  if (/non-fast-forward|fetch first|rejected/i.test(text2)) return "Push was rejected as non-fast-forward or remote-advanced.";
   return abnormal2(result) ? "Push outcome is unknown because the process could not be observed normally." : `Push failed with exit ${String(result.exitCode)}.`;
 }
 function classifyGhFailure(result) {
-  const text = `${result.stderr}
+  const text2 = `${result.stderr}
 ${result.stdout}`;
   if (result.exitCode === null) return "gh is missing or could not be spawned.";
-  if (/auth|login|authentication|not logged/i.test(text)) return "gh authentication failed.";
+  if (/auth|login|authentication|not logged/i.test(text2)) return "gh authentication failed.";
   return abnormal2(result) ? "PR creation outcome is unknown because gh did not complete normally." : `PR creation failed with exit ${String(result.exitCode)}.`;
 }
 function ghCreateFailureReason(result) {
-  const text = `${result.stderr}
+  const text2 = `${result.stderr}
 ${result.stdout}`;
-  if (result.exitCode === null || /command not found|enoent/i.test(text)) return "gh-missing";
-  if (/auth|login|authentication|not logged/i.test(text)) return "gh-unauthenticated";
+  if (result.exitCode === null || /command not found|enoent/i.test(text2)) return "gh-missing";
+  if (/auth|login|authentication|not logged/i.test(text2)) return "gh-unauthenticated";
   return "pr-create-failed";
 }
 async function persistOutcome2(stored, result) {
@@ -86114,9 +86228,9 @@ function extractFrontmatterBlock2(content) {
     body: match[2] ?? ""
   };
 }
-function countIndent(line) {
+function countIndent(line2) {
   let indent = 0;
-  while (indent < line.length && line[indent] === " ") {
+  while (indent < line2.length && line2[indent] === " ") {
     indent += 1;
   }
   return indent;
@@ -86151,12 +86265,12 @@ function foldBlockLines(lines3) {
       paragraph = [];
     }
   };
-  for (const line of lines3) {
-    if (line.length === 0) {
+  for (const line2 of lines3) {
+    if (line2.length === 0) {
       flushParagraph();
       continue;
     }
-    paragraph.push(line.trim());
+    paragraph.push(line2.trim());
   }
   flushParagraph();
   if (paragraphs.length === 0) {
@@ -86169,16 +86283,16 @@ function parseBlockScalar(lines3, startIndex, indent, indicator) {
   const blockLines = [];
   let index = startIndex;
   while (index < lines3.length) {
-    const line = lines3[index];
-    if (line.trim().length === 0) {
+    const line2 = lines3[index];
+    if (line2.trim().length === 0) {
       blockLines.push("");
       index += 1;
       continue;
     }
-    if (countIndent(line) < indent) {
+    if (countIndent(line2) < indent) {
       break;
     }
-    blockLines.push(line.slice(indent));
+    blockLines.push(line2.slice(indent));
     index += 1;
   }
   return {
@@ -86192,12 +86306,12 @@ function parseArray2(lines3, startIndex, indent) {
   const values = [];
   let index = startIndex;
   while (index < lines3.length) {
-    const line = lines3[index];
-    if (line.trim().length === 0) {
+    const line2 = lines3[index];
+    if (line2.trim().length === 0) {
       index += 1;
       continue;
     }
-    const lineIndent = countIndent(line);
+    const lineIndent = countIndent(line2);
     if (lineIndent < indent) {
       break;
     }
@@ -86206,7 +86320,7 @@ function parseArray2(lines3, startIndex, indent) {
       index += 1;
       continue;
     }
-    const trimmed = line.trim();
+    const trimmed = line2.trim();
     if (!trimmed.startsWith("- ")) {
       break;
     }
@@ -86242,12 +86356,12 @@ function parseObject2(lines3, startIndex, indent) {
   const value = {};
   let index = startIndex;
   while (index < lines3.length) {
-    const line = lines3[index];
-    if (line.trim().length === 0) {
+    const line2 = lines3[index];
+    if (line2.trim().length === 0) {
       index += 1;
       continue;
     }
-    const lineIndent = countIndent(line);
+    const lineIndent = countIndent(line2);
     if (lineIndent < indent) {
       break;
     }
@@ -86256,7 +86370,7 @@ function parseObject2(lines3, startIndex, indent) {
       index += 1;
       continue;
     }
-    const trimmed = line.trim();
+    const trimmed = line2.trim();
     const keyMatch = /^([A-Za-z0-9_-]+):(.*)$/.exec(trimmed);
     if (!keyMatch) {
       issues.push(`Invalid YAML mapping at line ${index + 1}.`);
@@ -86422,6 +86536,7 @@ var project_exports = {};
 __export(project_exports, {
   blueprintCommandCatalog: () => blueprintCommandCatalog,
   blueprintProjectInit: () => blueprintProjectInit,
+  blueprintProjectPrepare: () => blueprintProjectPrepare,
   blueprintProjectStatus: () => blueprintProjectStatus,
   blueprintRuntimeOwnedCommandCatalog: () => blueprintRuntimeOwnedCommandCatalog,
   projectToolDefinitions: () => projectToolDefinitions
@@ -86540,7 +86655,7 @@ async function readRepoSummary(projectRoot) {
   for (const candidate of readmePaths) {
     try {
       const raw = await fs31.readFile(path27.join(projectRoot, candidate), "utf8");
-      const summary = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith("#"));
+      const summary = raw.split("\n").map((line2) => line2.trim()).find((line2) => line2.length > 0 && !line2.startsWith("#"));
       if (summary) {
         return summary;
       }
@@ -86550,52 +86665,17 @@ async function readRepoSummary(projectRoot) {
   }
   return readPackageDescription(projectRoot);
 }
-function mergeBootstrapSeed(synthesized, explicit) {
-  if (!explicit) {
-    return synthesized;
-  }
-  return {
-    vision: explicit.vision ?? synthesized.vision,
-    audience: {
-      primary: explicit.audience?.primary ?? synthesized.audience?.primary,
-      secondary: explicit.audience?.secondary ?? synthesized.audience?.secondary
-    },
-    constraints: explicit.constraints ?? synthesized.constraints,
-    currentMilestone: explicit.currentMilestone ?? synthesized.currentMilestone,
-    nonGoals: explicit.nonGoals ?? synthesized.nonGoals,
-    requirements: explicit.requirements ?? synthesized.requirements,
-    roadmapPhases: explicit.roadmapPhases ?? synthesized.roadmapPhases,
-    brownfieldMode: explicit.brownfieldMode ?? synthesized.brownfieldMode,
-    assumptions: explicit.assumptions ?? synthesized.assumptions
-  };
-}
 function bootstrapSeedIsSufficient(seed) {
   return Boolean(
     seed?.vision?.trim() && seed.currentMilestone?.trim() && seed.requirements && seed.requirements.length > 0 && seed.roadmapPhases && seed.roadmapPhases.length > 0
   );
 }
-function countWords(value) {
-  return (value.match(/[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)*/g) ?? []).length;
-}
-function isSubstantiveText(value, minimumWords = MIN_SUBSTANTIVE_WORDS) {
+function isSubstantiveText(value) {
   const normalized = value?.trim() ?? "";
-  return normalized.length > 0 && countWords(normalized) >= minimumWords && !GENERIC_TEXT_PATTERN.test(normalized);
-}
-function bootstrapSeedHasAutoContext(seed, repoSummary) {
-  if (isSubstantiveText(repoSummary ?? void 0)) {
-    return true;
-  }
-  if (isSubstantiveText(seed?.vision)) {
-    return true;
-  }
-  const substantiveRequirements = seed?.requirements?.filter((requirement) => isSubstantiveText(requirement.requirement)).length ?? 0;
-  const substantivePhases = seed?.roadmapPhases?.filter(
-    (phase) => isSubstantiveText(phase.title, 2) && isSubstantiveText(phase.objective)
-  ).length ?? 0;
-  return substantiveRequirements > 0 && substantivePhases > 0;
+  return normalized.length > 0 && /[\p{L}\p{N}]/u.test(normalized) && !GENERIC_TEXT_PATTERN.test(normalized);
 }
 function normalizedPhaseRef(value) {
-  return value.trim().replace(/\.0+$/, "").toLowerCase();
+  return normalizeBlueprintPhaseRef(value);
 }
 function bootstrapSeedPreflightDiagnostics(seed) {
   const diagnostics = [];
@@ -86608,10 +86688,10 @@ function bootstrapSeedPreflightDiagnostics(seed) {
       path: "bootstrapSeed.vision",
       code: "seed_vision_not_substantive",
       message: "bootstrapSeed.vision must contain a substantive project brief before the first write.",
-      repair: "Replace placeholder vision text with a concrete project brief of at least six meaningful words."
+      repair: "Replace placeholder vision text with a concrete project brief."
     }));
   }
-  if (!isSubstantiveText(seed.currentMilestone, 1)) {
+  if (!isSubstantiveText(seed.currentMilestone)) {
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.currentMilestone",
       code: "seed_current_milestone_missing",
@@ -86630,7 +86710,7 @@ function bootstrapSeedPreflightDiagnostics(seed) {
       }));
     }
     requirementIds.add(requirement.id);
-    if (!isSubstantiveText(requirement.requirement, 5)) {
+    if (!isSubstantiveText(requirement.requirement)) {
       diagnostics.push(seedDiagnostic({
         path: `bootstrapSeed.requirements[${requirementIndex}].requirement`,
         code: "seed_requirement_not_substantive",
@@ -86654,7 +86734,26 @@ function bootstrapSeedPreflightDiagnostics(seed) {
     }));
   }
   for (const [phaseIndex, phase] of seed.roadmapPhases.entries()) {
-    const phaseRef = normalizedPhaseRef(phase.phase);
+    let phaseRef;
+    try {
+      phaseRef = normalizedPhaseRef(phase.phase);
+    } catch {
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].phase`,
+        code: "seed_phase_ref_invalid",
+        message: `Invalid phase reference: ${phase.phase}`,
+        repair: "Use a numeric phase reference, or bootstrapModel so runtime assigns it."
+      }));
+      continue;
+    }
+    if (!isSubstantiveText(phase.title) || !isSubstantiveText(phase.objective)) {
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].objective`,
+        code: "seed_phase_intent_missing",
+        message: `Phase ${phase.phase} needs a title and objective.`,
+        repair: "Describe the phase outcome."
+      }));
+    }
     if (phaseRefs.has(phaseRef)) {
       diagnostics.push(seedDiagnostic({
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].phase`,
@@ -86677,6 +86776,14 @@ function bootstrapSeedPreflightDiagnostics(seed) {
         }));
       }
       uniquePhaseRequirementIds.add(requirementId);
+      if (seed.requirements.some((row) => row.id === requirementId && row.scope === "out_of_scope")) {
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_excluded_requirement_scheduled",
+          message: `Phase ${phase.phase} schedules out-of-scope requirement ${requirementId}.`,
+          repair: "Remove excluded requirements from active phases."
+        }));
+      }
       if (!requirementIds.has(requirementId)) {
         diagnostics.push(seedDiagnostic({
           path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
@@ -86690,12 +86797,12 @@ function bootstrapSeedPreflightDiagnostics(seed) {
       }
     }
     const successCriteria = phase.successCriteria ?? [];
-    if (successCriteria.length < 2 || successCriteria.length > 5) {
+    if (successCriteria.length === 0) {
       diagnostics.push(seedDiagnostic({
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_success_criteria_count_invalid",
-        message: `Phase ${phase.phase} must include 2-5 success criteria before the first write.`,
-        repair: "Provide between 2 and 5 success criteria for the phase."
+        message: `Phase ${phase.phase} must include at least one success criterion before the first write.`,
+        repair: "Provide observable evidence for the phase outcome."
       }));
     }
   }
@@ -86737,7 +86844,7 @@ function bootstrapSeedExplicitGapDiagnostics(seed) {
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_phase_success_criteria_missing",
         message: `Phase ${phaseLabel2} must include explicit successCriteria before the first write.`,
-        repair: "Add at least two success criteria before retrying."
+        repair: "Add at least one observable success criterion before retrying."
       }));
     }
   }
@@ -86812,9 +86919,6 @@ function assertBootstrapCanWrite(args) {
       `Brownfield repos must be mapped before project bootstrap writes. Run ${blueprintRunDirectCommand("map-codebase")} first, then re-run ${blueprintDirectCommand("new-project")}.`
     );
   }
-  if (args.bootstrapMode === "interactive" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
-    return;
-  }
 }
 function bootstrapSeedSufficiencyDiagnostics(seed) {
   const diagnostics = [];
@@ -86822,7 +86926,7 @@ function bootstrapSeedSufficiencyDiagnostics(seed) {
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.vision",
       code: "seed_vision_missing",
-      message: "Interactive project bootstrap requires bootstrapSeed.vision before any writes.",
+      message: "Project bootstrap requires bootstrapSeed.vision before any writes.",
       repair: "Ask for or provide a concise project vision before retrying."
     }));
   }
@@ -86830,7 +86934,7 @@ function bootstrapSeedSufficiencyDiagnostics(seed) {
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.currentMilestone",
       code: "seed_current_milestone_missing",
-      message: "Interactive project bootstrap requires bootstrapSeed.currentMilestone before any writes.",
+      message: "Project bootstrap requires bootstrapSeed.currentMilestone before any writes.",
       repair: "Set the active milestone label before retrying."
     }));
   }
@@ -86838,7 +86942,7 @@ function bootstrapSeedSufficiencyDiagnostics(seed) {
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.requirements",
       code: "seed_requirements_missing",
-      message: "Interactive project bootstrap requires at least one bootstrapSeed.requirements entry before any writes.",
+      message: "Project bootstrap requires at least one bootstrapSeed.requirements entry before any writes.",
       repair: "Capture at least one durable requirement with id, requirement, status, and notes before retrying."
     }));
   }
@@ -86846,21 +86950,11 @@ function bootstrapSeedSufficiencyDiagnostics(seed) {
     diagnostics.push(seedDiagnostic({
       path: "bootstrapSeed.roadmapPhases",
       code: "seed_roadmap_phases_missing",
-      message: "Interactive project bootstrap requires at least one bootstrapSeed.roadmapPhases entry before any writes.",
+      message: "Project bootstrap requires at least one bootstrapSeed.roadmapPhases entry before any writes.",
       repair: "Capture at least one roadmap phase with phase, title, objective, requirementIds, and successCriteria before retrying."
     }));
   }
   return diagnostics;
-}
-function bootstrapSeedAutoContextDiagnostics() {
-  return [
-    seedDiagnostic({
-      path: "bootstrapSeed.vision",
-      code: "seed_auto_context_missing",
-      message: "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes.",
-      repair: "Provide bootstrapSeed.vision or add README/package description context before retrying."
-    })
-  ];
 }
 function buildBootstrapStatus(diagnostics) {
   return {
@@ -87076,35 +87170,84 @@ async function blueprintProjectInitUnlocked(args = {}) {
   assertBootstrapCanWrite({
     inspection,
     bootstrapAssessment: initialBootstrapDiagnostics.brownfield,
-    overwrite,
-    bootstrapMode,
-    bootstrapSeed: args.bootstrapSeed
+    overwrite
   });
-  if (bootstrapMode === "interactive" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
+  if (args.bootstrapModel !== void 0) {
+    if (args.bootstrapSeed !== void 0) {
+      return buildInvalidProjectInitResult({
+        projectRoot,
+        diagnostics: [seedDiagnostic({
+          path: "bootstrapModel",
+          code: "ambiguous_authoring_input",
+          message: "Pass bootstrapModel or legacy bootstrapSeed, not both.",
+          repair: "Use bootstrapModel for new project authoring."
+        })]
+      });
+    }
+    const parsed = bootstrapAuthoringSchema.safeParse(args.bootstrapModel);
+    if (!parsed.success) {
+      return buildInvalidProjectInitResult({
+        projectRoot,
+        diagnostics: parsed.error.issues.map((issue2) => seedDiagnostic({
+          path: `bootstrapModel.${issue2.path.join(".")}`,
+          code: "model_shape_invalid",
+          message: issue2.message,
+          repair: "Use the compact authoring schema returned by blueprint_project_prepare."
+        }))
+      });
+    }
+    try {
+      const previous = overwrite && inspection.readiness === "initialized" ? readPreviousBootstrapRequirementIds(await fs31.readFile(
+        resolveBlueprintPath(projectRoot, ".blueprint/REQUIREMENTS.md"),
+        "utf8"
+      )) : [];
+      args = { ...args, bootstrapSeed: compileBootstrapAuthoringModel(parsed.data, previous) };
+    } catch (error2) {
+      return buildInvalidProjectInitResult({
+        projectRoot,
+        diagnostics: [seedDiagnostic({
+          path: "bootstrapModel.phases",
+          code: "model_scope_invalid",
+          message: error2.message,
+          repair: "Keep requirements in one scope, give phases distinct titles and put prerequisites first."
+        })]
+      });
+    }
+  }
+  if (!bootstrapSeedIsSufficient(args.bootstrapSeed)) {
     return buildInvalidProjectInitResult({
       projectRoot,
       diagnostics: bootstrapSeedSufficiencyDiagnostics(args.bootstrapSeed)
     });
   }
-  const projectName = await inferProjectName2(projectRoot, args.projectName);
-  const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
-  const repoSummary = await readRepoSummary(projectRoot);
-  if (bootstrapMode === "auto" && !bootstrapSeedHasAutoContext(args.bootstrapSeed, repoSummary)) {
+  if (bootstrapMode === "interactive" && !args.clarification?.trim()) {
     return buildInvalidProjectInitResult({
       projectRoot,
-      diagnostics: bootstrapSeedAutoContextDiagnostics()
+      diagnostics: [seedDiagnostic({
+        path: "clarification",
+        code: "clarification_required",
+        message: "Ask the user a focused clarifying question before first-run project creation, even when config does not exist.",
+        repair: "Ask about the first user, first useful outcome, or scope boundary; pass the actual user response as clarification. Only an explicit --auto request bypasses this."
+      })]
     });
   }
-  const autoBaseSeed = bootstrapMode === "auto" ? buildDefaultBootstrapSeed(
-    projectName,
-    bootstrapAssessment,
-    repoSummary ? { vision: repoSummary } : void 0
-  ) : void 0;
-  const seedInput = bootstrapMode === "auto" ? mergeBootstrapSeed(autoBaseSeed, args.bootstrapSeed) : args.bootstrapSeed;
+  const projectName = await inferProjectName2(projectRoot, args.projectName);
+  const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
+  const seedInput = args.bootstrapSeed;
   const rawPhaseRequirementDiagnostics = bootstrapSeedRawPhaseRequirementDiagnostics(seedInput);
   const explicitGapDiagnostics = bootstrapSeedExplicitGapDiagnostics(seedInput);
   const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
   const preflightDiagnostics = bootstrapSeedPreflightDiagnostics(bootstrapSeed);
+  for (const [index, phase] of (seedInput.roadmapPhases ?? []).entries()) {
+    if (!phase.title.trim() || !phase.phase.trim()) {
+      preflightDiagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${index}]`,
+        code: "seed_phase_identity_missing",
+        message: "Each phase needs a title and phase reference.",
+        repair: "Supply phase intent or use bootstrapModel."
+      }));
+    }
+  }
   const preWriteDiagnostics = dedupeProjectInitDiagnostics([
     ...rawPhaseRequirementDiagnostics,
     ...explicitGapDiagnostics,
@@ -87114,6 +87257,31 @@ async function blueprintProjectInitUnlocked(args = {}) {
     return buildInvalidProjectInitResult({
       projectRoot,
       diagnostics: preWriteDiagnostics
+    });
+  }
+  let prepared;
+  try {
+    prepared = prepareBootstrapArtifactContents({ projectName, bootstrapSeed, bootstrapAssessment });
+  } catch (error2) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: [seedDiagnostic({
+        path: "bootstrapModel",
+        code: "bootstrap_render_invalid",
+        message: error2.message,
+        repair: "Correct the indicated content before creating project files."
+      })]
+    });
+  }
+  if (prepared.issues.length) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: prepared.issues.map((message) => seedDiagnostic({
+        path: "bootstrapModel",
+        code: "bootstrap_content_invalid",
+        message,
+        repair: "Correct the indicated product content; runtime owns formatting."
+      }))
     });
   }
   preflightProjectConfigDefaultsPath(args.defaultsPath);
@@ -87134,6 +87302,8 @@ async function blueprintProjectInitUnlocked(args = {}) {
   const initializedNextAction = bootstrapAssessment.provisionalRoadmap ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable` : blueprintRunDirectCommand("discuss-phase", initialPhase);
   const scaffold = await blueprintArtifactScaffold({
     cwd: projectRoot,
+    bootstrapInitialization: true,
+    preparedBootstrapContents: prepared.contents,
     overwrite,
     projectName,
     bootstrapSeed,
@@ -87184,6 +87354,7 @@ async function blueprintProjectInitUnlocked(args = {}) {
     seededConfig.configPath
   ];
   const warnings = [
+    ...prepared.warnings,
     ...scaffold.warnings,
     ...bootstrapContextWarnings,
     ...seededConfig.warnings,
@@ -87292,10 +87463,31 @@ async function blueprintProjectStatus(args = {}) {
     }
   };
 }
-var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, projectToolDefinitions;
+async function blueprintProjectPrepare(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const [status, config2, repoSummary] = await Promise.all([
+    blueprintProjectStatus({ cwd: projectRoot }),
+    blueprintConfigGet({ cwd: projectRoot, defaultsPath: args.defaultsPath, scope: "effective" }),
+    readRepoSummary(projectRoot)
+  ]);
+  const blocked = status.status === "partial" || status.status === "mapping-incomplete" || status.bootstrap.brownfieldDetected && !status.bootstrap.codebaseMapped;
+  return {
+    status: blocked ? "blocked" : "ready",
+    project: status,
+    config: config2,
+    bootstrapMode: args.auto === true ? "auto" : "interactive",
+    clarificationRequired: args.auto !== true,
+    nextAction: blocked ? status.nextAction : args.auto === true ? "Synthesize the supplied brief using authoringSchema; do not invent missing project intent." : "Ask one focused clarifying question and wait for the user's response before proposing project creation.",
+    evidence: { repoSummary, codebaseMapped: status.bootstrap.codebaseMapped },
+    authoringSchema: toJSONSchema(bootstrapAuthoringSchema, { target: "draft-7" }),
+    authoringRules: ["Author requirements once inside their owning phase.", "Runtime supplies IDs, phase numbers, statuses and Markdown.", "Empty optional lists are valid; never invent assumptions to fill sections.", "Show the proposal and get approval before interactive initialization."]
+  };
+}
+var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, GENERIC_TEXT_PATTERN, projectToolDefinitions;
 var init_project = __esm({
   "src/mcp/tools/project.ts"() {
     "use strict";
+    init_bootstrap_authoring();
     init_discuss();
     init_research();
     init_plan();
@@ -87327,7 +87519,9 @@ var init_project = __esm({
       savedDefaultsPolicy: _enum(["apply", "skip"]).optional(),
       overwrite: boolean2().optional(),
       projectName: string2().optional(),
-      bootstrapMode: _enum(["interactive", "auto"]).optional(),
+      bootstrapMode: _enum(["interactive", "auto"]).optional().describe("Interactive by default, even with no config. Auto requires an explicit --auto request."),
+      clarification: string2().trim().min(1).optional().describe("User response to your clarification question; required in interactive mode."),
+      bootstrapModel: bootstrapAuthoringSchema.optional().describe("Preferred authoring input. Runtime derives IDs, numbering, statuses and document formatting."),
       bootstrapSeed: object2({
         vision: string2().optional(),
         audience: object2({
@@ -87379,6 +87573,7 @@ var init_project = __esm({
     ];
     PROJECT_TOOL_NAMES = [
       "blueprint_command_catalog",
+      "blueprint_project_prepare",
       "blueprint_project_init",
       "blueprint_project_status",
       "blueprint_lightweight_preflight"
@@ -87401,9 +87596,14 @@ var init_project = __esm({
       ...updateToolDefinitions.map((definition) => definition.name),
       ...workspaceToolDefinitions.map((definition) => definition.name)
     ]);
-    MIN_SUBSTANTIVE_WORDS = 6;
     GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
     projectToolDefinitions = [
+      {
+        name: "blueprint_project_prepare",
+        description: "Read bootstrap readiness, effective config and compact authoring schema. First run asks clarification unless --auto is explicit.",
+        inputSchema: { cwd: string2().optional(), defaultsPath: string2().optional(), auto: boolean2().optional().describe("True only for an explicit --auto user request; default false even without config.") },
+        handler: async (args) => blueprintProjectPrepare(args)
+      },
       {
         name: "blueprint_command_catalog",
         description: "Return the retained Blueprint command registry and router metadata.",
@@ -87412,7 +87612,7 @@ var init_project = __esm({
       },
       {
         name: "blueprint_project_init",
-        description: "Create the initial .blueprint/ scaffold and seed normalized repo config from defaults.",
+        description: "Create a project from the compact bootstrapModel after clarification and approval. Runtime derives IDs, numbering and Markdown; legacy bootstrapSeed remains supported.",
         inputSchema: projectInitInputSchema,
         handler: async (args) => blueprintProjectInit(args)
       },
@@ -97169,16 +97369,16 @@ var ReadBuffer = class {
     if (index === -1) {
       return null;
     }
-    const line = this._buffer.toString("utf8", 0, index).replace(/\r$/, "");
+    const line2 = this._buffer.toString("utf8", 0, index).replace(/\r$/, "");
     this._buffer = this._buffer.subarray(index + 1);
-    return deserializeMessage(line);
+    return deserializeMessage(line2);
   }
   clear() {
     this._buffer = void 0;
   }
 };
-function deserializeMessage(line) {
-  return JSONRPCMessageSchema.parse(JSON.parse(line));
+function deserializeMessage(line2) {
+  return JSONRPCMessageSchema.parse(JSON.parse(line2));
 }
 function serializeMessage(message) {
   return JSON.stringify(message) + "\n";
@@ -97261,8 +97461,8 @@ function extractFrontmatterBlock(content) {
     body: match[2]
   };
 }
-function countLeadingSpaces(line) {
-  const match = line.match(/^ */);
+function countLeadingSpaces(line2) {
+  const match = line2.match(/^ */);
   return match?.[0]?.length ?? 0;
 }
 function normalizeFrontmatterKey(rawKey) {
@@ -97273,7 +97473,7 @@ function normalizeFrontmatterKey(rawKey) {
   return trimmed;
 }
 function collapseBlockLines(lines3) {
-  return lines3.map((line) => line.trim()).join(" ").replace(/\s+/g, " ").trim();
+  return lines3.map((line2) => line2.trim()).join(" ").replace(/\s+/g, " ").trim();
 }
 function findNextMeaningfulLine(lines3, startIndex) {
   for (let index = startIndex; index < lines3.length; index += 1) {
@@ -97402,7 +97602,7 @@ function unique(values) {
 }
 function parseLegacyRequiredInputs(content) {
   return unique(
-    extractMarkdownSection(content, "Required Inputs").split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).map((line) => line.replace(/^`(.+)`$/, "$1")).filter((line) => line.length > 0)
+    extractMarkdownSection(content, "Required Inputs").split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).map((line2) => line2.replace(/^`(.+)`$/, "$1")).filter((line2) => line2.length > 0)
   );
 }
 function asStringArray(value) {
@@ -99187,8 +99387,8 @@ async function resolveExistingRepoFiles2(args) {
 }
 function parseGitNameStatusDeletedFiles(output) {
   return stableUniqueSorted(
-    output.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).flatMap((line) => {
-      const [status, ...paths] = line.split(/\t+/);
+    output.split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0).flatMap((line2) => {
+      const [status, ...paths] = line2.split(/\t+/);
       return status === "D" && paths[0] ? [paths[0]] : [];
     })
   );
@@ -100610,15 +100810,15 @@ function parseGodReviewFileReference(rawReference) {
   const trimmed = rawReference.trim();
   const lineMatch = trimmed.match(/^(.+):(\d+)$/);
   const rawPath = lineMatch ? lineMatch[1] : trimmed;
-  const line = lineMatch ? Number(lineMatch[2]) : null;
+  const line2 = lineMatch ? Number(lineMatch[2]) : null;
   const normalized = normalizeGodReviewRepoRelativeFilePath(rawPath);
   if (!normalized.valid) {
-    return { ...normalized, line };
+    return { ...normalized, line: line2 };
   }
   return {
     valid: true,
     path: normalized.path,
-    line
+    line: line2
   };
 }
 function extractNearbyEvidenceSnippets(evidence) {
@@ -100673,7 +100873,7 @@ async function validateGodReviewFixTargetEvidence(args) {
   const snippets = extractNearbyEvidenceSnippets(args.finding.evidence);
   for (const snippet of snippets) {
     const snippetFound = [...readableFileTexts.values()].some(
-      (text) => text.includes(snippet)
+      (text2) => text2.includes(snippet)
     );
     if (!snippetFound) {
       staleReasons.push(
@@ -102315,7 +102515,7 @@ async function blueprintGodReviewCleanup(rawArgs) {
 function parseBulletValue(lines3, label) {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^- ${escapedLabel}:\\s*(.+)$`, "i");
-  const match = lines3.map((line) => line.trim()).find((line) => pattern.test(line));
+  const match = lines3.map((line2) => line2.trim()).find((line2) => pattern.test(line2));
   return match?.match(pattern)?.[1]?.trim() ?? null;
 }
 function parseBacktickedList(value) {

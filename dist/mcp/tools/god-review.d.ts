@@ -70,14 +70,14 @@ export declare const godReviewScopeKindSchema: z.ZodEnum<{
     "current-diff": "current-diff";
 }>;
 export declare const godReviewSessionStatusSchema: z.ZodEnum<{
-    blocked: "blocked";
     completed: "completed";
+    blocked: "blocked";
     stale: "stale";
     "in-progress": "in-progress";
 }>;
 export declare const godReviewGroupStatusSchema: z.ZodEnum<{
-    blocked: "blocked";
     completed: "completed";
+    blocked: "blocked";
     pending: "pending";
     "in-progress": "in-progress";
 }>;
@@ -89,8 +89,8 @@ export declare const godReviewSeveritySchema: z.ZodEnum<{
     critical: "critical";
 }>;
 export declare const godReviewDispositionSchema: z.ZodEnum<{
-    blocked: "blocked";
     "follow-up": "follow-up";
+    blocked: "blocked";
     observation: "observation";
     "accepted-risk": "accepted-risk";
 }>;
@@ -101,9 +101,9 @@ export declare const godReviewFixEligibilitySchema: z.ZodEnum<{
 }>;
 export declare const godReviewRemediationStatusSchema: z.ZodEnum<{
     fixed: "fixed";
-    blocked: "blocked";
     skipped: "skipped";
     deferred: "deferred";
+    blocked: "blocked";
     stale: "stale";
 }>;
 export declare const godReviewSelectedBySchema: z.ZodEnum<{
@@ -141,8 +141,8 @@ export declare const godReviewGroupStateSchema: z.ZodObject<{
         OPS: "OPS";
     }>;
     status: z.ZodEnum<{
-        blocked: "blocked";
         completed: "completed";
+        blocked: "blocked";
         pending: "pending";
         "in-progress": "in-progress";
     }>;
@@ -153,8 +153,8 @@ export declare const godReviewSessionSchema: z.ZodObject<{
     runId: z.ZodString;
     parentRunId: z.ZodNullable<z.ZodString>;
     status: z.ZodEnum<{
-        blocked: "blocked";
         completed: "completed";
+        blocked: "blocked";
         stale: "stale";
         "in-progress": "in-progress";
     }>;
@@ -221,8 +221,8 @@ export declare const godReviewSessionSchema: z.ZodObject<{
             OPS: "OPS";
         }>;
         status: z.ZodEnum<{
-            blocked: "blocked";
             completed: "completed";
+            blocked: "blocked";
             pending: "pending";
             "in-progress": "in-progress";
         }>;
@@ -491,8 +491,8 @@ declare const godReviewAppendArgsSchema: z.ZodObject<{
         "operations-portability-product": "operations-portability-product";
     }>;
     status: z.ZodEnum<{
-        blocked: "blocked";
         completed: "completed";
+        blocked: "blocked";
     }>;
     findings: z.ZodOptional<z.ZodArray<z.ZodObject<{
         title: z.ZodString;
@@ -535,9 +535,9 @@ declare const godReviewRecordFixArgsSchema: z.ZodObject<{
     findingId: z.ZodString;
     status: z.ZodEnum<{
         fixed: "fixed";
-        blocked: "blocked";
         skipped: "skipped";
         deferred: "deferred";
+        blocked: "blocked";
         stale: "stale";
     }>;
     selectedBy: z.ZodEnum<{

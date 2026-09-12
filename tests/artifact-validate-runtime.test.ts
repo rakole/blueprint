@@ -809,11 +809,11 @@ test("bootstrap roadmap validation requires per-phase requirement mapping and su
   );
   assert.match(
     validation.issues.join("\n"),
-    /ROADMAP\.md: Phase 1 \(Bootstrap Seed\) must include at least two success criteria\. Repair Phase 1 field Success Criteria by listing 2-5 observable criteria\./
+    /ROADMAP\.md: Roadmap artifact Phase 1 field Success Criteria must include at least one observable success criterion\./
   );
   assert.match(
     validation.issues.join("\n"),
-    /ROADMAP\.md: Roadmap artifact phase entries must include 2-5 success criteria bullets\./
+    /at least one observable success criterion/
   );
 });
 
@@ -826,7 +826,7 @@ test("bootstrap roadmap validation treats bold and unbolded phase lines consiste
     await rm(path.dirname(unboldedRepoPath), { recursive: true, force: true });
   });
 
-  const unboldedPhases = `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01, RQ-04)
+  const unboldedPhases = `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01)
   - Objective: Seed the first milestone.
   - Success Criteria:
     - Bootstrap requirements are traceable.
@@ -887,12 +887,9 @@ test("bootstrap roadmap validation reports phase-specific success criteria count
   assert.equal(validation.valid, false);
   assert.match(
     issues,
-    /ROADMAP\.md: Phase 1 \(Bootstrap Seed\) must include at least two success criteria\. Repair Phase 1 field Success Criteria by listing 2-5 observable criteria\./
+    /ROADMAP\.md: Roadmap artifact Phase 1 field Success Criteria must include at least one observable success criterion\./
   );
-  assert.match(
-    issues,
-    /ROADMAP\.md: Phase 2 \(Traceable Follow-Through\) must include no more than five success criteria\. Repair Phase 2 field Success Criteria by trimming it to 2-5 observable criteria\./
-  );
+  assert.doesNotMatch(issues, /Phase 2.*Success Criteria|no more than five/);
 });
 
 test("bootstrap roadmap validation names offending undeclared requirement IDs and phase numbers", async (t) => {

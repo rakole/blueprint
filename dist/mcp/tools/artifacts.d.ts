@@ -39,6 +39,7 @@ export type BootstrapRoadmapPhase = {
     objective: string;
     requirementIds?: string[];
     successCriteria?: string[];
+    dependencies?: string[];
     notes?: string[];
 };
 export type BootstrapSeed = {
@@ -81,6 +82,9 @@ export type NormalizedBootstrapSeed = Omit<Required<BootstrapSeed>, "requirement
     requirements: NormalizedBootstrapRequirementRow[];
 };
 type ArtifactScaffoldArgs = {
+    /** Internal project-init path; milestone carry-forward uses the default guard. */
+    bootstrapInitialization?: boolean;
+    preparedBootstrapContents?: Record<string, string>;
     cwd?: string;
     artifacts?: string[];
     overwrite?: boolean;
@@ -658,6 +662,11 @@ export type CaptureIndexRow = {
     description: string;
     reservedPhase: string | null;
 };
+type BootstrapRenderContext = {
+    projectName: string;
+    bootstrapSeed?: BootstrapSeed;
+    bootstrapAssessment: BootstrapAssessment;
+};
 export type PlanArtifactMetadata = {
     phase: string | null;
     planId: string | null;
@@ -817,6 +826,11 @@ export declare function inspectBlueprintArtifacts(projectRoot: string): Promise<
     codebase: CodebaseArtifactDiagnostics;
 }>;
 export declare function inspectBootstrapArtifacts(projectRoot: string): Promise<BootstrapArtifactDiagnostics>;
+export declare function prepareBootstrapArtifactContents(context: BootstrapRenderContext): {
+    contents: Record<string, string>;
+    issues: string[];
+    warnings: string[];
+};
 export declare function blueprintArtifactScaffold(args?: ArtifactScaffoldArgs): Promise<ArtifactScaffoldResult>;
 export declare function blueprintArtifactList(args?: ArtifactListArgs): Promise<ArtifactListResult>;
 export declare function blueprintArtifactMutateIndex(args: ArtifactMutateIndexArgs): Promise<ArtifactMutateIndexResult>;
@@ -884,7 +898,6 @@ export declare const artifactToolDefinitions: ({
             ".blueprint/PROJECT.md": ".blueprint/PROJECT.md";
             ".blueprint/REQUIREMENTS.md": ".blueprint/REQUIREMENTS.md";
             ".blueprint/ROADMAP.md": ".blueprint/ROADMAP.md";
-            ".blueprint/phases/": ".blueprint/phases/";
             ".blueprint/codebase/STACK.md": ".blueprint/codebase/STACK.md";
             ".blueprint/codebase/ARCHITECTURE.md": ".blueprint/codebase/ARCHITECTURE.md";
             ".blueprint/codebase/STRUCTURE.md": ".blueprint/codebase/STRUCTURE.md";
@@ -892,6 +905,7 @@ export declare const artifactToolDefinitions: ({
             ".blueprint/codebase/TESTING.md": ".blueprint/codebase/TESTING.md";
             ".blueprint/codebase/INTEGRATIONS.md": ".blueprint/codebase/INTEGRATIONS.md";
             ".blueprint/codebase/CONCERNS.md": ".blueprint/codebase/CONCERNS.md";
+            ".blueprint/phases/": ".blueprint/phases/";
         }>, z.ZodString]>>>;
         bootstrapSeed: z.ZodOptional<z.ZodObject<{
             vision: z.ZodOptional<z.ZodString>;
@@ -972,9 +986,9 @@ export declare const artifactToolDefinitions: ({
             todo: "todo";
         }>;
         action: z.ZodOptional<z.ZodEnum<{
-            update: "update";
-            append: "append";
             list: "list";
+            append: "append";
+            update: "update";
         }>>;
         entry: z.ZodOptional<z.ZodObject<{
             text: z.ZodString;

@@ -358,11 +358,11 @@ const BOOTSTRAP_ROADMAP_MODEL_CONTRACT: ArtifactModelContract = {
   jsonSchema: readJsonSchemaAsset(BOOTSTRAP_ROADMAP_MODEL_SCHEMA_FILE),
   qualityRules: [
     "Author the roadmap as the canonical milestone-to-phase traceability model before rendering Markdown; do not invent phase numbers, requirement ids, status labels, dependency labels, or inserted markers outside the schema vocabulary.",
-    "Every whole-number bootstrap phase must declare durable requirement ids, dependency phase numbers, objective, status, and 2-5 concrete success criteria; inserted decimal phases may temporarily use empty requirement grounding only until discovery assigns it.",
+    "Every whole-number bootstrap phase must declare durable requirement ids, dependency phase numbers, objective, status, and at least one observable success criterion; inserted decimal phases may temporarily use empty requirement grounding only until discovery assigns it.",
     "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
-    "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
+    "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and one or more success criteria as the matching phase entry.",
     "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",
-    "Do not copy minimal example wording, placeholder titles, or static-for-now assumptions into a real project roadmap. Prefer specific success criteria over generic filler, but bootstrap validation itself enforces requirement grounding and 2-5 criteria."
+    "Do not copy minimal example wording, placeholder titles, or static-for-now assumptions into a real project roadmap. Prefer specific success criteria over generic filler, but bootstrap validation itself enforces requirement grounding and at least one success criterion."
   ],
   contextBindings: [
     ".blueprint/PROJECT.md supplies the active milestone, repository shape, codebase mapping posture, and roadmap confidence.",
@@ -4106,7 +4106,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     notes: [
       "Project bootstrap should capture the product direction, milestone framing, and durable scope posture before later lifecycle commands run.",
-      "Validation expects substantive content in the audience, constraints, scope posture, non-goals, and assumptions sections."
+      "Validation requires a primary audience and project intent. Secondary audience is optional; constraints, non-goals and assumptions may explicitly be none."
     ],
     renderScaffoldTemplate: renderBootstrapProjectTemplate,
     renderAuthoringTemplate: renderBootstrapProjectTemplate
@@ -4169,7 +4169,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "Roadmap bootstrap should keep phase ordering, requirement coverage, and confidence posture visible.",
       "Validation expects at least one concrete phase entry with objective, requirement mapping, and success criteria.",
-      "Structured roadmap authoring is schema-first: use bootstrap.roadmap modelContract metadata for milestone, bootstrap status, requirement coverage, phase status, dependencies, inserted markers, requirement ids, and 2-5 success criteria."
+      "Structured roadmap authoring is schema-first: use bootstrap.roadmap modelContract metadata for milestone, bootstrap status, requirement coverage, phase status, dependencies, inserted markers, requirement ids, and one or more success criteria."
     ],
     modelContract: BOOTSTRAP_ROADMAP_MODEL_CONTRACT,
     renderScaffoldTemplate: renderBootstrapRoadmapTemplate,
