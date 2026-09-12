@@ -16,7 +16,7 @@ export declare function readResearchEvidence(root: string, relative: string, max
 }>;
 export declare function researchInputHash(root: string, relative: string): Promise<string | null>;
 export declare function researchBasisFreshness(root: string, readSet: ResearchReadSet): Promise<{
-    status: "unknown" | "fresh" | "stale";
+    status: "unknown" | "stale" | "fresh";
     stalePaths: string[];
     unknownPaths: string[];
 }>;
@@ -39,7 +39,7 @@ export declare function readPublishedResearchFreshness(root: string, researchPat
     reason: string;
 } | {
     reason: null;
-    status: "unknown" | "fresh" | "stale";
+    status: "unknown" | "stale" | "fresh";
     stalePaths: string[];
     unknownPaths: string[];
 }>;

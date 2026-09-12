@@ -31,7 +31,7 @@ const SKILL_BUNDLES = [
   },
   {
     name: "blueprint-phase-planning",
-    description: "Plan synthesis, checker coordination, and phase.plan persistence for Blueprint",
+    description: "Preserve plan-set drafts, coordinate bounded review",
     commands: ["/blu-plan-phase"]
   },
   {

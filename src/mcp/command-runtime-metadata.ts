@@ -223,23 +223,10 @@ const DISCUSS_PHASE_REQUIRED_TOOLS = [
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const PLAN_PHASE_REQUIRED_TOOLS = [
-  "blueprint_phase_locate",
-  "blueprint_artifact_contract_read",
-  "blueprint_phase_context",
-  "blueprint_phase_research_status",
-  "blueprint_phase_artifact_read",
-  "blueprint_phase_validation_read",
-  "blueprint_review_load_findings",
-  "blueprint_phase_plan_index",
-  "blueprint_phase_plan_read",
-  "blueprint_phase_plan_readiness",
-  "blueprint_phase_plan_authoring_context",
-  "blueprint_phase_plan_validate_model",
-  "blueprint_phase_plan_write",
-  "blueprint_phase_plan_validate",
-  "blueprint_config_get",
-  "blueprint_state_load",
-  "blueprint_state_update"
+  "blueprint_plan_prepare",
+  "blueprint_plan_submit",
+  "blueprint_plan_read",
+  "blueprint_plan_finalize"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const RESEARCH_PHASE_REQUIRED_TOOLS = [
@@ -1479,8 +1466,7 @@ export const PLAN_PHASE_RUNTIME_METADATA = {
     family: "Core Lifecycle",
     primarySkill: "blueprint-phase-planning",
     declaredStatus: "implemented",
-    risk:
-      "Medium: can replace plans and change downstream execution order."
+    risk: "Medium: can replace plans and change downstream execution order."
   },
   requiredTools: PLAN_PHASE_REQUIRED_TOOLS,
   optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
@@ -1490,15 +1476,14 @@ export const PLAN_PHASE_RUNTIME_METADATA = {
     title: "`/blu-plan-phase`",
     executionProfile: "long-running-mutation",
     rootRoutable: true,
-    purpose:
-      "`plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.",
+    purpose: "`plan-phase` preserves compact plan-set candidates before validation, compiles execution-ready phase.plan artifacts, and publishes a complete checked set through MCP.",
     reads: [
-      "Phase resolution, context, planning readiness, saved discovery artifacts including optional phase-local XX-SPEC.md when present, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."
+      "blueprint_plan_prepare supplies a stable phase evidence snapshot, optional XX-SPEC.md, project and requirement grounding, research/UI readiness, effective config, saved-plan inventory and compact candidate schema; blueprint_plan_read recovers saved revisions."
     ],
     writes: [
-      "structured phase.plan JSON through blueprint_phase_plan_write",
-      ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_phase_plan_write",
-      ".blueprint/STATE.md through synced state update"
+      "phase-scoped original plan candidates, revisions, evidence fingerprints and publication journal",
+      ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_plan_finalize",
+      ".blueprint/STATE.md through finalizer-owned synced state update"
     ]
   },
   runtimeReference: {
@@ -1509,8 +1494,7 @@ export const PLAN_PHASE_RUNTIME_METADATA = {
     exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
     optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-    contractNotes:
-      "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals including optional XX-SPEC.md when present, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Treat missing XX-SPEC.md as nonblocking by default, but when phase.artifacts.spec exists include it in the Planning Investigation Trace, the readiness read set, and runtime-narrowed evidenceCoverage, and repair or warn on draft contradictions against explicit spec out-of-scope boundaries. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: \"strict\", authoringMode: \"model-only\", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: \"synced\" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.",
+    contractNotes: "Use blueprint_plan_prepare -> blueprint_plan_submit -> blueprint_plan_finalize, with blueprint_plan_read for recovery. Prepare owns phase resolution, effective config, stable evidence fingerprints and saved-plan add/revise/replace selection. Use saved research instead of live browsing; required context/research/UI readiness blocks drafting, while missing XX-SPEC.md is nonblocking. Author the compact plan-set candidate using the returned schema; MCP derives slots, waves, aggregate file lists and coverage ledgers. Submit saves the exact original candidate before validation, supports revision-CAS field corrections, and retains invalid drafts without canonical publication. Review the complete saved candidate with blueprint-checker when workflow.plan_check is enabled; bind the verdict to its revision and candidateHash. Use blueprint-planner only for useful bounded decomposition, preserving the no-subagent fallback. Finalize requires current evidence, full plan-set validation and explicit overwrite authorization for revise/replace; its publication journal and marker block execution of partial sets and resume interrupted writes. Finalizer owns base: synced state update and state-aware routing to implemented follow-ups. Never infer completion from candidate saved/valid status; require the published receipt. No raw .blueprint writes, Markdown fallback to canonical paths, scaffold seeding or warn-mode publication.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

@@ -38,6 +38,8 @@ import {
   writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
+import { readPlanPublicationStatus } from "./plan-publication.js";
+import { researchInputHash, researchProvenancePath } from "./research-evidence.js";
 import { loadBlueprintState } from "./state.js";
 import { blueprintStateLoad } from "./state.js";
 import {
@@ -969,6 +971,21 @@ function detectDependencyCycles(graph: ReadonlyMap<string, string[]>): string[][
     .sort((left, right) => left.join("->").localeCompare(right.join("->")));
 }
 
+function phasePlanPublicationIssue(
+  before: Awaited<ReturnType<typeof readPlanPublicationStatus>>,
+  after: Awaited<ReturnType<typeof readPlanPublicationStatus>>
+): string | null {
+  if (before.status === "pending" || before.status === "invalid") {
+    return before.reason ?? "Phase plan publication is incomplete; resume its publication before execution.";
+  }
+  if (after.status === "pending" || after.status === "invalid") {
+    return after.reason ?? "Phase plan publication is incomplete; resume its publication before execution.";
+  }
+  return before.token !== after.token
+    ? "Phase plan publication changed during this read; refresh the plan set before execution."
+    : null;
+}
+
 async function validatePhasePlanSet(
   projectRoot: string,
   resolved: ResolvedPhaseLocation,
@@ -977,8 +994,11 @@ async function validatePhasePlanSet(
     roadmapCoverageSeverity?: "issue" | "warning" | "ignore";
     roadmapRequirementIds?: readonly string[];
     knownPlanPaths?: readonly string[];
+    ignorePublicationGuard?: boolean;
   } = {}
 ): Promise<PhasePlanValidationResult> {
+  const publicationBefore = options.ignorePublicationGuard ? null
+    : await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const coverageSeverity = options.roadmapCoverageSeverity ?? "issue";
   const { plans, nonCanonicalPlanPaths } = await collectPhasePlanArtifacts(
     projectRoot,
@@ -1161,6 +1181,12 @@ async function validatePhasePlanSet(
         .sort((left, right) => left.localeCompare(right))
         .join(", ")}.`
     );
+  }
+
+  if (publicationBefore) {
+    const issue = phasePlanPublicationIssue(publicationBefore,
+      await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix));
+    if (issue) issues.push(issue);
   }
 
   return {
@@ -1857,6 +1883,10 @@ function compareReadSetFreshness(
     };
   }
 
+  // Target-body selection is presentation state. Every saved plan already has
+  // a phase.plan fingerprint and the inventory tracks additions/removals.
+  currentReadSet = currentReadSet.filter((entry) => entry.kind !== "phase.plan.body");
+  previousReadSet = previousReadSet.filter((entry) => entry.kind !== "phase.plan.body");
   const currentByKey = new Map(
     currentReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
   );
@@ -2201,7 +2231,7 @@ async function resolvePhasePlanAuthoringContextData(
 }
 
 async function buildPhasePlanAuthoringContextData(
-  input: PhasePlanAuthoringContextBuildInput
+  input: PhasePlanAuthoringContextBuildInput & { existingIndex?: PhasePlanIndexResult }
 ): Promise<{
   projectRoot: string;
   resolved: ResolvedPhaseLocation;
@@ -2221,7 +2251,7 @@ async function buildPhasePlanAuthoringContextData(
     throw new Error(snapshot.located.reason ?? "Phase could not be resolved for plan authoring.");
   }
 
-  const existingIndex = await buildPhasePlanIndexFromResolved({
+  const existingIndex = input.existingIndex ?? await buildPhasePlanIndexFromResolved({
     projectRoot,
     resolved,
     artifacts: snapshot.artifacts
@@ -2828,13 +2858,9 @@ function collectPhasePlanComparableStrings(
   push("model.goal", model.goal);
   model.scope.forEach((value, index) => push(`model.scope[${index}]`, value));
   model.filesModified.forEach((value, index) => push(`model.filesModified[${index}]`, value));
-  model.readFirst.forEach((value, index) => push(`model.readFirst[${index}]`, value));
   model.mustHaves.forEach((value, index) => push(`model.mustHaves[${index}]`, value));
   model.tasks.forEach((task, taskIndex) => {
     push(`model.tasks[${taskIndex}].title`, task.title);
-    task.readFirst.forEach((value, index) =>
-      push(`model.tasks[${taskIndex}].readFirst[${index}]`, value)
-    );
     task.action.forEach((value, index) =>
       push(`model.tasks[${taskIndex}].action[${index}]`, value)
     );
@@ -2849,19 +2875,10 @@ function collectPhasePlanComparableStrings(
     push(`model.verification[${index}].item`, row.item);
     push(`model.verification[${index}].evidence`, row.evidence);
   });
-  model.evidenceCoverage.forEach((row, index) => {
-    push(`model.evidenceCoverage[${index}].artifact`, row.artifact);
-    push(`model.evidenceCoverage[${index}].rationale`, row.rationale);
-  });
+  // Evidence references and typed unknowns/deferrals describe inputs or work
+  // deliberately not undertaken. A mention there cannot establish added scope.
   model.fileSurfaceCoverage.forEach((row, index) => {
     push(`model.fileSurfaceCoverage[${index}].surface`, row.surface);
-    push(`model.fileSurfaceCoverage[${index}].verification`, row.verification);
-    push(`model.fileSurfaceCoverage[${index}].rationale`, row.rationale);
-  });
-  model.unknownsAndDeferrals.forEach((row, index) => {
-    push(`model.unknownsAndDeferrals[${index}].item`, row.item);
-    push(`model.unknownsAndDeferrals[${index}].rationale`, row.rationale);
-    push(`model.unknownsAndDeferrals[${index}].followUp`, row.followUp);
   });
 
   return strings;
@@ -2890,6 +2907,26 @@ function phasePlanSpecBoundaryDiagnostics(args: {
         continue;
       }
 
+      // Consider the clause containing the match. Negative/exclusion prose is
+      // evidence of respecting a boundary, not evidence of violating it.
+      const matchIndex = candidate.normalized.indexOf(signal.normalized);
+      const before = (candidate.normalized.slice(0, matchIndex)
+        .split(/(?<=[.!?;])\s+|\b(?:but|however)\b/).at(-1) ?? "").trimStart();
+      const after = candidate.normalized.slice(matchIndex + signal.normalized.length);
+      if (
+        /\b(?:not|never|without|avoid|exclude|excluded|excluding|defer|deferred|deferring|out[- ]of[- ]scope)\b/.test(before) ||
+        /^\s+(?:(?:is|are|remains?|stays?)\s+)?(?:out[- ]of[- ]scope|excluded|deferred|not included|not planned)\b/.test(after)
+      ) {
+        continue;
+      }
+      const fileOwnership = /(?:\.filesModified\[\d+\]|\.fileSurfaceCoverage\[\d+\]\.surface)$/.test(candidate.path);
+      const directWork = candidate.normalized === signal.normalized ||
+        /^(?:add|adding|implement|implementing|modify|modifying|change|changing|create|creating|build|building|remove|removing|delete|deleting|update|updating) (?:the )?$/.test(before);
+      // A concrete owned path must match the excluded path, not merely contain
+      // its filename as a prefix (for example legacy.ts.backup).
+      if (fileOwnership && candidate.normalized !== signal.normalized) continue;
+      const confirmedConflict = fileOwnership || directWork;
+
       const key = `${candidate.path}:${signal.normalized}`;
 
       if (seen.has(key)) {
@@ -2901,10 +2938,11 @@ function phasePlanSpecBoundaryDiagnostics(args: {
         phasePlanDiagnostic({
           source: "scope",
           path: candidate.path,
-          code: "scope.spec_out_of_scope_conflict",
+          severity: confirmedConflict ? "error" : "warning",
+          code: confirmedConflict ? "scope.spec_out_of_scope_conflict" : "scope.spec_boundary_review",
           message:
             `Saved phase spec ${args.specPath} marks "${signal.sourceItem}" as out of scope, ` +
-            `but ${candidate.path} includes "${candidate.value}".`,
+            `${candidate.path} ${confirmedConflict ? "plans" : "mentions"} "${candidate.value}".`,
           context: {
             specPath: args.specPath,
             outOfScope: signal.sourceItem,
@@ -2913,8 +2951,9 @@ function phasePlanSpecBoundaryDiagnostics(args: {
           actual: candidate.value,
           expected: `Avoid planned work that conflicts with saved out-of-scope spec boundary: ${signal.display}`,
           repairAction: "replace",
-          suggestion:
-            "Remove or defer the conflicting plan item, or update the saved XX-SPEC.md boundary before authoring the phase plan."
+          suggestion: confirmedConflict
+            ? "Remove or defer the conflicting plan item, or update the saved XX-SPEC.md boundary before authoring the phase plan."
+            : "Review the mention in context. Clarify whether it describes planned work, a reference, or an explicit exclusion; substring matching alone cannot decide scope."
         })
       );
 
@@ -2968,6 +3007,7 @@ function phasePlanPreflightDiagnosticFromIssue(issue: string): PhasePlanModelDia
 async function validatePhasePlanModelWithContext(args: {
   model: unknown;
   context: Awaited<ReturnType<typeof resolvePhasePlanAuthoringContextData>>;
+  savedSpecContent?: string | null;
 }): Promise<PhasePlanValidateModelResult> {
   const diagnostics: PhasePlanModelDiagnostic[] = phasePlanAuthoringContextBlockers(
     args.context
@@ -3057,11 +3097,16 @@ async function validatePhasePlanModelWithContext(args: {
       }
 
       diagnostics.push(
-        ...(await validatePhasePlanModelAgainstSavedSpec({
-          projectRoot: args.context.projectRoot,
-          resolved: args.context.resolved,
-          model: normalizedModel
-        }))
+        ...(args.savedSpecContent === undefined
+          ? await validatePhasePlanModelAgainstSavedSpec({
+              projectRoot: args.context.projectRoot,
+              resolved: args.context.resolved,
+              model: normalizedModel
+            })
+          : args.savedSpecContent
+            ? phasePlanSpecBoundaryDiagnostics({ model: normalizedModel, specContent: args.savedSpecContent,
+                specPath: artifactPathFor(args.context.resolved, "spec") })
+            : [])
       );
     }
   }
@@ -4642,10 +4687,17 @@ export async function blueprintPhaseValidationWrite(
 }
 
 async function buildPhasePlanIndexFromResolved(
-  input: PhasePlanIndexBuildInput
+  input: PhasePlanIndexBuildInput & { ignorePublicationGuard?: boolean }
 ): Promise<PhasePlanIndexResult> {
   const { projectRoot, resolved } = input;
-  const planPaths = input.artifacts
+  const publicationBefore = input.ignorePublicationGuard ? null
+    : await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  // A resolved phase snapshot may predate a completed publication. Re-list
+  // under the marker guard unless the caller supplies its own guarded bytes.
+  const artifacts = !input.ignorePublicationGuard && !input.planContents
+    ? await listPhaseArtifacts(resolveBlueprintPath(projectRoot, resolved.phaseDir), projectRoot)
+    : input.artifacts;
+  const planPaths = artifacts
     .filter((artifact) => artifact.endsWith("-PLAN.md"))
     .sort((left, right) => left.localeCompare(right));
   const plans: PhasePlanRecord[] = [];
@@ -4684,6 +4736,16 @@ async function buildPhasePlanIndexFromResolved(
     const waveKey = String(record.wave ?? "unassigned");
     waves[waveKey] ??= [];
     waves[waveKey].push(planPath);
+  }
+
+  if (publicationBefore) {
+    const issue = phasePlanPublicationIssue(publicationBefore,
+      await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix));
+    if (issue) {
+      warnings.push(issue);
+      gapClosurePlans.clear();
+      for (const plan of plans) { plan.valid = false; plan.issues.push(issue); }
+    }
   }
 
   const missingPlans =
@@ -4796,6 +4858,7 @@ async function readPhasePlanFromResolved(args: {
   planId: string;
 }): Promise<PhasePlanReadResult> {
   const { projectRoot, resolved, planId } = args;
+  const publicationBefore = await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const pathValue = planPathFor(resolved, planId);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
 
@@ -4819,6 +4882,10 @@ async function readPhasePlanFromResolved(args: {
   const content = await fs.readFile(absolutePath, "utf8");
   const record = toPhasePlanRecord(planId, pathValue, content, resolved.phaseNumber);
   const dependencyIssues = collectInvalidPlanDependencyIssues(pathValue, record.dependsOn);
+
+  const publicationIssue = phasePlanPublicationIssue(publicationBefore,
+    await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix));
+  if (publicationIssue) { record.valid = false; record.issues.push(publicationIssue); }
 
   return {
     phaseFound: true,
@@ -4886,6 +4953,107 @@ export async function blueprintPhasePlanValidate(
   return validatePhasePlanSet(projectRoot, resolved);
 }
 
+/** Validate a prospective complete set without publishing any candidate bytes.
+ * All candidate slots share one evidence/dependency snapshot. The durable
+ * session owner supplies locking/freshness and publication authorization.
+ */
+export async function validatePhasePlanCandidateSet(args: {
+  cwd?: string;
+  phase: string;
+  models: Array<{ planId: string; model: unknown }>;
+  removePlanIds?: string[];
+  requireComplete?: boolean;
+}): Promise<{
+  valid: boolean;
+  diagnostics: PhasePlanModelDiagnostic[];
+  plans: Array<{ planId: string; path: string; model: unknown; content: string }>;
+  planSetValidation: PhasePlanValidationResult | null;
+}> {
+  const diagnostics: PhasePlanModelDiagnostic[] = [];
+  const plans: Array<{ planId: string; path: string; model: unknown; content: string }> = [];
+  let planSetValidation: PhasePlanValidationResult | null = null;
+  try {
+    const snapshot = await resolvePhaseRuntimeSnapshot(args);
+    const { projectRoot, resolved } = snapshot;
+    if (!resolved) throw new Error(snapshot.located.reason ?? "Phase could not be resolved.");
+    const candidates = args.models.map((candidate) => ({ ...candidate, planId: normalizePlanId(candidate.planId) }));
+    const candidateIds = candidates.map((candidate) => candidate.planId);
+    if (new Set(candidateIds).size !== candidateIds.length) throw new Error("Candidate plan IDs must be unique.");
+    const excludedIds = new Set([...candidateIds, ...(args.removePlanIds ?? []).map(normalizePlanId)]);
+    const evidenceArtifacts = snapshot.artifacts.filter((artifact) => {
+      const planId = parseCanonicalPlanArtifactPath(artifact, resolved);
+      return planId === null || !excludedIds.has(planId);
+    });
+    const retainedPaths = evidenceArtifacts.filter((artifact) =>
+      path.posix.dirname(artifact) === resolved.phaseDir && artifact.endsWith("-PLAN.md"));
+    const retainedContents = new Map(await Promise.all(retainedPaths.map(async (artifact) =>
+      [artifact, await fs.readFile(resolveBlueprintPath(projectRoot, artifact), "utf8")] as const)));
+    const existingIndex = await buildPhasePlanIndexFromResolved({
+      projectRoot, resolved, artifacts: evidenceArtifacts, planContents: retainedContents,
+      ignorePublicationGuard: true
+    });
+    const baseContext = await buildPhasePlanAuthoringContextData({
+      snapshot: { ...snapshot, artifacts: evidenceArtifacts },
+      planId: candidateIds[0] ?? "01", existingIndex
+    });
+    const savedSpecContent = await readMarkdownDocument(projectRoot, artifactPathFor(resolved, "spec"));
+    const allPlanIds = [...new Set([...existingIndex.plans.map((plan) => plan.planId), ...candidateIds])];
+    for (const candidate of candidates) {
+      const pathValue = planPathFor(resolved, candidate.planId);
+      const allowedDependencyPlanIds = allPlanIds.filter((planId) => planId !== candidate.planId);
+      const context = { ...baseContext, planId: candidate.planId, pathValue, allowedDependencyPlanIds,
+        taskSchema: buildPhasePlanTaskSchema({ baseSchema: baseContext.baseSchema,
+          knownRequirements: baseContext.knownRequirements,
+          knownEvidenceArtifacts: baseContext.knownEvidenceArtifacts, allowedDependencyPlanIds }) };
+      const validation = await validatePhasePlanModelWithContext({ model: candidate.model, context, savedSpecContent });
+      diagnostics.push(...validation.diagnostics.map((diagnostic) => ({
+        ...diagnostic, context: { ...diagnostic.context, planId: candidate.planId, path: pathValue }
+      })));
+      if (validation.valid && validation.renderPreview && validation.normalizedModel) {
+        const prepared = prepareTextForPersistence(validation.renderPreview, { label: pathValue });
+        plans.push({ planId: candidate.planId, path: pathValue,
+          model: validation.normalizedModel, content: prepared.content });
+      }
+    }
+    if (!diagnostics.some(isBlockingPhasePlanDiagnostic)) {
+      const overrides = new Map([...retainedContents, ...plans.map((plan) => [plan.path, plan.content] as const)]);
+      planSetValidation = await validatePhasePlanSet(projectRoot, resolved, {
+        overrides, knownPlanPaths: retainedPaths,
+        roadmapRequirementIds: snapshot.matchedPhase?.requirements ?? [],
+        roadmapCoverageSeverity: args.requireComplete === false ? "warning" : "issue",
+        ignorePublicationGuard: true
+      });
+      const partitioned = partitionPhasePlanMarkdownValidationIssues(planSetValidation.issues);
+      planSetValidation.issues = partitioned.blockingIssues;
+      planSetValidation.warnings.push(...partitioned.warningIssues);
+      const loaded = await collectPhasePlanArtifacts(projectRoot, resolved, overrides, retainedPaths);
+      for (let leftIndex = 0; leftIndex < loaded.plans.length; leftIndex += 1) {
+        const left = loaded.plans[leftIndex];
+        for (const right of loaded.plans.slice(leftIndex + 1)) {
+          if (left.metadata.wave !== right.metadata.wave) continue;
+          const overlap = sharedExecutionSurfaces(
+            { filesModified: left.metadata.filesModified, readFirst: [] },
+            { filesModified: right.metadata.filesModified, readFirst: [] });
+          if (overlap.length) planSetValidation.issues.push(
+            `Plans ${left.planIdFromPath} and ${right.planIdFromPath} both modify ${overlap.map((surface) => surface.value).join(", ")} in wave ${left.metadata.wave}. Assign dependencies and sequential waves for shared ownership.`);
+        }
+      }
+      planSetValidation.status = planSetValidation.issues.length ? "invalid" : "valid";
+      diagnostics.push(...planSetValidation.issues.map(phasePlanPreflightDiagnosticFromIssue));
+      diagnostics.push(...planSetValidation.warnings.map((message) => phasePlanDiagnostic({
+        severity: "warning", source: "residual", path: "models", code: "plan_set.guidance", message,
+        context: { stage: "prospective-plan-set-preflight" },
+        suggestion: "Review plan-set guidance before marking planning complete."
+      })));
+    }
+  } catch (error) {
+    diagnostics.push(phasePlanDiagnostic({ source: "scope", path: "models", code: "plan_set.invalid",
+      message: error instanceof Error ? error.message : String(error), context: {},
+      suggestion: "Resolve the candidate IDs and phase evidence, then validate the saved candidate again." }));
+  }
+  return { valid: !diagnostics.some(isBlockingPhasePlanDiagnostic), diagnostics, plans, planSetValidation };
+}
+
 export async function blueprintPhasePlanAuthoringContext(
   args: PhasePlanAuthoringContextArgs = {}
 ): Promise<PhasePlanAuthoringContextResult> {
@@ -4932,6 +5100,24 @@ export async function blueprintPhasePlanReadiness(
   const includeContent = args.bodyMode === "bounded" && args.readMode !== "hashes-only";
   const snapshot = await resolvePhaseRuntimeSnapshot(args);
   const projectRoot = snapshot.projectRoot;
+  // Bind the inputs before deriving summaries. If an input changes while
+  // readiness is being assembled, retain its original hash so a later writer
+  // cannot accept an older summary against a newer input fingerprint.
+  const consistencyPaths = uniqueSortedStrings([
+    `${BLUEPRINT_DIR}/PROJECT.md`, `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
+    `${BLUEPRINT_DIR}/ROADMAP.md`, `${BLUEPRINT_DIR}/STATE.md`, `${BLUEPRINT_DIR}/config.json`,
+    ...CODEBASE_ARTIFACTS,
+    ...(snapshot.resolved ? [
+      ...canonicalPhaseReadinessInventory(snapshot.artifacts, snapshot.resolved),
+      ...(["context", "discussion-log", "research", "spec", "ui-spec"] as const)
+        .map((kind) => artifactPathFor(snapshot.resolved!, kind))
+    ] : [])
+  ]);
+  const consistencyHashes = new Map(await Promise.all(consistencyPaths.map(async (pathValue) => {
+    const read = await readReadinessPath({ projectRoot, pathValue, kind: "input-consistency",
+      includeContent: false, maxBodyBytes });
+    return [pathValue, read.readSet.hash] as const;
+  })));
   const state = await blueprintStateLoad({ cwd: projectRoot });
   const config = await blueprintConfigGet({
     cwd: projectRoot,
@@ -4947,6 +5133,9 @@ export async function blueprintPhasePlanReadiness(
   const readSet: PhasePlanReadSetEntry[] = [];
 
   for (const [pathValue, kind] of [
+    [`${BLUEPRINT_DIR}/PROJECT.md`, "project"],
+    [`${BLUEPRINT_DIR}/REQUIREMENTS.md`, "requirements"],
+    ...CODEBASE_ARTIFACTS.map((artifact) => [artifact, "codebase"] as const),
     [`${BLUEPRINT_DIR}/ROADMAP.md`, "roadmap"],
     [`${BLUEPRINT_DIR}/STATE.md`, "state"],
     [`${BLUEPRINT_DIR}/config.json`, "config.project"]
@@ -5016,7 +5205,8 @@ export async function blueprintPhasePlanReadiness(
     });
     const authoringData = await buildPhasePlanAuthoringContextData({
       snapshot,
-      planId: args.planId
+      planId: args.planId,
+      existingIndex: planIndex
     });
     authoringContext = phasePlanAuthoringContextFromData({
       context: authoringData,
@@ -5065,10 +5255,6 @@ export async function blueprintPhasePlanReadiness(
       : "disabled or not relevant under effective config";
 
     if (!pathValue) {
-      if (key === "spec") {
-        continue;
-      }
-
       if (expectedPath) {
         const missingRead = await readReadinessPath({
           projectRoot,
@@ -5258,10 +5444,76 @@ export async function blueprintPhasePlanReadiness(
     }
   }
 
-  const finalReadSet = dedupeReadSet(readSet);
+  // Cover canonical evidence even when body expansion is disabled. The
+  // inventory hash detects added/deleted artifacts; these hashes detect edits.
+  if (resolved) {
+    const trackedPaths = new Set(readSet.map((entry) => entry.path));
+    const extraEvidence = canonicalPhaseReadinessInventory(snapshot.artifacts, resolved)
+      .filter((artifact) => !trackedPaths.has(artifact));
+    const extraReads = await Promise.all(extraEvidence.map((pathValue) => readReadinessPath({
+      projectRoot, pathValue, kind: "phase.evidence", includeContent: false, maxBodyBytes,
+      reason: "freshness-metadata"
+    })));
+    readSet.push(...extraReads.map((read) => read.readSet));
+
+    const researchTarget = artifactPathFor(resolved, "research");
+    const provenanceRead = await readReadinessPath({
+      projectRoot, pathValue: researchProvenancePath(researchTarget),
+      kind: "phase.research.provenance", includeContent: false, maxBodyBytes,
+      reason: "research-readiness"
+    });
+    readSet.push(provenanceRead.readSet);
+    if (provenanceRead.raw) {
+      try {
+        const provenance = safeJsonParseObject(provenanceRead.raw, { label: provenanceRead.readSet.path });
+        if (Array.isArray(provenance.readSet) && provenance.readSet.length <= 100) {
+          for (const input of provenance.readSet) {
+            if (!input || typeof input !== "object" || typeof input.path !== "string") continue;
+            // Research fingerprints may name repository source files or virtual
+            // effective config. Reuse the owning containment-aware hash reader.
+            let hash: string | null;
+            try { hash = await researchInputHash(projectRoot, input.path); }
+            catch (error) { hash = `unreadable:${error instanceof Error ? error.message : String(error)}`; }
+            readSet.push({ path: input.path, kind: "phase.research.input", hash: hash ?? "missing",
+              sizeBytes: 0, truncated: false, included: false, reason: "research-readiness" });
+          }
+        }
+      } catch {
+        // The provenance bytes are fingerprinted and research readiness exposes
+        // malformed provenance as a blocker; do not conceal that result here.
+      }
+    } else {
+      const sessionRead = await readReadinessPath({
+        projectRoot, pathValue: researchTarget.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json"),
+        kind: "phase.research.publication", includeContent: false, maxBodyBytes,
+        reason: "research-readiness"
+      });
+      readSet.push(sessionRead.readSet);
+    }
+  }
+  readSet.push(buildReadinessHashEntry({
+    pathValue: modelContract?.schemaPath ?? "phase.plan.model.schema",
+    kind: "phase.plan.schema",
+    value: { schema: modelContract?.jsonSchema ?? null, authoringTemplate: contract.authoringTemplate }
+  }));
+
+  const changedDuringRead = new Set<string>();
+  const finalReadSet = dedupeReadSet(readSet).map((entry) => {
+    const originalHash = consistencyHashes.get(entry.path);
+    if (originalHash !== undefined && originalHash !== entry.hash) {
+      changedDuringRead.add(entry.path);
+      return { ...entry, hash: originalHash };
+    }
+    return entry;
+  });
   const freshness = compareReadSetFreshness(finalReadSet, args.previousReadSet);
+  if (changedDuringRead.size) {
+    freshness.checked = true;
+    freshness.fresh = false;
+    freshness.stalePaths = uniqueSortedStrings([...freshness.stalePaths, ...changedDuringRead]);
+  }
   const status: PhasePlanReadinessResult["status"] =
-    !resolved ? "invalid" : authoringContext.status === "ready" ? "ready" : "blocked";
+    !resolved ? "invalid" : authoringContext.status === "ready" && !changedDuringRead.size ? "ready" : "blocked";
   const hashesOnly = args.readMode === "hashes-only";
   const returnedAuthoringContext = hashesOnly
     ? {
@@ -6456,11 +6708,14 @@ export async function blueprintPhaseExecutionTargets(
     };
   }
 
+  const publicationBefore = await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const requestedWave = args.wave ?? null;
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
   const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
-  const planPaths = located.artifacts.filter(
+  const executionArtifacts = await listPhaseArtifacts(
+    resolveBlueprintPath(projectRoot, resolved.phaseDir), projectRoot);
+  const planPaths = executionArtifacts.filter(
     (artifactPath) =>
       path.posix.dirname(artifactPath) === resolved.phaseDir &&
       artifactPath.endsWith("-PLAN.md")
@@ -6476,11 +6731,11 @@ export async function blueprintPhaseExecutionTargets(
   const [summaryContext, effectiveConfig, planSetValidation] = await Promise.all([
     loadResolvedPhaseSummaryContext({
       projectRoot,
-      located,
+      located: { ...located, artifacts: executionArtifacts },
       resolved,
       buildPhasePlanIndexFromLocated: (input) => buildPhasePlanIndexFromResolved({
         ...input,
-        artifacts: located.artifacts,
+        artifacts: executionArtifacts,
         planContents
       }),
       validateSummaryAgainstLivePlanInventory
@@ -6791,6 +7046,13 @@ export async function blueprintPhaseExecutionTargets(
         summary
       ): summary is PhaseExecutionTargetsResult["existingSummaries"][number] => summary !== null
     );
+  const publicationIssue = phasePlanPublicationIssue(publicationBefore,
+    await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix));
+  if (publicationIssue) {
+    blockers.push(publicationIssue);
+    planSetValidation.status = "invalid";
+    planSetValidation.issues.push(publicationIssue);
+  }
   const warnings = uniqueSortedStrings([
     ...planIndex.warnings,
     ...summaryIndex.warnings,

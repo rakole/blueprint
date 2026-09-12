@@ -1,5 +1,6 @@
 import { discussToolDefinitions } from "./tools/discuss.js";
 import { researchToolDefinitions } from "./tools/research.js";
+import { planningToolDefinitions } from "./tools/plan.js";
 import type { ToolDefinition } from "./tool-types.js";
 import { artifactToolDefinitions } from "./tools/artifacts.js";
 import { cleanupToolDefinitions } from "./tools/cleanup.js";
@@ -23,6 +24,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...projectToolDefinitions,
   ...discussToolDefinitions,
   ...researchToolDefinitions,
+  ...planningToolDefinitions,
   ...lightweightToolDefinitions,
   ...configToolDefinitions,
   ...stateToolDefinitions,

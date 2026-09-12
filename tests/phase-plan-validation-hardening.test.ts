@@ -1674,3 +1674,32 @@ test("strict plan writes still accept a concrete execution-ready plan", async (t
     true
   );
 });
+
+test("structured plan paths accept literal route brackets, braces, and groups", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  for (const file of ["app/users/[id]/page.tsx", "app/docs/[[...slug]]/page.tsx", "app/(admin)/{literal}/page.tsx"]) {
+    const model = validPlanModel();
+    model.filesModified = [file];
+    model.readFirst = [file];
+    model.tasks[0].readFirst = [file];
+    model.tasks[0].filesModified = [file];
+    model.fileSurfaceCoverage[0].surface = file;
+    const result = await blueprintPhasePlanValidateModel({ cwd: repoPath, phase: "3", planId: "14", model });
+    assert.equal(result.valid, true, `${file}: ${JSON.stringify(result.diagnostics)}`);
+  }
+});
+
+test("structured plan paths still reject traversal, absolute paths, and wildcard expansion", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  for (const file of ["../outside.ts", "/tmp/outside.ts", "C:\\outside.ts", "app/**/page.tsx", "app/user?/page.tsx"]) {
+    const model = validPlanModel();
+    model.filesModified = [file];
+    model.tasks[0].filesModified = [file];
+    model.fileSurfaceCoverage[0].surface = file;
+    const result = await blueprintPhasePlanValidateModel({ cwd: repoPath, phase: "3", planId: "14", model });
+    assert.equal(result.valid, false, file);
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === "schema.pattern"), file);
+  }
+});

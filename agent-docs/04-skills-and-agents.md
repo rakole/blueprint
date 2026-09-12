@@ -108,3 +108,13 @@ recommendations and evidence instead of reproducing a long document template.
 Record partial work at meaningful boundaries; read and field corrections are
 recovery tools. Do not reintroduce separate state, catalog, checkpoint or artifact
 calls into the normal research prompt.
+
+## Planning input boundary
+
+Plan uses `blueprint_plan_prepare` -> `blueprint_plan_submit` ->
+`blueprint_plan_finalize`; read is recovery/view only. The compact candidate
+schema is supplied by prepare. MCP derives numeric slots, waves and coverage
+ledgers, preserving the existing phase.plan execution shape. Submit retains raw
+candidates before assessment. Review verdicts bind to candidate revision/hash.
+Load planning recovery guidance only for conflicts or interrupted publication.
+Do not reintroduce primitive artifact/state orchestration into the normal prompt.

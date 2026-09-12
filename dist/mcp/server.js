@@ -16,9 +16,9 @@ var __export = (target, all) => {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    for (let key2 of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key2) && key2 !== except)
+        __defProp(to, key2, { get: () => from[key2], enumerable: !(desc = __getOwnPropDesc(from, key2)) || desc.enumerable });
   }
   return to;
 };
@@ -238,9 +238,9 @@ function floatSafeRemainder2(val, step) {
   const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
   return valInt % stepInt / 10 ** decCount;
 }
-function defineLazy(object3, key, getter) {
+function defineLazy(object3, key2, getter) {
   let value = void 0;
-  Object.defineProperty(object3, key, {
+  Object.defineProperty(object3, key2, {
     get() {
       if (value === EVALUATING) {
         return void 0;
@@ -252,7 +252,7 @@ function defineLazy(object3, key, getter) {
       return value;
     },
     set(v) {
-      Object.defineProperty(object3, key, {
+      Object.defineProperty(object3, key2, {
         value: v
         // configurable: true,
       });
@@ -279,17 +279,17 @@ function mergeDefs(...defs) {
   }
   return Object.defineProperties({}, mergedDescriptors);
 }
-function cloneDef(schema) {
-  return mergeDefs(schema._zod.def);
+function cloneDef(schema2) {
+  return mergeDefs(schema2._zod.def);
 }
-function getElementAtPath(obj, path30) {
-  if (!path30)
+function getElementAtPath(obj, path31) {
+  if (!path31)
     return obj;
-  return path30.reduce((acc, key) => acc?.[key], obj);
+  return path31.reduce((acc, key2) => acc?.[key2], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
-  const promises = keys.map((key) => promisesObj[key]);
+  const promises = keys.map((key2) => promisesObj[key2]);
   return Promise.all(promises).then((results) => {
     const resolvedObj = {};
     for (let i = 0; i < keys.length; i++) {
@@ -340,8 +340,8 @@ function shallowClone(o) {
 }
 function numKeys(data) {
   let keyCount = 0;
-  for (const key in data) {
-    if (Object.prototype.hasOwnProperty.call(data, key)) {
+  for (const key2 in data) {
+    if (Object.prototype.hasOwnProperty.call(data, key2)) {
       keyCount++;
     }
   }
@@ -417,91 +417,91 @@ function optionalKeys(shape) {
     return shape[k]._zod.optin === "optional" && shape[k]._zod.optout === "optional";
   });
 }
-function pick(schema, mask) {
-  const currDef = schema._zod.def;
+function pick(schema2, mask) {
+  const currDef = schema2._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
   if (hasChecks) {
     throw new Error(".pick() cannot be used on object schemas containing refinements");
   }
-  const def = mergeDefs(schema._zod.def, {
+  const def = mergeDefs(schema2._zod.def, {
     get shape() {
       const newShape = {};
-      for (const key in mask) {
-        if (!(key in currDef.shape)) {
-          throw new Error(`Unrecognized key: "${key}"`);
+      for (const key2 in mask) {
+        if (!(key2 in currDef.shape)) {
+          throw new Error(`Unrecognized key: "${key2}"`);
         }
-        if (!mask[key])
+        if (!mask[key2])
           continue;
-        newShape[key] = currDef.shape[key];
+        newShape[key2] = currDef.shape[key2];
       }
       assignProp(this, "shape", newShape);
       return newShape;
     },
     checks: []
   });
-  return clone(schema, def);
+  return clone(schema2, def);
 }
-function omit(schema, mask) {
-  const currDef = schema._zod.def;
+function omit(schema2, mask) {
+  const currDef = schema2._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
   if (hasChecks) {
     throw new Error(".omit() cannot be used on object schemas containing refinements");
   }
-  const def = mergeDefs(schema._zod.def, {
+  const def = mergeDefs(schema2._zod.def, {
     get shape() {
-      const newShape = { ...schema._zod.def.shape };
-      for (const key in mask) {
-        if (!(key in currDef.shape)) {
-          throw new Error(`Unrecognized key: "${key}"`);
+      const newShape = { ...schema2._zod.def.shape };
+      for (const key2 in mask) {
+        if (!(key2 in currDef.shape)) {
+          throw new Error(`Unrecognized key: "${key2}"`);
         }
-        if (!mask[key])
+        if (!mask[key2])
           continue;
-        delete newShape[key];
+        delete newShape[key2];
       }
       assignProp(this, "shape", newShape);
       return newShape;
     },
     checks: []
   });
-  return clone(schema, def);
+  return clone(schema2, def);
 }
-function extend(schema, shape) {
+function extend(schema2, shape) {
   if (!isPlainObject(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
-  const checks = schema._zod.def.checks;
+  const checks = schema2._zod.def.checks;
   const hasChecks = checks && checks.length > 0;
   if (hasChecks) {
-    const existingShape = schema._zod.def.shape;
-    for (const key in shape) {
-      if (Object.getOwnPropertyDescriptor(existingShape, key) !== void 0) {
+    const existingShape = schema2._zod.def.shape;
+    for (const key2 in shape) {
+      if (Object.getOwnPropertyDescriptor(existingShape, key2) !== void 0) {
         throw new Error("Cannot overwrite keys on object schemas containing refinements. Use `.safeExtend()` instead.");
       }
     }
   }
-  const def = mergeDefs(schema._zod.def, {
+  const def = mergeDefs(schema2._zod.def, {
     get shape() {
-      const _shape = { ...schema._zod.def.shape, ...shape };
+      const _shape = { ...schema2._zod.def.shape, ...shape };
       assignProp(this, "shape", _shape);
       return _shape;
     }
   });
-  return clone(schema, def);
+  return clone(schema2, def);
 }
-function safeExtend(schema, shape) {
+function safeExtend(schema2, shape) {
   if (!isPlainObject(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
-  const def = mergeDefs(schema._zod.def, {
+  const def = mergeDefs(schema2._zod.def, {
     get shape() {
-      const _shape = { ...schema._zod.def.shape, ...shape };
+      const _shape = { ...schema2._zod.def.shape, ...shape };
       assignProp(this, "shape", _shape);
       return _shape;
     }
   });
-  return clone(schema, def);
+  return clone(schema2, def);
 }
 function merge(a, b) {
   const def = mergeDefs(a._zod.def, {
@@ -518,35 +518,35 @@ function merge(a, b) {
   });
   return clone(a, def);
 }
-function partial(Class2, schema, mask) {
-  const currDef = schema._zod.def;
+function partial(Class2, schema2, mask) {
+  const currDef = schema2._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
   if (hasChecks) {
     throw new Error(".partial() cannot be used on object schemas containing refinements");
   }
-  const def = mergeDefs(schema._zod.def, {
+  const def = mergeDefs(schema2._zod.def, {
     get shape() {
-      const oldShape = schema._zod.def.shape;
+      const oldShape = schema2._zod.def.shape;
       const shape = { ...oldShape };
       if (mask) {
-        for (const key in mask) {
-          if (!(key in oldShape)) {
-            throw new Error(`Unrecognized key: "${key}"`);
+        for (const key2 in mask) {
+          if (!(key2 in oldShape)) {
+            throw new Error(`Unrecognized key: "${key2}"`);
           }
-          if (!mask[key])
+          if (!mask[key2])
             continue;
-          shape[key] = Class2 ? new Class2({
+          shape[key2] = Class2 ? new Class2({
             type: "optional",
-            innerType: oldShape[key]
-          }) : oldShape[key];
+            innerType: oldShape[key2]
+          }) : oldShape[key2];
         }
       } else {
-        for (const key in oldShape) {
-          shape[key] = Class2 ? new Class2({
+        for (const key2 in oldShape) {
+          shape[key2] = Class2 ? new Class2({
             type: "optional",
-            innerType: oldShape[key]
-          }) : oldShape[key];
+            innerType: oldShape[key2]
+          }) : oldShape[key2];
         }
       }
       assignProp(this, "shape", shape);
@@ -554,30 +554,30 @@ function partial(Class2, schema, mask) {
     },
     checks: []
   });
-  return clone(schema, def);
+  return clone(schema2, def);
 }
-function required(Class2, schema, mask) {
-  const def = mergeDefs(schema._zod.def, {
+function required(Class2, schema2, mask) {
+  const def = mergeDefs(schema2._zod.def, {
     get shape() {
-      const oldShape = schema._zod.def.shape;
+      const oldShape = schema2._zod.def.shape;
       const shape = { ...oldShape };
       if (mask) {
-        for (const key in mask) {
-          if (!(key in shape)) {
-            throw new Error(`Unrecognized key: "${key}"`);
+        for (const key2 in mask) {
+          if (!(key2 in shape)) {
+            throw new Error(`Unrecognized key: "${key2}"`);
           }
-          if (!mask[key])
+          if (!mask[key2])
             continue;
-          shape[key] = new Class2({
+          shape[key2] = new Class2({
             type: "nonoptional",
-            innerType: oldShape[key]
+            innerType: oldShape[key2]
           });
         }
       } else {
-        for (const key in oldShape) {
-          shape[key] = new Class2({
+        for (const key2 in oldShape) {
+          shape[key2] = new Class2({
             type: "nonoptional",
-            innerType: oldShape[key]
+            innerType: oldShape[key2]
           });
         }
       }
@@ -585,7 +585,7 @@ function required(Class2, schema, mask) {
       return shape;
     }
   });
-  return clone(schema, def);
+  return clone(schema2, def);
 }
 function aborted(x, startIndex = 0) {
   if (x.aborted === true)
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path30, issues) {
+function prefixIssues(path31, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path30);
+    iss.path.unshift(path31);
     return iss;
   });
 }
@@ -874,9 +874,9 @@ var init_parse = __esm({
     init_core();
     init_errors();
     init_util();
-    _parse = (_Err) => (schema, value, _ctx, _params) => {
+    _parse = (_Err) => (schema2, value, _ctx, _params) => {
       const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
-      const result = schema._zod.run({ value, issues: [] }, ctx);
+      const result = schema2._zod.run({ value, issues: [] }, ctx);
       if (result instanceof Promise) {
         throw new $ZodAsyncError();
       }
@@ -888,9 +888,9 @@ var init_parse = __esm({
       return result.value;
     };
     parse = /* @__PURE__ */ _parse($ZodRealError);
-    _parseAsync = (_Err) => async (schema, value, _ctx, params) => {
+    _parseAsync = (_Err) => async (schema2, value, _ctx, params) => {
       const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
-      let result = schema._zod.run({ value, issues: [] }, ctx);
+      let result = schema2._zod.run({ value, issues: [] }, ctx);
       if (result instanceof Promise)
         result = await result;
       if (result.issues.length) {
@@ -901,9 +901,9 @@ var init_parse = __esm({
       return result.value;
     };
     parseAsync = /* @__PURE__ */ _parseAsync($ZodRealError);
-    _safeParse = (_Err) => (schema, value, _ctx) => {
+    _safeParse = (_Err) => (schema2, value, _ctx) => {
       const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
-      const result = schema._zod.run({ value, issues: [] }, ctx);
+      const result = schema2._zod.run({ value, issues: [] }, ctx);
       if (result instanceof Promise) {
         throw new $ZodAsyncError();
       }
@@ -913,9 +913,9 @@ var init_parse = __esm({
       } : { success: true, data: result.value };
     };
     safeParse = /* @__PURE__ */ _safeParse($ZodRealError);
-    _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
+    _safeParseAsync = (_Err) => async (schema2, value, _ctx) => {
       const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
-      let result = schema._zod.run({ value, issues: [] }, ctx);
+      let result = schema2._zod.run({ value, issues: [] }, ctx);
       if (result instanceof Promise)
         result = await result;
       return result.issues.length ? {
@@ -924,33 +924,33 @@ var init_parse = __esm({
       } : { success: true, data: result.value };
     };
     safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
-    _encode = (_Err) => (schema, value, _ctx) => {
+    _encode = (_Err) => (schema2, value, _ctx) => {
       const ctx = _ctx ? Object.assign(_ctx, { direction: "backward" }) : { direction: "backward" };
-      return _parse(_Err)(schema, value, ctx);
+      return _parse(_Err)(schema2, value, ctx);
     };
-    _decode = (_Err) => (schema, value, _ctx) => {
-      return _parse(_Err)(schema, value, _ctx);
+    _decode = (_Err) => (schema2, value, _ctx) => {
+      return _parse(_Err)(schema2, value, _ctx);
     };
-    _encodeAsync = (_Err) => async (schema, value, _ctx) => {
+    _encodeAsync = (_Err) => async (schema2, value, _ctx) => {
       const ctx = _ctx ? Object.assign(_ctx, { direction: "backward" }) : { direction: "backward" };
-      return _parseAsync(_Err)(schema, value, ctx);
+      return _parseAsync(_Err)(schema2, value, ctx);
     };
-    _decodeAsync = (_Err) => async (schema, value, _ctx) => {
-      return _parseAsync(_Err)(schema, value, _ctx);
+    _decodeAsync = (_Err) => async (schema2, value, _ctx) => {
+      return _parseAsync(_Err)(schema2, value, _ctx);
     };
-    _safeEncode = (_Err) => (schema, value, _ctx) => {
+    _safeEncode = (_Err) => (schema2, value, _ctx) => {
       const ctx = _ctx ? Object.assign(_ctx, { direction: "backward" }) : { direction: "backward" };
-      return _safeParse(_Err)(schema, value, ctx);
+      return _safeParse(_Err)(schema2, value, ctx);
     };
-    _safeDecode = (_Err) => (schema, value, _ctx) => {
-      return _safeParse(_Err)(schema, value, _ctx);
+    _safeDecode = (_Err) => (schema2, value, _ctx) => {
+      return _safeParse(_Err)(schema2, value, _ctx);
     };
-    _safeEncodeAsync = (_Err) => async (schema, value, _ctx) => {
+    _safeEncodeAsync = (_Err) => async (schema2, value, _ctx) => {
       const ctx = _ctx ? Object.assign(_ctx, { direction: "backward" }) : { direction: "backward" };
-      return _safeParseAsync(_Err)(schema, value, ctx);
+      return _safeParseAsync(_Err)(schema2, value, ctx);
     };
-    _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
-      return _safeParseAsync(_Err)(schema, value, _ctx);
+    _safeDecodeAsync = (_Err) => async (schema2, value, _ctx) => {
+      return _safeParseAsync(_Err)(schema2, value, _ctx);
     };
   }
 });
@@ -1773,19 +1773,19 @@ function handleArrayResult(result, final, index) {
   }
   final.value[index] = result.value;
 }
-function handlePropertyResult(result, final, key, input, isOptionalOut) {
+function handlePropertyResult(result, final, key2, input, isOptionalOut) {
   if (result.issues.length) {
-    if (isOptionalOut && !(key in input)) {
+    if (isOptionalOut && !(key2 in input)) {
       return;
     }
-    final.issues.push(...prefixIssues(key, result.issues));
+    final.issues.push(...prefixIssues(key2, result.issues));
   }
   if (result.value === void 0) {
-    if (key in input) {
-      final.value[key] = void 0;
+    if (key2 in input) {
+      final.value[key2] = void 0;
     }
   } else {
-    final.value[key] = result.value;
+    final.value[key2] = result.value;
   }
 }
 function normalizeDef(def) {
@@ -1810,18 +1810,18 @@ function handleCatchall(proms, input, payload, ctx, def, inst) {
   const _catchall = def.catchall._zod;
   const t = _catchall.def.type;
   const isOptionalOut = _catchall.optout === "optional";
-  for (const key in input) {
-    if (keySet.has(key))
+  for (const key2 in input) {
+    if (keySet.has(key2))
       continue;
     if (t === "never") {
-      unrecognized.push(key);
+      unrecognized.push(key2);
       continue;
     }
-    const r = _catchall.run({ value: input[key], issues: [] }, ctx);
+    const r = _catchall.run({ value: input[key2], issues: [] }, ctx);
     if (r instanceof Promise) {
-      proms.push(r.then((r2) => handlePropertyResult(r2, payload, key, input, isOptionalOut)));
+      proms.push(r.then((r2) => handlePropertyResult(r2, payload, key2, input, isOptionalOut)));
     } else {
-      handlePropertyResult(r, payload, key, input, isOptionalOut);
+      handlePropertyResult(r, payload, key2, input, isOptionalOut);
     }
   }
   if (unrecognized.length) {
@@ -1891,17 +1891,17 @@ function mergeValues2(a, b) {
   }
   if (isPlainObject(a) && isPlainObject(b)) {
     const bKeys = Object.keys(b);
-    const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
+    const sharedKeys = Object.keys(a).filter((key2) => bKeys.indexOf(key2) !== -1);
     const newObj = { ...a, ...b };
-    for (const key of sharedKeys) {
-      const sharedValue = mergeValues2(a[key], b[key]);
+    for (const key2 of sharedKeys) {
+      const sharedValue = mergeValues2(a[key2], b[key2]);
       if (!sharedValue.valid) {
         return {
           valid: false,
-          mergeErrorPath: [key, ...sharedValue.mergeErrorPath]
+          mergeErrorPath: [key2, ...sharedValue.mergeErrorPath]
         };
       }
-      newObj[key] = sharedValue.data;
+      newObj[key2] = sharedValue.data;
     }
     return { valid: true, data: newObj };
   }
@@ -1971,10 +1971,10 @@ function handleTupleResult(result, final, index) {
   }
   final.value[index] = result.value;
 }
-function handleMapResult(keyResult, valueResult, final, key, input, inst, ctx) {
+function handleMapResult(keyResult, valueResult, final, key2, input, inst, ctx) {
   if (keyResult.issues.length) {
-    if (propertyKeyTypes.has(typeof key)) {
-      final.issues.push(...prefixIssues(key, keyResult.issues));
+    if (propertyKeyTypes.has(typeof key2)) {
+      final.issues.push(...prefixIssues(key2, keyResult.issues));
     } else {
       final.issues.push({
         code: "invalid_key",
@@ -1986,15 +1986,15 @@ function handleMapResult(keyResult, valueResult, final, key, input, inst, ctx) {
     }
   }
   if (valueResult.issues.length) {
-    if (propertyKeyTypes.has(typeof key)) {
-      final.issues.push(...prefixIssues(key, valueResult.issues));
+    if (propertyKeyTypes.has(typeof key2)) {
+      final.issues.push(...prefixIssues(key2, valueResult.issues));
     } else {
       final.issues.push({
         origin: "map",
         code: "invalid_element",
         input,
         inst,
-        key,
+        key: key2,
         issues: valueResult.issues.map((iss) => finalizeIssue(iss, ctx, config()))
       });
     }
@@ -2711,12 +2711,12 @@ var init_schemas = __esm({
       defineLazy(inst._zod, "propValues", () => {
         const shape = def.shape;
         const propValues = {};
-        for (const key in shape) {
-          const field = shape[key]._zod;
+        for (const key2 in shape) {
+          const field = shape[key2]._zod;
           if (field.values) {
-            propValues[key] ?? (propValues[key] = /* @__PURE__ */ new Set());
+            propValues[key2] ?? (propValues[key2] = /* @__PURE__ */ new Set());
             for (const v of field.values)
-              propValues[key].add(v);
+              propValues[key2].add(v);
           }
         }
         return propValues;
@@ -2739,14 +2739,14 @@ var init_schemas = __esm({
         payload.value = {};
         const proms = [];
         const shape = value.shape;
-        for (const key of value.keys) {
-          const el = shape[key];
+        for (const key2 of value.keys) {
+          const el = shape[key2];
           const isOptionalOut = el._zod.optout === "optional";
-          const r = el._zod.run({ value: input[key], issues: [] }, ctx);
+          const r = el._zod.run({ value: input[key2], issues: [] }, ctx);
           if (r instanceof Promise) {
-            proms.push(r.then((r2) => handlePropertyResult(r2, payload, key, input, isOptionalOut)));
+            proms.push(r.then((r2) => handlePropertyResult(r2, payload, key2, input, isOptionalOut)));
           } else {
-            handlePropertyResult(r, payload, key, input, isOptionalOut);
+            handlePropertyResult(r, payload, key2, input, isOptionalOut);
           }
         }
         if (!catchall) {
@@ -2762,23 +2762,23 @@ var init_schemas = __esm({
       const generateFastpass = (shape) => {
         const doc = new Doc(["shape", "payload", "ctx"]);
         const normalized = _normalized.value;
-        const parseStr = (key) => {
-          const k = esc(key);
+        const parseStr = (key2) => {
+          const k = esc(key2);
           return `shape[${k}]._zod.run({ value: input[${k}], issues: [] }, ctx)`;
         };
         doc.write(`const input = payload.value;`);
         const ids = /* @__PURE__ */ Object.create(null);
         let counter = 0;
-        for (const key of normalized.keys) {
-          ids[key] = `key_${counter++}`;
+        for (const key2 of normalized.keys) {
+          ids[key2] = `key_${counter++}`;
         }
         doc.write(`const newResult = {};`);
-        for (const key of normalized.keys) {
-          const id = ids[key];
-          const k = esc(key);
-          const schema = shape[key];
-          const isOptionalOut = schema?._zod?.optout === "optional";
-          doc.write(`const ${id} = ${parseStr(key)};`);
+        for (const key2 of normalized.keys) {
+          const id = ids[key2];
+          const k = esc(key2);
+          const schema2 = shape[key2];
+          const isOptionalOut = schema2?._zod?.optout === "optional";
+          doc.write(`const ${id} = ${parseStr(key2)};`);
           if (isOptionalOut) {
             doc.write(`
         if (${id}.issues.length) {
@@ -3097,30 +3097,30 @@ var init_schemas = __esm({
         if (values) {
           payload.value = {};
           const recordKeys = /* @__PURE__ */ new Set();
-          for (const key of values) {
-            if (typeof key === "string" || typeof key === "number" || typeof key === "symbol") {
-              recordKeys.add(typeof key === "number" ? key.toString() : key);
-              const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
+          for (const key2 of values) {
+            if (typeof key2 === "string" || typeof key2 === "number" || typeof key2 === "symbol") {
+              recordKeys.add(typeof key2 === "number" ? key2.toString() : key2);
+              const result = def.valueType._zod.run({ value: input[key2], issues: [] }, ctx);
               if (result instanceof Promise) {
                 proms.push(result.then((result2) => {
                   if (result2.issues.length) {
-                    payload.issues.push(...prefixIssues(key, result2.issues));
+                    payload.issues.push(...prefixIssues(key2, result2.issues));
                   }
-                  payload.value[key] = result2.value;
+                  payload.value[key2] = result2.value;
                 }));
               } else {
                 if (result.issues.length) {
-                  payload.issues.push(...prefixIssues(key, result.issues));
+                  payload.issues.push(...prefixIssues(key2, result.issues));
                 }
-                payload.value[key] = result.value;
+                payload.value[key2] = result.value;
               }
             }
           }
           let unrecognized;
-          for (const key in input) {
-            if (!recordKeys.has(key)) {
+          for (const key2 in input) {
+            if (!recordKeys.has(key2)) {
               unrecognized = unrecognized ?? [];
-              unrecognized.push(key);
+              unrecognized.push(key2);
             }
           }
           if (unrecognized && unrecognized.length > 0) {
@@ -3133,16 +3133,16 @@ var init_schemas = __esm({
           }
         } else {
           payload.value = {};
-          for (const key of Reflect.ownKeys(input)) {
-            if (key === "__proto__")
+          for (const key2 of Reflect.ownKeys(input)) {
+            if (key2 === "__proto__")
               continue;
-            let keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
+            let keyResult = def.keyType._zod.run({ value: key2, issues: [] }, ctx);
             if (keyResult instanceof Promise) {
               throw new Error("Async schemas not supported in object keys currently");
             }
-            const checkNumericKey = typeof key === "string" && number.test(key) && keyResult.issues.length;
+            const checkNumericKey = typeof key2 === "string" && number.test(key2) && keyResult.issues.length;
             if (checkNumericKey) {
-              const retryResult = def.keyType._zod.run({ value: Number(key), issues: [] }, ctx);
+              const retryResult = def.keyType._zod.run({ value: Number(key2), issues: [] }, ctx);
               if (retryResult instanceof Promise) {
                 throw new Error("Async schemas not supported in object keys currently");
               }
@@ -3152,30 +3152,30 @@ var init_schemas = __esm({
             }
             if (keyResult.issues.length) {
               if (def.mode === "loose") {
-                payload.value[key] = input[key];
+                payload.value[key2] = input[key2];
               } else {
                 payload.issues.push({
                   code: "invalid_key",
                   origin: "record",
                   issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
-                  input: key,
-                  path: [key],
+                  input: key2,
+                  path: [key2],
                   inst
                 });
               }
               continue;
             }
-            const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
+            const result = def.valueType._zod.run({ value: input[key2], issues: [] }, ctx);
             if (result instanceof Promise) {
               proms.push(result.then((result2) => {
                 if (result2.issues.length) {
-                  payload.issues.push(...prefixIssues(key, result2.issues));
+                  payload.issues.push(...prefixIssues(key2, result2.issues));
                 }
                 payload.value[keyResult.value] = result2.value;
               }));
             } else {
               if (result.issues.length) {
-                payload.issues.push(...prefixIssues(key, result.issues));
+                payload.issues.push(...prefixIssues(key2, result.issues));
               }
               payload.value[keyResult.value] = result.value;
             }
@@ -3202,15 +3202,15 @@ var init_schemas = __esm({
         }
         const proms = [];
         payload.value = /* @__PURE__ */ new Map();
-        for (const [key, value] of input) {
-          const keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
+        for (const [key2, value] of input) {
+          const keyResult = def.keyType._zod.run({ value: key2, issues: [] }, ctx);
           const valueResult = def.valueType._zod.run({ value, issues: [] }, ctx);
           if (keyResult instanceof Promise || valueResult instanceof Promise) {
             proms.push(Promise.all([keyResult, valueResult]).then(([keyResult2, valueResult2]) => {
-              handleMapResult(keyResult2, valueResult2, payload, key, input, inst, ctx);
+              handleMapResult(keyResult2, valueResult2, payload, key2, input, inst, ctx);
             }));
           } else {
-            handleMapResult(keyResult, valueResult, payload, key, input, inst, ctx);
+            handleMapResult(keyResult, valueResult, payload, key2, input, inst, ctx);
           }
         }
         if (proms.length)
@@ -4229,11 +4229,11 @@ var init_registries = __esm({
         this._map = /* @__PURE__ */ new WeakMap();
         this._idmap = /* @__PURE__ */ new Map();
       }
-      add(schema, ..._meta) {
+      add(schema2, ..._meta) {
         const meta3 = _meta[0];
-        this._map.set(schema, meta3);
+        this._map.set(schema2, meta3);
         if (meta3 && typeof meta3 === "object" && "id" in meta3) {
-          this._idmap.set(meta3.id, schema);
+          this._idmap.set(meta3.id, schema2);
         }
         return this;
       }
@@ -4242,26 +4242,26 @@ var init_registries = __esm({
         this._idmap = /* @__PURE__ */ new Map();
         return this;
       }
-      remove(schema) {
-        const meta3 = this._map.get(schema);
+      remove(schema2) {
+        const meta3 = this._map.get(schema2);
         if (meta3 && typeof meta3 === "object" && "id" in meta3) {
           this._idmap.delete(meta3.id);
         }
-        this._map.delete(schema);
+        this._map.delete(schema2);
         return this;
       }
-      get(schema) {
-        const p = schema._zod.parent;
+      get(schema2) {
+        const p = schema2._zod.parent;
         if (p) {
           const pm = { ...this.get(p) ?? {} };
           delete pm.id;
-          const f = { ...pm, ...this._map.get(schema) };
+          const f = { ...pm, ...this._map.get(schema2) };
           return Object.keys(f).length ? f : void 0;
         }
-        return this._map.get(schema);
+        return this._map.get(schema2);
       }
-      has(schema) {
-        return this._map.has(schema);
+      has(schema2) {
+        return this._map.has(schema2);
       }
     };
     (_a = globalThis).__zod_globalRegistry ?? (_a.__zod_globalRegistry = registry());
@@ -4865,11 +4865,11 @@ function _endsWith(suffix, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _property(property, schema, params) {
+function _property(property, schema2, params) {
   return new $ZodCheckProperty({
     check: "property",
     property,
-    schema,
+    schema: schema2,
     ...normalizeParams(params)
   });
 }
@@ -4930,23 +4930,23 @@ function _file(Class2, params) {
 function _custom(Class2, fn, _params) {
   const norm = normalizeParams(_params);
   norm.abort ?? (norm.abort = true);
-  const schema = new Class2({
+  const schema2 = new Class2({
     type: "custom",
     check: "custom",
     fn,
     ...norm
   });
-  return schema;
+  return schema2;
 }
 // @__NO_SIDE_EFFECTS__
 function _refine(Class2, fn, _params) {
-  const schema = new Class2({
+  const schema2 = new Class2({
     type: "custom",
     check: "custom",
     fn,
     ...normalizeParams(_params)
   });
-  return schema;
+  return schema2;
 }
 // @__NO_SIDE_EFFECTS__
 function _superRefine(fn) {
@@ -5103,40 +5103,40 @@ function initializeContext(params) {
     external: params?.external ?? void 0
   };
 }
-function process2(schema, ctx, _params = { path: [], schemaPath: [] }) {
+function process2(schema2, ctx, _params = { path: [], schemaPath: [] }) {
   var _a2;
-  const def = schema._zod.def;
-  const seen = ctx.seen.get(schema);
+  const def = schema2._zod.def;
+  const seen = ctx.seen.get(schema2);
   if (seen) {
     seen.count++;
-    const isCycle = _params.schemaPath.includes(schema);
+    const isCycle = _params.schemaPath.includes(schema2);
     if (isCycle) {
       seen.cycle = _params.path;
     }
     return seen.schema;
   }
   const result = { schema: {}, count: 1, cycle: void 0, path: _params.path };
-  ctx.seen.set(schema, result);
-  const overrideSchema = schema._zod.toJSONSchema?.();
+  ctx.seen.set(schema2, result);
+  const overrideSchema = schema2._zod.toJSONSchema?.();
   if (overrideSchema) {
     result.schema = overrideSchema;
   } else {
     const params = {
       ..._params,
-      schemaPath: [..._params.schemaPath, schema],
+      schemaPath: [..._params.schemaPath, schema2],
       path: _params.path
     };
-    if (schema._zod.processJSONSchema) {
-      schema._zod.processJSONSchema(ctx, result.schema, params);
+    if (schema2._zod.processJSONSchema) {
+      schema2._zod.processJSONSchema(ctx, result.schema, params);
     } else {
       const _json = result.schema;
       const processor = ctx.processors[def.type];
       if (!processor) {
         throw new Error(`[toJSONSchema]: Non-representable type encountered: ${def.type}`);
       }
-      processor(schema, ctx, _json, params);
+      processor(schema2, ctx, _json, params);
     }
-    const parent = schema._zod.parent;
+    const parent = schema2._zod.parent;
     if (parent) {
       if (!result.ref)
         result.ref = parent;
@@ -5144,21 +5144,21 @@ function process2(schema, ctx, _params = { path: [], schemaPath: [] }) {
       ctx.seen.get(parent).isParent = true;
     }
   }
-  const meta3 = ctx.metadataRegistry.get(schema);
+  const meta3 = ctx.metadataRegistry.get(schema2);
   if (meta3)
     Object.assign(result.schema, meta3);
-  if (ctx.io === "input" && isTransforming(schema)) {
+  if (ctx.io === "input" && isTransforming(schema2)) {
     delete result.schema.examples;
     delete result.schema.default;
   }
   if (ctx.io === "input" && result.schema._prefault)
     (_a2 = result.schema).default ?? (_a2.default = result.schema._prefault);
   delete result.schema._prefault;
-  const _result = ctx.seen.get(schema);
+  const _result = ctx.seen.get(schema2);
   return _result.schema;
 }
-function extractDefs(ctx, schema) {
-  const root = ctx.seen.get(schema);
+function extractDefs(ctx, schema2) {
+  const root = ctx.seen.get(schema2);
   if (!root)
     throw new Error("Unprocessed schema. This is a bug in Zod.");
   const idToSchema = /* @__PURE__ */ new Map();
@@ -5201,11 +5201,11 @@ function extractDefs(ctx, schema) {
     seen.def = { ...seen.schema };
     if (defId)
       seen.defId = defId;
-    const schema2 = seen.schema;
-    for (const key in schema2) {
-      delete schema2[key];
+    const schema3 = seen.schema;
+    for (const key2 in schema3) {
+      delete schema3[key2];
     }
-    schema2.$ref = ref;
+    schema3.$ref = ref;
   };
   if (ctx.cycles === "throw") {
     for (const entry of ctx.seen.entries()) {
@@ -5219,13 +5219,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   for (const entry of ctx.seen.entries()) {
     const seen = entry[1];
-    if (schema === entry[0]) {
+    if (schema2 === entry[0]) {
       extractToDef(entry);
       continue;
     }
     if (ctx.external) {
       const ext = ctx.external.registry.get(entry[0])?.id;
-      if (schema !== entry[0] && ext) {
+      if (schema2 !== entry[0] && ext) {
         extractToDef(entry);
         continue;
       }
@@ -5247,16 +5247,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
   }
 }
-function finalize(ctx, schema) {
-  const root = ctx.seen.get(schema);
+function finalize(ctx, schema2) {
+  const root = ctx.seen.get(schema2);
   if (!root)
     throw new Error("Unprocessed schema. This is a bug in Zod.");
   const flattenRef = (zodSchema) => {
     const seen = ctx.seen.get(zodSchema);
     if (seen.ref === null)
       return;
-    const schema2 = seen.def ?? seen.schema;
-    const _cached = { ...schema2 };
+    const schema3 = seen.def ?? seen.schema;
+    const _cached = { ...schema3 };
     const ref = seen.ref;
     seen.ref = null;
     if (ref) {
@@ -5264,28 +5264,28 @@ function finalize(ctx, schema) {
       const refSeen = ctx.seen.get(ref);
       const refSchema = refSeen.schema;
       if (refSchema.$ref && (ctx.target === "draft-07" || ctx.target === "draft-04" || ctx.target === "openapi-3.0")) {
-        schema2.allOf = schema2.allOf ?? [];
-        schema2.allOf.push(refSchema);
+        schema3.allOf = schema3.allOf ?? [];
+        schema3.allOf.push(refSchema);
       } else {
-        Object.assign(schema2, refSchema);
+        Object.assign(schema3, refSchema);
       }
-      Object.assign(schema2, _cached);
+      Object.assign(schema3, _cached);
       const isParentRef = zodSchema._zod.parent === ref;
       if (isParentRef) {
-        for (const key in schema2) {
-          if (key === "$ref" || key === "allOf")
+        for (const key2 in schema3) {
+          if (key2 === "$ref" || key2 === "allOf")
             continue;
-          if (!(key in _cached)) {
-            delete schema2[key];
+          if (!(key2 in _cached)) {
+            delete schema3[key2];
           }
         }
       }
       if (refSchema.$ref && refSeen.def) {
-        for (const key in schema2) {
-          if (key === "$ref" || key === "allOf")
+        for (const key2 in schema3) {
+          if (key2 === "$ref" || key2 === "allOf")
             continue;
-          if (key in refSeen.def && JSON.stringify(schema2[key]) === JSON.stringify(refSeen.def[key])) {
-            delete schema2[key];
+          if (key2 in refSeen.def && JSON.stringify(schema3[key2]) === JSON.stringify(refSeen.def[key2])) {
+            delete schema3[key2];
           }
         }
       }
@@ -5295,13 +5295,13 @@ function finalize(ctx, schema) {
       flattenRef(parent);
       const parentSeen = ctx.seen.get(parent);
       if (parentSeen?.schema.$ref) {
-        schema2.$ref = parentSeen.schema.$ref;
+        schema3.$ref = parentSeen.schema.$ref;
         if (parentSeen.def) {
-          for (const key in schema2) {
-            if (key === "$ref" || key === "allOf")
+          for (const key2 in schema3) {
+            if (key2 === "$ref" || key2 === "allOf")
               continue;
-            if (key in parentSeen.def && JSON.stringify(schema2[key]) === JSON.stringify(parentSeen.def[key])) {
-              delete schema2[key];
+            if (key2 in parentSeen.def && JSON.stringify(schema3[key2]) === JSON.stringify(parentSeen.def[key2])) {
+              delete schema3[key2];
             }
           }
         }
@@ -5309,7 +5309,7 @@ function finalize(ctx, schema) {
     }
     ctx.override({
       zodSchema,
-      jsonSchema: schema2,
+      jsonSchema: schema3,
       path: seen.path ?? []
     });
   };
@@ -5327,7 +5327,7 @@ function finalize(ctx, schema) {
   } else {
   }
   if (ctx.external?.uri) {
-    const id = ctx.external.registry.get(schema)?.id;
+    const id = ctx.external.registry.get(schema2)?.id;
     if (!id)
       throw new Error("Schema is missing an `id` property");
     result.$id = ctx.external.uri(id);
@@ -5354,10 +5354,10 @@ function finalize(ctx, schema) {
     const finalized = JSON.parse(JSON.stringify(result));
     Object.defineProperty(finalized, "~standard", {
       value: {
-        ...schema["~standard"],
+        ...schema2["~standard"],
         jsonSchema: {
-          input: createStandardJSONSchemaMethod(schema, "input", ctx.processors),
-          output: createStandardJSONSchemaMethod(schema, "output", ctx.processors)
+          input: createStandardJSONSchemaMethod(schema2, "input", ctx.processors),
+          output: createStandardJSONSchemaMethod(schema2, "output", ctx.processors)
         }
       },
       enumerable: false,
@@ -5395,8 +5395,8 @@ function isTransforming(_schema, _ctx) {
     return isTransforming(def.in, ctx) || isTransforming(def.out, ctx);
   }
   if (def.type === "object") {
-    for (const key in def.shape) {
-      if (isTransforming(def.shape[key], ctx))
+    for (const key2 in def.shape) {
+      if (isTransforming(def.shape[key2], ctx))
         return true;
     }
     return false;
@@ -5423,18 +5423,18 @@ var createToJSONSchemaMethod, createStandardJSONSchemaMethod;
 var init_to_json_schema = __esm({
   "node_modules/zod/v4/core/to-json-schema.js"() {
     init_registries();
-    createToJSONSchemaMethod = (schema, processors = {}) => (params) => {
+    createToJSONSchemaMethod = (schema2, processors = {}) => (params) => {
       const ctx = initializeContext({ ...params, processors });
-      process2(schema, ctx);
-      extractDefs(ctx, schema);
-      return finalize(ctx, schema);
+      process2(schema2, ctx);
+      extractDefs(ctx, schema2);
+      return finalize(ctx, schema2);
     };
-    createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params) => {
+    createStandardJSONSchemaMethod = (schema2, io, processors = {}) => (params) => {
       const { libraryOptions, target } = params ?? {};
       const ctx = initializeContext({ ...libraryOptions ?? {}, target, io, processors });
-      process2(schema, ctx);
-      extractDefs(ctx, schema);
-      return finalize(ctx, schema);
+      process2(schema2, ctx);
+      extractDefs(ctx, schema2);
+      return finalize(ctx, schema2);
     };
   }
 });
@@ -5446,8 +5446,8 @@ function toJSONSchema(input, params) {
     const ctx2 = initializeContext({ ...params, processors: allProcessors });
     const defs = {};
     for (const entry of registry2._idmap.entries()) {
-      const [_, schema] = entry;
-      process2(schema, ctx2);
+      const [_, schema2] = entry;
+      process2(schema2, ctx2);
     }
     const schemas = {};
     const external = {
@@ -5457,9 +5457,9 @@ function toJSONSchema(input, params) {
     };
     ctx2.external = external;
     for (const entry of registry2._idmap.entries()) {
-      const [key, schema] = entry;
-      extractDefs(ctx2, schema);
-      schemas[key] = finalize(ctx2, schema);
+      const [key2, schema2] = entry;
+      extractDefs(ctx2, schema2);
+      schemas[key2] = finalize(ctx2, schema2);
     }
     if (Object.keys(defs).length > 0) {
       const defsSegment = ctx2.target === "draft-2020-12" ? "$defs" : "definitions";
@@ -5487,10 +5487,10 @@ var init_json_schema_processors = __esm({
       regex: ""
       // do not set
     };
-    stringProcessor = (schema, ctx, _json, _params) => {
+    stringProcessor = (schema2, ctx, _json, _params) => {
       const json2 = _json;
       json2.type = "string";
-      const { minimum, maximum, format, patterns, contentEncoding } = schema._zod.bag;
+      const { minimum, maximum, format, patterns, contentEncoding } = schema2._zod.bag;
       if (typeof minimum === "number")
         json2.minLength = minimum;
       if (typeof maximum === "number")
@@ -5519,9 +5519,9 @@ var init_json_schema_processors = __esm({
         }
       }
     };
-    numberProcessor = (schema, ctx, _json, _params) => {
+    numberProcessor = (schema2, ctx, _json, _params) => {
       const json2 = _json;
-      const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
+      const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema2._zod.bag;
       if (typeof format === "string" && format.includes("int"))
         json2.type = "integer";
       else
@@ -5607,8 +5607,8 @@ var init_json_schema_processors = __esm({
         throw new Error("Date cannot be represented in JSON Schema");
       }
     };
-    enumProcessor = (schema, _ctx, json2, _params) => {
-      const def = schema._zod.def;
+    enumProcessor = (schema2, _ctx, json2, _params) => {
+      const def = schema2._zod.def;
       const values = getEnumValues(def.entries);
       if (values.every((v) => typeof v === "number"))
         json2.type = "number";
@@ -5616,8 +5616,8 @@ var init_json_schema_processors = __esm({
         json2.type = "string";
       json2.enum = values;
     };
-    literalProcessor = (schema, ctx, json2, _params) => {
-      const def = schema._zod.def;
+    literalProcessor = (schema2, ctx, json2, _params) => {
+      const def = schema2._zod.def;
       const vals = [];
       for (const val of def.values) {
         if (val === void 0) {
@@ -5661,22 +5661,22 @@ var init_json_schema_processors = __esm({
         throw new Error("NaN cannot be represented in JSON Schema");
       }
     };
-    templateLiteralProcessor = (schema, _ctx, json2, _params) => {
+    templateLiteralProcessor = (schema2, _ctx, json2, _params) => {
       const _json = json2;
-      const pattern = schema._zod.pattern;
+      const pattern = schema2._zod.pattern;
       if (!pattern)
         throw new Error("Pattern not found in template literal");
       _json.type = "string";
       _json.pattern = pattern.source;
     };
-    fileProcessor = (schema, _ctx, json2, _params) => {
+    fileProcessor = (schema2, _ctx, json2, _params) => {
       const _json = json2;
       const file2 = {
         type: "string",
         format: "binary",
         contentEncoding: "binary"
       };
-      const { minimum, maximum, mime } = schema._zod.bag;
+      const { minimum, maximum, mime } = schema2._zod.bag;
       if (minimum !== void 0)
         file2.minLength = minimum;
       if (maximum !== void 0)
@@ -5721,10 +5721,10 @@ var init_json_schema_processors = __esm({
         throw new Error("Set cannot be represented in JSON Schema");
       }
     };
-    arrayProcessor = (schema, ctx, _json, params) => {
+    arrayProcessor = (schema2, ctx, _json, params) => {
       const json2 = _json;
-      const def = schema._zod.def;
-      const { minimum, maximum } = schema._zod.bag;
+      const def = schema2._zod.def;
+      const { minimum, maximum } = schema2._zod.bag;
       if (typeof minimum === "number")
         json2.minItems = minimum;
       if (typeof maximum === "number")
@@ -5732,21 +5732,21 @@ var init_json_schema_processors = __esm({
       json2.type = "array";
       json2.items = process2(def.element, ctx, { ...params, path: [...params.path, "items"] });
     };
-    objectProcessor = (schema, ctx, _json, params) => {
+    objectProcessor = (schema2, ctx, _json, params) => {
       const json2 = _json;
-      const def = schema._zod.def;
+      const def = schema2._zod.def;
       json2.type = "object";
       json2.properties = {};
       const shape = def.shape;
-      for (const key in shape) {
-        json2.properties[key] = process2(shape[key], ctx, {
+      for (const key2 in shape) {
+        json2.properties[key2] = process2(shape[key2], ctx, {
           ...params,
-          path: [...params.path, "properties", key]
+          path: [...params.path, "properties", key2]
         });
       }
       const allKeys = new Set(Object.keys(shape));
-      const requiredKeys = new Set([...allKeys].filter((key) => {
-        const v = def.shape[key]._zod;
+      const requiredKeys = new Set([...allKeys].filter((key2) => {
+        const v = def.shape[key2]._zod;
         if (ctx.io === "input") {
           return v.optin === void 0;
         } else {
@@ -5768,8 +5768,8 @@ var init_json_schema_processors = __esm({
         });
       }
     };
-    unionProcessor = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
+    unionProcessor = (schema2, ctx, json2, params) => {
+      const def = schema2._zod.def;
       const isExclusive = def.inclusive === false;
       const options = def.options.map((x, i) => process2(x, ctx, {
         ...params,
@@ -5781,8 +5781,8 @@ var init_json_schema_processors = __esm({
         json2.anyOf = options;
       }
     };
-    intersectionProcessor = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
+    intersectionProcessor = (schema2, ctx, json2, params) => {
+      const def = schema2._zod.def;
       const a = process2(def.left, ctx, {
         ...params,
         path: [...params.path, "allOf", 0]
@@ -5798,9 +5798,9 @@ var init_json_schema_processors = __esm({
       ];
       json2.allOf = allOf;
     };
-    tupleProcessor = (schema, ctx, _json, params) => {
+    tupleProcessor = (schema2, ctx, _json, params) => {
       const json2 = _json;
-      const def = schema._zod.def;
+      const def = schema2._zod.def;
       json2.type = "array";
       const prefixPath = ctx.target === "draft-2020-12" ? "prefixItems" : "items";
       const restPath = ctx.target === "draft-2020-12" ? "items" : ctx.target === "openapi-3.0" ? "items" : "additionalItems";
@@ -5834,15 +5834,15 @@ var init_json_schema_processors = __esm({
           json2.additionalItems = rest;
         }
       }
-      const { minimum, maximum } = schema._zod.bag;
+      const { minimum, maximum } = schema2._zod.bag;
       if (typeof minimum === "number")
         json2.minItems = minimum;
       if (typeof maximum === "number")
         json2.maxItems = maximum;
     };
-    recordProcessor = (schema, ctx, _json, params) => {
+    recordProcessor = (schema2, ctx, _json, params) => {
       const json2 = _json;
-      const def = schema._zod.def;
+      const def = schema2._zod.def;
       json2.type = "object";
       const keyType = def.keyType;
       const keyBag = keyType._zod.bag;
@@ -5876,10 +5876,10 @@ var init_json_schema_processors = __esm({
         }
       }
     };
-    nullableProcessor = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
+    nullableProcessor = (schema2, ctx, json2, params) => {
+      const def = schema2._zod.def;
       const inner = process2(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       if (ctx.target === "openapi-3.0") {
         seen.ref = def.innerType;
         json2.nullable = true;
@@ -5887,31 +5887,31 @@ var init_json_schema_processors = __esm({
         json2.anyOf = [inner, { type: "null" }];
       }
     };
-    nonoptionalProcessor = (schema, ctx, _json, params) => {
-      const def = schema._zod.def;
+    nonoptionalProcessor = (schema2, ctx, _json, params) => {
+      const def = schema2._zod.def;
       process2(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = def.innerType;
     };
-    defaultProcessor = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
+    defaultProcessor = (schema2, ctx, json2, params) => {
+      const def = schema2._zod.def;
       process2(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = def.innerType;
       json2.default = JSON.parse(JSON.stringify(def.defaultValue));
     };
-    prefaultProcessor = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
+    prefaultProcessor = (schema2, ctx, json2, params) => {
+      const def = schema2._zod.def;
       process2(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = def.innerType;
       if (ctx.io === "input")
         json2._prefault = JSON.parse(JSON.stringify(def.defaultValue));
     };
-    catchProcessor = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
+    catchProcessor = (schema2, ctx, json2, params) => {
+      const def = schema2._zod.def;
       process2(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = def.innerType;
       let catchValue;
       try {
@@ -5921,36 +5921,36 @@ var init_json_schema_processors = __esm({
       }
       json2.default = catchValue;
     };
-    pipeProcessor = (schema, ctx, _json, params) => {
-      const def = schema._zod.def;
+    pipeProcessor = (schema2, ctx, _json, params) => {
+      const def = schema2._zod.def;
       const innerType = ctx.io === "input" ? def.in._zod.def.type === "transform" ? def.out : def.in : def.out;
       process2(innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = innerType;
     };
-    readonlyProcessor = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
+    readonlyProcessor = (schema2, ctx, json2, params) => {
+      const def = schema2._zod.def;
       process2(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = def.innerType;
       json2.readOnly = true;
     };
-    promiseProcessor = (schema, ctx, _json, params) => {
-      const def = schema._zod.def;
+    promiseProcessor = (schema2, ctx, _json, params) => {
+      const def = schema2._zod.def;
       process2(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = def.innerType;
     };
-    optionalProcessor = (schema, ctx, _json, params) => {
-      const def = schema._zod.def;
+    optionalProcessor = (schema2, ctx, _json, params) => {
+      const def = schema2._zod.def;
       process2(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = def.innerType;
     };
-    lazyProcessor = (schema, ctx, _json, params) => {
-      const innerType = schema._zod.innerType;
+    lazyProcessor = (schema2, ctx, _json, params) => {
+      const innerType = schema2._zod.innerType;
       process2(innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
+      const seen = ctx.seen.get(schema2);
       seen.ref = innerType;
     };
     allProcessors = {
@@ -6510,8 +6510,8 @@ function date3(params) {
 function array(element, params) {
   return _array(ZodArray2, element, params);
 }
-function keyof(schema) {
-  const shape = schema._zod.def.shape;
+function keyof(schema2) {
+  const shape = schema2._zod.def.shape;
   return _enum(Object.keys(shape));
 }
 function object2(shape, params) {
@@ -6808,8 +6808,8 @@ function json(params) {
   });
   return jsonSchema;
 }
-function preprocess(fn, schema) {
-  return pipe(transform(fn), schema);
+function preprocess(fn, schema2) {
+  return pipe(transform(fn), schema2);
 }
 var ZodType2, _ZodString, ZodString2, ZodStringFormat, ZodEmail, ZodGUID, ZodUUID, ZodURL, ZodEmoji, ZodNanoID, ZodCUID, ZodCUID2, ZodULID, ZodXID, ZodKSUID, ZodIPv4, ZodMAC, ZodIPv6, ZodCIDRv4, ZodCIDRv6, ZodBase64, ZodBase64URL, ZodE164, ZodJWT, ZodCustomStringFormat, ZodNumber2, ZodNumberFormat, ZodBoolean2, ZodBigInt2, ZodBigIntFormat, ZodSymbol2, ZodUndefined2, ZodNull2, ZodAny2, ZodUnknown2, ZodNever2, ZodVoid2, ZodDate2, ZodArray2, ZodObject2, ZodUnion2, ZodXor, ZodDiscriminatedUnion2, ZodIntersection2, ZodTuple2, ZodRecord2, ZodMap2, ZodSet2, ZodEnum2, ZodLiteral2, ZodFile, ZodTransform, ZodOptional2, ZodExactOptional, ZodNullable2, ZodDefault2, ZodPrefault, ZodNonOptional, ZodSuccess, ZodCatch2, ZodNaN2, ZodPipe, ZodCodec, ZodReadonly2, ZodTemplateLiteral, ZodLazy2, ZodPromise2, ZodFunction2, ZodCustom, describe2, meta2, stringbool;
 var init_schemas2 = __esm({
@@ -7459,8 +7459,8 @@ var init_compat = __esm({
 });
 
 // node_modules/zod/v4/classic/from-json-schema.js
-function detectVersion(schema, defaultTarget) {
-  const $schema = schema.$schema;
+function detectVersion(schema2, defaultTarget) {
+  const $schema = schema2.$schema;
   if ($schema === "https://json-schema.org/draft/2020-12/schema") {
     return "draft-2020-12";
   }
@@ -7476,41 +7476,41 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path30 = ref.slice(1).split("/").filter(Boolean);
-  if (path30.length === 0) {
+  const path31 = ref.slice(1).split("/").filter(Boolean);
+  if (path31.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path30[0] === defsKey) {
-    const key = path30[1];
-    if (!key || !ctx.defs[key]) {
+  if (path31[0] === defsKey) {
+    const key2 = path31[1];
+    if (!key2 || !ctx.defs[key2]) {
       throw new Error(`Reference not found: ${ref}`);
     }
-    return ctx.defs[key];
+    return ctx.defs[key2];
   }
   throw new Error(`Reference not found: ${ref}`);
 }
-function convertBaseSchema(schema, ctx) {
-  if (schema.not !== void 0) {
-    if (typeof schema.not === "object" && Object.keys(schema.not).length === 0) {
+function convertBaseSchema(schema2, ctx) {
+  if (schema2.not !== void 0) {
+    if (typeof schema2.not === "object" && Object.keys(schema2.not).length === 0) {
       return z.never();
     }
     throw new Error("not is not supported in Zod (except { not: {} } for never)");
   }
-  if (schema.unevaluatedItems !== void 0) {
+  if (schema2.unevaluatedItems !== void 0) {
     throw new Error("unevaluatedItems is not supported");
   }
-  if (schema.unevaluatedProperties !== void 0) {
+  if (schema2.unevaluatedProperties !== void 0) {
     throw new Error("unevaluatedProperties is not supported");
   }
-  if (schema.if !== void 0 || schema.then !== void 0 || schema.else !== void 0) {
+  if (schema2.if !== void 0 || schema2.then !== void 0 || schema2.else !== void 0) {
     throw new Error("Conditional schemas (if/then/else) are not supported");
   }
-  if (schema.dependentSchemas !== void 0 || schema.dependentRequired !== void 0) {
+  if (schema2.dependentSchemas !== void 0 || schema2.dependentRequired !== void 0) {
     throw new Error("dependentSchemas and dependentRequired are not supported");
   }
-  if (schema.$ref) {
-    const refPath = schema.$ref;
+  if (schema2.$ref) {
+    const refPath = schema2.$ref;
     if (ctx.refs.has(refPath)) {
       return ctx.refs.get(refPath);
     }
@@ -7529,9 +7529,9 @@ function convertBaseSchema(schema, ctx) {
     ctx.processing.delete(refPath);
     return zodSchema2;
   }
-  if (schema.enum !== void 0) {
-    const enumValues = schema.enum;
-    if (ctx.version === "openapi-3.0" && schema.nullable === true && enumValues.length === 1 && enumValues[0] === null) {
+  if (schema2.enum !== void 0) {
+    const enumValues = schema2.enum;
+    if (ctx.version === "openapi-3.0" && schema2.nullable === true && enumValues.length === 1 && enumValues[0] === null) {
       return z.null();
     }
     if (enumValues.length === 0) {
@@ -7549,13 +7549,13 @@ function convertBaseSchema(schema, ctx) {
     }
     return z.union([literalSchemas[0], literalSchemas[1], ...literalSchemas.slice(2)]);
   }
-  if (schema.const !== void 0) {
-    return z.literal(schema.const);
+  if (schema2.const !== void 0) {
+    return z.literal(schema2.const);
   }
-  const type = schema.type;
+  const type = schema2.type;
   if (Array.isArray(type)) {
     const typeSchemas = type.map((t) => {
-      const typeSchema = { ...schema, type: t };
+      const typeSchema = { ...schema2, type: t };
       return convertBaseSchema(typeSchema, ctx);
     });
     if (typeSchemas.length === 0) {
@@ -7573,8 +7573,8 @@ function convertBaseSchema(schema, ctx) {
   switch (type) {
     case "string": {
       let stringSchema = z.string();
-      if (schema.format) {
-        const format = schema.format;
+      if (schema2.format) {
+        const format = schema2.format;
         if (format === "email") {
           stringSchema = stringSchema.check(z.email());
         } else if (format === "uri" || format === "uri-reference") {
@@ -7623,14 +7623,14 @@ function convertBaseSchema(schema, ctx) {
           stringSchema = stringSchema.check(z.ksuid());
         }
       }
-      if (typeof schema.minLength === "number") {
-        stringSchema = stringSchema.min(schema.minLength);
+      if (typeof schema2.minLength === "number") {
+        stringSchema = stringSchema.min(schema2.minLength);
       }
-      if (typeof schema.maxLength === "number") {
-        stringSchema = stringSchema.max(schema.maxLength);
+      if (typeof schema2.maxLength === "number") {
+        stringSchema = stringSchema.max(schema2.maxLength);
       }
-      if (schema.pattern) {
-        stringSchema = stringSchema.regex(new RegExp(schema.pattern));
+      if (schema2.pattern) {
+        stringSchema = stringSchema.regex(new RegExp(schema2.pattern));
       }
       zodSchema = stringSchema;
       break;
@@ -7638,24 +7638,24 @@ function convertBaseSchema(schema, ctx) {
     case "number":
     case "integer": {
       let numberSchema = type === "integer" ? z.number().int() : z.number();
-      if (typeof schema.minimum === "number") {
-        numberSchema = numberSchema.min(schema.minimum);
+      if (typeof schema2.minimum === "number") {
+        numberSchema = numberSchema.min(schema2.minimum);
       }
-      if (typeof schema.maximum === "number") {
-        numberSchema = numberSchema.max(schema.maximum);
+      if (typeof schema2.maximum === "number") {
+        numberSchema = numberSchema.max(schema2.maximum);
       }
-      if (typeof schema.exclusiveMinimum === "number") {
-        numberSchema = numberSchema.gt(schema.exclusiveMinimum);
-      } else if (schema.exclusiveMinimum === true && typeof schema.minimum === "number") {
-        numberSchema = numberSchema.gt(schema.minimum);
+      if (typeof schema2.exclusiveMinimum === "number") {
+        numberSchema = numberSchema.gt(schema2.exclusiveMinimum);
+      } else if (schema2.exclusiveMinimum === true && typeof schema2.minimum === "number") {
+        numberSchema = numberSchema.gt(schema2.minimum);
       }
-      if (typeof schema.exclusiveMaximum === "number") {
-        numberSchema = numberSchema.lt(schema.exclusiveMaximum);
-      } else if (schema.exclusiveMaximum === true && typeof schema.maximum === "number") {
-        numberSchema = numberSchema.lt(schema.maximum);
+      if (typeof schema2.exclusiveMaximum === "number") {
+        numberSchema = numberSchema.lt(schema2.exclusiveMaximum);
+      } else if (schema2.exclusiveMaximum === true && typeof schema2.maximum === "number") {
+        numberSchema = numberSchema.lt(schema2.maximum);
       }
-      if (typeof schema.multipleOf === "number") {
-        numberSchema = numberSchema.multipleOf(schema.multipleOf);
+      if (typeof schema2.multipleOf === "number") {
+        numberSchema = numberSchema.multipleOf(schema2.multipleOf);
       }
       zodSchema = numberSchema;
       break;
@@ -7670,15 +7670,15 @@ function convertBaseSchema(schema, ctx) {
     }
     case "object": {
       const shape = {};
-      const properties = schema.properties || {};
-      const requiredSet = new Set(schema.required || []);
-      for (const [key, propSchema] of Object.entries(properties)) {
+      const properties = schema2.properties || {};
+      const requiredSet = new Set(schema2.required || []);
+      for (const [key2, propSchema] of Object.entries(properties)) {
         const propZodSchema = convertSchema(propSchema, ctx);
-        shape[key] = requiredSet.has(key) ? propZodSchema : propZodSchema.optional();
+        shape[key2] = requiredSet.has(key2) ? propZodSchema : propZodSchema.optional();
       }
-      if (schema.propertyNames) {
-        const keySchema = convertSchema(schema.propertyNames, ctx);
-        const valueSchema = schema.additionalProperties && typeof schema.additionalProperties === "object" ? convertSchema(schema.additionalProperties, ctx) : z.any();
+      if (schema2.propertyNames) {
+        const keySchema = convertSchema(schema2.propertyNames, ctx);
+        const valueSchema = schema2.additionalProperties && typeof schema2.additionalProperties === "object" ? convertSchema(schema2.additionalProperties, ctx) : z.any();
         if (Object.keys(shape).length === 0) {
           zodSchema = z.record(keySchema, valueSchema);
           break;
@@ -7688,8 +7688,8 @@ function convertBaseSchema(schema, ctx) {
         zodSchema = z.intersection(objectSchema2, recordSchema2);
         break;
       }
-      if (schema.patternProperties) {
-        const patternProps = schema.patternProperties;
+      if (schema2.patternProperties) {
+        const patternProps = schema2.patternProperties;
         const patternKeys = Object.keys(patternProps);
         const looseRecords = [];
         for (const pattern of patternKeys) {
@@ -7716,18 +7716,18 @@ function convertBaseSchema(schema, ctx) {
         break;
       }
       const objectSchema = z.object(shape);
-      if (schema.additionalProperties === false) {
+      if (schema2.additionalProperties === false) {
         zodSchema = objectSchema.strict();
-      } else if (typeof schema.additionalProperties === "object") {
-        zodSchema = objectSchema.catchall(convertSchema(schema.additionalProperties, ctx));
+      } else if (typeof schema2.additionalProperties === "object") {
+        zodSchema = objectSchema.catchall(convertSchema(schema2.additionalProperties, ctx));
       } else {
         zodSchema = objectSchema.passthrough();
       }
       break;
     }
     case "array": {
-      const prefixItems = schema.prefixItems;
-      const items = schema.items;
+      const prefixItems = schema2.prefixItems;
+      const items = schema2.items;
       if (prefixItems && Array.isArray(prefixItems)) {
         const tupleItems = prefixItems.map((item) => convertSchema(item, ctx));
         const rest = items && typeof items === "object" && !Array.isArray(items) ? convertSchema(items, ctx) : void 0;
@@ -7736,34 +7736,34 @@ function convertBaseSchema(schema, ctx) {
         } else {
           zodSchema = z.tuple(tupleItems);
         }
-        if (typeof schema.minItems === "number") {
-          zodSchema = zodSchema.check(z.minLength(schema.minItems));
+        if (typeof schema2.minItems === "number") {
+          zodSchema = zodSchema.check(z.minLength(schema2.minItems));
         }
-        if (typeof schema.maxItems === "number") {
-          zodSchema = zodSchema.check(z.maxLength(schema.maxItems));
+        if (typeof schema2.maxItems === "number") {
+          zodSchema = zodSchema.check(z.maxLength(schema2.maxItems));
         }
       } else if (Array.isArray(items)) {
         const tupleItems = items.map((item) => convertSchema(item, ctx));
-        const rest = schema.additionalItems && typeof schema.additionalItems === "object" ? convertSchema(schema.additionalItems, ctx) : void 0;
+        const rest = schema2.additionalItems && typeof schema2.additionalItems === "object" ? convertSchema(schema2.additionalItems, ctx) : void 0;
         if (rest) {
           zodSchema = z.tuple(tupleItems).rest(rest);
         } else {
           zodSchema = z.tuple(tupleItems);
         }
-        if (typeof schema.minItems === "number") {
-          zodSchema = zodSchema.check(z.minLength(schema.minItems));
+        if (typeof schema2.minItems === "number") {
+          zodSchema = zodSchema.check(z.minLength(schema2.minItems));
         }
-        if (typeof schema.maxItems === "number") {
-          zodSchema = zodSchema.check(z.maxLength(schema.maxItems));
+        if (typeof schema2.maxItems === "number") {
+          zodSchema = zodSchema.check(z.maxLength(schema2.maxItems));
         }
       } else if (items !== void 0) {
         const element = convertSchema(items, ctx);
         let arraySchema = z.array(element);
-        if (typeof schema.minItems === "number") {
-          arraySchema = arraySchema.min(schema.minItems);
+        if (typeof schema2.minItems === "number") {
+          arraySchema = arraySchema.min(schema2.minItems);
         }
-        if (typeof schema.maxItems === "number") {
-          arraySchema = arraySchema.max(schema.maxItems);
+        if (typeof schema2.maxItems === "number") {
+          arraySchema = arraySchema.max(schema2.maxItems);
         }
         zodSchema = arraySchema;
       } else {
@@ -7774,64 +7774,64 @@ function convertBaseSchema(schema, ctx) {
     default:
       throw new Error(`Unsupported type: ${type}`);
   }
-  if (schema.description) {
-    zodSchema = zodSchema.describe(schema.description);
+  if (schema2.description) {
+    zodSchema = zodSchema.describe(schema2.description);
   }
-  if (schema.default !== void 0) {
-    zodSchema = zodSchema.default(schema.default);
+  if (schema2.default !== void 0) {
+    zodSchema = zodSchema.default(schema2.default);
   }
   return zodSchema;
 }
-function convertSchema(schema, ctx) {
-  if (typeof schema === "boolean") {
-    return schema ? z.any() : z.never();
+function convertSchema(schema2, ctx) {
+  if (typeof schema2 === "boolean") {
+    return schema2 ? z.any() : z.never();
   }
-  let baseSchema = convertBaseSchema(schema, ctx);
-  const hasExplicitType = schema.type || schema.enum !== void 0 || schema.const !== void 0;
-  if (schema.anyOf && Array.isArray(schema.anyOf)) {
-    const options = schema.anyOf.map((s) => convertSchema(s, ctx));
+  let baseSchema = convertBaseSchema(schema2, ctx);
+  const hasExplicitType = schema2.type || schema2.enum !== void 0 || schema2.const !== void 0;
+  if (schema2.anyOf && Array.isArray(schema2.anyOf)) {
+    const options = schema2.anyOf.map((s) => convertSchema(s, ctx));
     const anyOfUnion = z.union(options);
     baseSchema = hasExplicitType ? z.intersection(baseSchema, anyOfUnion) : anyOfUnion;
   }
-  if (schema.oneOf && Array.isArray(schema.oneOf)) {
-    const options = schema.oneOf.map((s) => convertSchema(s, ctx));
+  if (schema2.oneOf && Array.isArray(schema2.oneOf)) {
+    const options = schema2.oneOf.map((s) => convertSchema(s, ctx));
     const oneOfUnion = z.xor(options);
     baseSchema = hasExplicitType ? z.intersection(baseSchema, oneOfUnion) : oneOfUnion;
   }
-  if (schema.allOf && Array.isArray(schema.allOf)) {
-    if (schema.allOf.length === 0) {
+  if (schema2.allOf && Array.isArray(schema2.allOf)) {
+    if (schema2.allOf.length === 0) {
       baseSchema = hasExplicitType ? baseSchema : z.any();
     } else {
-      let result = hasExplicitType ? baseSchema : convertSchema(schema.allOf[0], ctx);
+      let result = hasExplicitType ? baseSchema : convertSchema(schema2.allOf[0], ctx);
       const startIdx = hasExplicitType ? 0 : 1;
-      for (let i = startIdx; i < schema.allOf.length; i++) {
-        result = z.intersection(result, convertSchema(schema.allOf[i], ctx));
+      for (let i = startIdx; i < schema2.allOf.length; i++) {
+        result = z.intersection(result, convertSchema(schema2.allOf[i], ctx));
       }
       baseSchema = result;
     }
   }
-  if (schema.nullable === true && ctx.version === "openapi-3.0") {
+  if (schema2.nullable === true && ctx.version === "openapi-3.0") {
     baseSchema = z.nullable(baseSchema);
   }
-  if (schema.readOnly === true) {
+  if (schema2.readOnly === true) {
     baseSchema = z.readonly(baseSchema);
   }
   const extraMeta = {};
   const coreMetadataKeys = ["$id", "id", "$comment", "$anchor", "$vocabulary", "$dynamicRef", "$dynamicAnchor"];
-  for (const key of coreMetadataKeys) {
-    if (key in schema) {
-      extraMeta[key] = schema[key];
+  for (const key2 of coreMetadataKeys) {
+    if (key2 in schema2) {
+      extraMeta[key2] = schema2[key2];
     }
   }
   const contentMetadataKeys = ["contentEncoding", "contentMediaType", "contentSchema"];
-  for (const key of contentMetadataKeys) {
-    if (key in schema) {
-      extraMeta[key] = schema[key];
+  for (const key2 of contentMetadataKeys) {
+    if (key2 in schema2) {
+      extraMeta[key2] = schema2[key2];
     }
   }
-  for (const key of Object.keys(schema)) {
-    if (!RECOGNIZED_KEYS.has(key)) {
-      extraMeta[key] = schema[key];
+  for (const key2 of Object.keys(schema2)) {
+    if (!RECOGNIZED_KEYS.has(key2)) {
+      extraMeta[key2] = schema2[key2];
     }
   }
   if (Object.keys(extraMeta).length > 0) {
@@ -7839,21 +7839,21 @@ function convertSchema(schema, ctx) {
   }
   return baseSchema;
 }
-function fromJSONSchema(schema, params) {
-  if (typeof schema === "boolean") {
-    return schema ? z.any() : z.never();
+function fromJSONSchema(schema2, params) {
+  if (typeof schema2 === "boolean") {
+    return schema2 ? z.any() : z.never();
   }
-  const version2 = detectVersion(schema, params?.defaultTarget);
-  const defs = schema.$defs || schema.definitions || {};
+  const version2 = detectVersion(schema2, params?.defaultTarget);
+  const defs = schema2.$defs || schema2.definitions || {};
   const ctx = {
     version: version2,
     defs,
     refs: /* @__PURE__ */ new Map(),
     processing: /* @__PURE__ */ new Set(),
-    rootSchema: schema,
+    rootSchema: schema2,
     registry: params?.registry ?? globalRegistry
   };
-  return convertSchema(schema, ctx);
+  return convertSchema(schema2, ctx);
 }
 var z, RECOGNIZED_KEYS;
 var init_from_json_schema = __esm({
@@ -8123,15 +8123,15 @@ var require_code = __commonJS({
       return JSON.stringify(x).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
     }
     exports.safeStringify = safeStringify;
-    function getProperty(key) {
-      return typeof key == "string" && exports.IDENTIFIER.test(key) ? new _Code(`.${key}`) : _`[${key}]`;
+    function getProperty(key2) {
+      return typeof key2 == "string" && exports.IDENTIFIER.test(key2) ? new _Code(`.${key2}`) : _`[${key2}]`;
     }
     exports.getProperty = getProperty;
-    function getEsmExportName(key) {
-      if (typeof key == "string" && exports.IDENTIFIER.test(key)) {
-        return new _Code(`${key}`);
+    function getEsmExportName(key2) {
+      if (typeof key2 == "string" && exports.IDENTIFIER.test(key2)) {
+        return new _Code(`${key2}`);
       }
-      throw new Error(`CodeGen: invalid export name: ${key}, use explicit $id name mapping`);
+      throw new Error(`CodeGen: invalid export name: ${key2}, use explicit $id name mapping`);
     }
     exports.getEsmExportName = getEsmExportName;
     function regexpCode(rx) {
@@ -8758,11 +8758,11 @@ var require_codegen = __commonJS({
       // returns code for object literal for the passed argument list of key-value pairs
       object(...keyValues) {
         const code = ["{"];
-        for (const [key, value] of keyValues) {
+        for (const [key2, value] of keyValues) {
           if (code.length > 1)
             code.push(",");
-          code.push(key);
-          if (key !== value || this.opts.es5) {
+          code.push(key2);
+          if (key2 !== value || this.opts.es5) {
             code.push(":");
             (0, code_1.addCodeArg)(code, value);
           }
@@ -9015,58 +9015,58 @@ var require_util = __commonJS({
     var codegen_1 = require_codegen();
     var code_1 = require_code();
     function toHash(arr) {
-      const hash3 = {};
+      const hash4 = {};
       for (const item of arr)
-        hash3[item] = true;
-      return hash3;
+        hash4[item] = true;
+      return hash4;
     }
     exports.toHash = toHash;
-    function alwaysValidSchema(it, schema) {
-      if (typeof schema == "boolean")
-        return schema;
-      if (Object.keys(schema).length === 0)
+    function alwaysValidSchema(it, schema2) {
+      if (typeof schema2 == "boolean")
+        return schema2;
+      if (Object.keys(schema2).length === 0)
         return true;
-      checkUnknownRules(it, schema);
-      return !schemaHasRules(schema, it.self.RULES.all);
+      checkUnknownRules(it, schema2);
+      return !schemaHasRules(schema2, it.self.RULES.all);
     }
     exports.alwaysValidSchema = alwaysValidSchema;
-    function checkUnknownRules(it, schema = it.schema) {
+    function checkUnknownRules(it, schema2 = it.schema) {
       const { opts, self } = it;
       if (!opts.strictSchema)
         return;
-      if (typeof schema === "boolean")
+      if (typeof schema2 === "boolean")
         return;
       const rules = self.RULES.keywords;
-      for (const key in schema) {
-        if (!rules[key])
-          checkStrictMode(it, `unknown keyword: "${key}"`);
+      for (const key2 in schema2) {
+        if (!rules[key2])
+          checkStrictMode(it, `unknown keyword: "${key2}"`);
       }
     }
     exports.checkUnknownRules = checkUnknownRules;
-    function schemaHasRules(schema, rules) {
-      if (typeof schema == "boolean")
-        return !schema;
-      for (const key in schema)
-        if (rules[key])
+    function schemaHasRules(schema2, rules) {
+      if (typeof schema2 == "boolean")
+        return !schema2;
+      for (const key2 in schema2)
+        if (rules[key2])
           return true;
       return false;
     }
     exports.schemaHasRules = schemaHasRules;
-    function schemaHasRulesButRef(schema, RULES) {
-      if (typeof schema == "boolean")
-        return !schema;
-      for (const key in schema)
-        if (key !== "$ref" && RULES.all[key])
+    function schemaHasRulesButRef(schema2, RULES) {
+      if (typeof schema2 == "boolean")
+        return !schema2;
+      for (const key2 in schema2)
+        if (key2 !== "$ref" && RULES.all[key2])
           return true;
       return false;
     }
     exports.schemaHasRulesButRef = schemaHasRulesButRef;
-    function schemaRefOrVal({ topSchemaRef, schemaPath }, schema, keyword, $data) {
+    function schemaRefOrVal({ topSchemaRef, schemaPath }, schema2, keyword, $data) {
       if (!$data) {
-        if (typeof schema == "number" || typeof schema == "boolean")
-          return schema;
-        if (typeof schema == "string")
-          return (0, codegen_1._)`${schema}`;
+        if (typeof schema2 == "number" || typeof schema2 == "boolean")
+          return schema2;
+        if (typeof schema2 == "string")
+          return (0, codegen_1._)`${schema2}`;
       }
       return (0, codegen_1._)`${topSchemaRef}${schemaPath}${(0, codegen_1.getProperty)(keyword)}`;
     }
@@ -9161,11 +9161,11 @@ var require_util = __commonJS({
       return jsPropertySyntax ? (0, codegen_1.getProperty)(dataProp).toString() : "/" + escapeJsonPointer(dataProp);
     }
     exports.getErrorPath = getErrorPath;
-    function checkStrictMode(it, msg, mode = it.opts.strictSchema) {
-      if (!mode)
+    function checkStrictMode(it, msg, mode2 = it.opts.strictSchema) {
+      if (!mode2)
         return;
       msg = `strict mode: ${msg}`;
-      if (mode === true)
+      if (mode2 === true)
         throw new Error(msg);
       it.self.logger.warn(msg);
     }
@@ -9347,10 +9347,10 @@ var require_boolSchema = __commonJS({
       message: "boolean schema is false"
     };
     function topBoolOrEmptySchema(it) {
-      const { gen, schema, validateName } = it;
-      if (schema === false) {
+      const { gen, schema: schema2, validateName } = it;
+      if (schema2 === false) {
         falseSchemaError(it, false);
-      } else if (typeof schema == "object" && schema.$async === true) {
+      } else if (typeof schema2 == "object" && schema2.$async === true) {
         gen.return(names_1.default.data);
       } else {
         gen.assign((0, codegen_1._)`${validateName}.errors`, null);
@@ -9359,8 +9359,8 @@ var require_boolSchema = __commonJS({
     }
     exports.topBoolOrEmptySchema = topBoolOrEmptySchema;
     function boolOrEmptySchema(it, valid) {
-      const { gen, schema } = it;
-      if (schema === false) {
+      const { gen, schema: schema2 } = it;
+      if (schema2 === false) {
         gen.var(valid, false);
         falseSchemaError(it);
       } else {
@@ -9422,18 +9422,18 @@ var require_applicability = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
-    function schemaHasRulesForType({ schema, self }, type) {
+    function schemaHasRulesForType({ schema: schema2, self }, type) {
       const group = self.RULES.types[type];
-      return group && group !== true && shouldUseGroup(schema, group);
+      return group && group !== true && shouldUseGroup(schema2, group);
     }
     exports.schemaHasRulesForType = schemaHasRulesForType;
-    function shouldUseGroup(schema, group) {
-      return group.rules.some((rule) => shouldUseRule(schema, rule));
+    function shouldUseGroup(schema2, group) {
+      return group.rules.some((rule) => shouldUseRule(schema2, rule));
     }
     exports.shouldUseGroup = shouldUseGroup;
-    function shouldUseRule(schema, rule) {
+    function shouldUseRule(schema2, rule) {
       var _a2;
-      return schema[rule.keyword] !== void 0 || ((_a2 = rule.definition.implements) === null || _a2 === void 0 ? void 0 : _a2.some((kwd) => schema[kwd] !== void 0));
+      return schema2[rule.keyword] !== void 0 || ((_a2 = rule.definition.implements) === null || _a2 === void 0 ? void 0 : _a2.some((kwd) => schema2[kwd] !== void 0));
     }
     exports.shouldUseRule = shouldUseRule;
   }
@@ -9455,17 +9455,17 @@ var require_dataType = __commonJS({
       DataType2[DataType2["Correct"] = 0] = "Correct";
       DataType2[DataType2["Wrong"] = 1] = "Wrong";
     })(DataType || (exports.DataType = DataType = {}));
-    function getSchemaTypes(schema) {
-      const types = getJSONTypes(schema.type);
+    function getSchemaTypes(schema2) {
+      const types = getJSONTypes(schema2.type);
       const hasNull = types.includes("null");
       if (hasNull) {
-        if (schema.nullable === false)
+        if (schema2.nullable === false)
           throw new Error("type: null contradicts nullable: false");
       } else {
-        if (!types.length && schema.nullable !== void 0) {
+        if (!types.length && schema2.nullable !== void 0) {
           throw new Error('"nullable" cannot be used without "type"');
         }
-        if (schema.nullable === true)
+        if (schema2.nullable === true)
           types.push("null");
       }
       return types;
@@ -9597,8 +9597,8 @@ var require_dataType = __commonJS({
     }
     exports.checkDataTypes = checkDataTypes;
     var typeError = {
-      message: ({ schema }) => `must be ${schema}`,
-      params: ({ schema, schemaValue }) => typeof schema == "string" ? (0, codegen_1._)`{type: ${schema}}` : (0, codegen_1._)`{type: ${schemaValue}}`
+      message: ({ schema: schema2 }) => `must be ${schema2}`,
+      params: ({ schema: schema2, schemaValue }) => typeof schema2 == "string" ? (0, codegen_1._)`{type: ${schema2}}` : (0, codegen_1._)`{type: ${schemaValue}}`
     };
     function reportTypeError(it) {
       const cxt = getTypeErrorContext(it);
@@ -9606,16 +9606,16 @@ var require_dataType = __commonJS({
     }
     exports.reportTypeError = reportTypeError;
     function getTypeErrorContext(it) {
-      const { gen, data, schema } = it;
-      const schemaCode = (0, util_1.schemaRefOrVal)(it, schema, "type");
+      const { gen, data, schema: schema2 } = it;
+      const schemaCode = (0, util_1.schemaRefOrVal)(it, schema2, "type");
       return {
         gen,
         keyword: "type",
         data,
-        schema: schema.type,
+        schema: schema2.type,
         schemaCode,
         schemaValue: schemaCode,
-        parentSchema: schema,
+        parentSchema: schema2,
         params: {},
         it
       };
@@ -9634,8 +9634,8 @@ var require_defaults = __commonJS({
     function assignDefaults(it, ty) {
       const { properties, items } = it.schema;
       if (ty === "object" && properties) {
-        for (const key in properties) {
-          assignDefault(it, key, properties[key].default);
+        for (const key2 in properties) {
+          assignDefault(it, key2, properties[key2].default);
         }
       } else if (ty === "array" && Array.isArray(items)) {
         items.forEach((sch, i) => assignDefault(it, i, sch.default));
@@ -9768,15 +9768,15 @@ var require_code2 = __commonJS({
     }
     exports.validateArray = validateArray;
     function validateUnion(cxt) {
-      const { gen, schema, keyword, it } = cxt;
-      if (!Array.isArray(schema))
+      const { gen, schema: schema2, keyword, it } = cxt;
+      if (!Array.isArray(schema2))
         throw new Error("ajv implementation error");
-      const alwaysValid = schema.some((sch) => (0, util_1.alwaysValidSchema)(it, sch));
+      const alwaysValid = schema2.some((sch) => (0, util_1.alwaysValidSchema)(it, sch));
       if (alwaysValid && !it.opts.unevaluated)
         return;
       const valid = gen.let("valid", false);
       const schValid = gen.name("_valid");
-      gen.block(() => schema.forEach((_sch, i) => {
+      gen.block(() => schema2.forEach((_sch, i) => {
         const schCxt = cxt.subschema({
           keyword,
           schemaProp: i,
@@ -9804,8 +9804,8 @@ var require_keyword = __commonJS({
     var code_1 = require_code2();
     var errors_1 = require_errors();
     function macroKeywordCode(cxt, def) {
-      const { gen, keyword, schema, parentSchema, it } = cxt;
-      const macroSchema = def.macro.call(it.self, schema, parentSchema, it);
+      const { gen, keyword, schema: schema2, parentSchema, it } = cxt;
+      const macroSchema = def.macro.call(it.self, schema2, parentSchema, it);
       const schemaRef = useKeyword(gen, keyword, macroSchema);
       if (it.opts.validateSchema !== false)
         it.self.validateSchema(macroSchema, true);
@@ -9822,9 +9822,9 @@ var require_keyword = __commonJS({
     exports.macroKeywordCode = macroKeywordCode;
     function funcKeywordCode(cxt, def) {
       var _a2;
-      const { gen, keyword, schema, parentSchema, $data, it } = cxt;
+      const { gen, keyword, schema: schema2, parentSchema, $data, it } = cxt;
       checkAsyncKeyword(it, def);
-      const validate = !$data && def.compile ? def.compile.call(it.self, schema, parentSchema, it) : def.validate;
+      const validate = !$data && def.compile ? def.compile.call(it.self, schema2, parentSchema, it) : def.validate;
       const validateRef = useKeyword(gen, keyword, validate);
       const valid = gen.let("valid");
       cxt.block$data(valid, validateKeyword);
@@ -9884,20 +9884,20 @@ var require_keyword = __commonJS({
         throw new Error(`keyword "${keyword}" failed to compile`);
       return gen.scopeValue("keyword", typeof result == "function" ? { ref: result } : { ref: result, code: (0, codegen_1.stringify)(result) });
     }
-    function validSchemaType(schema, schemaType, allowUndefined = false) {
-      return !schemaType.length || schemaType.some((st) => st === "array" ? Array.isArray(schema) : st === "object" ? schema && typeof schema == "object" && !Array.isArray(schema) : typeof schema == st || allowUndefined && typeof schema == "undefined");
+    function validSchemaType(schema2, schemaType, allowUndefined = false) {
+      return !schemaType.length || schemaType.some((st) => st === "array" ? Array.isArray(schema2) : st === "object" ? schema2 && typeof schema2 == "object" && !Array.isArray(schema2) : typeof schema2 == st || allowUndefined && typeof schema2 == "undefined");
     }
     exports.validSchemaType = validSchemaType;
-    function validateKeywordUsage({ schema, opts, self, errSchemaPath }, def, keyword) {
+    function validateKeywordUsage({ schema: schema2, opts, self, errSchemaPath }, def, keyword) {
       if (Array.isArray(def.keyword) ? !def.keyword.includes(keyword) : def.keyword !== keyword) {
         throw new Error("ajv implementation error");
       }
       const deps = def.dependencies;
-      if (deps === null || deps === void 0 ? void 0 : deps.some((kwd) => !Object.prototype.hasOwnProperty.call(schema, kwd))) {
+      if (deps === null || deps === void 0 ? void 0 : deps.some((kwd) => !Object.prototype.hasOwnProperty.call(schema2, kwd))) {
         throw new Error(`parent schema must have dependencies of ${keyword}: ${deps.join(",")}`);
       }
       if (def.validateSchema) {
-        const valid = def.validateSchema(schema[keyword]);
+        const valid = def.validateSchema(schema2[keyword]);
         if (!valid) {
           const msg = `keyword "${keyword}" value is invalid at path "${errSchemaPath}": ` + self.errorsText(def.validateSchema.errors);
           if (opts.validateSchema === "log")
@@ -9919,8 +9919,8 @@ var require_subschema = __commonJS({
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
     var codegen_1 = require_codegen();
     var util_1 = require_util();
-    function getSubschema(it, { keyword, schemaProp, schema, schemaPath, errSchemaPath, topSchemaRef }) {
-      if (keyword !== void 0 && schema !== void 0) {
+    function getSubschema(it, { keyword, schemaProp, schema: schema2, schemaPath, errSchemaPath, topSchemaRef }) {
+      if (keyword !== void 0 && schema2 !== void 0) {
         throw new Error('both "keyword" and "schema" passed, only one allowed');
       }
       if (keyword !== void 0) {
@@ -9935,12 +9935,12 @@ var require_subschema = __commonJS({
           errSchemaPath: `${it.errSchemaPath}/${keyword}/${(0, util_1.escapeFragment)(schemaProp)}`
         };
       }
-      if (schema !== void 0) {
+      if (schema2 !== void 0) {
         if (schemaPath === void 0 || errSchemaPath === void 0 || topSchemaRef === void 0) {
           throw new Error('"schemaPath", "errSchemaPath" and "topSchemaRef" are required with "schema"');
         }
         return {
-          schema,
+          schema: schema2,
           schemaPath,
           topSchemaRef,
           errSchemaPath
@@ -10019,8 +10019,8 @@ var require_fast_deep_equal = __commonJS({
         for (i = length; i-- !== 0; )
           if (!Object.prototype.hasOwnProperty.call(b, keys[i])) return false;
         for (i = length; i-- !== 0; ) {
-          var key = keys[i];
-          if (!equal(a[key], b[key])) return false;
+          var key2 = keys[i];
+          if (!equal(a[key2], b[key2])) return false;
         }
         return true;
       }
@@ -10033,7 +10033,7 @@ var require_fast_deep_equal = __commonJS({
 var require_json_schema_traverse = __commonJS({
   "node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
-    var traverse = module.exports = function(schema, opts, cb) {
+    var traverse = module.exports = function(schema2, opts, cb) {
       if (typeof opts == "function") {
         cb = opts;
         opts = {};
@@ -10043,7 +10043,7 @@ var require_json_schema_traverse = __commonJS({
       };
       var post = cb.post || function() {
       };
-      _traverse(opts, pre, post, schema, "", schema);
+      _traverse(opts, pre, post, schema2, "", schema2);
     };
     traverse.keywords = {
       additionalItems: true,
@@ -10089,26 +10089,26 @@ var require_json_schema_traverse = __commonJS({
       maxProperties: true,
       minProperties: true
     };
-    function _traverse(opts, pre, post, schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex) {
-      if (schema && typeof schema == "object" && !Array.isArray(schema)) {
-        pre(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
-        for (var key in schema) {
-          var sch = schema[key];
+    function _traverse(opts, pre, post, schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex) {
+      if (schema2 && typeof schema2 == "object" && !Array.isArray(schema2)) {
+        pre(schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
+        for (var key2 in schema2) {
+          var sch = schema2[key2];
           if (Array.isArray(sch)) {
-            if (key in traverse.arrayKeywords) {
+            if (key2 in traverse.arrayKeywords) {
               for (var i = 0; i < sch.length; i++)
-                _traverse(opts, pre, post, sch[i], jsonPtr + "/" + key + "/" + i, rootSchema, jsonPtr, key, schema, i);
+                _traverse(opts, pre, post, sch[i], jsonPtr + "/" + key2 + "/" + i, rootSchema, jsonPtr, key2, schema2, i);
             }
-          } else if (key in traverse.propsKeywords) {
+          } else if (key2 in traverse.propsKeywords) {
             if (sch && typeof sch == "object") {
               for (var prop in sch)
-                _traverse(opts, pre, post, sch[prop], jsonPtr + "/" + key + "/" + escapeJsonPtr(prop), rootSchema, jsonPtr, key, schema, prop);
+                _traverse(opts, pre, post, sch[prop], jsonPtr + "/" + key2 + "/" + escapeJsonPtr(prop), rootSchema, jsonPtr, key2, schema2, prop);
             }
-          } else if (key in traverse.keywords || opts.allKeys && !(key in traverse.skipKeywords)) {
-            _traverse(opts, pre, post, sch, jsonPtr + "/" + key, rootSchema, jsonPtr, key, schema);
+          } else if (key2 in traverse.keywords || opts.allKeys && !(key2 in traverse.skipKeywords)) {
+            _traverse(opts, pre, post, sch, jsonPtr + "/" + key2, rootSchema, jsonPtr, key2, schema2);
           }
         }
-        post(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
+        post(schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
       }
     }
     function escapeJsonPtr(str) {
@@ -10144,14 +10144,14 @@ var require_resolve = __commonJS({
       "enum",
       "const"
     ]);
-    function inlineRef(schema, limit = true) {
-      if (typeof schema == "boolean")
+    function inlineRef(schema2, limit = true) {
+      if (typeof schema2 == "boolean")
         return true;
       if (limit === true)
-        return !hasRef(schema);
+        return !hasRef(schema2);
       if (!limit)
         return false;
-      return countKeys(schema) <= limit;
+      return countKeys(schema2) <= limit;
     }
     exports.inlineRef = inlineRef;
     var REF_KEYWORDS = /* @__PURE__ */ new Set([
@@ -10161,11 +10161,11 @@ var require_resolve = __commonJS({
       "$dynamicRef",
       "$dynamicAnchor"
     ]);
-    function hasRef(schema) {
-      for (const key in schema) {
-        if (REF_KEYWORDS.has(key))
+    function hasRef(schema2) {
+      for (const key2 in schema2) {
+        if (REF_KEYWORDS.has(key2))
           return true;
-        const sch = schema[key];
+        const sch = schema2[key2];
         if (Array.isArray(sch) && sch.some(hasRef))
           return true;
         if (typeof sch == "object" && hasRef(sch))
@@ -10173,16 +10173,16 @@ var require_resolve = __commonJS({
       }
       return false;
     }
-    function countKeys(schema) {
+    function countKeys(schema2) {
       let count = 0;
-      for (const key in schema) {
-        if (key === "$ref")
+      for (const key2 in schema2) {
+        if (key2 === "$ref")
           return Infinity;
         count++;
-        if (SIMPLE_INLINED.has(key))
+        if (SIMPLE_INLINED.has(key2))
           continue;
-        if (typeof schema[key] == "object") {
-          (0, util_1.eachItem)(schema[key], (sch) => count += countKeys(sch));
+        if (typeof schema2[key2] == "object") {
+          (0, util_1.eachItem)(schema2[key2], (sch) => count += countKeys(sch));
         }
         if (count === Infinity)
           return Infinity;
@@ -10212,16 +10212,16 @@ var require_resolve = __commonJS({
     }
     exports.resolveUrl = resolveUrl;
     var ANCHOR = /^[a-z_][-a-z0-9._]*$/i;
-    function getSchemaRefs(schema, baseId) {
-      if (typeof schema == "boolean")
+    function getSchemaRefs(schema2, baseId) {
+      if (typeof schema2 == "boolean")
         return {};
       const { schemaId, uriResolver } = this.opts;
-      const schId = normalizeId(schema[schemaId] || baseId);
+      const schId = normalizeId(schema2[schemaId] || baseId);
       const baseIds = { "": schId };
       const pathPrefix = getFullPath(uriResolver, schId, false);
       const localRefs = {};
       const schemaRefs = /* @__PURE__ */ new Set();
-      traverse(schema, { allKeys: true }, (sch, jsonPtr, _, parentJsonPtr) => {
+      traverse(schema2, { allKeys: true }, (sch, jsonPtr, _, parentJsonPtr) => {
         if (parentJsonPtr === void 0)
           return;
         const fullPath = pathPrefix + jsonPtr;
@@ -10302,15 +10302,15 @@ var require_validate = __commonJS({
       validateFunction(it, () => (0, boolSchema_1.topBoolOrEmptySchema)(it));
     }
     exports.validateFunctionCode = validateFunctionCode;
-    function validateFunction({ gen, validateName, schema, schemaEnv, opts }, body) {
+    function validateFunction({ gen, validateName, schema: schema2, schemaEnv, opts }, body) {
       if (opts.code.es5) {
         gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${names_1.default.valCxt}`, schemaEnv.$async, () => {
-          gen.code((0, codegen_1._)`"use strict"; ${funcSourceUrl(schema, opts)}`);
+          gen.code((0, codegen_1._)`"use strict"; ${funcSourceUrl(schema2, opts)}`);
           destructureValCxtES5(gen, opts);
           gen.code(body);
         });
       } else {
-        gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${destructureValCxt(opts)}`, schemaEnv.$async, () => gen.code(funcSourceUrl(schema, opts)).code(body));
+        gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${destructureValCxt(opts)}`, schemaEnv.$async, () => gen.code(funcSourceUrl(schema2, opts)).code(body));
       }
     }
     function destructureValCxt(opts) {
@@ -10334,9 +10334,9 @@ var require_validate = __commonJS({
       });
     }
     function topSchemaObjCode(it) {
-      const { schema, opts, gen } = it;
+      const { schema: schema2, opts, gen } = it;
       validateFunction(it, () => {
-        if (opts.$comment && schema.$comment)
+        if (opts.$comment && schema2.$comment)
           commentKeyword(it);
         checkNoDefault(it);
         gen.let(names_1.default.vErrors, null);
@@ -10354,8 +10354,8 @@ var require_validate = __commonJS({
       gen.if((0, codegen_1._)`${it.evaluated}.dynamicProps`, () => gen.assign((0, codegen_1._)`${it.evaluated}.props`, (0, codegen_1._)`undefined`));
       gen.if((0, codegen_1._)`${it.evaluated}.dynamicItems`, () => gen.assign((0, codegen_1._)`${it.evaluated}.items`, (0, codegen_1._)`undefined`));
     }
-    function funcSourceUrl(schema, opts) {
-      const schId = typeof schema == "object" && schema[opts.schemaId];
+    function funcSourceUrl(schema2, opts) {
+      const schId = typeof schema2 == "object" && schema2[opts.schemaId];
       return schId && (opts.code.source || opts.code.process) ? (0, codegen_1._)`/*# sourceURL=${schId} */` : codegen_1.nil;
     }
     function subschemaCode(it, valid) {
@@ -10368,11 +10368,11 @@ var require_validate = __commonJS({
       }
       (0, boolSchema_1.boolOrEmptySchema)(it, valid);
     }
-    function schemaCxtHasRules({ schema, self }) {
-      if (typeof schema == "boolean")
-        return !schema;
-      for (const key in schema)
-        if (self.RULES.all[key])
+    function schemaCxtHasRules({ schema: schema2, self }) {
+      if (typeof schema2 == "boolean")
+        return !schema2;
+      for (const key2 in schema2)
+        if (self.RULES.all[key2])
           return true;
       return false;
     }
@@ -10380,8 +10380,8 @@ var require_validate = __commonJS({
       return typeof it.schema != "boolean";
     }
     function subSchemaObjCode(it, valid) {
-      const { schema, gen, opts } = it;
-      if (opts.$comment && schema.$comment)
+      const { schema: schema2, gen, opts } = it;
+      if (opts.$comment && schema2.$comment)
         commentKeyword(it);
       updateContext(it);
       checkAsyncSchema(it);
@@ -10401,14 +10401,14 @@ var require_validate = __commonJS({
       schemaKeywords(it, types, !checkedTypes, errsCount);
     }
     function checkRefsAndKeywords(it) {
-      const { schema, errSchemaPath, opts, self } = it;
-      if (schema.$ref && opts.ignoreKeywordsWithRef && (0, util_1.schemaHasRulesButRef)(schema, self.RULES)) {
+      const { schema: schema2, errSchemaPath, opts, self } = it;
+      if (schema2.$ref && opts.ignoreKeywordsWithRef && (0, util_1.schemaHasRulesButRef)(schema2, self.RULES)) {
         self.logger.warn(`$ref: keywords ignored in schema at path "${errSchemaPath}"`);
       }
     }
     function checkNoDefault(it) {
-      const { schema, opts } = it;
-      if (schema.default !== void 0 && opts.useDefaults && opts.strictSchema) {
+      const { schema: schema2, opts } = it;
+      if (schema2.default !== void 0 && opts.useDefaults && opts.strictSchema) {
         (0, util_1.checkStrictMode)(it, "default is ignored in the schema root");
       }
     }
@@ -10421,8 +10421,8 @@ var require_validate = __commonJS({
       if (it.schema.$async && !it.schemaEnv.$async)
         throw new Error("async schema in sync schema");
     }
-    function commentKeyword({ gen, schemaEnv, schema, errSchemaPath, opts }) {
-      const msg = schema.$comment;
+    function commentKeyword({ gen, schemaEnv, schema: schema2, errSchemaPath, opts }) {
+      const msg = schema2.$comment;
       if (opts.$comment === true) {
         gen.code((0, codegen_1._)`${names_1.default.self}.logger.log(${msg})`);
       } else if (typeof opts.$comment == "function") {
@@ -10449,9 +10449,9 @@ var require_validate = __commonJS({
         gen.assign((0, codegen_1._)`${evaluated}.items`, items);
     }
     function schemaKeywords(it, types, typeErrors, errsCount) {
-      const { gen, schema, data, allErrors, opts, self } = it;
+      const { gen, schema: schema2, data, allErrors, opts, self } = it;
       const { RULES } = self;
-      if (schema.$ref && (opts.ignoreKeywordsWithRef || !(0, util_1.schemaHasRulesButRef)(schema, RULES))) {
+      if (schema2.$ref && (opts.ignoreKeywordsWithRef || !(0, util_1.schemaHasRulesButRef)(schema2, RULES))) {
         gen.block(() => keywordCode(it, "$ref", RULES.all.$ref.definition));
         return;
       }
@@ -10463,7 +10463,7 @@ var require_validate = __commonJS({
         groupKeywords(RULES.post);
       });
       function groupKeywords(group) {
-        if (!(0, applicability_1.shouldUseGroup)(schema, group))
+        if (!(0, applicability_1.shouldUseGroup)(schema2, group))
           return;
         if (group.type) {
           gen.if((0, dataType_2.checkDataType)(group.type, data, opts.strictNumbers));
@@ -10481,12 +10481,12 @@ var require_validate = __commonJS({
       }
     }
     function iterateKeywords(it, group) {
-      const { gen, schema, opts: { useDefaults } } = it;
+      const { gen, schema: schema2, opts: { useDefaults } } = it;
       if (useDefaults)
         (0, defaults_1.assignDefaults)(it, group.type);
       gen.block(() => {
         for (const rule of group.rules) {
-          if ((0, applicability_1.shouldUseRule)(schema, rule)) {
+          if ((0, applicability_1.shouldUseRule)(schema2, rule)) {
             keywordCode(it, rule.keyword, rule.definition, group.type);
           }
         }
@@ -10831,17 +10831,17 @@ var require_compile = __commonJS({
         var _a2;
         this.refs = {};
         this.dynamicAnchors = {};
-        let schema;
+        let schema2;
         if (typeof env2.schema == "object")
-          schema = env2.schema;
+          schema2 = env2.schema;
         this.schema = env2.schema;
         this.schemaId = env2.schemaId;
         this.root = env2.root || this;
-        this.baseId = (_a2 = env2.baseId) !== null && _a2 !== void 0 ? _a2 : (0, resolve_1.normalizeId)(schema === null || schema === void 0 ? void 0 : schema[env2.schemaId || "$id"]);
+        this.baseId = (_a2 = env2.baseId) !== null && _a2 !== void 0 ? _a2 : (0, resolve_1.normalizeId)(schema2 === null || schema2 === void 0 ? void 0 : schema2[env2.schemaId || "$id"]);
         this.schemaPath = env2.schemaPath;
         this.localRefs = env2.localRefs;
         this.meta = env2.meta;
-        this.$async = schema === null || schema === void 0 ? void 0 : schema.$async;
+        this.$async = schema2 === null || schema2 === void 0 ? void 0 : schema2.$async;
         this.refs = {};
       }
     };
@@ -10940,10 +10940,10 @@ var require_compile = __commonJS({
         return schOrFunc;
       let _sch = resolve.call(this, root, ref);
       if (_sch === void 0) {
-        const schema = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
+        const schema2 = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
-        if (schema)
-          _sch = new SchemaEnv({ schema, schemaId, root, baseId });
+        if (schema2)
+          _sch = new SchemaEnv({ schema: schema2, schemaId, root, baseId });
       }
       if (_sch === void 0)
         return;
@@ -10991,12 +10991,12 @@ var require_compile = __commonJS({
       if (!schOrRef.validate)
         compileSchema.call(this, schOrRef);
       if (id === (0, resolve_1.normalizeId)(ref)) {
-        const { schema } = schOrRef;
+        const { schema: schema2 } = schOrRef;
         const { schemaId } = this.opts;
-        const schId = schema[schemaId];
+        const schId = schema2[schemaId];
         if (schId)
           baseId = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schId);
-        return new SchemaEnv({ schema, schemaId, root, baseId });
+        return new SchemaEnv({ schema: schema2, schemaId, root, baseId });
       }
       return getJsonPointer.call(this, p, schOrRef);
     }
@@ -11008,29 +11008,29 @@ var require_compile = __commonJS({
       "dependencies",
       "definitions"
     ]);
-    function getJsonPointer(parsedRef, { baseId, schema, root }) {
+    function getJsonPointer(parsedRef, { baseId, schema: schema2, root }) {
       var _a2;
       if (((_a2 = parsedRef.fragment) === null || _a2 === void 0 ? void 0 : _a2[0]) !== "/")
         return;
       for (const part of parsedRef.fragment.slice(1).split("/")) {
-        if (typeof schema === "boolean")
+        if (typeof schema2 === "boolean")
           return;
-        const partSchema = schema[(0, util_1.unescapeFragment)(part)];
+        const partSchema = schema2[(0, util_1.unescapeFragment)(part)];
         if (partSchema === void 0)
           return;
-        schema = partSchema;
-        const schId = typeof schema === "object" && schema[this.opts.schemaId];
+        schema2 = partSchema;
+        const schId = typeof schema2 === "object" && schema2[this.opts.schemaId];
         if (!PREVENT_SCOPE_CHANGE.has(part) && schId) {
           baseId = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schId);
         }
       }
       let env2;
-      if (typeof schema != "boolean" && schema.$ref && !(0, util_1.schemaHasRulesButRef)(schema, this.RULES)) {
-        const $ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schema.$ref);
+      if (typeof schema2 != "boolean" && schema2.$ref && !(0, util_1.schemaHasRulesButRef)(schema2, this.RULES)) {
+        const $ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schema2.$ref);
         env2 = resolveSchema.call(this, root, $ref);
       }
       const { schemaId } = this.opts;
-      env2 = env2 || new SchemaEnv({ schema, schemaId, root, baseId });
+      env2 = env2 || new SchemaEnv({ schema: schema2, schemaId, root, baseId });
       if (env2.schema !== env2.root.schema)
         return env2;
       return void 0;
@@ -11183,8 +11183,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path30) {
-      let input = path30;
+    function removeDotSegments(path31) {
+      let input = path31;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -11436,8 +11436,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path30, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path30 && path30 !== "/" ? path30 : void 0;
+        const [path31, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path31 && path31 !== "/" ? path31 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -12046,16 +12046,16 @@ var require_core = __commonJS({
           this.errors = v.errors;
         return valid;
       }
-      compile(schema, _meta) {
-        const sch = this._addSchema(schema, _meta);
+      compile(schema2, _meta) {
+        const sch = this._addSchema(schema2, _meta);
         return sch.validate || this._compileSchemaEnv(sch);
       }
-      compileAsync(schema, meta3) {
+      compileAsync(schema2, meta3) {
         if (typeof this.opts.loadSchema != "function") {
           throw new Error("options.loadSchema should be a function");
         }
         const { loadSchema } = this.opts;
-        return runCompileAsync.call(this, schema, meta3);
+        return runCompileAsync.call(this, schema2, meta3);
         async function runCompileAsync(_schema, _meta) {
           await loadMetaSchema.call(this, _schema.$schema);
           const sch = this._addSchema(_schema, _meta);
@@ -12101,37 +12101,37 @@ var require_core = __commonJS({
         }
       }
       // Adds schema to the instance
-      addSchema(schema, key, _meta, _validateSchema = this.opts.validateSchema) {
-        if (Array.isArray(schema)) {
-          for (const sch of schema)
+      addSchema(schema2, key2, _meta, _validateSchema = this.opts.validateSchema) {
+        if (Array.isArray(schema2)) {
+          for (const sch of schema2)
             this.addSchema(sch, void 0, _meta, _validateSchema);
           return this;
         }
         let id;
-        if (typeof schema === "object") {
+        if (typeof schema2 === "object") {
           const { schemaId } = this.opts;
-          id = schema[schemaId];
+          id = schema2[schemaId];
           if (id !== void 0 && typeof id != "string") {
             throw new Error(`schema ${schemaId} must be string`);
           }
         }
-        key = (0, resolve_1.normalizeId)(key || id);
-        this._checkUnique(key);
-        this.schemas[key] = this._addSchema(schema, _meta, key, _validateSchema, true);
+        key2 = (0, resolve_1.normalizeId)(key2 || id);
+        this._checkUnique(key2);
+        this.schemas[key2] = this._addSchema(schema2, _meta, key2, _validateSchema, true);
         return this;
       }
       // Add schema that will be used to validate other schemas
       // options in META_IGNORE_OPTIONS are alway set to false
-      addMetaSchema(schema, key, _validateSchema = this.opts.validateSchema) {
-        this.addSchema(schema, key, true, _validateSchema);
+      addMetaSchema(schema2, key2, _validateSchema = this.opts.validateSchema) {
+        this.addSchema(schema2, key2, true, _validateSchema);
         return this;
       }
       //  Validate schema against its meta-schema
-      validateSchema(schema, throwOrLogError) {
-        if (typeof schema == "boolean")
+      validateSchema(schema2, throwOrLogError) {
+        if (typeof schema2 == "boolean")
           return true;
         let $schema;
-        $schema = schema.$schema;
+        $schema = schema2.$schema;
         if ($schema !== void 0 && typeof $schema != "string") {
           throw new Error("$schema must be a string");
         }
@@ -12141,7 +12141,7 @@ var require_core = __commonJS({
           this.errors = null;
           return true;
         }
-        const valid = this.validate($schema, schema);
+        const valid = this.validate($schema, schema2);
         if (!valid && throwOrLogError) {
           const message = "schema is invalid: " + this.errorsText();
           if (this.opts.validateSchema === "log")
@@ -12279,14 +12279,14 @@ var require_core = __commonJS({
           let keywords = metaSchema;
           for (const seg of segments)
             keywords = keywords[seg];
-          for (const key in rules) {
-            const rule = rules[key];
+          for (const key2 in rules) {
+            const rule = rules[key2];
             if (typeof rule != "object")
               continue;
             const { $data } = rule.definition;
-            const schema = keywords[key];
-            if ($data && schema)
-              keywords[key] = schemaOrData(schema);
+            const schema2 = keywords[key2];
+            if ($data && schema2)
+              keywords[key2] = schemaOrData(schema2);
           }
         }
         return metaSchema;
@@ -12304,23 +12304,23 @@ var require_core = __commonJS({
           }
         }
       }
-      _addSchema(schema, meta3, baseId, validateSchema = this.opts.validateSchema, addSchema = this.opts.addUsedSchema) {
+      _addSchema(schema2, meta3, baseId, validateSchema = this.opts.validateSchema, addSchema = this.opts.addUsedSchema) {
         let id;
         const { schemaId } = this.opts;
-        if (typeof schema == "object") {
-          id = schema[schemaId];
+        if (typeof schema2 == "object") {
+          id = schema2[schemaId];
         } else {
           if (this.opts.jtd)
             throw new Error("schema must be object");
-          else if (typeof schema != "boolean")
+          else if (typeof schema2 != "boolean")
             throw new Error("schema must be object or boolean");
         }
-        let sch = this._cache.get(schema);
+        let sch = this._cache.get(schema2);
         if (sch !== void 0)
           return sch;
         baseId = (0, resolve_1.normalizeId)(id || baseId);
-        const localRefs = resolve_1.getSchemaRefs.call(this, schema, baseId);
-        sch = new compile_1.SchemaEnv({ schema, schemaId, meta: meta3, baseId, localRefs });
+        const localRefs = resolve_1.getSchemaRefs.call(this, schema2, baseId);
+        sch = new compile_1.SchemaEnv({ schema: schema2, schemaId, meta: meta3, baseId, localRefs });
         this._cache.set(sch.schema, sch);
         if (addSchema && !baseId.startsWith("#")) {
           if (baseId)
@@ -12328,7 +12328,7 @@ var require_core = __commonJS({
           this.refs[baseId] = sch;
         }
         if (validateSchema)
-          this.validateSchema(schema, true);
+          this.validateSchema(schema2, true);
         return sch;
       }
       _checkUnique(id) {
@@ -12359,10 +12359,10 @@ var require_core = __commonJS({
     Ajv2.MissingRefError = ref_error_1.default;
     exports.default = Ajv2;
     function checkOptions(checkOpts, options, msg, log = "error") {
-      for (const key in checkOpts) {
-        const opt = key;
+      for (const key2 in checkOpts) {
+        const opt = key2;
         if (opt in options)
-          this.logger[log](`${msg}: option ${key}. ${checkOpts[opt]}`);
+          this.logger[log](`${msg}: option ${key2}. ${checkOpts[opt]}`);
       }
     }
     function getSchEnv(keyRef) {
@@ -12376,8 +12376,8 @@ var require_core = __commonJS({
       if (Array.isArray(optsSchemas))
         this.addSchema(optsSchemas);
       else
-        for (const key in optsSchemas)
-          this.addSchema(optsSchemas[key], key);
+        for (const key2 in optsSchemas)
+          this.addSchema(optsSchemas[key2], key2);
     }
     function addInitialFormats() {
       for (const name in this.opts.formats) {
@@ -12482,8 +12482,8 @@ var require_core = __commonJS({
     var $dataRef = {
       $ref: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#"
     };
-    function schemaOrData(schema) {
-      return { anyOf: [schema, $dataRef] };
+    function schemaOrData(schema2) {
+      return { anyOf: [schema2, $dataRef] };
     }
   }
 });
@@ -12783,7 +12783,7 @@ var require_pattern = __commonJS({
       $data: true,
       error: error2,
       code(cxt) {
-        const { gen, data, $data, schema, schemaCode, it } = cxt;
+        const { gen, data, $data, schema: schema2, schemaCode, it } = cxt;
         const u = it.opts.unicodeRegExp ? "u" : "";
         if ($data) {
           const { regExp } = it.opts.code;
@@ -12792,7 +12792,7 @@ var require_pattern = __commonJS({
           gen.try(() => gen.assign(valid, (0, codegen_1._)`${regExpCode}(${schemaCode}, ${u}).test(${data})`), () => gen.assign(valid, false));
           cxt.fail$data((0, codegen_1._)`!${valid}`);
         } else {
-          const regExp = (0, code_1.usePattern)(cxt, schema);
+          const regExp = (0, code_1.usePattern)(cxt, schema2);
           cxt.fail$data((0, codegen_1._)`!${regExp}.test(${data})`);
         }
       }
@@ -12849,11 +12849,11 @@ var require_required = __commonJS({
       $data: true,
       error: error2,
       code(cxt) {
-        const { gen, schema, schemaCode, data, $data, it } = cxt;
+        const { gen, schema: schema2, schemaCode, data, $data, it } = cxt;
         const { opts } = it;
-        if (!$data && schema.length === 0)
+        if (!$data && schema2.length === 0)
           return;
-        const useLoop = schema.length >= opts.loopRequired;
+        const useLoop = schema2.length >= opts.loopRequired;
         if (it.allErrors)
           allErrorsMode();
         else
@@ -12861,7 +12861,7 @@ var require_required = __commonJS({
         if (opts.strictRequired) {
           const props = cxt.parentSchema.properties;
           const { definedProperties } = cxt.it;
-          for (const requiredKey of schema) {
+          for (const requiredKey of schema2) {
             if ((props === null || props === void 0 ? void 0 : props[requiredKey]) === void 0 && !definedProperties.has(requiredKey)) {
               const schemaPath = it.schemaEnv.baseId + it.errSchemaPath;
               const msg = `required property "${requiredKey}" is not defined at "${schemaPath}" (strictRequired)`;
@@ -12873,7 +12873,7 @@ var require_required = __commonJS({
           if (useLoop || $data) {
             cxt.block$data(codegen_1.nil, loopAllRequired);
           } else {
-            for (const prop of schema) {
+            for (const prop of schema2) {
               (0, code_1.checkReportMissingProp)(cxt, prop);
             }
           }
@@ -12885,7 +12885,7 @@ var require_required = __commonJS({
             cxt.block$data(valid, () => loopUntilMissing(missing, valid));
             cxt.ok(valid);
           } else {
-            gen.if((0, code_1.checkMissingProp)(cxt, schema, missing));
+            gen.if((0, code_1.checkMissingProp)(cxt, schema2, missing));
             (0, code_1.reportMissingProp)(cxt, missing);
             gen.else();
           }
@@ -12972,8 +12972,8 @@ var require_uniqueItems = __commonJS({
       $data: true,
       error: error2,
       code(cxt) {
-        const { gen, data, $data, schema, parentSchema, schemaCode, it } = cxt;
-        if (!$data && !schema)
+        const { gen, data, $data, schema: schema2, parentSchema, schemaCode, it } = cxt;
+        if (!$data && !schema2)
           return;
         const valid = gen.let("valid");
         const itemTypes = parentSchema.items ? (0, dataType_1.getSchemaTypes)(parentSchema.items) : [];
@@ -13036,11 +13036,11 @@ var require_const = __commonJS({
       $data: true,
       error: error2,
       code(cxt) {
-        const { gen, data, $data, schemaCode, schema } = cxt;
-        if ($data || schema && typeof schema == "object") {
+        const { gen, data, $data, schemaCode, schema: schema2 } = cxt;
+        if ($data || schema2 && typeof schema2 == "object") {
           cxt.fail$data((0, codegen_1._)`!${(0, util_1.useFunc)(gen, equal_1.default)}(${data}, ${schemaCode})`);
         } else {
-          cxt.fail((0, codegen_1._)`${schema} !== ${data}`);
+          cxt.fail((0, codegen_1._)`${schema2} !== ${data}`);
         }
       }
     };
@@ -13066,10 +13066,10 @@ var require_enum = __commonJS({
       $data: true,
       error: error2,
       code(cxt) {
-        const { gen, data, $data, schema, schemaCode, it } = cxt;
-        if (!$data && schema.length === 0)
+        const { gen, data, $data, schema: schema2, schemaCode, it } = cxt;
+        if (!$data && schema2.length === 0)
           throw new Error("enum must have non-empty array");
-        const useLoop = schema.length >= it.opts.loopEnum;
+        const useLoop = schema2.length >= it.opts.loopEnum;
         let eql;
         const getEql = () => eql !== null && eql !== void 0 ? eql : eql = (0, util_1.useFunc)(gen, equal_1.default);
         let valid;
@@ -13077,10 +13077,10 @@ var require_enum = __commonJS({
           valid = gen.let("valid");
           cxt.block$data(valid, loopEnum);
         } else {
-          if (!Array.isArray(schema))
+          if (!Array.isArray(schema2))
             throw new Error("ajv implementation error");
           const vSchema = gen.const("vSchema", schemaCode);
-          valid = (0, codegen_1.or)(...schema.map((_x, i) => equalCode(vSchema, i)));
+          valid = (0, codegen_1.or)(...schema2.map((_x, i) => equalCode(vSchema, i)));
         }
         cxt.pass(valid);
         function loopEnum() {
@@ -13088,7 +13088,7 @@ var require_enum = __commonJS({
           gen.forOf("v", schemaCode, (v) => gen.if((0, codegen_1._)`${getEql()}(${data}, ${v})`, () => gen.assign(valid, true).break()));
         }
         function equalCode(vSchema, i) {
-          const sch = schema[i];
+          const sch = schema2[i];
           return typeof sch === "object" && sch !== null ? (0, codegen_1._)`${getEql()}(${data}, ${vSchema}[${i}])` : (0, codegen_1._)`${data} === ${sch}`;
         }
       }
@@ -13164,13 +13164,13 @@ var require_additionalItems = __commonJS({
       }
     };
     function validateAdditionalItems(cxt, items) {
-      const { gen, schema, data, keyword, it } = cxt;
+      const { gen, schema: schema2, data, keyword, it } = cxt;
       it.items = true;
       const len = gen.const("len", (0, codegen_1._)`${data}.length`);
-      if (schema === false) {
+      if (schema2 === false) {
         cxt.setParams({ len: items.length });
         cxt.pass((0, codegen_1._)`${len} <= ${items.length}`);
-      } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
+      } else if (typeof schema2 == "object" && !(0, util_1.alwaysValidSchema)(it, schema2)) {
         const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items.length}`);
         gen.if((0, codegen_1.not)(valid), () => validateItems(valid));
         cxt.ok(valid);
@@ -13203,11 +13203,11 @@ var require_items = __commonJS({
       schemaType: ["object", "array", "boolean"],
       before: "uniqueItems",
       code(cxt) {
-        const { schema, it } = cxt;
-        if (Array.isArray(schema))
-          return validateTuple(cxt, "additionalItems", schema);
+        const { schema: schema2, it } = cxt;
+        if (Array.isArray(schema2))
+          return validateTuple(cxt, "additionalItems", schema2);
         it.items = true;
-        if ((0, util_1.alwaysValidSchema)(it, schema))
+        if ((0, util_1.alwaysValidSchema)(it, schema2))
           return;
         cxt.ok((0, code_1.validateArray)(cxt));
       }
@@ -13282,10 +13282,10 @@ var require_items2020 = __commonJS({
       before: "uniqueItems",
       error: error2,
       code(cxt) {
-        const { schema, parentSchema, it } = cxt;
+        const { schema: schema2, parentSchema, it } = cxt;
         const { prefixItems } = parentSchema;
         it.items = true;
-        if ((0, util_1.alwaysValidSchema)(it, schema))
+        if ((0, util_1.alwaysValidSchema)(it, schema2))
           return;
         if (prefixItems)
           (0, additionalItems_1.validateAdditionalItems)(cxt, prefixItems);
@@ -13316,7 +13316,7 @@ var require_contains = __commonJS({
       trackErrors: true,
       error: error2,
       code(cxt) {
-        const { gen, schema, parentSchema, data, it } = cxt;
+        const { gen, schema: schema2, parentSchema, data, it } = cxt;
         let min;
         let max;
         const { minContains, maxContains } = parentSchema;
@@ -13337,7 +13337,7 @@ var require_contains = __commonJS({
           cxt.fail();
           return;
         }
-        if ((0, util_1.alwaysValidSchema)(it, schema)) {
+        if ((0, util_1.alwaysValidSchema)(it, schema2)) {
           let cond = (0, codegen_1._)`${len} >= ${min}`;
           if (max !== void 0)
             cond = (0, codegen_1._)`${cond} && ${len} <= ${max}`;
@@ -13422,14 +13422,14 @@ var require_dependencies = __commonJS({
         validateSchemaDeps(cxt, schDeps);
       }
     };
-    function splitDependencies({ schema }) {
+    function splitDependencies({ schema: schema2 }) {
       const propertyDeps = {};
       const schemaDeps = {};
-      for (const key in schema) {
-        if (key === "__proto__")
+      for (const key2 in schema2) {
+        if (key2 === "__proto__")
           continue;
-        const deps = Array.isArray(schema[key]) ? propertyDeps : schemaDeps;
-        deps[key] = schema[key];
+        const deps = Array.isArray(schema2[key2]) ? propertyDeps : schemaDeps;
+        deps[key2] = schema2[key2];
       }
       return [propertyDeps, schemaDeps];
     }
@@ -13502,17 +13502,17 @@ var require_propertyNames = __commonJS({
       schemaType: ["object", "boolean"],
       error: error2,
       code(cxt) {
-        const { gen, schema, data, it } = cxt;
-        if ((0, util_1.alwaysValidSchema)(it, schema))
+        const { gen, schema: schema2, data, it } = cxt;
+        if ((0, util_1.alwaysValidSchema)(it, schema2))
           return;
         const valid = gen.name("valid");
-        gen.forIn("key", data, (key) => {
-          cxt.setParams({ propertyName: key });
+        gen.forIn("key", data, (key2) => {
+          cxt.setParams({ propertyName: key2 });
           cxt.subschema({
             keyword: "propertyNames",
-            data: key,
+            data: key2,
             dataTypes: ["string"],
-            propertyName: key,
+            propertyName: key2,
             compositeRule: true
           }, valid);
           gen.if((0, codegen_1.not)(valid), () => {
@@ -13549,74 +13549,74 @@ var require_additionalProperties = __commonJS({
       trackErrors: true,
       error: error2,
       code(cxt) {
-        const { gen, schema, parentSchema, data, errsCount, it } = cxt;
+        const { gen, schema: schema2, parentSchema, data, errsCount, it } = cxt;
         if (!errsCount)
           throw new Error("ajv implementation error");
         const { allErrors, opts } = it;
         it.props = true;
-        if (opts.removeAdditional !== "all" && (0, util_1.alwaysValidSchema)(it, schema))
+        if (opts.removeAdditional !== "all" && (0, util_1.alwaysValidSchema)(it, schema2))
           return;
         const props = (0, code_1.allSchemaProperties)(parentSchema.properties);
         const patProps = (0, code_1.allSchemaProperties)(parentSchema.patternProperties);
         checkAdditionalProperties();
         cxt.ok((0, codegen_1._)`${errsCount} === ${names_1.default.errors}`);
         function checkAdditionalProperties() {
-          gen.forIn("key", data, (key) => {
+          gen.forIn("key", data, (key2) => {
             if (!props.length && !patProps.length)
-              additionalPropertyCode(key);
+              additionalPropertyCode(key2);
             else
-              gen.if(isAdditional(key), () => additionalPropertyCode(key));
+              gen.if(isAdditional(key2), () => additionalPropertyCode(key2));
           });
         }
-        function isAdditional(key) {
+        function isAdditional(key2) {
           let definedProp;
           if (props.length > 8) {
             const propsSchema = (0, util_1.schemaRefOrVal)(it, parentSchema.properties, "properties");
-            definedProp = (0, code_1.isOwnProperty)(gen, propsSchema, key);
+            definedProp = (0, code_1.isOwnProperty)(gen, propsSchema, key2);
           } else if (props.length) {
-            definedProp = (0, codegen_1.or)(...props.map((p) => (0, codegen_1._)`${key} === ${p}`));
+            definedProp = (0, codegen_1.or)(...props.map((p) => (0, codegen_1._)`${key2} === ${p}`));
           } else {
             definedProp = codegen_1.nil;
           }
           if (patProps.length) {
-            definedProp = (0, codegen_1.or)(definedProp, ...patProps.map((p) => (0, codegen_1._)`${(0, code_1.usePattern)(cxt, p)}.test(${key})`));
+            definedProp = (0, codegen_1.or)(definedProp, ...patProps.map((p) => (0, codegen_1._)`${(0, code_1.usePattern)(cxt, p)}.test(${key2})`));
           }
           return (0, codegen_1.not)(definedProp);
         }
-        function deleteAdditional(key) {
-          gen.code((0, codegen_1._)`delete ${data}[${key}]`);
+        function deleteAdditional(key2) {
+          gen.code((0, codegen_1._)`delete ${data}[${key2}]`);
         }
-        function additionalPropertyCode(key) {
-          if (opts.removeAdditional === "all" || opts.removeAdditional && schema === false) {
-            deleteAdditional(key);
+        function additionalPropertyCode(key2) {
+          if (opts.removeAdditional === "all" || opts.removeAdditional && schema2 === false) {
+            deleteAdditional(key2);
             return;
           }
-          if (schema === false) {
-            cxt.setParams({ additionalProperty: key });
+          if (schema2 === false) {
+            cxt.setParams({ additionalProperty: key2 });
             cxt.error();
             if (!allErrors)
               gen.break();
             return;
           }
-          if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
+          if (typeof schema2 == "object" && !(0, util_1.alwaysValidSchema)(it, schema2)) {
             const valid = gen.name("valid");
             if (opts.removeAdditional === "failing") {
-              applyAdditionalSchema(key, valid, false);
+              applyAdditionalSchema(key2, valid, false);
               gen.if((0, codegen_1.not)(valid), () => {
                 cxt.reset();
-                deleteAdditional(key);
+                deleteAdditional(key2);
               });
             } else {
-              applyAdditionalSchema(key, valid);
+              applyAdditionalSchema(key2, valid);
               if (!allErrors)
                 gen.if((0, codegen_1.not)(valid), () => gen.break());
             }
           }
         }
-        function applyAdditionalSchema(key, valid, errors) {
+        function applyAdditionalSchema(key2, valid, errors) {
           const subschema = {
             keyword: "additionalProperties",
-            dataProp: key,
+            dataProp: key2,
             dataPropType: util_1.Type.Str
           };
           if (errors === false) {
@@ -13648,18 +13648,18 @@ var require_properties = __commonJS({
       type: "object",
       schemaType: "object",
       code(cxt) {
-        const { gen, schema, parentSchema, data, it } = cxt;
+        const { gen, schema: schema2, parentSchema, data, it } = cxt;
         if (it.opts.removeAdditional === "all" && parentSchema.additionalProperties === void 0) {
           additionalProperties_1.default.code(new validate_1.KeywordCxt(it, additionalProperties_1.default, "additionalProperties"));
         }
-        const allProps = (0, code_1.allSchemaProperties)(schema);
+        const allProps = (0, code_1.allSchemaProperties)(schema2);
         for (const prop of allProps) {
           it.definedProperties.add(prop);
         }
         if (it.opts.unevaluated && allProps.length && it.props !== true) {
           it.props = util_1.mergeEvaluated.props(gen, (0, util_1.toHash)(allProps), it.props);
         }
-        const properties = allProps.filter((p) => !(0, util_1.alwaysValidSchema)(it, schema[p]));
+        const properties = allProps.filter((p) => !(0, util_1.alwaysValidSchema)(it, schema2[p]));
         if (properties.length === 0)
           return;
         const valid = gen.name("valid");
@@ -13677,7 +13677,7 @@ var require_properties = __commonJS({
           cxt.ok(valid);
         }
         function hasDefault(prop) {
-          return it.opts.useDefaults && !it.compositeRule && schema[prop].default !== void 0;
+          return it.opts.useDefaults && !it.compositeRule && schema2[prop].default !== void 0;
         }
         function applyPropertySchema(prop) {
           cxt.subschema({
@@ -13706,10 +13706,10 @@ var require_patternProperties = __commonJS({
       type: "object",
       schemaType: "object",
       code(cxt) {
-        const { gen, schema, data, parentSchema, it } = cxt;
+        const { gen, schema: schema2, data, parentSchema, it } = cxt;
         const { opts } = it;
-        const patterns = (0, code_1.allSchemaProperties)(schema);
-        const alwaysValidPatterns = patterns.filter((p) => (0, util_1.alwaysValidSchema)(it, schema[p]));
+        const patterns = (0, code_1.allSchemaProperties)(schema2);
+        const alwaysValidPatterns = patterns.filter((p) => (0, util_1.alwaysValidSchema)(it, schema2[p]));
         if (patterns.length === 0 || alwaysValidPatterns.length === patterns.length && (!it.opts.unevaluated || it.props === true)) {
           return;
         }
@@ -13741,19 +13741,19 @@ var require_patternProperties = __commonJS({
           }
         }
         function validateProperties(pat) {
-          gen.forIn("key", data, (key) => {
-            gen.if((0, codegen_1._)`${(0, code_1.usePattern)(cxt, pat)}.test(${key})`, () => {
+          gen.forIn("key", data, (key2) => {
+            gen.if((0, codegen_1._)`${(0, code_1.usePattern)(cxt, pat)}.test(${key2})`, () => {
               const alwaysValid = alwaysValidPatterns.includes(pat);
               if (!alwaysValid) {
                 cxt.subschema({
                   keyword: "patternProperties",
                   schemaProp: pat,
-                  dataProp: key,
+                  dataProp: key2,
                   dataPropType: util_2.Type.Str
                 }, valid);
               }
               if (it.opts.unevaluated && props !== true) {
-                gen.assign((0, codegen_1._)`${props}[${key}]`, true);
+                gen.assign((0, codegen_1._)`${props}[${key2}]`, true);
               } else if (!alwaysValid && !it.allErrors) {
                 gen.if((0, codegen_1.not)(valid), () => gen.break());
               }
@@ -13777,8 +13777,8 @@ var require_not = __commonJS({
       schemaType: ["object", "boolean"],
       trackErrors: true,
       code(cxt) {
-        const { gen, schema, it } = cxt;
-        if ((0, util_1.alwaysValidSchema)(it, schema)) {
+        const { gen, schema: schema2, it } = cxt;
+        if ((0, util_1.alwaysValidSchema)(it, schema2)) {
           cxt.fail();
           return;
         }
@@ -13831,12 +13831,12 @@ var require_oneOf = __commonJS({
       trackErrors: true,
       error: error2,
       code(cxt) {
-        const { gen, schema, parentSchema, it } = cxt;
-        if (!Array.isArray(schema))
+        const { gen, schema: schema2, parentSchema, it } = cxt;
+        if (!Array.isArray(schema2))
           throw new Error("ajv implementation error");
         if (it.opts.discriminator && parentSchema.discriminator)
           return;
-        const schArr = schema;
+        const schArr = schema2;
         const valid = gen.let("valid", false);
         const passing = gen.let("passing", null);
         const schValid = gen.name("_valid");
@@ -13882,11 +13882,11 @@ var require_allOf = __commonJS({
       keyword: "allOf",
       schemaType: "array",
       code(cxt) {
-        const { gen, schema, it } = cxt;
-        if (!Array.isArray(schema))
+        const { gen, schema: schema2, it } = cxt;
+        if (!Array.isArray(schema2))
           throw new Error("ajv implementation error");
         const valid = gen.name("valid");
-        schema.forEach((sch, i) => {
+        schema2.forEach((sch, i) => {
           if ((0, util_1.alwaysValidSchema)(it, sch))
             return;
           const schCxt = cxt.subschema({ keyword: "allOf", schemaProp: i }, valid);
@@ -13961,8 +13961,8 @@ var require_if = __commonJS({
       }
     };
     function hasSchema(it, keyword) {
-      const schema = it.schema[keyword];
-      return schema !== void 0 && !(0, util_1.alwaysValidSchema)(it, schema);
+      const schema2 = it.schema[keyword];
+      return schema2 !== void 0 && !(0, util_1.alwaysValidSchema)(it, schema2);
     }
     exports.default = def;
   }
@@ -14051,7 +14051,7 @@ var require_format = __commonJS({
       $data: true,
       error: error2,
       code(cxt, ruleType) {
-        const { gen, data, $data, schema, schemaCode, it } = cxt;
+        const { gen, data, $data, schema: schema2, schemaCode, it } = cxt;
         const { opts, errSchemaPath, schemaEnv, self } = it;
         if (!opts.validateFormats)
           return;
@@ -14081,7 +14081,7 @@ var require_format = __commonJS({
           }
         }
         function validateFormat() {
-          const formatDef = self.formats[schema];
+          const formatDef = self.formats[schema2];
           if (!formatDef) {
             unknownFormat();
             return;
@@ -14098,12 +14098,12 @@ var require_format = __commonJS({
             }
             throw new Error(unknownMsg());
             function unknownMsg() {
-              return `unknown format "${schema}" ignored in schema at path "${errSchemaPath}"`;
+              return `unknown format "${schema2}" ignored in schema at path "${errSchemaPath}"`;
             }
           }
           function getFormat(fmtDef) {
-            const code = fmtDef instanceof RegExp ? (0, codegen_1.regexpCode)(fmtDef) : opts.code.formats ? (0, codegen_1._)`${opts.code.formats}${(0, codegen_1.getProperty)(schema)}` : void 0;
-            const fmt = gen.scopeValue("formats", { key: schema, ref: fmtDef, code });
+            const code = fmtDef instanceof RegExp ? (0, codegen_1.regexpCode)(fmtDef) : opts.code.formats ? (0, codegen_1._)`${opts.code.formats}${(0, codegen_1.getProperty)(schema2)}` : void 0;
+            const fmt = gen.scopeValue("formats", { key: schema2, ref: fmtDef, code });
             if (typeof fmtDef == "object" && !(fmtDef instanceof RegExp)) {
               return [fmtDef.type || "string", fmtDef.validate, (0, codegen_1._)`${fmt}.validate`];
             }
@@ -14214,15 +14214,15 @@ var require_discriminator = __commonJS({
       schemaType: "object",
       error: error2,
       code(cxt) {
-        const { gen, data, schema, parentSchema, it } = cxt;
+        const { gen, data, schema: schema2, parentSchema, it } = cxt;
         const { oneOf } = parentSchema;
         if (!it.opts.discriminator) {
           throw new Error("discriminator: requires discriminator option");
         }
-        const tagName = schema.propertyName;
+        const tagName = schema2.propertyName;
         if (typeof tagName != "string")
           throw new Error("discriminator: requires propertyName");
-        if (schema.mapping)
+        if (schema2.mapping)
           throw new Error("discriminator: mapping is not supported");
         if (!oneOf)
           throw new Error("discriminator: requires oneOf keyword");
@@ -14823,19 +14823,19 @@ var require_dist = __commonJS({
         (0, limit_1.default)(ajv);
       return ajv;
     };
-    formatsPlugin.get = (name, mode = "full") => {
-      const formats = mode === "fast" ? formats_1.fastFormats : formats_1.fullFormats;
+    formatsPlugin.get = (name, mode2 = "full") => {
+      const formats = mode2 === "fast" ? formats_1.fastFormats : formats_1.fullFormats;
       const f = formats[name];
       if (!f)
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs33, exportName) {
+    function addFormats(ajv, list, fs36, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs33[f]);
+        ajv.addFormat(f, fs36[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -15055,23 +15055,10 @@ var init_command_runtime_metadata = __esm({
       "blueprint_discuss_finalize"
     ];
     PLAN_PHASE_REQUIRED_TOOLS = [
-      "blueprint_phase_locate",
-      "blueprint_artifact_contract_read",
-      "blueprint_phase_context",
-      "blueprint_phase_research_status",
-      "blueprint_phase_artifact_read",
-      "blueprint_phase_validation_read",
-      "blueprint_review_load_findings",
-      "blueprint_phase_plan_index",
-      "blueprint_phase_plan_read",
-      "blueprint_phase_plan_readiness",
-      "blueprint_phase_plan_authoring_context",
-      "blueprint_phase_plan_validate_model",
-      "blueprint_phase_plan_write",
-      "blueprint_phase_plan_validate",
-      "blueprint_config_get",
-      "blueprint_state_load",
-      "blueprint_state_update"
+      "blueprint_plan_prepare",
+      "blueprint_plan_submit",
+      "blueprint_plan_read",
+      "blueprint_plan_finalize"
     ];
     RESEARCH_PHASE_REQUIRED_TOOLS = [
       "blueprint_research_prepare",
@@ -16170,14 +16157,14 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-plan-phase`",
         executionProfile: "long-running-mutation",
         rootRoutable: true,
-        purpose: "`plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.",
+        purpose: "`plan-phase` preserves compact plan-set candidates before validation, compiles execution-ready phase.plan artifacts, and publishes a complete checked set through MCP.",
         reads: [
-          "Phase resolution, context, planning readiness, saved discovery artifacts including optional phase-local XX-SPEC.md when present, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."
+          "blueprint_plan_prepare supplies a stable phase evidence snapshot, optional XX-SPEC.md, project and requirement grounding, research/UI readiness, effective config, saved-plan inventory and compact candidate schema; blueprint_plan_read recovers saved revisions."
         ],
         writes: [
-          "structured phase.plan JSON through blueprint_phase_plan_write",
-          ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_phase_plan_write",
-          ".blueprint/STATE.md through synced state update"
+          "phase-scoped original plan candidates, revisions, evidence fingerprints and publication journal",
+          ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_plan_finalize",
+          ".blueprint/STATE.md through finalizer-owned synced state update"
         ]
       },
       runtimeReference: {
@@ -16188,7 +16175,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
         optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals including optional XX-SPEC.md when present, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Treat missing XX-SPEC.md as nonblocking by default, but when phase.artifacts.spec exists include it in the Planning Investigation Trace, the readiness read set, and runtime-narrowed evidenceCoverage, and repair or warn on draft contradictions against explicit spec out-of-scope boundaries. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: "strict", authoringMode: "model-only", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.',
+        contractNotes: "Use blueprint_plan_prepare -> blueprint_plan_submit -> blueprint_plan_finalize, with blueprint_plan_read for recovery. Prepare owns phase resolution, effective config, stable evidence fingerprints and saved-plan add/revise/replace selection. Use saved research instead of live browsing; required context/research/UI readiness blocks drafting, while missing XX-SPEC.md is nonblocking. Author the compact plan-set candidate using the returned schema; MCP derives slots, waves, aggregate file lists and coverage ledgers. Submit saves the exact original candidate before validation, supports revision-CAS field corrections, and retains invalid drafts without canonical publication. Review the complete saved candidate with blueprint-checker when workflow.plan_check is enabled; bind the verdict to its revision and candidateHash. Use blueprint-planner only for useful bounded decomposition, preserving the no-subagent fallback. Finalize requires current evidence, full plan-set validation and explicit overwrite authorization for revise/replace; its publication journal and marker block execution of partial sets and resume interrupted writes. Finalizer owns base: synced state update and state-aware routing to implemented follow-ups. Never infer completion from candidate saved/valid status; require the published receipt. No raw .blueprint writes, Markdown fallback to canonical paths, scaffold seeding or warn-mode publication.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -17773,8 +17760,8 @@ function resolveRealishPathSync(targetPath) {
   const realExistingPath = realpathSync.native(current);
   return path.join(realExistingPath, ...pendingSegments);
 }
-function isEscapingRoot(rootPath, candidatePath) {
-  const relative = path.relative(rootPath, candidatePath);
+function isEscapingRoot(rootPath, candidatePath2) {
+  const relative = path.relative(rootPath, candidatePath2);
   return relative.startsWith("..") || path.isAbsolute(relative);
 }
 function findSuspiciousEncodedPayload(text) {
@@ -17792,35 +17779,35 @@ function assertNoNullBytes(value, label = "Value") {
     throw new Error(`${label} must not contain null bytes.`);
   }
 }
-function ensurePathWithinRootSync(rootPath, candidatePath, options = {}) {
+function ensurePathWithinRootSync(rootPath, candidatePath2, options = {}) {
   const label = options.label ?? "Path";
   assertNoNullBytes(rootPath, "Root path");
-  assertNoNullBytes(candidatePath, label);
+  assertNoNullBytes(candidatePath2, label);
   const resolvedRoot = resolveRealishPathSync(rootPath);
-  const resolvedCandidate = resolveRealishPathSync(candidatePath);
+  const resolvedCandidate = resolveRealishPathSync(candidatePath2);
   if (isEscapingRoot(resolvedRoot, resolvedCandidate)) {
-    throw new Error(`${label} escapes the allowed root: ${candidatePath}`);
+    throw new Error(`${label} escapes the allowed root: ${candidatePath2}`);
   }
-  return path.resolve(candidatePath);
+  return path.resolve(candidatePath2);
 }
-function isPathWithinRootSync(rootPath, candidatePath) {
+function isPathWithinRootSync(rootPath, candidatePath2) {
   try {
-    ensurePathWithinRootSync(rootPath, candidatePath, { label: "Path" });
+    ensurePathWithinRootSync(rootPath, candidatePath2, { label: "Path" });
     return true;
   } catch {
     return false;
   }
 }
-function resolveRepoRelativeInputPathSync(rootPath, candidatePath, options = {}) {
+function resolveRepoRelativeInputPathSync(rootPath, candidatePath2, options = {}) {
   const label = options.label ?? "Path";
-  assertNoNullBytes(candidatePath, label);
-  if (candidatePath.trim().length === 0) {
+  assertNoNullBytes(candidatePath2, label);
+  if (candidatePath2.trim().length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  if (path.isAbsolute(candidatePath)) {
-    throw new Error(`${label} must be repo-relative, not absolute: ${candidatePath}`);
+  if (path.isAbsolute(candidatePath2)) {
+    throw new Error(`${label} must be repo-relative, not absolute: ${candidatePath2}`);
   }
-  const absolutePath = path.resolve(rootPath, candidatePath);
+  const absolutePath = path.resolve(rootPath, candidatePath2);
   return ensurePathWithinRootSync(rootPath, absolutePath, options);
 }
 function safeJsonParse(raw, options = {}) {
@@ -18022,10 +18009,10 @@ var require_dynamicAnchor = __commonJS({
     }
     exports.dynamicAnchor = dynamicAnchor;
     function _getValidate(cxt) {
-      const { schemaEnv, schema, self } = cxt.it;
+      const { schemaEnv, schema: schema2, self } = cxt.it;
       const { root, baseId, localRefs, meta: meta3 } = schemaEnv.root;
       const { schemaId } = self.opts;
-      const sch = new compile_1.SchemaEnv({ schema, schemaId, root, baseId, localRefs, meta: meta3 });
+      const sch = new compile_1.SchemaEnv({ schema: schema2, schemaId, root, baseId, localRefs, meta: meta3 });
       compile_1.compileSchema.call(self, sch);
       return (0, ref_1.getValidate)(cxt, sch);
     }
@@ -18214,44 +18201,44 @@ var require_unevaluatedProperties = __commonJS({
       trackErrors: true,
       error: error2,
       code(cxt) {
-        const { gen, schema, data, errsCount, it } = cxt;
+        const { gen, schema: schema2, data, errsCount, it } = cxt;
         if (!errsCount)
           throw new Error("ajv implementation error");
         const { allErrors, props } = it;
         if (props instanceof codegen_1.Name) {
-          gen.if((0, codegen_1._)`${props} !== true`, () => gen.forIn("key", data, (key) => gen.if(unevaluatedDynamic(props, key), () => unevaluatedPropCode(key))));
+          gen.if((0, codegen_1._)`${props} !== true`, () => gen.forIn("key", data, (key2) => gen.if(unevaluatedDynamic(props, key2), () => unevaluatedPropCode(key2))));
         } else if (props !== true) {
-          gen.forIn("key", data, (key) => props === void 0 ? unevaluatedPropCode(key) : gen.if(unevaluatedStatic(props, key), () => unevaluatedPropCode(key)));
+          gen.forIn("key", data, (key2) => props === void 0 ? unevaluatedPropCode(key2) : gen.if(unevaluatedStatic(props, key2), () => unevaluatedPropCode(key2)));
         }
         it.props = true;
         cxt.ok((0, codegen_1._)`${errsCount} === ${names_1.default.errors}`);
-        function unevaluatedPropCode(key) {
-          if (schema === false) {
-            cxt.setParams({ unevaluatedProperty: key });
+        function unevaluatedPropCode(key2) {
+          if (schema2 === false) {
+            cxt.setParams({ unevaluatedProperty: key2 });
             cxt.error();
             if (!allErrors)
               gen.break();
             return;
           }
-          if (!(0, util_1.alwaysValidSchema)(it, schema)) {
+          if (!(0, util_1.alwaysValidSchema)(it, schema2)) {
             const valid = gen.name("valid");
             cxt.subschema({
               keyword: "unevaluatedProperties",
-              dataProp: key,
+              dataProp: key2,
               dataPropType: util_1.Type.Str
             }, valid);
             if (!allErrors)
               gen.if((0, codegen_1.not)(valid), () => gen.break());
           }
         }
-        function unevaluatedDynamic(evaluatedProps, key) {
-          return (0, codegen_1._)`!${evaluatedProps} || !${evaluatedProps}[${key}]`;
+        function unevaluatedDynamic(evaluatedProps, key2) {
+          return (0, codegen_1._)`!${evaluatedProps} || !${evaluatedProps}[${key2}]`;
         }
-        function unevaluatedStatic(evaluatedProps, key) {
+        function unevaluatedStatic(evaluatedProps, key2) {
           const ps = [];
           for (const p in evaluatedProps) {
             if (evaluatedProps[p] === true)
-              ps.push((0, codegen_1._)`${key} !== ${p}`);
+              ps.push((0, codegen_1._)`${key2} !== ${p}`);
           }
           return (0, codegen_1.and)(...ps);
         }
@@ -18278,15 +18265,15 @@ var require_unevaluatedItems = __commonJS({
       schemaType: ["boolean", "object"],
       error: error2,
       code(cxt) {
-        const { gen, schema, data, it } = cxt;
+        const { gen, schema: schema2, data, it } = cxt;
         const items = it.items || 0;
         if (items === true)
           return;
         const len = gen.const("len", (0, codegen_1._)`${data}.length`);
-        if (schema === false) {
+        if (schema2 === false) {
           cxt.setParams({ len: items });
           cxt.fail((0, codegen_1._)`${len} > ${items}`);
-        } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
+        } else if (typeof schema2 == "object" && !(0, util_1.alwaysValidSchema)(it, schema2)) {
           const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items}`);
           gen.if((0, codegen_1.not)(valid), () => validateItems(valid, items));
           cxt.ok(valid);
@@ -18884,12 +18871,12 @@ function readJsonSchemaAsset(schemaFileName) {
     path2.join(moduleDir, "artifact-contracts", "schemas", schemaFileName)
   ];
   const failures = [];
-  for (const candidatePath of candidatePaths) {
+  for (const candidatePath2 of candidatePaths) {
     try {
-      return JSON.parse(readFileSync(candidatePath, "utf8"));
+      return JSON.parse(readFileSync(candidatePath2, "utf8"));
     } catch (error2) {
       failures.push(
-        error2 instanceof Error ? `${candidatePath}: ${error2.message}` : `${candidatePath}: unknown error`
+        error2 instanceof Error ? `${candidatePath2}: ${error2.message}` : `${candidatePath2}: unknown error`
       );
     }
   }
@@ -25161,26 +25148,26 @@ function isReservedKey(scope, fullPath) {
   return fullPath === "hooks" || fullPath.startsWith("hooks.") || scope === "project" && (fullPath === "workflow.use_workspaces" || fullPath === "workflow.use_workstreams");
 }
 function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appliedPaths) {
-  for (const [key, value] of Object.entries(source)) {
+  for (const [key2, value] of Object.entries(source)) {
     try {
-      validateFieldNameSegment(key, "Config key");
+      validateFieldNameSegment(key2, "Config key");
     } catch (error2) {
-      warnings.push(error2 instanceof Error ? error2.message : `Ignored unsafe config key: ${key}`);
+      warnings.push(error2 instanceof Error ? error2.message : `Ignored unsafe config key: ${key2}`);
       continue;
     }
-    const fullPath = [...pathPrefix, key].join(".");
+    const fullPath = [...pathPrefix, key2].join(".");
     if (isReservedKey(scope, fullPath)) {
       warnings.push(`Ignored disallowed config key: ${fullPath}`);
       continue;
     }
-    if (!(key in target)) {
+    if (!(key2 in target)) {
       warnings.push(`Ignored unknown config key: ${fullPath}`);
       continue;
     }
-    const currentValue = target[key];
+    const currentValue = target[key2];
     if (fullPath === "version") {
       if (value === HARD_CODED_CONFIG_VERSION) {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(
@@ -25191,7 +25178,7 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
     }
     if (fullPath === "model_profile") {
       if (typeof value === "string" && MODEL_PROFILES.includes(value)) {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
@@ -25200,7 +25187,7 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
     }
     if (fullPath === "ux.progress_mode") {
       if (typeof value === "string" && PROGRESS_MODES.includes(value)) {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
@@ -25209,7 +25196,7 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
     }
     if (fullPath === "ux.structured_confirmations") {
       if (typeof value === "string" && STRUCTURED_CONFIRMATION_MODES.includes(value)) {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
@@ -25218,7 +25205,7 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
     }
     if (fullPath === "ux.user_checkpoints") {
       if (typeof value === "string" && USER_CHECKPOINT_MODES.includes(value)) {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
@@ -25227,7 +25214,7 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
     }
     if (fullPath === "orchestration.task_tracker") {
       if (typeof value === "string" && TASK_TRACKER_MODES.includes(value)) {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
@@ -25236,7 +25223,7 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
     }
     if (fullPath === "research.external_sources") {
       if (typeof value === "string" && EXTERNAL_SOURCE_MODES.includes(value)) {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
@@ -25245,7 +25232,7 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
     }
     if (fullPath === "agent_skills") {
       if (isPlainObject4(value)) {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
@@ -25265,12 +25252,12 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
         warnings.push(`Ignored invalid config object for ${fullPath}`);
         continue;
       }
-      applyConfigLayer(currentValue, value, scope, warnings, [...pathPrefix, key], appliedPaths);
+      applyConfigLayer(currentValue, value, scope, warnings, [...pathPrefix, key2], appliedPaths);
       continue;
     }
     if (currentValue === null) {
       if (value === null || typeof value === "string") {
-        target[key] = value;
+        target[key2] = value;
         appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid nullable config value for ${fullPath}`);
@@ -25278,7 +25265,7 @@ function applyConfigLayer(target, source, scope, warnings, pathPrefix = [], appl
       continue;
     }
     if (typeof value === typeof currentValue) {
-      target[key] = value;
+      target[key2] = value;
       appliedPaths?.add(fullPath);
       continue;
     }
@@ -25347,9 +25334,9 @@ function normalizeSparseConfigLayer(candidate, scope) {
 }
 function flattenPatchKeys(candidate, prefix = []) {
   const keys = [];
-  for (const [key, value] of Object.entries(candidate)) {
-    const fullPath = [...prefix, key];
-    if (isPlainObject4(value) && key !== "agent_skills") {
+  for (const [key2, value] of Object.entries(candidate)) {
+    const fullPath = [...prefix, key2];
+    if (isPlainObject4(value) && key2 !== "agent_skills") {
       keys.push(...flattenPatchKeys(value, fullPath));
     } else {
       keys.push(fullPath.join("."));
@@ -25360,11 +25347,11 @@ function flattenPatchKeys(candidate, prefix = []) {
 function collectChangedKeys(before, after, prefix = []) {
   const keys = /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)]);
   const changed = [];
-  for (const key of keys) {
-    const pathSegments = [...prefix, key];
-    const beforeValue = before[key];
-    const afterValue = after[key];
-    if (isPlainObject4(beforeValue) && isPlainObject4(afterValue) && key !== "agent_skills") {
+  for (const key2 of keys) {
+    const pathSegments = [...prefix, key2];
+    const beforeValue = before[key2];
+    const afterValue = after[key2];
+    if (isPlainObject4(beforeValue) && isPlainObject4(afterValue) && key2 !== "agent_skills") {
       changed.push(...collectChangedKeys(beforeValue, afterValue, pathSegments));
       continue;
     }
@@ -25630,9 +25617,9 @@ async function blueprintConfigSetLocked({
     ...baseResult3.warnings,
     ...malformedProjectConfigWarning ? [malformedProjectConfigWarning] : []
   ];
-  for (const key of flattenPatchKeys(patch)) {
-    if (isReservedKey(scope, key)) {
-      throw new Error(`Config key is not allowed in ${scope} scope: ${key}`);
+  for (const key2 of flattenPatchKeys(patch)) {
+    if (isReservedKey(scope, key2)) {
+      throw new Error(`Config key is not allowed in ${scope} scope: ${key2}`);
     }
   }
   if (scope === "project") {
@@ -25669,7 +25656,7 @@ async function blueprintConfigSetLocked({
     const patchKeys2 = flattenPatchKeys(patch);
     return {
       scope,
-      updatedKeys: patchKeys2.filter((key) => changedKeys2.includes(key)),
+      updatedKeys: patchKeys2.filter((key2) => changedKeys2.includes(key2)),
       config: nextResult.config,
       provenance: nextResult.provenance,
       configPath: toRepoRelativePath(projectRoot, configPath),
@@ -25692,7 +25679,7 @@ async function blueprintConfigSetLocked({
   const patchKeys = flattenPatchKeys(patch);
   return {
     scope,
-    updatedKeys: patchKeys.filter((key) => changedKeys.includes(key)),
+    updatedKeys: patchKeys.filter((key2) => changedKeys.includes(key2)),
     config: nextConfig,
     provenance: {
       layersApplied: ["hardcoded", scope],
@@ -26164,9 +26151,148 @@ var init_phase_roadmap_parser = __esm({
   }
 });
 
-// src/mcp/tools/quality-gates.ts
-import fs2 from "node:fs/promises";
+// src/mcp/tools/plan-publication.ts
+import { createHash } from "node:crypto";
+import { promises as fs2 } from "node:fs";
 import path6 from "node:path";
+async function readPlanPublicationStatus(projectRoot, phaseDir2, phasePrefix2) {
+  const invalid = (reason, token = "invalid") => ({
+    status: "invalid",
+    token,
+    reason
+  });
+  if (!/^\.blueprint\/phases\/[^/]+$/.test(phaseDir2) || phaseDir2.split("/").some((part) => part === "." || part === "..") || !/^\d+(?:\.\d+)*$/.test(phasePrefix2)) {
+    return invalid("Invalid plan publication scope.");
+  }
+  const marker = path6.join(projectRoot, phaseDir2, `${phasePrefix2}-PLAN-PUBLICATION.json`);
+  try {
+    const stat = await fs2.lstat(marker);
+    if (!stat.isFile() || stat.size > 1024 * 1024) {
+      return invalid("Plan publication marker must be a bounded regular file.");
+    }
+    const [realParent, realRoot] = await Promise.all([
+      fs2.realpath(path6.dirname(marker)),
+      fs2.realpath(projectRoot)
+    ]);
+    const relative = path6.relative(realRoot, realParent);
+    if (relative.startsWith(`..${path6.sep}`) || relative === ".." || path6.isAbsolute(relative)) {
+      return invalid("Plan publication marker escapes the repository.");
+    }
+    const raw = await fs2.readFile(marker, "utf8");
+    const token = createHash("sha256").update(raw).digest("hex");
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return invalid("Plan publication marker is malformed; resume planning before execution.", token);
+    }
+    const canonicalPlan = (value) => typeof value === "string" && path6.posix.dirname(value) === phaseDir2 && new RegExp(`^${phasePrefix2.replace(/\./g, "\\.")}-\\d+-PLAN\\.md$`).test(path6.posix.basename(value));
+    if (!data || typeof data !== "object" || data.version !== 1 || typeof data.status !== "string" || !["pending", "committed"].includes(data.status) || typeof data.requestId !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(data.requestId) || !Number.isSafeInteger(data.revision) || Number(data.revision) < 0 || !Array.isArray(data.files) || !data.files.every((file2) => file2 && typeof file2 === "object" && canonicalPlan(file2.path) && typeof file2.hash === "string" && /^[a-f0-9]{64}$/.test(file2.hash)) || !Array.isArray(data.removedPaths) || !data.removedPaths.every(canonicalPlan)) {
+      return invalid("Plan publication marker is invalid; resume planning before execution.", token);
+    }
+    return {
+      status: data.status,
+      token,
+      reason: data.status === "pending" ? "Plan publication is incomplete; resume /blu-plan-phase before execution." : null
+    };
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return { status: "absent", token: "missing", reason: null };
+    }
+    return invalid(`Cannot read plan publication marker: ${error2.message}`);
+  }
+}
+var init_plan_publication = __esm({
+  "src/mcp/tools/plan-publication.ts"() {
+    "use strict";
+  }
+});
+
+// src/mcp/tools/research-evidence.ts
+import { createHash as createHash2 } from "node:crypto";
+import { promises as fs3 } from "node:fs";
+import path7 from "node:path";
+function canonicalResearchEvidencePath(root, relative) {
+  return path7.relative(root, resolveRepoRelativeInputPathSync(root, relative)).split(path7.sep).join("/");
+}
+async function readResearchEvidence(root, relative, maxBytes = 256 * 1024) {
+  const absolute = resolveRepoRelativeInputPathSync(root, relative);
+  try {
+    const bytes = await fs3.readFile(absolute);
+    if (bytes.length > maxBytes) throw new Error(`Research evidence exceeds ${maxBytes} bytes: ${relative}. Select a smaller source.`);
+    return { path: relative, hash: researchDigest(bytes), content: bytes.toString("utf8") };
+  } catch (error2) {
+    if (error2.code === "ENOENT") return { path: relative, hash: null, content: null };
+    throw error2;
+  }
+}
+async function researchInputHash(root, relative) {
+  if (relative === "@research/effective-config") {
+    const config2 = await blueprintConfigGet({ cwd: root, scope: "effective" });
+    return researchDigest(stableResearchValue({ config: config2.config, provenance: config2.provenance }));
+  }
+  try {
+    return researchDigest(await fs3.readFile(resolveRepoRelativeInputPathSync(root, relative)));
+  } catch (error2) {
+    if (error2.code === "ENOENT") return null;
+    throw error2;
+  }
+}
+async function researchBasisFreshness(root, readSet) {
+  const stalePaths = [];
+  const unknownPaths = [];
+  if (!readSet.length) unknownPaths.push("readSet");
+  await Promise.all(readSet.map(async (item) => {
+    try {
+      if (await researchInputHash(root, item.path) !== item.hash) stalePaths.push(item.path);
+    } catch {
+      unknownPaths.push(item.path);
+    }
+  }));
+  stalePaths.sort();
+  unknownPaths.sort();
+  return { status: stalePaths.length ? "stale" : unknownPaths.length ? "unknown" : "fresh", stalePaths, unknownPaths };
+}
+function researchProvenancePath(researchPath) {
+  if (!researchPath.endsWith("-RESEARCH.md")) throw new Error("Invalid research artifact path.");
+  return researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json");
+}
+async function readPublishedResearchFreshness(root, researchPath) {
+  try {
+    const evidence = await readResearchEvidence(root, researchProvenancePath(researchPath));
+    if (evidence.content === null) {
+      const saved = await readResearchEvidence(root, researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json"), 32 * 1024 * 1024);
+      const session = saved.content ? safeJsonParseObject(saved.content, { label: saved.path, maxBytes: 32 * 1024 * 1024 }) : null;
+      const journal = session?.journal;
+      const incomplete = Boolean(journal?.stages?.artifact && journal.contentHash === await researchInputHash(root, researchPath));
+      return { status: "unknown", stalePaths: [], unknownPaths: [incomplete ? "publication" : "provenance"], reason: incomplete ? "Research session has not published source provenance." : "Legacy research has no recorded input fingerprints; review before reuse." };
+    }
+    const parsed = safeJsonParseObject(evidence.content, { label: evidence.path });
+    if (parsed.version !== 1 || typeof parsed.researchHash !== "string" || !/^[a-f0-9]{64}$/.test(parsed.researchHash) || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100 || !parsed.readSet.every((r) => {
+      const x = r;
+      return x && typeof x.path === "string" && (x.hash === null || typeof x.hash === "string" && /^[a-f0-9]{64}$/.test(x.hash));
+    })) throw new Error("Invalid research provenance.");
+    if (await researchInputHash(root, researchPath) !== parsed.researchHash)
+      return { status: "stale", stalePaths: [researchPath], unknownPaths: [], reason: "Research content changed after publication." };
+    return { ...await researchBasisFreshness(root, parsed.readSet), reason: null };
+  } catch (error2) {
+    return { status: "unknown", stalePaths: [], unknownPaths: [researchProvenancePath(researchPath)], reason: error2.message };
+  }
+}
+var researchDigest, stableResearchValue;
+var init_research_evidence = __esm({
+  "src/mcp/tools/research-evidence.ts"() {
+    "use strict";
+    init_security();
+    init_config();
+    researchDigest = (value) => createHash2("sha256").update(value).digest("hex");
+    stableResearchValue = (value) => JSON.stringify(value, (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.keys(item).sort().map((key2) => [key2, item[key2]])) : item);
+  }
+});
+
+// src/mcp/tools/quality-gates.ts
+import fs4 from "node:fs/promises";
+import path8 from "node:path";
 function normalizePhasePrefix(args) {
   return args.phasePrefix?.trim() || formatBlueprintPhasePrefix(args.phaseNumber);
 }
@@ -26233,7 +26359,7 @@ async function listPhaseArtifacts(args) {
   }
   try {
     const absolutePhaseRoot = resolveBlueprintPath(args.projectRoot, args.phaseRoot);
-    const entries = await fs2.readdir(absolutePhaseRoot, { withFileTypes: true });
+    const entries = await fs4.readdir(absolutePhaseRoot, { withFileTypes: true });
     return entries.filter((entry) => entry.isFile()).map((entry) => ({
       path: `${args.phaseRoot}/${entry.name}`,
       kind: "other"
@@ -26259,7 +26385,7 @@ async function readArtifactContent(args) {
     return args.artifact.content;
   }
   try {
-    return await fs2.readFile(resolveBlueprintPath(args.projectRoot, args.artifact.path), "utf8");
+    return await fs4.readFile(resolveBlueprintPath(args.projectRoot, args.artifact.path), "utf8");
   } catch {
     return null;
   }
@@ -26269,7 +26395,7 @@ async function artifactExists(projectRoot, artifactPath) {
     return false;
   }
   try {
-    const stats = await fs2.stat(resolveBlueprintPath(projectRoot, artifactPath));
+    const stats = await fs4.stat(resolveBlueprintPath(projectRoot, artifactPath));
     return stats.isFile();
   } catch {
     return false;
@@ -26302,7 +26428,7 @@ async function resolveExistingRepoFiles(args) {
       warnings.push(`Skipped wildcard quality-gate path from ${args.source}: ${candidate}`);
       continue;
     }
-    if (path6.isAbsolute(candidate)) {
+    if (path8.isAbsolute(candidate)) {
       warnings.push(`Skipped absolute quality-gate path from ${args.source}: ${candidate}`);
       continue;
     }
@@ -26320,7 +26446,7 @@ async function resolveExistingRepoFiles(args) {
     }
     let stats;
     try {
-      stats = await fs2.stat(absolutePath);
+      stats = await fs4.stat(absolutePath);
     } catch {
       continue;
     }
@@ -26755,7 +26881,7 @@ function savedReviewFollowUpCommandName(args) {
   return commandName;
 }
 function isReviewableConfigPath(relativePath) {
-  const basename = path6.posix.basename(relativePath);
+  const basename = path8.posix.basename(relativePath);
   if (REVIEWABLE_FILENAMES.has(basename)) {
     return true;
   }
@@ -26766,7 +26892,7 @@ function isReviewableRepoFile(relativePath) {
   if (normalized.length === 0 || normalized.startsWith(`${BLUEPRINT_DIR}/`) || normalized.startsWith("dist/")) {
     return false;
   }
-  const extension = path6.posix.extname(normalized);
+  const extension = path8.posix.extname(normalized);
   if (extension === ".md") {
     return false;
   }
@@ -26798,8 +26924,8 @@ async function resolveQualityGateSettings(projectRoot) {
 async function collectPlanDerivedFiles(args) {
   const files = /* @__PURE__ */ new Set();
   const planArtifacts = args.artifacts.filter((artifact) => {
-    const planId2 = parsePlanIdForSuffix(artifact.path, args.phasePrefix, "PLAN");
-    return planId2 !== null && args.completedSummaryIds.has(planId2);
+    const planId3 = parsePlanIdForSuffix(artifact.path, args.phasePrefix, "PLAN");
+    return planId3 !== null && args.completedSummaryIds.has(planId3);
   });
   for (const planArtifact of planArtifacts) {
     const content = await readArtifactContent({
@@ -26856,8 +26982,8 @@ async function collectCompletedSummaries(args) {
   const summaries = [];
   const summaryIds = /* @__PURE__ */ new Set();
   for (const artifact of args.artifacts) {
-    const planId2 = parsePlanIdForSuffix(artifact.path, args.phasePrefix, "SUMMARY");
-    if (planId2 === null) {
+    const planId3 = parsePlanIdForSuffix(artifact.path, args.phasePrefix, "SUMMARY");
+    if (planId3 === null) {
       continue;
     }
     const content = await readArtifactContent({
@@ -26872,7 +26998,7 @@ async function collectCompletedSummaries(args) {
       continue;
     }
     summaries.push(artifact);
-    summaryIds.add(planId2);
+    summaryIds.add(planId3);
   }
   return { summaries, summaryIds };
 }
@@ -27456,6 +27582,193 @@ var init_quality_gates = __esm({
   }
 });
 
+// src/mcp/tools/phase-locations.ts
+import { promises as fs5 } from "node:fs";
+import path9 from "node:path";
+async function pathExists(targetPath) {
+  try {
+    await fs5.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function materializePhaseDirectory(projectRoot, phaseDir2) {
+  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir2);
+  try {
+    const stats = await fs5.stat(phaseDirPath);
+    if (!stats.isDirectory()) {
+      throw new Error(
+        `Phase directory path exists but is not a directory: ${phaseDir2}. Resolve the drift before mutating the roadmap.`
+      );
+    }
+    return {
+      phaseDirPath,
+      created: false,
+      warnings: [`Phase directory already exists and can be reused: ${phaseDir2}`]
+    };
+  } catch (error2) {
+    const statError = error2;
+    if (statError.code !== "ENOENT") {
+      throw error2;
+    }
+  }
+  await fs5.mkdir(phaseDirPath, { recursive: true });
+  return {
+    phaseDirPath,
+    created: true,
+    warnings: []
+  };
+}
+async function listPhaseArtifacts2(rootPath, projectRoot) {
+  if (!await pathExists(rootPath)) {
+    return [];
+  }
+  const entries = await fs5.readdir(rootPath, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const absolutePath = path9.join(rootPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await listPhaseArtifacts2(absolutePath, projectRoot));
+      continue;
+    }
+    files.push(toRepoRelativePath(projectRoot, absolutePath));
+  }
+  return files.sort();
+}
+async function findPhaseDirectory(projectRoot, phaseNumber) {
+  const phasesRoot = resolveBlueprintPath(projectRoot, BLUEPRINT_PHASES_PATH);
+  if (!await pathExists(phasesRoot)) {
+    return {
+      phaseDir: null,
+      reason: "missing"
+    };
+  }
+  const entries = await fs5.readdir(phasesRoot, { withFileTypes: true });
+  const target = normalizePhaseNumber(phaseNumber);
+  const matches = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).filter((directoryName) => {
+    const prefix = extractPhaseNumberToken(directoryName);
+    return prefix === target;
+  });
+  if (matches.length === 0) {
+    return {
+      phaseDir: null,
+      reason: "missing"
+    };
+  }
+  if (matches.length > 1) {
+    return {
+      phaseDir: null,
+      reason: "ambiguous"
+    };
+  }
+  return {
+    phaseDir: toRepoRelativePath(projectRoot, path9.join(phasesRoot, matches[0])),
+    reason: null
+  };
+}
+async function readRoadmap(projectRoot) {
+  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  if (!await pathExists(roadmapPath)) {
+    throw new Error(
+      `Missing prerequisite artifact: ${BLUEPRINT_DIR}/ROADMAP.md. Restore it or run /blu-new-project before using phase discovery commands.`
+    );
+  }
+  const raw = await fs5.readFile(roadmapPath, "utf8");
+  const parsed = parseRoadmapDocument(raw);
+  return {
+    path: `${BLUEPRINT_DIR}/ROADMAP.md`,
+    milestone: parsed.milestone,
+    phases: parsed.phases
+  };
+}
+async function readMarkdownDocument(projectRoot, relativePath) {
+  const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
+  if (!await pathExists(absolutePath)) {
+    return null;
+  }
+  return await fs5.readFile(absolutePath, "utf8");
+}
+async function resolveRequestedPhase(projectRoot, requestedPhase, phases) {
+  const explicit = requestedPhase === void 0 ? void 0 : normalizeBlueprintInput(requestedPhase).trim();
+  if (explicit) {
+    return {
+      phaseNumber: extractPhaseNumberToken(explicit),
+      resolvedFrom: "explicit"
+    };
+  }
+  try {
+    const state = await loadBlueprintState(projectRoot);
+    const fromState = extractPhaseNumberToken(state.currentPhase);
+    if (fromState) {
+      return {
+        phaseNumber: fromState,
+        resolvedFrom: "state"
+      };
+    }
+  } catch {
+  }
+  const nextPhase = phases.find((phase) => !phase.completed) ?? phases[0];
+  return {
+    phaseNumber: nextPhase?.phaseNumber ?? null,
+    resolvedFrom: "roadmap"
+  };
+}
+function buildArtifactPath(phaseDir2, phasePrefix2, suffix) {
+  return `${phaseDir2}/${phasePrefix2}${suffix}`;
+}
+function findPhaseSpecArtifact(artifacts, phaseDir2, phasePrefix2) {
+  const expectedPath = buildArtifactPath(phaseDir2, phasePrefix2, "-SPEC.md");
+  return artifacts.find((artifact) => artifact === expectedPath) ?? null;
+}
+function findPhaseArtifact(artifacts, located, artifact) {
+  const expectedPath = artifactPathFor(located, artifact);
+  return artifacts.find((candidate) => candidate === expectedPath) ?? null;
+}
+function findPhaseValidationArtifact(artifacts, located, artifact) {
+  const expectedPath = validationArtifactPathFor(located, artifact);
+  return artifacts.find((candidate) => candidate === expectedPath) ?? null;
+}
+function artifactPathFor(located, artifact) {
+  return buildArtifactPath(
+    located.phaseDir,
+    located.phasePrefix,
+    PHASE_ARTIFACT_SUFFIXES[artifact]
+  );
+}
+function validationArtifactPathFor(located, artifact) {
+  return buildArtifactPath(
+    located.phaseDir,
+    located.phasePrefix,
+    PHASE_VALIDATION_ARTIFACT_SUFFIXES[artifact]
+  );
+}
+function checkpointPathFor(located) {
+  return buildArtifactPath(located.phaseDir, located.phasePrefix, PHASE_CHECKPOINT_SUFFIX);
+}
+var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX;
+var init_phase_locations = __esm({
+  "src/mcp/tools/phase-locations.ts"() {
+    "use strict";
+    init_artifacts();
+    init_phase_numbering();
+    init_phase_roadmap_parser();
+    init_state();
+    PHASE_ARTIFACT_SUFFIXES = {
+      context: "-CONTEXT.md",
+      "discussion-log": "-DISCUSSION-LOG.md",
+      research: "-RESEARCH.md",
+      spec: "-SPEC.md",
+      "ui-spec": "-UI-SPEC.md"
+    };
+    PHASE_VALIDATION_ARTIFACT_SUFFIXES = {
+      verification: "-VERIFICATION.md",
+      uat: "-UAT.md"
+    };
+    PHASE_CHECKPOINT_SUFFIX = "-DISCUSS-CHECKPOINT.json";
+  }
+});
+
 // src/mcp/tools/phase-markdown.ts
 function summarizeSavedArtifact(raw) {
   const normalizedLines = raw.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim());
@@ -27696,7 +28009,7 @@ __export(state_exports, {
   stateToolDefinitions: () => stateToolDefinitions,
   writePreparedBlueprintStateUpdate: () => writePreparedBlueprintStateUpdate
 });
-import { promises as fs3 } from "node:fs";
+import { promises as fs6 } from "node:fs";
 function roadmapDetailStatusIsComplete(status) {
   if (status === null) {
     return null;
@@ -27891,7 +28204,7 @@ async function loadPauseHandoffReport(projectRoot) {
       warnings: []
     };
   }
-  const raw = await fs3.readFile(absolutePath, "utf8");
+  const raw = await fs6.readFile(absolutePath, "utf8");
   return {
     found: true,
     path: PAUSE_HANDOFF_REPORT_PATH,
@@ -28122,7 +28435,7 @@ function parseStateDocument(raw) {
 async function readBlueprintStateFile(projectRoot) {
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
   try {
-    const raw = await fs3.readFile(statePath, "utf8");
+    const raw = await fs6.readFile(statePath, "utf8");
     return {
       state: parseStateDocument(raw),
       status: "loaded",
@@ -28355,11 +28668,11 @@ function detectRoutingPlanCycles(dependencyGraph) {
   const active = /* @__PURE__ */ new Set();
   const cycles = [];
   const seenCycleKeys = /* @__PURE__ */ new Set();
-  const visit = (planId2, trail) => {
-    if (active.has(planId2)) {
-      const cycleStartIndex = trail.indexOf(planId2);
+  const visit = (planId3, trail) => {
+    if (active.has(planId3)) {
+      const cycleStartIndex = trail.indexOf(planId3);
       if (cycleStartIndex >= 0) {
-        const cycle = [...trail.slice(cycleStartIndex), planId2];
+        const cycle = [...trail.slice(cycleStartIndex), planId3];
         const cycleKey = cycle.join("->");
         if (!seenCycleKeys.has(cycleKey)) {
           seenCycleKeys.add(cycleKey);
@@ -28368,18 +28681,18 @@ function detectRoutingPlanCycles(dependencyGraph) {
       }
       return;
     }
-    if (visited.has(planId2)) {
+    if (visited.has(planId3)) {
       return;
     }
-    visited.add(planId2);
-    active.add(planId2);
-    for (const dependencyId of dependencyGraph.get(planId2) ?? []) {
+    visited.add(planId3);
+    active.add(planId3);
+    for (const dependencyId of dependencyGraph.get(planId3) ?? []) {
       visit(dependencyId, [...trail, dependencyId]);
     }
-    active.delete(planId2);
+    active.delete(planId3);
   };
-  for (const planId2 of dependencyGraph.keys()) {
-    visit(planId2, [planId2]);
+  for (const planId3 of dependencyGraph.keys()) {
+    visit(planId3, [planId3]);
   }
   return cycles;
 }
@@ -28387,7 +28700,7 @@ async function inspectPhasePlanRoutingReadiness(args) {
   const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   let roadmapRequirementIds = [];
   try {
-    const roadmap = parseRoadmapDocument(await fs3.readFile(roadmapPath, "utf8"));
+    const roadmap = parseRoadmapDocument(await fs6.readFile(roadmapPath, "utf8"));
     roadmapRequirementIds = roadmap.phases.find((phase) => normalizePhaseNumber2(phase.phaseNumber) === args.currentPhase)?.requirements ?? [];
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
@@ -28404,18 +28717,18 @@ async function inspectPhasePlanRoutingReadiness(args) {
   const planMetadata = /* @__PURE__ */ new Map();
   for (const planPath of args.planPaths) {
     try {
-      const raw = await fs3.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
+      const raw = await fs6.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, args.currentPhase);
-      const planId2 = normalizeRoutingPlanId(validation.metadata.planId ?? "");
+      const planId3 = normalizeRoutingPlanId(validation.metadata.planId ?? "");
       for (const issue2 of validation.issues) {
         planValidationIssues.push(`${planPath}: ${issue2}`);
       }
-      if (!planId2) {
+      if (!planId3) {
         planValidationIssues.push(`${planPath}: frontmatter plan_id is missing or invalid.`);
         continue;
       }
-      dependencyGraph.set(planId2, []);
-      planMetadata.set(planId2, {
+      dependencyGraph.set(planId3, []);
+      planMetadata.set(planId3, {
         path: planPath,
         wave: typeof validation.metadata.wave === "number" ? validation.metadata.wave : null,
         dependsOn: validation.metadata.dependsOn
@@ -28428,9 +28741,9 @@ async function inspectPhasePlanRoutingReadiness(args) {
       planValidationIssues.push(`${planPath}: ${message}`);
     }
   }
-  for (const [planId2, metadata] of planMetadata) {
+  for (const [planId3, metadata] of planMetadata) {
     const normalizedDependencies = metadata.dependsOn.map((dependency) => normalizeRoutingPlanId(dependency)).filter((dependency) => dependency !== null);
-    dependencyGraph.set(planId2, normalizedDependencies);
+    dependencyGraph.set(planId3, normalizedDependencies);
     for (const dependencyId of normalizedDependencies) {
       const dependencyMetadata = planMetadata.get(dependencyId);
       if (!dependencyMetadata) {
@@ -28556,7 +28869,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     if (!artifactPath) {
       continue;
     }
-    const content = await fs3.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const content = await fs6.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
     const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths, {
       noUat: options.noUat === true
     }) : validateUatArtifactContent(content, summaryPaths, {
@@ -28612,7 +28925,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
 }
 async function listImmediateDirectories(rootPath) {
   try {
-    const entries = await fs3.readdir(rootPath, { withFileTypes: true });
+    const entries = await fs6.readdir(rootPath, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
   } catch {
     return [];
@@ -28628,7 +28941,7 @@ async function resolvePreparedStateRoutingFreshness(projectRoot, currentPhase2) 
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   let rawRoadmap;
   try {
-    rawRoadmap = await fs3.readFile(roadmapPath, "utf8");
+    rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
   } catch {
     return null;
   }
@@ -28687,7 +29000,7 @@ async function assertPreparedStateRoutingFreshness(prepared) {
 async function assertPreparedStateContentFreshness(prepared) {
   let actualStateContent;
   try {
-    actualStateContent = await fs3.readFile(prepared.absoluteStatePath, "utf8");
+    actualStateContent = await fs6.readFile(prepared.absoluteStatePath, "utf8");
   } catch (error2) {
     if (!isNodeErrorCode(error2, "ENOENT")) {
       throw error2;
@@ -28806,7 +29119,7 @@ function formatPhaseQualityGateWarning(args) {
 }
 async function uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings) {
   try {
-    const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
+    const raw = await fs6.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
     return !isExplicitUiSkipRationale(raw);
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
@@ -28827,7 +29140,7 @@ async function inspectUiSpecReadiness(projectRoot, uiSpecPath) {
     return emptyUiSpecReadiness();
   }
   try {
-    const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
+    const raw = await fs6.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
     const validation = validatePhaseArtifactContent(raw, "ui-spec");
     const warnings = [
       ...validation.issues.map((issue2) => `${uiSpecPath}: ${issue2}`),
@@ -29030,7 +29343,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const phaseDir2 = matchingPhaseDirs[0];
   const phasePrefix2 = formatPhasePrefix2(normalizedPhase);
   const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir2}`;
-  const phaseArtifacts = inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`));
+  const publicationBefore = await readPlanPublicationStatus(projectRoot, phaseRoot, phasePrefix2);
+  const phaseArtifacts = await listPhaseArtifacts2(resolveBlueprintPath(projectRoot, phaseRoot), projectRoot);
   const contextPath = `${phaseRoot}/${phasePrefix2}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix2}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix2}-UI-SPEC.md`;
@@ -29097,7 +29411,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   let contextUsableForNoUiBypass = false;
   if (hasContext) {
     try {
-      const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, contextPath), "utf8");
+      const raw = await fs6.readFile(resolveBlueprintPath(projectRoot, contextPath), "utf8");
       contextContent = raw;
       contextNeedsAuthoring = isBootstrapStarterContext(raw);
       contextUsableForNoUiBypass = validatePhaseArtifactContent(raw, "context").valid && !contextNeedsAuthoring;
@@ -29113,7 +29427,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   }
   if (hasResearch) {
     try {
-      const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
+      const raw = await fs6.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
       const validation = validateResearchArtifactContent(raw);
       researchValid = validation.valid;
       for (const issue2 of validation.issues) {
@@ -29144,7 +29458,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   }
   for (const planPath of planPaths) {
     try {
-      const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+      const raw = await fs6.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, normalizedPhase);
       for (const issue2 of validation.issues) {
         warnings.push(`${planPath}: ${issue2}`);
@@ -29170,6 +29484,11 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     );
   }
   warnings.push(...summaryWarnings, ...validationWarnings);
+  const publicationAfter = await readPlanPublicationStatus(projectRoot, phaseRoot, phasePrefix2);
+  if (publicationBefore.reason || publicationAfter.reason || publicationBefore.token !== publicationAfter.token) {
+    planRoutingReadiness.executionReady = false;
+    planRoutingReadiness.warnings.push(publicationAfter.reason ?? publicationBefore.reason ?? "Plan publication changed during state inspection; refresh planning before execution.");
+  }
   warnings.push(...planRoutingReadiness.warnings);
   const qualityGateEvaluation = await evaluatePhaseQualityGates({
     projectRoot,
@@ -29256,7 +29575,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
 async function readRoadmapSignals(projectRoot) {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   try {
-    const raw = await fs3.readFile(roadmapPath, "utf8");
+    const raw = await fs6.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
     const checkboxPhases = [...raw.matchAll(
       /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?)(?:\*\*)?\s*(?::|-)\s+/gm
@@ -29561,7 +29880,7 @@ async function readUiReviewRoutingState(args) {
     };
   }
   try {
-    const raw = await fs3.readFile(resolveBlueprintPath(args.projectRoot, args.uiReviewPath), "utf8");
+    const raw = await fs6.readFile(resolveBlueprintPath(args.projectRoot, args.uiReviewPath), "utf8");
     const verdict = extractUiReviewVerdict(raw);
     const nextSafeAction = extractNextSafeActionCommand(raw);
     return {
@@ -29621,7 +29940,7 @@ async function inspectMilestoneAuditReportStatus(args) {
     return emptyMilestoneAuditReportStatus();
   }
   try {
-    const raw = await fs3.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
+    const raw = await fs6.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
     const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
     const requirementGapRows = parseMilestoneAuditGapSection(
       extractMarkdownSection4(raw, "Requirement Gaps")
@@ -30108,7 +30427,7 @@ async function blueprintPauseHandoffWriteUnlocked(args) {
   const exists3 = await blueprintPathExists(absolutePath);
   const warnings = [];
   if (exists3) {
-    const existingContent = await fs3.readFile(absolutePath, "utf8");
+    const existingContent = await fs6.readFile(absolutePath, "utf8");
     const existingHandoff = parsePauseHandoff(existingContent);
     if (JSON.stringify(comparablePauseHandoffRecord(existingHandoff)) === JSON.stringify(comparablePauseHandoffRecord(handoff))) {
       warnings.push("Preserved existing pause handoff because the content was unchanged.");
@@ -30238,7 +30557,7 @@ async function prepareBlueprintStateUpdate(args = {}) {
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
   let expectedStateContent;
   try {
-    expectedStateContent = await fs3.readFile(statePath, "utf8");
+    expectedStateContent = await fs6.readFile(statePath, "utf8");
   } catch (error2) {
     if (!isNodeErrorCode(error2, "ENOENT")) {
       throw error2;
@@ -30295,8 +30614,8 @@ async function prepareBlueprintStateUpdate(args = {}) {
       ...Object.keys(sanitizedPatch),
       ...sanitizedPatch.lastUpdated ? [] : ["lastUpdated"]
     ])
-  ].filter((key) => {
-    const field = key;
+  ].filter((key2) => {
+    const field = key2;
     return JSON.stringify(comparisonState[field]) !== JSON.stringify(nextState[field]);
   });
   const warnings = [
@@ -30393,12 +30712,14 @@ var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADI
 var init_state = __esm({
   "src/mcp/tools/state.ts"() {
     "use strict";
+    init_plan_publication();
     init_v4();
     init_artifact_contracts();
     init_artifacts();
     init_config();
     init_quality_gates();
     init_phase_roadmap_parser();
+    init_phase_locations();
     init_phase_no_ui_signals();
     init_command_paths();
     init_phase_topology_lock();
@@ -30555,8 +30876,8 @@ var init_state = __esm({
 });
 
 // src/mcp/tools/phase-checkpoint-freshness.ts
-import { createHash } from "node:crypto";
-import { promises as fs4 } from "node:fs";
+import { createHash as createHash3 } from "node:crypto";
+import { promises as fs7 } from "node:fs";
 async function evaluateCheckpointFreshness(projectRoot, checkpoint) {
   const result = {
     status: "not-applicable",
@@ -30588,7 +30909,7 @@ async function evaluateCheckpointFreshness(projectRoot, checkpoint) {
       continue;
     }
     try {
-      const stat = await fs4.stat(absolutePath);
+      const stat = await fs7.stat(absolutePath);
       if (expectedAbsence) {
         result.stalePaths.push(inputPath);
         continue;
@@ -30597,7 +30918,7 @@ async function evaluateCheckpointFreshness(projectRoot, checkpoint) {
         result.unknownPaths.push(inputPath);
         continue;
       }
-      const unchanged = expectedHash ? createHash("sha256").update(await fs4.readFile(absolutePath)).digest("hex") === expectedHash : stat.mtime.getTime() === expectedTime;
+      const unchanged = expectedHash ? createHash3("sha256").update(await fs7.readFile(absolutePath)).digest("hex") === expectedHash : stat.mtime.getTime() === expectedTime;
       if (!unchanged) result.stalePaths.push(inputPath);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -30636,8 +30957,8 @@ function ensureCheckpointForPersistence(checkpoint, checkpointPath) {
   }
   return parsed.data;
 }
-function checkpointStringField(record2, key) {
-  const value = record2[key];
+function checkpointStringField(record2, key2) {
+  const value = record2[key2];
   return typeof value === "string" && value.trim() ? value : null;
 }
 function checkpointOwnerCommand(record2) {
@@ -30799,193 +31120,6 @@ var init_phase_checkpoint_records = __esm({
       discussCheckpointWriteSchema,
       researchCheckpointWriteSchema
     ]);
-  }
-});
-
-// src/mcp/tools/phase-locations.ts
-import { promises as fs5 } from "node:fs";
-import path7 from "node:path";
-async function pathExists(targetPath) {
-  try {
-    await fs5.access(targetPath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function materializePhaseDirectory(projectRoot, phaseDir2) {
-  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir2);
-  try {
-    const stats = await fs5.stat(phaseDirPath);
-    if (!stats.isDirectory()) {
-      throw new Error(
-        `Phase directory path exists but is not a directory: ${phaseDir2}. Resolve the drift before mutating the roadmap.`
-      );
-    }
-    return {
-      phaseDirPath,
-      created: false,
-      warnings: [`Phase directory already exists and can be reused: ${phaseDir2}`]
-    };
-  } catch (error2) {
-    const statError = error2;
-    if (statError.code !== "ENOENT") {
-      throw error2;
-    }
-  }
-  await fs5.mkdir(phaseDirPath, { recursive: true });
-  return {
-    phaseDirPath,
-    created: true,
-    warnings: []
-  };
-}
-async function listPhaseArtifacts2(rootPath, projectRoot) {
-  if (!await pathExists(rootPath)) {
-    return [];
-  }
-  const entries = await fs5.readdir(rootPath, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const absolutePath = path7.join(rootPath, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...await listPhaseArtifacts2(absolutePath, projectRoot));
-      continue;
-    }
-    files.push(toRepoRelativePath(projectRoot, absolutePath));
-  }
-  return files.sort();
-}
-async function findPhaseDirectory(projectRoot, phaseNumber) {
-  const phasesRoot = resolveBlueprintPath(projectRoot, BLUEPRINT_PHASES_PATH);
-  if (!await pathExists(phasesRoot)) {
-    return {
-      phaseDir: null,
-      reason: "missing"
-    };
-  }
-  const entries = await fs5.readdir(phasesRoot, { withFileTypes: true });
-  const target = normalizePhaseNumber(phaseNumber);
-  const matches = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).filter((directoryName) => {
-    const prefix = extractPhaseNumberToken(directoryName);
-    return prefix === target;
-  });
-  if (matches.length === 0) {
-    return {
-      phaseDir: null,
-      reason: "missing"
-    };
-  }
-  if (matches.length > 1) {
-    return {
-      phaseDir: null,
-      reason: "ambiguous"
-    };
-  }
-  return {
-    phaseDir: toRepoRelativePath(projectRoot, path7.join(phasesRoot, matches[0])),
-    reason: null
-  };
-}
-async function readRoadmap(projectRoot) {
-  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
-  if (!await pathExists(roadmapPath)) {
-    throw new Error(
-      `Missing prerequisite artifact: ${BLUEPRINT_DIR}/ROADMAP.md. Restore it or run /blu-new-project before using phase discovery commands.`
-    );
-  }
-  const raw = await fs5.readFile(roadmapPath, "utf8");
-  const parsed = parseRoadmapDocument(raw);
-  return {
-    path: `${BLUEPRINT_DIR}/ROADMAP.md`,
-    milestone: parsed.milestone,
-    phases: parsed.phases
-  };
-}
-async function readMarkdownDocument(projectRoot, relativePath) {
-  const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
-  if (!await pathExists(absolutePath)) {
-    return null;
-  }
-  return await fs5.readFile(absolutePath, "utf8");
-}
-async function resolveRequestedPhase(projectRoot, requestedPhase, phases) {
-  const explicit = requestedPhase === void 0 ? void 0 : normalizeBlueprintInput(requestedPhase).trim();
-  if (explicit) {
-    return {
-      phaseNumber: extractPhaseNumberToken(explicit),
-      resolvedFrom: "explicit"
-    };
-  }
-  try {
-    const state = await loadBlueprintState(projectRoot);
-    const fromState = extractPhaseNumberToken(state.currentPhase);
-    if (fromState) {
-      return {
-        phaseNumber: fromState,
-        resolvedFrom: "state"
-      };
-    }
-  } catch {
-  }
-  const nextPhase = phases.find((phase) => !phase.completed) ?? phases[0];
-  return {
-    phaseNumber: nextPhase?.phaseNumber ?? null,
-    resolvedFrom: "roadmap"
-  };
-}
-function buildArtifactPath(phaseDir2, phasePrefix2, suffix) {
-  return `${phaseDir2}/${phasePrefix2}${suffix}`;
-}
-function findPhaseSpecArtifact(artifacts, phaseDir2, phasePrefix2) {
-  const expectedPath = buildArtifactPath(phaseDir2, phasePrefix2, "-SPEC.md");
-  return artifacts.find((artifact) => artifact === expectedPath) ?? null;
-}
-function findPhaseArtifact(artifacts, located, artifact) {
-  const expectedPath = artifactPathFor(located, artifact);
-  return artifacts.find((candidate) => candidate === expectedPath) ?? null;
-}
-function findPhaseValidationArtifact(artifacts, located, artifact) {
-  const expectedPath = validationArtifactPathFor(located, artifact);
-  return artifacts.find((candidate) => candidate === expectedPath) ?? null;
-}
-function artifactPathFor(located, artifact) {
-  return buildArtifactPath(
-    located.phaseDir,
-    located.phasePrefix,
-    PHASE_ARTIFACT_SUFFIXES[artifact]
-  );
-}
-function validationArtifactPathFor(located, artifact) {
-  return buildArtifactPath(
-    located.phaseDir,
-    located.phasePrefix,
-    PHASE_VALIDATION_ARTIFACT_SUFFIXES[artifact]
-  );
-}
-function checkpointPathFor(located) {
-  return buildArtifactPath(located.phaseDir, located.phasePrefix, PHASE_CHECKPOINT_SUFFIX);
-}
-var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX;
-var init_phase_locations = __esm({
-  "src/mcp/tools/phase-locations.ts"() {
-    "use strict";
-    init_artifacts();
-    init_phase_numbering();
-    init_phase_roadmap_parser();
-    init_state();
-    PHASE_ARTIFACT_SUFFIXES = {
-      context: "-CONTEXT.md",
-      "discussion-log": "-DISCUSSION-LOG.md",
-      research: "-RESEARCH.md",
-      spec: "-SPEC.md",
-      "ui-spec": "-UI-SPEC.md"
-    };
-    PHASE_VALIDATION_ARTIFACT_SUFFIXES = {
-      verification: "-VERIFICATION.md",
-      uat: "-UAT.md"
-    };
-    PHASE_CHECKPOINT_SUFFIX = "-DISCUSS-CHECKPOINT.json";
   }
 });
 
@@ -31481,7 +31615,7 @@ var init_phase_roadmap_mutations = __esm({
 });
 
 // src/mcp/tools/phase-resolution.ts
-import path8 from "node:path";
+import path10 from "node:path";
 function buildLocateRecovery(reason) {
   if (!reason) {
     return [];
@@ -31510,7 +31644,7 @@ function buildLocateRecovery(reason) {
   ];
 }
 function fallbackPhaseName(phaseDir2) {
-  return slugToTitle(path8.basename(phaseDir2).replace(/^\d+(?:\.\d+)?-/, ""));
+  return slugToTitle(path10.basename(phaseDir2).replace(/^\d+(?:\.\d+)?-/, ""));
 }
 function toResolvedPhaseLocation(located) {
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
@@ -31789,7 +31923,7 @@ var init_phase_resolution = __esm({
 });
 
 // src/mcp/tools/phase-checkpoints.ts
-import { promises as fs6 } from "node:fs";
+import { promises as fs8 } from "node:fs";
 async function blueprintPhaseCheckpointGet(args = {}) {
   const snapshot3 = await resolvePhaseRuntimeSnapshot(args);
   const { projectRoot, located, resolved } = snapshot3;
@@ -31830,7 +31964,7 @@ async function blueprintPhaseCheckpointGet(args = {}) {
     };
   }
   const parsed = ensureCheckpointObject(
-    safeJsonParseObject(await fs6.readFile(absolutePath, "utf8"), {
+    safeJsonParseObject(await fs8.readFile(absolutePath, "utf8"), {
       label: checkpointPath,
       maxBytes: 256 * 1024
     }),
@@ -31876,7 +32010,7 @@ async function blueprintPhaseCheckpointPut(args) {
 `;
       const warnings = [];
       if (await pathExists(absolutePath)) {
-        const existingRaw = await fs6.readFile(absolutePath, "utf8");
+        const existingRaw = await fs8.readFile(absolutePath, "utf8");
         if (existingRaw === nextRaw) {
           warnings.push(`Preserved existing phase checkpoint because the content was unchanged.`);
           return {
@@ -31976,7 +32110,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
         };
       }
       const parsed = ensureCheckpointObject(
-        safeJsonParseObject(await fs6.readFile(absolutePath, "utf8"), {
+        safeJsonParseObject(await fs8.readFile(absolutePath, "utf8"), {
           label: checkpointPath,
           maxBytes: 256 * 1024
         }),
@@ -32006,7 +32140,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
           )
         };
       }
-      await fs6.rm(absolutePath, { force: true });
+      await fs8.rm(absolutePath, { force: true });
       return {
         phaseFound: true,
         phaseNumber: resolved2.phaseNumber,
@@ -32033,88 +32167,6 @@ var init_phase_checkpoints = __esm({
   }
 });
 
-// src/mcp/tools/research-evidence.ts
-import { createHash as createHash2 } from "node:crypto";
-import { promises as fs7 } from "node:fs";
-import path9 from "node:path";
-function canonicalResearchEvidencePath(root, relative) {
-  return path9.relative(root, resolveRepoRelativeInputPathSync(root, relative)).split(path9.sep).join("/");
-}
-async function readResearchEvidence(root, relative, maxBytes = 256 * 1024) {
-  const absolute = resolveRepoRelativeInputPathSync(root, relative);
-  try {
-    const bytes = await fs7.readFile(absolute);
-    if (bytes.length > maxBytes) throw new Error(`Research evidence exceeds ${maxBytes} bytes: ${relative}. Select a smaller source.`);
-    return { path: relative, hash: researchDigest(bytes), content: bytes.toString("utf8") };
-  } catch (error2) {
-    if (error2.code === "ENOENT") return { path: relative, hash: null, content: null };
-    throw error2;
-  }
-}
-async function researchInputHash(root, relative) {
-  if (relative === "@research/effective-config") {
-    const config2 = await blueprintConfigGet({ cwd: root, scope: "effective" });
-    return researchDigest(stableResearchValue({ config: config2.config, provenance: config2.provenance }));
-  }
-  try {
-    return researchDigest(await fs7.readFile(resolveRepoRelativeInputPathSync(root, relative)));
-  } catch (error2) {
-    if (error2.code === "ENOENT") return null;
-    throw error2;
-  }
-}
-async function researchBasisFreshness(root, readSet) {
-  const stalePaths = [];
-  const unknownPaths = [];
-  if (!readSet.length) unknownPaths.push("readSet");
-  await Promise.all(readSet.map(async (item) => {
-    try {
-      if (await researchInputHash(root, item.path) !== item.hash) stalePaths.push(item.path);
-    } catch {
-      unknownPaths.push(item.path);
-    }
-  }));
-  stalePaths.sort();
-  unknownPaths.sort();
-  return { status: stalePaths.length ? "stale" : unknownPaths.length ? "unknown" : "fresh", stalePaths, unknownPaths };
-}
-function researchProvenancePath(researchPath) {
-  if (!researchPath.endsWith("-RESEARCH.md")) throw new Error("Invalid research artifact path.");
-  return researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json");
-}
-async function readPublishedResearchFreshness(root, researchPath) {
-  try {
-    const evidence = await readResearchEvidence(root, researchProvenancePath(researchPath));
-    if (evidence.content === null) {
-      const saved = await readResearchEvidence(root, researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json"), 32 * 1024 * 1024);
-      const session = saved.content ? safeJsonParseObject(saved.content, { label: saved.path, maxBytes: 32 * 1024 * 1024 }) : null;
-      const journal = session?.journal;
-      const incomplete = Boolean(journal?.stages?.artifact && journal.contentHash === await researchInputHash(root, researchPath));
-      return { status: "unknown", stalePaths: [], unknownPaths: [incomplete ? "publication" : "provenance"], reason: incomplete ? "Research session has not published source provenance." : "Legacy research has no recorded input fingerprints; review before reuse." };
-    }
-    const parsed = safeJsonParseObject(evidence.content, { label: evidence.path });
-    if (parsed.version !== 1 || typeof parsed.researchHash !== "string" || !/^[a-f0-9]{64}$/.test(parsed.researchHash) || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100 || !parsed.readSet.every((r) => {
-      const x = r;
-      return x && typeof x.path === "string" && (x.hash === null || typeof x.hash === "string" && /^[a-f0-9]{64}$/.test(x.hash));
-    })) throw new Error("Invalid research provenance.");
-    if (await researchInputHash(root, researchPath) !== parsed.researchHash)
-      return { status: "stale", stalePaths: [researchPath], unknownPaths: [], reason: "Research content changed after publication." };
-    return { ...await researchBasisFreshness(root, parsed.readSet), reason: null };
-  } catch (error2) {
-    return { status: "unknown", stalePaths: [], unknownPaths: [researchProvenancePath(researchPath)], reason: error2.message };
-  }
-}
-var researchDigest, stableResearchValue;
-var init_research_evidence = __esm({
-  "src/mcp/tools/research-evidence.ts"() {
-    "use strict";
-    init_security();
-    init_config();
-    researchDigest = (value) => createHash2("sha256").update(value).digest("hex");
-    stableResearchValue = (value) => JSON.stringify(value, (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.keys(item).sort().map((key) => [key, item[key]])) : item);
-  }
-});
-
 // src/mcp/tools/phase-json-helpers.ts
 function collectModelStringValues(value) {
   if (typeof value === "string") {
@@ -32134,8 +32186,8 @@ function cloneJsonObject2(value) {
 function asJsonObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
-function getJsonObjectProperty(value, key) {
-  return asJsonObject(value[key]);
+function getJsonObjectProperty(value, key2) {
+  return asJsonObject(value[key2]);
 }
 function createAjvValidator() {
   return new import__.Ajv2020({
@@ -32262,8 +32314,8 @@ function validatePhaseContextModelInput(model) {
     });
   } else {
     const contract = readArtifactContract("phase.context");
-    const schema = contract.modelContract?.jsonSchema;
-    if (!schema) {
+    const schema2 = contract.modelContract?.jsonSchema;
+    if (!schema2) {
       diagnostics.push({
         path: "model",
         code: "schema.missing",
@@ -32273,7 +32325,7 @@ function validatePhaseContextModelInput(model) {
         nextTool: "blueprint_phase_artifact_write"
       });
     } else {
-      const validate = contextModelValidator ??= createAjvValidator().compile(schema);
+      const validate = contextModelValidator ??= createAjvValidator().compile(schema2);
       const valid = validate(modelObject);
       if (!valid) {
         diagnostics.push(
@@ -32404,8 +32456,8 @@ var init_phase_context_model = __esm({
 });
 
 // src/mcp/tools/phase-artifacts.ts
-import { createHash as createHash3 } from "node:crypto";
-import { promises as fs8 } from "node:fs";
+import { createHash as createHash4 } from "node:crypto";
+import { promises as fs9 } from "node:fs";
 function isScaffoldGeneratedPhaseArtifact(content) {
   return isScaffoldGeneratedArtifact(content);
 }
@@ -32452,7 +32504,7 @@ async function blueprintPhaseArtifactRead(args) {
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    content: await fs8.readFile(absolutePath, "utf8"),
+    content: await fs9.readFile(absolutePath, "utf8"),
     reason: null
   };
 }
@@ -32497,7 +32549,7 @@ async function blueprintPhaseArtifactScaffold(args) {
       } catch (error2) {
         if (phaseDirState.created) {
           try {
-            await fs8.rm(phaseDirState.phaseDirPath, { recursive: true, force: true });
+            await fs9.rm(phaseDirState.phaseDirPath, { recursive: true, force: true });
           } catch (rollbackError) {
             const reason = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
             const original = error2 instanceof Error ? error2.message : String(error2);
@@ -32732,12 +32784,12 @@ async function blueprintPhaseArtifactWrite(args) {
       return withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
         const exists3 = await pathExists(absolutePath);
         if (args.expectedContentHash !== void 0) {
-          const actualHash = exists3 ? createHash3("sha256").update(await fs8.readFile(absolutePath)).digest("hex") : null;
+          const actualHash = exists3 ? createHash4("sha256").update(await fs9.readFile(absolutePath)).digest("hex") : null;
           if (actualHash !== args.expectedContentHash) throw new Error(`Stale artifact baseline: ${artifactPath2}. Refresh and explicitly reconcile before publishing.`);
         }
         const warnings = [];
         if (exists3) {
-          const existingContent = await fs8.readFile(absolutePath, "utf8");
+          const existingContent = await fs9.readFile(absolutePath, "utf8");
           const existingValidation = validatePhaseArtifactContent(
             args.artifact === "research" ? canonicalizeResearchHeadingLines(normalizeTextContent(existingContent)) : existingContent,
             args.artifact
@@ -32847,7 +32899,7 @@ async function blueprintPhaseUiSkipWrite(args) {
         const exists3 = await pathExists(absolutePath);
         const warnings = [];
         if (exists3) {
-          const existingContent = await fs8.readFile(absolutePath, "utf8");
+          const existingContent = await fs9.readFile(absolutePath, "utf8");
           const existingValidation = validatePhaseArtifactContent(existingContent, "ui-spec");
           if (existingContent === normalizedContent) {
             if (!validation.valid) {
@@ -32948,7 +33000,7 @@ var init_phase_artifacts = __esm({
 });
 
 // src/mcp/tools/phase-plan-identifiers.ts
-import path10 from "node:path";
+import path11 from "node:path";
 function normalizePlanId(value) {
   const normalizedInput = normalizeBlueprintInput(value).trim();
   if (/^0+$/.test(normalizedInput)) {
@@ -32963,16 +33015,16 @@ function parsePlanArtifactPath(pathValue, phasePrefix2) {
   return match ? normalizePlanId(match[1]) : null;
 }
 function parseCanonicalPlanArtifactPath(pathValue, located) {
-  if (path10.posix.dirname(pathValue) !== located.phaseDir) {
+  if (path11.posix.dirname(pathValue) !== located.phaseDir) {
     return null;
   }
-  const match = path10.posix.basename(pathValue).match(
+  const match = path11.posix.basename(pathValue).match(
     new RegExp(`^${escapeForRegex2(located.phasePrefix)}-(\\d+)-PLAN\\.md$`)
   );
   return match ? normalizePlanId(match[1]) : null;
 }
-function planPathFor(located, planId2) {
-  return `${located.phaseDir}/${located.phasePrefix}-${normalizePlanId(planId2)}-PLAN.md`;
+function planPathFor(located, planId3) {
+  return `${located.phaseDir}/${located.phasePrefix}-${normalizePlanId(planId3)}-PLAN.md`;
 }
 function escapeForRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -33026,8 +33078,8 @@ function reconcilePlanHeadingLine(line, fromPlanId, toPlanId) {
   const updatedLine = replacePlanSlotLabel(line, fromPlanId, toPlanId);
   return updatedLine === line ? null : updatedLine;
 }
-function reconcileAutoAssignedPlanContent(content, planId2) {
-  const normalizedPlanId = normalizePlanId(planId2);
+function reconcileAutoAssignedPlanContent(content, planId3) {
+  const normalizedPlanId = normalizePlanId(planId3);
   const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---(\n|$)/);
   if (!frontmatterMatch || frontmatterMatch.index === void 0) {
     return content;
@@ -33120,7 +33172,7 @@ var init_phase_plan_identifiers = __esm({
 });
 
 // src/mcp/tools/phase-context-tools.ts
-import { promises as fs9 } from "node:fs";
+import { promises as fs10 } from "node:fs";
 function extractRequirementIdsFromRequirementsTable(section) {
   return extractMarkdownTableRows(section).map((row) => row[0]?.trim() ?? "").filter((id) => DURABLE_REQUIREMENT_ID_PATTERN.test(id));
 }
@@ -33272,7 +33324,7 @@ async function readMappedCodebaseContext(projectRoot) {
     }
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     try {
-      const raw = await fs9.readFile(absolutePath, "utf8");
+      const raw = await fs10.readFile(absolutePath, "utf8");
       const summary = summarizeSavedArtifact(raw);
       artifacts.push(artifact);
       digest2.push({
@@ -33330,7 +33382,7 @@ async function evaluatePhaseArtifactUsability(projectRoot, artifactPath, artifac
   }
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   try {
-    const raw = await fs9.readFile(absolutePath, "utf8");
+    const raw = await fs10.readFile(absolutePath, "utf8");
     const validation = validatePhaseArtifactContent(raw, artifact);
     const bootstrapStarter = artifact === "context" && isBootstrapStarterContext(raw);
     const issues = [...validation.issues];
@@ -33626,7 +33678,7 @@ async function buildPhaseResearchStatusFromContext(projectRoot, context) {
   if (researchPath) {
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
-      const raw = await fs9.readFile(absolutePath, "utf8");
+      const raw = await fs10.readFile(absolutePath, "utf8");
       const validation = validatePhaseArtifactContent(
         canonicalizeResearchHeadingLines(normalizeTextContent(raw)),
         "research"
@@ -33733,27 +33785,27 @@ var init_phase_context_tools = __esm({
 });
 
 // src/mcp/tools/phase-task-schema-helpers.ts
-function setArrayItemEnum(schema, values) {
-  if (!schema || values.length === 0) {
+function setArrayItemEnum(schema2, values) {
+  if (!schema2 || values.length === 0) {
     return;
   }
-  const items = getJsonObjectProperty(schema, "items");
+  const items = getJsonObjectProperty(schema2, "items");
   if (items) {
     items.enum = values;
   }
 }
-function setArrayMaxItems(schema, maxItems) {
-  if (!schema) {
+function setArrayMaxItems(schema2, maxItems) {
+  if (!schema2) {
     return;
   }
-  schema.maxItems = maxItems;
+  schema2.maxItems = maxItems;
 }
-function allowOnlyEmptyArray(schema) {
-  if (!schema) {
+function allowOnlyEmptyArray(schema2) {
+  if (!schema2) {
     return;
   }
-  schema.minItems = 0;
-  schema.maxItems = 0;
+  schema2.minItems = 0;
+  schema2.maxItems = 0;
 }
 function exactObjectPropertyContains(propertyName, value) {
   return {
@@ -33796,9 +33848,9 @@ var init_phase_task_schema_helpers = __esm({
 
 // src/mcp/tools/phase-plan-schemas.ts
 function buildPhasePlanTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-  const defs = getJsonObjectProperty(schema, "$defs");
+  const schema2 = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema2, "properties");
+  const defs = getJsonObjectProperty(schema2, "$defs");
   const task = defs ? getJsonObjectProperty(defs, "task") : null;
   const taskProperties = task ? getJsonObjectProperty(task, "properties") : null;
   const requirementCoverageRow = defs ? getJsonObjectProperty(defs, "requirementCoverageRow") : null;
@@ -33806,7 +33858,7 @@ function buildPhasePlanTaskSchema(args) {
   const evidenceCoverageRow = defs ? getJsonObjectProperty(defs, "evidenceCoverageRow") : null;
   const evidenceCoverageRowProperties = evidenceCoverageRow ? getJsonObjectProperty(evidenceCoverageRow, "properties") : null;
   if (!properties) {
-    return schema;
+    return schema2;
   }
   const dependsOn = getJsonObjectProperty(properties, "dependsOn");
   if (dependsOn) {
@@ -33855,12 +33907,12 @@ function buildPhasePlanTaskSchema(args) {
   } else {
     allowOnlyEmptyArray(getJsonObjectProperty(properties, "evidenceCoverage"));
   }
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     knownRequirements: args.knownRequirements,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
     allowedDependencyPlanIds: args.allowedDependencyPlanIds
   };
-  return schema;
+  return schema2;
 }
 var init_phase_plan_schemas = __esm({
   "src/mcp/tools/phase-plan-schemas.ts"() {
@@ -33934,11 +33986,11 @@ var init_phase_schema_paths = __esm({
 });
 
 // src/mcp/tools/phase-execution-surfaces.ts
-import path11 from "node:path";
+import path12 from "node:path";
 function normalizeExecutionSurfacePath(value) {
   const normalized = value.replaceAll("\\", "/").trim();
   const withoutDotPrefix = normalized.replace(/^\.\//, "");
-  const collapsed = path11.posix.normalize(withoutDotPrefix);
+  const collapsed = path12.posix.normalize(withoutDotPrefix);
   if (collapsed === ".") {
     return withoutDotPrefix.replace(/\/+$/u, "");
   }
@@ -33981,11 +34033,11 @@ function planExecutionSurfaces(plan) {
     if (surface.value.length === 0) {
       return false;
     }
-    const key = `${surface.kind}:${surface.value}`;
-    if (seen.has(key)) {
+    const key2 = `${surface.kind}:${surface.value}`;
+    if (seen.has(key2)) {
       return false;
     }
-    seen.add(key);
+    seen.add(key2);
     return true;
   });
 }
@@ -34000,9 +34052,9 @@ function sharedExecutionSurfaces(left, right) {
       }
       const value = executionSurfaceSharedValue(leftSurface.value, rightSurface.value);
       const kinds = uniqueSortedStrings([leftSurface.kind, rightSurface.kind]);
-      const key = `${value}:${kinds.join(",")}`;
-      if (!shared.has(key)) {
-        shared.set(key, { value, kinds });
+      const key2 = `${value}:${kinds.join(",")}`;
+      if (!shared.has(key2)) {
+        shared.set(key2, { value, kinds });
       }
     }
   }
@@ -34023,11 +34075,11 @@ function parseSummaryArtifactPath(pathValue, phasePrefix2) {
   );
   return match ? normalizePlanId(match[1]) : null;
 }
-function summaryPathFor(located, planId2) {
+function summaryPathFor(located, planId3) {
   return buildArtifactPath(
     located.phaseDir,
     located.phasePrefix,
-    `-${normalizePlanId(planId2)}-SUMMARY.md`
+    `-${normalizePlanId(planId3)}-SUMMARY.md`
   );
 }
 function normalizeSummaryMarkerValue(value) {
@@ -34052,7 +34104,7 @@ function phaseSummaryCompletedRoute(args) {
 function remainingPlanIdsAfterSelectedCompletion(args) {
   const completedAfterSelection = new Set(args.completedPlanIds);
   completedAfterSelection.add(args.selectedPlanId);
-  return args.planIds.filter((planId2) => !completedAfterSelection.has(planId2));
+  return args.planIds.filter((planId3) => !completedAfterSelection.has(planId3));
 }
 function completedRouteAfterSelectedCompletion(args) {
   return phaseSummaryCompletedRoute({
@@ -34334,7 +34386,7 @@ function renderYamlList(items) {
 function renderMarkdownTableRows(rows) {
   return rows.map((row) => `| ${row.map((cell) => markdownCell(cell)).join(" | ")} |`).join("\n");
 }
-function renderPhasePlanModelContent(model, resolved, planId2) {
+function renderPhasePlanModelContent(model, resolved, planId3) {
   const acceptanceCriteria = uniquePreservingOrder(
     model.tasks.flatMap((task) => task.acceptanceCriteria)
   );
@@ -34405,7 +34457,7 @@ ${renderBulletList(task.acceptanceCriteria)}`
   );
   return normalizeTextContent(`---
 phase: ${resolved.phaseNumber}
-plan_id: ${quoteYamlScalar(planId2)}
+plan_id: ${quoteYamlScalar(planId3)}
 title: ${quoteYamlScalar(model.title)}
 wave: ${model.wave}
 status: ${model.status}
@@ -34422,7 +34474,7 @@ ${renderYamlList(acceptanceCriteria)}
 autonomous: ${model.autonomous}
 ---
 
-# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - Plan ${planId2}
+# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - Plan ${planId3}
 
 ## Goal
 
@@ -34526,7 +34578,7 @@ var init_phase_command_actions = __esm({
 });
 
 // src/mcp/tools/phase-summary-inventory.ts
-import { promises as fs10 } from "node:fs";
+import { promises as fs11 } from "node:fs";
 function summarizeMarkdownContent(content) {
   const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
   const summary = content.split("\n").map((line) => line.trim()).find(
@@ -34537,11 +34589,11 @@ function summarizeMarkdownContent(content) {
     summary
   };
 }
-function toPhaseSummaryRecord(planId2, pathValue, content, linkedPlanPath) {
+function toPhaseSummaryRecord(planId3, pathValue, content, linkedPlanPath) {
   const metadata = summarizeMarkdownContent(content);
   const status = extractSummaryStatus(content);
   return {
-    planId: planId2,
+    planId: planId3,
     path: pathValue,
     linkedPlanPath,
     status,
@@ -34566,20 +34618,20 @@ async function loadPhaseSummaryInventory(args) {
   const planRecordsById = new Map(planIndex.plans.map((plan) => [plan.planId, plan]));
   const loadedSummaries = [];
   for (const summaryPath2 of summaryPaths) {
-    const planId2 = parseSummaryArtifactPath(summaryPath2, resolved.phasePrefix);
-    if (!planId2) {
+    const planId3 = parseSummaryArtifactPath(summaryPath2, resolved.phasePrefix);
+    if (!planId3) {
       warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath2}`);
       continue;
     }
-    const content = await fs10.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const content = await fs11.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
     const linkedPlanPath = extractSummaryPlanReference(content);
     const strictValidation = validateStrictSummaryArtifactContent(content, {
-      linkedPlanPath: knownPlanPaths.get(planId2) ?? null
+      linkedPlanPath: knownPlanPaths.get(planId3) ?? null
     });
-    const linkedPlan = planRecordsById.get(planId2) ?? null;
+    const linkedPlan = planRecordsById.get(planId3) ?? null;
     const livePlanValidation = validateSummaryAgainstLivePlanInventory2(content, {
       resolved,
-      planId: planId2,
+      planId: planId3,
       plan: linkedPlan,
       knownPlanIds,
       completedRouteValidation: { mode: "skip" }
@@ -34589,13 +34641,13 @@ async function loadPhaseSummaryInventory(args) {
       issues: [...strictValidation.issues, ...livePlanValidation.issues],
       warnings: [...strictValidation.warnings, ...livePlanValidation.warnings]
     };
-    const record2 = toPhaseSummaryRecord(planId2, summaryPath2, content, linkedPlanPath);
+    const record2 = toPhaseSummaryRecord(planId3, summaryPath2, content, linkedPlanPath);
     const summaryStatus = extractSummaryStatus(content);
     const completedEvidence = summaryCountsAsCompleted(summaryStatus, content);
     const legacyCompletedEvidence = completedEvidence && summaryStatus === null;
     summaries.push(record2);
     loadedSummaries.push({
-      planId: planId2,
+      planId: planId3,
       path: summaryPath2,
       content,
       record: record2,
@@ -34657,7 +34709,7 @@ async function loadPhaseSummaryInventory(args) {
       };
     }
     const nextCompletedPlans = deriveCompletedPlans();
-    if (nextCompletedPlans.size === completedPlans.size && [...nextCompletedPlans].every((planId2) => completedPlans.has(planId2))) {
+    if (nextCompletedPlans.size === completedPlans.size && [...nextCompletedPlans].every((planId3) => completedPlans.has(planId3))) {
       completedPlans = nextCompletedPlans;
       break;
     }
@@ -34686,7 +34738,7 @@ async function loadPhaseSummaryInventory(args) {
       warnings.push(...loaded.validation.warnings.map((warning) => `${loaded.path}: ${warning}`));
     }
   }
-  const pendingPlans = planIndex.plans.map((plan) => plan.planId).filter((planId2) => !completedPlans.has(planId2));
+  const pendingPlans = planIndex.plans.map((plan) => plan.planId).filter((planId3) => !completedPlans.has(planId3));
   return {
     summaryIndex: {
       phaseFound: true,
@@ -34703,9 +34755,9 @@ async function loadPhaseSummaryInventory(args) {
   };
 }
 function phaseSummaryReadFromInventory(args) {
-  const { resolved, planId: planId2, inventory, validateSummaryAgainstLivePlanInventory: validateSummaryAgainstLivePlanInventory2 } = args;
-  const pathValue = summaryPathFor(resolved, planId2);
-  const loaded = inventory.summariesByPlanId.get(planId2);
+  const { resolved, planId: planId3, inventory, validateSummaryAgainstLivePlanInventory: validateSummaryAgainstLivePlanInventory2 } = args;
+  const pathValue = summaryPathFor(resolved, planId3);
+  const loaded = inventory.summariesByPlanId.get(planId3);
   if (!loaded) {
     return {
       phaseFound: true,
@@ -34714,7 +34766,7 @@ function phaseSummaryReadFromInventory(args) {
       phasePrefix: resolved.phasePrefix,
       phaseName: resolved.phaseName,
       phaseDir: resolved.phaseDir,
-      planId: planId2,
+      planId: planId3,
       path: pathValue,
       content: null,
       metadata: null,
@@ -34723,7 +34775,7 @@ function phaseSummaryReadFromInventory(args) {
     };
   }
   const strictValidation = validateStrictSummaryArtifactContent(loaded.content, {
-    linkedPlanPath: planPathFor(resolved, planId2),
+    linkedPlanPath: planPathFor(resolved, planId3),
     requirePlanMarker: true
   });
   const knownPlanIds = new Set(
@@ -34734,7 +34786,7 @@ function phaseSummaryReadFromInventory(args) {
   );
   const livePlanValidation = validateSummaryAgainstLivePlanInventory2(loaded.content, {
     resolved,
-    planId: planId2,
+    planId: planId3,
     plan: loaded.linkedPlan,
     knownPlanIds,
     completedDependencyPlanIds: new Set(inventory.summaryIndex.completedPlans),
@@ -34752,7 +34804,7 @@ function phaseSummaryReadFromInventory(args) {
     phasePrefix: resolved.phasePrefix,
     phaseName: resolved.phaseName,
     phaseDir: resolved.phaseDir,
-    planId: planId2,
+    planId: planId3,
     path: pathValue,
     content: loaded.content,
     metadata: {
@@ -34786,7 +34838,7 @@ async function collectValidatedSummaryPaths(projectRoot, summaries) {
   const summaryPaths = [];
   const warnings = [];
   for (const summary of summaries) {
-    const content = await fs10.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const content = await fs11.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: summary.linkedPlanPath
     });
@@ -35109,7 +35161,7 @@ function collectModelStringEntries(value, pathValue = "model") {
   }
   if (typeof value === "object" && value !== null) {
     return Object.entries(value).flatMap(
-      ([key, item]) => collectModelStringEntries(item, `${pathValue}.${key}`)
+      ([key2, item]) => collectModelStringEntries(item, `${pathValue}.${key2}`)
     );
   }
   return [];
@@ -35506,8 +35558,8 @@ async function buildPhaseVerificationAllowedNextActions(phaseNumber, noUat) {
   };
 }
 function buildPhaseVerificationTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
+  const schema2 = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema2, "properties");
   if (properties) {
     const evidenceReviewedSummaryPaths = getJsonObjectProperty(
       properties,
@@ -35529,8 +35581,8 @@ function buildPhaseVerificationTaskSchema(args) {
       nextSafeAction.enum = args.allowedActions;
     }
   }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
+  const existingAllOf = Array.isArray(schema2.allOf) ? schema2.allOf : [];
+  schema2.allOf = [
     ...existingAllOf,
     {
       if: {
@@ -35627,14 +35679,14 @@ function buildPhaseVerificationTaskSchema(args) {
       }
     }
   ];
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     summaryPaths: args.summaryPaths,
     readyAction: args.readyAction,
     repairActions: args.repairActions,
     allowedActions: args.allowedActions,
     noUat: args.readyAction === "/blu-progress"
   };
-  return schema;
+  return schema2;
 }
 async function phaseVerificationModelSchemas(args) {
   const modelContract = args.contract.modelContract;
@@ -35688,9 +35740,9 @@ async function buildPhaseUatAllowedNextActions(phaseNumber) {
   };
 }
 function buildPhaseUatTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-  const defs = getJsonObjectProperty(schema, "$defs");
+  const schema2 = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema2, "properties");
+  const defs = getJsonObjectProperty(schema2, "$defs");
   const testMatrixRow = defs ? getJsonObjectProperty(defs, "testMatrixRow") : null;
   const testMatrixRowProperties = testMatrixRow ? getJsonObjectProperty(testMatrixRow, "properties") : null;
   const evidencePaths = uniquePreservingOrder([
@@ -35718,8 +35770,8 @@ function buildPhaseUatTaskSchema(args) {
       nextSafeAction.enum = args.allowedActions;
     }
   }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
+  const existingAllOf = Array.isArray(schema2.allOf) ? schema2.allOf : [];
+  schema2.allOf = [
     ...existingAllOf,
     {
       if: {
@@ -35748,7 +35800,7 @@ function buildPhaseUatTaskSchema(args) {
       }
     }
   ];
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     summaryPaths: args.summaryPaths,
     verificationPath: args.verificationPath,
     evidencePaths,
@@ -35760,7 +35812,7 @@ function buildPhaseUatTaskSchema(args) {
       verificationPath: "required upstream context"
     }
   };
-  return schema;
+  return schema2;
 }
 async function phaseUatModelSchemas(args) {
   const modelContract = args.contract.modelContract;
@@ -35795,7 +35847,7 @@ var init_phase_validation_schemas = __esm({
 });
 
 // src/mcp/tools/phase-validation-tools.ts
-import { promises as fs11 } from "node:fs";
+import { promises as fs12 } from "node:fs";
 function trimPhaseValidationStandaloneValidateModelResult(validation) {
   const {
     taskSchema: _taskSchema,
@@ -35891,7 +35943,7 @@ async function collectValidationAuthoringSummaryEvidence(projectRoot, summaries,
   const evidence = [];
   const warnings = [];
   for (const summary of completedSummaryRecords(summaries, completedPlanIds)) {
-    const content = await fs11.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const content = await fs12.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: summary.linkedPlanPath
     });
@@ -35922,33 +35974,33 @@ async function collectValidationAuthoringSummaryEvidence(projectRoot, summaries,
 }
 async function validationPrerequisiteBlockers(projectRoot, resolved, artifact, summaryPaths, deps) {
   const blockers = [];
-  let verification = null;
+  let verification2 = null;
   if (summaryPaths.length === 0) {
     blockers.push(
       `Phase ${resolved.phaseNumber} does not have any valid completed execution summaries.`
     );
   }
   if (artifact === "uat") {
-    verification = await blueprintPhaseValidationRead({
+    verification2 = await blueprintPhaseValidationRead({
       cwd: projectRoot,
       phase: resolved.phaseNumber,
       artifact: "verification"
     }, deps);
-    if (!verification.found) {
+    if (!verification2.found) {
       blockers.push(
         `Phase ${resolved.phaseNumber} must have a saved VERIFICATION artifact before UAT.`
       );
-    } else if (!verification.validation?.valid) {
+    } else if (!verification2.validation?.valid) {
       blockers.push(
         `Phase ${resolved.phaseNumber} must have a valid VERIFICATION artifact before UAT.`
       );
-    } else if (!verification.verificationReadyForUat) {
+    } else if (!verification2.verificationReadyForUat) {
       blockers.push(
         `Phase ${resolved.phaseNumber} verification is valid but not ready for UAT.`
       );
     }
   }
-  return { blockers, verification };
+  return { blockers, verification: verification2 };
 }
 async function blueprintPhaseValidationAuthoringContext(args, deps) {
   const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
@@ -36004,7 +36056,7 @@ async function blueprintPhaseValidationAuthoringContext(args, deps) {
     summaryEvidence.summaryPaths,
     deps
   );
-  const verification = args.artifact === "verification" ? existing : prerequisites.verification;
+  const verification2 = args.artifact === "verification" ? existing : prerequisites.verification;
   const modelSchemas = args.artifact === "verification" ? await phaseVerificationModelSchemas({
     contract,
     phaseNumber: resolved.phaseNumber,
@@ -36030,7 +36082,7 @@ async function blueprintPhaseValidationAuthoringContext(args, deps) {
     summaryPaths: summaryEvidence.summaryPaths,
     summaryEvidence: summaryEvidence.evidence,
     existing,
-    verification,
+    verification: verification2,
     prerequisiteBlockers: prerequisites.blockers,
     readyForDraft,
     schemaPath: modelSchemas.schemaPath,
@@ -36313,7 +36365,7 @@ async function blueprintPhaseValidationRead(args, deps) {
       reason: `${artifactPath} does not exist yet.`
     };
   }
-  const content = await fs11.readFile(absolutePath, "utf8");
+  const content = await fs12.readFile(absolutePath, "utf8");
   const summaryIndex = await deps.readSummaryIndex({
     cwd: projectRoot,
     phase: resolved.phaseNumber
@@ -36475,7 +36527,7 @@ async function blueprintPhaseValidationWrite(args, deps) {
             `Phase ${refreshedResolved.phaseNumber} must be validated before UAT. Run /blu-validate-phase ${refreshedResolved.phaseNumber} first.`
           );
         }
-        const verificationContent = await fs11.readFile(verificationAbsolutePath, "utf8");
+        const verificationContent = await fs12.readFile(verificationAbsolutePath, "utf8");
         const verificationValidation = validateVerificationArtifactContent(
           verificationContent,
           summaryPaths,
@@ -36493,7 +36545,7 @@ async function blueprintPhaseValidationWrite(args, deps) {
         }
       }
       if (exists3) {
-        const existingContent = await fs11.readFile(absolutePath, "utf8");
+        const existingContent = await fs12.readFile(absolutePath, "utf8");
         const existingReferencedSummaryPaths = collectReferencedValidatedSummaryPaths(
           existingContent,
           summaryIndex.summaries,
@@ -36864,7 +36916,7 @@ var init_phase_plan_diagnostics = __esm({
 });
 
 // src/mcp/tools/phase-roadmap-requirements.ts
-import { promises as fs12 } from "node:fs";
+import { promises as fs13 } from "node:fs";
 function parseRequirementTableRow(line) {
   if (!/^\|.*\|$/.test(line)) {
     return null;
@@ -36895,7 +36947,7 @@ async function readRequirementTable(projectRoot, options) {
   if (!await pathExists(requirementsPath)) {
     throw new Error(options.missingFileMessage);
   }
-  const rawRequirements = await fs12.readFile(requirementsPath, "utf8");
+  const rawRequirements = await fs13.readFile(requirementsPath, "utf8");
   const requirementsSectionMatch = rawRequirements.match(REQUIREMENTS_TABLE_SECTION_PATTERN);
   if (!requirementsSectionMatch) {
     throw new Error(options.malformedMessage);
@@ -37396,11 +37448,12 @@ __export(phase_exports, {
   blueprintRoadmapRemovePhase: () => blueprintRoadmapRemovePhase,
   buildBlueprintPhaseDirectoryPath: () => buildBlueprintPhaseDirectoryPath,
   phaseToolDefinitions: () => phaseToolDefinitions,
-  resolvePhaseTopologySnapshot: () => resolvePhaseTopologySnapshot
+  resolvePhaseTopologySnapshot: () => resolvePhaseTopologySnapshot,
+  validatePhasePlanCandidateSet: () => validatePhasePlanCandidateSet
 });
-import { createHash as createHash4 } from "node:crypto";
-import { promises as fs13 } from "node:fs";
-import path12 from "node:path";
+import { createHash as createHash5 } from "node:crypto";
+import { promises as fs14 } from "node:fs";
+import path13 from "node:path";
 function normalizedPhaseText(value) {
   return normalizePhaseDescription(value ?? "").toLowerCase();
 }
@@ -37443,7 +37496,7 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
     phase.phaseName,
     auditBackedDetails.sourceReportPath
   ) : null;
-  const originalRequirements = requirementRepair ? await fs13.readFile(requirementsAbsolutePath, "utf8") : null;
+  const originalRequirements = requirementRepair ? await fs14.readFile(requirementsAbsolutePath, "utf8") : null;
   const preparedRequirements = requirementRepair ? prepareTextForPersistence(requirementRepair.content, {
     label: requirementsPath
   }) : null;
@@ -37471,7 +37524,7 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
       }).catch(() => void 0);
     }
     if (phaseDirState.created) {
-      await fs13.rm(phaseDirState.phaseDirPath, {
+      await fs14.rm(phaseDirState.phaseDirPath, {
         recursive: true,
         force: true
       }).catch(() => void 0);
@@ -37522,7 +37575,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     if (!phaseArtifacts.includes(artifactPath)) {
       continue;
     }
-    const content = await fs13.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const content = await fs14.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
     const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths, {
       noUat: options.noUat === true
     }) : validateUatArtifactContent(content, summaryPaths, {
@@ -37575,7 +37628,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     );
   }
   const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true && !hasBlockingUat) && (!requiresQualityGate || qualityGateEvaluation.gatesSatisfied);
-  const rawRoadmap = await fs13.readFile(roadmapPath, "utf8");
+  const rawRoadmap = await fs14.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
     resolved.phaseNumber,
@@ -37627,7 +37680,7 @@ async function readBacklogPromotionCandidates(projectRoot) {
       warnings: ["No backlog index exists yet. Run /blu-add-backlog before reviewing backlog items."]
     };
   }
-  const rawBacklog = await fs13.readFile(backlogPath, "utf8");
+  const rawBacklog = await fs14.readFile(backlogPath, "utf8");
   const parsedBacklog = parseCaptureIndexDocument(rawBacklog, "backlog");
   const warnings = parsedBacklog.malformed ? [
     `Recovered non-canonical backlog index content while reading ${BLUEPRINT_BACKLOG_INDEX_PATH}.`
@@ -37697,7 +37750,7 @@ async function readPhaseRoadmapRequirements(projectRoot, phaseNumber) {
   if (!await pathExists(roadmapPath)) {
     return [];
   }
-  const roadmap = parseRoadmapDocument(await fs13.readFile(roadmapPath, "utf8"));
+  const roadmap = parseRoadmapDocument(await fs14.readFile(roadmapPath, "utf8"));
   const matchedPhase = roadmap.phases.find(
     (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizePhaseNumber(phaseNumber)
   );
@@ -37707,7 +37760,7 @@ async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @
   const phaseRoot = resolveBlueprintPath(projectRoot, resolved.phaseDir);
   const planPaths = new Set(knownPlanPaths ?? []);
   if (knownPlanPaths === void 0 && await pathExists(phaseRoot)) {
-    const entries = await fs13.readdir(phaseRoot, { withFileTypes: true });
+    const entries = await fs14.readdir(phaseRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith("-PLAN.md")) {
         continue;
@@ -37728,7 +37781,7 @@ async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @
       nonCanonicalPlanPaths.push(planPath);
       continue;
     }
-    const content = overrides.get(planPath) ?? await fs13.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = overrides.get(planPath) ?? await fs14.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
     plans.push({
       path: planPath,
@@ -37749,12 +37802,12 @@ function detectDependencyCycles(graph) {
   const cycles = /* @__PURE__ */ new Set();
   const state = /* @__PURE__ */ new Map();
   const stack = [];
-  const visit = (planId2) => {
-    const currentState = state.get(planId2);
+  const visit = (planId3) => {
+    const currentState = state.get(planId3);
     if (currentState === "visiting") {
-      const cycleStart = stack.indexOf(planId2);
+      const cycleStart = stack.indexOf(planId3);
       if (cycleStart >= 0) {
-        const cycle = [...stack.slice(cycleStart), planId2];
+        const cycle = [...stack.slice(cycleStart), planId3];
         cycles.add(cycle.join("->"));
       }
       return;
@@ -37762,23 +37815,33 @@ function detectDependencyCycles(graph) {
     if (currentState === "visited") {
       return;
     }
-    state.set(planId2, "visiting");
-    stack.push(planId2);
-    for (const dependency of graph.get(planId2) ?? []) {
+    state.set(planId3, "visiting");
+    stack.push(planId3);
+    for (const dependency of graph.get(planId3) ?? []) {
       if (!graph.has(dependency)) {
         continue;
       }
       visit(dependency);
     }
     stack.pop();
-    state.set(planId2, "visited");
+    state.set(planId3, "visited");
   };
-  for (const planId2 of graph.keys()) {
-    visit(planId2);
+  for (const planId3 of graph.keys()) {
+    visit(planId3);
   }
   return [...cycles].map((cycle) => cycle.split("->")).sort((left, right) => left.join("->").localeCompare(right.join("->")));
 }
+function phasePlanPublicationIssue(before, after) {
+  if (before.status === "pending" || before.status === "invalid") {
+    return before.reason ?? "Phase plan publication is incomplete; resume its publication before execution.";
+  }
+  if (after.status === "pending" || after.status === "invalid") {
+    return after.reason ?? "Phase plan publication is incomplete; resume its publication before execution.";
+  }
+  return before.token !== after.token ? "Phase plan publication changed during this read; refresh the plan set before execution." : null;
+}
 async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
+  const publicationBefore = options.ignorePublicationGuard ? null : await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const coverageSeverity = options.roadmapCoverageSeverity ?? "issue";
   const { plans, nonCanonicalPlanPaths } = await collectPhasePlanArtifacts(
     projectRoot,
@@ -37912,6 +37975,13 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
       `Phase ${resolved.phaseNumber} plans reference requirements not declared for this roadmap phase: ${[...unexpectedRequirementIds].sort((left, right) => left.localeCompare(right)).join(", ")}.`
     );
   }
+  if (publicationBefore) {
+    const issue2 = phasePlanPublicationIssue(
+      publicationBefore,
+      await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+    );
+    if (issue2) issues.push(issue2);
+  }
   return {
     phaseFound: true,
     phaseNumber: resolved.phaseNumber,
@@ -37931,7 +38001,7 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
     cyclicDependencyPlanIds
   };
 }
-function selectRelevantPlanValidationIssues(validation, pathValue, planId2) {
+function selectRelevantPlanValidationIssues(validation, pathValue, planId3) {
   return validation.issues.filter((issue2) => {
     const normalizedIssue = issue2.replace(/^[^:]+:\s*/, "");
     if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(normalizedIssue)) {
@@ -37942,12 +38012,12 @@ function selectRelevantPlanValidationIssues(validation, pathValue, planId2) {
     }
     if (issue2.startsWith("Plan dependency cycle detected:")) {
       const cycle = issue2.replace(/^Plan dependency cycle detected:\s*/, "").replace(/\.$/, "").split(/\s*->\s*/);
-      return cycle.includes(planId2);
+      return cycle.includes(planId3);
     }
-    return issue2.includes(`dependency ${planId2} `) || issue2.includes(`plan "${planId2}"`) || issue2.includes(`plan ${planId2}`) || issue2.includes(`plan_id "${planId2}"`) || issue2.includes(`path plan id "${planId2}"`);
+    return issue2.includes(`dependency ${planId3} `) || issue2.includes(`plan "${planId3}"`) || issue2.includes(`plan ${planId3}`) || issue2.includes(`plan_id "${planId3}"`) || issue2.includes(`path plan id "${planId3}"`);
   });
 }
-async function validateProspectivePhasePlanSetForPath(projectRoot, resolved, pathValue, planId2, renderedContent) {
+async function validateProspectivePhasePlanSetForPath(projectRoot, resolved, pathValue, planId3, renderedContent) {
   const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
     overrides: /* @__PURE__ */ new Map([[pathValue, renderedContent]]),
     roadmapCoverageSeverity: "warning"
@@ -37956,7 +38026,7 @@ async function validateProspectivePhasePlanSetForPath(projectRoot, resolved, pat
     blockingIssues: selectRelevantPlanValidationIssues(
       prospectiveValidation,
       pathValue,
-      planId2
+      planId3
     ),
     warnings: prospectiveValidation.warnings
   };
@@ -37989,10 +38059,10 @@ function phasePlanWriteCompletionFields(args) {
     incrementalCheckpoint: args.saved && !completionReady
   };
 }
-function toPhasePlanRecord(planId2, pathValue, content, expectedPhase) {
+function toPhasePlanRecord(planId3, pathValue, content, expectedPhase) {
   const validation = validatePlanArtifactContent(content, expectedPhase);
   return {
-    planId: planId2,
+    planId: planId3,
     path: pathValue,
     title: validation.metadata.title,
     wave: validation.metadata.wave,
@@ -38270,7 +38340,7 @@ function buildPhasePlanAuthoringReadinessReason(planningReadiness) {
   return `${detailWithPunctuation} Next safe action: ${action}${/[.!?]$/.test(action) ? "" : "."}`;
 }
 function hashString(value) {
-  return createHash4("sha256").update(value).digest("hex");
+  return createHash5("sha256").update(value).digest("hex");
 }
 function buildReadinessHashEntry(args) {
   const serialized = typeof args.value === "string" ? args.value : JSON.stringify(args.value) ?? "undefined";
@@ -38322,9 +38392,9 @@ async function readReadinessPath(args) {
       raw: null
     };
   }
-  const raw = await fs13.readFile(absolutePath, "utf8");
+  const raw = await fs14.readFile(absolutePath, "utf8");
   const rawSizeBytes = Buffer.byteLength(raw, "utf8");
-  const hash3 = hashString(raw);
+  const hash4 = hashString(raw);
   const summary = summarizeSavedArtifact(raw);
   const truncatedContent = truncateForReadiness(raw, args.maxBodyBytes);
   const contentIncluded = args.includeContent;
@@ -38332,7 +38402,7 @@ async function readReadinessPath(args) {
     readSet: {
       path: args.pathValue,
       kind: args.kind,
-      hash: hash3,
+      hash: hash4,
       sizeBytes: rawSizeBytes,
       truncated: contentIncluded ? truncatedContent.truncated : false,
       included: contentIncluded,
@@ -38342,7 +38412,7 @@ async function readReadinessPath(args) {
       path: args.pathValue,
       ...contentIncluded ? { content: truncatedContent.content } : {},
       summary: `${summary.title}: ${summary.summary}`,
-      hash: hash3,
+      hash: hash4,
       sizeBytes: rawSizeBytes,
       truncated: contentIncluded ? truncatedContent.truncated : false,
       ...contentIncluded ? {} : { omittedReason: args.reason ?? "bodyMode summary" },
@@ -38368,6 +38438,8 @@ function compareReadSetFreshness(currentReadSet, previousReadSet) {
       stalePaths: []
     };
   }
+  currentReadSet = currentReadSet.filter((entry) => entry.kind !== "phase.plan.body");
+  previousReadSet = previousReadSet.filter((entry) => entry.kind !== "phase.plan.body");
   const currentByKey = new Map(
     currentReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
   );
@@ -38486,13 +38558,13 @@ function isCanonicalPhasePlanArtifactPath2(artifactPath, resolved) {
   return parseCanonicalPlanArtifactPath(artifactPath, resolved) !== null;
 }
 function isCanonicalPhaseSummaryArtifactPath(artifactPath, resolved) {
-  return path12.posix.dirname(artifactPath) === resolved.phaseDir && parseSummaryArtifactPath(artifactPath, resolved.phasePrefix) !== null;
+  return path13.posix.dirname(artifactPath) === resolved.phaseDir && parseSummaryArtifactPath(artifactPath, resolved.phasePrefix) !== null;
 }
 function isCanonicalPhaseSpecArtifactPath(artifactPath, resolved) {
   return artifactPath === artifactPathFor(resolved, "spec");
 }
 function isNoncanonicalPhaseSpecLookalikePath(artifactPath, resolved) {
-  const basename = path12.posix.basename(artifactPath);
+  const basename = path13.posix.basename(artifactPath);
   const canonicalSpecFileName = `${resolved.phasePrefix}-SPEC.md`;
   const uiSpecFileName = `${resolved.phasePrefix}-UI-SPEC.md`;
   if (isCanonicalPhaseSpecArtifactPath(artifactPath, resolved)) {
@@ -38571,7 +38643,7 @@ async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, tar
     if (isNoncanonicalPhaseSpecLookalikePath(artifact, resolved)) {
       return false;
     }
-    if (path12.posix.basename(artifact) === canonicalSpecFileName) {
+    if (path13.posix.basename(artifact) === canonicalSpecFileName) {
       return canonicalSpecPath !== null && isCanonicalPhaseSpecArtifactPath(artifact, resolved);
     }
     return true;
@@ -38589,14 +38661,14 @@ async function buildPhasePlanAuthoringContextData(input) {
   if (!resolved) {
     throw new Error(snapshot3.located.reason ?? "Phase could not be resolved for plan authoring.");
   }
-  const existingIndex = await buildPhasePlanIndexFromResolved({
+  const existingIndex = input.existingIndex ?? await buildPhasePlanIndexFromResolved({
     projectRoot,
     resolved,
     artifacts: snapshot3.artifacts
   });
   const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))) + 1;
-  const planId2 = input.planId ? normalizePlanId(input.planId) : normalizePlanId(String(nextPlanNumber));
-  const pathValue = planPathFor(resolved, planId2);
+  const planId3 = input.planId ? normalizePlanId(input.planId) : normalizePlanId(String(nextPlanNumber));
+  const pathValue = planPathFor(resolved, planId3);
   const modelContract = readArtifactContract("phase.plan").modelContract;
   if (!modelContract) {
     throw new Error("phase.plan does not expose a modelContract.");
@@ -38611,7 +38683,7 @@ async function buildPhasePlanAuthoringContextData(input) {
     pathValue,
     snapshot3.artifacts
   );
-  const allowedDependencyPlanIds = existingIndex.plans.map((plan) => plan.planId).filter((existingPlanId) => existingPlanId !== planId2);
+  const allowedDependencyPlanIds = existingIndex.plans.map((plan) => plan.planId).filter((existingPlanId) => existingPlanId !== planId3);
   const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
   const taskSchema = buildPhasePlanTaskSchema({
     baseSchema,
@@ -38622,7 +38694,7 @@ async function buildPhasePlanAuthoringContextData(input) {
   return {
     projectRoot,
     resolved,
-    planId: planId2,
+    planId: planId3,
     pathValue,
     schemaPath: modelContract.schemaPath,
     baseSchema,
@@ -38661,10 +38733,10 @@ function validatePhasePlanStructuredModelCoverage(model) {
     issues.push(`Phase plan model fileSurfaceCoverage duplicates surface "${duplicate}".`);
   }
   for (const row of model.requirementCoverage) {
-    for (const taskId of row.coveredByTasks) {
-      if (!taskIdSet.has(taskId)) {
+    for (const taskId2 of row.coveredByTasks) {
+      if (!taskIdSet.has(taskId2)) {
         issues.push(
-          `Requirement coverage for ${row.requirement} references unknown task id "${taskId}".`
+          `Requirement coverage for ${row.requirement} references unknown task id "${taskId2}".`
         );
       }
     }
@@ -38679,11 +38751,11 @@ function validatePhasePlanStructuredModelCoverage(model) {
           `Requirement coverage for ${row.requirement} is covered but does not list any coveredByTasks.`
         );
       }
-      for (const taskId of row.coveredByTasks) {
-        const task = model.tasks.find((candidate) => candidate.id === taskId);
+      for (const taskId2 of row.coveredByTasks) {
+        const task = model.tasks.find((candidate) => candidate.id === taskId2);
         if (task && !task.requirements.includes(row.requirement)) {
           issues.push(
-            `Requirement coverage for ${row.requirement} references task "${taskId}", but that task does not list the requirement.`
+            `Requirement coverage for ${row.requirement} references task "${taskId2}", but that task does not list the requirement.`
           );
         }
       }
@@ -38748,11 +38820,11 @@ function validatePhasePlanStructuredModelCoverage(model) {
         `File surface coverage for ${normalizedSurface} does not match any top-level filesModified entry.`
       );
     }
-    for (const taskId of row.coveredByTasks) {
-      const task = model.tasks.find((candidate) => candidate.id === taskId);
+    for (const taskId2 of row.coveredByTasks) {
+      const task = model.tasks.find((candidate) => candidate.id === taskId2);
       if (!task) {
         issues.push(
-          `File surface coverage for ${normalizedSurface} references unknown task id "${taskId}".`
+          `File surface coverage for ${normalizedSurface} references unknown task id "${taskId2}".`
         );
         continue;
       }
@@ -38760,7 +38832,7 @@ function validatePhasePlanStructuredModelCoverage(model) {
         (taskFilePath) => normalizePhasePlanModelSurface(taskFilePath) === normalizedSurface
       )) {
         issues.push(
-          `File surface coverage for ${normalizedSurface} references task "${taskId}", but that task does not modify the surface.`
+          `File surface coverage for ${normalizedSurface} references task "${taskId2}", but that task does not modify the surface.`
         );
       }
     }
@@ -38770,10 +38842,10 @@ function validatePhasePlanStructuredModelCoverage(model) {
       );
     }
   }
-  for (const verification of model.verification) {
-    if (!isPhasePlanAcceptanceCriterionVerifiable(verification.evidence)) {
+  for (const verification2 of model.verification) {
+    if (!isPhasePlanAcceptanceCriterionVerifiable(verification2.evidence)) {
       warnings.push(
-        `Verification item "${verification.item}" has evidence that is not objectively verifiable: ${verification.evidence}.`
+        `Verification item "${verification2.item}" has evidence that is not objectively verifiable: ${verification2.evidence}.`
       );
     }
   }
@@ -38786,8 +38858,8 @@ function validatePhasePlanStructuredModelCoverage(model) {
   }
   return { issues, warnings };
 }
-function findPhasePlanTaskIndex(model, taskId) {
-  return model.tasks.findIndex((task) => task.id === taskId);
+function findPhasePlanTaskIndex(model, taskId2) {
+  return model.tasks.findIndex((task) => task.id === taskId2);
 }
 function findPhasePlanRequirementCoverageIndex(model, requirementId) {
   return model.requirementCoverage.findIndex((row) => row.requirement === requirementId);
@@ -38803,9 +38875,9 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
     /^Task (.+?) acceptance criterion is not objectively verifiable: (.+)\.$/
   );
   if (taskCriterionMatch) {
-    const taskId = taskCriterionMatch[1] ?? "";
+    const taskId2 = taskCriterionMatch[1] ?? "";
     const criterion = taskCriterionMatch[2] ?? "";
-    const taskIndex = findPhasePlanTaskIndex(model, taskId);
+    const taskIndex = findPhasePlanTaskIndex(model, taskId2);
     const criterionIndex = taskIndex >= 0 ? model.tasks[taskIndex].acceptanceCriteria.findIndex((item) => item === criterion) : -1;
     const pathValue = taskIndex >= 0 && criterionIndex >= 0 ? `model.tasks[${taskIndex}].acceptanceCriteria[${criterionIndex}]` : "model.tasks";
     return phasePlanDiagnostic({
@@ -38814,7 +38886,7 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
       path: pathValue,
       code: "coverage.unverifiable_acceptance_criterion",
       message: issue2,
-      context: { taskId, criterion },
+      context: { taskId: taskId2, criterion },
       actual: criterion,
       expected: "A grep, test, command, file-read, or artifact-validation-verifiable acceptance criterion.",
       repairAction: "make-verifiable",
@@ -38882,19 +38954,19 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
   );
   if (coverageTaskRequirementMismatch) {
     const requirementId = coverageTaskRequirementMismatch[1] ?? "";
-    const taskId = coverageTaskRequirementMismatch[2] ?? "";
-    const taskIndex = findPhasePlanTaskIndex(model, taskId);
+    const taskId2 = coverageTaskRequirementMismatch[2] ?? "";
+    const taskIndex = findPhasePlanTaskIndex(model, taskId2);
     const pathValue = taskIndex >= 0 ? `model.tasks[${taskIndex}].requirements` : "model.tasks";
     return phasePlanDiagnostic({
       source: "residual",
       path: pathValue,
       code: "coverage.task_requirement_mismatch",
       message: issue2,
-      context: { requirementId, taskId },
+      context: { requirementId, taskId: taskId2 },
       actual: taskIndex >= 0 ? model.tasks[taskIndex].requirements : void 0,
       expected: requirementId,
       repairAction: "add",
-      suggestion: `Add ${requirementId} to task ${taskId}.requirements, or remove ${taskId} from that requirementCoverage row.`
+      suggestion: `Add ${requirementId} to task ${taskId2}.requirements, or remove ${taskId2} from that requirementCoverage row.`
     });
   }
   const fileSurfaceVerificationMatch = issue2.match(
@@ -38902,7 +38974,7 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
   );
   if (fileSurfaceVerificationMatch) {
     const surface = fileSurfaceVerificationMatch[1] ?? "";
-    const verification = fileSurfaceVerificationMatch[2] ?? "";
+    const verification2 = fileSurfaceVerificationMatch[2] ?? "";
     const rowIndex = findPhasePlanFileSurfaceCoverageIndex(model, surface);
     const pathValue = rowIndex >= 0 ? `model.fileSurfaceCoverage[${rowIndex}].verification` : "model.fileSurfaceCoverage";
     return phasePlanDiagnostic({
@@ -38911,8 +38983,8 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
       path: pathValue,
       code: "coverage.unverifiable_file_surface",
       message: issue2,
-      context: { surface, verification },
-      actual: verification,
+      context: { surface, verification: verification2 },
+      actual: verification2,
       expected: "A command, grep, file-read, test, or artifact-validation check.",
       repairAction: "make-verifiable",
       suggestion: "Replace the file surface verification with an objective check such as a focused test command or file-read assertion."
@@ -39050,13 +39122,9 @@ function collectPhasePlanComparableStrings(model) {
   push("model.goal", model.goal);
   model.scope.forEach((value, index) => push(`model.scope[${index}]`, value));
   model.filesModified.forEach((value, index) => push(`model.filesModified[${index}]`, value));
-  model.readFirst.forEach((value, index) => push(`model.readFirst[${index}]`, value));
   model.mustHaves.forEach((value, index) => push(`model.mustHaves[${index}]`, value));
   model.tasks.forEach((task, taskIndex) => {
     push(`model.tasks[${taskIndex}].title`, task.title);
-    task.readFirst.forEach(
-      (value, index) => push(`model.tasks[${taskIndex}].readFirst[${index}]`, value)
-    );
     task.action.forEach(
       (value, index) => push(`model.tasks[${taskIndex}].action[${index}]`, value)
     );
@@ -39071,19 +39139,8 @@ function collectPhasePlanComparableStrings(model) {
     push(`model.verification[${index}].item`, row.item);
     push(`model.verification[${index}].evidence`, row.evidence);
   });
-  model.evidenceCoverage.forEach((row, index) => {
-    push(`model.evidenceCoverage[${index}].artifact`, row.artifact);
-    push(`model.evidenceCoverage[${index}].rationale`, row.rationale);
-  });
   model.fileSurfaceCoverage.forEach((row, index) => {
     push(`model.fileSurfaceCoverage[${index}].surface`, row.surface);
-    push(`model.fileSurfaceCoverage[${index}].verification`, row.verification);
-    push(`model.fileSurfaceCoverage[${index}].rationale`, row.rationale);
-  });
-  model.unknownsAndDeferrals.forEach((row, index) => {
-    push(`model.unknownsAndDeferrals[${index}].item`, row.item);
-    push(`model.unknownsAndDeferrals[${index}].rationale`, row.rationale);
-    push(`model.unknownsAndDeferrals[${index}].followUp`, row.followUp);
   });
   return strings;
 }
@@ -39102,17 +39159,28 @@ function phasePlanSpecBoundaryDiagnostics(args) {
       if (!candidate.normalized.includes(signal.normalized)) {
         continue;
       }
-      const key = `${candidate.path}:${signal.normalized}`;
-      if (seen.has(key)) {
+      const matchIndex = candidate.normalized.indexOf(signal.normalized);
+      const before = (candidate.normalized.slice(0, matchIndex).split(/(?<=[.!?;])\s+|\b(?:but|however)\b/).at(-1) ?? "").trimStart();
+      const after = candidate.normalized.slice(matchIndex + signal.normalized.length);
+      if (/\b(?:not|never|without|avoid|exclude|excluded|excluding|defer|deferred|deferring|out[- ]of[- ]scope)\b/.test(before) || /^\s+(?:(?:is|are|remains?|stays?)\s+)?(?:out[- ]of[- ]scope|excluded|deferred|not included|not planned)\b/.test(after)) {
         continue;
       }
-      seen.add(key);
+      const fileOwnership = /(?:\.filesModified\[\d+\]|\.fileSurfaceCoverage\[\d+\]\.surface)$/.test(candidate.path);
+      const directWork = candidate.normalized === signal.normalized || /^(?:add|adding|implement|implementing|modify|modifying|change|changing|create|creating|build|building|remove|removing|delete|deleting|update|updating) (?:the )?$/.test(before);
+      if (fileOwnership && candidate.normalized !== signal.normalized) continue;
+      const confirmedConflict = fileOwnership || directWork;
+      const key2 = `${candidate.path}:${signal.normalized}`;
+      if (seen.has(key2)) {
+        continue;
+      }
+      seen.add(key2);
       diagnostics.push(
         phasePlanDiagnostic({
           source: "scope",
           path: candidate.path,
-          code: "scope.spec_out_of_scope_conflict",
-          message: `Saved phase spec ${args.specPath} marks "${signal.sourceItem}" as out of scope, but ${candidate.path} includes "${candidate.value}".`,
+          severity: confirmedConflict ? "error" : "warning",
+          code: confirmedConflict ? "scope.spec_out_of_scope_conflict" : "scope.spec_boundary_review",
+          message: `Saved phase spec ${args.specPath} marks "${signal.sourceItem}" as out of scope, ${candidate.path} ${confirmedConflict ? "plans" : "mentions"} "${candidate.value}".`,
           context: {
             specPath: args.specPath,
             outOfScope: signal.sourceItem,
@@ -39121,7 +39189,7 @@ function phasePlanSpecBoundaryDiagnostics(args) {
           actual: candidate.value,
           expected: `Avoid planned work that conflicts with saved out-of-scope spec boundary: ${signal.display}`,
           repairAction: "replace",
-          suggestion: "Remove or defer the conflicting plan item, or update the saved XX-SPEC.md boundary before authoring the phase plan."
+          suggestion: confirmedConflict ? "Remove or defer the conflicting plan item, or update the saved XX-SPEC.md boundary before authoring the phase plan." : "Review the mention in context. Clarify whether it describes planned work, a reference, or an explicit exclusion; substring matching alone cannot decide scope."
         })
       );
       if (diagnostics.length >= 5) {
@@ -39231,11 +39299,15 @@ async function validatePhasePlanModelWithContext(args) {
         diagnostics.push(phasePlanCoverageDiagnosticFromIssue(warning, normalizedModel));
       }
       diagnostics.push(
-        ...await validatePhasePlanModelAgainstSavedSpec({
+        ...args.savedSpecContent === void 0 ? await validatePhasePlanModelAgainstSavedSpec({
           projectRoot: args.context.projectRoot,
           resolved: args.context.resolved,
           model: normalizedModel
-        })
+        }) : args.savedSpecContent ? phasePlanSpecBoundaryDiagnostics({
+          model: normalizedModel,
+          specContent: args.savedSpecContent,
+          specPath: artifactPathFor(args.context.resolved, "spec")
+        }) : []
       );
     }
   }
@@ -39448,7 +39520,7 @@ async function blueprintRoadmapAddPhase(args) {
     const slug = slugifyPhaseName(normalizedDescription);
     const phaseDir2 = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-    const rawRoadmap = await fs13.readFile(roadmapPath, "utf8");
+    const rawRoadmap = await fs14.readFile(roadmapPath, "utf8");
     const requirementRepair = auditBackedDetails?.repairRequirementIds?.length ? await repairRequirementsTraceability(
       projectRoot,
       auditBackedDetails.repairRequirementIds,
@@ -39496,7 +39568,7 @@ async function blueprintRoadmapAddPhase(args) {
     const preparedRequirements = requirementRepair ? prepareTextForPersistence(requirementRepair.content, {
       label: requirementsPath
     }) : null;
-    const originalRequirements = requirementRepair ? await fs13.readFile(requirementsAbsolutePath, "utf8") : null;
+    const originalRequirements = requirementRepair ? await fs14.readFile(requirementsAbsolutePath, "utf8") : null;
     warnings.push(...preparedRoadmap.warnings);
     warnings.push(...preparedRequirements?.warnings ?? []);
     const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir2);
@@ -39529,7 +39601,7 @@ async function blueprintRoadmapAddPhase(args) {
         }).catch(() => void 0);
       }
       if (materializedPhaseDir.created) {
-        await fs13.rm(materializedPhaseDir.phaseDirPath, {
+        await fs14.rm(materializedPhaseDir.phaseDirPath, {
           recursive: true,
           force: true
         }).catch(() => void 0);
@@ -39635,7 +39707,7 @@ async function blueprintRoadmapInsertPhase(args) {
       );
     }
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-    const rawRoadmap = await fs13.readFile(roadmapPath, "utf8");
+    const rawRoadmap = await fs14.readFile(roadmapPath, "utf8");
     const insertedPhaseLines = insertPhaseLineToRoadmap(
       rawRoadmap,
       insertionAnchor,
@@ -39673,7 +39745,7 @@ async function blueprintRoadmapInsertPhase(args) {
     const preparedRequirements = prepareTextForPersistence(requirementMapping.content, {
       label: requirementsPath
     });
-    const originalRequirements = await fs13.readFile(requirementsAbsolutePath, "utf8");
+    const originalRequirements = await fs14.readFile(requirementsAbsolutePath, "utf8");
     const warnings = [...preparedRoadmap.warnings];
     warnings.push(...preparedRequirements.warnings);
     const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir2);
@@ -39698,7 +39770,7 @@ async function blueprintRoadmapInsertPhase(args) {
         enforcePromptBoundary: false
       }).catch(() => void 0);
       if (materializedPhaseDir.created) {
-        await fs13.rm(materializedPhaseDir.phaseDirPath, {
+        await fs14.rm(materializedPhaseDir.phaseDirPath, {
           recursive: true,
           force: true
         }).catch(() => void 0);
@@ -39732,7 +39804,7 @@ function renameLeadingPhaseToken(entryName, phaseNumber, replacementPrefix) {
 async function assertExistingPhaseTopologyDirectory(directoryPath, repoRelativeDirectory) {
   let stats;
   try {
-    stats = await fs13.stat(directoryPath);
+    stats = await fs14.stat(directoryPath);
   } catch (error2) {
     const code = error2.code;
     if (code === "ENOENT") {
@@ -39758,26 +39830,26 @@ async function assertPhaseTopologyDestinationAvailable(destinationPath, repoRela
 async function collectPhaseArtifactRenamePlans(options) {
   const sourceRelativePath = options.sourceRelativePath ?? "";
   const executionRelativePath = options.executionRelativePath ?? "";
-  const scanDirectoryPath = sourceRelativePath ? path12.join(options.sourceRootPath, sourceRelativePath) : options.sourceRootPath;
-  const entries = await fs13.readdir(scanDirectoryPath, { withFileTypes: true });
+  const scanDirectoryPath = sourceRelativePath ? path13.join(options.sourceRootPath, sourceRelativePath) : options.sourceRootPath;
+  const entries = await fs14.readdir(scanDirectoryPath, { withFileTypes: true });
   const plans = [];
   for (const entry of entries) {
-    const originalRelativePath = sourceRelativePath ? path12.join(sourceRelativePath, entry.name) : entry.name;
-    const executionFromRelativePath = executionRelativePath ? path12.join(executionRelativePath, entry.name) : entry.name;
+    const originalRelativePath = sourceRelativePath ? path13.join(sourceRelativePath, entry.name) : entry.name;
+    const executionFromRelativePath = executionRelativePath ? path13.join(executionRelativePath, entry.name) : entry.name;
     const renamedEntry = renameLeadingPhaseToken(
       entry.name,
       options.oldPhaseNumber,
       options.newPhasePrefix
     );
-    const executionToRelativePath = executionRelativePath ? path12.join(executionRelativePath, renamedEntry ?? entry.name) : renamedEntry ?? entry.name;
+    const executionToRelativePath = executionRelativePath ? path13.join(executionRelativePath, renamedEntry ?? entry.name) : renamedEntry ?? entry.name;
     if (renamedEntry) {
-      const fromPath = path12.join(options.destinationRootPath, executionFromRelativePath);
-      const toPath = path12.join(options.destinationRootPath, executionToRelativePath);
+      const fromPath = path13.join(options.destinationRootPath, executionFromRelativePath);
+      const toPath = path13.join(options.destinationRootPath, executionToRelativePath);
       plans.push({
         fromPath,
         toPath,
-        originalPath: path12.join(options.sourceRootPath, originalRelativePath),
-        originalDestinationPath: path12.join(options.sourceRootPath, executionToRelativePath),
+        originalPath: path13.join(options.sourceRootPath, originalRelativePath),
+        originalDestinationPath: path13.join(options.sourceRootPath, executionToRelativePath),
         from: toRepoRelativePath(options.projectRoot, fromPath),
         to: toRepoRelativePath(options.projectRoot, toPath)
       });
@@ -39797,14 +39869,14 @@ async function collectPhaseArtifactRenamePlans(options) {
 async function preflightPhaseArtifactRenamePlans(plans) {
   const destinationPaths = /* @__PURE__ */ new Set();
   for (const plan of plans) {
-    const normalizedDestinationPath = path12.resolve(plan.toPath);
+    const normalizedDestinationPath = path13.resolve(plan.toPath);
     if (destinationPaths.has(normalizedDestinationPath)) {
       throw new Error(
         `Phase artifact rename plan has a duplicate destination before mutation: ${plan.to}.`
       );
     }
     destinationPaths.add(normalizedDestinationPath);
-    if (path12.resolve(plan.originalDestinationPath) !== path12.resolve(plan.originalPath) && await pathExists(plan.originalDestinationPath)) {
+    if (path13.resolve(plan.originalDestinationPath) !== path13.resolve(plan.originalPath) && await pathExists(plan.originalDestinationPath)) {
       throw new Error(
         `Phase artifact destination already exists before mutation: ${plan.to}. Resolve the collision before mutating the roadmap.`
       );
@@ -39812,7 +39884,7 @@ async function preflightPhaseArtifactRenamePlans(plans) {
   }
 }
 async function renameWithPhaseTopologyRollback(fromPath, toPath, journal) {
-  await fs13.rename(fromPath, toPath);
+  await fs14.rename(fromPath, toPath);
   journal.push({ fromPath, toPath });
 }
 async function rollbackPhaseTopologyMoves(journal) {
@@ -39828,16 +39900,16 @@ async function rollbackPhaseTopologyMoves(journal) {
       continue;
     }
     const failureCountBeforeMkdir = failures.length;
-    await fs13.mkdir(path12.dirname(entry.fromPath), { recursive: true }).catch((error2) => {
+    await fs14.mkdir(path13.dirname(entry.fromPath), { recursive: true }).catch((error2) => {
       failures.push(
-        `Could not recreate rollback parent ${path12.dirname(entry.fromPath)}: ${error2 instanceof Error ? error2.message : String(error2)}`
+        `Could not recreate rollback parent ${path13.dirname(entry.fromPath)}: ${error2 instanceof Error ? error2.message : String(error2)}`
       );
     });
     if (failures.length > failureCountBeforeMkdir) {
       continue;
     }
     try {
-      await fs13.rename(entry.toPath, entry.fromPath);
+      await fs14.rename(entry.toPath, entry.fromPath);
     } catch (error2) {
       failures.push(
         `Could not roll back ${entry.toPath} to ${entry.fromPath}: ${error2 instanceof Error ? error2.message : String(error2)}`
@@ -40017,7 +40089,7 @@ async function blueprintRoadmapRemovePhase(args) {
       ])
     );
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-    const rawRoadmap = await fs13.readFile(roadmapPath, "utf8");
+    const rawRoadmap = await fs14.readFile(roadmapPath, "utf8");
     const removedPhaseLine = removePhaseLineFromRoadmap(rawRoadmap, targetPhaseNumber);
     if (!removedPhaseLine.removed) {
       throw new Error(
@@ -40048,7 +40120,7 @@ async function blueprintRoadmapRemovePhase(args) {
       }
       const previousPhaseDir = locatedPhaseDirectory.phaseDir;
       const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
-      const previousDirectoryName = path12.basename(previousPhaseDirPath);
+      const previousDirectoryName = path13.basename(previousPhaseDirPath);
       const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
       const renamedDirectoryName = renameLeadingPhaseToken(
         previousDirectoryName,
@@ -40060,10 +40132,10 @@ async function blueprintRoadmapRemovePhase(args) {
           `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
         );
       }
-      const newPhaseDirPath = path12.join(path12.dirname(previousPhaseDirPath), renamedDirectoryName);
+      const newPhaseDirPath = path13.join(path13.dirname(previousPhaseDirPath), renamedDirectoryName);
       const newPhaseDir = toRepoRelativePath(projectRoot, newPhaseDirPath);
       await assertExistingPhaseTopologyDirectory(previousPhaseDirPath, previousPhaseDir);
-      if (path12.resolve(newPhaseDirPath) !== path12.resolve(targetPhaseDirPath)) {
+      if (path13.resolve(newPhaseDirPath) !== path13.resolve(targetPhaseDirPath)) {
         await assertPhaseTopologyDestinationAvailable(newPhaseDirPath, newPhaseDir);
       }
       const artifactRenamePlans = await collectPhaseArtifactRenamePlans({
@@ -40091,9 +40163,9 @@ async function blueprintRoadmapRemovePhase(args) {
       targetPhaseNumber
     );
     const transactionRootRelativePath = toRepoRelativePath(projectRoot, transactionRootPath);
-    const tombstonePhaseDirPath = path12.join(
+    const tombstonePhaseDirPath = path13.join(
       transactionRootPath,
-      path12.basename(targetPhaseDirPath)
+      path13.basename(targetPhaseDirPath)
     );
     const journal = [];
     let committed = false;
@@ -40102,7 +40174,7 @@ async function blueprintRoadmapRemovePhase(args) {
       transactionRootRelativePath
     );
     try {
-      await fs13.mkdir(transactionRootPath, { recursive: true });
+      await fs14.mkdir(transactionRootPath, { recursive: true });
       await renameWithPhaseTopologyRollback(
         targetPhaseDirPath,
         tombstonePhaseDirPath,
@@ -40138,7 +40210,7 @@ async function blueprintRoadmapRemovePhase(args) {
     } catch (error2) {
       const rollbackFailures = await rollbackPhaseTopologyMoves(journal);
       if (rollbackFailures.length === 0) {
-        await fs13.rm(transactionRootPath, { recursive: true, force: true }).catch(() => void 0);
+        await fs14.rm(transactionRootPath, { recursive: true, force: true }).catch(() => void 0);
         throw error2;
       }
       throw new Error(
@@ -40150,7 +40222,7 @@ async function blueprintRoadmapRemovePhase(args) {
       );
     }
     if (committed) {
-      await fs13.rm(transactionRootPath, { recursive: true, force: true }).catch((error2) => {
+      await fs14.rm(transactionRootPath, { recursive: true, force: true }).catch((error2) => {
         warnings.push(
           `Phase ${targetPhaseNumber} was removed, but cleanup of transaction tombstone ${transactionRootRelativePath} failed: ${error2 instanceof Error ? error2.message : String(error2)}`
         );
@@ -40186,7 +40258,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
     if (reservedDirectory.phaseDir) {
       const reservedPhaseDirPath = resolveBlueprintPath(projectRoot, reservedDirectory.phaseDir);
       const renamedDirectoryName = renameLeadingPhaseToken(
-        path12.basename(reservedPhaseDirPath),
+        path13.basename(reservedPhaseDirPath),
         item.reservedPhase,
         phasePrefix2
       );
@@ -40195,8 +40267,8 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
           `Reserved phase directory ${reservedDirectory.phaseDir} does not start with ${item.reservedPhase}.`
         );
       }
-      const promotedPhaseDirPath = path12.join(
-        path12.dirname(reservedPhaseDirPath),
+      const promotedPhaseDirPath = path13.join(
+        path13.dirname(reservedPhaseDirPath),
         renamedDirectoryName
       );
       if (promotedPhaseDirPath !== reservedPhaseDirPath && await pathExists(promotedPhaseDirPath)) {
@@ -40252,7 +40324,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
       warnings
     };
   }
-  await fs13.mkdir(desiredPhaseDirPath, { recursive: true });
+  await fs14.mkdir(desiredPhaseDirPath, { recursive: true });
   return {
     phaseDir: desiredPhaseDir,
     createdPhaseDir: true,
@@ -40333,7 +40405,7 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
   return withBlueprintRepoLock(projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
     const roadmap = await readRoadmap(projectRoot);
     const roadmapAbsolutePath = resolveBlueprintPath(projectRoot, roadmap.path);
-    let roadmapBody = await fs13.readFile(roadmapAbsolutePath, "utf8");
+    let roadmapBody = await fs14.readFile(roadmapAbsolutePath, "utf8");
     const roadmapPhases = [...roadmap.phases];
     const promotedItems = [];
     const createdPhaseDirs = [];
@@ -40423,23 +40495,25 @@ async function blueprintPhaseValidationWrite2(args) {
 }
 async function buildPhasePlanIndexFromResolved(input) {
   const { projectRoot, resolved } = input;
-  const planPaths = input.artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right));
+  const publicationBefore = input.ignorePublicationGuard ? null : await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const artifacts = !input.ignorePublicationGuard && !input.planContents ? await listPhaseArtifacts2(resolveBlueprintPath(projectRoot, resolved.phaseDir), projectRoot) : input.artifacts;
+  const planPaths = artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right));
   const plans = [];
   const waves = {};
   const warnings = [...input.warnings ?? []];
   const knownPlanIds = /* @__PURE__ */ new Set();
   const gapClosurePlans = /* @__PURE__ */ new Set();
   for (const planPath of planPaths) {
-    const planId2 = parseCanonicalPlanArtifactPath(planPath, resolved);
-    if (!planId2) {
-      if (path12.posix.dirname(planPath) === resolved.phaseDir) {
+    const planId3 = parseCanonicalPlanArtifactPath(planPath, resolved);
+    if (!planId3) {
+      if (path13.posix.dirname(planPath) === resolved.phaseDir) {
         warnings.push(`Ignoring non-canonical plan artifact name: ${planPath}`);
       }
       continue;
     }
-    knownPlanIds.add(planId2);
-    const content = input.planContents?.get(planPath) ?? await fs13.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
-    const record2 = toPhasePlanRecord(planId2, planPath, content, resolved.phaseNumber);
+    knownPlanIds.add(planId3);
+    const content = input.planContents?.get(planPath) ?? await fs14.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const record2 = toPhasePlanRecord(planId3, planPath, content, resolved.phaseNumber);
     const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record2.dependsOn);
     if (dependencyIssues.length > 0) {
       record2.issues.push(...dependencyIssues);
@@ -40447,11 +40521,25 @@ async function buildPhasePlanIndexFromResolved(input) {
     }
     plans.push(record2);
     if (record2.valid && record2.gapClosure) {
-      gapClosurePlans.add(planId2);
+      gapClosurePlans.add(planId3);
     }
     const waveKey = String(record2.wave ?? "unassigned");
     waves[waveKey] ??= [];
     waves[waveKey].push(planPath);
+  }
+  if (publicationBefore) {
+    const issue2 = phasePlanPublicationIssue(
+      publicationBefore,
+      await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+    );
+    if (issue2) {
+      warnings.push(issue2);
+      gapClosurePlans.clear();
+      for (const plan of plans) {
+        plan.valid = false;
+        plan.issues.push(issue2);
+      }
+    }
   }
   const missingPlans = plans.length === 0 ? [planPathFor(resolved, "01")] : plans.flatMap(
     (plan) => collectMissingDependencyPlanPaths(plan.dependsOn, knownPlanIds, resolved)
@@ -40536,8 +40624,9 @@ async function blueprintPhasePlanRead(args) {
   });
 }
 async function readPhasePlanFromResolved(args) {
-  const { projectRoot, resolved, planId: planId2 } = args;
-  const pathValue = planPathFor(resolved, planId2);
+  const { projectRoot, resolved, planId: planId3 } = args;
+  const publicationBefore = await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const pathValue = planPathFor(resolved, planId3);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   if (!await pathExists(absolutePath)) {
     return {
@@ -40547,7 +40636,7 @@ async function readPhasePlanFromResolved(args) {
       phasePrefix: resolved.phasePrefix,
       phaseName: resolved.phaseName,
       phaseDir: resolved.phaseDir,
-      planId: planId2,
+      planId: planId3,
       path: pathValue,
       content: null,
       metadata: null,
@@ -40555,9 +40644,17 @@ async function readPhasePlanFromResolved(args) {
       reason: `${pathValue} does not exist yet.`
     };
   }
-  const content = await fs13.readFile(absolutePath, "utf8");
-  const record2 = toPhasePlanRecord(planId2, pathValue, content, resolved.phaseNumber);
+  const content = await fs14.readFile(absolutePath, "utf8");
+  const record2 = toPhasePlanRecord(planId3, pathValue, content, resolved.phaseNumber);
   const dependencyIssues = collectInvalidPlanDependencyIssues(pathValue, record2.dependsOn);
+  const publicationIssue = phasePlanPublicationIssue(
+    publicationBefore,
+    await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+  );
+  if (publicationIssue) {
+    record2.valid = false;
+    record2.issues.push(publicationIssue);
+  }
   return {
     phaseFound: true,
     found: true,
@@ -40565,7 +40662,7 @@ async function readPhasePlanFromResolved(args) {
     phasePrefix: resolved.phasePrefix,
     phaseName: resolved.phaseName,
     phaseDir: resolved.phaseDir,
-    planId: planId2,
+    planId: planId3,
     path: pathValue,
     content,
     metadata: {
@@ -40618,6 +40715,118 @@ async function blueprintPhasePlanValidate(args = {}) {
   }
   return validatePhasePlanSet(projectRoot, resolved);
 }
+async function validatePhasePlanCandidateSet(args) {
+  const diagnostics = [];
+  const plans = [];
+  let planSetValidation = null;
+  try {
+    const snapshot3 = await resolvePhaseRuntimeSnapshot(args);
+    const { projectRoot, resolved } = snapshot3;
+    if (!resolved) throw new Error(snapshot3.located.reason ?? "Phase could not be resolved.");
+    const candidates = args.models.map((candidate) => ({ ...candidate, planId: normalizePlanId(candidate.planId) }));
+    const candidateIds = candidates.map((candidate) => candidate.planId);
+    if (new Set(candidateIds).size !== candidateIds.length) throw new Error("Candidate plan IDs must be unique.");
+    const excludedIds = /* @__PURE__ */ new Set([...candidateIds, ...(args.removePlanIds ?? []).map(normalizePlanId)]);
+    const evidenceArtifacts = snapshot3.artifacts.filter((artifact) => {
+      const planId3 = parseCanonicalPlanArtifactPath(artifact, resolved);
+      return planId3 === null || !excludedIds.has(planId3);
+    });
+    const retainedPaths = evidenceArtifacts.filter((artifact) => path13.posix.dirname(artifact) === resolved.phaseDir && artifact.endsWith("-PLAN.md"));
+    const retainedContents = new Map(await Promise.all(retainedPaths.map(async (artifact) => [artifact, await fs14.readFile(resolveBlueprintPath(projectRoot, artifact), "utf8")])));
+    const existingIndex = await buildPhasePlanIndexFromResolved({
+      projectRoot,
+      resolved,
+      artifacts: evidenceArtifacts,
+      planContents: retainedContents,
+      ignorePublicationGuard: true
+    });
+    const baseContext = await buildPhasePlanAuthoringContextData({
+      snapshot: { ...snapshot3, artifacts: evidenceArtifacts },
+      planId: candidateIds[0] ?? "01",
+      existingIndex
+    });
+    const savedSpecContent = await readMarkdownDocument(projectRoot, artifactPathFor(resolved, "spec"));
+    const allPlanIds = [.../* @__PURE__ */ new Set([...existingIndex.plans.map((plan) => plan.planId), ...candidateIds])];
+    for (const candidate of candidates) {
+      const pathValue = planPathFor(resolved, candidate.planId);
+      const allowedDependencyPlanIds = allPlanIds.filter((planId3) => planId3 !== candidate.planId);
+      const context = {
+        ...baseContext,
+        planId: candidate.planId,
+        pathValue,
+        allowedDependencyPlanIds,
+        taskSchema: buildPhasePlanTaskSchema({
+          baseSchema: baseContext.baseSchema,
+          knownRequirements: baseContext.knownRequirements,
+          knownEvidenceArtifacts: baseContext.knownEvidenceArtifacts,
+          allowedDependencyPlanIds
+        })
+      };
+      const validation = await validatePhasePlanModelWithContext({ model: candidate.model, context, savedSpecContent });
+      diagnostics.push(...validation.diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        context: { ...diagnostic.context, planId: candidate.planId, path: pathValue }
+      })));
+      if (validation.valid && validation.renderPreview && validation.normalizedModel) {
+        const prepared = prepareTextForPersistence(validation.renderPreview, { label: pathValue });
+        plans.push({
+          planId: candidate.planId,
+          path: pathValue,
+          model: validation.normalizedModel,
+          content: prepared.content
+        });
+      }
+    }
+    if (!diagnostics.some(isBlockingPhasePlanDiagnostic)) {
+      const overrides = new Map([...retainedContents, ...plans.map((plan) => [plan.path, plan.content])]);
+      planSetValidation = await validatePhasePlanSet(projectRoot, resolved, {
+        overrides,
+        knownPlanPaths: retainedPaths,
+        roadmapRequirementIds: snapshot3.matchedPhase?.requirements ?? [],
+        roadmapCoverageSeverity: args.requireComplete === false ? "warning" : "issue",
+        ignorePublicationGuard: true
+      });
+      const partitioned = partitionPhasePlanMarkdownValidationIssues(planSetValidation.issues);
+      planSetValidation.issues = partitioned.blockingIssues;
+      planSetValidation.warnings.push(...partitioned.warningIssues);
+      const loaded = await collectPhasePlanArtifacts(projectRoot, resolved, overrides, retainedPaths);
+      for (let leftIndex = 0; leftIndex < loaded.plans.length; leftIndex += 1) {
+        const left = loaded.plans[leftIndex];
+        for (const right of loaded.plans.slice(leftIndex + 1)) {
+          if (left.metadata.wave !== right.metadata.wave) continue;
+          const overlap = sharedExecutionSurfaces(
+            { filesModified: left.metadata.filesModified, readFirst: [] },
+            { filesModified: right.metadata.filesModified, readFirst: [] }
+          );
+          if (overlap.length) planSetValidation.issues.push(
+            `Plans ${left.planIdFromPath} and ${right.planIdFromPath} both modify ${overlap.map((surface) => surface.value).join(", ")} in wave ${left.metadata.wave}. Assign dependencies and sequential waves for shared ownership.`
+          );
+        }
+      }
+      planSetValidation.status = planSetValidation.issues.length ? "invalid" : "valid";
+      diagnostics.push(...planSetValidation.issues.map(phasePlanPreflightDiagnosticFromIssue));
+      diagnostics.push(...planSetValidation.warnings.map((message) => phasePlanDiagnostic({
+        severity: "warning",
+        source: "residual",
+        path: "models",
+        code: "plan_set.guidance",
+        message,
+        context: { stage: "prospective-plan-set-preflight" },
+        suggestion: "Review plan-set guidance before marking planning complete."
+      })));
+    }
+  } catch (error2) {
+    diagnostics.push(phasePlanDiagnostic({
+      source: "scope",
+      path: "models",
+      code: "plan_set.invalid",
+      message: error2 instanceof Error ? error2.message : String(error2),
+      context: {},
+      suggestion: "Resolve the candidate IDs and phase evidence, then validate the saved candidate again."
+    }));
+  }
+  return { valid: !diagnostics.some(isBlockingPhasePlanDiagnostic), diagnostics, plans, planSetValidation };
+}
 async function blueprintPhasePlanAuthoringContext(args = {}) {
   try {
     const context = await resolvePhasePlanAuthoringContextData(args);
@@ -40655,6 +40864,28 @@ async function blueprintPhasePlanReadiness(args = {}) {
   const includeContent = args.bodyMode === "bounded" && args.readMode !== "hashes-only";
   const snapshot3 = await resolvePhaseRuntimeSnapshot(args);
   const projectRoot = snapshot3.projectRoot;
+  const consistencyPaths = uniqueSortedStrings([
+    `${BLUEPRINT_DIR}/PROJECT.md`,
+    `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
+    `${BLUEPRINT_DIR}/ROADMAP.md`,
+    `${BLUEPRINT_DIR}/STATE.md`,
+    `${BLUEPRINT_DIR}/config.json`,
+    ...CODEBASE_ARTIFACTS,
+    ...snapshot3.resolved ? [
+      ...canonicalPhaseReadinessInventory(snapshot3.artifacts, snapshot3.resolved),
+      ...["context", "discussion-log", "research", "spec", "ui-spec"].map((kind) => artifactPathFor(snapshot3.resolved, kind))
+    ] : []
+  ]);
+  const consistencyHashes = new Map(await Promise.all(consistencyPaths.map(async (pathValue) => {
+    const read = await readReadinessPath({
+      projectRoot,
+      pathValue,
+      kind: "input-consistency",
+      includeContent: false,
+      maxBodyBytes
+    });
+    return [pathValue, read.readSet.hash];
+  })));
   const state = await blueprintStateLoad({ cwd: projectRoot });
   const config2 = await blueprintConfigGet({
     cwd: projectRoot,
@@ -40669,6 +40900,9 @@ async function blueprintPhasePlanReadiness(args = {}) {
   const modelContract = contract.modelContract ?? null;
   const readSet = [];
   for (const [pathValue, kind] of [
+    [`${BLUEPRINT_DIR}/PROJECT.md`, "project"],
+    [`${BLUEPRINT_DIR}/REQUIREMENTS.md`, "requirements"],
+    ...CODEBASE_ARTIFACTS.map((artifact) => [artifact, "codebase"]),
     [`${BLUEPRINT_DIR}/ROADMAP.md`, "roadmap"],
     [`${BLUEPRINT_DIR}/STATE.md`, "state"],
     [`${BLUEPRINT_DIR}/config.json`, "config.project"]
@@ -40736,7 +40970,8 @@ async function blueprintPhasePlanReadiness(args = {}) {
     });
     const authoringData = await buildPhasePlanAuthoringContextData({
       snapshot: snapshot3,
-      planId: args.planId
+      planId: args.planId,
+      existingIndex: planIndex
     });
     authoringContext = phasePlanAuthoringContextFromData({
       context: authoringData,
@@ -40768,18 +41003,15 @@ async function blueprintPhasePlanReadiness(args = {}) {
     uat: validationArtifactPathFor(resolved, "uat"),
     review: buildArtifactPath(resolved.phaseDir, resolved.phasePrefix, "-REVIEW.md")
   } : null;
-  for (const [key, pathValue, kind, relevant] of [
+  for (const [key2, pathValue, kind, relevant] of [
     ["context", contextPath, "phase.context", true],
     ["research", researchPath, "phase.research", config2.config.workflow.research],
     ["spec", specPath, "phase.spec", true],
     ["uiSpec", uiSpecPath, "phase.uiSpec", config2.config.workflow.ui_phase]
   ]) {
-    const expectedPath = expectedArtifactPaths?.[key] ?? null;
+    const expectedPath = expectedArtifactPaths?.[key2] ?? null;
     const omittedReason = relevant ? "artifact absent" : "disabled or not relevant under effective config";
     if (!pathValue) {
-      if (key === "spec") {
-        continue;
-      }
       if (expectedPath) {
         const missingRead = await readReadinessPath({
           projectRoot,
@@ -40791,7 +41023,7 @@ async function blueprintPhasePlanReadiness(args = {}) {
         });
         readSet.push(missingRead.readSet);
       }
-      artifactBodies[key] = {
+      artifactBodies[key2] = {
         path: expectedPath,
         summary: null,
         hash: null,
@@ -40811,7 +41043,7 @@ async function blueprintPhasePlanReadiness(args = {}) {
       reason: relevant ? void 0 : "disabled or not relevant under effective config"
     });
     readSet.push(read.readSet);
-    artifactBodies[key] = read.body;
+    artifactBodies[key2] = read.body;
   }
   const validationPaths = [
     context.phase?.artifacts.verification,
@@ -40940,9 +41172,86 @@ async function blueprintPhasePlanReadiness(args = {}) {
       readSet.push(missingRead.readSet);
     }
   }
-  const finalReadSet = dedupeReadSet(readSet);
+  if (resolved) {
+    const trackedPaths = new Set(readSet.map((entry) => entry.path));
+    const extraEvidence = canonicalPhaseReadinessInventory(snapshot3.artifacts, resolved).filter((artifact) => !trackedPaths.has(artifact));
+    const extraReads = await Promise.all(extraEvidence.map((pathValue) => readReadinessPath({
+      projectRoot,
+      pathValue,
+      kind: "phase.evidence",
+      includeContent: false,
+      maxBodyBytes,
+      reason: "freshness-metadata"
+    })));
+    readSet.push(...extraReads.map((read) => read.readSet));
+    const researchTarget = artifactPathFor(resolved, "research");
+    const provenanceRead = await readReadinessPath({
+      projectRoot,
+      pathValue: researchProvenancePath(researchTarget),
+      kind: "phase.research.provenance",
+      includeContent: false,
+      maxBodyBytes,
+      reason: "research-readiness"
+    });
+    readSet.push(provenanceRead.readSet);
+    if (provenanceRead.raw) {
+      try {
+        const provenance = safeJsonParseObject(provenanceRead.raw, { label: provenanceRead.readSet.path });
+        if (Array.isArray(provenance.readSet) && provenance.readSet.length <= 100) {
+          for (const input of provenance.readSet) {
+            if (!input || typeof input !== "object" || typeof input.path !== "string") continue;
+            let hash4;
+            try {
+              hash4 = await researchInputHash(projectRoot, input.path);
+            } catch (error2) {
+              hash4 = `unreadable:${error2 instanceof Error ? error2.message : String(error2)}`;
+            }
+            readSet.push({
+              path: input.path,
+              kind: "phase.research.input",
+              hash: hash4 ?? "missing",
+              sizeBytes: 0,
+              truncated: false,
+              included: false,
+              reason: "research-readiness"
+            });
+          }
+        }
+      } catch {
+      }
+    } else {
+      const sessionRead = await readReadinessPath({
+        projectRoot,
+        pathValue: researchTarget.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json"),
+        kind: "phase.research.publication",
+        includeContent: false,
+        maxBodyBytes,
+        reason: "research-readiness"
+      });
+      readSet.push(sessionRead.readSet);
+    }
+  }
+  readSet.push(buildReadinessHashEntry({
+    pathValue: modelContract?.schemaPath ?? "phase.plan.model.schema",
+    kind: "phase.plan.schema",
+    value: { schema: modelContract?.jsonSchema ?? null, authoringTemplate: contract.authoringTemplate }
+  }));
+  const changedDuringRead = /* @__PURE__ */ new Set();
+  const finalReadSet = dedupeReadSet(readSet).map((entry) => {
+    const originalHash = consistencyHashes.get(entry.path);
+    if (originalHash !== void 0 && originalHash !== entry.hash) {
+      changedDuringRead.add(entry.path);
+      return { ...entry, hash: originalHash };
+    }
+    return entry;
+  });
   const freshness = compareReadSetFreshness(finalReadSet, args.previousReadSet);
-  const status = !resolved ? "invalid" : authoringContext.status === "ready" ? "ready" : "blocked";
+  if (changedDuringRead.size) {
+    freshness.checked = true;
+    freshness.fresh = false;
+    freshness.stalePaths = uniqueSortedStrings([...freshness.stalePaths, ...changedDuringRead]);
+  }
+  const status = !resolved ? "invalid" : authoringContext.status === "ready" && !changedDuringRead.size ? "ready" : "blocked";
   const hashesOnly = args.readMode === "hashes-only";
   const returnedAuthoringContext = hashesOnly ? {
     ...authoringContext,
@@ -41106,8 +41415,8 @@ async function blueprintPhasePlanWrite(args) {
       const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(
         ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
       ) + 1;
-      const planId2 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
-      const pathValue = planPathFor(resolved, planId2);
+      const planId3 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
+      const pathValue = planPathFor(resolved, planId3);
       const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
       if (hasContent === hasModel) {
         return {
@@ -41115,7 +41424,7 @@ async function blueprintPhasePlanWrite(args) {
           phasePrefix: resolved.phasePrefix,
           phaseName: resolved.phaseName,
           phaseDir: resolved.phaseDir,
-          planId: planId2,
+          planId: planId3,
           path: pathValue,
           written: false,
           created: false,
@@ -41135,7 +41444,7 @@ async function blueprintPhasePlanWrite(args) {
           phasePrefix: resolved.phasePrefix,
           phaseName: resolved.phaseName,
           phaseDir: resolved.phaseDir,
-          planId: planId2,
+          planId: planId3,
           path: pathValue,
           written: false,
           created: false,
@@ -41155,7 +41464,7 @@ async function blueprintPhasePlanWrite(args) {
         const readiness = await blueprintPhasePlanReadiness({
           cwd: projectRoot,
           phase: resolved.phaseNumber,
-          planId: planId2,
+          planId: planId3,
           readMode: "hashes-only",
           includeSavedPlanBodies: "target",
           previousReadSet: args.expectedReadSet
@@ -41167,7 +41476,7 @@ async function blueprintPhasePlanWrite(args) {
             phasePrefix: resolved.phasePrefix,
             phaseName: resolved.phaseName,
             phaseDir: resolved.phaseDir,
-            planId: planId2,
+            planId: planId3,
             path: pathValue,
             written: false,
             created: false,
@@ -41194,7 +41503,7 @@ async function blueprintPhasePlanWrite(args) {
       if (hasModel) {
         const authoringContext = await buildPhasePlanAuthoringContextData({
           snapshot: lockedSnapshot,
-          planId: planId2
+          planId: planId3
         });
         const modelRender = await phasePlanModelToContent(args.model, authoringContext);
         modelValidation = trimPhasePlanWriteModelValidation(modelRender.validation);
@@ -41204,7 +41513,7 @@ async function blueprintPhasePlanWrite(args) {
             phasePrefix: resolved.phasePrefix,
             phaseName: resolved.phaseName,
             phaseDir: resolved.phaseDir,
-            planId: planId2,
+            planId: planId3,
             path: pathValue,
             written: false,
             created: false,
@@ -41225,7 +41534,7 @@ async function blueprintPhasePlanWrite(args) {
       } else {
         normalizedContent = normalizeTextContent(args.content ?? "");
       }
-      const contentForValidation = !hasModel && args.planId === void 0 ? reconcileAutoAssignedPlanContent(normalizedContent, planId2) : normalizedContent;
+      const contentForValidation = !hasModel && args.planId === void 0 ? reconcileAutoAssignedPlanContent(normalizedContent, planId3) : normalizedContent;
       const preparedContent = prepareTextForPersistence(contentForValidation, {
         label: pathValue
       });
@@ -41255,7 +41564,7 @@ async function blueprintPhasePlanWrite(args) {
           phasePrefix: resolved.phasePrefix,
           phaseName: resolved.phaseName,
           phaseDir: resolved.phaseDir,
-          planId: planId2,
+          planId: planId3,
           path: pathValue,
           written: false,
           created: false,
@@ -41269,14 +41578,14 @@ async function blueprintPhasePlanWrite(args) {
           warnings: dependencyIssues
         };
       }
-      if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId2) {
-        const issue2 = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId2}".`;
+      if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId3) {
+        const issue2 = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId3}".`;
         return {
           phaseNumber: resolved.phaseNumber,
           phasePrefix: resolved.phasePrefix,
           phaseName: resolved.phaseName,
           phaseDir: resolved.phaseDir,
-          planId: planId2,
+          planId: planId3,
           path: pathValue,
           written: false,
           created: false,
@@ -41296,7 +41605,7 @@ async function blueprintPhasePlanWrite(args) {
           phasePrefix: resolved.phasePrefix,
           phaseName: resolved.phaseName,
           phaseDir: resolved.phaseDir,
-          planId: planId2,
+          planId: planId3,
           path: pathValue,
           written: false,
           created: false,
@@ -41317,7 +41626,7 @@ async function blueprintPhasePlanWrite(args) {
           phasePrefix: resolved.phasePrefix,
           phaseName: resolved.phaseName,
           phaseDir: resolved.phaseDir,
-          planId: planId2,
+          planId: planId3,
           path: pathValue,
           written: false,
           created: false,
@@ -41338,7 +41647,7 @@ async function blueprintPhasePlanWrite(args) {
       const blockingIssues = selectRelevantPlanValidationIssues(
         prospectiveValidation,
         pathValue,
-        planId2
+        planId3
       );
       if (blockingIssues.length > 0 && strictValidation) {
         return {
@@ -41346,7 +41655,7 @@ async function blueprintPhasePlanWrite(args) {
           phasePrefix: resolved.phasePrefix,
           phaseName: resolved.phaseName,
           phaseDir: resolved.phaseDir,
-          planId: planId2,
+          planId: planId3,
           path: pathValue,
           written: false,
           created: false,
@@ -41368,7 +41677,7 @@ async function blueprintPhasePlanWrite(args) {
       const exists3 = await pathExists(absolutePath);
       const normalizePersistedText = (value) => value.replace(/\r\n/g, "\n").replace(/^---\n([\s\S]*?)\n---\n+/, "---\n$1\n---\n").trimEnd();
       if (exists3) {
-        const existingContent = await fs13.readFile(absolutePath, "utf8");
+        const existingContent = await fs14.readFile(absolutePath, "utf8");
         if (normalizePersistedText(existingContent) === normalizePersistedText(preparedContent.content)) {
           warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
           return {
@@ -41376,7 +41685,7 @@ async function blueprintPhasePlanWrite(args) {
             phasePrefix: resolved.phasePrefix,
             phaseName: resolved.phaseName,
             phaseDir: resolved.phaseDir,
-            planId: planId2,
+            planId: planId3,
             path: pathValue,
             written: false,
             created: false,
@@ -41422,7 +41731,7 @@ async function blueprintPhasePlanWrite(args) {
         phasePrefix: resolved.phasePrefix,
         phaseName: resolved.phaseName,
         phaseDir: resolved.phaseDir,
-        planId: planId2,
+        planId: planId3,
         path: pathValue,
         written: true,
         created: !exists3,
@@ -41476,7 +41785,7 @@ async function blueprintPhaseSummaryIndex(args = {}) {
   return summaryInventory.summaryIndex;
 }
 async function resolvePhaseSummaryAuthoringData(args) {
-  const planId2 = normalizePlanId(args.planId);
+  const planId3 = normalizePlanId(args.planId);
   const snapshot3 = await resolvePhaseRuntimeSnapshot(args);
   const { projectRoot, located, resolved, matchedPhase } = snapshot3;
   if (!resolved) {
@@ -41485,7 +41794,7 @@ async function resolvePhaseSummaryAuthoringData(args) {
       located,
       resolved: null,
       matchedPhase,
-      planId: planId2,
+      planId: planId3,
       summaryPath: null,
       planRead: null,
       planIndex: null,
@@ -41502,7 +41811,7 @@ async function resolvePhaseSummaryAuthoringData(args) {
     readPhasePlanFromResolved({
       projectRoot,
       resolved,
-      planId: planId2
+      planId: planId3
     }),
     loadResolvedPhaseSummaryContext({
       projectRoot,
@@ -41513,7 +41822,7 @@ async function resolvePhaseSummaryAuthoringData(args) {
     })
   ]);
   const { planIndex, summaryInventory } = summaryContext;
-  const indexedPlan = planIndex.plans.find((candidate) => candidate.planId === planId2) ?? null;
+  const indexedPlan = planIndex.plans.find((candidate) => candidate.planId === planId3) ?? null;
   const knownPlanIds = new Set(planIndex.plans.map((candidate) => candidate.planId));
   const dependsOn = indexedPlan?.dependsOn ?? planRead.metadata?.dependsOn ?? [];
   return {
@@ -41521,14 +41830,14 @@ async function resolvePhaseSummaryAuthoringData(args) {
     located,
     resolved,
     matchedPhase,
-    planId: planId2,
-    summaryPath: summaryPathFor(resolved, planId2),
+    planId: planId3,
+    summaryPath: summaryPathFor(resolved, planId3),
     planRead,
     planIndex,
     summaryInventory,
     existingSummary: phaseSummaryReadFromInventory({
       resolved,
-      planId: planId2,
+      planId: planId3,
       inventory: summaryInventory,
       validateSummaryAgainstLivePlanInventory
     }),
@@ -41585,7 +41894,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
   const {
     located,
     resolved,
-    planId: planId2,
+    planId: planId3,
     summaryPath: summaryPath2,
     planRead,
     planIndex,
@@ -41601,7 +41910,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
     return {
       status: "invalid",
       phase: null,
-      planId: planId2,
+      planId: planId3,
       path: null,
       linkedPlanPath: null,
       plan: null,
@@ -41620,7 +41929,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
   }
   const { linkedPlanPath, blockers, warnings } = buildPhaseSummaryAuthoringPrerequisites({
     resolved,
-    planId: planId2,
+    planId: planId3,
     planRead,
     planIndex,
     summaryInventory,
@@ -41632,7 +41941,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
   return {
     status: blockers.length === 0 ? "ready" : "invalid",
     phase: resolved,
-    planId: planId2,
+    planId: planId3,
     path: summaryPath2,
     linkedPlanPath,
     plan: indexedPlan,
@@ -41658,7 +41967,7 @@ async function blueprintPhaseSummaryValidateModel(args) {
   const {
     located,
     resolved,
-    planId: planId2,
+    planId: planId3,
     summaryPath: summaryPath2,
     planRead,
     planIndex,
@@ -41669,7 +41978,7 @@ async function blueprintPhaseSummaryValidateModel(args) {
   } = data;
   const prerequisiteData = resolved ? buildPhaseSummaryAuthoringPrerequisites({
     resolved,
-    planId: planId2,
+    planId: planId3,
     planRead,
     planIndex,
     summaryInventory,
@@ -41686,7 +41995,7 @@ async function blueprintPhaseSummaryValidateModel(args) {
       path: "phase.plan",
       code: "scope.prerequisite_blocker",
       message,
-      context: { phase: resolved?.phaseNumber ?? null, planId: planId2 },
+      context: { phase: resolved?.phaseNumber ?? null, planId: planId3 },
       suggestion: "Repair the selected saved plan and dependency inventory before authoring phase.summary evidence."
     })
   );
@@ -41736,11 +42045,11 @@ async function blueprintPhaseSummaryValidateModel(args) {
           })
         );
       } else if (resolved && summaryPath2) {
-        const linkedPlanPath = planRead?.path ?? indexedPlan?.path ?? planPathFor(resolved, planId2);
+        const linkedPlanPath = planRead?.path ?? indexedPlan?.path ?? planPathFor(resolved, planId3);
         renderPreview = renderPhaseSummaryModelContent({
           model: normalizedModel,
           resolved,
-          planId: planId2,
+          planId: planId3,
           linkedPlanPath,
           summaryPath: summaryPath2
         });
@@ -41754,7 +42063,7 @@ async function blueprintPhaseSummaryValidateModel(args) {
       completedDependencyPlanIds
     } = prerequisiteData ?? buildPhaseSummaryAuthoringPrerequisites({
       resolved,
-      planId: planId2,
+      planId: planId3,
       planRead,
       planIndex,
       summaryInventory,
@@ -41795,11 +42104,11 @@ async function blueprintPhaseSummaryValidateModel(args) {
       phaseNumber: resolved.phaseNumber,
       planIds: planIndex?.plans.map((plan) => plan.planId) ?? [],
       completedPlanIds: completedDependencyPlanIds,
-      selectedPlanId: planId2
+      selectedPlanId: planId3
     });
     const livePlanValidation = validateSummaryAgainstLivePlanInventory(renderPreview, {
       resolved,
-      planId: planId2,
+      planId: planId3,
       plan: indexedPlan,
       knownPlanIds: new Set(planIndex?.plans.map((plan) => plan.planId) ?? []),
       completedDependencyPlanIds,
@@ -41831,9 +42140,9 @@ async function blueprintPhaseSummaryValidateModel(args) {
     status: diagnostics.length === 0 ? "valid" : "invalid",
     valid: diagnostics.length === 0,
     phase: resolved,
-    planId: planId2,
+    planId: planId3,
     path: summaryPath2,
-    linkedPlanPath: resolved ? planRead?.path ?? indexedPlan?.path ?? planPathFor(resolved, planId2) : null,
+    linkedPlanPath: resolved ? planRead?.path ?? indexedPlan?.path ?? planPathFor(resolved, planId3) : null,
     schemaPath: null,
     taskSchema: null,
     diagnostics,
@@ -41865,8 +42174,8 @@ async function blueprintPhaseSummaryRead(args) {
       reason: located.reason
     };
   }
-  const planId2 = normalizePlanId(args.planId);
-  const pathValue = summaryPathFor(resolved, planId2);
+  const planId3 = normalizePlanId(args.planId);
+  const pathValue = summaryPathFor(resolved, planId3);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   if (!await pathExists(absolutePath)) {
     return {
@@ -41876,7 +42185,7 @@ async function blueprintPhaseSummaryRead(args) {
       phasePrefix: resolved.phasePrefix,
       phaseName: resolved.phaseName,
       phaseDir: resolved.phaseDir,
-      planId: planId2,
+      planId: planId3,
       path: pathValue,
       content: null,
       metadata: null,
@@ -41893,7 +42202,7 @@ async function blueprintPhaseSummaryRead(args) {
   });
   return phaseSummaryReadFromInventory({
     resolved,
-    planId: planId2,
+    planId: planId3,
     inventory: summaryInventory,
     validateSummaryAgainstLivePlanInventory
   });
@@ -41964,29 +42273,34 @@ async function blueprintPhaseExecutionTargets(args = {}) {
       warnings: located.reason ? [located.reason] : []
     };
   }
+  const publicationBefore = await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const requestedWave = args.wave ?? null;
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
   const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
-  const planPaths = located.artifacts.filter(
-    (artifactPath) => path12.posix.dirname(artifactPath) === resolved.phaseDir && artifactPath.endsWith("-PLAN.md")
+  const executionArtifacts = await listPhaseArtifacts2(
+    resolveBlueprintPath(projectRoot, resolved.phaseDir),
+    projectRoot
+  );
+  const planPaths = executionArtifacts.filter(
+    (artifactPath) => path13.posix.dirname(artifactPath) === resolved.phaseDir && artifactPath.endsWith("-PLAN.md")
   );
   const planContents = new Map(
     await Promise.all(
       planPaths.map(async (planPath) => [
         planPath,
-        await fs13.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8")
+        await fs14.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8")
       ])
     )
   );
   const [summaryContext, effectiveConfig, planSetValidation] = await Promise.all([
     loadResolvedPhaseSummaryContext({
       projectRoot,
-      located,
+      located: { ...located, artifacts: executionArtifacts },
       resolved,
       buildPhasePlanIndexFromLocated: (input) => buildPhasePlanIndexFromResolved({
         ...input,
-        artifacts: located.artifacts,
+        artifacts: executionArtifacts,
         planContents
       }),
       validateSummaryAgainstLivePlanInventory
@@ -42038,16 +42352,16 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   });
   const planOrder = new Map(executionPlans.map((plan, index) => [plan.planId, index]));
   const planById = new Map(executionPlans.map((plan) => [plan.planId, plan]));
-  let candidatePlanIds = executionPlans.map((plan) => plan.planId).filter((planId2) => pendingPlanIdSet.has(planId2));
+  let candidatePlanIds = executionPlans.map((plan) => plan.planId).filter((planId3) => pendingPlanIdSet.has(planId3));
   if (gapsOnly) {
-    candidatePlanIds = candidatePlanIds.filter((planId2) => gapClosurePlanIdSet.has(planId2));
+    candidatePlanIds = candidatePlanIds.filter((planId3) => gapClosurePlanIdSet.has(planId3));
   }
   if (requestedWave !== null) {
     candidatePlanIds = candidatePlanIds.filter(
-      (planId2) => planById.get(planId2)?.wave === requestedWave
+      (planId3) => planById.get(planId3)?.wave === requestedWave
     );
   }
-  const candidatePlans = candidatePlanIds.map((planId2) => planById.get(planId2)).filter((plan) => plan !== void 0);
+  const candidatePlans = candidatePlanIds.map((planId3) => planById.get(planId3)).filter((plan) => plan !== void 0);
   const selectedWave = requestedWave ?? candidatePlans.map((plan) => plan.wave).filter((wave) => typeof wave === "number").sort((left, right) => left - right)[0] ?? null;
   const selectedPlans = requestedWave !== null || selectedWave === null ? candidatePlans : candidatePlans.filter((plan) => plan.wave === selectedWave);
   const lowerWavePendingPlans = selectedWave === null ? [] : executionPlans.filter(
@@ -42128,14 +42442,14 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   }
   const selectedPlanIdSet = new Set(selectedPlans.map((plan) => plan.planId));
   const parent = /* @__PURE__ */ new Map();
-  const find = (planId2) => {
-    const current = parent.get(planId2) ?? planId2;
-    if (current === planId2) {
-      parent.set(planId2, planId2);
-      return planId2;
+  const find = (planId3) => {
+    const current = parent.get(planId3) ?? planId3;
+    if (current === planId3) {
+      parent.set(planId3, planId3);
+      return planId3;
     }
     const root = find(current);
-    parent.set(planId2, root);
+    parent.set(planId3, root);
     return root;
   };
   const union2 = (left, right) => {
@@ -42160,23 +42474,23 @@ async function blueprintPhaseExecutionTargets(args = {}) {
     const componentPlanIds = uniqueSortedStrings(
       pairs.flatMap((pair) => [pair.leftPlanId, pair.rightPlanId])
     );
-    if (!componentPlanIds.some((planId2) => selectedPlanIdSet.has(planId2))) {
+    if (!componentPlanIds.some((planId3) => selectedPlanIdSet.has(planId3))) {
       continue;
     }
     const sharedSurfaces = /* @__PURE__ */ new Map();
     for (const pair of pairs) {
       for (const surface of pair.sharedSurfaces) {
-        const key = `${surface.value}:${surface.kinds.join(",")}`;
-        if (!sharedSurfaces.has(key)) {
-          sharedSurfaces.set(key, surface);
+        const key2 = `${surface.value}:${surface.kinds.join(",")}`;
+        if (!sharedSurfaces.has(key2)) {
+          sharedSurfaces.set(key2, surface);
         }
       }
     }
-    const componentPlans = componentPlanIds.map((planId2) => planById.get(planId2)).filter((plan) => plan !== void 0).sort((left, right) => (planOrder.get(left.planId) ?? 0) - (planOrder.get(right.planId) ?? 0));
+    const componentPlans = componentPlanIds.map((planId3) => planById.get(planId3)).filter((plan) => plan !== void 0).sort((left, right) => (planOrder.get(left.planId) ?? 0) - (planOrder.get(right.planId) ?? 0));
     conflictGroups.push({
       planIds: componentPlans.map((plan) => plan.planId),
       planPaths: componentPlans.map((plan) => plan.path),
-      selectedPlanIds: componentPlans.map((plan) => plan.planId).filter((planId2) => selectedPlanIdSet.has(planId2)),
+      selectedPlanIds: componentPlans.map((plan) => plan.planId).filter((planId3) => selectedPlanIdSet.has(planId3)),
       sharedSurfaces: [...sharedSurfaces.values()].sort(
         (left, right) => left.value.localeCompare(right.value)
       ),
@@ -42186,21 +42500,21 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   }
   const overlapPlanIds = uniqueSortedStrings(
     conflictGroups.flatMap(
-      (group) => group.planIds.filter((planId2) => !selectedPlanIdSet.has(planId2))
+      (group) => group.planIds.filter((planId3) => !selectedPlanIdSet.has(planId3))
     )
   );
-  const overlapPlans = overlapPlanIds.map((planId2) => planById.get(planId2)).filter((plan) => plan !== void 0).sort((left, right) => (planOrder.get(left.planId) ?? 0) - (planOrder.get(right.planId) ?? 0));
+  const overlapPlans = overlapPlanIds.map((planId3) => planById.get(planId3)).filter((plan) => plan !== void 0).sort((left, right) => (planOrder.get(left.planId) ?? 0) - (planOrder.get(right.planId) ?? 0));
   const existingSummaryPlanIds = uniqueSortedStrings([
     ...candidatePlanIds,
     ...overlapPlanIds
-  ]).filter((planId2) => planById.get(planId2)?.summary.found === true);
-  const existingSummaries = existingSummaryPlanIds.map((planId2) => {
-    const plan = planById.get(planId2);
+  ]).filter((planId3) => planById.get(planId3)?.summary.found === true);
+  const existingSummaries = existingSummaryPlanIds.map((planId3) => {
+    const plan = planById.get(planId3);
     if (!plan) {
       return null;
     }
     return {
-      planId: planId2,
+      planId: planId3,
       path: plan.summary.path,
       linkedPlanPath: plan.summary.linkedPlanPath,
       status: plan.summary.status,
@@ -42212,6 +42526,15 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   }).filter(
     (summary) => summary !== null
   );
+  const publicationIssue = phasePlanPublicationIssue(
+    publicationBefore,
+    await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+  );
+  if (publicationIssue) {
+    blockers.push(publicationIssue);
+    planSetValidation.status = "invalid";
+    planSetValidation.issues.push(publicationIssue);
+  }
   const warnings = uniqueSortedStrings([
     ...planIndex.warnings,
     ...summaryIndex.warnings,
@@ -42285,7 +42608,7 @@ async function blueprintPhaseSummaryWrite(args) {
   const { projectRoot, resolved } = data;
   const {
     matchedPhase,
-    planId: planId2,
+    planId: planId3,
     summaryPath: summaryPath2,
     planRead,
     planIndex,
@@ -42295,11 +42618,11 @@ async function blueprintPhaseSummaryWrite(args) {
     dependencyPlans,
     missingDependencyPlans
   } = data;
-  const pathValue = summaryPath2 ?? summaryPathFor(resolved, planId2);
+  const pathValue = summaryPath2 ?? summaryPathFor(resolved, planId3);
   const expectedTopology = phaseTopologyFingerprintFromLocation(resolved, matchedPhase);
   const prerequisites = buildPhaseSummaryAuthoringPrerequisites({
     resolved,
-    planId: planId2,
+    planId: planId3,
     planRead,
     planIndex,
     summaryInventory,
@@ -42320,7 +42643,7 @@ async function blueprintPhaseSummaryWrite(args) {
       phasePrefix: resolved.phasePrefix,
       phaseName: resolved.phaseName,
       phaseDir: resolved.phaseDir,
-      planId: planId2,
+      planId: planId3,
       path: pathValue,
       linkedPlanPath: plan.path,
       written: false,
@@ -42339,7 +42662,7 @@ async function blueprintPhaseSummaryWrite(args) {
       phasePrefix: resolved.phasePrefix,
       phaseName: resolved.phaseName,
       phaseDir: resolved.phaseDir,
-      planId: planId2,
+      planId: planId3,
       path: pathValue,
       linkedPlanPath,
       written: false,
@@ -42360,7 +42683,7 @@ async function blueprintPhaseSummaryWrite(args) {
       phasePrefix: resolved.phasePrefix,
       phaseName: resolved.phaseName,
       phaseDir: resolved.phaseDir,
-      planId: planId2,
+      planId: planId3,
       path: pathValue,
       linkedPlanPath,
       written: false,
@@ -42385,7 +42708,7 @@ async function blueprintPhaseSummaryWrite(args) {
         phasePrefix: resolved.phasePrefix,
         phaseName: resolved.phaseName,
         phaseDir: resolved.phaseDir,
-        planId: planId2,
+        planId: planId3,
         path: pathValue,
         linkedPlanPath,
         written: false,
@@ -42419,7 +42742,7 @@ async function blueprintPhaseSummaryWrite(args) {
         phasePrefix: resolved.phasePrefix,
         phaseName: resolved.phaseName,
         phaseDir: resolved.phaseDir,
-        planId: planId2,
+        planId: planId3,
         path: pathValue,
         linkedPlanPath,
         written: false,
@@ -42448,7 +42771,7 @@ async function blueprintPhaseSummaryWrite(args) {
       renderPhaseSummaryModelContent({
         model: normalizedModel,
         resolved,
-        planId: planId2,
+        planId: planId3,
         linkedPlanPath,
         summaryPath: pathValue
       })
@@ -42477,7 +42800,7 @@ async function blueprintPhaseSummaryWrite(args) {
       phasePrefix: resolved.phasePrefix,
       phaseName: resolved.phaseName,
       phaseDir: resolved.phaseDir,
-      planId: planId2,
+      planId: planId3,
       path: pathValue,
       linkedPlanPath,
       written: false,
@@ -42500,11 +42823,11 @@ async function blueprintPhaseSummaryWrite(args) {
     phaseNumber: resolved.phaseNumber,
     planIds: planIndex?.plans.map((candidate) => candidate.planId) ?? [],
     completedPlanIds: prerequisites.completedDependencyPlanIds,
-    selectedPlanId: planId2
+    selectedPlanId: planId3
   });
   const livePlanValidation = validateSummaryAgainstLivePlanInventory(normalizedContent, {
     resolved,
-    planId: planId2,
+    planId: planId3,
     plan: indexedPlan,
     knownPlanIds,
     completedDependencyPlanIds: prerequisites.completedDependencyPlanIds,
@@ -42526,7 +42849,7 @@ async function blueprintPhaseSummaryWrite(args) {
       phasePrefix: resolved.phasePrefix,
       phaseName: resolved.phaseName,
       phaseDir: resolved.phaseDir,
-      planId: planId2,
+      planId: planId3,
       path: pathValue,
       linkedPlanPath,
       written: false,
@@ -42562,7 +42885,7 @@ async function blueprintPhaseSummaryWrite(args) {
       const lockedPlan = await readPhasePlanFromResolved({
         projectRoot,
         resolved,
-        planId: planId2
+        planId: planId3
       });
       const lockedPlanHash = lockedPlan.content === null ? null : hashString(lockedPlan.content);
       if (!lockedPlan.found || !lockedPlan.path || lockedPlan.path !== linkedPlanPath || lockedPlanHash !== expectedLinkedPlanHash) {
@@ -42571,8 +42894,8 @@ async function blueprintPhaseSummaryWrite(args) {
           phasePrefix: resolved.phasePrefix,
           phaseName: resolved.phaseName,
           phaseDir: resolved.phaseDir,
-          planId: planId2,
-          path: summaryPathFor(resolved, planId2),
+          planId: planId3,
+          path: summaryPathFor(resolved, planId3),
           linkedPlanPath,
           written: false,
           created: false,
@@ -42584,11 +42907,11 @@ async function blueprintPhaseSummaryWrite(args) {
           warnings: [...modelWarnings, ...warnings]
         };
       }
-      const lockedPathValue = summaryPathFor(resolved, planId2);
+      const lockedPathValue = summaryPathFor(resolved, planId3);
       const absolutePath = resolveBlueprintPath(projectRoot, lockedPathValue);
       const exists3 = await pathExists(absolutePath);
       if (exists3) {
-        const existingContent = await fs13.readFile(absolutePath, "utf8");
+        const existingContent = await fs14.readFile(absolutePath, "utf8");
         if (existingContent === normalizedContent) {
           warnings.push(`Preserved existing summary artifact because the content was unchanged.`);
           return {
@@ -42596,7 +42919,7 @@ async function blueprintPhaseSummaryWrite(args) {
             phasePrefix: resolved.phasePrefix,
             phaseName: resolved.phaseName,
             phaseDir: resolved.phaseDir,
-            planId: planId2,
+            planId: planId3,
             path: lockedPathValue,
             linkedPlanPath,
             written: false,
@@ -42626,7 +42949,7 @@ async function blueprintPhaseSummaryWrite(args) {
         phasePrefix: resolved.phasePrefix,
         phaseName: resolved.phaseName,
         phaseDir: resolved.phaseDir,
-        planId: planId2,
+        planId: planId3,
         path: lockedPathValue,
         linkedPlanPath,
         written: true,
@@ -42646,6 +42969,8 @@ var init_phase = __esm({
     init_artifact_contracts();
     init_artifacts();
     init_config();
+    init_plan_publication();
+    init_research_evidence();
     init_state();
     init_state();
     init_security();
@@ -42968,9 +43293,9 @@ __export(artifacts_exports, {
   writeTextFile: () => writeTextFile
 });
 import { execFile } from "node:child_process";
-import { createHash as createHash5 } from "node:crypto";
-import { promises as fs14 } from "node:fs";
-import path13 from "node:path";
+import { createHash as createHash6 } from "node:crypto";
+import { promises as fs15 } from "node:fs";
+import path14 from "node:path";
 import { promisify } from "node:util";
 function normalizeBlueprintArtifactPathForClassification(relativePath) {
   return relativePath.replace(/\\/g, "/").replace(/\/+$/g, "");
@@ -42988,7 +43313,7 @@ function isOperationalOnlyBlueprintArtifact(relativePath) {
   if (blueprintLocalPath === "locks" || blueprintLocalPath.startsWith("locks/")) {
     return true;
   }
-  const artifactName = path13.posix.basename(artifact);
+  const artifactName = path14.posix.basename(artifact);
   return /^\.?.+\.\d+\.\d+\.[a-z0-9]+\.tmp$/i.test(artifactName) || /^.+\.tmp-\d+-\d+$/i.test(artifactName);
 }
 function isScaffoldGeneratedArtifact(content) {
@@ -43011,22 +43336,22 @@ function isDocumentationLikeFile(entryName) {
   if (normalized === "license" || normalized.startsWith("license.")) {
     return true;
   }
-  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path13.extname(normalized));
+  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path14.extname(normalized));
 }
 function isImplementationLikeFile(entryName) {
   if (isBootstrapStarterFile(entryName) || isDocumentationLikeFile(entryName)) {
     return false;
   }
-  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path13.extname(entryName).toLowerCase());
+  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path14.extname(entryName).toLowerCase());
 }
 async function directoryHasImplementationEvidence(directoryPath) {
-  const entries = await fs14.readdir(directoryPath, { withFileTypes: true });
+  const entries = await fs15.readdir(directoryPath, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.isDirectory()) {
       if (entry.name.startsWith(".") || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
         continue;
       }
-      if (await directoryHasImplementationEvidence(path13.join(directoryPath, entry.name))) {
+      if (await directoryHasImplementationEvidence(path14.join(directoryPath, entry.name))) {
         return true;
       }
       continue;
@@ -43038,7 +43363,7 @@ async function directoryHasImplementationEvidence(directoryPath) {
   return false;
 }
 async function assessRootBootstrapShape(projectRoot) {
-  const entries = await fs14.readdir(projectRoot, { withFileTypes: true });
+  const entries = await fs15.readdir(projectRoot, { withFileTypes: true });
   const substantiveEntries = entries.filter(
     (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
   );
@@ -43061,7 +43386,7 @@ async function assessRootBootstrapShape(projectRoot) {
       if (!entry.isDirectory() || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
         continue;
       }
-      if (await directoryHasImplementationEvidence(path13.join(projectRoot, entry.name))) {
+      if (await directoryHasImplementationEvidence(path14.join(projectRoot, entry.name))) {
         hasImplementationEvidence = true;
         break;
       }
@@ -43830,7 +44155,7 @@ async function assertReportCompareAndSwap(absolutePath, expectedExistingContentS
   if (!exists3) {
     throw new Error("Report compare-and-swap failed because the approved report disappeared.");
   }
-  const actualSha256 = createHash5("sha256").update(await fs14.readFile(absolutePath)).digest("hex");
+  const actualSha256 = createHash6("sha256").update(await fs15.readFile(absolutePath)).digest("hex");
   if (actualSha256 !== expectedExistingContentSha256) {
     throw new Error("Report compare-and-swap failed because report content changed after approval.");
   }
@@ -43868,7 +44193,7 @@ function milestoneReportPrefix(reportName2) {
 }
 async function readActiveMilestone(projectRoot) {
   try {
-    const roadmap = await fs14.readFile(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`), "utf8");
+    const roadmap = await fs15.readFile(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`), "utf8");
     return roadmap.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
   } catch {
     return null;
@@ -43954,20 +44279,20 @@ function isPlainObject5(value) {
 }
 async function pathExists2(targetPath) {
   try {
-    await fs14.access(targetPath);
+    await fs15.access(targetPath);
     return true;
   } catch {
     return false;
   }
 }
 function toPosixPath(relativePath) {
-  return relativePath.split(path13.sep).join("/");
+  return relativePath.split(path14.sep).join("/");
 }
 function getProjectRoot(cwd) {
-  return path13.resolve(cwd ?? process.cwd());
+  return path14.resolve(cwd ?? process.cwd());
 }
 function getBlueprintRoot(cwd) {
-  return path13.join(getProjectRoot(cwd), BLUEPRINT_DIR);
+  return path14.join(getProjectRoot(cwd), BLUEPRINT_DIR);
 }
 async function blueprintPathExists(targetPath) {
   return pathExists2(targetPath);
@@ -43989,7 +44314,7 @@ async function resolveGitTopLevel(projectRoot) {
 }
 async function ensureRepoRoot(cwd) {
   const projectRoot = getProjectRoot(cwd);
-  const gitPath = path13.join(projectRoot, ".git");
+  const gitPath = path14.join(projectRoot, ".git");
   if (!await pathExists2(gitPath)) {
     throw new Error(
       "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
@@ -43997,8 +44322,8 @@ async function ensureRepoRoot(cwd) {
   }
   const gitTopLevel = await resolveGitTopLevel(projectRoot);
   const [resolvedProjectRoot, resolvedGitTopLevel] = await Promise.all([
-    fs14.realpath(projectRoot),
-    fs14.realpath(gitTopLevel)
+    fs15.realpath(projectRoot),
+    fs15.realpath(gitTopLevel)
   ]);
   if (resolvedProjectRoot !== resolvedGitTopLevel) {
     throw new Error(
@@ -44008,7 +44333,7 @@ async function ensureRepoRoot(cwd) {
   return projectRoot;
 }
 function toRepoRelativePath(projectRoot, absolutePath) {
-  return toPosixPath(path13.relative(projectRoot, absolutePath));
+  return toPosixPath(path14.relative(projectRoot, absolutePath));
 }
 function resolveRepoRelativePath(projectRoot, relativePath) {
   try {
@@ -44024,7 +44349,7 @@ function resolveRepoRelativePath(projectRoot, relativePath) {
 }
 function resolveBlueprintPath(projectRoot, relativePath) {
   assertNoNullBytes(relativePath, "Blueprint path");
-  if (path13.isAbsolute(relativePath)) {
+  if (path14.isAbsolute(relativePath)) {
     throw new Error(`Blueprint paths must be repo-relative, not absolute: ${relativePath}`);
   }
   if (!relativePath.startsWith(`${BLUEPRINT_DIR}/`)) {
@@ -44043,15 +44368,15 @@ function resolveBlueprintPath(projectRoot, relativePath) {
   return absolutePath;
 }
 async function ensureParentDirectory2(targetPath) {
-  await fs14.mkdir(path13.dirname(targetPath), { recursive: true });
+  await fs15.mkdir(path14.dirname(targetPath), { recursive: true });
 }
 function activeJsonFileSystem() {
   return jsonFileSystemForTest ?? defaultJsonFileSystem;
 }
 function tempSiblingPath(filePath) {
-  return path13.join(
-    path13.dirname(filePath),
-    `.${path13.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  return path14.join(
+    path14.dirname(filePath),
+    `.${path14.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
   );
 }
 function blueprintRepoLockNameSegment(value) {
@@ -44086,12 +44411,12 @@ async function readJsonIfPresent(filePath) {
   if (!await pathExists2(filePath)) {
     return null;
   }
-  const raw = await fs14.readFile(filePath, "utf8");
+  const raw = await fs15.readFile(filePath, "utf8");
   return safeJsonParseObject(raw, { label: filePath });
 }
 async function existingRegularFileMode(filePath) {
   try {
-    const stats = await fs14.lstat(filePath);
+    const stats = await fs15.lstat(filePath);
     if (!stats.isFile()) {
       throw new Error(`Atomic file target must be a regular file: ${filePath}`);
     }
@@ -44112,7 +44437,7 @@ async function writeJsonFile(filePath, value) {
     await fileSystem.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
     if (existingMode !== null) {
-      await fs14.chmod(tempPath, existingMode);
+      await fs15.chmod(tempPath, existingMode);
     }
     await existingRegularFileMode(filePath);
     await fileSystem.rename(tempPath, filePath);
@@ -44126,44 +44451,44 @@ async function writeTextFile(filePath, value, options = {}) {
     content: value.replace(/\r\n/g, "\n"),
     warnings: []
   } : prepareTextForPersistence(value, {
-    label: options.label ?? path13.basename(filePath)
+    label: options.label ?? path14.basename(filePath)
   });
   await ensureParentDirectory2(filePath);
   const tempPath = tempSiblingPath(filePath);
   const existingMode = await existingRegularFileMode(filePath);
   try {
-    await fs14.writeFile(tempPath, prepared.content, "utf8");
+    await fs15.writeFile(tempPath, prepared.content, "utf8");
     if (existingMode !== null) {
-      await fs14.chmod(tempPath, existingMode);
+      await fs15.chmod(tempPath, existingMode);
     }
     await existingRegularFileMode(filePath);
-    await fs14.rename(tempPath, filePath);
+    await fs15.rename(tempPath, filePath);
   } catch (error2) {
-    await fs14.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs15.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
   return prepared.warnings;
 }
 function blueprintRepoLockOwnerPath(lockPath) {
-  return path13.join(lockPath, BLUEPRINT_REPO_LOCK_OWNER_FILE);
+  return path14.join(lockPath, BLUEPRINT_REPO_LOCK_OWNER_FILE);
 }
 function blueprintRepoLockLeasePath(lockPath) {
-  return path13.join(lockPath, BLUEPRINT_REPO_LOCK_LEASE_FILE);
+  return path14.join(lockPath, BLUEPRINT_REPO_LOCK_LEASE_FILE);
 }
 function blueprintRepoLockRecoveryPath(lockPath) {
   return `${lockPath}.recovery`;
 }
 function blueprintRepoLockRecoveryGuardOwnerPath(recoveryPath, token) {
-  return path13.join(recoveryPath, `${BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+  return path14.join(recoveryPath, `${BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
 }
 function blueprintRepoLockQuarantinePath(lockPath) {
-  return path13.join(
-    path13.dirname(lockPath),
-    `.${path13.basename(lockPath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.stale`
+  return path14.join(
+    path14.dirname(lockPath),
+    `.${path14.basename(lockPath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.stale`
   );
 }
 async function writeBlueprintRepoLockFile(filePath, contents) {
-  await fs14.writeFile(filePath, `${contents}
+  await fs15.writeFile(filePath, `${contents}
 `, "utf8");
 }
 async function readBlueprintRepoLockOwner(lockHandle) {
@@ -44171,7 +44496,7 @@ async function readBlueprintRepoLockOwner(lockHandle) {
 }
 async function readBlueprintRepoLockOwnerAtPath(ownerPath) {
   try {
-    return (await fs14.readFile(ownerPath, "utf8")).trim();
+    return (await fs15.readFile(ownerPath, "utf8")).trim();
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -44189,7 +44514,7 @@ async function refreshBlueprintRepoLockLease(lockHandle) {
 }
 async function getBlueprintRepoLockPathAgeMs(targetPath) {
   try {
-    const stats = await fs14.stat(targetPath);
+    const stats = await fs15.stat(targetPath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code === "ENOENT") {
@@ -44201,7 +44526,7 @@ async function getBlueprintRepoLockPathAgeMs(targetPath) {
 async function getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath) {
   let entries;
   try {
-    entries = await fs14.readdir(recoveryPath);
+    entries = await fs15.readdir(recoveryPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -44214,7 +44539,7 @@ async function getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath) {
       continue;
     }
     try {
-      const stats = await fs14.stat(path13.join(recoveryPath, entry));
+      const stats = await fs15.stat(path14.join(recoveryPath, entry));
       newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
@@ -44230,7 +44555,7 @@ async function getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath) {
 async function getBlueprintRepoLockAgeMs(lockPath) {
   const leasePath = blueprintRepoLockLeasePath(lockPath);
   try {
-    const stats = await fs14.stat(leasePath);
+    const stats = await fs15.stat(leasePath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code !== "ENOENT") {
@@ -44253,7 +44578,7 @@ async function createBlueprintRepoLockRecoveryGuardHandle(lockPath, recoveryPath
   try {
     await writeBlueprintRepoLockFile(recoveryGuard.ownerPath, token);
   } catch (error2) {
-    await fs14.rmdir(recoveryPath).catch(() => void 0);
+    await fs15.rmdir(recoveryPath).catch(() => void 0);
     throw error2;
   }
   return recoveryGuard;
@@ -44261,7 +44586,7 @@ async function createBlueprintRepoLockRecoveryGuardHandle(lockPath, recoveryPath
 async function refreshOwnedBlueprintRepoLockRecoveryGuard(recoveryGuard) {
   let stats;
   try {
-    stats = await fs14.stat(recoveryGuard.ownerPath);
+    stats = await fs15.stat(recoveryGuard.ownerPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return false;
@@ -44273,7 +44598,7 @@ async function refreshOwnedBlueprintRepoLockRecoveryGuard(recoveryGuard) {
   }
   try {
     const now = /* @__PURE__ */ new Date();
-    await fs14.utimes(recoveryGuard.ownerPath, now, now);
+    await fs15.utimes(recoveryGuard.ownerPath, now, now);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return false;
@@ -44287,14 +44612,14 @@ async function releaseBlueprintRepoLockRecoveryGuard(recoveryGuard) {
     return;
   }
   try {
-    await fs14.unlink(recoveryGuard.ownerPath);
+    await fs15.unlink(recoveryGuard.ownerPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return;
     }
     throw error2;
   }
-  await fs14.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
+  await fs15.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
 }
 async function createBlueprintRepoLockHandle(lockPath) {
   const token = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -44308,7 +44633,7 @@ async function createBlueprintRepoLockHandle(lockPath) {
     await writeBlueprintRepoLockFile(lockHandle.ownerPath, token);
     await writeBlueprintRepoLockFile(lockHandle.leasePath, token);
   } catch (error2) {
-    await fs14.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    await fs15.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   return lockHandle;
@@ -44323,21 +44648,21 @@ async function reclaimStaleBlueprintRepoLockRecoveryGuard(recoveryPath) {
   }
   const quarantinePath = blueprintRepoLockQuarantinePath(recoveryPath);
   try {
-    await fs14.rename(recoveryPath, quarantinePath);
+    await fs15.rename(recoveryPath, quarantinePath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return true;
     }
     throw error2;
   }
-  await fs14.rm(quarantinePath, { recursive: true, force: true });
+  await fs15.rm(quarantinePath, { recursive: true, force: true });
   return true;
 }
 async function tryAcquireBlueprintRepoLockRecoveryGuard(lockPath) {
   const recoveryPath = blueprintRepoLockRecoveryPath(lockPath);
   for (; ; ) {
     try {
-      await fs14.mkdir(recoveryPath);
+      await fs15.mkdir(recoveryPath);
       return createBlueprintRepoLockRecoveryGuardHandle(lockPath, recoveryPath);
     } catch (error2) {
       if (error2.code !== "EEXIST") {
@@ -44381,14 +44706,14 @@ async function recoverStaleBlueprintRepoLock(lockPath) {
     }
     const quarantinePath = blueprintRepoLockQuarantinePath(lockPath);
     try {
-      await fs14.rename(lockPath, quarantinePath);
+      await fs15.rename(lockPath, quarantinePath);
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return true;
       }
       throw error2;
     }
-    await fs14.rm(quarantinePath, { recursive: true, force: true });
+    await fs15.rm(quarantinePath, { recursive: true, force: true });
     return true;
   } finally {
     await releaseBlueprintRepoLockRecoveryGuard(recoveryGuard).catch(() => void 0);
@@ -44400,7 +44725,7 @@ async function acquireBlueprintRepoLock(lockPath) {
   await ensureParentDirectory2(lockPath);
   for (; ; ) {
     try {
-      await fs14.mkdir(lockPath);
+      await fs15.mkdir(lockPath);
       return createBlueprintRepoLockHandle(lockPath);
     } catch (error2) {
       const lockError = error2;
@@ -44445,9 +44770,9 @@ async function releaseBlueprintRepoLock(lockHandle) {
   if (ownerToken !== lockHandle.token) {
     return;
   }
-  await fs14.rm(lockHandle.ownerPath, { force: true }).catch(() => void 0);
-  await fs14.rm(lockHandle.leasePath, { force: true }).catch(() => void 0);
-  await fs14.rmdir(lockHandle.lockPath).catch(() => void 0);
+  await fs15.rm(lockHandle.ownerPath, { force: true }).catch(() => void 0);
+  await fs15.rm(lockHandle.leasePath, { force: true }).catch(() => void 0);
+  await fs15.rmdir(lockHandle.lockPath).catch(() => void 0);
 }
 async function withBlueprintRepoLock(projectRoot, lockName, task) {
   const lockPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/locks/${lockName}.lock`);
@@ -44546,24 +44871,24 @@ function parsePlanFrontmatter(content) {
       currentArrayKey = null;
       continue;
     }
-    const [, key, rawValue] = keyValueMatch;
+    const [, key2, rawValue] = keyValueMatch;
     const value = rawValue.trim();
     if (value === "") {
-      arrays.set(key, []);
-      currentArrayKey = key;
+      arrays.set(key2, []);
+      currentArrayKey = key2;
       continue;
     }
     if (value === "[]") {
-      arrays.set(key, []);
+      arrays.set(key2, []);
       currentArrayKey = null;
       continue;
     }
     if (value.startsWith("[")) {
-      arrays.set(key, parseInlineArray(value));
+      arrays.set(key2, parseInlineArray(value));
       currentArrayKey = null;
       continue;
     }
-    scalars.set(key, normalizeFrontmatterScalar(value));
+    scalars.set(key2, normalizeFrontmatterScalar(value));
     currentArrayKey = null;
   }
   const waveValue = scalars.get("wave");
@@ -45391,7 +45716,7 @@ function isRepoRelativePlanPath(value) {
   if (rawValue.length === 0) {
     return false;
   }
-  if (path13.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
+  if (path14.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
     return false;
   }
   const normalized = normalizePlanPathForValidation(rawValue);
@@ -45408,7 +45733,7 @@ function isRepoRelativePlanPath(value) {
   return segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
 }
 function isGlobPlanPath(value) {
-  return /[*?\[\]{}]/.test(value.trim().replace(/\\/g, "/"));
+  return /[*?]/.test(value.trim());
 }
 function isBlueprintCommandReference(value) {
   return /^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(value.trim());
@@ -46853,15 +47178,15 @@ function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
     if (!UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN.test(line)) {
       continue;
     }
-    for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
-      if (pattern.test(line) && !flaggedModes.has(mode)) {
+    for (const { mode: mode2, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
+      if (pattern.test(line) && !flaggedModes.has(mode2)) {
         diagnostics.push({
           path: "content.unsupportedModeClaims",
           code: "discuss.unsupported_mode_claim",
-          message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`,
+          message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode2}.`,
           repair: "Remove shipped/available claims for unsupported discuss-phase modes, or restate them as explicit non-goals or unavailable behavior."
         });
-        flaggedModes.add(mode);
+        flaggedModes.add(mode2);
       }
     }
   }
@@ -48635,7 +48960,7 @@ function validateSummaryPlanReference(content, options = {}) {
       issues.push("Summary artifact must reference a matching plan artifact.");
     } else {
       const expectedPlanPath = options.linkedPlanPath;
-      const expectedPlanFile = path13.basename(expectedPlanPath);
+      const expectedPlanFile = path14.basename(expectedPlanPath);
       if (summaryPlanReference !== expectedPlanPath && summaryPlanReference !== expectedPlanFile) {
         warnings.push(
           `Summary artifact Plan marker ${summaryPlanReference} does not match linked plan path ${expectedPlanPath}; canonical filename linkage will be used.`
@@ -48788,10 +49113,10 @@ async function listRelativeFiles(rootPath, projectRoot) {
   if (!await pathExists2(rootPath)) {
     return [];
   }
-  const entries = await fs14.readdir(rootPath, { withFileTypes: true });
+  const entries = await fs15.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path13.join(rootPath, entry.name);
+    const absolutePath = path14.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listRelativeFiles(absolutePath, projectRoot));
       continue;
@@ -48804,7 +49129,7 @@ async function listImmediateDirectories2(rootPath) {
   if (!await pathExists2(rootPath)) {
     return [];
   }
-  const entries = await fs14.readdir(rootPath, { withFileTypes: true });
+  const entries = await fs15.readdir(rootPath, { withFileTypes: true });
   return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
 }
 async function inspectBlueprintArtifacts(projectRoot) {
@@ -48844,7 +49169,7 @@ async function inspectBlueprintArtifacts(projectRoot) {
     if (await pathExists2(artifactPath)) {
       codebasePresent.push(artifact);
       const contractId = resolveCodebaseArtifactPathContractId(artifact);
-      const raw = await fs14.readFile(artifactPath, "utf8");
+      const raw = await fs15.readFile(artifactPath, "utf8");
       const validation = validateCodebaseArtifactContent(raw, contractId);
       if (validation.valid) {
         codebaseValid.push(artifact);
@@ -49040,7 +49365,7 @@ async function inspectBootstrapArtifacts(projectRoot) {
     if (!await pathExists2(absolutePath)) {
       continue;
     }
-    const raw = await fs14.readFile(absolutePath, "utf8");
+    const raw = await fs15.readFile(absolutePath, "utf8");
     contents.set(artifact, raw);
     if (BOOTSTRAP_PLACEHOLDER_SIGNALS[artifact]?.some((signal) => raw.includes(signal))) {
       placeholderArtifacts.push(artifact);
@@ -49097,7 +49422,7 @@ function inferProjectName(projectRoot, requestedName) {
   if (trimmed) {
     return trimmed;
   }
-  return path13.basename(projectRoot);
+  return path14.basename(projectRoot);
 }
 function emptyCarryForwardBootstrapReceipt() {
   return {
@@ -49115,13 +49440,13 @@ function buildScaffoldPhaseDirectoryPath(phaseNumber, phaseTitle) {
   return `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slugifyPhaseName(phaseTitle.trim())}`;
 }
 async function prepareCarryForwardBootstrapReceipt(args) {
-  const receipt = emptyCarryForwardBootstrapReceipt();
+  const receipt2 = emptyCarryForwardBootstrapReceipt();
   const requestedContextArtifact = args.artifacts.map((artifact) => parsePhaseArtifactRequest(artifact)).find((artifact) => artifact?.kind === "CONTEXT") ?? null;
   const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   if (!args.bootstrapSeed || requestedContextArtifact === null || !await pathExists2(roadmapPath)) {
-    return receipt;
+    return receipt2;
   }
-  const roadmap = parseRoadmapDocument(await fs14.readFile(roadmapPath, "utf8"));
+  const roadmap = parseRoadmapDocument(await fs15.readFile(roadmapPath, "utf8"));
   const firstPhaseNumber = computeNextWholePhaseNumber(roadmap.phases);
   const firstPhasePrefix = formatPhasePrefix3(firstPhaseNumber);
   const firstPhaseTitle = args.bootstrapSeed.roadmapPhases?.[0]?.title?.trim() || requestedContextArtifact.phaseName;
@@ -49129,11 +49454,11 @@ async function prepareCarryForwardBootstrapReceipt(args) {
   const firstContextPath = `${firstPhaseDir}/${firstPhasePrefix}-CONTEXT.md`;
   const previewedFirstPhase = args.bootstrapSeed.roadmapPhases?.[0]?.phase?.trim() ? normalizePhaseNumber(args.bootstrapSeed.roadmapPhases[0].phase) : normalizePhaseNumber(requestedContextArtifact.phasePrefix);
   const highestBasePhaseNumber = String(Number.parseInt(firstPhaseNumber, 10) - 1);
-  receipt.highestBasePhaseNumber = highestBasePhaseNumber;
-  receipt.firstPhaseNumber = firstPhaseNumber;
-  receipt.firstPhasePrefix = firstPhasePrefix;
-  receipt.firstPhaseDir = firstPhaseDir;
-  receipt.firstContextPath = firstContextPath;
+  receipt2.highestBasePhaseNumber = highestBasePhaseNumber;
+  receipt2.firstPhaseNumber = firstPhaseNumber;
+  receipt2.firstPhasePrefix = firstPhasePrefix;
+  receipt2.firstPhaseDir = firstPhaseDir;
+  receipt2.firstContextPath = firstContextPath;
   if (previewedFirstPhase !== firstPhaseNumber) {
     throw new Error(
       `Carry-forward scaffold preview is stale: bootstrapSeed first phase ${previewedFirstPhase} no longer matches the live next whole phase ${firstPhaseNumber}. Re-run /blu-new-milestone after re-reading ${BLUEPRINT_DIR}/ROADMAP.md.`
@@ -49149,7 +49474,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
     const directoryPhaseNumber = phaseDir2.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
     return directoryPhaseNumber !== void 0 && normalizePhaseNumber3(directoryPhaseNumber) === firstPhaseNumber;
   });
-  const computedPhaseDirName = path13.basename(firstPhaseDir);
+  const computedPhaseDirName = path14.basename(firstPhaseDir);
   if (matchingPhaseDirs.length > 1) {
     throw new Error(
       `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs.map((phaseDir2) => `${BLUEPRINT_PHASES_PATH}/${phaseDir2}`).join(", ")}.`
@@ -49162,7 +49487,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
   }
   const firstContextAbsolutePath = resolveBlueprintPath(args.projectRoot, firstContextPath);
   if (await pathExists2(firstContextAbsolutePath)) {
-    const existingContext = await fs14.readFile(firstContextAbsolutePath, "utf8");
+    const existingContext = await fs15.readFile(firstContextAbsolutePath, "utf8");
     if (!args.overwrite && !isScaffoldGeneratedArtifact(existingContext) && !isBootstrapStarterContext(existingContext)) {
       throw new Error(
         `Carry-forward scaffold is blocked because ${firstContextPath} already contains user-authored context. Re-run with explicit overwrite approval before replacing the saved phase context.`
@@ -49174,7 +49499,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
       `Carry-forward scaffold would overwrite existing Phase ${firstPhaseNumber} starter artifacts at ${firstPhaseDir}. Re-run with explicit overwrite approval before writing starter docs.`
     );
   }
-  return receipt;
+  return receipt2;
 }
 async function blueprintArtifactScaffold(args = {}) {
   if (args.phase !== void 0 || args.artifact !== void 0) {
@@ -49201,7 +49526,7 @@ async function blueprintArtifactScaffold(args = {}) {
     bootstrapSeed: args.bootstrapSeed,
     bootstrapAssessment: bootstrapDiagnostics.brownfield
   };
-  await fs14.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
+  await fs15.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
   for (const artifact of artifacts) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const exists3 = await pathExists2(absolutePath);
@@ -49210,7 +49535,7 @@ async function blueprintArtifactScaffold(args = {}) {
       if (exists3) {
         reusedFiles.push(artifact);
       } else {
-        await fs14.mkdir(absolutePath, { recursive: true });
+        await fs15.mkdir(absolutePath, { recursive: true });
         createdFiles.push(artifact);
       }
       continue;
@@ -49325,7 +49650,7 @@ async function blueprintArtifactMutateIndexUnlocked(args) {
   }
   const absolutePath = resolveBlueprintPath(projectRoot, targetPath);
   const exists3 = await pathExists2(absolutePath);
-  const raw = exists3 ? await fs14.readFile(absolutePath, "utf8") : "";
+  const raw = exists3 ? await fs15.readFile(absolutePath, "utf8") : "";
   const parsed = parseCaptureIndexDocument(raw, args.target);
   if (parsed.malformed) {
     warnings.push(
@@ -49766,7 +50091,7 @@ async function isActiveDiscussPhaseDraft(projectRoot, inspection) {
     return false;
   }
   try {
-    const raw = await fs14.readFile(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH), "utf8");
+    const raw = await fs15.readFile(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH), "utf8");
     const activeCommand2 = readStateLineValue(raw, "Active command");
     return activeCommand2 === blueprintDirectCommand("discuss-phase");
   } catch {
@@ -49979,7 +50304,7 @@ async function blueprintArtifactValidate(args = {}) {
         continue;
       }
       const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-      const raw = await fs14.readFile(absolutePath, "utf8");
+      const raw = await fs15.readFile(absolutePath, "utf8");
       if (target.kind === "context" && isLegacyPhaseContextShell(raw)) {
         continue;
       }
@@ -50018,7 +50343,7 @@ async function blueprintArtifactValidate(args = {}) {
     if (!await pathExists2(absolutePath)) {
       continue;
     }
-    const raw = await fs14.readFile(absolutePath, "utf8");
+    const raw = await fs15.readFile(absolutePath, "utf8");
     bootstrapContents.set(artifact, raw);
     const validation = artifact.endsWith("PROJECT.md") ? validateBootstrapProjectArtifact(raw, { allowLegacyShell: allowLegacyBootstrapShell }) : artifact.endsWith("REQUIREMENTS.md") ? validateBootstrapRequirementsArtifact(raw, {
       allowLegacyShell: allowLegacyBootstrapShell
@@ -50058,7 +50383,7 @@ async function blueprintArtifactValidate(args = {}) {
   }
   for (const artifact of inspection.phases.filter((value) => value.endsWith("-VERIFICATION.md"))) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-    const raw = await fs14.readFile(absolutePath, "utf8");
+    const raw = await fs15.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
     const validation = validateVerificationArtifactContent(raw, summaryPaths, { noUat });
     for (const issue2 of validation.issues) {
@@ -50075,7 +50400,7 @@ async function blueprintArtifactValidate(args = {}) {
   }
   for (const artifact of inspection.phases.filter((value) => value.endsWith("-UAT.md"))) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-    const raw = await fs14.readFile(absolutePath, "utf8");
+    const raw = await fs15.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
     const validation = validateUatArtifactContent(raw, summaryPaths, {
       requireReadyVerificationEvidence: true
@@ -50096,7 +50421,7 @@ async function blueprintArtifactValidate(args = {}) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const phaseMatch = artifact.match(/\/(\d+(?:\.\d+)?)-\d+-PLAN\.md$/);
     const expectedPhase = phaseMatch?.[1];
-    const raw = await fs14.readFile(absolutePath, "utf8");
+    const raw = await fs15.readFile(absolutePath, "utf8");
     const validation = validatePlanArtifactContent(raw, expectedPhase);
     for (const issue2 of validation.issues) {
       issues.push(`${artifact}: ${issue2}`);
@@ -50114,7 +50439,7 @@ async function blueprintArtifactValidate(args = {}) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const linkedPlanPath = artifact.replace(/-SUMMARY\.md$/, "-PLAN.md");
     const linkedPlanExists = await pathExists2(resolveBlueprintPath(projectRoot, linkedPlanPath));
-    const raw = await fs14.readFile(absolutePath, "utf8");
+    const raw = await fs15.readFile(absolutePath, "utf8");
     const validation = validateStrictSummaryArtifactContent(raw, {
       linkedPlanPath: linkedPlanExists ? linkedPlanPath : null
     });
@@ -50425,11 +50750,11 @@ async function buildArtifactDigestSections(projectRoot, artifactPaths) {
   const digest2 = [];
   for (const artifactPath of artifactPaths) {
     const absolutePath = resolveRepoRelativePath(projectRoot, artifactPath);
-    const raw = await fs14.readFile(absolutePath, "utf8");
+    const raw = await fs15.readFile(absolutePath, "utf8");
     const summary = summarizeArtifactContent(raw);
     digest2.push({
       artifact: artifactPath,
-      title: summary.title.length > 0 ? summary.title : path13.basename(artifactPath, path13.extname(artifactPath)),
+      title: summary.title.length > 0 ? summary.title : path14.basename(artifactPath, path14.extname(artifactPath)),
       summary: summary.summary,
       evidence: [artifactPath]
     });
@@ -50557,14 +50882,14 @@ function getJsonObjectProperty3(object3, propertyName) {
   const value = object3?.[propertyName];
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
-function allowOnlyEmptyArray2(schema) {
-  if (!schema) {
+function allowOnlyEmptyArray2(schema2) {
+  if (!schema2) {
     return;
   }
-  schema.minItems = 0;
-  schema.maxItems = 0;
-  schema.items = false;
-  delete schema.allOf;
+  schema2.minItems = 0;
+  schema2.maxItems = 0;
+  schema2.items = false;
+  delete schema2.allOf;
 }
 function exactArrayContains(value) {
   return {
@@ -50586,19 +50911,19 @@ function exactObjectPropertyContains2(propertyName, value) {
     maxContains: 1
   };
 }
-function setArrayEnum(schema, values) {
-  if (!schema) {
+function setArrayEnum(schema2, values) {
+  if (!schema2) {
     return;
   }
   if (values.length === 0) {
-    allowOnlyEmptyArray2(schema);
+    allowOnlyEmptyArray2(schema2);
     return;
   }
-  schema.minItems = values.length;
-  schema.maxItems = values.length;
-  schema.uniqueItems = true;
-  schema.items = { type: "string", enum: values };
-  schema.allOf = values.map(exactArrayContains);
+  schema2.minItems = values.length;
+  schema2.maxItems = values.length;
+  schema2.uniqueItems = true;
+  schema2.items = { type: "string", enum: values };
+  schema2.allOf = values.map(exactArrayContains);
 }
 function mcpWriteDiagnostic(args) {
   return args;
@@ -50677,12 +51002,12 @@ function valueAtJsonPointer(root, pointer) {
     return root;
   }
   return pointer.split("/").filter((segment) => segment.length > 0).reduce((current, segment) => {
-    const key = segment.replace(/~1/g, "/").replace(/~0/g, "~");
-    if (Array.isArray(current) && /^\d+$/.test(key)) {
-      return current[Number(key)];
+    const key2 = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+    if (Array.isArray(current) && /^\d+$/.test(key2)) {
+      return current[Number(key2)];
     }
-    if (typeof current === "object" && current !== null && key in current) {
-      return current[key];
+    if (typeof current === "object" && current !== null && key2 in current) {
+      return current[key2];
     }
     return void 0;
   }, root);
@@ -50834,7 +51159,7 @@ function collectModelStringEntries2(value, pathValue = "model") {
   }
   if (typeof value === "object" && value !== null) {
     return Object.entries(value).flatMap(
-      ([key, item]) => collectModelStringEntries2(item, `${pathValue}.${key}`)
+      ([key2, item]) => collectModelStringEntries2(item, `${pathValue}.${key2}`)
     );
   }
   return [];
@@ -50998,7 +51323,7 @@ async function collectValidAddTestsValidationEvidencePaths(args) {
   const warnings = [];
   const noUat = await readWorkflowNoUat2(args.projectRoot);
   for (const artifactPath of args.phaseFiles.filter((entry) => entry.endsWith("-VERIFICATION.md") || entry.endsWith("-UAT.md")).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs14.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs15.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = artifactPath.endsWith("-VERIFICATION.md") ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat }) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
@@ -51025,7 +51350,7 @@ function normalizeSummaryLinkedPlanPath(summaryPath2, planReference) {
     return planReference;
   }
   if (!planReference.includes("/") && /-PLAN\.md$/.test(planReference)) {
-    return `${path13.posix.dirname(summaryPath2)}/${planReference}`;
+    return `${path14.posix.dirname(summaryPath2)}/${planReference}`;
   }
   return planReference;
 }
@@ -51052,7 +51377,7 @@ async function resolveAddTestsSummaryLinkedPlan(args) {
 async function collectValidAddTestsReviewPath(args) {
   const warnings = [];
   for (const artifactPath of args.phaseFiles.filter((entry) => isNormalReviewArtifactPath(entry)).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs14.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs15.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = validateReviewArtifactContent(raw, "code-review");
     if (validation.valid) {
       return { path: artifactPath, warnings };
@@ -51094,13 +51419,13 @@ async function collectAddTestsReportContext(projectRoot, reportName2) {
     };
   }
   const phaseDirAbs = resolveBlueprintPath(projectRoot, phase.phaseDir);
-  const entries = await fs14.readdir(phaseDirAbs).catch(() => []);
+  const entries = await fs15.readdir(phaseDirAbs).catch(() => []);
   const phaseFiles = entries.map((entry) => `${phase.phaseDir}/${entry}`);
   const planPaths = phaseFiles.filter((entry) => /-\d{2,}-PLAN\.md$/.test(entry)).sort((left, right) => left.localeCompare(right));
   const completedSummaries = [];
   const dependencyPlanMap = /* @__PURE__ */ new Map();
   for (const summaryPath2 of phaseFiles.filter((entry) => /-\d{2,}-SUMMARY\.md$/.test(entry)).sort((left, right) => left.localeCompare(right))) {
-    const content = await fs14.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const content = await fs15.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
     const { linkedPlanPath, linkedPlanExists } = await resolveAddTestsSummaryLinkedPlan({
       projectRoot,
       summaryPath: summaryPath2,
@@ -51120,9 +51445,9 @@ async function collectAddTestsReportContext(projectRoot, reportName2) {
       continue;
     }
     const planIdMatch = summaryPath2.match(/-(\d{2,})-SUMMARY\.md$/);
-    const planId2 = planIdMatch?.[1] ?? "";
+    const planId3 = planIdMatch?.[1] ?? "";
     completedSummaries.push({
-      planId: planId2,
+      planId: planId3,
       path: summaryPath2,
       linkedPlanPath,
       targetedVerification: extractSummaryTargetedVerification(content)
@@ -51133,10 +51458,10 @@ async function collectAddTestsReportContext(projectRoot, reportName2) {
   }
   const completedPlanIds = new Set(completedSummaries.map((summary) => summary.planId));
   const pendingPlans = planPaths.flatMap((planPath) => {
-    const planId2 = planPath.match(/-(\d{2,})-PLAN\.md$/)?.[1];
-    return planId2 && !completedPlanIds.has(planId2) ? [
+    const planId3 = planPath.match(/-(\d{2,})-PLAN\.md$/)?.[1];
+    return planId3 && !completedPlanIds.has(planId3) ? [
       {
-        planId: planId2,
+        planId: planId3,
         path: planPath,
         reason: "No valid completed summary exists for this plan."
       }
@@ -51290,7 +51615,7 @@ async function validateAuditFixScopeFiles(args) {
       continue;
     }
     try {
-      const stats = await fs14.stat(absolutePath);
+      const stats = await fs15.stat(absolutePath);
       if (!stats.isFile()) {
         warnings.push(
           `Audit-fix scope file ${file2} is no longer a regular file; keeping it in scope because blueprint_review_scope captured the pre-fix path.`
@@ -51304,8 +51629,8 @@ async function validateAuditFixScopeFiles(args) {
   }
   return { files, blockers, warnings };
 }
-function dependencyPlanPathForPhase(phaseDir2, phasePrefix2, planId2) {
-  return `${phaseDir2}/${phasePrefix2}-${planId2}-PLAN.md`;
+function dependencyPlanPathForPhase(phaseDir2, phasePrefix2, planId3) {
+  return `${phaseDir2}/${phasePrefix2}-${planId3}-PLAN.md`;
 }
 async function collectAuditFixSummaryInventory(args) {
   const blockers = [];
@@ -51327,10 +51652,10 @@ async function collectAuditFixSummaryInventory(args) {
   warnings.push(...planIndex.warnings, ...summaryIndex.warnings, ...executionTargets.warnings);
   const summaryReads = await Promise.all(
     summaryIndex.completedPlans.map(
-      (planId2) => blueprintPhaseSummaryRead({
+      (planId3) => blueprintPhaseSummaryRead({
         cwd: args.projectRoot,
         phase: args.phase.phaseNumber,
-        planId: planId2
+        planId: planId3
       })
     )
   );
@@ -51411,7 +51736,7 @@ async function collectValidAuditFixArtifactPath(args) {
   for (const artifactPath of args.phaseFiles.filter(
     (entry) => args.suffix === "-REVIEW.md" ? isNormalReviewArtifactPath(entry) : entry.endsWith(args.suffix)
   ).sort((left, right) => left.localeCompare(right))) {
-    const raw = await fs14.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const raw = await fs15.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = args.suffix === "-REVIEW.md" ? validateReviewArtifactContent(raw, "code-review") : args.suffix === "-SECURITY.md" ? validateReviewArtifactContent(raw, "security") : args.suffix === "-VERIFICATION.md" ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat }) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
@@ -51430,7 +51755,7 @@ async function collectAuditFixSelectedEvidencePaths(args) {
   const warnings = [];
   const blockers = [];
   const phaseDirAbs = resolveBlueprintPath(args.projectRoot, args.phaseDir);
-  const entries = await fs14.readdir(phaseDirAbs).catch(() => []);
+  const entries = await fs15.readdir(phaseDirAbs).catch(() => []);
   const phaseFiles = entries.map((entry) => `${args.phaseDir}/${entry}`);
   const review = await collectValidAuditFixArtifactPath({
     projectRoot: args.projectRoot,
@@ -51444,7 +51769,7 @@ async function collectAuditFixSelectedEvidencePaths(args) {
     suffix: "-SECURITY.md",
     summaryPaths: args.summaryPaths
   });
-  const verification = await collectValidAuditFixArtifactPath({
+  const verification2 = await collectValidAuditFixArtifactPath({
     projectRoot: args.projectRoot,
     phaseFiles,
     suffix: "-VERIFICATION.md",
@@ -51456,11 +51781,11 @@ async function collectAuditFixSelectedEvidencePaths(args) {
     suffix: "-UAT.md",
     summaryPaths: args.summaryPaths
   });
-  warnings.push(...review.warnings, ...security.warnings, ...verification.warnings, ...uat.warnings);
+  warnings.push(...review.warnings, ...security.warnings, ...verification2.warnings, ...uat.warnings);
   const availableBySource = {
     review: review.path,
     security: security.path,
-    verification: verification.path,
+    verification: verification2.path,
     uat: uat.path
   };
   const selectedEvidencePaths = args.source === "all" ? uniqueSorted(
@@ -51595,9 +51920,9 @@ function isPhaseSafeAddTestsSyncedAction(action, targetPhase, currentMilestone) 
   return milestoneArgument !== null && milestoneArgument.toLowerCase() === currentMilestone.trim().toLowerCase();
 }
 function buildAddTestsReportTaskSchema(args) {
-  const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty3(schema, "properties");
-  const defs = getJsonObjectProperty3(schema, "$defs");
+  const schema2 = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty3(schema2, "properties");
+  const defs = getJsonObjectProperty3(schema2, "$defs");
   const summaryPaths = args.completedSummaries.map((summary) => summary.path);
   const evidencePaths = [...summaryPaths, ...args.validationEvidencePaths];
   if (properties) {
@@ -51643,12 +51968,12 @@ function buildAddTestsReportTaskSchema(args) {
       const additionalProperties = getJsonObjectProperty3(summaryEvidence, "additionalProperties");
       const additionalPropertiesProperties = additionalProperties ? getJsonObjectProperty3(additionalProperties, "properties") : null;
       const linkedPlanPath = additionalPropertiesProperties ? getJsonObjectProperty3(additionalPropertiesProperties, "linkedPlanPath") : null;
-      const planId2 = additionalPropertiesProperties ? getJsonObjectProperty3(additionalPropertiesProperties, "planId") : null;
+      const planId3 = additionalPropertiesProperties ? getJsonObjectProperty3(additionalPropertiesProperties, "planId") : null;
       if (linkedPlanPath) {
         linkedPlanPath.enum = args.completedSummaries.map((summary) => summary.linkedPlanPath);
       }
-      if (planId2) {
-        planId2.enum = args.completedSummaries.map((summary) => summary.planId);
+      if (planId3) {
+        planId3.enum = args.completedSummaries.map((summary) => summary.planId);
       }
     }
     const pendingPlans = getJsonObjectProperty3(properties, "pendingPlans");
@@ -51659,10 +51984,10 @@ function buildAddTestsReportTaskSchema(args) {
       pendingPlans.maxItems = args.pendingPlans.length;
       const items = getJsonObjectProperty3(pendingPlans, "items");
       const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
-      const planId2 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
+      const planId3 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
       const pathProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "path") : null;
-      if (planId2) {
-        planId2.enum = args.pendingPlans.map((plan) => plan.planId);
+      if (planId3) {
+        planId3.enum = args.pendingPlans.map((plan) => plan.planId);
       }
       if (pathProperty) {
         pathProperty.enum = args.pendingPlans.map((plan) => plan.path);
@@ -51679,10 +52004,10 @@ function buildAddTestsReportTaskSchema(args) {
       dependencyPlans.maxItems = args.dependencyPlans.length;
       const items = getJsonObjectProperty3(dependencyPlans, "items");
       const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
-      const planId2 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
+      const planId3 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
       const pathProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "path") : null;
-      if (planId2) {
-        planId2.enum = args.dependencyPlans.map((plan) => plan.planId);
+      if (planId3) {
+        planId3.enum = args.dependencyPlans.map((plan) => plan.planId);
       }
       if (pathProperty) {
         pathProperty.enum = args.dependencyPlans.map((plan) => plan.path);
@@ -51706,8 +52031,8 @@ function buildAddTestsReportTaskSchema(args) {
       nextSafeAction.enum = args.allowedActions;
     }
   }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
+  const existingAllOf = Array.isArray(schema2.allOf) ? schema2.allOf : [];
+  schema2.allOf = [
     ...existingAllOf,
     {
       if: {
@@ -51749,7 +52074,7 @@ function buildAddTestsReportTaskSchema(args) {
       }
     }
   ];
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     completedSummaryPaths: summaryPaths,
     validationEvidencePaths: args.validationEvidencePaths,
     pendingPlans: args.pendingPlans,
@@ -51765,24 +52090,24 @@ function buildAddTestsReportTaskSchema(args) {
       dependencyPlans: "optional empty context"
     }
   };
-  return schema;
+  return schema2;
 }
 function buildQuickRunReportTaskSchema(args) {
-  const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty3(schema, "properties");
+  const schema2 = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty3(schema2, "properties");
   if (properties) {
     const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedActions;
     }
   }
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     allowedActions: args.allowedActions,
     upstreamContext: {
       allowedActions: "implemented command catalog filtered to quick-safe routes"
     }
   };
-  return schema;
+  return schema2;
 }
 async function quickRunReportModelSchemas(args) {
   const modelContract = args.contract.modelContract;
@@ -51913,9 +52238,9 @@ async function collectAuditFixReportContext(args) {
   };
 }
 function buildAuditFixReportTaskSchema(args) {
-  const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty3(schema, "properties");
-  const defs = getJsonObjectProperty3(schema, "$defs");
+  const schema2 = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty3(schema2, "properties");
+  const defs = getJsonObjectProperty3(schema2, "$defs");
   const summaryPaths = args.completedSummaries.map((summary) => summary.path);
   if (properties) {
     const summaryEvidence = getJsonObjectProperty3(properties, "summaryEvidence");
@@ -52006,10 +52331,10 @@ function buildAuditFixReportTaskSchema(args) {
         "properties"
       );
       if (itemProperties) {
-        const planId2 = getJsonObjectProperty3(itemProperties, "planId");
+        const planId3 = getJsonObjectProperty3(itemProperties, "planId");
         const pathProperty = getJsonObjectProperty3(itemProperties, "path");
-        if (planId2) {
-          planId2.enum = args.pendingPlans.map((plan) => plan.planId);
+        if (planId3) {
+          planId3.enum = args.pendingPlans.map((plan) => plan.planId);
         }
         if (pathProperty) {
           pathProperty.enum = args.pendingPlans.map((plan) => plan.path);
@@ -52030,11 +52355,11 @@ function buildAuditFixReportTaskSchema(args) {
         "properties"
       );
       if (itemProperties) {
-        const planId2 = getJsonObjectProperty3(itemProperties, "planId");
+        const planId3 = getJsonObjectProperty3(itemProperties, "planId");
         const pathProperty = getJsonObjectProperty3(itemProperties, "path");
         const status = getJsonObjectProperty3(itemProperties, "status");
-        if (planId2) {
-          planId2.enum = args.dependencyPlans.map((plan) => plan.planId);
+        if (planId3) {
+          planId3.enum = args.dependencyPlans.map((plan) => plan.planId);
         }
         if (pathProperty) {
           pathProperty.enum = args.dependencyPlans.map((plan) => plan.path);
@@ -52078,8 +52403,8 @@ function buildAuditFixReportTaskSchema(args) {
       nextSafeAction.enum = args.allowedActions;
     }
   }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
+  const existingAllOf = Array.isArray(schema2.allOf) ? schema2.allOf : [];
+  schema2.allOf = [
     ...existingAllOf,
     {
       if: {
@@ -52121,7 +52446,7 @@ function buildAuditFixReportTaskSchema(args) {
       }
     }
   ];
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     selectedEvidencePaths: args.selectedEvidencePaths,
     scopeFiles: args.scopeFiles,
     completedSummaryPaths: summaryPaths,
@@ -52138,7 +52463,7 @@ function buildAuditFixReportTaskSchema(args) {
       dependencyPlans: "optional empty context"
     }
   };
-  return schema;
+  return schema2;
 }
 async function auditFixReportModelSchemas(args) {
   const modelContract = args.contract.modelContract;
@@ -52996,7 +53321,7 @@ function normalizeAuditFixReportModel(model) {
       summary: row.summary.trim()
     } : null
   );
-  const verification = normalizeRows(
+  const verification2 = normalizeRows(
     model.verification,
     (row) => typeof row.findingId === "string" && typeof row.check === "string" && typeof row.command === "string" && typeof row.result === "string" && typeof row.evidence === "string" ? {
       findingId: row.findingId.trim(),
@@ -53050,7 +53375,7 @@ function normalizeAuditFixReportModel(model) {
     } : null
   );
   const createdCommits = normalizeStringArray(commitTraceability.createdCommits);
-  if (classification === null || changesApplied === null || verification === null || pendingPlans === null || dependencyPlans === null || manualOrDeferredWork === null || gapRoutes === null || evidence === null || typeof commitTraceability.preFixHead !== "string" || createdCommits === null || typeof todoCapture.status !== "string" || typeof todoCapture.evidence !== "string") {
+  if (classification === null || changesApplied === null || verification2 === null || pendingPlans === null || dependencyPlans === null || manualOrDeferredWork === null || gapRoutes === null || evidence === null || typeof commitTraceability.preFixHead !== "string" || createdCommits === null || typeof todoCapture.status !== "string" || typeof todoCapture.evidence !== "string") {
     return null;
   }
   return {
@@ -53061,7 +53386,7 @@ function normalizeAuditFixReportModel(model) {
     summaryEvidence: normalizedSummaryEvidence,
     classification,
     changesApplied,
-    verification,
+    verification: verification2,
     pendingPlans,
     dependencyPlans,
     manualOrDeferredWork,
@@ -53933,7 +54258,7 @@ async function blueprintArtifactReportWriteUnlocked(args) {
       task: async () => {
         const exists4 = await pathExists2(absolutePath);
         if (exists4) {
-          const existingContent = await fs14.readFile(absolutePath, "utf8");
+          const existingContent = await fs15.readFile(absolutePath, "utf8");
           const reusableContents = ["created", "updated", "reused"].map(contentForStatus);
           if (reusableContents.includes(existingContent)) {
             warnings2.push("Preserved existing report because the model-rendered content was unchanged.");
@@ -54017,7 +54342,7 @@ async function blueprintArtifactReportWriteUnlocked(args) {
     );
   }
   if (exists3) {
-    const existingContent = await fs14.readFile(absolutePath, "utf8");
+    const existingContent = await fs15.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
       warnings.push("Preserved existing report because the content was unchanged.");
       return {
@@ -54123,7 +54448,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     };
   }
   if (exists3) {
-    const existingContent = await fs14.readFile(absolutePath, "utf8");
+    const existingContent = await fs15.readFile(absolutePath, "utf8");
     const existingValidation = validateCodebaseArtifactContent(existingContent, args.artifactId);
     if (existingContent === normalizedContent) {
       warnings.push("Preserved existing codebase artifact because the content was unchanged.");
@@ -54590,9 +54915,9 @@ var init_artifacts = __esm({
       "milestone-summary-"
     ];
     defaultJsonFileSystem = {
-      writeFile: (filePath, contents, encoding) => fs14.writeFile(filePath, contents, encoding),
-      rename: (oldPath, newPath) => fs14.rename(oldPath, newPath),
-      rm: (filePath, options) => fs14.rm(filePath, options)
+      writeFile: (filePath, contents, encoding) => fs15.writeFile(filePath, contents, encoding),
+      rename: (oldPath, newPath) => fs15.rename(oldPath, newPath),
+      rm: (filePath, options) => fs15.rm(filePath, options)
     };
     jsonFileSystemForTest = null;
     repoLockTimingForTest = null;
@@ -54871,11 +55196,11 @@ var init_artifacts = __esm({
 });
 
 // src/mcp/tools/discuss-evidence.ts
-import { createHash as createHash6 } from "node:crypto";
-import { promises as fs15 } from "node:fs";
+import { createHash as createHash7 } from "node:crypto";
+import { promises as fs16 } from "node:fs";
 async function readDiscussEvidence(root, relative) {
   try {
-    const bytes = await fs15.readFile(
+    const bytes = await fs16.readFile(
       resolveRepoRelativeInputPathSync(root, relative)
     );
     if (bytes.length > 256 * 1024)
@@ -54894,7 +55219,7 @@ async function readDiscussEvidence(root, relative) {
   }
 }
 async function discussPlanInventory(root, phaseDir2) {
-  return (await fs15.readdir(resolveRepoRelativeInputPathSync(root, phaseDir2))).filter((name) => /(?:^|-)PLAN(?:\.json|\.md)$/.test(name)).sort();
+  return (await fs16.readdir(resolveRepoRelativeInputPathSync(root, phaseDir2))).filter((name) => /(?:^|-)PLAN(?:\.json|\.md)$/.test(name)).sort();
 }
 async function discussEvidenceHash(root, relative) {
   if (relative === "@discuss/effective-config") {
@@ -55022,9 +55347,9 @@ async function collectDiscussEvidence(args) {
       status: "blocked",
       reason: "Evidence packet exceeds 512 KiB; narrow source inputs before preparing."
     };
-  const readSet = [roadmap, spec, ...sources].map(({ path: path30, hash: hash3 }) => ({
-    path: path30,
-    hash: hash3
+  const readSet = [roadmap, spec, ...sources].map(({ path: path31, hash: hash4 }) => ({
+    path: path31,
+    hash: hash4
   }));
   readSet.push(...priorSnapshots.map((snapshot4, index) => ({
     path: `@discuss/prior/${prior[index].phaseNumber}`,
@@ -55112,23 +55437,23 @@ var init_discuss_evidence = __esm({
     init_phase_artifacts();
     init_state();
     init_artifacts();
-    evidenceDigest = (value) => createHash6("sha256").update(value).digest("hex");
+    evidenceDigest = (value) => createHash7("sha256").update(value).digest("hex");
     stableEvidence = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
-        Object.keys(item).sort().map((key) => [key, item[key]])
+        Object.keys(item).sort().map((key2) => [key2, item[key2]])
       ) : item
     );
   }
 });
 
 // src/mcp/tools/discuss.ts
-import { createHash as createHash7 } from "node:crypto";
-import { promises as fs16 } from "node:fs";
+import { createHash as createHash8 } from "node:crypto";
+import { promises as fs17 } from "node:fs";
 async function hashPath(root, relative) {
   try {
     return digest(
-      await fs16.readFile(resolveRepoRelativeInputPathSync(root, relative))
+      await fs17.readFile(resolveRepoRelativeInputPathSync(root, relative))
     );
   } catch (error2) {
     if (error2.code === "ENOENT") return null;
@@ -55143,10 +55468,10 @@ function checkedPayload(value) {
     if (typeof item === "string")
       prepareTextForPersistence(item, { label: "Discuss payload" });
     else if (item && typeof item === "object")
-      for (const [key, val] of Object.entries(item)) {
-        if (["__proto__", "prototype", "constructor"].includes(key))
+      for (const [key2, val] of Object.entries(item)) {
+        if (["__proto__", "prototype", "constructor"].includes(key2))
           throw new Error("Unsafe JSON key.");
-        inspect(key);
+        inspect(key2);
         inspect(val);
       }
   };
@@ -55185,7 +55510,7 @@ async function basisFreshness(root, readSet) {
 async function readSession(root, relative) {
   try {
     const parsed = safeJsonParseObject(
-      await fs16.readFile(resolveBlueprintPath(root, relative), "utf8"),
+      await fs17.readFile(resolveBlueprintPath(root, relative), "utf8"),
       { label: relative, maxBytes: 32 * 1024 * 1024 }
     );
     sessionSchema.parse(parsed);
@@ -55196,11 +55521,11 @@ async function readSession(root, relative) {
       throw new Error("Discuss session phase/path identity mismatch.");
     const journal = session.journal;
     if (journal) {
-      const receipt = session.requests[journal.requestId];
+      const receipt2 = session.requests[journal.requestId];
       const contextPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-CONTEXT.md`;
       const logPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-DISCUSSION-LOG.md`;
       const model = validatePhaseContextModelInput(journal.context.model).model;
-      if (!model || journal.context.path !== contextPath || journal.log && journal.log.path !== logPath || journal.revision > session.revision || !receipt || receipt.revision !== journal.revision || receipt.hash !== journal.requestHash || Object.keys(journal.stages).some((stage) => !["context", "log", "state", "refresh", "cleanup"].includes(stage)) || digest(prepareTextForPersistence(renderPhaseContextModelContent({ resolved: { phasePrefix: session.topology.phasePrefix, phaseName: session.topology.phaseName ?? "" }, model })).content.replace(/\r\n/g, "\n")) !== journal.context.hash || journal.log && digest(journal.log.content) !== journal.log.hash)
+      if (!model || journal.context.path !== contextPath || journal.log && journal.log.path !== logPath || journal.revision > session.revision || !receipt2 || receipt2.revision !== journal.revision || receipt2.hash !== journal.requestHash || Object.keys(journal.stages).some((stage) => !["context", "log", "state", "refresh", "cleanup"].includes(stage)) || digest(prepareTextForPersistence(renderPhaseContextModelContent({ resolved: { phasePrefix: session.topology.phasePrefix, phaseName: session.topology.phaseName ?? "" }, model })).content.replace(/\r\n/g, "\n")) !== journal.context.hash || journal.log && digest(journal.log.content) !== journal.log.hash)
         throw new Error("Discuss publication journal identity or integrity mismatch.");
     }
     return parsed;
@@ -55297,7 +55622,7 @@ async function prepareDiscussInputBasis(args) {
         ...args.readSet.map((i) => i.path)
       ])
     ].filter(
-      (path30) => session.basis.readSet.find((i) => i.path === path30)?.hash !== args.readSet.find((i) => i.path === path30)?.hash
+      (path31) => session.basis.readSet.find((i) => i.path === path31)?.hash !== args.readSet.find((i) => i.path === path31)?.hash
     );
     if (session.basis.prepared && changedPaths.length && !args.acknowledgeChangedInputs)
       return {
@@ -55462,10 +55787,10 @@ async function blueprintDiscussRecord(raw) {
         );
       args.candidate = args.model;
     }
-    const requestHash = digest(stable(args));
-    const replay = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
-    if (replay) {
-      if (replay.hash !== requestHash)
+    const requestHash2 = digest(stable(args));
+    const replay2 = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
+    if (replay2) {
+      if (replay2.hash !== requestHash2)
         return {
           status: "rejected",
           reason: "Request ID conflict",
@@ -55473,7 +55798,7 @@ async function blueprintDiscussRecord(raw) {
         };
       return {
         status: "reused",
-        revision: replay.revision,
+        revision: replay2.revision,
         currentRevision: session.revision,
         path: loc.sessionPath
       };
@@ -55494,28 +55819,28 @@ async function blueprintDiscussRecord(raw) {
     if (args.candidate !== void 0)
       session.candidate = checkedPayload(args.candidate);
     if (args.corrections?.length) {
-      for (const correction of args.corrections) {
-        correction.path.forEach((segment) => {
+      for (const correction2 of args.corrections) {
+        correction2.path.forEach((segment) => {
           validateFieldNameSegment(segment);
           if (["__proto__", "prototype", "constructor"].includes(segment))
             throw new Error("Unsafe correction path.");
         });
         let target = session.candidate;
-        for (const segment of correction.path.slice(0, -1)) {
+        for (const segment of correction2.path.slice(0, -1)) {
           if (!target || typeof target !== "object" || !Object.hasOwn(target, segment))
             throw new Error("Correction parent does not exist.");
           target = target[segment];
         }
         if (!target || typeof target !== "object")
           throw new Error("Correction target is not an object.");
-        const field = correction.path.at(-1);
-        if (correction.operation === "remove") {
+        const field = correction2.path.at(-1);
+        if (correction2.operation === "remove") {
           if (Array.isArray(target)) {
             if (!/^(?:0|[1-9]\d*)$/.test(field))
               throw new Error("Array correction requires an index.");
             target.splice(Number(field), 1);
           } else delete target[field];
-        } else target[field] = checkedPayload(correction.value);
+        } else target[field] = checkedPayload(correction2.value);
       }
     }
     for (const record2 of args.records ?? []) {
@@ -55532,7 +55857,7 @@ async function blueprintDiscussRecord(raw) {
       ...args.candidate !== void 0 || args.corrections?.length ? { candidate: session.candidate } : {}
     });
     session.requests[args.requestId] = {
-      hash: requestHash,
+      hash: requestHash2,
       revision: session.revision
     };
     await save(loc.projectRoot, loc.sessionPath, session);
@@ -55593,9 +55918,9 @@ async function blueprintDiscussFinalize(raw) {
         status: "not_found",
         nextAction: "Call blueprint_discuss_record."
       };
-    const requestHash = digest(stable(args));
+    const requestHash2 = digest(stable(args));
     let journal = session.journal;
-    if (journal?.requestId === args.requestId && journal.requestHash !== requestHash)
+    if (journal?.requestId === args.requestId && journal.requestHash !== requestHash2)
       return { status: "rejected", reason: "Request ID conflict" };
     if (journal?.requestId === args.requestId && journal.receipt)
       return { ...journal.receipt, status: "reused" };
@@ -55661,7 +55986,7 @@ async function blueprintDiscussFinalize(raw) {
             nextAction: "Run blueprint_discuss_prepare with explicit target reconciliation after reviewing changed canonical artifacts; the saved draft remains editable."
           };
         if (observed && !args.overwrite) {
-          const existing = await fs16.readFile(
+          const existing = await fs17.readFile(
             resolveBlueprintPath(loc.projectRoot, target),
             "utf8"
           );
@@ -55681,7 +56006,7 @@ async function blueprintDiscussFinalize(raw) {
         };
       journal = {
         requestId: args.requestId,
-        requestHash,
+        requestHash: requestHash2,
         revision: session.revision,
         context: {
           path: artifactPathFor(loc.resolved, "context"),
@@ -55699,7 +56024,7 @@ async function blueprintDiscussFinalize(raw) {
       };
       session.journal = journal;
       session.requests[args.requestId] = {
-        hash: requestHash,
+        hash: requestHash2,
         revision: session.revision
       };
       await save(loc.projectRoot, loc.sessionPath, session);
@@ -55936,11 +56261,11 @@ var init_discuss = __esm({
       overwrite: boolean2().optional(),
       includeLog: boolean2().optional()
     });
-    digest = (value) => createHash7("sha256").update(value).digest("hex");
+    digest = (value) => createHash8("sha256").update(value).digest("hex");
     stable = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
-        Object.keys(item).sort().map((key) => [key, item[key]])
+        Object.keys(item).sort().map((key2) => [key2, item[key2]])
       ) : item
     );
     sessionSchema = object2({
@@ -56056,10 +56381,10 @@ var init_discuss = __esm({
 // src/mcp/tools/phase-research-model.ts
 function validatePhaseResearchModelInput(raw, context = {}) {
   const validation = { valid: true, issues: [], warnings: [], diagnostics: [] };
-  const issue2 = (path30, code, message, repair, warning = false) => {
+  const issue2 = (path31, code, message, repair, warning = false) => {
     (warning ? validation.warnings : validation.issues).push(message);
     validation.diagnostics.push({
-      path: path30,
+      path: path31,
       code,
       message,
       repair,
@@ -56293,9 +56618,9 @@ function renderPhaseResearchModelContent(args) {
     [...model.findings, ...model.recommendations].filter((row) => row.requirementIds.includes(requirement.id)).map((row) => row.id).join(", ") || "No specific research finding supplied."
   ]);
   if (requirementRows.length === 0) requirementRows.push(["Phase scope", "No numbered requirement grounding was supplied to the renderer.", "See the research summary and prepared phase context."]);
-  const optional2 = (key) => `## ${OPTIONAL_HEADINGS[key]}
+  const optional2 = (key2) => `## ${OPTIONAL_HEADINGS[key2]}
 
-${sectionProse(model.sections?.[key])}`;
+${sectionProse(model.sections?.[key2])}`;
   const sections = [
     `# Phase ${args.resolved.phasePrefix.replace(/[\r\n]/g, " ")}: ${args.resolved.phaseName.replace(/[\r\n]/g, " ")} - Research
 
@@ -56313,7 +56638,7 @@ ${bullets(args.lockedDecisions, "No locked-decision grounding was supplied to th
     `## User Constraints
 
 ${bullets(args.userConstraints, "No user-constraint grounding was supplied to the renderer.")}`,
-    ...Object.keys(OPTIONAL_HEADINGS).filter((key) => key !== "codeExamples").map((key) => optional2(key)),
+    ...Object.keys(OPTIONAL_HEADINGS).filter((key2) => key2 !== "codeExamples").map((key2) => optional2(key2)),
     `## Open Questions
 
 ${model.openQuestions.length === 0 ? "- none" : model.openQuestions.map((question) => `- ${question.blocking ? "Blocking" : "Nonblocking"}: ${prose(question.question).replace(/\n/g, "\n  ")}`).join("\n")}`,
@@ -56360,7 +56685,7 @@ var init_phase_research_model = __esm({
 });
 
 // src/mcp/tools/research-session.ts
-import { promises as fs17 } from "node:fs";
+import { promises as fs18 } from "node:fs";
 async function researchLocation(args) {
   const located = await resolveLocatedPhaseForMutation(args);
   return { ...located, sessionPath: `${located.resolved.phaseDir}/${located.resolved.phasePrefix}-RESEARCH-SESSION.json` };
@@ -56371,9 +56696,9 @@ function checkedResearchPayload(value) {
   const inspect = (item, depth) => {
     if (depth > 40) throw new Error("Research candidate is too deeply nested.");
     if (typeof item === "string") prepareTextForPersistence(item, { label: "Research candidate" });
-    else if (item && typeof item === "object") for (const [key, val] of Object.entries(item)) {
-      if (["__proto__", "prototype", "constructor"].includes(key)) throw new Error("Unsafe research candidate key.");
-      prepareTextForPersistence(key, { label: "Research candidate key" });
+    else if (item && typeof item === "object") for (const [key2, val] of Object.entries(item)) {
+      if (["__proto__", "prototype", "constructor"].includes(key2)) throw new Error("Unsafe research candidate key.");
+      prepareTextForPersistence(key2, { label: "Research candidate key" });
       inspect(val, depth + 1);
     }
   };
@@ -56382,7 +56707,7 @@ function checkedResearchPayload(value) {
 }
 async function readResearchSession(loc) {
   try {
-    const session = sessionSchema2.parse(safeJsonParseObject(await fs17.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 }));
+    const session = sessionSchema2.parse(safeJsonParseObject(await fs18.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 }));
     if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseNumber !== session.phase || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Research session phase/path identity mismatch.");
     if (session.journal) {
       const j = session.journal;
@@ -56472,7 +56797,7 @@ var init_research_session = __esm({
 });
 
 // src/mcp/tools/research.ts
-import { promises as fs18 } from "node:fs";
+import { promises as fs19 } from "node:fs";
 async function safeNextAction(proposed) {
   const catalog = await blueprintCommandCatalog();
   const command = proposed?.match(/\/blu-([a-z][a-z-]*)\b/)?.[1];
@@ -56507,16 +56832,16 @@ function requestKey(args) {
   const { cwd: _cwd, ...input } = args;
   return researchDigest(stableResearchValue(input));
 }
-function requestReplay(session, requestId, hash3) {
+function requestReplay(session, requestId, hash4) {
   const previous = Object.hasOwn(session.requests, requestId) ? session.requests[requestId] : void 0;
   if (!previous) return null;
-  if (previous.hash !== hash3) return { status: "rejected", reason: "Request ID conflict", revision: session.revision };
+  if (previous.hash !== hash4) return { status: "rejected", reason: "Request ID conflict", revision: session.revision };
   return previous.receipt ?? null;
 }
-async function saveReceipt(loc, session, requestId, receipt) {
-  session.requests[requestId].receipt = receipt;
+async function saveReceipt(loc, session, requestId, receipt2) {
+  session.requests[requestId].receipt = receipt2;
   await saveResearchSession(loc, session);
-  return receipt;
+  return receipt2;
 }
 function assessment(session) {
   const ids = session.grounding.requirements.map((item) => item.id);
@@ -56540,7 +56865,7 @@ async function blueprintResearchPrepare(raw = {}) {
         readResearchEvidence(loc.projectRoot, researchPath, 4 * 1024 * 1024),
         readResearchEvidence(loc.projectRoot, researchProvenancePath(researchPath))
       ]);
-      const readSet = inputs.map(({ path: path30, hash: hash3 }) => ({ path: path30, hash: hash3 }));
+      const readSet = inputs.map(({ path: path31, hash: hash4 }) => ({ path: path31, hash: hash4 }));
       readSet.push({ path: "@research/effective-config", hash: researchDigest(stableResearchValue({ config: config2.config, provenance: config2.provenance })) });
       const context = inputs.find((item) => item.path === contextPath);
       const spec = inputs.find((item) => item.path === specPath);
@@ -56572,8 +56897,8 @@ async function blueprintResearchPrepare(raw = {}) {
       const topologyChanged = !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase));
       const targetChanged = session.prepared && (existing.hash !== session.baselineHash || provenance.hash !== session.baselineProvenanceHash);
       const pending = session.journal && !session.journal.receipt;
-      const pendingRequest = Object.entries(session.requests).find(([, request]) => !request.receipt);
-      if (pendingRequest && !pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_${pendingRequest[1].operation} with requestId ${pendingRequest[0]} and identical arguments.` };
+      const pendingRequest2 = Object.entries(session.requests).find(([, request]) => !request.receipt);
+      if (pendingRequest2 && !pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_${pendingRequest2[1].operation} with requestId ${pendingRequest2[0]} and identical arguments.` };
       if ((targetChanged || topologyChanged || pending && args.reconcile) && (!args.reconcile || args.reconcile.researchHash !== existing.hash || args.expectedRevision !== session.revision)) return { ...packet, status: "reconciliation_required", revision: session.revision, reason: "Review changed publication targets, then prepare with expectedRevision and reconcile containing the observed research hash." };
       if (pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_submit with requestId ${session.journal.requestId} and identical arguments.` };
       if (changed && changed.status !== "fresh" && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", revision: session.revision, freshness: changed, nextAction: "Review changed inputs, then prepare with expectedRevision and acknowledgeChangedInputs=true; preserve and correct the saved candidate." };
@@ -56582,9 +56907,9 @@ async function blueprintResearchPrepare(raw = {}) {
         session.requests[session.journal.requestId].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision; this publication attempt was reconciled." };
         delete session.journal;
       }
-      if (args.reconcile && pendingRequest) {
+      if (args.reconcile && pendingRequest2) {
         if (args.expectedRevision !== session.revision || args.reconcile.researchHash !== existing.hash) return { ...packet, status: "reconciliation_required", revision: session.revision };
-        pendingRequest[1].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision." };
+        pendingRequest2[1].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision." };
       }
       session.topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
       session.readSet = readSet;
@@ -56612,12 +56937,12 @@ async function blueprintResearchRecord(raw) {
   return withResearchSession(args, async (loc) => {
     const session = await readResearchSession(loc);
     if (!session) return { status: "not_found", nextAction: "Call blueprint_research_prepare first." };
-    const hash3 = requestKey(args);
-    const replay = requestReplay(session, args.requestId, hash3);
-    if (replay) return replay;
+    const hash4 = requestKey(args);
+    const replay2 = requestReplay(session, args.requestId, hash4);
+    if (replay2) return replay2;
     const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
-    const pendingRequest = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
-    if (pendingRequest) return { status: "partial", nextAction: `Retry blueprint_research_${pendingRequest[1].operation} requestId ${pendingRequest[0]} first.` };
+    const pendingRequest2 = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
+    if (pendingRequest2) return { status: "partial", nextAction: `Retry blueprint_research_${pendingRequest2[1].operation} requestId ${pendingRequest2[0]} first.` };
     if (session.journal && !session.journal.receipt) return { status: "partial", nextAction: `Retry blueprint_research_submit requestId ${session.journal.requestId} before changing the candidate.` };
     if (accepted) {
       if (accepted.revision !== session.revision || accepted.operation !== "record") return { status: "stale", revision: session.revision, reason: "Accepted request was superseded." };
@@ -56626,29 +56951,29 @@ async function blueprintResearchRecord(raw) {
     }
     if (session.revision !== args.expectedRevision) return { status: "stale", revision: session.revision, reason: "Revision conflict" };
     if (args.candidate !== void 0) session.candidate = checkedResearchPayload(args.candidate);
-    for (const correction of args.corrections ?? []) {
-      correction.path.forEach((segment) => {
+    for (const correction2 of args.corrections ?? []) {
+      correction2.path.forEach((segment) => {
         validateFieldNameSegment(segment);
         if (["__proto__", "constructor", "prototype"].includes(segment)) throw new Error("Unsafe correction path.");
       });
       let target = session.candidate;
-      for (const segment of correction.path.slice(0, -1)) {
+      for (const segment of correction2.path.slice(0, -1)) {
         if (!target || typeof target !== "object" || !Object.hasOwn(target, segment)) throw new Error("Correction parent does not exist.");
         target = target[segment];
       }
       if (!target || typeof target !== "object") throw new Error("Correction target is not an object.");
-      const field = correction.path.at(-1);
+      const field = correction2.path.at(-1);
       if (Array.isArray(target) && (!/^(0|[1-9]\d*)$/.test(field) || Number(field) > target.length)) throw new Error("Array correction requires an in-range index.");
-      if (correction.operation === "remove") {
+      if (correction2.operation === "remove") {
         if (Array.isArray(target)) target.splice(Number(field), 1);
         else delete target[field];
-      } else target[field] = checkedResearchPayload(correction.value);
+      } else target[field] = checkedResearchPayload(correction2.value);
     }
     if (args.notes !== void 0) session.notes.push(args.notes);
     checkedResearchPayload(session.candidate ?? null);
     session.revision++;
     session.history.push({ revision: session.revision, kind: "record", ...session.candidate !== void 0 ? { candidate: session.candidate } : {} });
-    session.requests[args.requestId] = { hash: hash3, revision: session.revision, operation: "record" };
+    session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "record" };
     await saveResearchSession(loc, session);
     const result = assessment(session);
     return saveReceipt(loc, session, args.requestId, { status: "recorded", saved: true, candidateSaved: session.candidate !== void 0, revision: session.revision, sessionPath: loc.sessionPath, validation: result.validation, nextAction: result.validation.valid ? "Call blueprint_research_submit using this saved revision." : "Correct only the saved fields identified in diagnostics." });
@@ -56675,12 +57000,12 @@ async function blueprintResearchSubmit(raw) {
   return withResearchSession(args, async (loc) => {
     const session = await readResearchSession(loc);
     if (!session) return { status: "not_found", saved: false, nextAction: "Call blueprint_research_prepare before submitting research." };
-    const hash3 = requestKey(args);
-    const replay = requestReplay(session, args.requestId, hash3);
-    if (replay) return replay;
+    const hash4 = requestKey(args);
+    const replay2 = requestReplay(session, args.requestId, hash4);
+    if (replay2) return replay2;
     const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
-    const pendingRequest = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
-    if (pendingRequest) return { status: "partial", saved: session.candidate !== void 0, nextAction: `Retry blueprint_research_${pendingRequest[1].operation} requestId ${pendingRequest[0]} first.` };
+    const pendingRequest2 = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
+    if (pendingRequest2) return { status: "partial", saved: session.candidate !== void 0, nextAction: `Retry blueprint_research_${pendingRequest2[1].operation} requestId ${pendingRequest2[0]} first.` };
     let journal = session.journal;
     if (journal && journal.requestId !== args.requestId && !journal.receipt) return { status: "partial", saved: session.candidate !== void 0, nextAction: `Retry blueprint_research_submit requestId ${journal.requestId} and identical arguments.` };
     const researchPath = artifactPathFor(loc.resolved, "research");
@@ -56693,7 +57018,7 @@ async function blueprintResearchSubmit(raw) {
         if (args.candidate !== void 0) session.candidate = checkedResearchPayload(args.candidate);
         session.revision++;
         session.history.push({ revision: session.revision, kind: "submit", ...session.candidate !== void 0 ? { candidate: session.candidate } : {} });
-        session.requests[args.requestId] = { hash: hash3, revision: session.revision, operation: "submit" };
+        session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "submit" };
         await saveResearchSession(loc, session);
       }
       const fail = (status, details) => saveReceipt(loc, session, args.requestId, { status, saved: session.candidate !== void 0 || Boolean(args.reuse), candidateSaved: session.candidate !== void 0, revision: session.revision, sessionPath: loc.sessionPath, ...details });
@@ -56730,12 +57055,12 @@ async function blueprintResearchSubmit(raw) {
       const observedProvenance = await researchInputHash(loc.projectRoot, provenancePath);
       if (observed !== session.baselineHash || observedProvenance !== session.baselineProvenanceHash) return fail("stale", { reason: "Publication targets changed after preparation.", nextAction: "Prepare with explicit reconciliation against the observed target hash." });
       if (observed && observed !== researchDigest(content) && !args.overwrite) {
-        const existing = await fs18.readFile(resolveBlueprintPath(loc.projectRoot, researchPath), "utf8");
+        const existing = await fs19.readFile(resolveBlueprintPath(loc.projectRoot, researchPath), "utf8");
         if (!isScaffoldGeneratedArtifact(existing)) return fail("needs_revision", { reason: "Explicit update/overwrite authorization is required.", nextAction: "After the user chooses update, submit the saved candidate with overwrite=true." });
       }
       const originalProvenance = args.reuse ? await readResearchEvidence(loc.projectRoot, provenancePath) : null;
       const provenance = originalProvenance?.content ?? JSON.stringify({ version: 1, researchHash: researchDigest(content), readSet: session.readSet, publishedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n";
-      journal = { requestId: args.requestId, requestHash: hash3, revision: session.revision, content, contentHash: researchDigest(content), baselineHash: observed, provenance, provenanceHash: researchDigest(provenance), baselineProvenanceHash: observedProvenance, readSet: args.reuse ? JSON.parse(provenance).readSet : session.readSet, reuse: args.reuse ?? false, stages: {} };
+      journal = { requestId: args.requestId, requestHash: hash4, revision: session.revision, content, contentHash: researchDigest(content), baselineHash: observed, provenance, provenanceHash: researchDigest(provenance), baselineProvenanceHash: observedProvenance, readSet: args.reuse ? JSON.parse(provenance).readSet : session.readSet, reuse: args.reuse ?? false, stages: {} };
       session.journal = journal;
       await saveResearchSession(loc, session);
     }
@@ -56852,12 +57177,1020 @@ var init_research = __esm({
   }
 });
 
+// src/mcp/tools/plan-model.ts
+function numericIdentity(value) {
+  if (!/^[0-9]+$/.test(value) || /^0+$/.test(value)) return null;
+  return BigInt(value).toString();
+}
+function candidatePath(segments) {
+  return "candidate" + segments.map((part) => typeof part === "number" ? `[${part}]` : `.${String(part)}`).join("");
+}
+function compilePlanCandidate(raw, context) {
+  const result = { valid: false, diagnostics: [], models: [], planIds: [] };
+  const issue2 = (path31, code, message, severity = "error") => {
+    result.diagnostics.push({ path: path31, code, message, severity });
+  };
+  const hasErrors = () => result.diagnostics.some((entry) => entry.severity === "error");
+  let input;
+  try {
+    input = typeof raw === "string" ? safeJsonParse(raw, { label: "Planning candidate", maxBytes: 1024 * 1024 }) : raw;
+  } catch (error2) {
+    issue2("candidate", "schema.json", error2 instanceof Error ? error2.message : "Planning candidate is not valid JSON.");
+    return result;
+  }
+  const parsed = authoringSchema.safeParse(input);
+  if (!parsed.success) {
+    for (const error2 of parsed.error.issues) {
+      if (error2.code === "unrecognized_keys") {
+        for (const property of error2.keys) issue2(candidatePath([...error2.path, property]), "schema.unknown_field", "This field is not part of the compact planning contract.");
+      } else {
+        issue2(candidatePath(error2.path), `schema.${error2.code}`, error2.message);
+      }
+    }
+    return result;
+  }
+  const candidate = parsed.data;
+  const requirements = uniquePreservingOrder(context.knownRequirements);
+  const knownRequirements = new Set(requirements);
+  const evidenceArtifacts = uniquePreservingOrder(context.knownEvidenceArtifacts);
+  const knownEvidence = new Set(evidenceArtifacts);
+  const savedByNumber = /* @__PURE__ */ new Map();
+  for (const [index, saved] of context.existingPlans.entries()) {
+    const identity = numericIdentity(saved.planId);
+    if (!identity || !Number.isSafeInteger(saved.wave) || saved.wave < 1) {
+      issue2(`context.existingPlans[${index}]`, "planning.invalid_saved_plan", "Saved plans require a positive numeric id and a positive integer wave.");
+    } else if (savedByNumber.has(identity)) {
+      issue2(`context.existingPlans[${index}].planId`, "planning.ambiguous_saved_slot", `Multiple saved plans resolve to numeric slot ${identity}.`);
+    } else {
+      savedByNumber.set(identity, { ...saved, planId: normalizePlanId(saved.planId) });
+    }
+  }
+  const targets = [];
+  const requestedTargets = context.mode === "replace" && context.targetPlanIds.length === 0 ? [...savedByNumber.values()].map((plan) => plan.planId) : context.targetPlanIds;
+  for (const [index, id] of requestedTargets.entries()) {
+    const identity = numericIdentity(id);
+    const saved = identity ? savedByNumber.get(identity) : void 0;
+    if (!saved) {
+      issue2(`context.targetPlanIds[${index}]`, "planning.target_missing", `Target plan ${id} is not an existing saved plan.`);
+    } else if (targets.includes(saved.planId)) {
+      issue2(`context.targetPlanIds[${index}]`, "planning.duplicate_target", `Target plan ${id} was selected more than once.`);
+    } else {
+      targets.push(saved.planId);
+    }
+  }
+  if (context.mode === "revise" && targets.length !== candidate.plans.length) {
+    issue2("candidate.plans", "planning.target_count", "Revise requires one candidate plan for each targetPlanIds entry, in the selected order.");
+  }
+  if (context.mode === "add" && context.targetPlanIds.length > 0) {
+    issue2("context.targetPlanIds", "planning.add_targets", "Add assigns new slots and cannot select saved targets.");
+  }
+  if (hasErrors()) return result;
+  const maxSaved = [...savedByNumber.keys()].reduce((max, value) => BigInt(value) > max ? BigInt(value) : max, 0n);
+  result.planIds = candidate.plans.map((_, index) => context.mode === "revise" ? targets[index] : context.mode === "replace" && index < targets.length ? targets[index] : normalizePlanId((maxSaved + BigInt(index + 1 - (context.mode === "replace" ? targets.length : 0))).toString()));
+  const localIds = /* @__PURE__ */ new Map();
+  for (const [index, plan] of candidate.plans.entries()) {
+    if (localIds.has(plan.key)) issue2(`candidate.plans[${index}].key`, "planning.duplicate_key", `Plan key ${plan.key} must be unique.`);
+    else localIds.set(plan.key, result.planIds[index]);
+  }
+  const candidateIds = new Set(result.planIds);
+  const retained = [...savedByNumber.values()].filter((saved) => !candidateIds.has(saved.planId) && !(context.mode === "replace" && targets.includes(saved.planId)));
+  const retainedIds = new Set(retained.map((plan) => plan.planId));
+  const dependencies2 = /* @__PURE__ */ new Map();
+  for (const [index, plan] of candidate.plans.entries()) {
+    const resolved = [];
+    for (const [dependencyIndex, dependency] of plan.dependsOn.entries()) {
+      const identity = numericIdentity(dependency);
+      const saved = identity ? savedByNumber.get(identity) : void 0;
+      const target = localIds.get(dependency) ?? (saved && (context.mode !== "replace" || retainedIds.has(saved.planId)) ? saved.planId : void 0);
+      if (!target) {
+        issue2(`candidate.plans[${index}].dependsOn[${dependencyIndex}]`, "planning.dependency_missing", `Dependency ${dependency} is not a candidate key or a retained saved plan. Use candidate keys to reference plans in this submission.`);
+      } else {
+        resolved.push(target);
+      }
+    }
+    dependencies2.set(result.planIds[index], uniquePreservingOrder(resolved));
+  }
+  for (const saved of retained) {
+    const resolved = [];
+    for (const dependency of saved.dependsOn ?? []) {
+      const identity = numericIdentity(dependency);
+      const target = identity ? savedByNumber.get(identity)?.planId : void 0;
+      if (!target || !retainedIds.has(target) && !candidateIds.has(target)) {
+        issue2("context.existingPlans", "planning.saved_dependency_missing", `Saved plan ${saved.planId} depends on missing plan ${dependency}.`);
+      } else {
+        resolved.push(target);
+      }
+    }
+    dependencies2.set(saved.planId, uniquePreservingOrder(resolved));
+  }
+  const waves = new Map(retained.map((plan) => [plan.planId, plan.wave]));
+  const visiting = /* @__PURE__ */ new Set();
+  const visited = /* @__PURE__ */ new Set();
+  const visit = (id) => {
+    if (visiting.has(id)) {
+      issue2("candidate.plans", "planning.dependency_cycle", `Dependency cycle reaches plan ${id}.`);
+      return 0;
+    }
+    if (visited.has(id)) return waves.get(id) ?? 1;
+    visiting.add(id);
+    const minimumWave = Math.max(0, ...(dependencies2.get(id) ?? []).map(visit)) + 1;
+    if (retainedIds.has(id)) {
+      if ((waves.get(id) ?? 0) < minimumWave) {
+        issue2("candidate.plans", "planning.saved_wave_conflict", `Saved plan ${id} would need wave ${minimumWave} or later. Include that plan in the revision targets to recompute its wave.`);
+      }
+    } else {
+      waves.set(id, minimumWave);
+      if (!Number.isSafeInteger(minimumWave)) {
+        issue2("candidate.plans", "planning.wave_overflow", `Plan ${id} would exceed the supported integer wave range.`);
+      }
+    }
+    visiting.delete(id);
+    visited.add(id);
+    return waves.get(id) ?? minimumWave;
+  };
+  for (const id of dependencies2.keys()) visit(id);
+  const deferrals = /* @__PURE__ */ new Map();
+  for (const [index, row] of (candidate.deferrals ?? []).entries()) {
+    if (!knownRequirements.has(row.requirement)) issue2(`candidate.deferrals[${index}].requirement`, "planning.requirement_unknown", `Unknown requirement ${row.requirement}.`);
+    if (deferrals.has(row.requirement)) issue2(`candidate.deferrals[${index}].requirement`, "planning.duplicate_deferral", `Requirement ${row.requirement} has multiple deferrals.`);
+    deferrals.set(row.requirement, row);
+  }
+  const owners = /* @__PURE__ */ new Map();
+  const fileOwners = /* @__PURE__ */ new Map();
+  for (const [index, plan] of candidate.plans.entries()) {
+    const id = result.planIds[index];
+    const taskIds = /* @__PURE__ */ new Set();
+    const citedEvidence = /* @__PURE__ */ new Set();
+    for (const [taskIndex, task] of plan.tasks.entries()) {
+      if (taskIds.has(task.id)) issue2(`candidate.plans[${index}].tasks[${taskIndex}].id`, "planning.duplicate_task", `Task id ${task.id} must be unique within its plan.`);
+      taskIds.add(task.id);
+      for (const [requirementIndex, requirement] of task.requirements.entries()) {
+        if (!knownRequirements.has(requirement)) issue2(`candidate.plans[${index}].tasks[${taskIndex}].requirements[${requirementIndex}]`, "planning.requirement_unknown", `Unknown requirement ${requirement}.`);
+        owners.set(requirement, uniquePreservingOrder([...owners.get(requirement) ?? [], id]));
+      }
+    }
+    for (const [evidenceIndex, evidence] of (plan.evidence ?? []).entries()) {
+      if (!knownEvidence.has(evidence.artifact)) issue2(`candidate.plans[${index}].evidence[${evidenceIndex}].artifact`, "planning.evidence_unknown", `Evidence ${evidence.artifact} is not in the prepared evidence inventory.`);
+      if (citedEvidence.has(evidence.artifact)) issue2(`candidate.plans[${index}].evidence[${evidenceIndex}].artifact`, "planning.duplicate_evidence", `Evidence ${evidence.artifact} is cited more than once.`);
+      citedEvidence.add(evidence.artifact);
+    }
+    for (const file2 of uniquePreservingOrder(plan.tasks.flatMap((task) => task.filesModified))) {
+      const wave = waves.get(id) ?? 1;
+      const ownershipKey = `${wave}:${file2}`;
+      const prior = fileOwners.get(ownershipKey);
+      if (prior) issue2(`candidate.plans[${index}].tasks`, "planning.file_ownership_conflict", `Plans ${prior.id} and ${id} both modify ${file2} in wave ${wave}. Add a dependency or split ownership.`);
+      else fileOwners.set(ownershipKey, { id, wave });
+    }
+  }
+  for (const [requirement, row] of deferrals) {
+    if (owners.has(requirement)) issue2("candidate.deferrals", "planning.deferral_conflict", `Requirement ${row.requirement} is both assigned to candidate tasks and deferred for the phase.`);
+  }
+  for (const requirement of requirements) {
+    if (!owners.has(requirement) && !deferrals.has(requirement) && !retained.some((plan) => plan.requirements?.includes(requirement))) {
+      issue2("candidate.plans", "planning.requirement_unassigned", `Requirement ${requirement} is not assigned by this candidate. Final plan-set coverage must resolve it before execution.`, "warning");
+    }
+  }
+  if (hasErrors()) return result;
+  result.models = candidate.plans.map((plan, index) => {
+    const id = result.planIds[index];
+    const tasks = plan.tasks.map((task) => ({
+      ...task,
+      requirements: uniquePreservingOrder(task.requirements),
+      filesModified: uniquePreservingOrder(task.filesModified),
+      readFirst: uniquePreservingOrder(task.readFirst)
+    }));
+    const filesModified = uniquePreservingOrder(tasks.flatMap((task) => task.filesModified));
+    const citedEvidence = new Map((plan.evidence ?? []).map((row) => [row.artifact, row.rationale]));
+    const checks = plan.verification?.length ? plan.verification : tasks.flatMap((task) => task.acceptanceCriteria.map((criterion) => ({
+      item: `Verify ${task.id}: ${criterion}`,
+      method: /(?:^|`)(?:npm|npx|pnpm|yarn|node|python3?|pytest|cargo|go|make|rg|grep)\s/.test(criterion) ? "command" : "file-read",
+      evidence: `${criterion} Collect evidence after executing ${task.id}; inspect ${task.filesModified.join(", ")}.`
+    })));
+    const unknowns = [...plan.unknownsAndDeferrals ?? [], ...[...deferrals.values()].map((row) => ({
+      item: row.requirement,
+      disposition: "deferred",
+      rationale: row.rationale,
+      followUp: row.followUp
+    }))];
+    if (unknowns.length === 0) unknowns.push({
+      item: "No additional unknowns or deferrals were declared in this candidate.",
+      disposition: "none",
+      rationale: "This row records the candidate's declared state; it does not certify that execution has resolved every risk.",
+      followUp: "Record newly discovered blockers before changing the accepted plan."
+    });
+    const model = {
+      title: plan.title,
+      wave: waves.get(id) ?? 1,
+      status: "planned",
+      objective: plan.goal,
+      dependsOn: dependencies2.get(id) ?? [],
+      requirements: uniquePreservingOrder(tasks.flatMap((task) => task.requirements)),
+      filesModified,
+      readFirst: uniquePreservingOrder(tasks.flatMap((task) => task.readFirst)),
+      autonomous: plan.autonomous ?? true,
+      goal: plan.goal,
+      scope: plan.scope,
+      tasks,
+      externalServicePrerequisites: plan.externalServicePrerequisites ?? [],
+      verification: checks,
+      mustHaves: plan.mustHaves,
+      requirementCoverage: requirements.map((requirement) => {
+        const coveredTasks = tasks.filter((task) => task.requirements.includes(requirement));
+        if (coveredTasks.length) return {
+          requirement,
+          status: "covered",
+          coveredByTasks: coveredTasks.map((task) => task.id),
+          evidence: coveredTasks.flatMap((task) => task.acceptanceCriteria).join("; "),
+          rationale: `Assigned to tasks ${coveredTasks.map((task) => task.id).join(", ")} in this plan.`
+        };
+        const otherOwners = uniquePreservingOrder([
+          ...owners.get(requirement) ?? [],
+          ...retained.filter((saved) => saved.requirements?.includes(requirement)).map((saved) => saved.planId)
+        ]);
+        const deferral = deferrals.get(requirement);
+        return {
+          requirement,
+          status: "deferred",
+          coveredByTasks: [],
+          evidence: otherOwners.length ? `Assigned to plans ${otherOwners.join(", ")}.` : deferral ? deferral.followUp : "No owner identified in the supplied plan-set context; final coverage validation is required.",
+          rationale: otherOwners.length ? "Owned by another plan in the phase; this plan does not claim its work." : deferral ? deferral.rationale : "This candidate leaves the requirement unassigned; execution readiness is not established by this ledger."
+        };
+      }),
+      evidenceCoverage: evidenceArtifacts.map((artifact) => ({
+        artifact,
+        status: citedEvidence.has(artifact) ? "used" : "irrelevant",
+        rationale: citedEvidence.get(artifact) ?? "Available in the prepared evidence inventory but not cited by this candidate; no use is claimed."
+      })),
+      fileSurfaceCoverage: filesModified.map((surface) => {
+        const coveredTasks = tasks.filter((task) => task.filesModified.includes(surface));
+        return {
+          surface,
+          coveredByTasks: coveredTasks.map((task) => task.id),
+          verification: coveredTasks.flatMap((task) => task.acceptanceCriteria).join("; "),
+          rationale: `Declared modification surface of tasks ${coveredTasks.map((task) => task.id).join(", ")}.`
+        };
+      }),
+      unknownsAndDeferrals: unknowns,
+      ...plan.gapClosure === void 0 ? {} : { gapClosure: plan.gapClosure }
+    };
+    return { planId: id, model };
+  });
+  result.valid = true;
+  return result;
+}
+var narrative, repoPath, taskId, key, verification, unknownOrDeferral, authoringSchema, planningCandidateJsonSchema;
+var init_plan_model = __esm({
+  "src/mcp/tools/plan-model.ts"() {
+    "use strict";
+    init_v4();
+    init_security();
+    init_phase_collection_helpers();
+    init_phase_plan_identifiers();
+    narrative = string2().min(1).regex(/\S/, "Use concrete nonblank text.").regex(/^[^\r\n\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+$/, "Use one line per entry; the original candidate remains saved for correction.");
+    repoPath = string2().min(1).regex(
+      /^(?!\s)(?!.*\s$)(?!.*[\u0000-\u001f\u007f])(?!\/)(?!~)(?![A-Za-z]:)(?!.*\\)(?!.*(?:^|\/)\.\.?(?:\/|$))(?!.*\/\/)(?!.*[*?])(?!.*\/$).*\S.*$/,
+      "Use a concrete repo-relative file path without traversal, wildcard operators (* and ?), or control characters. Brackets, braces and parentheses are literal filename characters."
+    );
+    taskId = string2().regex(/^[A-Za-z0-9._-]+$/);
+    key = string2().regex(/^[A-Za-z][A-Za-z0-9._-]*$/).describe("Local plan key. Dependencies use these keys or existing numeric plan ids.");
+    verification = strictObject({
+      item: narrative,
+      method: _enum(["test", "grep", "command", "file-read", "artifact-validation"]),
+      evidence: narrative
+    });
+    unknownOrDeferral = strictObject({
+      item: narrative,
+      disposition: _enum(["unknown", "deferred", "blocked", "none"]),
+      rationale: narrative,
+      followUp: narrative
+    });
+    authoringSchema = strictObject({
+      plans: array(strictObject({
+        key,
+        title: narrative,
+        goal: narrative,
+        scope: array(narrative).min(1),
+        dependsOn: array(string2().regex(/^(?:[A-Za-z][A-Za-z0-9._-]*|[0-9]+)$/)),
+        tasks: array(strictObject({
+          id: taskId,
+          title: narrative,
+          readFirst: array(repoPath).min(1),
+          filesModified: array(repoPath).min(1),
+          requirements: array(narrative).min(1),
+          action: array(narrative).min(1),
+          acceptanceCriteria: array(narrative).min(1)
+        })).min(1),
+        mustHaves: array(narrative).min(1),
+        autonomous: boolean2().optional(),
+        gapClosure: boolean2().optional(),
+        externalServicePrerequisites: array(strictObject({
+          service: narrative,
+          category: narrative,
+          purpose: narrative,
+          userSetup: narrative,
+          readinessCheck: narrative,
+          canAgentProceedWithoutIt: boolean2()
+        })).optional(),
+        verification: array(verification).optional(),
+        evidence: array(strictObject({ artifact: repoPath, rationale: narrative })).describe("Only explicitly cited saved evidence, with the reason it informed this plan.").optional(),
+        unknownsAndDeferrals: array(unknownOrDeferral).optional()
+      })).min(1),
+      deferrals: array(strictObject({
+        requirement: narrative,
+        rationale: narrative,
+        followUp: narrative
+      })).optional()
+    });
+    planningCandidateJsonSchema = toJSONSchema(authoringSchema);
+  }
+});
+
+// src/mcp/tools/plan-session.ts
+import { promises as fs20 } from "node:fs";
+function planPublicationPath(phaseDir2, phasePrefix2) {
+  return `${phaseDir2}/${phasePrefix2}-PLAN-PUBLICATION.json`;
+}
+async function planLocation(args) {
+  const located = await resolveLocatedPhaseForMutation(args);
+  return { ...located, sessionPath: `${located.resolved.phaseDir}/${located.resolved.phasePrefix}-PLAN-SESSION.json` };
+}
+async function readPlanSession(loc) {
+  try {
+    const session = schema.parse(safeJsonParseObject(await fs20.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 }));
+    if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Planning session identity mismatch.");
+    if (session.candidateHash !== (session.candidate === void 0 ? null : researchDigest(stableResearchValue(session.candidate)))) throw new Error("Planning candidate integrity mismatch.");
+    const validPlanPath = (value) => value.startsWith(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`) && /^\d+-PLAN\.md$/.test(value.slice(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`.length));
+    if (session.targets.some((item) => !validPlanPath(item.path))) throw new Error("Invalid planning target path.");
+    if (session.journal) {
+      const j = session.journal;
+      const request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : void 0;
+      if (!request || request.hash !== j.requestHash || j.revision !== session.revision || j.candidateHash !== session.candidateHash || j.files.some((file2) => !validPlanPath(file2.path) || researchDigest(file2.content) !== file2.hash || (file2.backup === null ? null : researchDigest(file2.backup)) !== file2.baselineHash) || j.removed.some((file2) => !validPlanPath(file2.path) || researchDigest(file2.backup) !== file2.baselineHash)) throw new Error("Planning publication journal integrity mismatch.");
+    }
+    return session;
+  } catch (error2) {
+    if (error2.code === "ENOENT") return null;
+    throw error2;
+  }
+}
+async function savePlanSession(loc, session, topologyLockHeld = false) {
+  schema.parse(session);
+  const text = JSON.stringify(session, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
+  if (Buffer.byteLength(text) > 32 * 1024 * 1024) throw new Error("Planning session exceeds 32 MiB; archive retained history through runtime maintenance.");
+  const write = async () => {
+    const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
+    if (current.sessionPath !== loc.sessionPath || current.resolved.phaseNumber !== session.phase) throw new Error("Phase storage identity changed; recover the previous planning session before saving.");
+    await writeTextFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), text);
+  };
+  return topologyLockHeld ? write() : withBlueprintRepoLock(loc.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, write);
+}
+async function withPlanSession(args, task) {
+  const root = await ensureRepoRoot(args.cwd);
+  return withBlueprintRepoLock(root, "plan-session", async () => task(await planLocation({ ...args, cwd: root })));
+}
+function initialPlanSession(loc) {
+  return { version: 1, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, needsIntent: false, mode: "add", targetPlanIds: [], readSet: [], evidencePaths: [], targets: [], existingPlans: [], knownRequirements: [], knownEvidenceArtifacts: [], checkerRequired: false, candidateHash: null, history: [], requests: {} };
+}
+var planNumericPhase, planRequestId, planLookup, checkedPlanPayload, hash3, receipt, targetSchema, journalSchema2, schema;
+var init_plan_session = __esm({
+  "src/mcp/tools/plan-session.ts"() {
+    "use strict";
+    init_v4();
+    init_security();
+    init_artifacts();
+    init_phase_resolution();
+    init_phase_topology_lock();
+    init_research_session();
+    init_research_evidence();
+    init_plan_publication();
+    planNumericPhase = researchNumericPhase;
+    planRequestId = researchRequestId;
+    planLookup = { cwd: string2().optional(), phase: planNumericPhase };
+    checkedPlanPayload = checkedResearchPayload;
+    hash3 = string2().regex(/^[a-f0-9]{64}$/);
+    receipt = record(string2(), unknown());
+    targetSchema = object2({ path: string2(), hash: hash3.nullable() });
+    journalSchema2 = object2({
+      requestId: planRequestId,
+      requestHash: hash3,
+      revision: number2().int().nonnegative(),
+      candidateHash: hash3,
+      baselineMarker: string2().nullable(),
+      review: object2({ revision: number2().int(), candidateHash: hash3, verdict: _enum(["accept", "revise"]), summary: string2() }).optional(),
+      files: array(object2({ planId: string2(), title: string2(), wave: number2().int().positive(), taskCount: number2().int().positive(), path: string2(), hash: hash3, content: string2(), baselineHash: hash3.nullable(), backup: string2().nullable() })),
+      removed: array(object2({ path: string2(), baselineHash: hash3, backup: string2() })),
+      stages: partialRecord(_enum(["files", "commit", "state", "routing"]), _enum(["intent", "complete"])),
+      receipt: receipt.optional()
+    });
+    schema = object2({
+      version: literal(1),
+      phase: string2(),
+      topology: custom((value) => Boolean(value && typeof value === "object" && "phaseDir" in value)),
+      revision: number2().int().nonnegative(),
+      prepared: boolean2(),
+      needsIntent: boolean2().default(false),
+      mode: _enum(["add", "revise", "replace"]),
+      targetPlanIds: array(string2()),
+      readSet: array(targetSchema).max(300),
+      evidencePaths: array(string2()),
+      targets: array(targetSchema),
+      existingPlans: array(object2({ planId: string2(), wave: number2(), dependsOn: array(string2()), requirements: array(string2()) })),
+      knownRequirements: array(string2()),
+      knownEvidenceArtifacts: array(string2()),
+      checkerRequired: boolean2(),
+      candidate: unknown().optional(),
+      candidateHash: hash3.nullable(),
+      history: array(object2({ revision: number2().int(), kind: string2(), candidate: unknown().optional(), readSet: array(targetSchema).optional(), targets: array(targetSchema).optional(), journal: journalSchema2.optional() })),
+      requests: record(string2(), object2({ hash: hash3, operation: _enum(["submit", "finalize"]), revision: number2().int(), receipt: receipt.optional() })),
+      journal: journalSchema2.optional()
+    });
+  }
+});
+
+// src/mcp/tools/plan-evidence.ts
+function evidenceInventory(loc) {
+  return loc.artifacts.filter((p) => !/-PLAN\.md$/.test(p) && !/-SESSION\.json$/.test(p) && !/-CHECKPOINT\.json$/.test(p) && !/-PLAN-PUBLICATION\.json$/.test(p)).sort();
+}
+async function planInputHash(root, relative, phase) {
+  if (relative === "@plan/effective-config") {
+    const config2 = await blueprintConfigGet({ cwd: root, scope: "effective" });
+    return researchDigest(stableResearchValue({ config: config2.config, provenance: config2.provenance }));
+  }
+  if (relative === "@plan/evidence-inventory") return researchDigest(stableResearchValue(evidenceInventory(await planLocation({ cwd: root, phase }))));
+  return researchInputHash(root, relative);
+}
+async function planBasisFreshness(root, phase, readSet) {
+  const stalePaths = [], unknownPaths = [];
+  if (!readSet.length) unknownPaths.push("readSet");
+  await Promise.all(readSet.map(async (item) => {
+    try {
+      if (await planInputHash(root, item.path, phase) !== item.hash) stalePaths.push(item.path);
+    } catch {
+      unknownPaths.push(item.path);
+    }
+  }));
+  stalePaths.sort();
+  unknownPaths.sort();
+  return { status: stalePaths.length ? "stale" : unknownPaths.length ? "unknown" : "fresh", stalePaths, unknownPaths };
+}
+async function capturePlanEvidence(loc, selectedPaths) {
+  const evidencePaths = [...new Set(selectedPaths.map((p) => canonicalResearchEvidencePath(loc.projectRoot, p)))];
+  if (evidencePaths.some((p) => p === ".blueprint/STATE.md" || /-(?:PLAN|SESSION|CHECKPOINT|PLAN-PUBLICATION)\.(?:md|json)$/.test(p))) throw new Error("Select repository evidence, not mutable plans, state, sessions, or checkpoints.");
+  const researchPath = artifactPathFor(loc.resolved, "research");
+  const paths = [.../* @__PURE__ */ new Set([
+    ".blueprint/PROJECT.md",
+    ".blueprint/REQUIREMENTS.md",
+    ".blueprint/ROADMAP.md",
+    ".blueprint/config.json",
+    ...CODEBASE_ARTIFACTS,
+    ...["context", "spec", "research", "ui-spec"].map((kind) => artifactPathFor(loc.resolved, kind)),
+    researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json"),
+    ...evidenceInventory(loc),
+    ...evidencePaths
+  ])];
+  const inputs = await Promise.all(paths.map((p) => readResearchEvidence(loc.projectRoot, p, 1024 * 1024)));
+  const readSet = inputs.map(({ path: path31, hash: hash4 }) => ({ path: path31, hash: hash4 }));
+  const provenance = inputs.find((input) => input.path === researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json"));
+  if (provenance?.content) {
+    const parsed = safeJsonParseObject(provenance.content, { label: provenance.path, maxBytes: 1024 * 1024 });
+    if (parsed.version !== 1 || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100) throw new Error("Research provenance has an invalid source read set.");
+    for (const item of parsed.readSet) {
+      if (!item || typeof item !== "object" || typeof item.path !== "string" || !(item.hash === null || typeof item.hash === "string" && /^[a-f0-9]{64}$/.test(item.hash))) throw new Error("Research provenance contains an invalid source fingerprint.");
+      if (item.path.startsWith("@") && item.path !== "@research/effective-config") throw new Error("Research provenance contains an unknown virtual input.");
+      const path31 = item.path === "@research/effective-config" ? item.path : canonicalResearchEvidencePath(loc.projectRoot, item.path);
+      const captured = readSet.find((entry) => entry.path === path31);
+      if (!captured) readSet.push({ path: path31, hash: await researchInputHash(loc.projectRoot, path31) });
+    }
+  } else {
+    const path31 = researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json");
+    readSet.push({ path: path31, hash: await researchInputHash(loc.projectRoot, path31) });
+  }
+  readSet.push({ path: "@plan/effective-config", hash: await planInputHash(loc.projectRoot, "@plan/effective-config", loc.resolved.phaseNumber) });
+  readSet.push({ path: "@plan/evidence-inventory", hash: researchDigest(stableResearchValue(evidenceInventory(loc))) });
+  return { inputs, readSet, evidencePaths };
+}
+async function readPlanTargetHashes(loc) {
+  const prefix = `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`;
+  return Promise.all(loc.artifacts.filter((p) => p.startsWith(prefix) && /^\d+-PLAN\.md$/.test(p.slice(prefix.length))).sort().map(async (path31) => ({ path: path31, hash: await researchInputHash(loc.projectRoot, path31) })));
+}
+async function planTargetFreshness(loc, session) {
+  const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
+  const targets = await readPlanTargetHashes(current);
+  return { fresh: stableResearchValue(targets) === stableResearchValue(session.targets), targets };
+}
+var init_plan_evidence = __esm({
+  "src/mcp/tools/plan-evidence.ts"() {
+    "use strict";
+    init_artifacts();
+    init_security();
+    init_config();
+    init_phase_locations();
+    init_plan_session();
+    init_research_evidence();
+  }
+});
+
+// src/mcp/tools/plan.ts
+import { promises as fs21 } from "node:fs";
+function requestHash(args) {
+  const { cwd: _cwd, ...logical } = args;
+  return researchDigest(stableResearchValue(logical));
+}
+function responseBase(loc, session) {
+  return { saved: session.candidate !== void 0, revision: session.revision, candidateHash: session.candidateHash, sessionPath: loc.sessionPath };
+}
+async function safeNextAction2(proposed) {
+  const catalog = await blueprintCommandCatalog();
+  const command = proposed?.match(/\/blu-([a-z][a-z-]*)\b/)?.[1];
+  if (command && catalog.commands[command]?.implemented) return proposed;
+  return catalog.commands.progress?.implemented ? "Run /blu-progress to review the next safe action." : null;
+}
+function pendingRequest(session, except) {
+  return Object.entries(session.requests).find(([id, request]) => id !== except && !request.receipt);
+}
+function replay(session, id, hash4) {
+  const previous = Object.hasOwn(session.requests, id) ? session.requests[id] : void 0;
+  if (previous && previous.hash !== hash4) return { status: "rejected", reason: "Request ID conflict", revision: session.revision };
+  return previous?.receipt ?? null;
+}
+async function saveReceipt2(loc, session, id, value) {
+  session.requests[id].receipt = value;
+  await savePlanSession(loc, session);
+  return value;
+}
+async function readinessGates(loc, readiness, inputs) {
+  const contextPath = artifactPathFor(loc.resolved, "context");
+  const content = inputs?.find((input) => input.path === contextPath)?.content ?? await fs21.readFile(resolveBlueprintPath(loc.projectRoot, contextPath), "utf8").catch((error2) => {
+    if (error2.code === "ENOENT") return null;
+    throw error2;
+  });
+  const validation = content === null ? null : validatePhaseArtifactContent(content, "context");
+  const blockers = [...readiness.authoringContext.planningReadiness.blockers];
+  if (!validation?.valid || isBootstrapStarterContext(content ?? "")) blockers.push("A complete, validated phase context is required before drafting plans.");
+  const spec = inputs?.find((input) => input.path === artifactPathFor(loc.resolved, "spec"));
+  if (spec?.content && !validatePhaseArtifactContent(spec.content, "spec").valid) blockers.push("The saved phase specification is invalid.");
+  return { ready: readiness.status === "ready" && blockers.length === 0, blockers: [...new Set(blockers)], checkerRequired: readiness.effectiveConfig.workflow.plan_check };
+}
+function boundedEvidence(inputs) {
+  let remaining = 12e3;
+  const priority = (path31) => /-CONTEXT\.md$/.test(path31) ? 0 : /-RESEARCH\.md$/.test(path31) ? 1 : /-(?:UI-)?SPEC\.md$/.test(path31) ? 2 : /\/(?:PROJECT|REQUIREMENTS)\.md$/.test(path31) ? 3 : 4;
+  return [...inputs].sort((left, right) => priority(left.path) - priority(right.path)).map((input) => {
+    const content = input.content === null ? null : input.content.slice(0, Math.min(3e3, remaining));
+    remaining -= content?.length ?? 0;
+    return { ...input, content, truncated: (input.content?.length ?? 0) > (content?.length ?? 0) };
+  });
+}
+async function blueprintPlanPrepare(raw = {}) {
+  const args = prepareInput3.parse(raw);
+  try {
+    return await withPlanSession(args, async (loc) => {
+      const session = await readPlanSession(loc) ?? initialPlanSession(loc);
+      let pending = pendingRequest(session);
+      if (pending && args.reconcile && session.journal && args.expectedRevision === session.revision && args.acknowledgeChangedInputs) {
+        const observed = await readPlanTargetHashes(await planLocation({ cwd: loc.projectRoot, phase: session.phase }));
+        if (stableResearchValue(Object.fromEntries(observed.map((item) => [item.path, item.hash]))) !== stableResearchValue(args.reconcile.targetHashes)) return { status: "reconciliation_required", ...responseBase(loc, session), targetHashes: Object.fromEntries(observed.map((item) => [item.path, item.hash])), reason: "Reconciliation requires the currently observed target hashes." };
+        await rollbackPublication(loc, session, args.reconcile.targetHashes);
+        loc = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
+        pending = pendingRequest(session);
+      }
+      if (pending) return { status: "partial", ...responseBase(loc, session), targetHashes: Object.fromEntries((await readPlanTargetHashes(loc)).map((item) => [item.path, item.hash])), nextAction: `Retry blueprint_plan_${pending[1].operation} with requestId ${pending[0]} and identical arguments. If external evidence changed, prepare with expectedRevision, acknowledgeChangedInputs=true and reconcile containing observed targetHashes to restore the previous plans before refreshing.` };
+      const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+      if (marker.status === "pending" || marker.status === "invalid") return { status: "partial", ...responseBase(loc, session), reason: marker.reason, nextAction: "Resume the original finalize request before changing preparation." };
+      const initialTargets = await readPlanTargetHashes(loc);
+      const capture = await capturePlanEvidence(loc, [.../* @__PURE__ */ new Set([...session.evidencePaths, ...args.evidencePaths ?? []])]);
+      const readiness = await blueprintPhasePlanReadiness({ cwd: loc.projectRoot, phase: session.phase, bodyMode: "summary" });
+      const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
+      const fresh = await planBasisFreshness(loc.projectRoot, session.phase, capture.readSet);
+      const targets = await readPlanTargetHashes(current);
+      const finalMarker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+      if (fresh.status !== "fresh" || marker.token !== finalMarker.token || stableResearchValue(targets) !== stableResearchValue(initialTargets) || !phaseTopologyFingerprintsMatch(phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) return { status: "stale", ...responseBase(loc, session), freshness: fresh, nextAction: "Retry prepare; inputs changed during collection." };
+      const gates = await readinessGates(loc, readiness, capture.inputs);
+      const plans = readiness.planIndex?.plans ?? [];
+      const packet = {
+        phase: readiness.phaseSelection,
+        gates,
+        config: { workflow: readiness.effectiveConfig.workflow },
+        requirements: readiness.context?.requirementsGrounding,
+        projectBrief: readiness.context?.projectBrief,
+        evidence: boundedEvidence(capture.inputs),
+        existingPlans: plans.map(({ planId: planId3, path: path31, title, wave, dependsOn, requirements, status }) => ({ planId: planId3, path: path31, title, wave, dependsOn, requirements, status })),
+        targetHashes: Object.fromEntries(targets.map((item) => [item.path, item.hash])),
+        planningCandidateJsonSchema
+      };
+      if (args.expectedRevision !== void 0 && args.expectedRevision !== session.revision) return { ...packet, status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
+      if (plans.length && !args.mode && (!session.readSet.length || session.journal?.receipt || session.needsIntent)) {
+        await savePlanSession(loc, session);
+        return { ...packet, status: "choice_required", ...responseBase(loc, session), nextAction: "Choose add, revise selected plans, or replace selected plans; supply mode and targetPlanIds for revise/replace." };
+      }
+      const nextMode = args.mode ?? session.mode;
+      const targetPlanIds = [...new Set(args.targetPlanIds ?? (nextMode === "add" ? [] : nextMode === "replace" && args.mode ? plans.map((plan) => plan.planId) : session.targetPlanIds))];
+      if (nextMode === "add" && targetPlanIds.length || nextMode !== "add" && !targetPlanIds.length || targetPlanIds.some((id) => !plans.some((plan) => plan.planId === id))) return { ...packet, status: "choice_required", ...responseBase(loc, session), reason: "Add accepts no targets; revise/replace require existing selected targetPlanIds." };
+      const changed = session.readSet.length ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet) : null;
+      const topologyChanged = !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase));
+      const targetsChanged = session.readSet.length > 0 && stableResearchValue(targets) !== stableResearchValue(session.targets);
+      const modeChanged = session.readSet.length > 0 && (nextMode !== session.mode || stableResearchValue(targetPlanIds) !== stableResearchValue(session.targetPlanIds));
+      const selectedEvidenceChanged = session.readSet.length > 0 && stableResearchValue(capture.evidencePaths) !== stableResearchValue(session.evidencePaths);
+      if ((targetsChanged || topologyChanged) && (!args.reconcile || args.expectedRevision !== session.revision || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(packet.targetHashes))) return { ...packet, status: "reconciliation_required", ...responseBase(loc, session), reason: "Review changed topology and publication targets, then prepare with expectedRevision and reconcile containing the observed targetHashes." };
+      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. Saved candidates remain available." };
+      const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && changed?.status === "fresh";
+      if (!unchanged) {
+        session.history.push({ revision: session.revision, kind: "prepare", readSet: session.readSet, targets: session.targets, ...session.journal ? { journal: session.journal } : {} });
+        delete session.journal;
+        session.topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
+        session.prepared = gates.ready;
+        session.mode = nextMode;
+        session.targetPlanIds = targetPlanIds;
+        if (args.mode) session.needsIntent = false;
+        session.readSet = capture.readSet;
+        session.evidencePaths = capture.evidencePaths;
+        session.targets = targets;
+        session.existingPlans = plans.map((plan) => ({ planId: plan.planId, wave: plan.wave ?? 1, dependsOn: plan.dependsOn, requirements: plan.requirements }));
+        session.knownRequirements = readiness.authoringContext.knownRequirements;
+        const selectedPaths = new Set(targetPlanIds.map((id) => `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-${id}-PLAN.md`));
+        session.knownEvidenceArtifacts = readiness.authoringContext.knownEvidenceArtifacts.filter((p) => !selectedPaths.has(p));
+        session.checkerRequired = gates.checkerRequired;
+        session.revision++;
+        await savePlanSession(loc, session);
+      }
+      return { ...packet, status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds, knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, nextAction: gates.ready ? "Draft the compact plan set using the saved evidence, then call blueprint_plan_submit once. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction2(readiness.nextSafeAction) };
+    });
+  } catch (error2) {
+    return { status: "blocked", reason: error2.message, nextAction: await safeNextAction2("Run /blu-progress to resolve planning preparation.") };
+  }
+}
+function correctedCandidate(session, args) {
+  if (args.candidate !== void 0 && args.corrections?.length) throw new Error("Supply a candidate or field corrections, not both.");
+  if (args.candidate !== void 0) return checkedPlanPayload(args.candidate);
+  if (!args.corrections?.length) throw new Error("Supply a candidate or field corrections.");
+  let candidate = checkedPlanPayload(session.candidate);
+  if (typeof candidate === "string") candidate = safeJsonParseObject(candidate, { label: "Saved planning candidate", maxBytes: 1024 * 1024 });
+  for (const change of args.corrections) {
+    change.path.forEach((segment) => {
+      validateFieldNameSegment(segment);
+      if (["__proto__", "prototype", "constructor"].includes(segment)) throw new Error("Unsafe correction path.");
+    });
+    let target = candidate;
+    for (const segment of change.path.slice(0, -1)) {
+      if (!target || typeof target !== "object" || !Object.hasOwn(target, segment)) throw new Error("Correction parent does not exist.");
+      target = target[segment];
+    }
+    if (!target || typeof target !== "object") throw new Error("Correction target is not an object.");
+    const field = change.path.at(-1);
+    if (Array.isArray(target) && (!/^(0|[1-9]\d*)$/.test(field) || Number(field) > target.length || change.operation === "remove" && Number(field) === target.length)) throw new Error("Array correction requires an existing index, or the next index when setting.");
+    if (change.operation === "remove") {
+      if (Array.isArray(target)) target.splice(Number(field), 1);
+      else delete target[field];
+    } else target[field] = checkedPlanPayload(change.value);
+  }
+  return checkedPlanPayload(candidate);
+}
+async function assess2(loc, session) {
+  const compiled = planDependencies.compile(session.candidate, { knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, existingPlans: session.existingPlans, mode: session.mode, targetPlanIds: session.targetPlanIds });
+  if (!compiled.valid) return { valid: false, diagnostics: compiled.diagnostics, plans: [], planIds: compiled.planIds, planSetValidation: null };
+  const validated = await planDependencies.validate({ cwd: loc.projectRoot, phase: session.phase, models: compiled.models, removePlanIds: session.mode === "replace" ? session.targetPlanIds : [], requireComplete: true });
+  return { ...validated, diagnostics: [...compiled.diagnostics, ...validated.diagnostics], planIds: compiled.planIds };
+}
+function validationSummary(result) {
+  const budget = { remaining: 64e3, truncated: false };
+  const bound = (value, depth = 0) => {
+    if (budget.remaining <= 0 || depth > 6) {
+      budget.truncated = true;
+      return "[truncated]";
+    }
+    if (typeof value === "string") {
+      const limit = Math.min(2e3, budget.remaining);
+      if (value.length > limit) budget.truncated = true;
+      const output = value.slice(0, limit);
+      budget.remaining -= output.length;
+      return output;
+    }
+    if (Array.isArray(value)) {
+      if (value.length > 20) budget.truncated = true;
+      return value.slice(0, 20).map((item) => bound(item, depth + 1));
+    }
+    if (value && typeof value === "object") {
+      const entries = Object.entries(value);
+      if (entries.length > 30) budget.truncated = true;
+      return Object.fromEntries(entries.slice(0, 30).map(([key2, item]) => [key2.slice(0, 200), bound(item, depth + 1)]));
+    }
+    return value;
+  };
+  const diagnostics = result.diagnostics.slice(0, 100).map((item) => bound(item));
+  const planSetValidation = bound(result.planSetValidation);
+  return { valid: result.valid, diagnostics, diagnosticCount: result.diagnostics.length, diagnosticsTruncated: result.diagnostics.length > diagnostics.length || budget.truncated, planSetValidation };
+}
+async function blueprintPlanSubmit(raw) {
+  const args = submitInput2.parse(raw);
+  checkedPlanPayload(args);
+  return withPlanSession(args, async (loc) => {
+    const session = await readPlanSession(loc);
+    if (!session) return { status: "not_found", saved: false, nextAction: "Call blueprint_plan_prepare first." };
+    const hash4 = requestHash(args), previous = replay(session, args.requestId, hash4);
+    if (previous) return previous;
+    const pending = pendingRequest(session, args.requestId);
+    if (pending) {
+      const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+      const canCorrect = args.expectedRevision === session.revision && (args.candidate !== void 0 || Boolean(args.corrections?.length)) && (!session.journal || Boolean(session.journal.receipt)) && (marker.status === "absent" || marker.status === "committed");
+      if (!canCorrect) return { status: "partial", ...responseBase(loc, session), nextAction: `Retry blueprint_plan_${pending[1].operation} with requestId ${pending[0]} first. A current-revision correction can supersede an interrupted assessment only before publication begins.` };
+      correctedCandidate(session, args);
+      pending[1].receipt = { status: "superseded", ...responseBase(loc, session), ready: false, reason: "A current-revision candidate correction superseded this interrupted assessment. Original candidate history is retained." };
+    }
+    const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
+    if (!accepted) {
+      if (args.expectedRevision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
+      const candidate = correctedCandidate(session, args);
+      if (session.journal) {
+        session.history.push({ revision: session.revision, kind: "published", journal: session.journal });
+        delete session.journal;
+      }
+      session.candidate = candidate;
+      session.candidateHash = researchDigest(stableResearchValue(candidate));
+      session.revision++;
+      session.history.push({ revision: session.revision, kind: "submit", candidate });
+      session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "submit" };
+      await savePlanSession(loc, session);
+    } else if (accepted.operation !== "submit" || accepted.revision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Accepted request was superseded." };
+    try {
+      const freshness = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
+      const result = await assess2(loc, session);
+      const valid = session.prepared && !session.needsIntent && freshness.status === "fresh" && result.valid;
+      return await saveReceipt2(loc, session, args.requestId, { status: valid ? "ready" : "needs_revision", ...responseBase(loc, session), validation: validationSummary(result), planIds: result.planIds, freshness, checkerRequired: session.checkerRequired, ...valid ? { reviewPacket: { revision: session.revision, candidateHash: session.candidateHash, plans: result.plans.map(({ planId: planId3, path: path31, model }) => ({ planId: planId3, path: path31, model })) } } : {}, nextAction: valid ? session.checkerRequired ? "Review this complete candidate set; finalize with the review verdict bound to this revision and candidateHash." : "Call blueprint_plan_finalize with this revision." : session.needsIntent ? "The draft is saved. Call blueprint_plan_prepare with an explicit add/revise/replace mode before requesting readiness or publication." : "The candidate is saved. Refresh stale preparation or correct only the fields identified by diagnostics, then submit with a new requestId." });
+    } catch (error2) {
+      return { status: "partial", ...responseBase(loc, session), reason: error2.message, nextAction: `The candidate is saved. Retry blueprint_plan_submit with requestId ${args.requestId} and identical arguments to resume assessment.` };
+    }
+  });
+}
+async function blueprintPlanRead(raw) {
+  const args = lookupSchema.parse(raw);
+  return withPlanSession(args, async (loc) => {
+    const session = await readPlanSession(loc);
+    return { status: session ? "found" : "not_found", sessionPath: loc.sessionPath, session, freshness: session ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet) : null, publication: await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix) };
+  });
+}
+function markerContent(session, journal, status) {
+  return JSON.stringify({ version: 1, status, requestId: journal.requestId, revision: session.revision, files: journal.files.map(({ path: path31, hash: hash4 }) => ({ path: path31, hash: hash4 })), removedPaths: journal.removed.map((file2) => file2.path) }, null, 2) + "\n";
+}
+async function verifyPublished(loc, journal, session) {
+  for (const file2 of journal.files) if (await researchInputHash(loc.projectRoot, file2.path) !== file2.hash) throw new Error(`Published plan changed: ${file2.path}.`);
+  for (const file2 of journal.removed) if (await researchInputHash(loc.projectRoot, file2.path) !== null) throw new Error(`Removed plan reappeared: ${file2.path}.`);
+  const expected = new Map(session.targets.map((item) => [item.path, item.hash]));
+  for (const file2 of journal.files) expected.set(file2.path, file2.hash);
+  for (const file2 of journal.removed) expected.delete(file2.path);
+  const observed = await readPlanTargetHashes(await planLocation({ cwd: loc.projectRoot, phase: session.phase }));
+  if (observed.length !== expected.size || observed.some((item) => !expected.has(item.path) || expected.get(item.path) !== item.hash)) throw new Error("The complete published plan set changed; retained plans or inventory no longer match the validated candidate set.");
+}
+async function rollbackPublication(loc, session, reviewedTargets) {
+  const journal = session.journal;
+  const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
+  const topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
+  await withFreshPhaseTopologyForMutation(loc.projectRoot, { phase: session.phase }, topology, "Planning publication reconciliation", async () => withBlueprintRepoLock(loc.projectRoot, "phase-plan-write", async () => {
+    const targets = await readPlanTargetHashes(await planLocation({ cwd: loc.projectRoot, phase: session.phase }));
+    if (stableResearchValue(Object.fromEntries(targets.map((item) => [item.path, item.hash]))) !== stableResearchValue(reviewedTargets)) throw new Error("Planning targets changed during reconciliation; review their new hashes before retrying.");
+    const publicationPath = planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    const observedMarker = await fs21.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8").catch((error2) => {
+      if (error2.code === "ENOENT") return null;
+      throw error2;
+    });
+    if (![journal.baselineMarker, markerContent(session, journal, "pending"), markerContent(session, journal, "committed")].includes(observedMarker)) throw new Error("Publication marker changed externally; reconciliation will not overwrite it.");
+    await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), markerContent(session, journal, "pending"));
+    for (const file2 of journal.files) {
+      const observed = await researchInputHash(loc.projectRoot, file2.path);
+      if (observed !== file2.hash) continue;
+      if (file2.backup === null) await planDependencies.remove(resolveBlueprintPath(loc.projectRoot, file2.path));
+      else await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, file2.path), file2.backup);
+    }
+    for (const file2 of journal.removed) if (await researchInputHash(loc.projectRoot, file2.path) === null) await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, file2.path), file2.backup);
+    session.history.push({ revision: session.revision, kind: "publication-reconciled", journal });
+    session.requests[journal.requestId].receipt = { status: "superseded", ...responseBase(loc, session), ready: false, reason: "Interrupted publication was explicitly reconciled; use the refreshed session revision." };
+    session.topology = topology;
+    session.targets = await readPlanTargetHashes(await planLocation({ cwd: loc.projectRoot, phase: session.phase }));
+    delete session.journal;
+    session.prepared = false;
+    if (journal.baselineMarker === null) await planDependencies.remove(resolveBlueprintPath(loc.projectRoot, publicationPath));
+    else await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), journal.baselineMarker);
+    await savePlanSession(loc, session, true);
+  }));
+}
+async function blueprintPlanFinalize(raw) {
+  const args = finalizeInput2.parse(raw);
+  checkedPlanPayload(args);
+  return withPlanSession(args, async (loc) => {
+    const session = await readPlanSession(loc);
+    if (!session) return { status: "not_found", saved: false, nextAction: "Call blueprint_plan_prepare first." };
+    const hash4 = requestHash(args), previous = replay(session, args.requestId, hash4);
+    if (previous) {
+      if (previous.status === "published" && previous.revision !== session.revision) return { ...previous, status: "superseded", ready: false, nextAction: "This receipt belongs to an earlier session revision; use blueprint_plan_read for the current candidate and publication." };
+      if (previous.status === "published" && session.journal?.requestId === args.requestId) {
+        try {
+          await verifyPublished(loc, session.journal, session);
+          if ((await planBasisFreshness(loc.projectRoot, session.phase, session.readSet)).status !== "fresh") throw new Error("Planning evidence changed after publication; refresh preparation.");
+          if (await fs21.readFile(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), "utf8") !== markerContent(session, session.journal, "committed")) throw new Error("Publication marker changed after publication.");
+        } catch (error2) {
+          return { status: "stale", ...responseBase(loc, session), reason: error2.message };
+        }
+      }
+      return previous;
+    }
+    const pending = pendingRequest(session, args.requestId);
+    if (pending) return { status: "partial", ...responseBase(loc, session), nextAction: `Retry blueprint_plan_${pending[1].operation} with requestId ${pending[0]} first.` };
+    const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
+    if (!accepted) {
+      if (args.expectedRevision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
+      session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "finalize" };
+      await savePlanSession(loc, session);
+    } else if (accepted.operation !== "finalize" || accepted.revision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Accepted request was superseded." };
+    const fail = (status, details) => saveReceipt2(loc, session, args.requestId, { status, ...responseBase(loc, session), ready: false, ...details });
+    let journal = session.journal?.requestId === args.requestId ? session.journal : void 0;
+    if (!journal) {
+      try {
+        const freshness = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
+        const targets = await planTargetFreshness(loc, session);
+        const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
+        if (!phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) return fail("stale", { reason: "Phase topology changed; explicitly reconcile preparation." });
+        if (!session.prepared || session.needsIntent || freshness.status !== "fresh" || !targets.fresh) return fail("needs_revision", { freshness, targets, nextAction: "Refresh planning preparation with an explicit mode choice and reconcile any changed inputs or targets; the candidate is saved." });
+        const readiness = await planDependencies.readiness({ cwd: loc.projectRoot, phase: session.phase, readMode: "hashes-only" });
+        const gates = await readinessGates(loc, readiness);
+        if (!gates.ready) return fail("blocked", { gates, nextAction: await safeNextAction2(readiness.nextSafeAction) });
+        if (session.mode !== "add" && !args.overwrite) return fail("needs_revision", { reason: "Revise/replace requires explicit overwrite authorization after the user chooses the selected targets." });
+        const executed = session.targetPlanIds.filter((id) => current.artifacts.some((p) => p === `${current.resolved.phaseDir}/${current.resolved.phasePrefix}-${id}-SUMMARY.md`));
+        if (executed.length) return fail("needs_revision", { reason: "Executed target plans cannot be revised or replaced; add follow-up plans instead.", executedPlanIds: executed });
+        if (gates.checkerRequired && (!args.review || args.review.verdict !== "accept" || args.review.revision !== session.revision || args.review.candidateHash !== session.candidateHash)) return fail("needs_revision", { reason: "An accepting checker review tied to the current revision and candidateHash is required." });
+        const result = await assess2(loc, session);
+        if (!result.valid || !result.plans.length || !session.candidateHash) return fail("needs_revision", { validation: validationSummary(result), nextAction: "Correct the saved candidate fields, submit a new revision, and review the updated set." });
+        const files = [];
+        for (const plan of result.plans) {
+          const content = prepareTextForPersistence(plan.content, { label: "Compiled phase plan" }).content;
+          if (Buffer.byteLength(content) > 4 * 1024 * 1024) return fail("needs_revision", { reason: "Rendered plan exceeds 4 MiB; candidate remains saved." });
+          const baselineHash = session.targets.find((item) => item.path === plan.path)?.hash ?? null;
+          if (session.mode === "add" && baselineHash || session.mode === "revise" && !session.targetPlanIds.includes(plan.planId)) return fail("needs_revision", { reason: "Candidate attempts to overwrite a plan outside the selected mode and targets." });
+          const backup = baselineHash === null ? null : await fs21.readFile(resolveBlueprintPath(loc.projectRoot, plan.path), "utf8");
+          if (backup !== null && researchDigest(backup) !== baselineHash) return fail("stale", { reason: `Plan changed before staging: ${plan.path}.` });
+          const model = plan.model;
+          files.push({ planId: plan.planId, title: model.title, wave: model.wave, taskCount: model.tasks.length, path: plan.path, hash: researchDigest(content), content, baselineHash, backup });
+        }
+        const removed = [];
+        if (session.mode === "replace") for (const id of session.targetPlanIds) {
+          const path31 = `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-${id}-PLAN.md`;
+          if (files.some((file2) => file2.path === path31)) continue;
+          const baselineHash = session.targets.find((item) => item.path === path31)?.hash;
+          if (!baselineHash) return fail("stale", { reason: `Selected replacement target is missing: ${path31}.` });
+          const backup = await fs21.readFile(resolveBlueprintPath(loc.projectRoot, path31), "utf8");
+          if (researchDigest(backup) !== baselineHash) return fail("stale", { reason: `Replacement target changed: ${path31}.` });
+          removed.push({ path: path31, baselineHash, backup });
+        }
+        const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+        if (marker.status === "pending" || marker.status === "invalid") return fail("partial", { reason: marker.reason });
+        const baselineMarker = await fs21.readFile(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), "utf8").catch((error2) => {
+          if (error2.code === "ENOENT") return null;
+          throw error2;
+        });
+        journal = { requestId: args.requestId, requestHash: hash4, revision: session.revision, candidateHash: session.candidateHash, baselineMarker, ...args.review ? { review: args.review } : {}, files, removed, stages: {} };
+        session.journal = journal;
+        await savePlanSession(loc, session);
+      } catch (error2) {
+        return { status: "partial", ...responseBase(loc, session), ready: false, reason: error2.message, nextAction: `Retry blueprint_plan_finalize with requestId ${args.requestId} and identical arguments; the candidate is saved.` };
+      }
+    }
+    const publicationPath = planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    const assertFresh = async () => {
+      const fresh = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
+      if (fresh.status !== "fresh") throw new Error(`Planning evidence changed: ${[...fresh.stalePaths, ...fresh.unknownPaths].join(", ")}. Candidate and publication journal are retained.`);
+    };
+    try {
+      await withFreshPhaseTopologyForMutation(loc.projectRoot, { phase: session.phase }, session.topology, "Plan-set publication", async () => withBlueprintRepoLock(loc.projectRoot, "phase-plan-write", async () => {
+        await assertFresh();
+        const checkpoint = () => savePlanSession(loc, session, true);
+        const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
+        const desiredPaths = new Set(journal.files.map((file2) => file2.path));
+        const removedPaths = new Set(journal.removed.map((file2) => file2.path));
+        const originalPaths = new Set(session.targets.map((item) => item.path));
+        for (const target of await readPlanTargetHashes(current)) {
+          if (!originalPaths.has(target.path) && !desiredPaths.has(target.path)) throw new Error(`An unreviewed plan appeared during publication: ${target.path}.`);
+          if (!desiredPaths.has(target.path) && !removedPaths.has(target.path) && session.targets.find((item) => item.path === target.path)?.hash !== target.hash) throw new Error(`Unselected plan changed: ${target.path}.`);
+        }
+        for (const target of session.targets) if (!desiredPaths.has(target.path) && !removedPaths.has(target.path) && await researchInputHash(loc.projectRoot, target.path) !== target.hash) throw new Error(`Unselected plan changed: ${target.path}.`);
+        if (journal.stages.commit !== "complete") {
+          const observedMarker = await fs21.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8").catch((error2) => {
+            if (error2.code === "ENOENT") return null;
+            throw error2;
+          });
+          if (observedMarker !== journal.baselineMarker && observedMarker !== markerContent(session, journal, "pending") && observedMarker !== markerContent(session, journal, "committed")) throw new Error("Publication marker changed externally; refusing to overwrite it.");
+          if (!journal.stages.files) {
+            const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+            if (marker.status === "pending" || marker.status === "invalid") throw new Error("Another incomplete publication marker requires recovery.");
+            for (const file2 of [...journal.files, ...journal.removed]) if (await researchInputHash(loc.projectRoot, file2.path) !== file2.baselineHash) throw new Error(`Plan target changed before publication: ${file2.path}.`);
+            journal.stages.files = "intent";
+            await checkpoint();
+          }
+          if (observedMarker === journal.baselineMarker) await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), markerContent(session, journal, "pending"));
+          for (const file2 of journal.files) {
+            const observed = await researchInputHash(loc.projectRoot, file2.path);
+            if (observed === file2.hash) continue;
+            if (observed !== file2.baselineHash) throw new Error(`Plan target changed externally: ${file2.path}.`);
+            await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, file2.path), file2.content);
+          }
+          for (const file2 of journal.removed) {
+            const observed = await researchInputHash(loc.projectRoot, file2.path);
+            if (observed === null) continue;
+            if (observed !== file2.baselineHash) throw new Error(`Replacement target changed externally: ${file2.path}.`);
+            await planDependencies.remove(resolveBlueprintPath(loc.projectRoot, file2.path));
+          }
+          await verifyPublished(loc, journal, session);
+          await assertFresh();
+          journal.stages.files = "complete";
+          journal.stages.commit = "intent";
+          await checkpoint();
+          await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), markerContent(session, journal, "committed"));
+          journal.stages.commit = "complete";
+          await checkpoint();
+        } else {
+          if (await fs21.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8") !== markerContent(session, journal, "committed")) throw new Error("Committed publication marker changed externally.");
+          await verifyPublished(loc, journal, session);
+        }
+      }));
+      await assertFresh();
+      if (journal.stages.state !== "complete") {
+        journal.stages.state = "intent";
+        await savePlanSession(loc, session);
+        await planDependencies.stateUpdate({ cwd: loc.projectRoot, base: "synced", patch: { currentPhase: session.phase, activeCommand: "/blu-plan-phase" } });
+        journal.stages.state = "complete";
+        await savePlanSession(loc, session);
+      }
+      const state = await planDependencies.stateLoad({ cwd: loc.projectRoot });
+      const nextAction = await safeNextAction2(state.derivedStatus.nextAction);
+      if (!nextAction) throw new Error("No implemented follow-up is available.");
+      return await withFreshPhaseTopologyForMutation(loc.projectRoot, { phase: session.phase }, session.topology, "Plan-set completion", async () => withBlueprintRepoLock(loc.projectRoot, "phase-plan-write", async () => {
+        await verifyPublished(loc, journal, session);
+        await assertFresh();
+        const index = await blueprintPhasePlanIndex({ cwd: loc.projectRoot, phase: session.phase });
+        if (!index.phaseFound || !index.plans.length || index.plans.some((plan) => !plan.valid)) throw new Error("The published plan index is no longer valid.");
+        await verifyPublished(loc, journal, session);
+        const acceptedTargets = new Map(session.targets.map((item) => [item.path, item.hash]));
+        for (const file2 of journal.files) acceptedTargets.set(file2.path, file2.hash);
+        for (const file2 of journal.removed) acceptedTargets.delete(file2.path);
+        session.targets = [...acceptedTargets].sort(([left], [right]) => left.localeCompare(right)).map(([path31, hash5]) => ({ path: path31, hash: hash5 }));
+        session.existingPlans = index.plans.map((plan) => ({ planId: plan.planId, wave: plan.wave ?? 1, dependsOn: plan.dependsOn, requirements: plan.requirements }));
+        journal.stages.routing = "complete";
+        session.needsIntent = true;
+        journal.receipt = { status: "published", ...responseBase(loc, session), ready: true, paths: journal.files.map((file2) => file2.path), plans: journal.files.map(({ planId: planId3, title, wave, taskCount, path: path31 }) => ({ planId: planId3, title, wave, taskCount, path: path31 })), removedPaths: journal.removed.map((file2) => file2.path), stages: { ...journal.stages }, warnings: state.warnings ?? [], nextAction };
+        session.requests[args.requestId].receipt = journal.receipt;
+        await savePlanSession(loc, session, true);
+        return journal.receipt;
+      }));
+    } catch (error2) {
+      return { status: "partial", ...responseBase(loc, session), ready: false, stages: journal.stages, reason: error2.message, nextAction: `Retry blueprint_plan_finalize with requestId ${args.requestId} and identical arguments. The journal retains exact candidate, previous plans, and intended publication bytes.` };
+    }
+  });
+}
+var mode, planId2, prepareInput3, correction, submitInput2, reviewInput, finalizeInput2, lookupSchema, planDependencies, planningToolDefinitions;
+var init_plan = __esm({
+  "src/mcp/tools/plan.ts"() {
+    "use strict";
+    init_v4();
+    init_security();
+    init_artifacts();
+    init_phase_locations();
+    init_phase();
+    init_plan_model();
+    init_state();
+    init_project();
+    init_phase_resolution();
+    init_phase_topology_lock();
+    init_research_evidence();
+    init_plan_evidence();
+    init_plan_session();
+    mode = _enum(["add", "revise", "replace"]);
+    planId2 = string2().regex(/^\d+$/).transform((value) => value.padStart(2, "0"));
+    prepareInput3 = object2({
+      cwd: string2().optional(),
+      phase: planNumericPhase.optional(),
+      mode: mode.optional(),
+      targetPlanIds: array(planId2).max(100).optional(),
+      evidencePaths: array(string2().min(1)).max(60).optional(),
+      expectedRevision: number2().int().nonnegative().optional(),
+      acknowledgeChangedInputs: boolean2().optional(),
+      reconcile: object2({ confirmed: literal(true), targetHashes: record(string2(), string2().nullable()) }).optional()
+    });
+    correction = object2({ path: array(string2()).min(1).max(20), operation: _enum(["set", "remove"]).default("set"), value: unknown().optional() });
+    submitInput2 = object2({ ...planLookup, requestId: planRequestId, expectedRevision: number2().int().nonnegative(), candidate: unknown().optional(), corrections: array(correction).max(50).optional() });
+    reviewInput = object2({ revision: number2().int().nonnegative(), candidateHash: string2().regex(/^[a-f0-9]{64}$/), verdict: _enum(["accept", "revise"]), summary: string2().min(1).max(2e4) });
+    finalizeInput2 = object2({ ...planLookup, requestId: planRequestId, expectedRevision: number2().int().nonnegative(), overwrite: boolean2().optional(), review: reviewInput.optional() });
+    lookupSchema = object2(planLookup);
+    planDependencies = { compile: compilePlanCandidate, validate: validatePhasePlanCandidateSet, readiness: blueprintPhasePlanReadiness, writeText: writeTextFile, remove: (path31) => fs21.unlink(path31), stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad };
+    planningToolDefinitions = [
+      { name: "blueprint_plan_prepare", description: "Prepare a compact, freshness-bound plan-set authoring packet and durable session. Existing plans require an explicit add/revise/replace choice; changed evidence requires reviewed reconciliation.", inputSchema: prepareInput3.shape, handler: (args) => blueprintPlanPrepare(args) },
+      { name: "blueprint_plan_submit", description: "Durably retain a plan candidate or exact raw JSON before validation, or apply narrow field corrections. Return diagnostics and a review packet without writing canonical plans.", inputSchema: submitInput2.shape, handler: (args) => blueprintPlanSubmit(args) },
+      { name: "blueprint_plan_read", description: "Recover saved planning candidate, revisions, receipts, evidence freshness, backups, and publication journal.", inputSchema: planLookup, handler: (args) => blueprintPlanRead(args) },
+      { name: "blueprint_plan_finalize", description: "Validate and publish the complete saved plan set with freshness and overwrite gates, revision-bound checker review, a publication read barrier, and resumable state synchronization.", inputSchema: finalizeInput2.shape, handler: (args) => blueprintPlanFinalize(args) }
+    ];
+  }
+});
+
 // src/mcp/tools/workspace.ts
 import { execFile as execFile2 } from "node:child_process";
-import { createHash as createHash8 } from "node:crypto";
-import { promises as fs19 } from "node:fs";
+import { createHash as createHash9 } from "node:crypto";
+import { promises as fs22 } from "node:fs";
 import os3 from "node:os";
-import path14 from "node:path";
+import path15 from "node:path";
 import { promisify as promisify2 } from "node:util";
 function expandHomePath3(value) {
   const trimmed = value.trim();
@@ -56865,7 +58198,7 @@ function expandHomePath3(value) {
     return os3.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path14.join(os3.homedir(), trimmed.slice(2));
+    return path15.join(os3.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -56896,17 +58229,17 @@ function slugifyRepoName(value) {
 }
 async function pathExists3(targetPath) {
   try {
-    await fs19.access(targetPath);
+    await fs22.access(targetPath);
     return true;
   } catch {
     return false;
   }
 }
-async function canonicalizePath(candidatePath) {
+async function canonicalizePath(candidatePath2) {
   try {
-    return await fs19.realpath(candidatePath);
+    return await fs22.realpath(candidatePath2);
   } catch {
-    return path14.resolve(candidatePath);
+    return path15.resolve(candidatePath2);
   }
 }
 function normalizeTextForComparison(value) {
@@ -56950,7 +58283,7 @@ async function readCurrentStateSnapshot(projectRoot) {
   if (!await pathExists3(statePath)) {
     return null;
   }
-  const raw = await fs19.readFile(statePath, "utf8");
+  const raw = await fs22.readFile(statePath, "utf8");
   return parseStateSnapshot(raw);
 }
 async function readRequiredCurrentStateSnapshot(projectRoot) {
@@ -57112,9 +58445,9 @@ async function writeFileAtomically(filePath, content) {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
   let existingMode = null;
   try {
-    await fs19.mkdir(path14.dirname(filePath), { recursive: true });
+    await fs22.mkdir(path15.dirname(filePath), { recursive: true });
     try {
-      const stats = await fs19.lstat(filePath);
+      const stats = await fs22.lstat(filePath);
       if (!stats.isFile()) {
         throw new Error(`Atomic file target must be a regular file: ${filePath}`);
       }
@@ -57124,21 +58457,21 @@ async function writeFileAtomically(filePath, content) {
         throw error2;
       }
     }
-    await fs19.writeFile(tempPath, content, "utf8");
+    await fs22.writeFile(tempPath, content, "utf8");
     if (existingMode !== null) {
-      await fs19.chmod(tempPath, existingMode);
+      await fs22.chmod(tempPath, existingMode);
     }
     try {
-      const stats = await fs19.lstat(filePath);
+      const stats = await fs22.lstat(filePath);
       if (!stats.isFile()) {
         throw new Error(`Atomic file target must be a regular file: ${filePath}`);
       }
     } catch (error2) {
       if (error2.code !== "ENOENT") throw error2;
     }
-    await fs19.rename(tempPath, filePath);
+    await fs22.rename(tempPath, filePath);
   } catch (error2) {
-    await fs19.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs22.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -57159,7 +58492,7 @@ async function snapshotFiles(paths) {
       return {
         path: targetPath,
         existed: true,
-        content: await fs19.readFile(targetPath, "utf8")
+        content: await fs22.readFile(targetPath, "utf8")
       };
     })
   );
@@ -57175,17 +58508,17 @@ async function snapshotDirectories(paths) {
 async function restoreFileSnapshots(snapshots) {
   for (const snapshot3 of snapshots) {
     if (!snapshot3.existed) {
-      await fs19.rm(snapshot3.path, { force: true }).catch(() => void 0);
+      await fs22.rm(snapshot3.path, { force: true }).catch(() => void 0);
       continue;
     }
-    await fs19.mkdir(path14.dirname(snapshot3.path), { recursive: true });
-    await fs19.writeFile(snapshot3.path, snapshot3.content ?? "", "utf8");
+    await fs22.mkdir(path15.dirname(snapshot3.path), { recursive: true });
+    await fs22.writeFile(snapshot3.path, snapshot3.content ?? "", "utf8");
   }
 }
 async function snapshotRepoFiles(repoRoot, relativePaths) {
   const snapshots = [];
   for (const relativePath of [...new Set(relativePaths)]) {
-    const targetPath = path14.resolve(repoRoot, relativePath);
+    const targetPath = path15.resolve(repoRoot, relativePath);
     ensurePathWithinRootSync(repoRoot, targetPath, {
       label: "Patch replay tracked file"
     });
@@ -57202,7 +58535,7 @@ async function snapshotRepoFiles(repoRoot, relativePaths) {
       path: targetPath,
       relativePath,
       existed: true,
-      content: await fs19.readFile(targetPath)
+      content: await fs22.readFile(targetPath)
     });
   }
   return snapshots;
@@ -57211,12 +58544,12 @@ async function restoreRepoFileSnapshots(snapshots) {
   const restoredFiles = [];
   for (const snapshot3 of snapshots) {
     if (!snapshot3.existed) {
-      await fs19.rm(snapshot3.path, { force: true }).catch(() => void 0);
+      await fs22.rm(snapshot3.path, { force: true }).catch(() => void 0);
       restoredFiles.push(snapshot3.relativePath);
       continue;
     }
-    await fs19.mkdir(path14.dirname(snapshot3.path), { recursive: true });
-    await fs19.writeFile(snapshot3.path, snapshot3.content ?? Buffer.alloc(0));
+    await fs22.mkdir(path15.dirname(snapshot3.path), { recursive: true });
+    await fs22.writeFile(snapshot3.path, snapshot3.content ?? Buffer.alloc(0));
     restoredFiles.push(snapshot3.relativePath);
   }
   return restoredFiles;
@@ -57224,7 +58557,7 @@ async function restoreRepoFileSnapshots(snapshots) {
 async function restoreDirectorySnapshots(snapshots) {
   const missingDirectories = snapshots.filter((snapshot3) => !snapshot3.existed).sort((left, right) => right.path.length - left.path.length);
   for (const snapshot3 of missingDirectories) {
-    await fs19.rm(snapshot3.path, { recursive: true, force: true }).catch(() => void 0);
+    await fs22.rm(snapshot3.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function workstreamsRootAbsolute(projectRoot) {
@@ -57234,7 +58567,7 @@ function workstreamsIndexAbsolute(projectRoot) {
   return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
 }
 function workstreamStateAbsolute(projectRoot, slug) {
-  return path14.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+  return path15.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
 }
 function workstreamSummary(projectRoot, entry) {
   return {
@@ -57275,7 +58608,7 @@ function buildResumeStatePatch(snapshot3) {
   };
 }
 async function loadWorkstreamStore(projectRoot) {
-  const blueprintRoot = path14.join(projectRoot, BLUEPRINT_DIR);
+  const blueprintRoot = path15.join(projectRoot, BLUEPRINT_DIR);
   const rootPath = workstreamsRootAbsolute(projectRoot);
   const indexPath = workstreamsIndexAbsolute(projectRoot);
   if (!await pathExists3(blueprintRoot)) {
@@ -57293,7 +58626,7 @@ async function loadWorkstreamStore(projectRoot) {
   }
   let entries;
   try {
-    entries = await fs19.readdir(rootPath, {
+    entries = await fs22.readdir(rootPath, {
       encoding: "utf8",
       withFileTypes: true
     });
@@ -57320,11 +58653,11 @@ async function loadWorkstreamStore(projectRoot) {
       if (!entry.isDirectory()) {
         continue;
       }
-      const statePath = path14.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      const statePath = path15.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
       if (!await pathExists3(statePath)) {
         throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
       }
-      const raw = await fs19.readFile(statePath, "utf8");
+      const raw = await fs22.readFile(statePath, "utf8");
       const parsed = safeJsonParseObject(raw, {
         label: statePath
       });
@@ -57341,7 +58674,7 @@ async function loadWorkstreamStore(projectRoot) {
       throw new Error("The workstream index is missing while workstream state files exist.");
     }
     if (indexExists) {
-      const actualIndex = await fs19.readFile(indexPath, "utf8");
+      const actualIndex = await fs22.readFile(indexPath, "utf8");
       if (normalizeTextForComparison(actualIndex) !== normalizeTextForComparison(expectedIndex)) {
         throw new Error("The workstream index is stale relative to the canonical state files.");
       }
@@ -57452,7 +58785,7 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(projectRoot),
-    ...uniqueSlugs.map((slug) => path14.dirname(workstreamStateAbsolute(projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path15.dirname(workstreamStateAbsolute(projectRoot, slug)))
   ]);
   try {
     for (const slug of uniqueSlugs) {
@@ -57485,7 +58818,7 @@ async function persistWorkstreamStateWithPreparedStateUpdate(args) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(args.projectRoot),
-    ...uniqueSlugs.map((slug) => path14.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path15.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
   ]);
   try {
     const affectedPaths = await persistWorkstreamState(
@@ -57535,7 +58868,7 @@ function maybeFailWorkspaceRegistryWrite(registryPath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesRegistry = injectedFailure === "1" || path14.resolve(injectedFailure) === path14.resolve(registryPath);
+  const matchesRegistry = injectedFailure === "1" || path15.resolve(injectedFailure) === path15.resolve(registryPath);
   if (!matchesRegistry) {
     return;
   }
@@ -57548,7 +58881,7 @@ function maybeFailPatchRegistryWrite(registryPath) {
     return;
   }
   const indexPath = patchIndexPath(registryPath);
-  const matchesRegistry = injectedFailure === "1" || path14.resolve(injectedFailure) === path14.resolve(registryPath) || path14.resolve(injectedFailure) === path14.resolve(indexPath);
+  const matchesRegistry = injectedFailure === "1" || path15.resolve(injectedFailure) === path15.resolve(registryPath) || path15.resolve(injectedFailure) === path15.resolve(indexPath);
   if (!matchesRegistry) {
     return;
   }
@@ -57581,12 +58914,12 @@ async function maybeDelayWorkspaceRemoveForTest() {
 }
 async function maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath) {
   const injectedTarget = process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
-  if (!injectedTarget || path14.resolve(injectedTarget) !== path14.resolve(workspacePath)) {
+  if (!injectedTarget || path15.resolve(injectedTarget) !== path15.resolve(workspacePath)) {
     return;
   }
   delete process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
-  await fs19.mkdir(workspacePath, { recursive: true });
-  await fs19.writeFile(path14.join(workspacePath, "foreign-content.txt"), "preserve\n", "utf8");
+  await fs22.mkdir(workspacePath, { recursive: true });
+  await fs22.writeFile(path15.join(workspacePath, "foreign-content.txt"), "preserve\n", "utf8");
 }
 async function maybeDelayPatchRecordBeforeIndexForTest() {
   const delayMs = parsePositiveIntegerEnv2("BLUEPRINT_TEST_PATCH_RECORD_BEFORE_INDEX_DELAY_MS");
@@ -57602,37 +58935,37 @@ async function maybeDelayPatchRecordAfterPatchWriteForTest() {
   }
   const markerPath = process.env.BLUEPRINT_TEST_PATCH_RECORD_AFTER_PATCH_WRITE_MARKER;
   if (markerPath) {
-    await fs19.mkdir(path14.dirname(markerPath), { recursive: true });
-    await fs19.writeFile(markerPath, "patch-written\n", "utf8");
+    await fs22.mkdir(path15.dirname(markerPath), { recursive: true });
+    await fs22.writeFile(markerPath, "patch-written\n", "utf8");
   }
   await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
-async function resolveGitRepoRoot(candidatePath) {
-  const result = await runGit(["-C", candidatePath, "rev-parse", "--show-toplevel"], {
+async function resolveGitRepoRoot(candidatePath2) {
+  const result = await runGit(["-C", candidatePath2, "rev-parse", "--show-toplevel"], {
     allowFailure: true
   });
   if (!result.success || !result.stdout) {
-    throw new Error(`Workspace source repo is not a valid git repository: ${candidatePath}`);
+    throw new Error(`Workspace source repo is not a valid git repository: ${candidatePath2}`);
   }
   return result.stdout;
 }
-async function gitCurrentBranch(repoPath) {
-  const result = await runGit(["-C", repoPath, "branch", "--show-current"], {
+async function gitCurrentBranch(repoPath2) {
+  const result = await runGit(["-C", repoPath2, "branch", "--show-current"], {
     allowFailure: true
   });
   return result.success && result.stdout.length > 0 ? result.stdout : null;
 }
-async function gitHeadSha(repoPath) {
-  const result = await runGit(["-C", repoPath, "rev-parse", "HEAD"], {
+async function gitHeadSha(repoPath2) {
+  const result = await runGit(["-C", repoPath2, "rev-parse", "HEAD"], {
     allowFailure: true
   });
   if (!result.success || result.stdout.length === 0) {
-    throw new Error(`Unable to resolve HEAD for workspace source repo: ${repoPath}`);
+    throw new Error(`Unable to resolve HEAD for workspace source repo: ${repoPath2}`);
   }
   return result.stdout;
 }
-async function gitWorkingTreeClean(repoPath, pathspecs = []) {
-  const args = ["-C", repoPath, "status", "--short"];
+async function gitWorkingTreeClean(repoPath2, pathspecs = []) {
+  const args = ["-C", repoPath2, "status", "--short"];
   if (pathspecs.length > 0) {
     args.push("--", ...pathspecs);
   }
@@ -57641,8 +58974,8 @@ async function gitWorkingTreeClean(repoPath, pathspecs = []) {
   });
   return result.success && result.stdout.length === 0;
 }
-async function gitStatusShortPaths(repoPath) {
-  const result = await runGit(["-C", repoPath, "status", "--short"], {
+async function gitStatusShortPaths(repoPath2) {
+  const result = await runGit(["-C", repoPath2, "status", "--short"], {
     allowFailure: true
   });
   if (!result.success || result.stdout.trim().length === 0) {
@@ -57654,11 +58987,11 @@ async function gitStatusShortPaths(repoPath) {
     return renameTarget ?? statusPath;
   });
 }
-async function gitWorkingTreeCleanForWorkstreamTransition(repoPath) {
+async function gitWorkingTreeCleanForWorkstreamTransition(repoPath2) {
   const result = await runGit(
     [
       "-C",
-      repoPath,
+      repoPath2,
       "status",
       "--short",
       "--untracked-files=all",
@@ -57674,16 +59007,16 @@ async function gitWorkingTreeCleanForWorkstreamTransition(repoPath) {
   );
   return result.success && result.stdout.length === 0;
 }
-async function localBranchExists(repoPath, branch) {
+async function localBranchExists(repoPath2, branch) {
   const result = await runGit(
-    ["-C", repoPath, "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`],
+    ["-C", repoPath2, "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`],
     { allowFailure: true }
   );
   return result.success && result.stdout.length > 0;
 }
-async function remoteBranchExists(repoPath, branch) {
+async function remoteBranchExists(repoPath2, branch) {
   const result = await runGit(
-    ["-C", repoPath, "rev-parse", "--verify", "--quiet", `refs/remotes/origin/${branch}`],
+    ["-C", repoPath2, "rev-parse", "--verify", "--quiet", `refs/remotes/origin/${branch}`],
     { allowFailure: true }
   );
   return result.success && result.stdout.length > 0;
@@ -57732,7 +59065,7 @@ async function readWorkspaceRegistryDocument(registryPath) {
       workspaces: []
     };
   }
-  const raw = await fs19.readFile(registryPath, "utf8");
+  const raw = await fs22.readFile(registryPath, "utf8");
   return parseWorkspaceRegistryDocument(raw, registryPath);
 }
 function normalizeRegistryEntry(value) {
@@ -57780,15 +59113,15 @@ function normalizeWorkspaceRepoMember(value, fallbackStrategy) {
   };
 }
 async function writeWorkspaceRegistryDocument(registryPath, document) {
-  const directory = path14.dirname(registryPath);
-  const tempPath = path14.join(
+  const directory = path15.dirname(registryPath);
+  const tempPath = path15.join(
     directory,
-    `${path14.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
+    `${path15.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
   let existingMode = null;
-  await fs19.mkdir(directory, { recursive: true });
+  await fs22.mkdir(directory, { recursive: true });
   try {
-    const stats = await fs19.lstat(registryPath);
+    const stats = await fs22.lstat(registryPath);
     if (!stats.isFile()) {
       throw new Error(`Workspace registry target must be a regular file: ${registryPath}`);
     }
@@ -57798,37 +59131,37 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
       throw error2;
     }
   }
-  await fs19.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
+  await fs22.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
 `, "utf8");
   if (existingMode !== null) {
-    await fs19.chmod(tempPath, existingMode);
+    await fs22.chmod(tempPath, existingMode);
   }
   try {
     maybeFailWorkspaceRegistryWrite(registryPath);
   } catch (error2) {
-    await fs19.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs22.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
   if (!await pathExists3(registryPath)) {
-    await fs19.rename(tempPath, registryPath);
+    await fs22.rename(tempPath, registryPath);
     return;
   }
-  const backupPath = path14.join(
+  const backupPath = path15.join(
     directory,
-    `${path14.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
+    `${path15.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
   );
   let restoredOriginal = false;
   try {
-    const currentStats = await fs19.lstat(registryPath);
+    const currentStats = await fs22.lstat(registryPath);
     if (!currentStats.isFile()) {
       throw new Error(`Workspace registry target must be a regular file: ${registryPath}`);
     }
-    await fs19.copyFile(registryPath, backupPath);
-    await fs19.rename(tempPath, registryPath);
+    await fs22.copyFile(registryPath, backupPath);
+    await fs22.rename(tempPath, registryPath);
   } catch (error2) {
-    await fs19.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs22.rm(tempPath, { force: true }).catch(() => void 0);
     if (!await pathExists3(registryPath) && await pathExists3(backupPath)) {
-      await fs19.copyFile(backupPath, registryPath).then(() => {
+      await fs22.copyFile(backupPath, registryPath).then(() => {
         restoredOriginal = true;
       }).catch(() => void 0);
     }
@@ -57837,30 +59170,30 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     }
     throw error2;
   }
-  await fs19.rm(backupPath, { force: true }).catch(() => void 0);
+  await fs22.rm(backupPath, { force: true }).catch(() => void 0);
 }
 function workspaceRegistryLockOwnerPath(lockPath) {
-  return path14.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
+  return path15.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
 }
 function workspaceRegistryLockLeasePath(lockPath) {
-  return path14.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+  return path15.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
 }
 function workspaceRegistryLockRecoveryPath(lockPath) {
   return `${lockPath}.recovery`;
 }
 function workspaceRegistryLockRecoveryGuardOwnerPath(recoveryPath, token) {
-  return path14.join(recoveryPath, `${WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+  return path15.join(recoveryPath, `${WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
 }
 function workspaceRegistryLockQuarantinePath(targetPath) {
   return `${targetPath}.reclaimed-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 async function writeWorkspaceRegistryLockFile(filePath, contents) {
-  await fs19.writeFile(filePath, `${contents}
+  await fs22.writeFile(filePath, `${contents}
 `, "utf8");
 }
 async function readWorkspaceRegistryLockOwnerAtPath(lockPath) {
   try {
-    return (await fs19.readFile(workspaceRegistryLockOwnerPath(lockPath), "utf8")).trim();
+    return (await fs22.readFile(workspaceRegistryLockOwnerPath(lockPath), "utf8")).trim();
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -57881,7 +59214,7 @@ async function refreshWorkspaceRegistryLockLease(lockHandle) {
 }
 async function getWorkspaceRegistryLockPathAgeMs(targetPath) {
   try {
-    const stats = await fs19.stat(targetPath);
+    const stats = await fs22.stat(targetPath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code === "ENOENT") {
@@ -57893,7 +59226,7 @@ async function getWorkspaceRegistryLockPathAgeMs(targetPath) {
 async function getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath) {
   let entries;
   try {
-    entries = await fs19.readdir(recoveryPath);
+    entries = await fs22.readdir(recoveryPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -57906,7 +59239,7 @@ async function getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath) {
       continue;
     }
     try {
-      const stats = await fs19.stat(path14.join(recoveryPath, entry));
+      const stats = await fs22.stat(path15.join(recoveryPath, entry));
       newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
@@ -57938,7 +59271,7 @@ async function createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recovery
   try {
     await writeWorkspaceRegistryLockFile(recoveryGuard.ownerPath, token);
   } catch (error2) {
-    await fs19.rmdir(recoveryPath).catch(() => void 0);
+    await fs22.rmdir(recoveryPath).catch(() => void 0);
     throw error2;
   }
   return recoveryGuard;
@@ -57946,7 +59279,7 @@ async function createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recovery
 async function refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard) {
   let stats;
   try {
-    stats = await fs19.stat(recoveryGuard.ownerPath);
+    stats = await fs22.stat(recoveryGuard.ownerPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return false;
@@ -57958,7 +59291,7 @@ async function refreshOwnedWorkspaceRegistryLockRecoveryGuard(recoveryGuard) {
   }
   try {
     const now = /* @__PURE__ */ new Date();
-    await fs19.utimes(recoveryGuard.ownerPath, now, now);
+    await fs22.utimes(recoveryGuard.ownerPath, now, now);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return false;
@@ -57972,14 +59305,14 @@ async function releaseWorkspaceRegistryLockRecoveryGuard(recoveryGuard) {
     return;
   }
   try {
-    await fs19.unlink(recoveryGuard.ownerPath);
+    await fs22.unlink(recoveryGuard.ownerPath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return;
     }
     throw error2;
   }
-  await fs19.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
+  await fs22.rmdir(recoveryGuard.recoveryPath).catch(() => void 0);
 }
 async function reclaimStaleWorkspaceRegistryLockRecoveryGuard(recoveryPath) {
   const ageMs = await getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath);
@@ -57991,21 +59324,21 @@ async function reclaimStaleWorkspaceRegistryLockRecoveryGuard(recoveryPath) {
   }
   const quarantinePath = workspaceRegistryLockQuarantinePath(recoveryPath);
   try {
-    await fs19.rename(recoveryPath, quarantinePath);
+    await fs22.rename(recoveryPath, quarantinePath);
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return true;
     }
     throw error2;
   }
-  await fs19.rm(quarantinePath, { recursive: true, force: true });
+  await fs22.rm(quarantinePath, { recursive: true, force: true });
   return true;
 }
 async function tryAcquireWorkspaceRegistryLockRecoveryGuard(lockPath) {
   const recoveryPath = workspaceRegistryLockRecoveryPath(lockPath);
   for (; ; ) {
     try {
-      await fs19.mkdir(recoveryPath);
+      await fs22.mkdir(recoveryPath);
       return createWorkspaceRegistryLockRecoveryGuardHandle(lockPath, recoveryPath);
     } catch (error2) {
       if (error2.code !== "EEXIST") {
@@ -58049,14 +59382,14 @@ async function recoverStaleWorkspaceRegistryLock(lockPath) {
     }
     const quarantinePath = workspaceRegistryLockQuarantinePath(lockPath);
     try {
-      await fs19.rename(lockPath, quarantinePath);
+      await fs22.rename(lockPath, quarantinePath);
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return true;
       }
       throw error2;
     }
-    await fs19.rm(quarantinePath, { recursive: true, force: true });
+    await fs22.rm(quarantinePath, { recursive: true, force: true });
     return true;
   } finally {
     await releaseWorkspaceRegistryLockRecoveryGuard(recoveryGuard).catch(() => void 0);
@@ -58075,16 +59408,16 @@ async function createWorkspaceRegistryLockHandle(lockPath) {
     await writeWorkspaceRegistryLockFile(lockHandle.ownerPath, token);
     await writeWorkspaceRegistryLockFile(lockHandle.leasePath, token);
   } catch (error2) {
-    await fs19.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    await fs22.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   return lockHandle;
 }
 async function acquireWorkspaceRegistryLock(lockPath) {
-  await fs19.mkdir(path14.dirname(lockPath), { recursive: true });
+  await fs22.mkdir(path15.dirname(lockPath), { recursive: true });
   for (; ; ) {
     try {
-      await fs19.mkdir(lockPath);
+      await fs22.mkdir(lockPath);
       const lockHandle = await createWorkspaceRegistryLockHandle(lockPath);
       if (await pathExists3(workspaceRegistryLockRecoveryPath(lockPath))) {
         if (await reclaimStaleWorkspaceRegistryLockRecoveryGuard(
@@ -58139,7 +59472,7 @@ async function releaseWorkspaceRegistryLock(lockHandle) {
   if (ownerToken !== lockHandle.token) {
     return;
   }
-  await fs19.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
+  await fs22.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
 }
 async function withWorkspaceRegistryLock(registryPath, callback) {
   const lockPath = `${registryPath}.lock`;
@@ -58194,23 +59527,23 @@ function normalizeRecordedPatchId(value, indexPath) {
   }
 }
 function patchIndexPath(registryPath) {
-  return path14.join(registryPath, "index.json");
+  return path15.join(registryPath, "index.json");
 }
 function patchManifestPath(registryPath, patchId) {
-  return path14.join(registryPath, `${patchId}.json`);
+  return path15.join(registryPath, `${patchId}.json`);
 }
 function patchContentPath(registryPath, patchId) {
-  return path14.join(registryPath, `${patchId}.patch`);
+  return path15.join(registryPath, `${patchId}.patch`);
 }
 function patchAuditPath(registryPath, patchId) {
-  return path14.join(registryPath, `${patchId}.audit.ndjson`);
+  return path15.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
-  return createHash8("sha256").update(value).digest("hex");
+  return createHash9("sha256").update(value).digest("hex");
 }
 async function fileContentHash(filePath) {
   try {
-    return sha256(await fs19.readFile(filePath));
+    return sha256(await fs22.readFile(filePath));
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -58239,11 +59572,11 @@ function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
   for (const trackedFile of trackedFiles) {
     assertNoNullBytes(trackedFile, "Patch tracked file");
-    const candidatePath = path14.isAbsolute(trackedFile) ? path14.resolve(trackedFile) : path14.resolve(repoRoot, trackedFile);
-    ensurePathWithinRootSync(repoRoot, candidatePath, {
+    const candidatePath2 = path15.isAbsolute(trackedFile) ? path15.resolve(trackedFile) : path15.resolve(repoRoot, trackedFile);
+    ensurePathWithinRootSync(repoRoot, candidatePath2, {
       label: "Patch tracked file"
     });
-    const relativePath = path14.relative(repoRoot, candidatePath).replaceAll(path14.sep, "/");
+    const relativePath = path15.relative(repoRoot, candidatePath2).replaceAll(path15.sep, "/");
     if (!relativePath || relativePath === ".") {
       throw new Error("Patch tracked file must resolve to a file path inside the repo.");
     }
@@ -58251,8 +59584,8 @@ function normalizeTrackedFiles(repoRoot, trackedFiles) {
   }
   return [...normalized];
 }
-async function gitRemoteUrl(repoPath) {
-  const result = await runGit(["-C", repoPath, "remote", "get-url", "origin"], {
+async function gitRemoteUrl(repoPath2) {
+  const result = await runGit(["-C", repoPath2, "remote", "get-url", "origin"], {
     allowFailure: true
   });
   return result.success && result.stdout.length > 0 ? result.stdout : null;
@@ -58315,7 +59648,7 @@ async function readPatchRegistryDocument(registryPath) {
       patches: []
     };
   }
-  const raw = await fs19.readFile(indexPath, "utf8");
+  const raw = await fs22.readFile(indexPath, "utf8");
   const parsed = safeJsonParseObject(raw, {
     label: indexPath
   });
@@ -58345,7 +59678,7 @@ async function readPatchRegistryDocument(registryPath) {
   };
 }
 async function writePatchRegistryDocument(registryPath, document) {
-  await fs19.mkdir(registryPath, { recursive: true });
+  await fs22.mkdir(registryPath, { recursive: true });
   maybeFailPatchRegistryWrite(registryPath);
   await writeJsonAtomically(
     patchIndexPath(registryPath),
@@ -58357,15 +59690,15 @@ async function readPatchManifest(registryPath, patchId) {
   if (!await pathExists3(manifestPath)) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
-  const raw = await fs19.readFile(manifestPath, "utf8");
+  const raw = await fs22.readFile(manifestPath, "utf8");
   const parsed = safeJsonParseObject(raw, {
     label: manifestPath
   });
   return normalizePatchManifest(parsed, patchId);
 }
 async function appendPatchAuditEntry(registryPath, patchId, entry) {
-  await fs19.mkdir(registryPath, { recursive: true });
-  await fs19.appendFile(
+  await fs22.mkdir(registryPath, { recursive: true });
+  await fs22.appendFile(
     patchAuditPath(registryPath, patchId),
     `${JSON.stringify(entry)}
 `,
@@ -58382,7 +59715,7 @@ async function loadPatchContent(registryPath, patchId, manifest) {
   if (!await pathExists3(contentPath)) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
-  const patch = await fs19.readFile(contentPath, "utf8");
+  const patch = await fs22.readFile(contentPath, "utf8");
   if (sha256(patch) !== manifest.patchHash) {
     throw new Error(
       `Patch registry is malformed for ${patchId}; recorded patch content does not match its manifest.`
@@ -58445,9 +59778,9 @@ function assertNotInstalledExtensionTarget(repoRoot) {
   if (!extensionPath) {
     return;
   }
-  const resolvedRepoRoot = path14.resolve(repoRoot);
-  const resolvedExtensionPath = path14.resolve(extensionPath);
-  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path14.sep}`)) {
+  const resolvedRepoRoot = path15.resolve(repoRoot);
+  const resolvedExtensionPath = path15.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path15.sep}`)) {
     throw new Error(
       `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
     );
@@ -58467,7 +59800,7 @@ async function buildPatchCompatibilityStatus(manifest, repoRoot) {
   }
   const runtimeHost = resolveBlueprintRuntimeHost();
   const reasons = [];
-  const repoName = path14.basename(repoRoot);
+  const repoName = path15.basename(repoRoot);
   if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
     reasons.push(
       `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
@@ -58528,14 +59861,14 @@ async function resolveDefaultWorkspaceRoot(cwd) {
       throw error2;
     }
   }
-  return path14.join(os3.homedir(), "blueprint-workspaces");
+  return path15.join(os3.homedir(), "blueprint-workspaces");
 }
 async function resolveWorkspacePath(args) {
   if (args.path) {
-    return path14.resolve(expandHomePath3(args.path));
+    return path15.resolve(expandHomePath3(args.path));
   }
   const workspaceRoot = await resolveDefaultWorkspaceRoot(args.cwd);
-  return path14.join(workspaceRoot, normalizeWorkspaceName(args.name));
+  return path15.join(workspaceRoot, normalizeWorkspaceName(args.name));
 }
 async function validateWorkspaceBranchName(branch) {
   const trimmed = branch.trim();
@@ -58565,18 +59898,18 @@ async function resolveSourceRepos(repoInputs, cwd) {
   const seen = /* @__PURE__ */ new Set();
   for (const repoInput of repoInputs) {
     assertNoNullBytes(repoInput, "Workspace repo");
-    const candidatePath = path14.resolve(cwd ?? process.cwd(), expandHomePath3(repoInput));
-    const sourcePath = await resolveGitRepoRoot(candidatePath);
+    const candidatePath2 = path15.resolve(cwd ?? process.cwd(), expandHomePath3(repoInput));
+    const sourcePath = await resolveGitRepoRoot(candidatePath2);
     if (seen.has(sourcePath)) {
       continue;
     }
     seen.add(sourcePath);
     resolved.push({
-      name: slugifyRepoName(path14.basename(sourcePath)),
+      name: slugifyRepoName(path15.basename(sourcePath)),
       sourcePath,
       defaultBranch: await gitCurrentBranch(sourcePath),
       head: await gitHeadSha(sourcePath),
-      blueprintProject: await pathExists3(path14.join(sourcePath, ".blueprint"))
+      blueprintProject: await pathExists3(path15.join(sourcePath, ".blueprint"))
     });
   }
   if (resolved.length === 0) {
@@ -58598,19 +59931,19 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
 }
 function resolveWorkspaceTargetPath(value, cwd) {
   assertNoNullBytes(value, "Workspace path");
-  return path14.resolve(cwd ?? process.cwd(), expandHomePath3(value));
+  return path15.resolve(cwd ?? process.cwd(), expandHomePath3(value));
 }
 function buildWorkspaceManifestPath(workspacePath) {
-  return path14.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+  return path15.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
-function assertNotInstalledExtensionPath(candidatePath, label) {
+function assertNotInstalledExtensionPath(candidatePath2, label) {
   const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
   if (!extensionPath) {
     return;
   }
-  if (isPathWithinRootSync(extensionPath, candidatePath)) {
+  if (isPathWithinRootSync(extensionPath, candidatePath2)) {
     throw new Error(
-      `${label} must not target the installed extension directory: ${path14.resolve(extensionPath)}`
+      `${label} must not target the installed extension directory: ${path15.resolve(extensionPath)}`
     );
   }
 }
@@ -58618,7 +59951,7 @@ async function rollbackPartialWorktreeAdd(sourceRepoPath, memberPath, createdSou
   await runGit(["-C", sourceRepoPath, "worktree", "remove", "--force", memberPath], {
     allowFailure: true
   });
-  await fs19.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
+  await fs22.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
   if (createdSourceBranch) {
     await runGit(
       ["-C", sourceRepoPath, "branch", "--delete", "--force", createdSourceBranch],
@@ -58637,7 +59970,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
     duplicateIndex += 1;
   }
   usedTargetNames.add(candidateName);
-  const memberPath = path14.join(workspacePath, candidateName);
+  const memberPath = path15.join(workspacePath, candidateName);
   if (strategy === "worktree") {
     const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
     const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
@@ -58750,7 +60083,7 @@ async function rollbackCreatedMembers(createdMembers) {
       }
     } catch {
     }
-    await fs19.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+    await fs22.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
@@ -58760,7 +60093,7 @@ function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
   }
   if (workspacePath) {
     const exactMatches = nameMatches.filter(
-      (workspace) => path14.resolve(workspace.path) === workspacePath
+      (workspace) => path15.resolve(workspace.path) === workspacePath
     );
     if (exactMatches.length > 1) {
       throw new Error(
@@ -58789,17 +60122,17 @@ async function ensurePathRemoved(targetPath, label) {
   }
 }
 function workspaceEntriesMatch(registryEntry, manifestEntry) {
-  if (registryEntry.name !== manifestEntry.name || path14.resolve(registryEntry.path) !== path14.resolve(manifestEntry.path) || path14.resolve(registryEntry.manifestPath) !== path14.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
+  if (registryEntry.name !== manifestEntry.name || path15.resolve(registryEntry.path) !== path15.resolve(manifestEntry.path) || path15.resolve(registryEntry.manifestPath) !== path15.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
     return false;
   }
   return registryEntry.repos.every((member, index) => {
     const manifestMember = manifestEntry.repos[index];
-    return manifestMember !== void 0 && member.name === manifestMember.name && path14.resolve(member.sourcePath) === path14.resolve(manifestMember.sourcePath) && path14.resolve(member.path) === path14.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
+    return manifestMember !== void 0 && member.name === manifestMember.name && path15.resolve(member.sourcePath) === path15.resolve(manifestMember.sourcePath) && path15.resolve(member.path) === path15.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
   });
 }
 async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryPath) {
   try {
-    const raw = await fs19.readFile(manifestPath, "utf8");
+    const raw = await fs22.readFile(manifestPath, "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: manifestPath
     });
@@ -58812,9 +60145,9 @@ async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryP
   }
 }
 async function verifyWorkspaceRemovalEntry(entry, registryPath) {
-  const workspacePath = path14.resolve(entry.path);
-  const manifestPath = path14.resolve(entry.manifestPath);
-  const expectedManifestPath = path14.resolve(buildWorkspaceManifestPath(workspacePath));
+  const workspacePath = path15.resolve(entry.path);
+  const manifestPath = path15.resolve(entry.manifestPath);
+  const expectedManifestPath = path15.resolve(buildWorkspaceManifestPath(workspacePath));
   assertNotInstalledExtensionPath(workspacePath, "Workspace removal target");
   if (manifestPath !== expectedManifestPath) {
     throw new Error(
@@ -58838,7 +60171,7 @@ async function verifyWorkspaceRemovalEntry(entry, registryPath) {
     );
   }
   for (const member of entry.repos) {
-    const memberPath = path14.resolve(member.path);
+    const memberPath = path15.resolve(member.path);
     ensurePathWithinRootSync(workspacePath, memberPath, {
       label: "Workspace repo member"
     });
@@ -58893,16 +60226,16 @@ async function removeWorkspaceMember(member) {
       );
     }
   }
-  await fs19.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+  await fs22.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   await ensurePathRemoved(member.path, "Workspace repo member");
 }
-async function listGitWorktreePaths(repoPath) {
-  const result = await runGit(["-C", repoPath, "worktree", "list", "--porcelain"], {
+async function listGitWorktreePaths(repoPath2) {
+  const result = await runGit(["-C", repoPath2, "worktree", "list", "--porcelain"], {
     allowFailure: true
   });
   if (!result.success) {
     throw new Error(
-      `Unable to inspect recorded worktrees for workspace source repo: ${repoPath}`
+      `Unable to inspect recorded worktrees for workspace source repo: ${repoPath2}`
     );
   }
   const recordedPaths = result.stdout.split("\n").filter((line) => line.startsWith("worktree ")).map((line) => line.slice("worktree ".length).trim());
@@ -58965,7 +60298,7 @@ async function rollbackWorkspaceRemoval({
 }) {
   const rollbackErrors = [];
   if (rollbackWorkspacePath && await pathExists3(rollbackWorkspacePath) && !await pathExists3(entry.path)) {
-    await fs19.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
+    await fs22.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
       const reason = error2 instanceof Error ? error2.message : String(error2);
       rollbackErrors.push(
         `unable to restore workspace root ${entry.path} from ${rollbackWorkspacePath}: ${reason}`
@@ -59025,7 +60358,7 @@ async function blueprintWorkspaceCreate(args) {
   return withWorkspaceRegistryLock(registryPath, async () => {
     const registry2 = await readWorkspaceRegistryDocument(registryPath);
     if (registry2.workspaces.some(
-      (workspace) => workspace.name === normalizedName || path14.resolve(workspace.path) === path14.resolve(workspacePath)
+      (workspace) => workspace.name === normalizedName || path15.resolve(workspace.path) === path15.resolve(workspacePath)
     )) {
       throw new Error(
         `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
@@ -59036,10 +60369,10 @@ async function blueprintWorkspaceCreate(args) {
     const createdAt = (/* @__PURE__ */ new Date()).toISOString();
     let createdWorkspaceRoot = false;
     try {
-      await fs19.mkdir(path14.dirname(workspacePath), { recursive: true });
+      await fs22.mkdir(path15.dirname(workspacePath), { recursive: true });
       await ensureWorkspaceTargetDoesNotExist(workspacePath);
       await maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath);
-      await fs19.mkdir(workspacePath, { recursive: false });
+      await fs22.mkdir(workspacePath, { recursive: false });
       createdWorkspaceRoot = true;
       for (const sourceRepo of sourceRepos) {
         const createdMember = await createWorkspaceMember(
@@ -59075,7 +60408,7 @@ async function blueprintWorkspaceCreate(args) {
     } catch (error2) {
       await rollbackCreatedMembers(createdMembers);
       if (createdWorkspaceRoot) {
-        await fs19.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
+        await fs22.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
       }
       if (error2 instanceof Error) {
         throw error2;
@@ -59114,11 +60447,11 @@ async function blueprintWorkspaceRemove(args) {
         await removeWorkspaceMember(member);
       }
       rollbackWorkspacePath = workspaceRemovalRollbackPath(entry.path);
-      await fs19.rename(entry.path, rollbackWorkspacePath);
+      await fs22.rename(entry.path, rollbackWorkspacePath);
       await maybeDelayWorkspaceRemoveForTest();
       await ensurePathRemoved(entry.path, "Workspace root");
       await writeWorkspaceRegistryDocument(registryPath, nextRegistryDocument);
-      await fs19.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
+      await fs22.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
       await ensurePathRemoved(rollbackWorkspacePath, "Workspace removal rollback root");
       return {
         removedPath: entry.path,
@@ -59153,7 +60486,7 @@ async function blueprintWorkstreamList(args = {}) {
 }
 async function blueprintWorkstreamMutate(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  if (!await pathExists3(path14.join(projectRoot, BLUEPRINT_DIR))) {
+  if (!await pathExists3(path15.join(projectRoot, BLUEPRINT_DIR))) {
     return blueprintWorkstreamMutateLocked(projectRoot, args);
   }
   return withWorkstreamTransitionLock(
@@ -59557,7 +60890,7 @@ async function blueprintPatchRecord(args, options = {}) {
       sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
       compatibility = {
         host: args.compatibility?.host ?? runtimeHost.host,
-        repoRootName: args.compatibility?.repoRootName ?? path14.basename(repoRoot),
+        repoRootName: args.compatibility?.repoRootName ?? path15.basename(repoRoot),
         remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
       };
     }
@@ -59567,9 +60900,9 @@ async function blueprintPatchRecord(args, options = {}) {
       label: args.label?.trim() || null,
       createdAt: existingManifest?.createdAt ?? createdAt,
       sourceVersion,
-      repoRootName: path14.basename(repoRoot),
+      repoRootName: path15.basename(repoRoot),
       repoRemote,
-      patchFile: path14.basename(patchPath),
+      patchFile: path15.basename(patchPath),
       patchHash,
       trackedFiles,
       compatibility,
@@ -59589,7 +60922,7 @@ async function blueprintPatchRecord(args, options = {}) {
     }) : null;
     let rollbackSnapshot = null;
     try {
-      await fs19.mkdir(registryPath, { recursive: true });
+      await fs22.mkdir(registryPath, { recursive: true });
       await writeFileAtomically(patchPath, normalizedPatch);
       await maybeDelayPatchRecordAfterPatchWriteForTest();
       await writeJsonFile(manifestPath, manifest);
@@ -59605,7 +60938,7 @@ async function blueprintPatchRecord(args, options = {}) {
         timestamp: createdAt,
         action: args.audit?.action ?? "record",
         outcome: args.audit?.outcome ?? "recorded",
-        cwd: path14.resolve(args.cwd ?? process.cwd()),
+        cwd: path15.resolve(args.cwd ?? process.cwd()),
         repoRoot,
         targetHead: args.audit?.targetHead ?? sourceVersion,
         trackedFiles,
@@ -59693,12 +61026,12 @@ async function blueprintPatchReapply(args = {}) {
     throw new Error(`Patch replay requires a clean working tree: ${repoRoot}`);
   }
   const conflicts = [];
-  const tempDir = await fs19.mkdtemp(path14.join(os3.tmpdir(), "blueprint-patch-reapply-"));
+  const tempDir = await fs22.mkdtemp(path15.join(os3.tmpdir(), "blueprint-patch-reapply-"));
   try {
     const patchFiles = await Promise.all(
       replaySnapshot.map(async (snapshot3, index) => {
-        const patchFile = path14.join(tempDir, `${index}-${snapshot3.patchId}.patch`);
-        await fs19.writeFile(patchFile, snapshot3.patch, "utf8");
+        const patchFile = path15.join(tempDir, `${index}-${snapshot3.patchId}.patch`);
+        await fs22.writeFile(patchFile, snapshot3.patch, "utf8");
         return patchFile;
       })
     );
@@ -59798,7 +61131,7 @@ async function blueprintPatchReapply(args = {}) {
       targetHead
     };
   } finally {
-    await fs19.rm(tempDir, { recursive: true, force: true }).catch(() => void 0);
+    await fs22.rm(tempDir, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, WORKSTREAM_TRANSITION_LOCK_PATH, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceRegistryLockRecoveryHooksForTest, workspaceToolDefinitions;
@@ -59946,9 +61279,9 @@ var init_workspace = __esm({
 
 // src/mcp/tools/plan-run.ts
 import { execFile as execFile3 } from "node:child_process";
-import { promises as fs20 } from "node:fs";
+import { promises as fs23 } from "node:fs";
 import os4 from "node:os";
-import path15 from "node:path";
+import path16 from "node:path";
 import { promisify as promisify3 } from "node:util";
 function normalizePlanRunPhase(value) {
   return normalizePhaseNumber(value);
@@ -59970,26 +61303,26 @@ function assertPlanRunSchemaVersion(value, label = "PlanRun schemaVersion") {
     throw new Error(`${label} must equal ${PLAN_RUN_SCHEMA_VERSION}.`);
   }
 }
-function planRunRelativeRootPath(phase, planId2) {
-  return `${PLAN_RUNS_ROOT_PATH}/phase-${normalizePlanRunPhase(phase)}/plan-${normalizePlanRunPlanId(planId2)}`;
+function planRunRelativeRootPath(phase, planId3) {
+  return `${PLAN_RUNS_ROOT_PATH}/phase-${normalizePlanRunPhase(phase)}/plan-${normalizePlanRunPlanId(planId3)}`;
 }
 function resolvePlanRunPath(projectRoot, relativePath) {
   const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
-  const planRunsRoot = path15.join(projectRoot, PLAN_RUNS_ROOT_PATH);
+  const planRunsRoot = path16.join(projectRoot, PLAN_RUNS_ROOT_PATH);
   return ensurePathWithinRootSync(planRunsRoot, absolutePath, {
     label: "PlanRun path"
   });
 }
-function buildPlanRunIndexPath(projectRoot, phase, planId2) {
+function buildPlanRunIndexPath(projectRoot, phase, planId3) {
   return resolvePlanRunPath(
     projectRoot,
-    `${planRunRelativeRootPath(phase, planId2)}/RUNS.json`
+    `${planRunRelativeRootPath(phase, planId3)}/RUNS.json`
   );
 }
-function buildPlanRunRecordPath(projectRoot, phase, planId2, runId) {
+function buildPlanRunRecordPath(projectRoot, phase, planId3, runId) {
   return resolvePlanRunPath(
     projectRoot,
-    `${planRunRelativeRootPath(phase, planId2)}/${normalizePlanRunId(runId)}.json`
+    `${planRunRelativeRootPath(phase, planId3)}/${normalizePlanRunId(runId)}.json`
   );
 }
 function isPlainObject6(value) {
@@ -60073,7 +61406,7 @@ function uniqueSortedStrings2(values) {
 }
 function normalizeRepoRelativePlanRunPath(projectRoot, value, label) {
   const absolutePath = resolveRepoRelativePath(projectRoot, value);
-  return path15.relative(projectRoot, absolutePath).split(path15.sep).join("/");
+  return path16.relative(projectRoot, absolutePath).split(path16.sep).join("/");
 }
 function normalizeRepoRelativePlanRunPaths(projectRoot, values, label) {
   return uniqueSortedStrings2(
@@ -60096,7 +61429,7 @@ function normalizePersistedRepoRelativePlanRunPaths(projectRoot, values, label) 
 function normalizeBlueprintArtifactPath(projectRoot, value, label) {
   const normalized = normalizeRequiredStringValue(value, label);
   const absolutePath = resolveBlueprintPath(projectRoot, normalized);
-  return path15.relative(projectRoot, absolutePath).split(path15.sep).join("/");
+  return path16.relative(projectRoot, absolutePath).split(path16.sep).join("/");
 }
 function normalizeNullableBlueprintArtifactPath(projectRoot, value, label) {
   if (value === null) {
@@ -60116,13 +61449,13 @@ function normalizeOptionalFilesystemPath(projectRoot, value, label) {
   if (!normalized) {
     return null;
   }
-  return path15.resolve(projectRoot, normalized);
+  return path16.resolve(projectRoot, normalized);
 }
 function normalizePersistedFilesystemPath(projectRoot, value, label) {
   if (value === null) {
     return null;
   }
-  return path15.resolve(projectRoot, normalizeRequiredStringValue(value, label));
+  return path16.resolve(projectRoot, normalizeRequiredStringValue(value, label));
 }
 function expandHomePath4(value) {
   const trimmed = value.trim();
@@ -60130,7 +61463,7 @@ function expandHomePath4(value) {
     return os4.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path15.join(os4.homedir(), trimmed.slice(2));
+    return path16.join(os4.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -60143,9 +61476,9 @@ function normalizePlanRunWorkspaceName(value) {
   assertNoNullBytes(normalized, "workspaceName");
   return normalized;
 }
-function buildDefaultPlanRunSlug(planTitle, planId2) {
+function buildDefaultPlanRunSlug(planTitle, planId3) {
   const titleSlug = slugifyPlanRunSegment(planTitle ?? "", "");
-  return titleSlug || `plan-${planId2}`;
+  return titleSlug || `plan-${planId3}`;
 }
 function renderPlanRunBranchName(args) {
   const defaultTemplate = "blu/phase-{phase}-plan-{planId}-{slug}";
@@ -60426,9 +61759,9 @@ async function resolvePlanRunDiffProjectRoot(args) {
 }
 async function realpathOrResolve(targetPath) {
   try {
-    return await fs20.realpath(targetPath);
+    return await fs23.realpath(targetPath);
   } catch {
-    return path15.resolve(targetPath);
+    return path16.resolve(targetPath);
   }
 }
 async function gitCommonDir(projectRoot) {
@@ -60442,7 +61775,7 @@ async function gitCommonDir(projectRoot) {
     };
   }
   const rawCommonDir = result.stdout.trim();
-  const commonDir = path15.isAbsolute(rawCommonDir) ? rawCommonDir : path15.resolve(projectRoot, rawCommonDir);
+  const commonDir = path16.isAbsolute(rawCommonDir) ? rawCommonDir : path16.resolve(projectRoot, rawCommonDir);
   return {
     path: await realpathOrResolve(commonDir),
     warning: null
@@ -60622,7 +61955,7 @@ function countTextLines(content) {
   return content.endsWith("\n") ? content.slice(0, -1).split("\n").length : content.split("\n").length;
 }
 async function readUntrackedFileForDiff(projectRoot, filePath) {
-  const fileBuffer = await fs20.readFile(path15.join(projectRoot, filePath));
+  const fileBuffer = await fs23.readFile(path16.join(projectRoot, filePath));
   if (fileBuffer.includes(0)) {
     return {
       kind: "binary",
@@ -60821,8 +62154,8 @@ function normalizePlanRunAttempt(value, label) {
     notes: normalizeRequiredStringArray(attempt.notes, `${label}.notes`)
   };
 }
-function normalizeVerificationEntries(verification) {
-  return (verification ?? []).map((entry, index) => {
+function normalizeVerificationEntries(verification2) {
+  return (verification2 ?? []).map((entry, index) => {
     const verificationEntry = requirePlainObject(entry, `verification[${index}]`);
     const command = normalizeRequiredStringValue(
       verificationEntry.command,
@@ -60944,10 +62277,10 @@ function normalizePlanRunIndex(value, expected) {
   }
   assertPlanRunSchemaVersion(value.schemaVersion, `${expected.label}.schemaVersion`);
   const phase = normalizePlanRunPhase(String(value.phase ?? ""));
-  const planId2 = normalizePlanRunPlanId(String(value.planId ?? ""));
-  if (phase !== expected.phase || planId2 !== expected.planId) {
+  const planId3 = normalizePlanRunPlanId(String(value.planId ?? ""));
+  if (phase !== expected.phase || planId3 !== expected.planId) {
     throw new Error(
-      `${expected.label} is for phase ${phase} plan ${planId2}, expected phase ${expected.phase} plan ${expected.planId}.`
+      `${expected.label} is for phase ${phase} plan ${planId3}, expected phase ${expected.phase} plan ${expected.planId}.`
     );
   }
   if (!Array.isArray(value.runs)) {
@@ -60977,7 +62310,7 @@ function normalizePlanRunIndex(value, expected) {
   return {
     schemaVersion: PLAN_RUN_SCHEMA_VERSION,
     phase,
-    planId: planId2,
+    planId: planId3,
     latestRunId,
     runs
   };
@@ -60988,15 +62321,15 @@ function normalizePlanRunRecord(value, expected) {
   const phase = normalizePlanRunPhase(
     normalizeRequiredStringValue(record2.phase, `${expected.label}.phase`)
   );
-  const planId2 = normalizePlanRunPlanId(
+  const planId3 = normalizePlanRunPlanId(
     normalizeRequiredStringValue(record2.planId, `${expected.label}.planId`)
   );
   const runId = normalizePlanRunId(
     normalizeRequiredStringValue(record2.runId, `${expected.label}.runId`)
   );
-  if (phase !== expected.phase || planId2 !== expected.planId || runId !== expected.runId) {
+  if (phase !== expected.phase || planId3 !== expected.planId || runId !== expected.runId) {
     throw new Error(
-      `${expected.label} is for phase ${phase} plan ${planId2} run ${runId}, expected phase ${expected.phase} plan ${expected.planId} run ${expected.runId}.`
+      `${expected.label} is for phase ${phase} plan ${planId3} run ${runId}, expected phase ${expected.phase} plan ${expected.planId} run ${expected.runId}.`
     );
   }
   const source = requirePlainObject(record2.source, `${expected.label}.source`);
@@ -61014,7 +62347,7 @@ function normalizePlanRunRecord(value, expected) {
   if (!Array.isArray(record2.verification)) {
     throw new Error(`${expected.label}.verification must be an array.`);
   }
-  const sourceRepoRoot = path15.resolve(
+  const sourceRepoRoot = path16.resolve(
     normalizeRequiredStringValue(source.repoRoot, `${expected.label}.source.repoRoot`)
   );
   if (sourceRepoRoot !== expected.projectRoot) {
@@ -61024,7 +62357,7 @@ function normalizePlanRunRecord(value, expected) {
     schemaVersion: PLAN_RUN_SCHEMA_VERSION,
     runId,
     phase,
-    planId: planId2,
+    planId: planId3,
     planPath: normalizeBlueprintArtifactPath(
       expected.projectRoot,
       record2.planPath,
@@ -61151,7 +62484,7 @@ async function readJsonObjectIfPresent(filePath, label) {
     return null;
   }
   try {
-    return safeJsonParseObject(await fs20.readFile(filePath, "utf8"), { label });
+    return safeJsonParseObject(await fs23.readFile(filePath, "utf8"), { label });
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -61161,7 +62494,7 @@ async function readJsonObjectIfPresent(filePath, label) {
 }
 async function inspectPlanRunFileTarget(filePath) {
   try {
-    const stats = await fs20.lstat(filePath);
+    const stats = await fs23.lstat(filePath);
     if (!stats.isFile()) {
       throw new Error(`PlanRun persistence target must be a regular file: ${filePath}`);
     }
@@ -61178,7 +62511,7 @@ function maybeFailPlanRunRecordWrite(filePath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesPath = injectedFailure === "1" || path15.resolve(injectedFailure) === path15.resolve(filePath);
+  const matchesPath = injectedFailure === "1" || path16.resolve(injectedFailure) === path16.resolve(filePath);
   if (!matchesPath) {
     return;
   }
@@ -61190,7 +62523,7 @@ function maybeFailPlanRunRecordRestore(filePath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesPath = injectedFailure === "1" || path15.resolve(injectedFailure) === path15.resolve(filePath);
+  const matchesPath = injectedFailure === "1" || path16.resolve(injectedFailure) === path16.resolve(filePath);
   if (!matchesPath) {
     return;
   }
@@ -61217,7 +62550,7 @@ async function waitForPlanRunTestPath(filePath, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      await fs20.access(filePath);
+      await fs23.access(filePath);
       return;
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -61235,8 +62568,8 @@ async function maybeDelayPlanRunPatchRollbackForTest() {
     return;
   }
   if (markerPath) {
-    await fs20.mkdir(path15.dirname(markerPath), { recursive: true });
-    await fs20.writeFile(markerPath, "rollback-pending\n", "utf8");
+    await fs23.mkdir(path16.dirname(markerPath), { recursive: true });
+    await fs23.writeFile(markerPath, "rollback-pending\n", "utf8");
   }
   if (releasePath) {
     await waitForPlanRunTestPath(releasePath, delayMs ?? 5e3);
@@ -61250,52 +62583,52 @@ async function writeAtomicJsonFile(filePath, value) {
   await ensureParentDirectory2(filePath);
   maybeFailPlanRunRecordWrite(filePath);
   const existingMode = await inspectPlanRunFileTarget(filePath);
-  const tempPath = path15.join(
-    path15.dirname(filePath),
-    `.${path15.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  const tempPath = path16.join(
+    path16.dirname(filePath),
+    `.${path16.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
   );
   try {
-    await fs20.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
+    await fs23.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
     if (existingMode !== null) {
-      await fs20.chmod(tempPath, existingMode);
+      await fs23.chmod(tempPath, existingMode);
     }
     await inspectPlanRunFileTarget(filePath);
-    await fs20.rename(tempPath, filePath);
+    await fs23.rename(tempPath, filePath);
   } catch (error2) {
-    await fs20.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs23.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
 }
 async function readPlanRunFileSnapshot(filePath) {
-  const mode = await inspectPlanRunFileTarget(filePath);
-  if (mode === null) {
+  const mode2 = await inspectPlanRunFileTarget(filePath);
+  if (mode2 === null) {
     return null;
   }
   return {
-    content: await fs20.readFile(filePath, "utf8"),
-    mode
+    content: await fs23.readFile(filePath, "utf8"),
+    mode: mode2
   };
 }
 async function restorePlanRunFileSnapshot(filePath, snapshot3) {
   maybeFailPlanRunRecordRestore(filePath);
   if (snapshot3 === null) {
     await inspectPlanRunFileTarget(filePath);
-    await fs20.rm(filePath, { force: true });
+    await fs23.rm(filePath, { force: true });
     return;
   }
   await ensureParentDirectory2(filePath);
-  const tempPath = path15.join(
-    path15.dirname(filePath),
-    `.${path15.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.rollback.tmp`
+  const tempPath = path16.join(
+    path16.dirname(filePath),
+    `.${path16.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.rollback.tmp`
   );
   try {
-    await fs20.writeFile(tempPath, snapshot3.content, "utf8");
-    await fs20.chmod(tempPath, snapshot3.mode);
+    await fs23.writeFile(tempPath, snapshot3.content, "utf8");
+    await fs23.chmod(tempPath, snapshot3.mode);
     await inspectPlanRunFileTarget(filePath);
-    await fs20.rename(tempPath, filePath);
+    await fs23.rename(tempPath, filePath);
   } catch (error2) {
-    await fs20.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs23.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -61410,7 +62743,7 @@ function createPlanRunRecord(args) {
     args.input.summaryPath,
     "summaryPath"
   ) ?? existing?.summaryPath ?? null;
-  const verification = args.input.verification === void 0 ? existing?.verification ?? [] : normalizeVerificationEntries(args.input.verification);
+  const verification2 = args.input.verification === void 0 ? existing?.verification ?? [] : normalizeVerificationEntries(args.input.verification);
   const patchId = normalizeString(args.input.patch?.patchId, "patch.patchId");
   const scopeWarnings = args.unauthorizedChangedFiles.length > 0 ? [
     `Changed files outside the plan authorization: ${args.unauthorizedChangedFiles.join(", ")}`
@@ -61447,7 +62780,7 @@ function createPlanRunRecord(args) {
       patchId: patchId ?? existing?.git.patchId ?? null
     },
     attempts: [...existing?.attempts ?? [], attempt],
-    verification,
+    verification: verification2,
     review: existing?.review ?? {
       verdict: null,
       openFindings: 0,
@@ -61471,10 +62804,10 @@ function createPlanRunRecord(args) {
 async function blueprintPlanRunRecord(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const phase = normalizePlanRunPhase(args.phase);
-  const planId2 = normalizePlanRunPlanId(args.planId);
+  const planId3 = normalizePlanRunPlanId(args.planId);
   const runId = normalizePlanRunId(args.runId);
-  const indexPath = buildPlanRunIndexPath(projectRoot, phase, planId2);
-  const recordPath = buildPlanRunRecordPath(projectRoot, phase, planId2, runId);
+  const indexPath = buildPlanRunIndexPath(projectRoot, phase, planId3);
+  const recordPath = buildPlanRunRecordPath(projectRoot, phase, planId3, runId);
   const changedFiles = normalizeRepoRelativePlanRunPaths(
     projectRoot,
     args.changedFiles,
@@ -61491,7 +62824,7 @@ async function blueprintPlanRunRecord(args) {
       const planMetadata = await loadPlanMetadata({
         projectRoot,
         phase,
-        planId: planId2
+        planId: planId3
       });
       const unauthorizedChangedFiles = deriveUnauthorizedChangedFiles({
         changedFiles,
@@ -61506,20 +62839,20 @@ async function blueprintPlanRunRecord(args) {
         projectRoot,
         indexPath,
         phase,
-        planId: planId2
+        planId: planId3
       });
       const existingRecord = await readPlanRunRecordIfPresent({
         projectRoot,
         recordPath,
         phase,
-        planId: planId2,
+        planId: planId3,
         runId
       });
       const run2 = createPlanRunRecord({
         projectRoot,
         input: args,
         phase,
-        planId: planId2,
+        planId: planId3,
         runId,
         planPath: planMetadata.path,
         planTitle: planMetadata.title,
@@ -61546,13 +62879,13 @@ async function blueprintPlanRunRecord(args) {
           projectRoot,
           indexPath,
           phase,
-          planId: planId2
+          planId: planId3
         });
         const reloadedRun = await readPlanRunRecordIfPresent({
           projectRoot,
           recordPath,
           phase,
-          planId: planId2,
+          planId: planId3,
           runId
         });
         if (!reloadedIndex || !reloadedRun) {
@@ -61596,19 +62929,19 @@ async function blueprintPlanRunRecord(args) {
 async function blueprintPlanRunLoad(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const phase = normalizePlanRunPhase(args.phase);
-  const planId2 = normalizePlanRunPlanId(args.planId);
-  const indexPath = buildPlanRunIndexPath(projectRoot, phase, planId2);
+  const planId3 = normalizePlanRunPlanId(args.planId);
+  const indexPath = buildPlanRunIndexPath(projectRoot, phase, planId3);
   const index = await readPlanRunIndexIfPresent({
     projectRoot,
     indexPath,
     phase,
-    planId: planId2
+    planId: planId3
   });
   if (!index) {
     return {
       found: false,
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: null,
       indexPath,
       path: null,
@@ -61624,7 +62957,7 @@ async function blueprintPlanRunLoad(args) {
     return {
       found: false,
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: null,
       indexPath,
       path: null,
@@ -61635,18 +62968,18 @@ async function blueprintPlanRunLoad(args) {
       warnings: []
     };
   }
-  const recordPath = buildPlanRunRecordPath(projectRoot, phase, planId2, selectedRunId);
+  const recordPath = buildPlanRunRecordPath(projectRoot, phase, planId3, selectedRunId);
   const run2 = await readPlanRunRecordIfPresent({
     projectRoot,
     recordPath,
     phase,
-    planId: planId2,
+    planId: planId3,
     runId: selectedRunId
   });
   return {
     found: run2 !== null,
     phase,
-    planId: planId2,
+    planId: planId3,
     runId: selectedRunId,
     indexPath,
     path: recordPath,
@@ -61659,7 +62992,7 @@ async function blueprintPlanRunLoad(args) {
 }
 async function blueprintPlanRunDiff(args) {
   const phase = normalizePlanRunPhase(args.phase);
-  const planId2 = normalizePlanRunPlanId(args.planId);
+  const planId3 = normalizePlanRunPlanId(args.planId);
   const requestedRunId = args.runId ? normalizePlanRunId(args.runId) : null;
   let projectRoot;
   try {
@@ -61676,7 +63009,7 @@ async function blueprintPlanRunDiff(args) {
   const loaded = await blueprintPlanRunLoad({
     cwd: projectRoot,
     phase,
-    planId: planId2,
+    planId: planId3,
     runId: requestedRunId ?? void 0
   });
   if (!loaded.found || !loaded.run) {
@@ -61792,7 +63125,7 @@ async function blueprintPlanRunDiff(args) {
 }
 async function blueprintPlanRunPatchRecord(args) {
   const phase = normalizePlanRunPhase(args.phase);
-  const planId2 = normalizePlanRunPlanId(args.planId);
+  const planId3 = normalizePlanRunPlanId(args.planId);
   const requestedRunId = args.runId ? normalizePlanRunId(args.runId) : null;
   let projectRoot;
   try {
@@ -61800,7 +63133,7 @@ async function blueprintPlanRunPatchRecord(args) {
   } catch (error2) {
     return blockedPlanRunPatchRecordResult({
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: requestedRunId,
       blockers: [
         error2 instanceof Error ? error2.message : "Blueprint PlanRun patch capture requires the source repository root."
@@ -61810,13 +63143,13 @@ async function blueprintPlanRunPatchRecord(args) {
   const loaded = await blueprintPlanRunLoad({
     cwd: projectRoot,
     phase,
-    planId: planId2,
+    planId: planId3,
     runId: requestedRunId ?? void 0
   });
   if (!loaded.found || !loaded.run) {
     return blockedPlanRunPatchRecordResult({
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: loaded.runId,
       sourceRoot: projectRoot,
       indexPath: loaded.indexPath,
@@ -61828,7 +63161,7 @@ async function blueprintPlanRunPatchRecord(args) {
   const run2 = loaded.run;
   const patchId = buildPlanRunPatchId({
     phase,
-    planId: planId2,
+    planId: planId3,
     runId: run2.runId
   });
   const diffProjectRoot = await resolvePlanRunPatchCaptureProjectRoot({
@@ -61838,7 +63171,7 @@ async function blueprintPlanRunPatchRecord(args) {
   if (diffProjectRoot.warning || !diffProjectRoot.projectRoot) {
     return blockedPlanRunPatchRecordResult({
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: run2.runId,
       sourceRoot: projectRoot,
       diffRoot: diffProjectRoot.projectRoot,
@@ -61855,7 +63188,7 @@ async function blueprintPlanRunPatchRecord(args) {
   const diff = await blueprintPlanRunDiff({
     cwd: projectRoot,
     phase,
-    planId: planId2,
+    planId: planId3,
     runId: run2.runId,
     includePatch: true,
     maxPatchBytes: args.maxPatchBytes ?? Number.MAX_SAFE_INTEGER
@@ -61863,7 +63196,7 @@ async function blueprintPlanRunPatchRecord(args) {
   if (diff.status === "blocked") {
     return blockedPlanRunPatchRecordResult({
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: run2.runId,
       sourceRoot: projectRoot,
       diffRoot: diffProjectRoot.projectRoot,
@@ -61880,7 +63213,7 @@ async function blueprintPlanRunPatchRecord(args) {
   if (changedFilePaths.length === 0 || !diff.patch) {
     return blockedPlanRunPatchRecordResult({
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: run2.runId,
       sourceRoot: projectRoot,
       diffRoot: diffProjectRoot.projectRoot,
@@ -61899,7 +63232,7 @@ async function blueprintPlanRunPatchRecord(args) {
   if (!diff.baseHead) {
     return blockedPlanRunPatchRecordResult({
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: run2.runId,
       sourceRoot: projectRoot,
       diffRoot: diffProjectRoot.projectRoot,
@@ -61918,7 +63251,7 @@ async function blueprintPlanRunPatchRecord(args) {
   if (diff.truncated) {
     return blockedPlanRunPatchRecordResult({
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: run2.runId,
       sourceRoot: projectRoot,
       diffRoot: diffProjectRoot.projectRoot,
@@ -61939,7 +63272,7 @@ async function blueprintPlanRunPatchRecord(args) {
       cwd: projectRoot,
       runId: run2.runId,
       phase,
-      planId: planId2,
+      planId: planId3,
       status: "BLOCKED",
       worktreePath: run2.worktree.path ?? void 0,
       branchName: run2.worktree.branchName ?? void 0,
@@ -61958,7 +63291,7 @@ async function blueprintPlanRunPatchRecord(args) {
     });
     return blockedPlanRunPatchRecordResult({
       phase,
-      planId: planId2,
+      planId: planId3,
       runId: run2.runId,
       sourceRoot: projectRoot,
       diffRoot: diffProjectRoot.projectRoot,
@@ -61982,10 +63315,10 @@ async function blueprintPlanRunPatchRecord(args) {
       patchId,
       patch: diff.patch,
       trackedFiles: changedFilePaths,
-      label: `Plan run ${phase}/${planId2}`,
+      label: `Plan run ${phase}/${planId3}`,
       sourceVersion: diffBaseHead,
       compatibility: {
-        repoRootName: path15.basename(projectRoot)
+        repoRootName: path16.basename(projectRoot)
       },
       audit: {
         action: "record",
@@ -62004,7 +63337,7 @@ async function blueprintPlanRunPatchRecord(args) {
       cwd: projectRoot,
       runId: run2.runId,
       phase,
-      planId: planId2,
+      planId: planId3,
       status: "IMPLEMENTED",
       worktreePath: run2.worktree.path ?? void 0,
       branchName: run2.worktree.branchName ?? void 0,
@@ -62039,7 +63372,7 @@ async function blueprintPlanRunPatchRecord(args) {
   return {
     status: "recorded",
     phase,
-    planId: planId2,
+    planId: planId3,
     runId: run2.runId,
     sourceRoot: projectRoot,
     diffRoot: diffProjectRoot.projectRoot,
@@ -62060,26 +63393,26 @@ async function blueprintPlanRunPatchRecord(args) {
   };
 }
 async function blueprintPlanRunPrepare(args) {
-  const mode = args.mode ?? "preview";
+  const mode2 = args.mode ?? "preview";
   const phase = normalizePlanRunPhase(args.phase);
-  const planId2 = normalizePlanRunPlanId(args.planId);
+  const planId3 = normalizePlanRunPlanId(args.planId);
   const runId = args.runId ? normalizePlanRunId(args.runId) : normalizePlanRunId(`run-${Date.now().toString(36)}`);
   let projectRoot;
   try {
     projectRoot = await ensureRepoRoot(args.cwd);
   } catch (error2) {
     return blockedPlanRunPrepareResult({
-      mode,
+      mode: mode2,
       phase,
-      planId: planId2,
+      planId: planId3,
       runId,
       blockers: [
         error2 instanceof Error ? error2.message : "Blueprint PlanRun prepare requires a git repository root."
       ]
     });
   }
-  const recordPath = buildPlanRunRecordPath(projectRoot, phase, planId2, runId);
-  const indexPath = buildPlanRunIndexPath(projectRoot, phase, planId2);
+  const recordPath = buildPlanRunRecordPath(projectRoot, phase, planId3, runId);
+  const indexPath = buildPlanRunIndexPath(projectRoot, phase, planId3);
   const [configResult, executionTargets, planRead, baseHead, sourceStatus] = await Promise.all([
     blueprintConfigGet({
       cwd: projectRoot,
@@ -62093,16 +63426,16 @@ async function blueprintPlanRunPrepare(args) {
     blueprintPhasePlanRead({
       cwd: projectRoot,
       phase,
-      planId: planId2
+      planId: planId3
     }),
     gitHeadSha2(projectRoot),
     gitStatusShort(projectRoot)
   ]);
   if (!executionTargets.phaseFound) {
     return blockedPlanRunPrepareResult({
-      mode,
+      mode: mode2,
       phase,
-      planId: planId2,
+      planId: planId3,
       runId,
       recordPath,
       indexPath,
@@ -62112,13 +63445,13 @@ async function blueprintPlanRunPrepare(args) {
   }
   if (!planRead.phaseFound || !planRead.found || !planRead.path) {
     return blockedPlanRunPrepareResult({
-      mode,
+      mode: mode2,
       phase,
-      planId: planId2,
+      planId: planId3,
       runId,
       recordPath,
       indexPath,
-      blockers: [planRead.reason ?? `Plan ${planId2} was not found for phase ${phase}.`],
+      blockers: [planRead.reason ?? `Plan ${planId3} was not found for phase ${phase}.`],
       warnings: planRead.validation?.warnings ?? []
     });
   }
@@ -62131,26 +63464,26 @@ async function blueprintPlanRunPrepare(args) {
     planRead.metadata?.acceptanceCriteria ?? []
   );
   const planTitle = planRead.metadata?.title ?? null;
-  const slug = buildDefaultPlanRunSlug(planTitle, planId2);
+  const slug = buildDefaultPlanRunSlug(planTitle, planId3);
   const branchName = args.branchName ?? renderPlanRunBranchName({
     template: configResult.config.git.phase_branch_template,
     phase,
-    planId: planId2,
+    planId: planId3,
     slug
   });
   const workspaceName = normalizePlanRunWorkspaceName(
-    args.workspaceName ?? `phase-${phase}-plan-${planId2}-${slug}`
+    args.workspaceName ?? `phase-${phase}-plan-${planId3}-${slug}`
   );
-  const workspacePath = path15.resolve(
+  const workspacePath = path16.resolve(
     expandHomePath4(
-      args.workspacePath ?? path15.join(configResult.config.maintenance.workspace_root, workspaceName)
+      args.workspacePath ?? path16.join(configResult.config.maintenance.workspace_root, workspaceName)
     )
   );
   const strategy = configResult.config.workflow.use_worktrees ? "worktree" : "same-tree";
   const commonResult = {
-    mode,
+    mode: mode2,
     phase,
-    planId: planId2,
+    planId: planId3,
     runId,
     planPath: planRead.path,
     planTitle,
@@ -62177,7 +63510,7 @@ async function blueprintPlanRunPrepare(args) {
       `Source repository has uncommitted changes and must be clean before PlanRun prepare: ${sourceStatus.value}`
     ] : [],
     ...executionTargets.blockers.executionBlocked ? executionTargets.blockers.reasons : [],
-    ...!executionTargets.selectedPlanIds.includes(planId2) ? [`Plan ${planId2} is not currently selected for execution.`] : [],
+    ...!executionTargets.selectedPlanIds.includes(planId3) ? [`Plan ${planId3} is not currently selected for execution.`] : [],
     ...strategy === "same-tree" ? ["workflow.use_worktrees is disabled; same-tree PlanRun prepare is not implemented yet."] : []
   ];
   if (blockers.length > 0 || !baseHead.value) {
@@ -62186,7 +63519,7 @@ async function blueprintPlanRunPrepare(args) {
       blockers: blockers.length > 0 ? blockers : ["Unable to read base HEAD."]
     });
   }
-  if (mode === "preview") {
+  if (mode2 === "preview") {
     return {
       status: "preview",
       ...commonResult,
@@ -62211,7 +63544,7 @@ async function blueprintPlanRunPrepare(args) {
       cwd: projectRoot,
       runId,
       phase,
-      planId: planId2,
+      planId: planId3,
       status: "PREPARED",
       worktreePath,
       branchName,
@@ -62417,14 +63750,14 @@ var init_plan_run = __esm({
 
 // src/mcp/tools/phase-execution-control.ts
 import { execFile as execFile4 } from "node:child_process";
-import { createHash as createHash9, randomUUID as randomUUID2 } from "node:crypto";
-import { promises as fs21 } from "node:fs";
-import path16 from "node:path";
+import { createHash as createHash10, randomUUID as randomUUID2 } from "node:crypto";
+import { promises as fs24 } from "node:fs";
+import path17 from "node:path";
 function dependencies(overrides) {
   return { ...defaultDependencies, ...overrides };
 }
 function sha2562(value) {
-  return createHash9("sha256").update(value).digest("hex");
+  return createHash10("sha256").update(value).digest("hex");
 }
 function canonicalize(value) {
   if (Array.isArray(value)) {
@@ -62433,9 +63766,9 @@ function canonicalize(value) {
   if (value && typeof value === "object") {
     const input = value;
     const output = {};
-    for (const key of Object.keys(input).sort()) {
-      if (input[key] !== void 0) {
-        output[key] = canonicalize(input[key]);
+    for (const key2 of Object.keys(input).sort()) {
+      if (input[key2] !== void 0) {
+        output[key2] = canonicalize(input[key2]);
       }
     }
     return output;
@@ -62459,13 +63792,13 @@ function extractBoundVerificationCommands(planContent) {
   return unique2(commands);
 }
 function isInside(root, candidate) {
-  return candidate === root || candidate.startsWith(`${root}${path16.sep}`);
+  return candidate === root || candidate.startsWith(`${root}${path17.sep}`);
 }
 function assertSafeRelativePath(relativePath, options) {
-  if (!relativePath || path16.isAbsolute(relativePath) || relativePath.includes("\0") || relativePath.includes("\\")) {
+  if (!relativePath || path17.isAbsolute(relativePath) || relativePath.includes("\0") || relativePath.includes("\\")) {
     throw new Error(`Unsafe execution path: ${JSON.stringify(relativePath)}.`);
   }
-  const normalized = path16.posix.normalize(relativePath.replace(/^\.\//, ""));
+  const normalized = path17.posix.normalize(relativePath.replace(/^\.\//, ""));
   if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized !== relativePath.replace(/^\.\//, "") || normalized === ".git" || normalized.startsWith(".git/") || !options.allowBlueprint && (normalized === BLUEPRINT_DIR || normalized.startsWith(`${BLUEPRINT_DIR}/`))) {
     throw new Error(`Unsafe execution path: ${JSON.stringify(relativePath)}.`);
   }
@@ -62475,9 +63808,9 @@ async function readRepoFile(projectRoot, canonicalRoot, relativePath) {
   const safePath = assertSafeRelativePath(relativePath, { allowBlueprint: true });
   const absolutePath = resolveBlueprintPath(projectRoot, safePath);
   const [stats, realPath, bytes] = await Promise.all([
-    fs21.lstat(absolutePath),
-    fs21.realpath(absolutePath),
-    fs21.readFile(absolutePath)
+    fs24.lstat(absolutePath),
+    fs24.realpath(absolutePath),
+    fs24.readFile(absolutePath)
   ]);
   if (!stats.isFile() || !isInside(canonicalRoot, realPath)) {
     throw new Error(`Execution authority path is not a regular repo file: ${safePath}.`);
@@ -62547,13 +63880,13 @@ async function digestRepoBoundaryPath(args) {
   const safePath = assertSafeRelativePath(args.relativePath, {
     allowBlueprint: args.allowBlueprint
   });
-  const absolutePath = path16.resolve(args.projectRoot, ...safePath.split("/"));
+  const absolutePath = path17.resolve(args.projectRoot, ...safePath.split("/"));
   const segments = safePath.split("/");
   let current = args.canonicalRoot;
   for (let index = 0; index < segments.length; index += 1) {
-    current = path16.join(current, segments[index] ?? "");
+    current = path17.join(current, segments[index] ?? "");
     try {
-      const stats2 = await fs21.lstat(current);
+      const stats2 = await fs24.lstat(current);
       if (stats2.isSymbolicLink()) {
         throw new Error(`Execution boundary path traverses a symbolic link: ${safePath}.`);
       }
@@ -62565,8 +63898,8 @@ async function digestRepoBoundaryPath(args) {
       }
     } catch (error2) {
       if (error2.code === "ENOENT" && args.allowMissing) {
-        const existingParent = path16.dirname(current);
-        const realParent = await fs21.realpath(existingParent);
+        const existingParent = path17.dirname(current);
+        const realParent = await fs24.realpath(existingParent);
         if (!isInside(args.canonicalRoot, realParent)) {
           throw new Error(`Execution boundary path escapes the repository: ${safePath}.`);
         }
@@ -62576,9 +63909,9 @@ async function digestRepoBoundaryPath(args) {
     }
   }
   const [realPath, stats, bytes] = await Promise.all([
-    fs21.realpath(absolutePath),
-    fs21.lstat(absolutePath),
-    fs21.readFile(absolutePath)
+    fs24.realpath(absolutePath),
+    fs24.lstat(absolutePath),
+    fs24.readFile(absolutePath)
   ]);
   if (!isInside(args.canonicalRoot, realPath)) {
     throw new Error(`Execution boundary path escapes the repository: ${safePath}.`);
@@ -62614,7 +63947,7 @@ async function gitSnapshot(projectRoot, deps) {
       ["-c", "core.quotepath=false", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
       projectRoot
     ),
-    fs21.realpath(projectRoot)
+    fs24.realpath(projectRoot)
   ]);
   const head = headResult.stdout.trim();
   if (headResult.exitCode !== 0 || headResult.signal !== null || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(head)) {
@@ -62642,11 +63975,11 @@ async function artifactInventory(projectRoot, canonicalRoot, phaseDir2) {
     throw new Error(`Unsafe phase directory: ${phaseDir2}.`);
   }
   const phaseAbsolute = resolveBlueprintPath(projectRoot, safePhaseDir);
-  const realPhaseDir = await fs21.realpath(phaseAbsolute);
+  const realPhaseDir = await fs24.realpath(phaseAbsolute);
   if (!isInside(canonicalRoot, realPhaseDir)) {
     throw new Error(`Phase directory escapes the canonical repository: ${phaseDir2}.`);
   }
-  const entries = await fs21.readdir(phaseAbsolute, { withFileTypes: true });
+  const entries = await fs24.readdir(phaseAbsolute, { withFileTypes: true });
   const paths = [
     `${BLUEPRINT_DIR}/ROADMAP.md`,
     BLUEPRINT_STATE_PATH,
@@ -62691,7 +64024,7 @@ async function buildPacket(projectRoot, args, deps) {
   ]);
   const blockers = [...targets.blockers.reasons];
   const unconfirmedOverwrites = targets.overwriteCandidatePlanIds.filter(
-    (planId2) => targets.selectedPlanIds.includes(planId2) && !options.overwriteConfirmedPlanIds.includes(planId2)
+    (planId3) => targets.selectedPlanIds.includes(planId3) && !options.overwriteConfirmedPlanIds.includes(planId3)
   );
   if (unconfirmedOverwrites.length > 0) {
     blockers.push(
@@ -62849,15 +64182,15 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
   const persistencePaths = /* @__PURE__ */ new Set();
   let stateMayBePersisted = false;
   let pendingStateUpdate = null;
-  for (const [planId2, progress] of Object.entries(session.execution.plans)) {
-    for (const receipt of progress.mutationReceipts) latestReceipts.set(receipt.path, receipt);
-    for (const receipt of progress.mutationGitStatusReceipts) {
-      latestMutationStatuses.set(receipt.path, receipt.status);
+  for (const [planId3, progress] of Object.entries(session.execution.plans)) {
+    for (const receipt2 of progress.mutationReceipts) latestReceipts.set(receipt2.path, receipt2);
+    for (const receipt2 of progress.mutationGitStatusReceipts) {
+      latestMutationStatuses.set(receipt2.path, receipt2.status);
     }
     for (const mutation of progress.pendingMutations) pendingMutations.set(mutation.path, mutation);
     if (progress.persistenceStage !== "none") {
       persistencePaths.add(
-        `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId2}-SUMMARY.md`
+        `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId3}-SUMMARY.md`
       );
     }
     if (progress.persistenceStage === "done" || progress.pendingStateUpdate !== null) {
@@ -62929,13 +64262,13 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
       blockers.push(`Execute-phase baseline working-tree authority drifted: ${baseline.path}.`);
     }
   }
-  for (const [relativePath, receipt] of latestReceipts) {
+  for (const [relativePath, receipt2] of latestReceipts) {
     if (pendingMutations.has(relativePath)) continue;
     if (currentStatusByPath.get(relativePath) !== latestMutationStatuses.get(relativePath)) {
       blockers.push(`Execute-phase mutation Git status drifted: ${relativePath}.`);
     }
     const observed = await observe(relativePath, false);
-    if (observed.sha256 !== receipt.afterHash || observed.mode !== receipt.afterMode) {
+    if (observed.sha256 !== receipt2.afterHash || observed.mode !== receipt2.afterMode) {
       blockers.push(`Execute-phase mutation receipt no longer matches ${relativePath}.`);
     }
   }
@@ -62964,9 +64297,9 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
   for (const plan of session.packet.selectedPlans) {
     for (const artifact of [...plan.ownedFilePreimages, ...plan.readFirstArtifacts]) {
       if (pendingMutations.has(artifact.path)) continue;
-      const receipt = latestReceipts.get(artifact.path);
+      const receipt2 = latestReceipts.get(artifact.path);
       const observed = await observe(artifact.path, artifact.path.startsWith(`${BLUEPRINT_DIR}/`));
-      if (observed.sha256 !== (receipt?.afterHash ?? artifact.sha256) || observed.mode !== (receipt?.afterMode ?? artifact.mode)) {
+      if (observed.sha256 !== (receipt2?.afterHash ?? artifact.sha256) || observed.mode !== (receipt2?.afterMode ?? artifact.mode)) {
         blockers.push(`Execute-phase repo authority drifted outside MCP ownership: ${artifact.path}.`);
       }
     }
@@ -63013,9 +64346,9 @@ async function assertControlStorageSafe(projectRoot, relativePath) {
   const segments = safePath.split("/");
   let cursor = projectRoot;
   for (const segment of segments.slice(0, -1)) {
-    cursor = path16.join(cursor, segment);
+    cursor = path17.join(cursor, segment);
     try {
-      const stats = await fs21.lstat(cursor);
+      const stats = await fs24.lstat(cursor);
       if (stats.isSymbolicLink() || !stats.isDirectory()) {
         throw new Error(`Execute-phase control storage has an unsafe ancestor: ${safePath}.`);
       }
@@ -63026,7 +64359,7 @@ async function assertControlStorageSafe(projectRoot, relativePath) {
   }
   const target = resolveBlueprintPath(projectRoot, safePath);
   try {
-    const stats = await fs21.lstat(target);
+    const stats = await fs24.lstat(target);
     if (stats.isSymbolicLink() || !stats.isFile()) {
       throw new Error(`Execute-phase control storage is not a regular file: ${safePath}.`);
     }
@@ -63035,19 +64368,19 @@ async function assertControlStorageSafe(projectRoot, relativePath) {
   }
 }
 async function assertExecutionLockStorageSafe(projectRoot) {
-  const canonicalRoot = await fs21.realpath(projectRoot);
-  const blueprintRoot = path16.join(canonicalRoot, BLUEPRINT_DIR);
-  const locksRoot = path16.join(blueprintRoot, "locks");
-  const blueprintStats = await fs21.lstat(blueprintRoot);
+  const canonicalRoot = await fs24.realpath(projectRoot);
+  const blueprintRoot = path17.join(canonicalRoot, BLUEPRINT_DIR);
+  const locksRoot = path17.join(blueprintRoot, "locks");
+  const blueprintStats = await fs24.lstat(blueprintRoot);
   if (blueprintStats.isSymbolicLink() || !blueprintStats.isDirectory()) {
     throw new Error("Execute-phase lock storage has an unsafe .blueprint ancestor.");
   }
   try {
-    const lockStats = await fs21.lstat(locksRoot);
+    const lockStats = await fs24.lstat(locksRoot);
     if (lockStats.isSymbolicLink() || !lockStats.isDirectory()) {
       throw new Error("Execute-phase lock storage must be a real repository directory.");
     }
-    const realLocksRoot = await fs21.realpath(locksRoot);
+    const realLocksRoot = await fs24.realpath(locksRoot);
     if (!isInside(canonicalRoot, realLocksRoot)) {
       throw new Error("Execute-phase lock storage escapes the canonical repository.");
     }
@@ -63058,7 +64391,7 @@ async function assertExecutionLockStorageSafe(projectRoot) {
 async function readJsonIfPresent2(projectRoot, relativePath) {
   await assertControlStorageSafe(projectRoot, relativePath);
   try {
-    const raw = await fs21.readFile(resolveBlueprintPath(projectRoot, relativePath), "utf8");
+    const raw = await fs24.readFile(resolveBlueprintPath(projectRoot, relativePath), "utf8");
     return JSON.parse(raw);
   } catch (error2) {
     if (error2.code === "ENOENT") return null;
@@ -63087,32 +64420,32 @@ function isArtifactDigest(value) {
   const digest2 = value;
   return typeof digest2.path === "string" && (digest2.sha256 === null || typeof digest2.sha256 === "string" && /^[0-9a-f]{64}$/.test(digest2.sha256)) && (digest2.sizeBytes === null || Number.isInteger(digest2.sizeBytes) && (digest2.sizeBytes ?? -1) >= 0) && (digest2.mode === null || Number.isInteger(digest2.mode));
 }
-function isVerificationOutputValid(receipt, channel) {
-  const text = receipt[channel];
-  const bytes = receipt[`${channel}Bytes`];
-  const hash3 = receipt[`${channel}Hash`];
-  const truncated = receipt[`${channel}Truncated`];
-  if (typeof text !== "string" || !Number.isInteger(bytes) || bytes < Buffer.byteLength(text) || typeof hash3 !== "string" || !/^[0-9a-f]{64}$/.test(hash3) || typeof truncated !== "boolean") {
+function isVerificationOutputValid(receipt2, channel) {
+  const text = receipt2[channel];
+  const bytes = receipt2[`${channel}Bytes`];
+  const hash4 = receipt2[`${channel}Hash`];
+  const truncated = receipt2[`${channel}Truncated`];
+  if (typeof text !== "string" || !Number.isInteger(bytes) || bytes < Buffer.byteLength(text) || typeof hash4 !== "string" || !/^[0-9a-f]{64}$/.test(hash4) || typeof truncated !== "boolean") {
     return false;
   }
   if (truncated) return bytes > Buffer.byteLength(text);
-  return bytes === Buffer.byteLength(text) && hash3 === sha2562(text);
+  return bytes === Buffer.byteLength(text) && hash4 === sha2562(text);
 }
 function isValidPhaseExecutionVerificationReceipt(value, command) {
   if (!value || typeof value !== "object") return false;
-  const receipt = value;
-  const argv = receipt.argv;
-  const exitCode = receipt.exitCode;
-  const signal = receipt.signal;
-  const timedOut = receipt.timedOut;
-  const outputLimitExceeded = receipt.outputLimitExceeded;
-  const passed = receipt.passed;
+  const receipt2 = value;
+  const argv = receipt2.argv;
+  const exitCode = receipt2.exitCode;
+  const signal = receipt2.signal;
+  const timedOut = receipt2.timedOut;
+  const outputLimitExceeded = receipt2.outputLimitExceeded;
+  const passed = receipt2.passed;
   const outcomePassed = exitCode === 0 && signal === null && timedOut === false && outputLimitExceeded === false;
-  return receipt.command === command && Array.isArray(argv) && argv.length === 2 && argv[0] === "-c" && argv[1] === command && (exitCode === null || Number.isInteger(exitCode)) && (signal === null || typeof signal === "string") && typeof timedOut === "boolean" && typeof outputLimitExceeded === "boolean" && typeof passed === "boolean" && passed === outcomePassed && isVerificationOutputValid(receipt, "stdout") && isVerificationOutputValid(receipt, "stderr");
+  return receipt2.command === command && Array.isArray(argv) && argv.length === 2 && argv[0] === "-c" && argv[1] === command && (exitCode === null || Number.isInteger(exitCode)) && (signal === null || typeof signal === "string") && typeof timedOut === "boolean" && typeof outputLimitExceeded === "boolean" && typeof passed === "boolean" && passed === outcomePassed && isVerificationOutputValid(receipt2, "stdout") && isVerificationOutputValid(receipt2, "stderr");
 }
 function hasPassingBoundPhaseExecutionVerification(commands, receipts) {
   return Array.isArray(receipts) && receipts.length === commands.length && receipts.every(
-    (receipt, index) => isValidPhaseExecutionVerificationReceipt(receipt, commands[index]) && receipt.passed
+    (receipt2, index) => isValidPhaseExecutionVerificationReceipt(receipt2, commands[index]) && receipt2.passed
   );
 }
 function isPreparedStateUpdate(value, packet) {
@@ -63121,7 +64454,7 @@ function isPreparedStateUpdate(value, packet) {
   if (!isArtifactDigest(effect.preimage) || !isArtifactDigest(effect.postimage)) return false;
   const prepared = effect.prepared;
   if (!prepared) return false;
-  const expectedAbsolutePath = path16.join(packet.repository.canonicalRoot, ...BLUEPRINT_STATE_PATH.split("/"));
+  const expectedAbsolutePath = path17.join(packet.repository.canonicalRoot, ...BLUEPRINT_STATE_PATH.split("/"));
   const expectedStateContent = prepared.expectedStateContent;
   if (!(expectedStateContent === null || typeof expectedStateContent === "string")) return false;
   if (prepared.projectRoot !== packet.repository.canonicalRoot || prepared.statePath !== BLUEPRINT_STATE_PATH || prepared.absoluteStatePath !== expectedAbsolutePath || typeof prepared.content !== "string" || typeof prepared.updated !== "boolean" || !Array.isArray(prepared.updatedFields) || !prepared.updatedFields.every((entry) => typeof entry === "string") || !Array.isArray(prepared.warnings) || !prepared.warnings.every((entry) => typeof entry === "string") || effect.preimage.path !== BLUEPRINT_STATE_PATH || effect.postimage.path !== BLUEPRINT_STATE_PATH || effect.preimage.sha256 !== (expectedStateContent === null ? null : sha2562(expectedStateContent)) || effect.preimage.sizeBytes !== (expectedStateContent === null ? null : Buffer.byteLength(expectedStateContent)) || effect.postimage.sha256 !== sha2562(prepared.content) || effect.postimage.sizeBytes !== Buffer.byteLength(prepared.content)) {
@@ -63157,19 +64490,19 @@ function isExecutionProgress(value, packet) {
     "state-update",
     "done"
   ]);
-  return Object.entries(progress.plans).every(([planId2, candidate]) => {
+  return Object.entries(progress.plans).every(([planId3, candidate]) => {
     const plan = candidate;
-    const packetPlan = packet.selectedPlans.find((entry) => entry.planId === planId2);
+    const packetPlan = packet.selectedPlans.find((entry) => entry.planId === planId3);
     if (!packetPlan) return false;
     const mutationReceiptsValid = Array.isArray(plan.mutationReceipts) && plan.mutationReceipts.every(
-      (receipt) => receipt && typeof receipt === "object" && packetPlan.allowedFiles.includes(receipt.path) && (receipt.operation === "write" || receipt.operation === "delete") && (receipt.beforeHash === null || /^[0-9a-f]{64}$/.test(receipt.beforeHash)) && (receipt.afterHash === null || /^[0-9a-f]{64}$/.test(receipt.afterHash)) && (receipt.beforeMode === null || Number.isInteger(receipt.beforeMode)) && (receipt.afterMode === null || Number.isInteger(receipt.afterMode)) && Number.isInteger(receipt.bytesWritten) && receipt.bytesWritten >= 0
+      (receipt2) => receipt2 && typeof receipt2 === "object" && packetPlan.allowedFiles.includes(receipt2.path) && (receipt2.operation === "write" || receipt2.operation === "delete") && (receipt2.beforeHash === null || /^[0-9a-f]{64}$/.test(receipt2.beforeHash)) && (receipt2.afterHash === null || /^[0-9a-f]{64}$/.test(receipt2.afterHash)) && (receipt2.beforeMode === null || Number.isInteger(receipt2.beforeMode)) && (receipt2.afterMode === null || Number.isInteger(receipt2.afterMode)) && Number.isInteger(receipt2.bytesWritten) && receipt2.bytesWritten >= 0
     );
     const mutationGitStatusReceiptsValid = Array.isArray(plan.mutationGitStatusReceipts) && plan.mutationGitStatusReceipts.length === plan.mutationReceipts?.length && plan.mutationGitStatusReceipts.every(
-      (receipt, index) => receipt && typeof receipt === "object" && receipt.path === plan.mutationReceipts?.[index]?.path && packetPlan.allowedFiles.includes(receipt.path) && (receipt.status === null || typeof receipt.status === "string" && receipt.status.length === 2)
+      (receipt2, index) => receipt2 && typeof receipt2 === "object" && receipt2.path === plan.mutationReceipts?.[index]?.path && packetPlan.allowedFiles.includes(receipt2.path) && (receipt2.status === null || typeof receipt2.status === "string" && receipt2.status.length === 2)
     );
     const verificationReceiptsValid = Array.isArray(plan.verificationReceipts) && plan.verificationReceipts.every(
       (attempt) => Array.isArray(attempt) && attempt.length > 0 && attempt.length <= packetPlan.verificationCommands.length && attempt.every(
-        (receipt, index) => isValidPhaseExecutionVerificationReceipt(receipt, packetPlan.verificationCommands[index])
+        (receipt2, index) => isValidPhaseExecutionVerificationReceipt(receipt2, packetPlan.verificationCommands[index])
       )
     );
     const latestVerification = plan.verificationReceipts?.at(-1);
@@ -63184,7 +64517,7 @@ function isExecutionProgress(value, packet) {
       (mutation) => mutation && typeof mutation === "object" && packetPlan.allowedFiles.includes(mutation.path) && (mutation.operation === "write" || mutation.operation === "delete") && (mutation.expectedHash === null || /^[0-9a-f]{64}$/.test(mutation.expectedHash)) && (mutation.expectedMode === null || Number.isInteger(mutation.expectedMode)) && (mutation.expectedAfterMode === null || Number.isInteger(mutation.expectedAfterMode)) && (mutation.operation === "write" ? typeof mutation.content === "string" : mutation.content === void 0)
     );
     const completionClaimValid = !((plan.status === "verified" || (plan.status === "summary-written" || plan.status === "persisted") && plan.failure === null) && (!(plan.applyAttempts && plan.applyAttempts > 0) || !plan.mutationReceipts?.length || !hasPassingBoundVerification));
-    return plan.planId === planId2 && typeof plan.status === "string" && statuses.has(plan.status) && Number.isInteger(plan.applyAttempts) && (plan.applyAttempts ?? -1) >= 0 && (plan.applyAttempts ?? Infinity) <= 2 && Number.isInteger(plan.verificationAttempts) && (plan.verificationAttempts ?? -1) >= 0 && (plan.verificationAttempts ?? Infinity) <= 2 && pendingMutationsValid && mutationReceiptsValid && mutationGitStatusReceiptsValid && verificationReceiptsValid && attemptCountsValid && (plan.failure === null || typeof plan.failure === "string") && (plan.summaryReceipt === null || isArtifactDigest(plan.summaryReceipt)) && (plan.stateReceipt === null || isArtifactDigest(plan.stateReceipt)) && (plan.pendingStateUpdate === null || isPreparedStateUpdate(plan.pendingStateUpdate, packet)) && (plan.pendingStateUpdate === null || plan.persistenceStage === "state-update") && typeof plan.persistenceStage === "string" && stages.has(plan.persistenceStage) && completionClaimValid;
+    return plan.planId === planId3 && typeof plan.status === "string" && statuses.has(plan.status) && Number.isInteger(plan.applyAttempts) && (plan.applyAttempts ?? -1) >= 0 && (plan.applyAttempts ?? Infinity) <= 2 && Number.isInteger(plan.verificationAttempts) && (plan.verificationAttempts ?? -1) >= 0 && (plan.verificationAttempts ?? Infinity) <= 2 && pendingMutationsValid && mutationReceiptsValid && mutationGitStatusReceiptsValid && verificationReceiptsValid && attemptCountsValid && (plan.failure === null || typeof plan.failure === "string") && (plan.summaryReceipt === null || isArtifactDigest(plan.summaryReceipt)) && (plan.stateReceipt === null || isArtifactDigest(plan.stateReceipt)) && (plan.pendingStateUpdate === null || isPreparedStateUpdate(plan.pendingStateUpdate, packet)) && (plan.pendingStateUpdate === null || plan.persistenceStage === "state-update") && typeof plan.persistenceStage === "string" && stages.has(plan.persistenceStage) && completionClaimValid;
   });
 }
 function asSession(value) {
@@ -63207,14 +64540,14 @@ async function loadDurableSessions(projectRoot) {
   let names;
   try {
     const [stats, canonicalProjectRoot, canonicalSessionRoot] = await Promise.all([
-      fs21.lstat(absoluteRoot),
-      fs21.realpath(projectRoot),
-      fs21.realpath(absoluteRoot)
+      fs24.lstat(absoluteRoot),
+      fs24.realpath(projectRoot),
+      fs24.realpath(absoluteRoot)
     ]);
     if (stats.isSymbolicLink() || !stats.isDirectory() || !isInside(canonicalProjectRoot, canonicalSessionRoot)) {
       throw new Error("Execute-phase session storage is unsafe.");
     }
-    names = await fs21.readdir(absoluteRoot);
+    names = await fs24.readdir(absoluteRoot);
   } catch (error2) {
     if (error2.code === "ENOENT") return /* @__PURE__ */ new Map();
     throw error2;
@@ -63332,10 +64665,10 @@ async function persistSession(projectRoot, session) {
     session
   );
 }
-function failure(mode, projectRoot, message, status = "blocked", packet = null, fingerprint = null, warnings = []) {
+function failure(mode2, projectRoot, message, status = "blocked", packet = null, fingerprint = null, warnings = []) {
   return {
     status,
-    mode,
+    mode: mode2,
     ready: false,
     reused: false,
     projectRoot,
@@ -63383,17 +64716,17 @@ async function mutatePhaseExecutionSession(args) {
   });
 }
 async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
-  const mode = args.mode ?? "preview";
+  const mode2 = args.mode ?? "preview";
   const deps = dependencies(dependencyOverrides);
   let projectRoot;
   try {
     projectRoot = await ensureRepoRoot(args.cwd);
     await assertExecutionLockStorageSafe(projectRoot);
   } catch (error2) {
-    return failure(mode, null, error2.message);
+    return failure(mode2, null, error2.message);
   }
-  if (mode === "resume") {
-    if (!args.sessionId) return failure(mode, projectRoot, "Resume requires an exact sessionId.");
+  if (mode2 === "resume") {
+    if (!args.sessionId) return failure(mode2, projectRoot, "Resume requires an exact sessionId.");
     try {
       return await withBlueprintRepoLock(projectRoot, CONTROL_LOCK, async () => {
         const reconciled = await reconcileControlIndex(
@@ -63403,13 +64736,13 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
         const index = reconciled.index;
         const session = reconciled.sessions.get(args.sessionId);
         if (!session) {
-          return failure(mode, projectRoot, `Execute-phase session ${args.sessionId} does not exist.`);
+          return failure(mode2, projectRoot, `Execute-phase session ${args.sessionId} does not exist.`);
         }
         if (index.activeSessionId !== session.sessionId) {
-          return failure(mode, projectRoot, "The requested session is not the active execute-phase session.");
+          return failure(mode2, projectRoot, "The requested session is not the active execute-phase session.");
         }
-        if (session.packet.repository.canonicalRoot !== await fs21.realpath(projectRoot)) {
-          return failure(mode, projectRoot, "The durable session belongs to a different canonical repository.", "stale");
+        if (session.packet.repository.canonicalRoot !== await fs24.realpath(projectRoot)) {
+          return failure(mode2, projectRoot, "The durable session belongs to a different canonical repository.", "stale");
         }
         const current = session.status === "claimed" ? await buildPacket(projectRoot, {
           cwd: projectRoot,
@@ -63430,7 +64763,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
         if (current.fingerprint !== session.fingerprint || current.blockers.length > 0) {
           return {
             ...failure(
-              mode,
+              mode2,
               projectRoot,
               `Execution session is stale; expected ${session.fingerprint}, observed ${current.fingerprint}.`,
               "stale",
@@ -63452,7 +64785,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
         await persistSession(projectRoot, resumed);
         return {
           status: "resumed",
-          mode,
+          mode: mode2,
           ready: true,
           reused: true,
           projectRoot,
@@ -63464,25 +64797,25 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
         };
       });
     } catch (error2) {
-      return failure(mode, projectRoot, error2.message);
+      return failure(mode2, projectRoot, error2.message);
     }
   }
-  if (mode === "claim" && args.confirmation !== EXECUTE_PHASE_CLAIM_CONFIRMATION) {
+  if (mode2 === "claim" && args.confirmation !== EXECUTE_PHASE_CLAIM_CONFIRMATION) {
     return failure(
-      mode,
+      mode2,
       projectRoot,
       `Claim requires the exact confirmation literal: ${EXECUTE_PHASE_CLAIM_CONFIRMATION}.`
     );
   }
-  if (mode === "claim" && !/^[0-9a-f]{64}$/.test(args.previewFingerprint ?? "")) {
-    return failure(mode, projectRoot, "Claim requires the exact 64-character preview fingerprint.");
+  if (mode2 === "claim" && !/^[0-9a-f]{64}$/.test(args.previewFingerprint ?? "")) {
+    return failure(mode2, projectRoot, "Claim requires the exact 64-character preview fingerprint.");
   }
   const execute = async () => {
     const built = await buildPacket(projectRoot, args, deps);
-    if (mode === "preview") {
+    if (mode2 === "preview") {
       return {
         status: built.blockers.length > 0 ? "blocked" : "preview",
-        mode,
+        mode: mode2,
         ready: built.blockers.length === 0,
         reused: false,
         projectRoot,
@@ -63495,7 +64828,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
     }
     if (args.previewFingerprint !== built.fingerprint) {
       return failure(
-        mode,
+        mode2,
         projectRoot,
         `Preview drifted; expected ${args.previewFingerprint}, observed ${built.fingerprint}.`,
         "stale",
@@ -63506,7 +64839,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
     }
     if (built.blockers.length > 0) {
       return {
-        ...failure(mode, projectRoot, built.blockers[0], "blocked", built.packet, built.fingerprint, built.warnings),
+        ...failure(mode2, projectRoot, built.blockers[0], "blocked", built.packet, built.fingerprint, built.warnings),
         blockers: built.blockers
       };
     }
@@ -63524,7 +64857,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
       if (index.activeSessionId === session2.sessionId) {
         return {
           status: "claimed",
-          mode,
+          mode: mode2,
           ready: true,
           reused: true,
           projectRoot,
@@ -63535,11 +64868,11 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
           warnings: unique2([...built.warnings, "Identical claim reused the active durable session."])
         };
       }
-      return failure(mode, projectRoot, "This preview fingerprint was already consumed and cannot be replayed.");
+      return failure(mode2, projectRoot, "This preview fingerprint was already consumed and cannot be replayed.");
     }
     if (index.activeSessionId) {
       return failure(
-        mode,
+        mode2,
         projectRoot,
         `A different execute-phase session is already active: ${index.activeSessionId}.`
       );
@@ -63570,7 +64903,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
     await persistIndex(projectRoot, index);
     return {
       status: "claimed",
-      mode,
+      mode: mode2,
       ready: true,
       reused: false,
       projectRoot,
@@ -63582,9 +64915,9 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
     };
   };
   try {
-    return mode === "claim" ? await withBlueprintRepoLock(projectRoot, CONTROL_LOCK, execute) : await execute();
+    return mode2 === "claim" ? await withBlueprintRepoLock(projectRoot, CONTROL_LOCK, execute) : await execute();
   } catch (error2) {
-    return failure(mode, projectRoot, error2.message);
+    return failure(mode2, projectRoot, error2.message);
   }
 }
 var CONTROL_ROOT, INDEX_PATH, SESSION_ROOT, CONTROL_LOCK, EXECUTE_PHASE_CLAIM_CONFIRMATION, defaultProcessRunner, defaultDependencies;
@@ -63637,12 +64970,12 @@ var init_phase_execution_control = __esm({
 
 // src/mcp/tools/phase-execution-runtime.ts
 import { spawn } from "node:child_process";
-import { createHash as createHash10, randomUUID as randomUUID3 } from "node:crypto";
-import { promises as fs22 } from "node:fs";
-import path17 from "node:path";
+import { createHash as createHash11, randomUUID as randomUUID3 } from "node:crypto";
+import { promises as fs25 } from "node:fs";
+import path18 from "node:path";
 import { createInterface } from "node:readline";
 function sha2563(value) {
-  return createHash10("sha256").update(value).digest("hex");
+  return createHash11("sha256").update(value).digest("hex");
 }
 function uniqueSorted2(values) {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
@@ -63655,7 +64988,7 @@ function normalizeRepoRelativePath(value, label) {
     throw new Error(`${label} must be a non-empty repo-relative path without NUL bytes.`);
   }
   const normalized = value.trim();
-  if (normalized.includes("\\") || path17.posix.isAbsolute(normalized) || normalized === "." || normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
+  if (normalized.includes("\\") || path18.posix.isAbsolute(normalized) || normalized === "." || normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
     throw new Error(`${label} must be a canonical repo-relative path.`);
   }
   const firstSegment = normalized.split("/")[0]?.toLowerCase();
@@ -63665,7 +64998,7 @@ function normalizeRepoRelativePath(value, label) {
   return normalized;
 }
 function normalizeObservedRepoPath(value) {
-  if (typeof value !== "string" || value.length === 0 || value.includes("\0") || value.includes("\\") || path17.posix.isAbsolute(value) || value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") || value === ".git" || value.startsWith(".git/")) {
+  if (typeof value !== "string" || value.length === 0 || value.includes("\0") || value.includes("\\") || path18.posix.isAbsolute(value) || value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") || value === ".git" || value.startsWith(".git/")) {
     throw new Error("git.changedPath must be a canonical repo-relative path.");
   }
   return value;
@@ -63687,7 +65020,7 @@ async function assertNoSymlinkTraversal(root, relativePath, fileSystem) {
   const segments = relativePath.split("/");
   let current = root;
   for (let index = 0; index < segments.length; index += 1) {
-    current = path17.join(current, segments[index] ?? "");
+    current = path18.join(current, segments[index] ?? "");
     try {
       const stats = await fileSystem.lstat(current);
       if (stats.isSymbolicLink()) {
@@ -63708,8 +65041,8 @@ async function assertNoSymlinkTraversal(root, relativePath, fileSystem) {
   }
 }
 async function assertMutationParentContained(root, absolutePath, relativePath, fileSystem) {
-  const realParent = await fileSystem.realpath(path17.dirname(absolutePath));
-  if (realParent !== root && !realParent.startsWith(`${root}${path17.sep}`)) {
+  const realParent = await fileSystem.realpath(path18.dirname(absolutePath));
+  if (realParent !== root && !realParent.startsWith(`${root}${path18.sep}`)) {
     throw new Error(`Mutation parent escapes the canonical repository: ${relativePath}`);
   }
 }
@@ -63731,13 +65064,13 @@ async function readExistingFile(filePath, fileSystem) {
   }
 }
 function tempSibling(filePath, kind) {
-  return path17.join(
-    path17.dirname(filePath),
-    `.${path17.basename(filePath)}.blueprint-execute-${kind}-${process.pid}-${randomUUID3()}`
+  return path18.join(
+    path18.dirname(filePath),
+    `.${path18.basename(filePath)}.blueprint-execute-${kind}-${process.pid}-${randomUUID3()}`
   );
 }
 async function applyPinnedPhaseExecutionMutations(args) {
-  const realRoot = await fs22.realpath(path17.resolve(args.projectRoot));
+  const realRoot = await fs25.realpath(path18.resolve(args.projectRoot));
   const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
   if (authorized.length === 0) throw new Error("At least one authorized file or directory is required.");
   if (args.mutations.length === 0) throw new Error("At least one file mutation is required.");
@@ -63764,30 +65097,30 @@ async function applyPinnedPhaseExecutionMutations(args) {
     } else if (mutation.content !== void 0) {
       throw new Error(`Delete mutation must not include content: ${mutation.path}`);
     }
-    const absolutePath = path17.resolve(realRoot, ...mutation.path.split("/"));
-    if (!absolutePath.startsWith(`${realRoot}${path17.sep}`)) {
+    const absolutePath = path18.resolve(realRoot, ...mutation.path.split("/"));
+    if (!absolutePath.startsWith(`${realRoot}${path18.sep}`)) {
       throw new Error(`Mutation path escapes the repository: ${mutation.path}`);
     }
-    await assertNoSymlinkTraversal(realRoot, mutation.path, fs22);
-    const parentPath = path17.dirname(absolutePath);
+    await assertNoSymlinkTraversal(realRoot, mutation.path, fs25);
+    const parentPath = path18.dirname(absolutePath);
     const [parentLstat, realParent, parentStats] = await Promise.all([
-      fs22.lstat(parentPath),
-      fs22.realpath(parentPath),
-      fs22.stat(parentPath)
+      fs25.lstat(parentPath),
+      fs25.realpath(parentPath),
+      fs25.stat(parentPath)
     ]);
-    if (parentLstat.isSymbolicLink() || !parentLstat.isDirectory() || realParent !== realRoot && !realParent.startsWith(`${realRoot}${path17.sep}`)) {
+    if (parentLstat.isSymbolicLink() || !parentLstat.isDirectory() || realParent !== realRoot && !realParent.startsWith(`${realRoot}${path18.sep}`)) {
       throw new Error(`Mutation parent is not a contained real directory: ${mutation.path}`);
     }
-    const parentRelativePath = path17.relative(realRoot, realParent).replaceAll(path17.sep, "/");
-    const key = `${parentStats.dev}:${parentStats.ino}`;
-    const group = groups.get(key) ?? {
+    const parentRelativePath = path18.relative(realRoot, realParent).replaceAll(path18.sep, "/");
+    const key2 = `${parentStats.dev}:${parentStats.ino}`;
+    const group = groups.get(key2) ?? {
       parentPath: realParent,
       parentRelativePath,
       dev: String(parentStats.dev),
       ino: String(parentStats.ino),
       mutations: []
     };
-    const basename = path17.basename(absolutePath);
+    const basename = path18.basename(absolutePath);
     const nonce = `${process.pid}-${randomUUID3()}`;
     group.mutations.push({
       path: mutation.path,
@@ -63799,7 +65132,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
       backup: `.${basename}.blueprint-execute-backup-${nonce}`,
       quarantine: `.${basename}.blueprint-execute-quarantine-${nonce}`
     });
-    groups.set(key, group);
+    groups.set(key2, group);
   }
   const requestTimeoutMs = args.runtimeHooks?.pinnedWorkerTimeoutMs ?? DEFAULT_PINNED_WORKER_TIMEOUT_MS;
   if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 25 || requestTimeoutMs > 12e4) {
@@ -63817,7 +65150,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
   }));
   const committed = [];
   const recoveryCandidates = (item) => uniqueSorted2(item.group.mutations.flatMap(
-    (mutation) => [mutation.backup, mutation.staged, mutation.quarantine].filter((value) => typeof value === "string").map((fileName) => path17.join(item.group.parentPath, fileName))
+    (mutation) => [mutation.backup, mutation.staged, mutation.quarantine].filter((value) => typeof value === "string").map((fileName) => path18.join(item.group.parentPath, fileName))
   ));
   const rollbackCommitted = async (failure2) => {
     const rollbackFailures = [];
@@ -63827,7 +65160,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
         const rollback = await item.worker.request({ action: "rollback" });
         rollbackFailures.push(...rollback.rollbackFailures ?? []);
         cleanupPaths.push(...(rollback.cleanupPaths ?? []).map(
-          (fileName) => path17.join(item.group.parentPath, fileName)
+          (fileName) => path18.join(item.group.parentPath, fileName)
         ));
       } catch (error2) {
         rollbackFailures.push(
@@ -63880,7 +65213,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
           result.failure ?? "Pinned mutation commit failed."
         );
         const currentCleanup = (result.cleanupPaths ?? []).map(
-          (fileName) => path17.join(item.group.parentPath, fileName)
+          (fileName) => path18.join(item.group.parentPath, fileName)
         );
         return {
           ...previousRollback,
@@ -63898,8 +65231,8 @@ async function applyPinnedPhaseExecutionMutations(args) {
     for (const { group } of workers) {
       try {
         const [stats, realParent] = await Promise.all([
-          fs22.stat(group.parentPath),
-          fs22.realpath(group.parentPath)
+          fs25.stat(group.parentPath),
+          fs25.realpath(group.parentPath)
         ]);
         if (String(stats.dev) !== group.dev || String(stats.ino) !== group.ino || realParent !== group.parentPath) {
           containmentFailure = `Mutation parent identity changed during commit: ${group.parentRelativePath}.`;
@@ -63926,11 +65259,11 @@ async function applyPinnedPhaseExecutionMutations(args) {
     }
     const receipts = observations.flatMap((result) => result.receipts ?? []);
     let divergence = null;
-    for (const receipt of receipts) {
-      const mutation = normalizedMutations.find((candidate) => candidate.path === receipt.path);
+    for (const receipt2 of receipts) {
+      const mutation = normalizedMutations.find((candidate) => candidate.path === receipt2.path);
       const expectedHash = mutation.operation === "write" ? sha2563(mutation.content ?? "") : null;
-      if (receipt.afterHash !== expectedHash) {
-        divergence = `Mutation postimage diverged before receipt persistence for ${receipt.path}.`;
+      if (receipt2.afterHash !== expectedHash) {
+        divergence = `Mutation postimage diverged before receipt persistence for ${receipt2.path}.`;
         break;
       }
     }
@@ -63973,13 +65306,13 @@ async function applyPinnedPhaseExecutionMutations(args) {
       }
     }));
     const cleanupPaths = cleanups.flatMap(
-      (result, index) => (result.cleanupPaths ?? []).map((fileName) => path17.join(workers[index].group.parentPath, fileName))
+      (result, index) => (result.cleanupPaths ?? []).map((fileName) => path18.join(workers[index].group.parentPath, fileName))
     );
     const cleanupFailures = cleanups.flatMap((result) => result.failure ? [result.failure] : []);
     return {
       status: divergence ? "postimage-diverged" : cleanupPaths.length > 0 ? "committed-cleanup-required" : "committed",
       receipts: normalizedMutations.map(
-        (mutation) => receipts.find((receipt) => receipt.path === mutation.path)
+        (mutation) => receipts.find((receipt2) => receipt2.path === mutation.path)
       ),
       cleanupPaths,
       failure: cleanupFailures.length > 0 ? cleanupFailures.join("; ") : divergence,
@@ -63993,8 +65326,8 @@ async function applyPhaseExecutionMutations(args) {
   if (args.fileSystem === void 0) {
     return applyPinnedPhaseExecutionMutations(args);
   }
-  const fileSystem = args.fileSystem ?? fs22;
-  const realRoot = await fileSystem.realpath(path17.resolve(args.projectRoot));
+  const fileSystem = args.fileSystem ?? fs25;
+  const realRoot = await fileSystem.realpath(path18.resolve(args.projectRoot));
   const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
   if (authorized.length === 0) {
     throw new Error("At least one authorized file or directory is required.");
@@ -64029,8 +65362,8 @@ async function applyPhaseExecutionMutations(args) {
       } else if (mutation.content !== void 0) {
         throw new Error(`Delete mutation must not include content: ${mutation.path}`);
       }
-      const absolutePath = path17.resolve(realRoot, ...mutation.path.split("/"));
-      if (!absolutePath.startsWith(`${realRoot}${path17.sep}`)) {
+      const absolutePath = path18.resolve(realRoot, ...mutation.path.split("/"));
+      if (!absolutePath.startsWith(`${realRoot}${path18.sep}`)) {
         throw new Error(`Mutation path escapes the repository: ${mutation.path}`);
       }
       await assertNoSymlinkTraversal(realRoot, mutation.path, fileSystem);
@@ -64044,7 +65377,7 @@ async function applyPhaseExecutionMutations(args) {
       if (mutation.operation === "delete" && existing.content === null) {
         throw new Error(`Delete mutation target does not exist: ${mutation.path}`);
       }
-      await fileSystem.mkdir(path17.dirname(absolutePath), { recursive: true });
+      await fileSystem.mkdir(path18.dirname(absolutePath), { recursive: true });
       await assertMutationParentContained(realRoot, absolutePath, mutation.path, fileSystem);
       const stagedPath = mutation.operation === "write" ? tempSibling(absolutePath, "staged") : null;
       if (stagedPath && mutation.content !== void 0) {
@@ -64850,17 +66183,17 @@ if (!finalized) await rollback();
 });
 
 // src/mcp/tools/phase-execution-tools.ts
-import { createHash as createHash11 } from "node:crypto";
-import { promises as fs23 } from "node:fs";
-import path18 from "node:path";
+import { createHash as createHash12 } from "node:crypto";
+import { promises as fs26 } from "node:fs";
+import path19 from "node:path";
 function sha2564(value) {
-  return createHash11("sha256").update(value).digest("hex");
+  return createHash12("sha256").update(value).digest("hex");
 }
 function canonicalize2(value) {
   if (Array.isArray(value)) return value.map(canonicalize2);
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalize2(entry)])
+      Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalize2(entry)])
     );
   }
   return value;
@@ -64869,16 +66202,16 @@ function canonicalJson2(value) {
   return JSON.stringify(canonicalize2(value));
 }
 async function readRepoHash(projectRoot, relativePath) {
-  const absolutePath = path18.resolve(projectRoot, ...relativePath.split("/"));
-  if (!absolutePath.startsWith(`${path18.resolve(projectRoot)}${path18.sep}`)) {
+  const absolutePath = path19.resolve(projectRoot, ...relativePath.split("/"));
+  if (!absolutePath.startsWith(`${path19.resolve(projectRoot)}${path19.sep}`)) {
     throw new Error(`Execution authority path escapes the repository: ${relativePath}.`);
   }
   try {
-    const stats = await fs23.lstat(absolutePath);
+    const stats = await fs26.lstat(absolutePath);
     if (stats.isSymbolicLink() || !stats.isFile()) {
       throw new Error(`Execution authority path is not a regular file: ${relativePath}.`);
     }
-    const content = await fs23.readFile(absolutePath);
+    const content = await fs26.readFile(absolutePath);
     return { hash: sha2564(content), bytes: content.byteLength, mode: stats.mode & 4095 };
   } catch (error2) {
     if (error2.code === "ENOENT") {
@@ -64910,7 +66243,7 @@ function interruptedVerificationReceipt(command) {
 function latestReceiptByPath(session) {
   const receipts = /* @__PURE__ */ new Map();
   for (const plan of Object.values(session.execution.plans)) {
-    for (const receipt of plan.mutationReceipts) receipts.set(receipt.path, receipt);
+    for (const receipt2 of plan.mutationReceipts) receipts.set(receipt2.path, receipt2);
   }
   return receipts;
 }
@@ -64927,13 +66260,13 @@ async function assertSessionAuthority(projectRoot, session) {
   const persistedSummaryPaths = /* @__PURE__ */ new Set();
   let stateWasPersisted = false;
   let pendingStateUpdate = null;
-  for (const [planId2, progress] of Object.entries(session.execution.plans)) {
-    for (const receipt of progress.mutationGitStatusReceipts) {
-      mutationStatuses.set(receipt.path, receipt.status);
+  for (const [planId3, progress] of Object.entries(session.execution.plans)) {
+    for (const receipt2 of progress.mutationGitStatusReceipts) {
+      mutationStatuses.set(receipt2.path, receipt2.status);
     }
     if (progress.persistenceStage !== "none") {
       persistedSummaryPaths.add(
-        `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId2}-SUMMARY.md`
+        `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId3}-SUMMARY.md`
       );
     }
     if (progress.persistenceStage === "done" || progress.pendingStateUpdate !== null) {
@@ -65037,10 +66370,10 @@ async function assertSessionAuthority(projectRoot, session) {
   }
   for (const plan of session.packet.selectedPlans) {
     for (const artifact of [...plan.ownedFilePreimages, ...plan.readFirstArtifacts]) {
-      const receipt = receipts.get(artifact.path);
+      const receipt2 = receipts.get(artifact.path);
       const observed = await readRepoHash(projectRoot, artifact.path);
-      const expectedHash = receipt ? receipt.afterHash : artifact.sha256;
-      const expectedMode = receipt ? receipt.afterMode : artifact.mode;
+      const expectedHash = receipt2 ? receipt2.afterHash : artifact.sha256;
+      const expectedMode = receipt2 ? receipt2.afterMode : artifact.mode;
       if (observed.hash !== expectedHash || observed.mode !== expectedMode) {
         throw new Error(`Execute-phase repo preimage drifted outside MCP ownership: ${artifact.path}.`);
       }
@@ -65090,20 +66423,20 @@ async function recoverInterruptedMutation(projectRoot, session, progress) {
 async function captureMutationGitStatusReceipts(projectRoot, receipts) {
   const repository = await capturePhaseExecutionRepositorySnapshot(projectRoot);
   const statuses = new Map(repository.workingTree.map((entry) => [entry.path, entry.status]));
-  return receipts.map((receipt) => ({
-    path: receipt.path,
-    status: statuses.get(receipt.path) ?? null
+  return receipts.map((receipt2) => ({
+    path: receipt2.path,
+    status: statuses.get(receipt2.path) ?? null
   }));
 }
-function expectedPreimages(session, planId2) {
-  const plan = session.packet.selectedPlans.find((candidate) => candidate.planId === planId2);
-  if (!plan) throw new Error(`Plan ${planId2} is not selected in this execute-phase session.`);
+function expectedPreimages(session, planId3) {
+  const plan = session.packet.selectedPlans.find((candidate) => candidate.planId === planId3);
+  if (!plan) throw new Error(`Plan ${planId3} is not selected in this execute-phase session.`);
   const expected = new Map(plan.ownedFilePreimages.map((entry) => [entry.path, entry.sha256]));
   for (const packetPlan of session.packet.selectedPlans) {
-    for (const receipt of session.execution.plans[packetPlan.planId]?.mutationReceipts ?? []) {
-      if (expected.has(receipt.path)) expected.set(receipt.path, receipt.afterHash);
+    for (const receipt2 of session.execution.plans[packetPlan.planId]?.mutationReceipts ?? []) {
+      if (expected.has(receipt2.path)) expected.set(receipt2.path, receipt2.afterHash);
     }
-    if (packetPlan.planId === planId2) break;
+    if (packetPlan.planId === planId3) break;
   }
   return expected;
 }
@@ -65321,7 +66654,7 @@ async function blueprintPhaseExecutionVerify(args, dependencies2 = {}) {
         timeoutMs: dependencies2.timeoutMs
       });
       progress.verificationReceipts.push(receipts);
-      const passed = receipts.length === packetPlan.verificationCommands.length && receipts.every((receipt) => receipt.passed);
+      const passed = receipts.length === packetPlan.verificationCommands.length && receipts.every((receipt2) => receipt2.passed);
       await assertSessionAuthority(context.projectRoot, session);
       if (passed) {
         progress.status = "verified";
@@ -65339,7 +66672,7 @@ async function blueprintPhaseExecutionVerify(args, dependencies2 = {}) {
           }
         };
       }
-      const failure2 = receipts.find((receipt) => !receipt.passed);
+      const failure2 = receipts.find((receipt2) => !receipt2.passed);
       progress.failure = failure2 ? `Verification failed for ${failure2.command} (exit ${failure2.exitCode ?? "none"}${failure2.timedOut ? ", timed out" : ""}).` : "Verification did not produce receipts for every bound command.";
       if (progress.verificationAttempts === 1) {
         progress.status = "awaiting-repair";
@@ -65381,7 +66714,7 @@ function summaryModelForPlan(session, packetPlan, progress) {
   const completed = hasReceiptDerivedCompletion(packetPlan, progress);
   const phase = session.packet.selection.phaseNumber ?? String(session.prepareArgs.phase ?? "");
   const remainingPending = session.packet.selection.pendingPlanIds.filter(
-    (planId2) => planId2 !== packetPlan.planId && session.execution.plans[planId2]?.status !== "persisted"
+    (planId3) => planId3 !== packetPlan.planId && session.execution.plans[planId3]?.status !== "persisted"
   );
   const nextSafeAction = completed ? remainingPending.length > 0 ? `/blu-execute-phase ${phase}` : `/blu-validate-phase ${phase}` : "/blu-progress";
   const latestVerification = progress.verificationReceipts.at(-1) ?? [];
@@ -65389,7 +66722,7 @@ function summaryModelForPlan(session, packetPlan, progress) {
     session.packet.existingSummaries.map((summary) => [summary.planId, summary])
   );
   const changes = progress.mutationReceipts.map(
-    (receipt) => `${receipt.operation === "delete" ? "Deleted" : "Updated"} ${receipt.path} through the Blueprint MCP execution boundary (${receipt.beforeHash ?? "missing"} -> ${receipt.afterHash ?? "missing"}).`
+    (receipt2) => `${receipt2.operation === "delete" ? "Deleted" : "Updated"} ${receipt2.path} through the Blueprint MCP execution boundary (${receipt2.beforeHash ?? "missing"} -> ${receipt2.afterHash ?? "missing"}).`
   );
   const failure2 = progress.failure ?? "Execution stopped before the selected plan reached passing verification.";
   return {
@@ -65399,22 +66732,22 @@ function summaryModelForPlan(session, packetPlan, progress) {
     outcome: completed ? [`Plan ${packetPlan.planId} completed with MCP-owned mutation and verification receipts.`] : [`Plan ${packetPlan.planId} stopped with durable execution evidence: ${failure2}`],
     changesMade: changes.length > 0 ? changes : [`No repository mutation was accepted for plan ${packetPlan.planId}.`],
     targetedVerification: packetPlan.verificationCommands.map((command) => {
-      const receipt = latestVerification.find((candidate) => candidate.command === command);
+      const receipt2 = latestVerification.find((candidate) => candidate.command === command);
       return {
         check: `${command} exits 0`,
         command,
-        result: completed && receipt?.passed ? "pass" : "blocked",
-        evidence: receipt ? `Exit ${receipt.exitCode ?? "none"}; stdout sha256 ${receipt.stdoutHash}; stderr sha256 ${receipt.stderrHash}.` : "No successful verification receipt was persisted.",
-        notes: receipt?.timedOut ? "The bound command timed out and its process group was terminated." : receipt?.passed ? "The exact packet-bound command passed." : failure2
+        result: completed && receipt2?.passed ? "pass" : "blocked",
+        evidence: receipt2 ? `Exit ${receipt2.exitCode ?? "none"}; stdout sha256 ${receipt2.stdoutHash}; stderr sha256 ${receipt2.stderrHash}.` : "No successful verification receipt was persisted.",
+        notes: receipt2?.timedOut ? "The bound command timed out and its process group was terminated." : receipt2?.passed ? "The exact packet-bound command passed." : failure2
       };
     }),
-    dependencyPlans: packetPlan.dependsOn.map((planId2) => {
-      const summary = existingByPlan.get(planId2);
+    dependencyPlans: packetPlan.dependsOn.map((planId3) => {
+      const summary = existingByPlan.get(planId3);
       return {
-        planId: planId2,
-        path: summary?.path ?? `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId2}-SUMMARY.md`,
+        planId: planId3,
+        path: summary?.path ?? `${session.packet.selection.phaseDir}/${session.packet.selection.phasePrefix}-${planId3}-SUMMARY.md`,
         status: "satisfied",
-        evidence: summary?.path ? `Dependency completion was bound from ${summary.path}.` : `Dependency plan ${planId2} was satisfied by the claimed plan topology.`
+        evidence: summary?.path ? `Dependency completion was bound from ${summary.path}.` : `Dependency plan ${planId3} was satisfied by the claimed plan topology.`
       };
     }),
     manualOrDeferredWork: completed ? [{ item: "none", reason: "none", followUp: "none", status: "NONE" }] : [{
@@ -65436,15 +66769,15 @@ function summaryModelForPlan(session, packetPlan, progress) {
         source: packetPlan.path,
         summary: `Claimed execution authority for plan ${packetPlan.planId}.`
       },
-      ...progress.mutationReceipts.map((receipt) => ({
+      ...progress.mutationReceipts.map((receipt2) => ({
         kind: "repo-path",
-        source: receipt.path,
-        summary: `MCP mutation receipt ${receipt.beforeHash ?? "missing"} -> ${receipt.afterHash ?? "missing"}.`
+        source: receipt2.path,
+        summary: `MCP mutation receipt ${receipt2.beforeHash ?? "missing"} -> ${receipt2.afterHash ?? "missing"}.`
       })),
-      ...latestVerification.map((receipt) => ({
+      ...latestVerification.map((receipt2) => ({
         kind: "command",
-        source: receipt.command,
-        summary: `Bound verification ${receipt.passed ? "passed" : "failed"} with exit ${receipt.exitCode ?? "none"}.`
+        source: receipt2.command,
+        summary: `Bound verification ${receipt2.passed ? "passed" : "failed"} with exit ${receipt2.exitCode ?? "none"}.`
       }))
     ],
     nextSafeAction
@@ -65536,14 +66869,14 @@ async function blueprintPhaseExecutionFinalize(args, dependencyOverrides = {}) {
         if (progress.pendingStateUpdate === null) {
           const prepared = await deps.statePrepare({ cwd: context.projectRoot, base: "synced" });
           const observed = await readRepoHash(context.projectRoot, ".blueprint/STATE.md");
-          const currentContent = observed.hash === null ? null : await fs23.readFile(path18.join(context.projectRoot, ".blueprint/STATE.md"), "utf8");
+          const currentContent = observed.hash === null ? null : await fs26.readFile(path19.join(context.projectRoot, ".blueprint/STATE.md"), "utf8");
           if (prepared.expectedStateContent !== currentContent) {
             throw new Error("Execute-phase STATE authority changed while its deterministic update was prepared.");
           }
           const canonicalPrepared = {
             ...prepared,
             projectRoot: session.packet.repository.canonicalRoot,
-            absoluteStatePath: path18.join(
+            absoluteStatePath: path19.join(
               session.packet.repository.canonicalRoot,
               ".blueprint/STATE.md"
             )
@@ -65701,15 +67034,15 @@ var init_phase_execution_tools = __esm({
 
 // src/mcp/tools/cleanup.ts
 import { execFile as execFile5 } from "node:child_process";
-import { promises as fs24 } from "node:fs";
-import path19 from "node:path";
+import { promises as fs27 } from "node:fs";
+import path20 from "node:path";
 import { promisify as promisify4 } from "node:util";
 function activeCleanupArchiveFileSystem() {
   return cleanupArchiveFileSystemForTest ?? defaultCleanupArchiveFileSystem;
 }
 async function pathExists4(targetPath) {
   try {
-    await fs24.access(targetPath);
+    await fs27.access(targetPath);
     return true;
   } catch {
     return false;
@@ -65822,28 +67155,28 @@ async function listPhaseDirectories(projectRoot) {
   if (!await pathExists4(phasesRoot)) {
     throw new Error(`Missing ${BLUEPRINT_PHASES_PATH}.`);
   }
-  const entries = await fs24.readdir(phasesRoot, { withFileTypes: true });
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => path19.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
+  const entries = await fs27.readdir(phasesRoot, { withFileTypes: true });
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => path20.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
 }
 async function listPhaseArtifactPaths(projectRoot, phaseDir2) {
   const absolutePhaseDir = resolveBlueprintPath(projectRoot, phaseDir2);
-  const entries = await fs24.readdir(absolutePhaseDir, { withFileTypes: true });
-  return entries.filter((entry) => entry.isFile()).map((entry) => path19.posix.join(phaseDir2, entry.name)).sort();
+  const entries = await fs27.readdir(absolutePhaseDir, { withFileTypes: true });
+  return entries.filter((entry) => entry.isFile()).map((entry) => path20.posix.join(phaseDir2, entry.name)).sort();
 }
 function milestoneFromSummaryReportPath(reportPath) {
-  const match = path19.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
+  const match = path20.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
   return match?.[1] ?? null;
 }
 async function completedMilestoneEvidenceForPhase(projectRoot, phaseDir2, reportPaths, activeMilestone) {
   const matches = [];
   for (const reportPath of reportPaths.filter(
-    (value) => path19.posix.basename(value).startsWith("milestone-summary-")
+    (value) => path20.posix.basename(value).startsWith("milestone-summary-")
   )) {
     const evidenceMilestone = milestoneFromSummaryReportPath(reportPath);
     if (!evidenceMilestone || evidenceMilestone === activeMilestone) {
       continue;
     }
-    const reportContent = await fs24.readFile(resolveBlueprintPath(projectRoot, reportPath), "utf8");
+    const reportContent = await fs27.readFile(resolveBlueprintPath(projectRoot, reportPath), "utf8");
     const archivalEvidencePattern = new RegExp(
       `${escapeRegExp2(phaseDir2)}[^\\n]*safe to archive`,
       "i"
@@ -65995,7 +67328,7 @@ async function executeCleanupArchiveMutation(args) {
   const skippedPhaseDirs = [];
   const failureReasons = {};
   for (const phaseDir2 of args.selectedPhaseDirs) {
-    const destinationPhaseDir = path19.posix.join(args.archiveDestination, path19.posix.basename(phaseDir2));
+    const destinationPhaseDir = path20.posix.join(args.archiveDestination, path20.posix.basename(phaseDir2));
     try {
       await archivePhaseDirectory({
         projectRoot: args.projectRoot,
@@ -66081,7 +67414,7 @@ function cleanupArchiveStatusForOutcome(outcome) {
 async function rejectDestinationCollisions(args) {
   const collisions = [];
   for (const phaseDir2 of args.selectedPhaseDirs) {
-    const destinationPhaseDir = path19.posix.join(args.archiveDestination, path19.posix.basename(phaseDir2));
+    const destinationPhaseDir = path20.posix.join(args.archiveDestination, path20.posix.basename(phaseDir2));
     if (await pathExists4(resolveBlueprintPath(args.projectRoot, destinationPhaseDir))) {
       collisions.push(destinationPhaseDir);
     }
@@ -66089,7 +67422,7 @@ async function rejectDestinationCollisions(args) {
   return collisions.sort();
 }
 async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
-  const mode = args.mode ?? "preview";
+  const mode2 = args.mode ?? "preview";
   const operation = args.operation ?? "move";
   let archiveDestination;
   let expectedSelectedPhaseDirs = null;
@@ -66113,7 +67446,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
     return buildCleanupArchiveResult({
       status: "invalid",
       projectRoot,
-      mode,
+      mode: mode2,
       operation,
       archiveDestination: args.archiveDestination ?? CLEANUP_ARCHIVE_DEFAULT_DESTINATION,
       reason: errorMessage(error2),
@@ -66132,7 +67465,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: status2,
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66146,7 +67479,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       });
     }
     const protectedPhaseDirs = scope.protectedEntries.map((entry) => entry.path);
-    if (mode === "commit" && (!expectedSelectedPhaseDirs || !expectedProtectedPhaseDirs)) {
+    if (mode2 === "commit" && (!expectedSelectedPhaseDirs || !expectedProtectedPhaseDirs)) {
       const missingFields = [];
       if (!expectedSelectedPhaseDirs) {
         missingFields.push("expectedSelectedPhaseDirs");
@@ -66158,7 +67491,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66171,7 +67504,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
         warnings: scope.warnings
       });
     }
-    if (mode === "commit" && expectedSelectedPhaseDirs && !arraysEqual(expectedSelectedPhaseDirs, scope.selectedPhaseDirs)) {
+    if (mode2 === "commit" && expectedSelectedPhaseDirs && !arraysEqual(expectedSelectedPhaseDirs, scope.selectedPhaseDirs)) {
       const reason2 = mismatchReason(
         "Selected phase directories",
         expectedSelectedPhaseDirs,
@@ -66180,7 +67513,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66193,7 +67526,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
         warnings: scope.warnings
       });
     }
-    if (mode === "commit" && expectedProtectedPhaseDirs && !arraysEqual(expectedProtectedPhaseDirs, protectedPhaseDirs)) {
+    if (mode2 === "commit" && expectedProtectedPhaseDirs && !arraysEqual(expectedProtectedPhaseDirs, protectedPhaseDirs)) {
       const reason2 = mismatchReason(
         "Protected phase directories",
         expectedProtectedPhaseDirs,
@@ -66202,7 +67535,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66215,11 +67548,11 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
         warnings: scope.warnings
       });
     }
-    if (mode === "preview") {
+    if (mode2 === "preview") {
       return buildCleanupArchiveResult({
         status: "ready",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66234,7 +67567,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66252,7 +67585,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66270,7 +67603,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66288,7 +67621,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66312,7 +67645,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66332,7 +67665,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       return buildCleanupArchiveResult({
         status: "blocked",
         projectRoot,
-        mode,
+        mode: mode2,
         operation,
         archiveDestination,
         archiveDestinationExists,
@@ -66396,7 +67729,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
     return buildCleanupArchiveResult({
       status,
       projectRoot,
-      mode,
+      mode: mode2,
       operation,
       archiveDestination,
       archiveDestinationExists: true,
@@ -66414,7 +67747,7 @@ async function blueprintCleanupArchiveWithProjectRoot(args, projectRoot) {
       warnings: [...scope.warnings, ...reportWarnings]
     });
   };
-  if (mode === "preview") {
+  if (mode2 === "preview") {
     return run2();
   }
   return withBlueprintRepoLock(
@@ -66468,10 +67801,10 @@ var init_cleanup = __esm({
       expectedProtectedPhaseDirs: array(string2()).optional()
     };
     defaultCleanupArchiveFileSystem = {
-      mkdir: (targetPath, options) => fs24.mkdir(targetPath, options),
-      rename: (sourcePath, destinationPath) => fs24.rename(sourcePath, destinationPath),
-      cp: (sourcePath, destinationPath, options) => fs24.cp(sourcePath, destinationPath, options),
-      rm: (targetPath, options) => fs24.rm(targetPath, options)
+      mkdir: (targetPath, options) => fs27.mkdir(targetPath, options),
+      rename: (sourcePath, destinationPath) => fs27.rename(sourcePath, destinationPath),
+      cp: (sourcePath, destinationPath, options) => fs27.cp(sourcePath, destinationPath, options),
+      rm: (targetPath, options) => fs27.rm(targetPath, options)
     };
     cleanupArchiveFileSystemForTest = null;
     cleanupToolDefinitions = [
@@ -66486,9 +67819,9 @@ var init_cleanup = __esm({
 });
 
 // src/mcp/tools/review.ts
-import { createHash as createHash12 } from "node:crypto";
-import { promises as fs25 } from "node:fs";
-import path20 from "node:path";
+import { createHash as createHash13 } from "node:crypto";
+import { promises as fs28 } from "node:fs";
+import path21 from "node:path";
 function createAjvValidator2() {
   return new import__3.Ajv2020({
     allErrors: true,
@@ -66532,7 +67865,7 @@ function collectModelStringEntries3(value, pathValue = "model") {
   }
   if (typeof value === "object" && value !== null) {
     return Object.entries(value).flatMap(
-      ([key, item]) => collectModelStringEntries3(item, `${pathValue}.${key}`)
+      ([key2, item]) => collectModelStringEntries3(item, `${pathValue}.${key2}`)
     );
   }
   return [];
@@ -66648,7 +67981,7 @@ function stripVisibleReviewTargetId2(value) {
   return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
 }
 function buildLegacyReviewTargetId(prefix, sourceSection, value) {
-  const digest2 = createHash12("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
+  const digest2 = createHash13("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
   return `${prefix}-LEGACY-${digest2}`;
 }
 function sanitizeMarkdownScalar(value) {
@@ -66778,13 +68111,13 @@ function buildTaskLocationSchema(scopeFiles) {
 function asJsonObject3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
-function getJsonObjectProperty4(value, key) {
-  return asJsonObject3(value[key]);
+function getJsonObjectProperty4(value, key2) {
+  return asJsonObject3(value[key2]);
 }
 function buildCodeReviewTaskSchema(args) {
-  const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty4(schema, "properties");
-  const defs = getJsonObjectProperty4(schema, "$defs");
+  const schema2 = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty4(schema2, "properties");
+  const defs = getJsonObjectProperty4(schema2, "$defs");
   const finding = defs ? getJsonObjectProperty4(defs, "finding") : null;
   const findingProperties = finding ? getJsonObjectProperty4(finding, "properties") : null;
   const location2 = findingProperties ? getJsonObjectProperty4(findingProperties, "location") : null;
@@ -66806,12 +68139,12 @@ function buildCodeReviewTaskSchema(args) {
     };
   }
   if (location2) {
-    for (const key of Object.keys(location2)) {
-      delete location2[key];
+    for (const key2 of Object.keys(location2)) {
+      delete location2[key2];
     }
     Object.assign(location2, buildTaskLocationSchema(args.scopeFiles));
   }
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     preferredNextSafeAction: args.preferredNextSafeAction,
     noFindingPreferredNextSafeAction: args.noFindingPreferredNextSafeAction,
     secondaryNextSafeAction: args.secondaryNextSafeAction,
@@ -66819,7 +68152,7 @@ function buildCodeReviewTaskSchema(args) {
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
     scopeFiles: args.scopeFiles
   };
-  return schema;
+  return schema2;
 }
 async function buildCodeReviewAuthoringContext(args) {
   const modelContract = readArtifactContract("review.code-review").modelContract;
@@ -66917,8 +68250,8 @@ async function collectPeerReviewEvidenceArtifacts(args) {
   ]);
 }
 function buildPeerReviewTaskSchema(args) {
-  const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty4(schema, "properties");
+  const schema2 = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty4(schema2, "properties");
   if (properties) {
     const planReviews = getJsonObjectProperty4(properties, "planReviews");
     if (planReviews) {
@@ -66926,10 +68259,10 @@ function buildPeerReviewTaskSchema(args) {
       planReviews.maxItems = args.plans.length;
       const items = getJsonObjectProperty4(planReviews, "items");
       const itemProperties = items ? getJsonObjectProperty4(items, "properties") : null;
-      const planId2 = itemProperties ? getJsonObjectProperty4(itemProperties, "planId") : null;
+      const planId3 = itemProperties ? getJsonObjectProperty4(itemProperties, "planId") : null;
       const pathProperty = itemProperties ? getJsonObjectProperty4(itemProperties, "path") : null;
-      if (planId2) {
-        planId2.enum = args.plans.map((plan) => plan.planId);
+      if (planId3) {
+        planId3.enum = args.plans.map((plan) => plan.planId);
       }
       if (pathProperty) {
         pathProperty.enum = args.plans.map((plan) => plan.path);
@@ -66963,8 +68296,8 @@ function buildPeerReviewTaskSchema(args) {
       nextSafeAction.enum = args.allowedNextActions;
     }
   }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
+  const existingAllOf = Array.isArray(schema2.allOf) ? schema2.allOf : [];
+  schema2.allOf = [
     ...existingAllOf,
     {
       if: {
@@ -67012,7 +68345,7 @@ function buildPeerReviewTaskSchema(args) {
       }
     }
   ];
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     reportPath: args.reportPath,
     plans: args.plans,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
@@ -67021,7 +68354,7 @@ function buildPeerReviewTaskSchema(args) {
     blockedNextSafeActions: args.blockedNextSafeActions,
     allowedNextActions: args.allowedNextActions
   };
-  return schema;
+  return schema2;
 }
 async function buildPeerReviewAuthoringContext(args) {
   const contract = readArtifactContract("review.peer-review");
@@ -67052,7 +68385,7 @@ async function buildPeerReviewAuthoringContext(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path21.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -67172,10 +68505,10 @@ async function buildPeerReviewAuthoringContext(args) {
     ])
   };
 }
-function allowOnlyEmptyArray3(schema) {
-  schema.minItems = 0;
-  schema.maxItems = 0;
-  delete schema.items;
+function allowOnlyEmptyArray3(schema2) {
+  schema2.minItems = 0;
+  schema2.maxItems = 0;
+  delete schema2.items;
 }
 function reviewFixTargetsFromFindings(loaded) {
   const findingTargets = loaded.findings.map((finding) => ({
@@ -67286,8 +68619,8 @@ function reviewFixEvidenceKindForSource(source) {
   return "other";
 }
 async function buildReviewFixTaskSchema(args) {
-  const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty4(schema, "properties");
+  const schema2 = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty4(schema2, "properties");
   if (properties) {
     const status = getJsonObjectProperty4(properties, "status");
     if (status && !args.allowCompleted) {
@@ -67316,14 +68649,14 @@ async function buildReviewFixTaskSchema(args) {
         dependencyPlans.maxItems = args.dependencyPlans.length;
         const items = getJsonObjectProperty4(dependencyPlans, "items");
         const itemProperties = items ? getJsonObjectProperty4(items, "properties") : null;
-        const planId2 = itemProperties ? getJsonObjectProperty4(itemProperties, "planId") : null;
+        const planId3 = itemProperties ? getJsonObjectProperty4(itemProperties, "planId") : null;
         const pathProperty = itemProperties ? getJsonObjectProperty4(itemProperties, "path") : null;
         const statusProperty = itemProperties ? getJsonObjectProperty4(itemProperties, "status") : null;
         const unsatisfiedDependencyIds = new Set(
           args.executionDebt.unsatisfiedDependencyPlans.map((dependency) => dependency.planId)
         );
-        if (planId2) {
-          planId2.enum = args.dependencyPlans.map((dependency) => dependency.planId);
+        if (planId3) {
+          planId3.enum = args.dependencyPlans.map((dependency) => dependency.planId);
         }
         if (pathProperty) {
           pathProperty.enum = args.dependencyPlans.map((dependency) => dependency.path);
@@ -67426,8 +68759,8 @@ async function buildReviewFixTaskSchema(args) {
       nextSafeAction.enum = args.allowedNextActions;
     }
   }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
+  const existingAllOf = Array.isArray(schema2.allOf) ? schema2.allOf : [];
+  schema2.allOf = [
     ...existingAllOf,
     {
       if: {
@@ -67469,7 +68802,7 @@ async function buildReviewFixTaskSchema(args) {
       }
     }
   ];
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     targets: args.targets,
     selectedTargetIds: args.selectedTargetIds,
     dependencyPlans: args.dependencyPlans,
@@ -67481,7 +68814,7 @@ async function buildReviewFixTaskSchema(args) {
     blockedNextSafeActions: args.blockedNextSafeActions,
     blockedRequiredNextSafeAction: args.blockedRequiredNextSafeAction
   };
-  return schema;
+  return schema2;
 }
 async function buildReviewFixAuthoringContext(args) {
   const located = await blueprintPhaseLocate2({
@@ -67530,7 +68863,7 @@ async function buildReviewFixAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path21.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -67581,10 +68914,10 @@ async function buildReviewFixAuthoringContext(args) {
   );
   const summaryReads = await Promise.all(
     summaryIndex.completedPlans.map(
-      (planId2) => blueprintPhaseSummaryRead({
+      (planId3) => blueprintPhaseSummaryRead({
         cwd: args.projectRoot,
         phase: phaseNumber,
-        planId: planId2
+        planId: planId3
       })
     )
   );
@@ -67599,8 +68932,8 @@ async function buildReviewFixAuthoringContext(args) {
       ).map((dependency) => `${dependency.planId}	${dependency.path}`) : []
     )
   ).map((entry) => {
-    const [planId2, dependencyPath] = entry.split("	");
-    return { planId: planId2, path: dependencyPath };
+    const [planId3, dependencyPath] = entry.split("	");
+    return { planId: planId3, path: dependencyPath };
   });
   const completedSummaries = summaryReads.filter((summaryRead) => summaryRead.found && summaryRead.path && summaryRead.validation?.valid).map((summaryRead) => summaryRead.path).sort((left, right) => left.localeCompare(right));
   const completedDependencyPlanIds = new Set(summaryIndex.completedPlans);
@@ -67744,7 +69077,7 @@ async function inspectUatRoutingState(args) {
     };
   }
   try {
-    const content = await fs25.readFile(
+    const content = await fs28.readFile(
       resolveBlueprintPath(args.projectRoot, args.artifactPath),
       "utf8"
     );
@@ -68044,9 +69377,9 @@ function parseThreatFlagsFromSummaryContent(content, sourceSummary) {
   return flags;
 }
 function buildSecurityTaskSchema(args) {
-  const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty4(schema, "properties");
-  const defs = getJsonObjectProperty4(schema, "$defs");
+  const schema2 = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty4(schema2, "properties");
+  const defs = getJsonObjectProperty4(schema2, "$defs");
   if (properties) {
     const status = getJsonObjectProperty4(properties, "status");
     if (status && !args.allowCompleted) {
@@ -68111,8 +69444,8 @@ function buildSecurityTaskSchema(args) {
       nextSafeAction.enum = args.allowedNextActions;
     }
   }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
+  const existingAllOf = Array.isArray(schema2.allOf) ? schema2.allOf : [];
+  schema2.allOf = [
     ...existingAllOf,
     {
       if: {
@@ -68154,7 +69487,7 @@ function buildSecurityTaskSchema(args) {
       }
     }
   ];
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     declaredThreats: args.declaredThreats,
     summaryThreatFlags: args.summaryThreatFlags,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
@@ -68163,7 +69496,7 @@ function buildSecurityTaskSchema(args) {
     blockedNextSafeAction: args.blockedNextSafeAction,
     allowCompleted: args.allowCompleted
   };
-  return schema;
+  return schema2;
 }
 async function buildSecurityAuthoringContext(args) {
   const located = await blueprintPhaseLocate2({
@@ -68213,7 +69546,7 @@ async function buildSecurityAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path21.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -68271,10 +69604,10 @@ async function buildSecurityAuthoringContext(args) {
   );
   const summaryReads = await Promise.all(
     summaryIndex.completedPlans.map(
-      (planId2) => blueprintPhaseSummaryRead({
+      (planId3) => blueprintPhaseSummaryRead({
         cwd: args.projectRoot,
         phase: phaseNumber,
-        planId: planId2
+        planId: planId3
       })
     )
   );
@@ -68411,8 +69744,8 @@ async function buildAllowedUiReviewNextActions(args) {
   };
 }
 function buildUiReviewTaskSchema(args) {
-  const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty4(schema, "properties");
+  const schema2 = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty4(schema2, "properties");
   if (properties) {
     const verdict = getJsonObjectProperty4(properties, "verdict");
     if (verdict && !args.allowPass) {
@@ -68434,7 +69767,7 @@ function buildUiReviewTaskSchema(args) {
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
-    const defs = getJsonObjectProperty4(schema, "$defs");
+    const defs = getJsonObjectProperty4(schema2, "$defs");
     const auditTrail = defs ? getJsonObjectProperty4(defs, "auditTrail") : null;
     const auditTrailProperties = auditTrail ? getJsonObjectProperty4(auditTrail, "properties") : null;
     const existingReviewPosture = auditTrailProperties ? getJsonObjectProperty4(auditTrailProperties, "existingReviewPosture") : null;
@@ -68468,8 +69801,8 @@ function buildUiReviewTaskSchema(args) {
       );
     }
   }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
+  const existingAllOf = Array.isArray(schema2.allOf) ? schema2.allOf : [];
+  schema2.allOf = [
     ...existingAllOf,
     {
       if: {
@@ -68511,7 +69844,7 @@ function buildUiReviewTaskSchema(args) {
       }
     }
   ];
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
     optionalEvidenceArtifacts: args.optionalEvidenceArtifacts,
     completedPlans: args.completedPlans,
@@ -68525,7 +69858,7 @@ function buildUiReviewTaskSchema(args) {
     followUpNextSafeAction: args.followUpNextSafeAction,
     blockedNextSafeAction: args.blockedNextSafeAction
   };
-  return schema;
+  return schema2;
 }
 async function buildUiReviewAuthoringContext(args) {
   const located = await blueprintPhaseLocate2({
@@ -68574,7 +69907,7 @@ async function buildUiReviewAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path21.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -68632,8 +69965,8 @@ async function buildUiReviewAuthoringContext(args) {
       ).map((dependency) => `${dependency.planId}	${dependency.path}`)
     )
   ).map((entry) => {
-    const [planId2, dependencyPath] = entry.split("	");
-    return { planId: planId2, path: dependencyPath };
+    const [planId3, dependencyPath] = entry.split("	");
+    return { planId: planId3, path: dependencyPath };
   }).sort((left, right) => left.planId.localeCompare(right.planId));
   if (completedSummaries.length === 0) {
     blockers.push(
@@ -68720,7 +70053,7 @@ async function buildUiReviewAuthoringContext(args) {
 }
 async function pathExists5(targetPath) {
   try {
-    await fs25.access(targetPath);
+    await fs28.access(targetPath);
     return true;
   } catch {
     return false;
@@ -70196,12 +71529,12 @@ function valueAtJsonPointer2(root, pointer) {
     return root;
   }
   return pointer.split("/").filter((segment) => segment.length > 0).reduce((current, segment) => {
-    const key = segment.replace(/~1/g, "/").replace(/~0/g, "~");
-    if (Array.isArray(current) && /^\d+$/.test(key)) {
-      return current[Number(key)];
+    const key2 = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+    if (Array.isArray(current) && /^\d+$/.test(key2)) {
+      return current[Number(key2)];
     }
-    if (typeof current === "object" && current !== null && key in current) {
-      return current[key];
+    if (typeof current === "object" && current !== null && key2 in current) {
+      return current[key2];
     }
     return void 0;
   }, root);
@@ -70535,13 +71868,13 @@ function normalizeReviewFixModel(model) {
   const remediationSummary = normalizeStringArray2(model.remediationSummary);
   const findingsAddressed = Array.isArray(model.findingsAddressed) ? model.findingsAddressed : null;
   const changesMade = Array.isArray(model.changesMade) ? model.changesMade : null;
-  const verification = Array.isArray(model.verification) ? model.verification : null;
+  const verification2 = Array.isArray(model.verification) ? model.verification : null;
   const dependencyPlans = Array.isArray(model.dependencyPlans) ? model.dependencyPlans : null;
   const manualOrDeferredWork = Array.isArray(model.manualOrDeferredWork) ? model.manualOrDeferredWork : null;
   const gapRoutes = Array.isArray(model.gapRoutes) ? model.gapRoutes : null;
   const followUps = normalizeStringArray2(model.followUps);
   const evidence = Array.isArray(model.evidence) ? model.evidence : null;
-  if (typeof model.status !== "string" || typeof model.readiness !== "string" || typeof model.completionState !== "string" || remediationSummary === null || findingsAddressed === null || changesMade === null || verification === null || dependencyPlans === null || manualOrDeferredWork === null || gapRoutes === null || followUps === null || evidence === null || typeof model.nextSafeAction !== "string") {
+  if (typeof model.status !== "string" || typeof model.readiness !== "string" || typeof model.completionState !== "string" || remediationSummary === null || findingsAddressed === null || changesMade === null || verification2 === null || dependencyPlans === null || manualOrDeferredWork === null || gapRoutes === null || followUps === null || evidence === null || typeof model.nextSafeAction !== "string") {
     return null;
   }
   const normalizedFindings = findingsAddressed.map((row) => {
@@ -70560,7 +71893,7 @@ function normalizeReviewFixModel(model) {
       summary: rowObject.summary.trim()
     } : null;
   });
-  const normalizedVerification = verification.map((row) => {
+  const normalizedVerification = verification2.map((row) => {
     const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.check === "string" && typeof rowObject.command === "string" && typeof rowObject.result === "string" && typeof rowObject.evidence === "string" ? {
       check: rowObject.check.trim(),
@@ -70844,7 +72177,7 @@ function parseCodeReviewLocation(location2) {
   };
 }
 async function countFileLines(filePath) {
-  const content = await fs25.readFile(filePath, "utf8");
+  const content = await fs28.readFile(filePath, "utf8");
   const contentWithoutTerminalNewline = content.replace(/(?:\r\n|\r|\n)$/, "");
   if (contentWithoutTerminalNewline.length === 0) {
     return content.length === 0 ? 0 : 1;
@@ -71019,7 +72352,7 @@ async function addFindingLocationDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs25.stat(absolutePath);
+      const stats = await fs28.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -71255,7 +72588,7 @@ async function collectCodeReviewResidualDiagnostics(args) {
   const diagnostics = [];
   const warnings = [];
   const identityKeys = Object.keys(args.model).filter(
-    (key) => CODE_REVIEW_MODEL_IDENTITY_KEYS.has(key)
+    (key2) => CODE_REVIEW_MODEL_IDENTITY_KEYS.has(key2)
   );
   if (identityKeys.length > 0) {
     diagnostics.push(
@@ -71315,15 +72648,15 @@ async function collectPeerReviewResidualDiagnostics(args) {
   const diagnostics = [];
   const modelContract = readArtifactContract("review.peer-review").modelContract;
   const stringEntries = collectModelStringEntries3(args.model);
-  for (const key of Object.keys(args.model)) {
-    if (PEER_REVIEW_MODEL_IDENTITY_KEYS.has(key)) {
+  for (const key2 of Object.keys(args.model)) {
+    if (PEER_REVIEW_MODEL_IDENTITY_KEYS.has(key2)) {
       diagnostics.push(
         modelDiagnostic({
           source: "residual",
-          path: `model.${key}`,
+          path: `model.${key2}`,
           code: "residual.identity_key",
-          message: `Peer-review model must not include MCP-owned identity field ${key}.`,
-          context: { key },
+          message: `Peer-review model must not include MCP-owned identity field ${key2}.`,
+          context: { key: key2 },
           suggestion: "Remove identity/provenance fields from the model and pass them as MCP tool arguments."
         })
       );
@@ -71396,7 +72729,7 @@ async function collectPeerReviewResidualDiagnostics(args) {
   const modelPlanKeys = args.normalizedModel.planReviews.map(
     (plan) => `${plan.planId}:${plan.path}`
   );
-  const unknownPlanKeys = modelPlanKeys.filter((key) => !knownPlanKeys.has(key));
+  const unknownPlanKeys = modelPlanKeys.filter((key2) => !knownPlanKeys.has(key2));
   if (unknownPlanKeys.length > 0) {
     diagnostics.push(
       modelDiagnostic({
@@ -71567,7 +72900,7 @@ async function addReviewFixChangedFileDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs25.stat(absolutePath);
+      const stats = await fs28.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -71960,7 +73293,7 @@ async function collectSecurityResidualDiagnostics(args) {
   const diagnostics = [];
   const warnings = [];
   const identityKeys = Object.keys(args.model).filter(
-    (key) => SECURITY_MODEL_IDENTITY_KEYS.has(key)
+    (key2) => SECURITY_MODEL_IDENTITY_KEYS.has(key2)
   );
   if (identityKeys.length > 0) {
     diagnostics.push(
@@ -72200,7 +73533,7 @@ async function addUiReviewRepoCitationDiagnostics(args) {
       continue;
     }
     try {
-      const stats = await fs25.stat(absolutePath);
+      const stats = await fs28.stat(absolutePath);
       if (!stats.isFile()) {
         args.diagnostics.push(
           modelDiagnostic({
@@ -72303,7 +73636,7 @@ function findPhaseArtifact3(artifacts, suffix) {
 async function readRepoFileIfPresent(projectRoot, relativePath) {
   try {
     const absolutePath = resolveRepoRelativePath(projectRoot, relativePath);
-    return await fs25.readFile(absolutePath, "utf8");
+    return await fs28.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -72319,7 +73652,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     if (requestedPath.length === 0) {
       continue;
     }
-    if (path20.isAbsolute(requestedPath)) {
+    if (path21.isAbsolute(requestedPath)) {
       warnings.push(
         `Invalid ${sourceLabel} path: ${requestedPath} (absolute filesystem paths are not allowed).`
       );
@@ -72353,7 +73686,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     }
     let stats;
     try {
-      stats = await fs25.stat(absolutePath);
+      stats = await fs28.stat(absolutePath);
     } catch {
       warnings.push(`Invalid ${sourceLabel} path: ${relativePath} (file does not exist).`);
       rejected = true;
@@ -72431,7 +73764,7 @@ async function deriveReviewFilesFromSummaries(projectRoot, located, warnings) {
         }
         let stats;
         try {
-          stats = await fs25.stat(absolutePath);
+          stats = await fs28.stat(absolutePath);
         } catch {
           warnings.push(
             `Skipped missing repo path from ${summaryPath2} review scope: ${relativePath}`
@@ -72455,7 +73788,7 @@ async function deriveReviewFilesFromSummaries(projectRoot, located, warnings) {
 }
 async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
   const summaryPlanIds = new Set(
-    located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).map((artifact) => parsePlanIdForSuffix2(artifact, located.phasePrefix, "SUMMARY")).filter((planId2) => planId2 !== null)
+    located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).map((artifact) => parsePlanIdForSuffix2(artifact, located.phasePrefix, "SUMMARY")).filter((planId3) => planId3 !== null)
   );
   if (summaryPlanIds.size === 0) {
     warnings.push(
@@ -72470,8 +73803,8 @@ async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
     if (!artifact.endsWith("-PLAN.md")) {
       return false;
     }
-    const planId2 = parsePlanIdForSuffix2(artifact, located.phasePrefix, "PLAN");
-    return planId2 !== null && summaryPlanIds.has(planId2);
+    const planId3 = parsePlanIdForSuffix2(artifact, located.phasePrefix, "PLAN");
+    return planId3 !== null && summaryPlanIds.has(planId3);
   });
   if (planPaths.length === 0) {
     warnings.push(
@@ -72519,7 +73852,7 @@ async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
       }
       let stats;
       try {
-        stats = await fs25.stat(absolutePath);
+        stats = await fs28.stat(absolutePath);
       } catch {
         warnings.push(
           `Skipped missing repo path from ${planPath} review scope: ${relativePath}`
@@ -72661,7 +73994,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path21.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -72695,7 +74028,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path21.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -72763,7 +74096,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path21.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -72787,7 +74120,7 @@ async function blueprintReviewScope(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path20.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path21.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -73493,7 +74826,7 @@ async function blueprintReviewRecordUnlocked(args, expectedTopology) {
   const { counts, followUps } = modelCountsOverride ?? parsedCounts;
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   const exists3 = await pathExists5(absolutePath);
-  const existingContent = exists3 ? await fs25.readFile(absolutePath, "utf8") : null;
+  const existingContent = exists3 ? await fs28.readFile(absolutePath, "utf8") : null;
   warnings.push(...prepared.warnings);
   const validation = validateReviewArtifactContent(normalizedContent, args.artifact);
   const evidenceCoverageIssues = args.artifact === "code-review" ? validateCodeReviewEvidenceCoverage(
@@ -73673,7 +75006,7 @@ async function blueprintReviewLoadFindings(args) {
       warnings: located.warnings
     };
   }
-  const content = await fs25.readFile(
+  const content = await fs28.readFile(
     resolveBlueprintPath(projectRoot, artifactPath),
     "utf8"
   );
@@ -73879,9 +75212,9 @@ var init_review = __esm({
 // src/mcp/tools/update.ts
 import { execFile as execFile6 } from "node:child_process";
 import { randomUUID as randomUUID4 } from "node:crypto";
-import { promises as fs26 } from "node:fs";
+import { promises as fs29 } from "node:fs";
 import os5 from "node:os";
-import path21 from "node:path";
+import path22 from "node:path";
 import { promisify as promisify5 } from "node:util";
 function positiveTimingOverride2(value, fallback) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -73915,7 +75248,7 @@ function expandHomePath5(value) {
     return os5.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path21.join(os5.homedir(), trimmed.slice(2));
+    return path22.join(os5.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -73927,7 +75260,7 @@ function normalizeOptionalString(value) {
 }
 async function pathExists6(targetPath) {
   try {
-    await fs26.access(targetPath);
+    await fs29.access(targetPath);
     return true;
   } catch {
     return false;
@@ -73974,7 +75307,7 @@ async function readJsonObject(filePath) {
     };
   }
   try {
-    const raw = await fs26.readFile(filePath, "utf8");
+    const raw = await fs29.readFile(filePath, "utf8");
     return {
       value: safeJsonParseObject(raw, { label: filePath }),
       warning: null
@@ -73998,19 +75331,19 @@ async function resolveInstalledVersion(extensionPath, manifestFileName) {
       warnings
     };
   }
-  const normalizedExtensionPath = path21.resolve(extensionPath);
+  const normalizedExtensionPath = path22.resolve(extensionPath);
   if (!await pathExists6(normalizedExtensionPath)) {
     warnings.push(`Configured extension path does not exist: ${normalizedExtensionPath}`);
     return {
       extensionPathState: "missing",
-      extensionManifestPath: path21.join(normalizedExtensionPath, manifestFileName),
+      extensionManifestPath: path22.join(normalizedExtensionPath, manifestFileName),
       installedVersion: null,
       warnings
     };
   }
-  const extensionManifestPath = path21.join(normalizedExtensionPath, manifestFileName);
+  const extensionManifestPath = path22.join(normalizedExtensionPath, manifestFileName);
   const manifestResult = await readJsonObject(extensionManifestPath);
-  const packageJsonResult = await readJsonObject(path21.join(normalizedExtensionPath, "package.json"));
+  const packageJsonResult = await readJsonObject(path22.join(normalizedExtensionPath, "package.json"));
   const manifest = manifestResult.value;
   const packageJson = packageJsonResult.value;
   if (manifestResult.warning) {
@@ -74268,7 +75601,7 @@ function compareSemver(left, right) {
 async function resolveUpdateCheck(args = {}, env2 = process.env) {
   const cwd = normalizeOptionalString(args.cwd) ?? process.cwd();
   const runtimeHost = resolveBlueprintRuntimeHost(env2);
-  const extensionPath = runtimeHost.extensionPath ? path21.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
+  const extensionPath = runtimeHost.extensionPath ? path22.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
   const warnings = [];
   if (extensionPath) {
     assertNoNullBytes(extensionPath, "Blueprint extension path");
@@ -74365,8 +75698,8 @@ function buildProvenanceSummary(provenance) {
       };
   }
 }
-function buildUpdateSteps(check2, mode, savedPaths) {
-  const modeDetail = mode === "ask_user" ? "Use Gemini CLI `ask_user` to choose whether the user wants a saved checklist or the manual fallback view." : "Keep the same decision boundary explicit in plain language because structured `ask_user` is unavailable or not desired.";
+function buildUpdateSteps(check2, mode2, savedPaths) {
+  const modeDetail = mode2 === "ask_user" ? "Use Gemini CLI `ask_user` to choose whether the user wants a saved checklist or the manual fallback view." : "Keep the same decision boundary explicit in plain language because structured `ask_user` is unavailable or not desired.";
   const sourceDetail = check2.latestVersionLookupStatus === "available" && check2.latestVersion ? `Compare installed version ${check2.installedVersion ?? "unknown"} with latest version ${check2.latestVersion} from ${check2.latestVersionSource ?? "the resolved source"}.` : "Read the installed version and install provenance, then surface the manual fallback because the latest version lookup is unavailable.";
   const provenanceSummary = buildProvenanceSummary(check2.installProvenance);
   return [
@@ -74407,7 +75740,7 @@ function buildUpdateSteps(check2, mode, savedPaths) {
     }
   ];
 }
-function buildUpdateNotes(check2, mode) {
+function buildUpdateNotes(check2, mode2) {
   const provenanceSummary = buildProvenanceSummary(check2.installProvenance);
   const notes = [
     "Blueprint update remains advisory. It prepares a safe checklist and metadata, but it does not self-update the installed extension in-session.",
@@ -74415,7 +75748,7 @@ function buildUpdateNotes(check2, mode) {
     "A host restart is required after the manual update because the running session will not hot-reload the extension bundle.",
     `Install provenance: ${provenanceSummary.label}. ${provenanceSummary.detail}`
   ];
-  if (mode === "ask_user") {
+  if (mode2 === "ask_user") {
     notes.push(
       "When Gemini CLI `ask_user` is available, use it for the saved-checklist versus manual-fallback decision instead of simulating a questionnaire in plain text."
     );
@@ -74480,7 +75813,7 @@ function serializeUpdatePlan(generatedAt, plan) {
   };
 }
 async function removeIfExists(targetPath) {
-  await fs26.rm(targetPath, { force: true });
+  await fs29.rm(targetPath, { force: true });
 }
 async function removeIfExistsSafely(targetPath, label) {
   try {
@@ -74494,7 +75827,7 @@ function createUpdatePlanNonce() {
   return `${process.pid}-${Date.now()}-${randomUUID4()}`;
 }
 async function withUpdatePlanLock(updatesDir, callback) {
-  const lockPath = path21.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
+  const lockPath = path22.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
   const lockOptions = {
     lockPath,
     timing: updatePlanLockTiming()
@@ -74525,7 +75858,7 @@ async function restoreFromBackup(backupPath, targetPath) {
   }
   try {
     await removeIfExists(targetPath);
-    await fs26.rename(backupPath, targetPath);
+    await fs29.rename(backupPath, targetPath);
     return {
       backupExisted: true,
       restored: true,
@@ -74561,7 +75894,7 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     const existingModes = await Promise.all(
       [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
         try {
-          const stats = await fs26.lstat(targetPath);
+          const stats = await fs29.lstat(targetPath);
           if (!stats.isFile()) {
             throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
           }
@@ -74577,18 +75910,18 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
-      label: path21.basename(plan.savedPaths.checklistPath)
+      label: path22.basename(plan.savedPaths.checklistPath)
     });
     if (existingModes[0] !== null) {
-      await fs26.chmod(metadataTmpPath, existingModes[0]);
+      await fs29.chmod(metadataTmpPath, existingModes[0]);
     }
     if (existingModes[1] !== null) {
-      await fs26.chmod(checklistTmpPath, existingModes[1]);
+      await fs29.chmod(checklistTmpPath, existingModes[1]);
     }
     const promotionModes = await Promise.all(
       [plan.savedPaths.metadataPath, plan.savedPaths.checklistPath].map(async (targetPath) => {
         try {
-          const stats = await fs26.lstat(targetPath);
+          const stats = await fs29.lstat(targetPath);
           if (!stats.isFile()) {
             throw new Error(`Update artifact target must be a regular file: ${targetPath}`);
           }
@@ -74600,16 +75933,16 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
       })
     );
     if (promotionModes[0] !== null) {
-      await fs26.rename(plan.savedPaths.metadataPath, metadataBackupPath);
+      await fs29.rename(plan.savedPaths.metadataPath, metadataBackupPath);
       metadataBackupCreated = true;
     }
     if (promotionModes[1] !== null) {
-      await fs26.rename(plan.savedPaths.checklistPath, checklistBackupPath);
+      await fs29.rename(plan.savedPaths.checklistPath, checklistBackupPath);
       checklistBackupCreated = true;
     }
-    await fs26.rename(metadataTmpPath, plan.savedPaths.metadataPath);
+    await fs29.rename(metadataTmpPath, plan.savedPaths.metadataPath);
     metadataPromoted = true;
-    await fs26.rename(checklistTmpPath, plan.savedPaths.checklistPath);
+    await fs29.rename(checklistTmpPath, plan.savedPaths.checklistPath);
     checklistPromoted = true;
     for (const [backupPath, label] of [
       [metadataBackupPath, "update metadata backup"],
@@ -74693,22 +76026,22 @@ async function blueprintUpdateCheck(args = {}, env2 = process.env) {
 }
 async function blueprintUpdatePlan(args = {}, env2 = process.env) {
   const runtimeHost = resolveBlueprintRuntimeHost(env2);
-  const mode = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
+  const mode2 = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
   const check2 = await resolveUpdateCheck(args, env2);
-  const updatesDir = path21.resolve(expandHomePath5(runtimeHost.updatesDir));
-  const metadataPath = path21.join(updatesDir, UPDATE_PLAN_FILE);
-  const checklistPath = path21.join(updatesDir, UPDATE_CHECKLIST_FILE);
+  const updatesDir = path22.resolve(expandHomePath5(runtimeHost.updatesDir));
+  const metadataPath = path22.join(updatesDir, UPDATE_PLAN_FILE);
+  const checklistPath = path22.join(updatesDir, UPDATE_CHECKLIST_FILE);
   const savedPaths = {
     updatesDir,
     metadataPath,
     checklistPath
   };
-  const steps = buildUpdateSteps(check2, mode, savedPaths);
-  const notes = buildUpdateNotes(check2, mode);
+  const steps = buildUpdateSteps(check2, mode2, savedPaths);
+  const notes = buildUpdateNotes(check2, mode2);
   const buildPlan = (status) => ({
     ...check2,
     warnings: [...check2.warnings],
-    mode,
+    mode: mode2,
     steps,
     notes,
     requiresRestart: true,
@@ -74790,20 +76123,20 @@ var init_update = __esm({
 
 // src/mcp/tools/impact.ts
 import { execFile as execFile7 } from "node:child_process";
-import { createHash as createHash13 } from "node:crypto";
-import { promises as fs27 } from "node:fs";
+import { createHash as createHash14 } from "node:crypto";
+import { promises as fs30 } from "node:fs";
 import os6 from "node:os";
-import path22 from "node:path";
+import path23 from "node:path";
 import { promisify as promisify6 } from "node:util";
 function stableHash(value) {
-  return createHash13("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
+  return createHash14("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
 }
 function stableStringify(value) {
   if (Array.isArray(value)) {
     return `[${value.map((item) => stableStringify(item)).join(",")}]`;
   }
   if (value && typeof value === "object") {
-    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(",")}}`;
+    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key2, item]) => `${JSON.stringify(key2)}:${stableStringify(item)}`).join(",")}}`;
   }
   return JSON.stringify(value);
 }
@@ -74868,7 +76201,7 @@ function hasPathSegment(filePath, segment) {
   return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
 }
 function hasConfigName(filePath) {
-  const basename = path22.posix.basename(filePath);
+  const basename = path23.posix.basename(filePath);
   return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
 }
 function isGeneratedPath(filePath) {
@@ -74878,7 +76211,7 @@ function isTestPath(filePath) {
   return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 function isDocsPath(filePath) {
-  const extension = path22.posix.extname(filePath).toLowerCase();
+  const extension = path23.posix.extname(filePath).toLowerCase();
   return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
 }
 function areaForSurface(surface) {
@@ -74923,8 +76256,8 @@ function areaForSurface(surface) {
 }
 function classifyImpactFile(filePath) {
   const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const basename = path22.posix.basename(normalizedPath);
-  const extension = path22.posix.extname(normalizedPath).toLowerCase();
+  const basename = path23.posix.basename(normalizedPath);
+  const extension = path23.posix.extname(normalizedPath).toLowerCase();
   const rules = [];
   if (SECRET_PATH_PATTERN.test(normalizedPath)) {
     addSurfaceRule(
@@ -75035,10 +76368,10 @@ function classifyImpactFile(filePath) {
 function summarizeSurfaceRecords(records, selector, sortNames = (left, right) => left.localeCompare(right)) {
   const summary = /* @__PURE__ */ new Map();
   for (const record2 of records) {
-    const key = selector(record2);
-    const files = summary.get(key) ?? /* @__PURE__ */ new Set();
+    const key2 = selector(record2);
+    const files = summary.get(key2) ?? /* @__PURE__ */ new Set();
     files.add(record2.path);
-    summary.set(key, files);
+    summary.set(key2, files);
   }
   return [...summary.entries()].sort(([left], [right]) => sortNames(left, right)).map(([name, files]) => {
     const sortedFiles = [...files].sort();
@@ -75610,7 +76943,7 @@ function matchesRepoPattern(filePath, pattern) {
     return false;
   }
   if (!normalizedPattern.includes("/")) {
-    return globPatternToRegExp(normalizedPattern).test(path22.posix.basename(normalizedPath));
+    return globPatternToRegExp(normalizedPattern).test(path23.posix.basename(normalizedPath));
   }
   return globPatternToRegExp(normalizedPattern).test(normalizedPath);
 }
@@ -75651,13 +76984,13 @@ function expandHomePath6(value) {
     return os6.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path22.join(os6.homedir(), trimmed.slice(2));
+    return path23.join(os6.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
 async function pathExists7(targetPath) {
   try {
-    await fs27.access(targetPath);
+    await fs30.access(targetPath);
     return true;
   } catch {
     return false;
@@ -75668,8 +77001,8 @@ function resolveContainedInputPath(projectRoot, inputPath, label) {
   if (trimmed.length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  const candidatePath = path22.isAbsolute(trimmed) ? trimmed : path22.resolve(projectRoot, trimmed);
-  return ensurePathWithinRootSync(projectRoot, candidatePath, { label });
+  const candidatePath2 = path23.isAbsolute(trimmed) ? trimmed : path23.resolve(projectRoot, trimmed);
+  return ensurePathWithinRootSync(projectRoot, candidatePath2, { label });
 }
 function toRepoRelativeInputPath(projectRoot, inputPath, label) {
   const absolutePath = resolveContainedInputPath(projectRoot, inputPath, label);
@@ -75733,15 +77066,15 @@ function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
 }
 function getImpactDefaultsPath() {
   const runtimeHost = resolveBlueprintRuntimeHost();
-  return path22.resolve(
+  return path23.resolve(
     expandHomePath6(
-      path22.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
+      path23.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
     )
   );
 }
 function isUnsafeRepoPattern(value) {
   const normalized = value.trim().replaceAll("\\", "/");
-  return normalized.length === 0 || normalized.includes("\0") || path22.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
+  return normalized.length === 0 || normalized.includes("\0") || path23.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
 }
 function validateConfigPathArrays(config2) {
   const errors = [];
@@ -75780,8 +77113,8 @@ function createAjvValidator3() {
     allowUnionTypes: true
   });
 }
-function getJsonObjectProperty5(value, key) {
-  const candidate = value?.[key];
+function getJsonObjectProperty5(value, key2) {
+  const candidate = value?.[key2];
   return isPlainObject7(candidate) ? candidate : null;
 }
 function impactSchemaDiagnostic(error2) {
@@ -75798,9 +77131,9 @@ function reportImpactBaseSchema() {
   return cloneJsonObject5(modelContract.jsonSchema);
 }
 function buildImpactReportTaskSchema(report, expectations = {}) {
-  const schema = reportImpactBaseSchema();
-  const properties = getJsonObjectProperty5(schema, "properties");
-  const defs = getJsonObjectProperty5(schema, "$defs");
+  const schema2 = reportImpactBaseSchema();
+  const properties = getJsonObjectProperty5(schema2, "properties");
+  const defs = getJsonObjectProperty5(schema2, "$defs");
   const expectedImpactId = expectations.impactId ?? report.impactId;
   const expectedScopeFingerprint = expectations.scopeFingerprint ?? report.scope.fingerprint;
   const expectedFiles = expectations.files ?? report.surfaces.map((surface) => surface.path).sort();
@@ -75860,7 +77193,7 @@ function buildImpactReportTaskSchema(report, expectations = {}) {
       enum: evidenceIds
     };
   }
-  schema["x-blueprint-runtimeContext"] = {
+  schema2["x-blueprint-runtimeContext"] = {
     impactId: expectedImpactId,
     scopeFingerprint: expectedScopeFingerprint,
     scopeSource: Object.prototype.hasOwnProperty.call(expectations, "scopeSource") ? expectations.scopeSource ?? null : report.scope.source,
@@ -75871,10 +77204,10 @@ function buildImpactReportTaskSchema(report, expectations = {}) {
     blockingFindingIds: expectations.blockingFindingIds ?? report.findings.filter((finding) => finding.status === "BLOCK").map((finding) => finding.id),
     warningFindingIds: expectations.warningFindingIds ?? report.findings.filter((finding) => finding.status === "WARN").map((finding) => finding.id)
   };
-  return schema;
+  return schema2;
 }
-function validateImpactReportAgainstSchema(report, schema) {
-  const validate = createAjvValidator3().compile(schema);
+function validateImpactReportAgainstSchema(report, schema2) {
+  const validate = createAjvValidator3().compile(schema2);
   if (validate(report)) {
     return [];
   }
@@ -75883,9 +77216,9 @@ function validateImpactReportAgainstSchema(report, schema) {
 function sanitizeConfigLayer(layer, label, strictConfig, warnings, errors) {
   const sanitized = {};
   const knownKeys = new Set(KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS);
-  for (const [key, value] of Object.entries(layer)) {
-    if (!knownKeys.has(key)) {
-      const message = `Unknown impact config key in ${label}: ${key}`;
+  for (const [key2, value] of Object.entries(layer)) {
+    if (!knownKeys.has(key2)) {
+      const message = `Unknown impact config key in ${label}: ${key2}`;
       if (strictConfig) {
         errors.push(message);
       } else {
@@ -75893,18 +77226,18 @@ function sanitizeConfigLayer(layer, label, strictConfig, warnings, errors) {
       }
       continue;
     }
-    sanitized[key] = value;
+    sanitized[key2] = value;
   }
   return sanitized;
 }
 function mergeConfigLayer(target, source) {
-  for (const [key, value] of Object.entries(source)) {
-    if (isPlainObject7(value) && isPlainObject7(target[key])) {
-      mergeConfigLayer(target[key], value);
+  for (const [key2, value] of Object.entries(source)) {
+    if (isPlainObject7(value) && isPlainObject7(target[key2])) {
+      mergeConfigLayer(target[key2], value);
     } else if (Array.isArray(value)) {
-      target[key] = [...value];
+      target[key2] = [...value];
     } else {
-      target[key] = value;
+      target[key2] = value;
     }
   }
 }
@@ -75913,7 +77246,7 @@ async function readConfigLayer(filePath, label, warnings, errors) {
     return null;
   }
   try {
-    return safeJsonParseObject(await fs27.readFile(filePath, "utf8"), { label });
+    return safeJsonParseObject(await fs30.readFile(filePath, "utf8"), { label });
   } catch (error2) {
     errors.push(error2 instanceof Error ? error2.message : `${label} could not be read.`);
     return null;
@@ -76005,7 +77338,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
       continue;
     }
     codeownersPath = toRepoRelativePath(projectRoot, absolutePath);
-    const parsedRules = parseCodeownersRules(await fs27.readFile(absolutePath, "utf8"), codeownersPath);
+    const parsedRules = parseCodeownersRules(await fs30.readFile(absolutePath, "utf8"), codeownersPath);
     rules.push(...parsedRules);
     sourcesUsed.push(codeownersPath);
     addEvidence(evidence, {
@@ -76029,7 +77362,7 @@ async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warn
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     try {
-      const parsed = safeJsonParseObject(await fs27.readFile(absolutePath, "utf8"), {
+      const parsed = safeJsonParseObject(await fs30.readFile(absolutePath, "utf8"), {
         label: `Impact ownership metadata ${relativePath}`
       });
       const metadataResult = ownershipMetadataSchema.safeParse(parsed);
@@ -76193,15 +77526,15 @@ function addDependencyNode(nodes, node) {
   });
 }
 function addDependencyEdge(edges, edge) {
-  const key = `${edge.from}\0${edge.to}\0${edge.type}\0${edge.source}`;
-  if (!edges.has(key)) {
-    edges.set(key, edge);
+  const key2 = `${edge.from}\0${edge.to}\0${edge.type}\0${edge.source}`;
+  if (!edges.has(key2)) {
+    edges.set(key2, edge);
   }
 }
 function dependencyNamesFromPackageJson(parsed) {
   return uniqueSorted4(
     ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].flatMap(
-      (key) => isPlainObject7(parsed[key]) ? Object.keys(parsed[key]) : []
+      (key2) => isPlainObject7(parsed[key2]) ? Object.keys(parsed[key2]) : []
     )
   );
 }
@@ -76221,7 +77554,7 @@ async function readJsonObjectIfPresent2(filePath, label) {
   if (!await pathExists7(filePath)) {
     return null;
   }
-  return safeJsonParseObject(await fs27.readFile(filePath, "utf8"), { label });
+  return safeJsonParseObject(await fs30.readFile(filePath, "utf8"), { label });
 }
 async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns) {
   const directories = [];
@@ -76231,17 +77564,17 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
       continue;
     }
     const root = normalizedPattern.split("/")[0];
-    const absoluteRoot = path22.join(projectRoot, root);
+    const absoluteRoot = path23.join(projectRoot, root);
     if (!await pathExists7(absoluteRoot)) {
       continue;
     }
-    const entries = await fs27.readdir(absoluteRoot, { withFileTypes: true });
+    const entries = await fs30.readdir(absoluteRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name.startsWith(".")) {
         continue;
       }
       const relativePath = `${root}/${entry.name}`;
-      if (await pathExists7(path22.join(projectRoot, relativePath, "package.json"))) {
+      if (await pathExists7(path23.join(projectRoot, relativePath, "package.json"))) {
         directories.push(relativePath);
       }
     }
@@ -76249,7 +77582,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
   return uniqueSorted4(directories);
 }
 async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
-  const packagePath = path22.join(projectRoot, "package.json");
+  const packagePath = path23.join(projectRoot, "package.json");
   const parsed = await readJsonObjectIfPresent2(packagePath, "Impact package.json");
   const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
   if (!parsed) {
@@ -76286,7 +77619,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   for (const workspacePath of workspaceDirectories) {
     try {
       const workspacePackage = await readJsonObjectIfPresent2(
-        path22.join(projectRoot, workspacePath, "package.json"),
+        path23.join(projectRoot, workspacePath, "package.json"),
         `Impact workspace package ${workspacePath}/package.json`
       );
       if (!workspacePackage) {
@@ -76316,7 +77649,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   }
   for (const workspacePath of workspaceDirectories) {
     const workspacePackage = await readJsonObjectIfPresent2(
-      path22.join(projectRoot, workspacePath, "package.json"),
+      path23.join(projectRoot, workspacePath, "package.json"),
       `Impact workspace package ${workspacePath}/package.json`
     );
     if (!workspacePackage) {
@@ -76350,12 +77683,12 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   return { used: true, packageNameByWorkspacePath };
 }
 async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
-  const lockPath = path22.join(projectRoot, "package-lock.json");
+  const lockPath = path23.join(projectRoot, "package-lock.json");
   if (!await pathExists7(lockPath)) {
     return false;
   }
   try {
-    const parsed = safeJsonParseObject(await fs27.readFile(lockPath, "utf8"), {
+    const parsed = safeJsonParseObject(await fs30.readFile(lockPath, "utf8"), {
       label: "Impact package-lock.json"
     });
     const packages = isPlainObject7(parsed.packages) ? Object.entries(parsed.packages) : [];
@@ -76404,7 +77737,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
   const results = /* @__PURE__ */ new Set();
   const queue = [];
   for (const root of roots) {
-    if (await pathExists7(path22.join(projectRoot, root))) {
+    if (await pathExists7(path23.join(projectRoot, root))) {
       queue.push({ relativePath: root, depth: 0 });
     }
   }
@@ -76413,8 +77746,8 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
     if (!current || current.depth > 8) {
       continue;
     }
-    const absolutePath = path22.join(projectRoot, current.relativePath);
-    const entries = await fs27.readdir(absolutePath, { withFileTypes: true });
+    const absolutePath = path23.join(projectRoot, current.relativePath);
+    const entries = await fs30.readdir(absolutePath, { withFileTypes: true });
     for (const entry of entries) {
       if (results.size >= 600) {
         break;
@@ -76428,13 +77761,13 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
           continue;
         }
         queue.push({ relativePath, depth: current.depth + 1 });
-      } else if (SOURCE_FILE_EXTENSIONS.has(path22.posix.extname(relativePath).toLowerCase())) {
+      } else if (SOURCE_FILE_EXTENSIONS.has(path23.posix.extname(relativePath).toLowerCase())) {
         results.add(relativePath);
       }
     }
   }
   for (const file2 of changedFiles) {
-    if (SOURCE_FILE_EXTENSIONS.has(path22.posix.extname(file2).toLowerCase())) {
+    if (SOURCE_FILE_EXTENSIONS.has(path23.posix.extname(file2).toLowerCase())) {
       results.add(file2);
     }
   }
@@ -76444,7 +77777,7 @@ function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPath
   if (!specifier.startsWith(".")) {
     return null;
   }
-  const base = path22.posix.normalize(path22.posix.join(path22.posix.dirname(importerPath), specifier));
+  const base = path23.posix.normalize(path23.posix.join(path23.posix.dirname(importerPath), specifier));
   const candidates = [
     base,
     `${base}.ts`,
@@ -76490,7 +77823,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
       skippedSecretCount += 1;
       continue;
     }
-    const absolutePath = path22.join(projectRoot, file2);
+    const absolutePath = path23.join(projectRoot, file2);
     if (!await pathExists7(absolutePath)) {
       continue;
     }
@@ -76510,7 +77843,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
         source: TS_IMPORT_SCAN_SOURCE
       });
     }
-    const rawSource = await fs27.readFile(absolutePath, "utf8");
+    const rawSource = await fs30.readFile(absolutePath, "utf8");
     scannedCount += 1;
     for (const specifier of extractImportSpecifiers(rawSource)) {
       const targetPath = resolveImportSpecifierToRepoPath(file2, specifier, sourceFileSet);
@@ -76566,7 +77899,7 @@ async function loadCustomDependencyGraphs(projectRoot, config2, nodes, edges, ev
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     try {
-      const parsed = safeJsonParseObject(await fs27.readFile(absolutePath, "utf8"), {
+      const parsed = safeJsonParseObject(await fs30.readFile(absolutePath, "utf8"), {
         label: `Impact dependency graph ${relativePath}`
       });
       const graphResult = dependencyGraphMetadataSchema.safeParse(parsed);
@@ -76839,8 +78172,8 @@ async function loadDependencyAnalysis(projectRoot, files, surfaces, config2, war
     evidence: sortEvidenceRecords(evidence)
   };
 }
-function hasOwnContextKey(context, key) {
-  return Object.prototype.hasOwnProperty.call(context, key);
+function hasOwnContextKey(context, key2) {
+  return Object.prototype.hasOwnProperty.call(context, key2);
 }
 function catalogEntries(catalog) {
   return Object.entries(catalog.commands ?? {}).filter(([, entry]) => isPlainObject7(entry)).sort(([left], [right]) => left.localeCompare(right));
@@ -77067,7 +78400,7 @@ function registeredRuntimeToolNames(runtime) {
     return null;
   }
   const keys = ["registeredTools", "toolNames", "availableTools", "registeredImpactTools"];
-  const names = keys.flatMap((key) => extractStringArray(runtime[key]));
+  const names = keys.flatMap((key2) => extractStringArray(runtime[key2]));
   return names.length > 0 ? new Set(names) : null;
 }
 function addCommandSubstrateFinding(findings, evidence, commandName, entry, asset, impactedFiles, requiredActions, extraData = {}) {
@@ -77479,7 +78812,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
   const missingMcpRuntimeBundleCoverage = compiledRuntimeOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
-  if (hasRuntimeOrExtension && !await pathExists7(path22.join(projectRoot, "dist/mcp/server.js"))) {
+  if (hasRuntimeOrExtension && !await pathExists7(path23.join(projectRoot, "dist/mcp/server.js"))) {
     const evidenceRef = addEvidence(evidence, {
       kind: "build",
       source: "dist-entrypoint",
@@ -77838,7 +79171,7 @@ function confidenceForScope(kind, changedFiles, warnings) {
     reasons: kind === "files" ? ["Explicit file scope was provided and path-containment checks passed."] : ["Git-backed scope resolved changed files and deterministic diff metadata."]
   };
 }
-function unresolvedScopeResult(mode, description, warnings, seed) {
+function unresolvedScopeResult(mode2, description, warnings, seed) {
   return {
     status: "unresolved",
     scope: {
@@ -77849,7 +79182,7 @@ function unresolvedScopeResult(mode, description, warnings, seed) {
     },
     changedFiles: [],
     git: {
-      mode,
+      mode: mode2,
       range: null,
       base: null,
       head: null
@@ -77962,7 +79295,7 @@ async function loadSeededScopeArgs(projectRoot, args) {
     return args;
   }
   const seedPath = resolveContainedInputPath(projectRoot, args.seedFile, "Impact seed file");
-  const parsed = safeJsonParseObject(await fs27.readFile(seedPath, "utf8"), {
+  const parsed = safeJsonParseObject(await fs30.readFile(seedPath, "utf8"), {
     label: "Impact seed file"
   });
   const seedResult = impactScopeSeedSchema.safeParse(parsed);
@@ -77988,7 +79321,7 @@ async function blueprintImpactConfigGet(args = {}) {
   const errors = [];
   const layersApplied = ["built-in"];
   const defaultsPath = getImpactDefaultsPath();
-  const projectConfigPath = path22.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
+  const projectConfigPath = path23.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
   let appliedDefaultsPath = null;
   let appliedProjectPath = null;
   let appliedInvocationPath = null;
@@ -78089,7 +79422,7 @@ async function blueprintImpactConfigGet(args = {}) {
     configHash: stableHash(effectiveConfig)
   };
 }
-async function resolveFilesScope(projectRoot, args, mode, description, warnings) {
+async function resolveFilesScope(projectRoot, args, mode2, description, warnings) {
   const files = [
     ...new Set(
       (args.files ?? []).map(
@@ -78108,7 +79441,7 @@ async function resolveFilesScope(projectRoot, args, mode, description, warnings)
     },
     changedFiles: files,
     git: {
-      mode,
+      mode: mode2,
       range: null,
       base: null,
       head: null
@@ -78131,17 +79464,17 @@ async function resolveFilesScope(projectRoot, args, mode, description, warnings)
     warnings: nextWarnings
   };
 }
-async function resolveDiffFileScope(projectRoot, args, mode, description, warnings) {
+async function resolveDiffFileScope(projectRoot, args, mode2, description, warnings) {
   if (!args.diffFile) {
     return unresolvedScopeResult(
-      mode,
+      mode2,
       description,
       [...warnings, "diff-file scope requires a diffFile path."],
-      { mode, description, reason: "missing-diff-file" }
+      { mode: mode2, description, reason: "missing-diff-file" }
     );
   }
   const diffPath = resolveContainedInputPath(projectRoot, args.diffFile, "Impact diff file");
-  const rawDiff = await fs27.readFile(diffPath, "utf8");
+  const rawDiff = await fs30.readFile(diffPath, "utf8");
   const files = parseDiffFilePaths(rawDiff).map((file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact diff path")).sort();
   const stats = parseDiffFileStats(rawDiff);
   const diffFileRelativePath = toRepoRelativePath(projectRoot, diffPath);
@@ -78156,7 +79489,7 @@ async function resolveDiffFileScope(projectRoot, args, mode, description, warnin
     },
     changedFiles: files,
     git: {
-      mode,
+      mode: mode2,
       range: null,
       base: null,
       head: null
@@ -78187,7 +79520,7 @@ async function resolveDiffFileScope(projectRoot, args, mode, description, warnin
     warnings: nextWarnings
   };
 }
-function resolveDescriptionScope(args, mode, description, warnings) {
+function resolveDescriptionScope(args, mode2, description, warnings) {
   const nextWarnings = [
     ...warnings,
     "Description-only impact scope is low confidence because no changed files or git evidence were resolved.",
@@ -78210,7 +79543,7 @@ function resolveDescriptionScope(args, mode, description, warnings) {
     },
     changedFiles: [],
     git: {
-      mode,
+      mode: mode2,
       range: null,
       base: null,
       head: null
@@ -78226,7 +79559,7 @@ function resolveDescriptionScope(args, mode, description, warnings) {
     warnings: nextWarnings
   };
 }
-async function resolveGitBackedScope(projectRoot, args, mode, kind, diffArgs, git2, source, description, warnings) {
+async function resolveGitBackedScope(projectRoot, args, mode2, kind, diffArgs, git2, source, description, warnings) {
   const metadata = await resolveGitDiffMetadata(projectRoot, kind, diffArgs, {
     kind,
     git: git2
@@ -78242,7 +79575,7 @@ async function resolveGitBackedScope(projectRoot, args, mode, kind, diffArgs, gi
     },
     changedFiles: metadata.changedFiles,
     git: {
-      mode,
+      mode: mode2,
       range: git2.range,
       base: git2.base,
       head: git2.head
@@ -78254,7 +79587,7 @@ async function resolveGitBackedScope(projectRoot, args, mode, kind, diffArgs, gi
     },
     patchHash: metadata.patchHash,
     scopeFingerprint: stableHash({
-      mode,
+      mode: mode2,
       kind,
       source,
       description,
@@ -78268,12 +79601,12 @@ async function resolveGitBackedScope(projectRoot, args, mode, kind, diffArgs, gi
     warnings: nextWarnings
   };
 }
-async function resolveScopeWithGit(projectRoot, args, mode, description, warnings) {
-  if (mode === "staged") {
+async function resolveScopeWithGit(projectRoot, args, mode2, description, warnings) {
+  if (mode2 === "staged") {
     return resolveGitBackedScope(
       projectRoot,
       args,
-      mode,
+      mode2,
       "staged",
       ["--cached", "--"],
       { range: null, base: null, head: null },
@@ -78282,11 +79615,11 @@ async function resolveScopeWithGit(projectRoot, args, mode, description, warning
       warnings
     );
   }
-  if (mode === "working-tree") {
+  if (mode2 === "working-tree") {
     return resolveGitBackedScope(
       projectRoot,
       args,
-      mode,
+      mode2,
       "working-tree",
       ["--"],
       { range: null, base: null, head: null },
@@ -78295,20 +79628,20 @@ async function resolveScopeWithGit(projectRoot, args, mode, description, warning
       warnings
     );
   }
-  if (mode === "range") {
+  if (mode2 === "range") {
     if (!args.range) {
       return unresolvedScopeResult(
-        mode,
+        mode2,
         description,
         [...warnings, "range scope requires a range value."],
-        { mode, description, reason: "missing-range" }
+        { mode: mode2, description, reason: "missing-range" }
       );
     }
     const range = assertSafeGitRevision(args.range, "Impact git range");
     return resolveGitBackedScope(
       projectRoot,
       args,
-      mode,
+      mode2,
       "range",
       [range, "--"],
       { range, base: null, head: null },
@@ -78317,13 +79650,13 @@ async function resolveScopeWithGit(projectRoot, args, mode, description, warning
       warnings
     );
   }
-  if (mode === "base-head") {
+  if (mode2 === "base-head") {
     if (!args.base || !args.head) {
       return unresolvedScopeResult(
-        mode,
+        mode2,
         description,
         [...warnings, "base-head scope requires both base and head values."],
-        { mode, description, reason: "missing-base-head" }
+        { mode: mode2, description, reason: "missing-base-head" }
       );
     }
     const base = assertSafeGitRevision(args.base, "Impact base ref");
@@ -78331,7 +79664,7 @@ async function resolveScopeWithGit(projectRoot, args, mode, description, warning
     return resolveGitBackedScope(
       projectRoot,
       args,
-      mode,
+      mode2,
       "base-head",
       [`${base}..${head}`, "--"],
       { range: null, base, head },
@@ -78345,7 +79678,7 @@ async function resolveScopeWithGit(projectRoot, args, mode, description, warning
     return resolveGitBackedScope(
       projectRoot,
       args,
-      mode,
+      mode2,
       autoScope.kind,
       autoScope.diffArgs,
       {
@@ -78359,13 +79692,13 @@ async function resolveScopeWithGit(projectRoot, args, mode, description, warning
     );
   }
   if (description) {
-    return resolveDescriptionScope(args, mode, description, warnings);
+    return resolveDescriptionScope(args, mode2, description, warnings);
   }
   return unresolvedScopeResult(
-    mode,
+    mode2,
     description,
     [...warnings, "No staged, working-tree, branch, CI, or description scope could be resolved."],
-    { mode, description, reason: "no-auto-scope" }
+    { mode: mode2, description, reason: "no-auto-scope" }
   );
 }
 async function blueprintImpactScopeResolve(args = {}) {
@@ -78373,42 +79706,42 @@ async function blueprintImpactScopeResolve(args = {}) {
   const hasGit = await isGitRepository(initialProjectRoot);
   const projectRoot = hasGit ? await ensureRepoRoot(args.cwd) : initialProjectRoot;
   const seededArgs = await loadSeededScopeArgs(projectRoot, args);
-  const mode = seededArgs.mode ?? "auto";
+  const mode2 = seededArgs.mode ?? "auto";
   const description = seededArgs.description?.trim() || null;
   const warnings = [];
   if (!hasGit) {
     warnings.push("No git repository was detected for scope resolution.");
   }
-  if (mode === "files" || mode === "auto" && seededArgs.files?.length) {
-    return resolveFilesScope(projectRoot, seededArgs, mode, description, warnings);
+  if (mode2 === "files" || mode2 === "auto" && seededArgs.files?.length) {
+    return resolveFilesScope(projectRoot, seededArgs, mode2, description, warnings);
   }
-  if (mode === "diff-file" || mode === "auto" && seededArgs.diffFile) {
-    return resolveDiffFileScope(projectRoot, seededArgs, mode, description, warnings);
+  if (mode2 === "diff-file" || mode2 === "auto" && seededArgs.diffFile) {
+    return resolveDiffFileScope(projectRoot, seededArgs, mode2, description, warnings);
   }
-  if (mode === "description") {
-    return resolveDescriptionScope(seededArgs, mode, description, warnings);
+  if (mode2 === "description") {
+    return resolveDescriptionScope(seededArgs, mode2, description, warnings);
   }
   if (!hasGit) {
     if (description) {
-      return resolveDescriptionScope(seededArgs, mode, description, warnings);
+      return resolveDescriptionScope(seededArgs, mode2, description, warnings);
     }
     return unresolvedScopeResult(
-      mode,
+      mode2,
       description,
       [...warnings, "A git-backed scope was requested, but this directory is not a git repository."],
-      { mode, description, reason: "not-git-repository" }
+      { mode: mode2, description, reason: "not-git-repository" }
     );
   }
-  if (mode === "auto" && seededArgs.range) {
+  if (mode2 === "auto" && seededArgs.range) {
     return resolveScopeWithGit(projectRoot, seededArgs, "range", description, warnings);
   }
-  if (mode === "auto" && seededArgs.base && seededArgs.head) {
+  if (mode2 === "auto" && seededArgs.base && seededArgs.head) {
     return resolveScopeWithGit(projectRoot, seededArgs, "base-head", description, warnings);
   }
-  return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
+  return resolveScopeWithGit(projectRoot, seededArgs, mode2, description, warnings);
 }
 async function readPackageMetadata(projectRoot) {
-  const packageJsonPath = path22.join(projectRoot, "package.json");
+  const packageJsonPath = path23.join(projectRoot, "package.json");
   if (!await pathExists7(packageJsonPath)) {
     return {
       loaded: false,
@@ -78421,7 +79754,7 @@ async function readPackageMetadata(projectRoot) {
     };
   }
   try {
-    const parsed = safeJsonParseObject(await fs27.readFile(packageJsonPath, "utf8"), {
+    const parsed = safeJsonParseObject(await fs30.readFile(packageJsonPath, "utf8"), {
       label: "package.json"
     });
     const scripts = isPlainObject7(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
@@ -78451,7 +79784,7 @@ async function readPackageMetadata(projectRoot) {
 async function listExistingTopLevelPaths(projectRoot, candidates) {
   const existing = [];
   for (const candidate of candidates) {
-    if (await pathExists7(path22.join(projectRoot, candidate))) {
+    if (await pathExists7(path23.join(projectRoot, candidate))) {
       existing.push(candidate);
     }
   }
@@ -79116,7 +80449,7 @@ function canonicalizeImpactReport(report) {
   };
 }
 function normalizeExpectedFilePath(value) {
-  return path22.posix.normalize(value.trim().replaceAll("\\", "/"));
+  return path23.posix.normalize(value.trim().replaceAll("\\", "/"));
 }
 function normalizeExpectedEvidencePathsById(expectedPathsById) {
   if (expectedPathsById === void 0) {
@@ -79415,17 +80748,17 @@ function validateReportRepoRelativePath(projectRoot, value, label, errors) {
     errors.push(`${label} must not contain null bytes.`);
     return;
   }
-  if (path22.isAbsolute(trimmed) || path22.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
+  if (path23.isAbsolute(trimmed) || path23.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
     errors.push(`${label} must be repo-relative, not absolute: ${value}`);
     return;
   }
-  const normalizedPath = path22.posix.normalize(slashNormalized);
+  const normalizedPath = path23.posix.normalize(slashNormalized);
   if (normalizedPath === ".." || normalizedPath.startsWith("../")) {
     errors.push(`${label} escapes the repository: ${value}`);
     return;
   }
   try {
-    ensurePathWithinRootSync(projectRoot, path22.resolve(projectRoot, normalizedPath), {
+    ensurePathWithinRootSync(projectRoot, path23.resolve(projectRoot, normalizedPath), {
       label
     });
   } catch (error2) {
@@ -79446,7 +80779,7 @@ function shouldValidateReportScopeSource(scope) {
   }
   const trimmed = scope.source.trim();
   const slashNormalized = trimmed.replaceAll("\\", "/");
-  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path22.isAbsolute(trimmed) || path22.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
+  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path23.isAbsolute(trimmed) || path23.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
 }
 function validateReportScopeSource(projectRoot, scope, errors) {
   if (!shouldValidateReportScopeSource(scope)) {
@@ -79801,13 +81134,13 @@ function sortJsonValue(value) {
   }
   if (isPlainObject7(value)) {
     return Object.fromEntries(
-      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => [key, sortJsonValue(item)])
+      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key2, item]) => [key2, sortJsonValue(item)])
     );
   }
   return value;
 }
-function renderImpactOutput(report, mode, verbosity = "normal") {
-  switch (mode) {
+function renderImpactOutput(report, mode2, verbosity = "normal") {
+  switch (mode2) {
     case "json":
       return `${stableJson(report)}
 `;
@@ -80122,13 +81455,13 @@ function renderImpactHumanText(report, verbosity) {
 `;
 }
 function ensureImpactReportRoot(projectRoot) {
-  return ensurePathWithinRootSync(projectRoot, path22.join(projectRoot, IMPACT_REPORT_ROOT), {
+  return ensurePathWithinRootSync(projectRoot, path23.join(projectRoot, IMPACT_REPORT_ROOT), {
     label: "impact report root"
   });
 }
 function ensureImpactBundleDir(projectRoot, impactId) {
   const impactRoot = ensureImpactReportRoot(projectRoot);
-  const impactDir = ensurePathWithinRootSync(impactRoot, path22.join(impactRoot, impactId), {
+  const impactDir = ensurePathWithinRootSync(impactRoot, path23.join(impactRoot, impactId), {
     label: "impact report directory"
   });
   ensurePathWithinRootSync(projectRoot, impactDir, { label: "impact report directory" });
@@ -80140,18 +81473,18 @@ async function compareImpactBundle(projectRoot, impactDir, files) {
     return { existing: false, identical: false };
   }
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path22.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path23.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
     if (!await pathExists7(filePath)) {
       return { existing: true, identical: false };
     }
-    if (await fs27.readFile(filePath, "utf8") !== content) {
+    if (await fs30.readFile(filePath, "utf8") !== content) {
       return { existing: true, identical: false };
     }
   }
-  const existingEntries = await fs27.readdir(impactDir, { withFileTypes: true });
+  const existingEntries = await fs30.readdir(impactDir, { withFileTypes: true });
   for (const entry of existingEntries) {
     if (!IMPACT_ALLOWED_BUNDLE_FILES.has(entry.name) || !files.has(entry.name)) {
       return { existing: true, identical: false };
@@ -80163,7 +81496,7 @@ function uniqueImpactBundleWorkDir(impactRoot, impactId, purpose) {
   const suffix = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return ensurePathWithinRootSync(
     impactRoot,
-    path22.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
+    path23.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
     { label: `impact report ${purpose} directory` }
   );
 }
@@ -80173,19 +81506,19 @@ function persistenceErrorMessage(error2) {
 async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files, existingDirectoryMode, existingFileModes) {
   const stagingDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "staging");
   try {
-    await fs27.mkdir(stagingDir);
+    await fs30.mkdir(stagingDir);
     if (existingDirectoryMode !== null) {
-      await fs27.chmod(stagingDir, existingDirectoryMode);
+      await fs30.chmod(stagingDir, existingDirectoryMode);
     }
     for (const [fileName, content] of files) {
-      const filePath = ensurePathWithinRootSync(stagingDir, path22.join(stagingDir, fileName), {
+      const filePath = ensurePathWithinRootSync(stagingDir, path23.join(stagingDir, fileName), {
         label: "staged impact report file"
       });
       ensurePathWithinRootSync(projectRoot, filePath, { label: "staged impact report file" });
-      await fs27.writeFile(filePath, content, "utf8");
+      await fs30.writeFile(filePath, content, "utf8");
       const existingMode = existingFileModes.get(fileName);
       if (existingMode !== void 0) {
-        await fs27.chmod(filePath, existingMode);
+        await fs30.chmod(filePath, existingMode);
       }
     }
     const stagedComparison = await compareImpactBundle(projectRoot, stagingDir, files);
@@ -80194,7 +81527,7 @@ async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files, 
     }
     return stagingDir;
   } catch (error2) {
-    await fs27.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+    await fs30.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
 }
@@ -80203,7 +81536,7 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
   const backupDir = uniqueImpactBundleWorkDir(impactRoot, impactId, "backup");
   let hadExistingBundle = false;
   try {
-    const stats = await fs27.lstat(impactDir);
+    const stats = await fs30.lstat(impactDir);
     if (!stats.isDirectory()) {
       throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
     }
@@ -80215,29 +81548,29 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
   let promoted = false;
   try {
     if (hadExistingBundle) {
-      await fs27.rename(impactDir, backupDir);
+      await fs30.rename(impactDir, backupDir);
       backupCreated = true;
     }
-    await fs27.rename(stagingDir, impactDir);
+    await fs30.rename(stagingDir, impactDir);
     promoted = true;
   } catch (error2) {
     if (backupCreated && !promoted) {
-      await fs27.rm(impactDir, { recursive: true, force: true }).catch(() => void 0);
+      await fs30.rm(impactDir, { recursive: true, force: true }).catch(() => void 0);
       try {
-        await fs27.rename(backupDir, impactDir);
+        await fs30.rename(backupDir, impactDir);
       } catch (restoreError) {
-        await fs27.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+        await fs30.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
         throw new Error(
           `Impact report bundle replacement failed and the previous bundle could not be restored. Replacement error: ${persistenceErrorMessage(error2)}. Restore error: ${persistenceErrorMessage(restoreError)}.`
         );
       }
     }
-    await fs27.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+    await fs30.rm(stagingDir, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   if (backupCreated) {
     try {
-      await fs27.rm(backupDir, { recursive: true, force: true });
+      await fs30.rm(backupDir, { recursive: true, force: true });
     } catch (error2) {
       warnings.push(
         `Impact report bundle was replaced, but cleanup of the previous staged backup failed: ${persistenceErrorMessage(error2)}`
@@ -80248,11 +81581,11 @@ async function promoteStagedImpactBundle(impactRoot, impactDir, stagingDir, impa
 }
 async function replaceImpactBundleTransactionally(projectRoot, impactId, impactDir, files) {
   const impactRoot = ensureImpactReportRoot(projectRoot);
-  await fs27.mkdir(impactRoot, { recursive: true });
+  await fs30.mkdir(impactRoot, { recursive: true });
   let existingDirectoryMode = null;
   const existingFileModes = /* @__PURE__ */ new Map();
   try {
-    const stats = await fs27.lstat(impactDir);
+    const stats = await fs30.lstat(impactDir);
     if (!stats.isDirectory()) {
       throw new Error(`Impact bundle target must be a real directory: ${impactDir}`);
     }
@@ -80267,11 +81600,11 @@ async function replaceImpactBundleTransactionally(projectRoot, impactId, impactD
       [...files.keys()].map(async (fileName) => {
         const existingPath = ensurePathWithinRootSync(
           impactDir,
-          path22.join(impactDir, fileName),
+          path23.join(impactDir, fileName),
           { label: "existing impact report file" }
         );
         try {
-          const stats = await fs27.lstat(existingPath);
+          const stats = await fs30.lstat(existingPath);
           if (!stats.isFile()) {
             throw new Error(`Impact bundle file target must be a regular file: ${existingPath}`);
           }
@@ -80296,13 +81629,13 @@ async function replaceImpactBundleTransactionally(projectRoot, impactId, impactD
 }
 async function readSavedImpactReport(projectRoot, impactId) {
   const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const reportPath = ensurePathWithinRootSync(impactDir, path22.join(impactDir, "impact.json"), {
+  const reportPath = ensurePathWithinRootSync(impactDir, path23.join(impactDir, "impact.json"), {
     label: "saved impact report"
   });
   if (!await pathExists7(reportPath)) {
     throw new Error(`${IMPACT_REPORT_ROOT}/${impactId}/impact.json does not exist.`);
   }
-  return safeJsonParseObject(await fs27.readFile(reportPath, "utf8"), {
+  return safeJsonParseObject(await fs30.readFile(reportPath, "utf8"), {
     label: `${IMPACT_REPORT_ROOT}/${impactId}/impact.json`
   });
 }
@@ -80347,9 +81680,9 @@ async function blueprintImpactReportWrite(args = {}) {
     writeEvidenceLog: args.writeEvidenceLog
   });
   return withBlueprintRepoLock(projectRoot, `impact-report-${impactId}`, async () => {
-    const lexicalImpactDir = path22.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
+    const lexicalImpactDir = path23.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
     try {
-      const stats = await fs27.lstat(lexicalImpactDir);
+      const stats = await fs30.lstat(lexicalImpactDir);
       if (!stats.isDirectory()) {
         throw new Error(`Impact bundle target must be a real directory: ${lexicalImpactDir}`);
       }
@@ -80415,7 +81748,7 @@ async function blueprintImpactReportWrite(args = {}) {
 }
 async function blueprintImpactOutputRender(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const mode = args.mode ?? "human";
+  const mode2 = args.mode ?? "human";
   const rawReport = args.report ?? (args.impactId ? await readSavedImpactReport(projectRoot, args.impactId) : void 0);
   const parsed = normalizeImpactReportForPersistence(rawReport, args.impactId, projectRoot);
   if (!parsed.report || parsed.errors.length > 0) {
@@ -80425,10 +81758,10 @@ async function blueprintImpactOutputRender(args = {}) {
   }
   return {
     phaseStatus: "rendered",
-    mode,
+    mode: mode2,
     status: parsed.report.status,
     impactStatus: parsed.report.impactStatus,
-    content: renderImpactOutput(parsed.report, mode, args.verbosity),
+    content: renderImpactOutput(parsed.report, mode2, args.verbosity),
     impactId: parsed.report.impactId,
     warnings: parsed.warnings
   };
@@ -80797,14 +82130,14 @@ var init_impact = __esm({
 
 // src/mcp/quality-shipping-safety.ts
 import { execFile as execFile8 } from "node:child_process";
-import { createHash as createHash14 } from "node:crypto";
+import { createHash as createHash15 } from "node:crypto";
 function canonicalize3(value) {
   if (Array.isArray(value)) {
     return value.map(canonicalize3);
   }
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).filter(([, entryValue]) => entryValue !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entryValue]) => [key, canonicalize3(entryValue)])
+      Object.entries(value).filter(([, entryValue]) => entryValue !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entryValue]) => [key2, canonicalize3(entryValue)])
     );
   }
   return value;
@@ -80813,7 +82146,7 @@ function qualityShippingStableSerialize(value) {
   return JSON.stringify(canonicalize3(value));
 }
 function qualityShippingSha256(value) {
-  return createHash14("sha256").update(value).digest("hex");
+  return createHash15("sha256").update(value).digest("hex");
 }
 function qualityShippingFingerprint(value) {
   return qualityShippingSha256(qualityShippingStableSerialize(value));
@@ -80840,16 +82173,16 @@ function qualityShippingGitEnvironment(overrides = {}) {
   };
 }
 function tryAcquireQualityShippingOperationLock(_operation, repositoryIdentity) {
-  const key = repositoryIdentity;
-  if (activeOperationKeys.has(key)) {
+  const key2 = repositoryIdentity;
+  if (activeOperationKeys.has(key2)) {
     return null;
   }
-  activeOperationKeys.add(key);
+  activeOperationKeys.add(key2);
   let released = false;
   return () => {
     if (released) return;
     released = true;
-    activeOperationKeys.delete(key);
+    activeOperationKeys.delete(key2);
   };
 }
 var activeOperationKeys, qualityShippingProcessRunner;
@@ -80890,7 +82223,7 @@ var init_quality_shipping_safety = __esm({
 import { randomUUID as randomUUID5 } from "node:crypto";
 import { access, lstat, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import os7 from "node:os";
-import path23 from "node:path";
+import path24 from "node:path";
 function pruneApprovals(forInsertion = false) {
   const now = nowProvider();
   for (const [operationId, approval] of approvals) {
@@ -80938,14 +82271,14 @@ async function pathExists8(targetPath) {
 }
 async function gitPathExists(repoRoot, name) {
   const gitPath = await requiredGit(repoRoot, ["rev-parse", "--git-path", name]);
-  return pathExists8(path23.isAbsolute(gitPath) ? gitPath : path23.resolve(repoRoot, gitPath));
+  return pathExists8(path24.isAbsolute(gitPath) ? gitPath : path24.resolve(repoRoot, gitPath));
 }
 async function inspectRepository(cwd) {
   const repoRootRaw = await requiredGit(cwd, ["rev-parse", "--show-toplevel"]);
   const repoRoot = await realpath(repoRootRaw);
   const gitCommonDirRaw = await requiredGit(repoRoot, ["rev-parse", "--git-common-dir"]);
   const gitCommonDir2 = await realpath(
-    path23.isAbsolute(gitCommonDirRaw) ? gitCommonDirRaw : path23.resolve(repoRoot, gitCommonDirRaw)
+    path24.isAbsolute(gitCommonDirRaw) ? gitCommonDirRaw : path24.resolve(repoRoot, gitCommonDirRaw)
   );
   const headResult = await runGit5(repoRoot, ["rev-parse", "--verify", "HEAD"]);
   const branchResult = await runGit5(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
@@ -80988,8 +82321,8 @@ async function inspectRepository(cwd) {
 function statusContainsOnlyUndoReport(status) {
   const entries = lines2(status);
   return entries.length > 0 && entries.every((entry) => {
-    const candidatePath = entry.slice(3).replace(/^"|"$/g, "");
-    return candidatePath === UNDO_REPORT_PATH;
+    const candidatePath2 = entry.slice(3).replace(/^"|"$/g, "");
+    return candidatePath2 === UNDO_REPORT_PATH;
   });
 }
 function repositoryBlockers(snapshot3) {
@@ -81006,12 +82339,12 @@ function repositoryBlockers(snapshot3) {
 }
 function normalizeEvidencePath(repoRoot, value) {
   const trimmed = value.trim().replaceAll("\\", "/");
-  if (!trimmed || path23.isAbsolute(trimmed) || trimmed.split("/").includes("..")) {
+  if (!trimmed || path24.isAbsolute(trimmed) || trimmed.split("/").includes("..")) {
     throw new Error(`Evidence path must be repo-relative and contained: ${value}`);
   }
-  const absolutePath = path23.resolve(repoRoot, trimmed);
-  const relativePath = path23.relative(repoRoot, absolutePath).replaceAll("\\", "/");
-  if (!relativePath || relativePath.startsWith("../") || path23.isAbsolute(relativePath)) {
+  const absolutePath = path24.resolve(repoRoot, trimmed);
+  const relativePath = path24.relative(repoRoot, absolutePath).replaceAll("\\", "/");
+  if (!relativePath || relativePath.startsWith("../") || path24.isAbsolute(relativePath)) {
     throw new Error(`Evidence path must resolve inside the repository: ${value}`);
   }
   if (relativePath !== trimmed) {
@@ -81023,7 +82356,7 @@ async function assertCanonicalEvidenceParents(repoRoot, relativePath) {
   const parentParts = relativePath.split("/").slice(0, -1);
   let currentPath = repoRoot;
   for (const part of parentParts) {
-    currentPath = path23.join(currentPath, part);
+    currentPath = path24.join(currentPath, part);
     let metadata;
     try {
       metadata = await lstat(currentPath);
@@ -81034,8 +82367,8 @@ async function assertCanonicalEvidenceParents(repoRoot, relativePath) {
     if (metadata.isSymbolicLink()) {
       try {
         const linkedPath = await realpath(currentPath);
-        const linkedRelativePath = path23.relative(repoRoot, linkedPath);
-        if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path23.sep}`) || path23.isAbsolute(linkedRelativePath)) {
+        const linkedRelativePath = path24.relative(repoRoot, linkedPath);
+        if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path24.sep}`) || path24.isAbsolute(linkedRelativePath)) {
           throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
         }
       } catch (error2) {
@@ -81055,7 +82388,7 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
   const normalized = [...new Set(evidencePaths.map((value) => normalizeEvidencePath(repoRoot, value)))].sort();
   const receipts = [];
   for (const relativePath of normalized) {
-    const absolutePath = path23.join(repoRoot, relativePath);
+    const absolutePath = path24.join(repoRoot, relativePath);
     let contentSha256 = null;
     if (relativePath === UNDO_REPORT_PATH) {
       throw new Error(`${UNDO_REPORT_PATH} cannot be its own undo evidence input.`);
@@ -81066,8 +82399,8 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
       if (metadata.isSymbolicLink()) {
         try {
           const linkedPath = await realpath(absolutePath);
-          const linkedRelativePath = path23.relative(repoRoot, linkedPath);
-          if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path23.sep}`) || path23.isAbsolute(linkedRelativePath)) {
+          const linkedRelativePath = path24.relative(repoRoot, linkedPath);
+          if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path24.sep}`) || path24.isAbsolute(linkedRelativePath)) {
             throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
           }
         } catch (error2) {
@@ -81082,8 +82415,8 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
         throw new Error(`Evidence path must be a regular file: ${relativePath}`);
       }
       const realEvidencePath = await realpath(absolutePath);
-      const realRelativePath = path23.relative(repoRoot, realEvidencePath);
-      if (realRelativePath === ".." || realRelativePath.startsWith(`..${path23.sep}`) || path23.isAbsolute(realRelativePath)) {
+      const realRelativePath = path24.relative(repoRoot, realEvidencePath);
+      if (realRelativePath === ".." || realRelativePath.startsWith(`..${path24.sep}`) || path24.isAbsolute(realRelativePath)) {
         throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
       }
       if (realEvidencePath !== absolutePath) {
@@ -81098,7 +82431,7 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
   return receipts;
 }
 async function readUndoReportReceipt(repoRoot) {
-  const reportPath = path23.join(repoRoot, UNDO_REPORT_PATH);
+  const reportPath = path24.join(repoRoot, UNDO_REPORT_PATH);
   if (!await pathExists8(reportPath)) {
     return { exists: false, contentSha256: null, content: null, appliedReverts: [] };
   }
@@ -81149,10 +82482,10 @@ async function expectedRevertTree(repoRoot, headBefore, candidate) {
   if (!selectedParent) return null;
   const sourceObjectsRaw = await requiredGit(repoRoot, ["rev-parse", "--git-path", "objects"]);
   const sourceObjects = await realpath(
-    path23.isAbsolute(sourceObjectsRaw) ? sourceObjectsRaw : path23.resolve(repoRoot, sourceObjectsRaw)
+    path24.isAbsolute(sourceObjectsRaw) ? sourceObjectsRaw : path24.resolve(repoRoot, sourceObjectsRaw)
   );
-  const temporaryObjectRoot = await mkdtemp(path23.join(os7.tmpdir(), "blueprint-undo-tree-"));
-  const temporaryObjects = path23.join(temporaryObjectRoot, "objects");
+  const temporaryObjectRoot = await mkdtemp(path24.join(os7.tmpdir(), "blueprint-undo-tree-"));
+  const temporaryObjects = path24.join(temporaryObjectRoot, "objects");
   try {
     await mkdir(temporaryObjects, { recursive: true });
     const result = await processRunner(
@@ -81477,7 +82810,7 @@ function renderOutcomeReport(packet, result) {
     ...result.reverted
   ];
   const processRows = result.processes.length ? result.processes.map(
-    (receipt) => `| ${receipt.target} | ${receipt.result.exitCode ?? "null"} | ${receipt.result.signal ?? "none"} | ${receipt.result.timedOut} | ${markdownValue(receipt.result.stdout || "none")} | ${markdownValue(receipt.result.stderr || "none")} |`
+    (receipt2) => `| ${receipt2.target} | ${receipt2.result.exitCode ?? "null"} | ${receipt2.result.signal ?? "none"} | ${receipt2.result.timedOut} | ${markdownValue(receipt2.result.stdout || "none")} | ${markdownValue(receipt2.result.stderr || "none")} |`
   ).join("\n") : "| none | none | none | false | none | none |";
   const reportWithOutcome = preReport.replace(
     /- \*\*Revert outcome:\*\* not-run\n- \*\*Blockers:\*\* none/,
@@ -81850,7 +83183,7 @@ async function blueprintUndoExecute(args) {
         return result;
       }
       const persistedPreReport = await readFile(
-        path23.join(stored.packet.repoRoot, stored.packet.report.path)
+        path24.join(stored.packet.repoRoot, stored.packet.report.path)
       );
       if (qualityShippingSha256(persistedPreReport) !== stored.packet.report.preMutationContentSha256) {
         result.status = "stale";
@@ -82305,7 +83638,7 @@ var init_undo = __esm({
 // src/mcp/tools/pr-branch.ts
 import { randomUUID as randomUUID6 } from "node:crypto";
 import { access as access2, lstat as lstat2, mkdtemp as mkdtemp2, readFile as readFile2, realpath as realpath2, rm as rm2 } from "node:fs/promises";
-import path24 from "node:path";
+import path25 from "node:path";
 function env() {
   return qualityShippingGitEnvironment();
 }
@@ -82353,14 +83686,14 @@ async function inProgressState(commonDir) {
     ["bisect", "BISECT_LOG"]
   ];
   const found = [];
-  for (const [name, marker] of markers) if (await exists(path24.join(commonDir, marker))) found.push(name);
+  for (const [name, marker] of markers) if (await exists(path25.join(commonDir, marker))) found.push(name);
   return found;
 }
 async function snapshot(cwd) {
   const repoRootRaw = await gitText(cwd, ["rev-parse", "--show-toplevel"], "repository discovery");
   const repoRoot = await realpath2(repoRootRaw);
   const commonRaw = await gitText(repoRoot, ["rev-parse", "--git-common-dir"], "git common-dir discovery");
-  const gitCommonDir2 = await realpath2(path24.resolve(repoRoot, commonRaw));
+  const gitCommonDir2 = await realpath2(path25.resolve(repoRoot, commonRaw));
   const branchResult = await git(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
   const headResult = await git(repoRoot, ["rev-parse", "--verify", "HEAD"]);
   const statusResult = await git(repoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
@@ -82469,12 +83802,12 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
   const normalized = [...new Set(evidencePaths.map((value) => value.trim().replaceAll("\\", "/").replace(/^\.\//, "")))].sort();
   const receipts = [];
   for (const relative of normalized) {
-    if (!relative || relative.startsWith("-") || path24.isAbsolute(relative) || relative.split("/").includes("..")) {
+    if (!relative || relative.startsWith("-") || path25.isAbsolute(relative) || relative.split("/").includes("..")) {
       throw new Error(`Evidence path must be a safe repo-relative canonical path: ${relative}`);
     }
-    const absolute = path24.resolve(repoRoot, relative);
-    const lexicalRelative = path24.relative(repoRoot, absolute);
-    if (!lexicalRelative || lexicalRelative === ".." || lexicalRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(lexicalRelative)) {
+    const absolute = path25.resolve(repoRoot, relative);
+    const lexicalRelative = path25.relative(repoRoot, absolute);
+    if (!lexicalRelative || lexicalRelative === ".." || lexicalRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(lexicalRelative)) {
       throw new Error(`Evidence path escapes the canonical repository: ${relative}`);
     }
     if (lexicalRelative.replaceAll("\\", "/") !== relative) {
@@ -82489,15 +83822,15 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
         } catch {
           throw new Error(`Evidence path ${relative} is a broken or unresolvable symlink.`);
         }
-        const linkedRelative = path24.relative(repoRoot, linkedPath);
-        if (linkedRelative === ".." || linkedRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(linkedRelative)) {
+        const linkedRelative = path25.relative(repoRoot, linkedPath);
+        if (linkedRelative === ".." || linkedRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(linkedRelative)) {
           throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
         }
         throw new Error(`Evidence path ${relative} is a symlink; evidence inputs must be canonical repository files.`);
       }
       const resolved = await realpath2(absolute);
-      const resolvedRelative = path24.relative(repoRoot, resolved);
-      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path24.sep}`) || path24.isAbsolute(resolvedRelative)) {
+      const resolvedRelative = path25.relative(repoRoot, resolved);
+      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
       }
       const canonical = resolvedRelative.replaceAll("\\", "/");
@@ -82515,7 +83848,7 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
 }
 async function reportReceipt(repoRoot) {
   try {
-    return { exists: true, sha256: qualityShippingSha256(await readFile2(path24.join(repoRoot, REPORT_PATH))) };
+    return { exists: true, sha256: qualityShippingSha256(await readFile2(path25.join(repoRoot, REPORT_PATH))) };
   } catch (error2) {
     if (error2.code === "ENOENT") return { exists: false, sha256: null };
     throw error2;
@@ -82576,9 +83909,9 @@ function parseTreeEntry(stdout) {
   return `${match[1]}:${match[2]}:${match[3]}`;
 }
 async function treeEntry(repoRoot, commit, relativePath) {
-  const receipt = await git(repoRoot, ["ls-tree", "-z", commit, "--", relativePath]);
-  if (!succeeded(receipt)) throw new Error(`Tree entry inspection failed for ${relativePath}.`);
-  return parseTreeEntry(receipt.stdout);
+  const receipt2 = await git(repoRoot, ["ls-tree", "-z", commit, "--", relativePath]);
+  if (!succeeded(receipt2)) throw new Error(`Tree entry inspection failed for ${relativePath}.`);
+  return parseTreeEntry(receipt2.stdout);
 }
 function pruneApprovals2() {
   const now = nowProvider2();
@@ -82632,8 +83965,8 @@ function renderReport(packet, fingerprint, result) {
   const ledger = packet.commits.map((commit) => {
     const mapping = mappings.find((entry) => entry.sourceCommit === commit.sourceCommit);
     const classification = mapping?.outcome === "empty-after-filter" ? "empty-after-filter" : commit.classification;
-    const verification = mapping?.verification ?? (mapping?.outcome === "failed" ? "unknown" : "not-attempted");
-    return `| ${commit.sourceCommit} | ${tableText(commit.subject)} | ${tableText(mapping?.observedSubject ?? "not observed")} | ${classification} | ${mapping?.outcome ?? commit.action} | ${verification} | ${commit.excludedPaths.join(", ") || "none"} |`;
+    const verification2 = mapping?.verification ?? (mapping?.outcome === "failed" ? "unknown" : "not-attempted");
+    return `| ${commit.sourceCommit} | ${tableText(commit.subject)} | ${tableText(mapping?.observedSubject ?? "not observed")} | ${classification} | ${mapping?.outcome ?? commit.action} | ${verification2} | ${commit.excludedPaths.join(", ") || "none"} |`;
   }).join("\n");
   return `# PR Branch Report
 
@@ -82703,7 +84036,7 @@ function baseResult(packet, operationId, fingerprint) {
 async function existingBranchDisposition(repoRoot, reviewBranch, report, request) {
   if (await localBranchDisposition(repoRoot, reviewBranch) === "absent") return null;
   if (!report.exists) return "divergent";
-  const content = await readFile2(path24.join(repoRoot, REPORT_PATH), "utf8");
+  const content = await readFile2(path25.join(repoRoot, REPORT_PATH), "utf8");
   const escaped = reviewBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const createdOid = content.match(new RegExp(`^- Created branch: ${escaped} \\(([0-9a-f]{40}|[0-9a-f]{64})\\)$`, "m"))?.[1] ?? null;
   const sourceBranch = content.match(/^- Source branch: (.+)$/m)?.[1] ?? null;
@@ -82911,9 +84244,9 @@ async function compareFreshAfterPreReport(packet, expectedReportSha256) {
   return changed;
 }
 async function recordProcess(result, stage, argv) {
-  const receipt = await git(approvals2.get(result.operationId)?.packet.repoRoot ?? globalThis.process.cwd(), argv);
-  result.processes.push({ stage, argv: [...argv], result: receipt });
-  return receipt;
+  const receipt2 = await git(approvals2.get(result.operationId)?.packet.repoRoot ?? globalThis.process.cwd(), argv);
+  result.processes.push({ stage, argv: [...argv], result: receipt2 });
+  return receipt2;
 }
 function abnormal(result) {
   return result.timedOut || result.signal !== null || result.exitCode === null;
@@ -82923,9 +84256,9 @@ async function currentOid(repoRoot, ref = "HEAD") {
   return succeeded(result) && isCanonicalFullGitHash(result.stdout.trim()) ? result.stdout.trim() : null;
 }
 async function readOidReceipt(result, stage, ref) {
-  const receipt = await recordProcess(result, stage, ["rev-parse", "--verify", "--end-of-options", ref]);
-  const oid = receipt.stdout.trim();
-  return succeeded(receipt) && isCanonicalFullGitHash(oid) ? oid : null;
+  const receipt2 = await recordProcess(result, stage, ["rev-parse", "--verify", "--end-of-options", ref]);
+  const oid = receipt2.stdout.trim();
+  return succeeded(receipt2) && isCanonicalFullGitHash(oid) ? oid : null;
 }
 function markValidationUnknown(result, blocker) {
   result.status = "outcome-unknown";
@@ -83102,7 +84435,7 @@ async function blueprintPrBranchExecute(args) {
         break;
       }
       const mixed = stored.packet.blueprintPolicy === "exclude" && commit.classification === "mixed";
-      let replay;
+      let replay2;
       let ownedTempDir = null;
       if (mixed) {
         const parent = commit.parents[0];
@@ -83113,8 +84446,8 @@ async function blueprintPrBranchExecute(args) {
           break;
         }
         try {
-          ownedTempDir = await mkdtemp2(path24.join(stored.packet.gitCommonDir, "blueprint-pr-branch-"));
-          const mixedPatchPath = path24.join(ownedTempDir, "replay.patch");
+          ownedTempDir = await mkdtemp2(path25.join(stored.packet.gitCommonDir, "blueprint-pr-branch-"));
+          const mixedPatchPath = path25.join(ownedTempDir, "replay.patch");
           const patchResult = await recordProcess(result, `filter-diff:${commit.sourceCommit}`, ["diff", "--binary", "--full-index", `--output=${mixedPatchPath}`, parent, commit.sourceCommit, "--", ".", ":(exclude).blueprint", ":(exclude).blueprint/**"]);
           if (!succeeded(patchResult)) {
             result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
@@ -83132,7 +84465,7 @@ async function blueprintPrBranchExecute(args) {
             result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "empty-after-filter", verification: "not-applicable" });
             continue;
           }
-          replay = await recordProcess(result, `replay:${commit.sourceCommit}`, ["apply", "--index", "--3way", "--", mixedPatchPath]);
+          replay2 = await recordProcess(result, `replay:${commit.sourceCommit}`, ["apply", "--index", "--3way", "--", mixedPatchPath]);
         } catch (error2) {
           result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
           result.status = "partial";
@@ -83142,13 +84475,13 @@ async function blueprintPrBranchExecute(args) {
           if (ownedTempDir) await rm2(ownedTempDir, { recursive: true, force: true }).catch(() => void 0);
         }
       } else {
-        replay = await recordProcess(result, `replay:${commit.sourceCommit}`, ["cherry-pick", commit.sourceCommit]);
+        replay2 = await recordProcess(result, `replay:${commit.sourceCommit}`, ["cherry-pick", commit.sourceCommit]);
       }
-      if (!succeeded(replay)) {
+      if (!succeeded(replay2)) {
         result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
-        result.status = abnormal(replay) ? "outcome-unknown" : "partial";
+        result.status = abnormal(replay2) ? "outcome-unknown" : "partial";
         result.blockers.push(`Replay failed at ${commit.sourceCommit}; conflicts were not resolved automatically.`);
-        const cherryPickHead = path24.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
+        const cherryPickHead = path25.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
         if (!mixed && await exists(cherryPickHead)) await recordProcess(result, "abort-cherry-pick", ["cherry-pick", "--abort"]);
         break;
       }
@@ -83461,7 +84794,7 @@ var init_pr_branch = __esm({
 // src/mcp/tools/ship.ts
 import { randomUUID as randomUUID7 } from "node:crypto";
 import { access as access3, lstat as lstat3, readFile as readFile3, readdir, realpath as realpath3 } from "node:fs/promises";
-import path25 from "node:path";
+import path26 from "node:path";
 function pruneApprovals3(forInsertion = false) {
   const now = nowProvider3();
   for (const [id, stored] of approvals3) {
@@ -83504,13 +84837,13 @@ function rejectLiteral(value, label) {
 async function inProgressState2(commonDir) {
   const markers = [["merge", "MERGE_HEAD"], ["cherry-pick", "CHERRY_PICK_HEAD"], ["revert", "REVERT_HEAD"], ["rebase-merge", "rebase-merge"], ["rebase-apply", "rebase-apply"], ["sequencer", "sequencer"], ["bisect", "BISECT_LOG"]];
   const found = [];
-  for (const [label, marker] of markers) if (await exists2(path25.join(commonDir, marker))) found.push(label);
+  for (const [label, marker] of markers) if (await exists2(path26.join(commonDir, marker))) found.push(label);
   return found;
 }
 async function snapshot2(cwd) {
   const root = await realpath3(await gitText2(cwd, ["rev-parse", "--show-toplevel"], "repository discovery"));
   const commonRaw = await gitText2(root, ["rev-parse", "--git-common-dir"], "git common-dir discovery");
-  const common = await realpath3(path25.resolve(root, commonRaw));
+  const common = await realpath3(path26.resolve(root, commonRaw));
   const [branch, head, status, config2] = await Promise.all([
     run("git", root, ["symbolic-ref", "--quiet", "--short", "HEAD"]),
     run("git", root, ["rev-parse", "--verify", "HEAD"]),
@@ -83564,16 +84897,16 @@ async function evidenceReceipts3(repoRoot, inputs) {
   const seen = /* @__PURE__ */ new Set();
   for (const input of inputs) {
     rejectLiteral(input.path, "Evidence path");
-    if (path25.isAbsolute(input.path) || input.path.split(/[\\/]+/).includes("..")) throw new Error("Evidence paths must be safe repo-relative paths.");
+    if (path26.isAbsolute(input.path) || input.path.split(/[\\/]+/).includes("..")) throw new Error("Evidence paths must be safe repo-relative paths.");
     const normalized = input.path.replaceAll("\\", "/").replace(/^\.\//, "");
     if (seen.has(normalized)) throw new Error("Each evidence path may be supplied only once.");
     seen.add(normalized);
     const role = canonicalEvidenceRole(normalized);
     if (!role) throw new Error(`Evidence path ${normalized} is not a canonical phase quality artifact or pr-branch-latest receipt.`);
     if (role.kind !== input.kind) throw new Error(`Evidence kind ${input.kind} does not match the canonical ${role.kind} role derived from ${normalized}.`);
-    const absolutePath = path25.resolve(repoRoot, normalized);
-    const lexicalRelative = path25.relative(repoRoot, absolutePath);
-    if (lexicalRelative === ".." || lexicalRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(lexicalRelative)) {
+    const absolutePath = path26.resolve(repoRoot, normalized);
+    const lexicalRelative = path26.relative(repoRoot, absolutePath);
+    if (lexicalRelative === ".." || lexicalRelative.startsWith(`..${path26.sep}`) || path26.isAbsolute(lexicalRelative)) {
       throw new Error(`Evidence path ${normalized} escapes the canonical repository.`);
     }
     try {
@@ -83581,8 +84914,8 @@ async function evidenceReceipts3(repoRoot, inputs) {
       if (metadata.isSymbolicLink()) {
         try {
           const linkedPath = await realpath3(absolutePath);
-          const linkedRelative = path25.relative(repoRoot, linkedPath);
-          if (linkedRelative === ".." || linkedRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(linkedRelative)) {
+          const linkedRelative = path26.relative(repoRoot, linkedPath);
+          if (linkedRelative === ".." || linkedRelative.startsWith(`..${path26.sep}`) || path26.isAbsolute(linkedRelative)) {
             throw new Error(`Evidence path ${normalized} resolves outside the canonical repository.`);
           }
         } catch (error2) {
@@ -83592,8 +84925,8 @@ async function evidenceReceipts3(repoRoot, inputs) {
         throw new Error(`Evidence path ${normalized} is a symlink; evidence inputs must be canonical repository files.`);
       }
       const resolvedPath = await realpath3(absolutePath);
-      const resolvedRelative = path25.relative(repoRoot, resolvedPath);
-      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path25.sep}`) || path25.isAbsolute(resolvedRelative)) {
+      const resolvedRelative = path26.relative(repoRoot, resolvedPath);
+      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path26.sep}`) || path26.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${normalized} resolves outside the canonical repository.`);
       }
       const canonicalPath = resolvedRelative.replaceAll("\\", "/");
@@ -83648,7 +84981,7 @@ function parsePrBranchDigestInputs(content) {
   return entries;
 }
 async function loadQualityGateInventory(repoRoot, phaseDir2) {
-  const absoluteDir = path25.resolve(repoRoot, phaseDir2);
+  const absoluteDir = path26.resolve(repoRoot, phaseDir2);
   const metadata = await lstat3(absoluteDir);
   if (!metadata.isDirectory() || metadata.isSymbolicLink()) throw new Error(`Canonical phase directory ${phaseDir2} must be one real directory.`);
   const resolvedDir = await realpath3(absoluteDir);
@@ -83659,7 +84992,7 @@ async function loadQualityGateInventory(repoRoot, phaseDir2) {
     if (!entry.isFile() || entry.isSymbolicLink()) {
       throw new Error(`Canonical phase inventory entry ${phaseDir2}/${entry.name} must be one regular non-symlink file.`);
     }
-    const absolute = path25.join(resolvedDir, entry.name);
+    const absolute = path26.join(resolvedDir, entry.name);
     const resolved = await realpath3(absolute);
     if (resolved !== absolute) throw new Error(`Canonical phase inventory entry ${phaseDir2}/${entry.name} resolves through a non-canonical alias.`);
     const inventoryPath = `${phaseDir2}/${entry.name}`;
@@ -83687,9 +85020,9 @@ async function validateAuthoritativeEvidence(args) {
   if (blockers.length > 0) return { receipts: args.evidence.map(({ content: _content, ...entry }) => entry), inventory: null, blockers };
   const review = byKind("review")[0];
   const security = byKind("security")[0];
-  const verification = byKind("verification")[0];
+  const verification2 = byKind("verification")[0];
   const prBranch = byKind("pr-branch")[0];
-  const qualityArtifacts = [review, security, verification].filter((entry) => entry !== void 0);
+  const qualityArtifacts = [review, security, verification2].filter((entry) => entry !== void 0);
   const qualityDigests = qualityArtifacts.map((entry) => entry.contentSha256);
   if (new Set(qualityDigests).size !== qualityDigests.length) blockers.push("Review, security, and verification evidence must have pairwise-distinct content digests.");
   if (review) {
@@ -83706,7 +85039,7 @@ async function validateAuthoritativeEvidence(args) {
       blockers.push("Canonical security evidence must be completed, ready-for-routing, and complete.");
     }
   }
-  const phaseDir2 = verification.phaseDir;
+  const phaseDir2 = verification2.phaseDir;
   const loadedInventory = await loadQualityGateInventory(args.repoRoot, phaseDir2);
   for (const artifact of qualityArtifacts) {
     const inventoried = loadedInventory.find((entry) => entry.path === artifact.path);
@@ -83715,10 +85048,10 @@ async function validateAuthoritativeEvidence(args) {
     }
   }
   const summaryPaths = loadedInventory.filter((entry) => /-SUMMARY\.md$/.test(entry.path)).map((entry) => entry.path);
-  const verificationValidation = validateVerificationArtifactContent(verification.content, summaryPaths, { noUat: args.config.noUat });
+  const verificationValidation = validateVerificationArtifactContent(verification2.content, summaryPaths, { noUat: args.config.noUat });
   if (!verificationValidation.valid) blockers.push(`Canonical verification evidence is invalid: ${verificationValidation.issues.join(" ")}`);
-  if (!isVerificationArtifactReadyForUat(verification.content)) blockers.push("Canonical verification evidence must be PASS and ready for UAT.");
-  const phasePrefix2 = verification.phasePrefix;
+  if (!isVerificationArtifactReadyForUat(verification2.content)) blockers.push("Canonical verification evidence must be PASS and ready for UAT.");
+  const phasePrefix2 = verification2.phasePrefix;
   const quality = await evaluatePhaseQualityGates({
     projectRoot: args.repoRoot,
     phaseNumber: phasePrefix2,
@@ -83773,7 +85106,7 @@ async function configReceipt(repoRoot) {
 }
 async function reportReceipt2(repoRoot) {
   try {
-    const content = await readFile3(path25.join(repoRoot, REPORT_PATH2));
+    const content = await readFile3(path26.join(repoRoot, REPORT_PATH2));
     return { exists: true, sha256: qualityShippingSha256(content) };
   } catch {
     return { exists: false, sha256: null };
@@ -84442,8 +85775,8 @@ async function blueprintShipExecute(args) {
     if (pushPlan) {
       result.stage = "push";
       result.externalMutationStarted = true;
-      const receipt = await run("git", stored.packet.repoRoot, pushPlan.argv);
-      result.processes.push({ stage: "push", command: "git", argv: [...pushPlan.argv], result: receipt });
+      const receipt2 = await run("git", stored.packet.repoRoot, pushPlan.argv);
+      result.processes.push({ stage: "push", command: "git", argv: [...pushPlan.argv], result: receipt2 });
       let observed = null;
       let observationError = null;
       try {
@@ -84452,19 +85785,19 @@ async function blueprintShipExecute(args) {
         observationError = error2 instanceof Error ? error2.message : String(error2);
       }
       result.push.remoteHeadAfter = observed;
-      if (observed === stored.packet.head && succeeded2(receipt)) result.push.status = "pushed";
+      if (observed === stored.packet.head && succeeded2(receipt2)) result.push.status = "pushed";
       else if (observed === stored.packet.head) {
         result.push.status = "reused";
-        result.warnings.push(`Push process returned exit ${String(receipt.exitCode)}, but the exact approved remote ref was observed at the approved HEAD; classified as reused-by-observation, not newly pushed.`);
-      } else if (observationError || succeeded2(receipt)) {
+        result.warnings.push(`Push process returned exit ${String(receipt2.exitCode)}, but the exact approved remote ref was observed at the approved HEAD; classified as reused-by-observation, not newly pushed.`);
+      } else if (observationError || succeeded2(receipt2)) {
         result.push.status = "outcome-unknown";
         result.status = "outcome-unknown";
         result.blockers.push(observationError ? `Push completed but the exact remote ref could not be observed: ${observationError}` : `Push exited successfully, but the exact push target ref was subsequently observed at ${observed ?? "absent"} instead of the approved HEAD; outcome is unknown.`);
         result.recoveryActions.push("Inspect the exact remote ref before any PR creation or retry.");
       } else {
-        result.push.status = abnormal2(receipt) ? "outcome-unknown" : "failed";
-        result.status = abnormal2(receipt) ? "outcome-unknown" : "failed";
-        result.blockers.push(classifyPushFailure(receipt));
+        result.push.status = abnormal2(receipt2) ? "outcome-unknown" : "failed";
+        result.status = abnormal2(receipt2) ? "outcome-unknown" : "failed";
+        result.blockers.push(classifyPushFailure(receipt2));
         result.recoveryActions.push("Inspect the exact remote ref before any new preview; PR creation was not attempted.");
       }
     }
@@ -84514,25 +85847,25 @@ async function blueprintShipExecute(args) {
           result.recoveryActions.push(freshPreviewRecovery(stored.packet, result));
         } else {
           result.externalMutationStarted = true;
-          const receipt = await run("gh", stored.packet.repoRoot, prPlan.argv);
-          result.processes.push({ stage: "pr-create", command: "gh", argv: [...prPlan.argv], result: receipt });
+          const receipt2 = await run("gh", stored.packet.repoRoot, prPlan.argv);
+          result.processes.push({ stage: "pr-create", command: "gh", argv: [...prPlan.argv], result: receipt2 });
           try {
             const verified = await inspectExistingPr(stored.packet.repoRoot, stored.packet.ghRepository.selector, stored.packet.branch, stored.packet.baseBranch, stored.packet.head, stored.packet.posture);
             if (verified.disposition === "exact" && verified.url) {
-              result.pr.status = succeeded2(receipt) ? "created" : "reused";
+              result.pr.status = succeeded2(receipt2) ? "created" : "reused";
               result.pr.url = verified.url;
-              if (!succeeded2(receipt)) result.warnings.push(`gh pr create returned exit ${String(receipt.exitCode)}, but the exact approved PR was observed; classified as reused-by-observation.`);
-            } else if (succeeded2(receipt)) {
+              if (!succeeded2(receipt2)) result.warnings.push(`gh pr create returned exit ${String(receipt2.exitCode)}, but the exact approved PR was observed; classified as reused-by-observation.`);
+            } else if (succeeded2(receipt2)) {
               result.pr.status = "outcome-unknown";
               result.status = "outcome-unknown";
               result.gh = { status: "pr-view-unavailable", detail: "gh pr create exited successfully but no exact PR was observed" };
               result.blockers.push("gh exited successfully but authoritative inspection reported no exact PR.");
               result.recoveryActions.push(freshPreviewRecovery(stored.packet, result));
             } else {
-              result.pr.status = abnormal2(receipt) ? "outcome-unknown" : "failed";
-              result.status = abnormal2(receipt) ? "outcome-unknown" : "partial";
-              result.gh = { status: ghCreateFailureReason(receipt), detail: classifyGhFailure(receipt) };
-              result.blockers.push(classifyGhFailure(receipt));
+              result.pr.status = abnormal2(receipt2) ? "outcome-unknown" : "failed";
+              result.status = abnormal2(receipt2) ? "outcome-unknown" : "partial";
+              result.gh = { status: ghCreateFailureReason(receipt2), detail: classifyGhFailure(receipt2) };
+              result.blockers.push(classifyGhFailure(receipt2));
               result.recoveryActions.push(freshPreviewRecovery(stored.packet, result));
               result.recoveryActions.push("The confirmed push remains successful; do not push again.");
             }
@@ -84930,11 +86263,11 @@ function parseObject2(lines3, startIndex, indent) {
       index += 1;
       continue;
     }
-    const [, key, rawRemainder] = keyMatch;
+    const [, key2, rawRemainder] = keyMatch;
     const remainder = rawRemainder.trimStart();
     if (remainder === ">" || remainder === "|") {
       const parsed = parseBlockScalar(lines3, index + 1, indent + 2, remainder);
-      value[key] = parsed.value;
+      value[key2] = parsed.value;
       issues.push(...parsed.issues);
       index = parsed.nextIndex;
       continue;
@@ -84945,18 +86278,18 @@ function parseObject2(lines3, startIndex, indent) {
         nextIndex += 1;
       }
       if (nextIndex >= lines3.length || countIndent(lines3[nextIndex]) <= indent) {
-        value[key] = null;
+        value[key2] = null;
         index += 1;
         continue;
       }
       const childIndent = countIndent(lines3[nextIndex]);
       const parsed = lines3[nextIndex].trim().startsWith("- ") ? parseArray2(lines3, nextIndex, childIndent) : parseObject2(lines3, nextIndex, childIndent);
-      value[key] = parsed.value;
+      value[key2] = parsed.value;
       issues.push(...parsed.issues);
       index = parsed.nextIndex;
       continue;
     }
-    value[key] = parseScalar(remainder);
+    value[key2] = parseScalar(remainder);
     index += 1;
   }
   return {
@@ -85093,8 +86426,8 @@ __export(project_exports, {
   blueprintRuntimeOwnedCommandCatalog: () => blueprintRuntimeOwnedCommandCatalog,
   projectToolDefinitions: () => projectToolDefinitions
 });
-import { promises as fs28 } from "node:fs";
-import path26 from "node:path";
+import { promises as fs31 } from "node:fs";
+import path27 from "node:path";
 function bundledUrl(relativePath) {
   const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
   return new URL(`${rootDepth}${relativePath}`, import.meta.url);
@@ -85165,7 +86498,7 @@ ${BOOTSTRAP_STARTER_CONTEXT_MARKER}
 }
 async function pathExists9(targetPath) {
   try {
-    await fs28.access(targetPath);
+    await fs31.access(targetPath);
     return true;
   } catch {
     return false;
@@ -85173,7 +86506,7 @@ async function pathExists9(targetPath) {
 }
 async function readPackageProjectName(projectRoot) {
   try {
-    const raw = await fs28.readFile(path26.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs31.readFile(path27.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -85185,7 +86518,7 @@ async function readPackageProjectName(projectRoot) {
 }
 async function readPackageDescription(projectRoot) {
   try {
-    const raw = await fs28.readFile(path26.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs31.readFile(path27.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -85200,13 +86533,13 @@ async function inferProjectName2(projectRoot, requestedName) {
   if (explicit) {
     return explicit;
   }
-  return await readPackageProjectName(projectRoot) ?? path26.basename(projectRoot);
+  return await readPackageProjectName(projectRoot) ?? path27.basename(projectRoot);
 }
 async function readRepoSummary(projectRoot) {
   const readmePaths = ["README.md", "README"];
   for (const candidate of readmePaths) {
     try {
-      const raw = await fs28.readFile(path26.join(projectRoot, candidate), "utf8");
+      const raw = await fs31.readFile(path27.join(projectRoot, candidate), "utf8");
       const summary = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith("#"));
       if (summary) {
         return summary;
@@ -85433,13 +86766,13 @@ function bootstrapSeedRawPhaseRequirementDiagnostics(seed) {
 function dedupeProjectInitDiagnostics(diagnostics) {
   const deduped = /* @__PURE__ */ new Map();
   for (const diagnostic of diagnostics) {
-    const key = JSON.stringify({
+    const key2 = JSON.stringify({
       path: diagnostic.path,
       code: diagnostic.code,
       message: diagnostic.message
     });
-    if (!deduped.has(key)) {
-      deduped.set(key, diagnostic);
+    if (!deduped.has(key2)) {
+      deduped.set(key2, diagnostic);
     }
   }
   return [...deduped.values()];
@@ -85567,7 +86900,7 @@ async function buildCommandCatalogEntry(parsedRow) {
       blockedBy.push(`Missing runtime input: ${inputPath}`);
     }
   }
-  const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName) && !researchToolDefinitions.some((definition) => definition.name === toolName));
+  const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName) && !researchToolDefinitions.some((definition) => definition.name === toolName) && !planningToolDefinitions.some((definition) => definition.name === toolName));
   const requiredToolsSatisfied = missingTools.length === 0;
   const runtimeInputsSatisfied = missingRuntimeInputs.length === 0;
   for (const toolName of missingTools) {
@@ -85576,7 +86909,7 @@ async function buildCommandCatalogEntry(parsedRow) {
   availableOptionalAgents.push(
     ...await resolveAvailableOptionalAgents(optionalAgents, async (relativePath) => {
       try {
-        return await fs28.readFile(bundledUrl(relativePath), "utf8");
+        return await fs31.readFile(bundledUrl(relativePath), "utf8");
       } catch {
         return null;
       }
@@ -85872,7 +87205,7 @@ async function blueprintProjectInit(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   return withDirectoryLock(
     {
-      lockPath: path26.join(projectRoot, ".blueprint-project-init.lock"),
+      lockPath: path27.join(projectRoot, ".blueprint-project-init.lock"),
       timing: {
         retryMs: 25,
         staleMs: 3e4,
@@ -85965,6 +87298,7 @@ var init_project = __esm({
     "use strict";
     init_discuss();
     init_research();
+    init_plan();
     init_v4();
     init_artifacts();
     init_directory_lock();
@@ -86129,9 +87463,9 @@ var util;
   };
   util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object3) => {
     const keys = [];
-    for (const key in object3) {
-      if (Object.prototype.hasOwnProperty.call(object3, key)) {
-        keys.push(key);
+    for (const key2 in object3) {
+      if (Object.prototype.hasOwnProperty.call(object3, key2)) {
+        keys.push(key2);
       }
     }
     return keys;
@@ -86454,8 +87788,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path30, errorMaps, issueData } = params;
-  const fullPath = [...path30, ...issueData.path || []];
+  const { data, path: path31, errorMaps, issueData } = params;
+  const fullPath = [...path31, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -86523,10 +87857,10 @@ var ParseStatus = class _ParseStatus {
   static async mergeObjectAsync(status, pairs) {
     const syncPairs = [];
     for (const pair of pairs) {
-      const key = await pair.key;
+      const key2 = await pair.key;
       const value = await pair.value;
       syncPairs.push({
-        key,
+        key: key2,
         value
       });
     }
@@ -86535,17 +87869,17 @@ var ParseStatus = class _ParseStatus {
   static mergeObjectSync(status, pairs) {
     const finalObject = {};
     for (const pair of pairs) {
-      const { key, value } = pair;
-      if (key.status === "aborted")
+      const { key: key2, value } = pair;
+      if (key2.status === "aborted")
         return INVALID;
       if (value.status === "aborted")
         return INVALID;
-      if (key.status === "dirty")
+      if (key2.status === "dirty")
         status.dirty();
       if (value.status === "dirty")
         status.dirty();
-      if (key.value !== "__proto__" && (typeof value.value !== "undefined" || pair.alwaysSet)) {
-        finalObject[key.value] = value.value;
+      if (key2.value !== "__proto__" && (typeof value.value !== "undefined" || pair.alwaysSet)) {
+        finalObject[key2.value] = value.value;
       }
     }
     return { status: status.value, value: finalObject };
@@ -86570,12 +87904,12 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path30, key) {
+  constructor(parent, value, path31, key2) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path30;
-    this._key = key;
+    this._path = path31;
+    this._key = key2;
   }
   get path() {
     if (!this._cachedPath.length) {
@@ -88307,9 +89641,9 @@ var ZodArray = class _ZodArray extends ZodType {
     return this.min(1, message);
   }
 };
-ZodArray.create = (schema, params) => {
+ZodArray.create = (schema2, params) => {
   return new ZodArray({
-    type: schema,
+    type: schema2,
     minLength: null,
     maxLength: null,
     exactLength: null,
@@ -88317,30 +89651,30 @@ ZodArray.create = (schema, params) => {
     ...processCreateParams(params)
   });
 };
-function deepPartialify(schema) {
-  if (schema instanceof ZodObject) {
+function deepPartialify(schema2) {
+  if (schema2 instanceof ZodObject) {
     const newShape = {};
-    for (const key in schema.shape) {
-      const fieldSchema = schema.shape[key];
-      newShape[key] = ZodOptional.create(deepPartialify(fieldSchema));
+    for (const key2 in schema2.shape) {
+      const fieldSchema = schema2.shape[key2];
+      newShape[key2] = ZodOptional.create(deepPartialify(fieldSchema));
     }
     return new ZodObject({
-      ...schema._def,
+      ...schema2._def,
       shape: () => newShape
     });
-  } else if (schema instanceof ZodArray) {
+  } else if (schema2 instanceof ZodArray) {
     return new ZodArray({
-      ...schema._def,
-      type: deepPartialify(schema.element)
+      ...schema2._def,
+      type: deepPartialify(schema2.element)
     });
-  } else if (schema instanceof ZodOptional) {
-    return ZodOptional.create(deepPartialify(schema.unwrap()));
-  } else if (schema instanceof ZodNullable) {
-    return ZodNullable.create(deepPartialify(schema.unwrap()));
-  } else if (schema instanceof ZodTuple) {
-    return ZodTuple.create(schema.items.map((item) => deepPartialify(item)));
+  } else if (schema2 instanceof ZodOptional) {
+    return ZodOptional.create(deepPartialify(schema2.unwrap()));
+  } else if (schema2 instanceof ZodNullable) {
+    return ZodNullable.create(deepPartialify(schema2.unwrap()));
+  } else if (schema2 instanceof ZodTuple) {
+    return ZodTuple.create(schema2.items.map((item) => deepPartialify(item)));
   } else {
-    return schema;
+    return schema2;
   }
 }
 var ZodObject = class _ZodObject extends ZodType {
@@ -88373,29 +89707,29 @@ var ZodObject = class _ZodObject extends ZodType {
     const { shape, keys: shapeKeys } = this._getCached();
     const extraKeys = [];
     if (!(this._def.catchall instanceof ZodNever && this._def.unknownKeys === "strip")) {
-      for (const key in ctx.data) {
-        if (!shapeKeys.includes(key)) {
-          extraKeys.push(key);
+      for (const key2 in ctx.data) {
+        if (!shapeKeys.includes(key2)) {
+          extraKeys.push(key2);
         }
       }
     }
     const pairs = [];
-    for (const key of shapeKeys) {
-      const keyValidator = shape[key];
-      const value = ctx.data[key];
+    for (const key2 of shapeKeys) {
+      const keyValidator = shape[key2];
+      const value = ctx.data[key2];
       pairs.push({
-        key: { status: "valid", value: key },
-        value: keyValidator._parse(new ParseInputLazyPath(ctx, value, ctx.path, key)),
-        alwaysSet: key in ctx.data
+        key: { status: "valid", value: key2 },
+        value: keyValidator._parse(new ParseInputLazyPath(ctx, value, ctx.path, key2)),
+        alwaysSet: key2 in ctx.data
       });
     }
     if (this._def.catchall instanceof ZodNever) {
       const unknownKeys = this._def.unknownKeys;
       if (unknownKeys === "passthrough") {
-        for (const key of extraKeys) {
+        for (const key2 of extraKeys) {
           pairs.push({
-            key: { status: "valid", value: key },
-            value: { status: "valid", value: ctx.data[key] }
+            key: { status: "valid", value: key2 },
+            value: { status: "valid", value: ctx.data[key2] }
           });
         }
       } else if (unknownKeys === "strict") {
@@ -88412,15 +89746,15 @@ var ZodObject = class _ZodObject extends ZodType {
       }
     } else {
       const catchall = this._def.catchall;
-      for (const key of extraKeys) {
-        const value = ctx.data[key];
+      for (const key2 of extraKeys) {
+        const value = ctx.data[key2];
         pairs.push({
-          key: { status: "valid", value: key },
+          key: { status: "valid", value: key2 },
           value: catchall._parse(
-            new ParseInputLazyPath(ctx, value, ctx.path, key)
+            new ParseInputLazyPath(ctx, value, ctx.path, key2)
             //, ctx.child(key), value, getParsedType(value)
           ),
-          alwaysSet: key in ctx.data
+          alwaysSet: key2 in ctx.data
         });
       }
     }
@@ -88428,10 +89762,10 @@ var ZodObject = class _ZodObject extends ZodType {
       return Promise.resolve().then(async () => {
         const syncPairs = [];
         for (const pair of pairs) {
-          const key = await pair.key;
+          const key2 = await pair.key;
           const value = await pair.value;
           syncPairs.push({
-            key,
+            key: key2,
             value,
             alwaysSet: pair.alwaysSet
           });
@@ -88556,8 +89890,8 @@ var ZodObject = class _ZodObject extends ZodType {
   //   }) as any;
   //   return merged;
   // }
-  setKey(key, schema) {
-    return this.augment({ [key]: schema });
+  setKey(key2, schema2) {
+    return this.augment({ [key2]: schema2 });
   }
   // merge<Incoming extends AnyZodObject>(
   //   merging: Incoming
@@ -88588,9 +89922,9 @@ var ZodObject = class _ZodObject extends ZodType {
   }
   pick(mask) {
     const shape = {};
-    for (const key of util.objectKeys(mask)) {
-      if (mask[key] && this.shape[key]) {
-        shape[key] = this.shape[key];
+    for (const key2 of util.objectKeys(mask)) {
+      if (mask[key2] && this.shape[key2]) {
+        shape[key2] = this.shape[key2];
       }
     }
     return new _ZodObject({
@@ -88600,9 +89934,9 @@ var ZodObject = class _ZodObject extends ZodType {
   }
   omit(mask) {
     const shape = {};
-    for (const key of util.objectKeys(this.shape)) {
-      if (!mask[key]) {
-        shape[key] = this.shape[key];
+    for (const key2 of util.objectKeys(this.shape)) {
+      if (!mask[key2]) {
+        shape[key2] = this.shape[key2];
       }
     }
     return new _ZodObject({
@@ -88618,12 +89952,12 @@ var ZodObject = class _ZodObject extends ZodType {
   }
   partial(mask) {
     const newShape = {};
-    for (const key of util.objectKeys(this.shape)) {
-      const fieldSchema = this.shape[key];
-      if (mask && !mask[key]) {
-        newShape[key] = fieldSchema;
+    for (const key2 of util.objectKeys(this.shape)) {
+      const fieldSchema = this.shape[key2];
+      if (mask && !mask[key2]) {
+        newShape[key2] = fieldSchema;
       } else {
-        newShape[key] = fieldSchema.optional();
+        newShape[key2] = fieldSchema.optional();
       }
     }
     return new _ZodObject({
@@ -88633,16 +89967,16 @@ var ZodObject = class _ZodObject extends ZodType {
   }
   required(mask) {
     const newShape = {};
-    for (const key of util.objectKeys(this.shape)) {
-      if (mask && !mask[key]) {
-        newShape[key] = this.shape[key];
+    for (const key2 of util.objectKeys(this.shape)) {
+      if (mask && !mask[key2]) {
+        newShape[key2] = this.shape[key2];
       } else {
-        const fieldSchema = this.shape[key];
+        const fieldSchema = this.shape[key2];
         let newField = fieldSchema;
         while (newField instanceof ZodOptional) {
           newField = newField._def.innerType;
         }
-        newShape[key] = newField;
+        newShape[key2] = newField;
       }
     }
     return new _ZodObject({
@@ -88886,14 +90220,14 @@ function mergeValues(a, b) {
     return { valid: true, data: a };
   } else if (aType === ZodParsedType.object && bType === ZodParsedType.object) {
     const bKeys = util.objectKeys(b);
-    const sharedKeys = util.objectKeys(a).filter((key) => bKeys.indexOf(key) !== -1);
+    const sharedKeys = util.objectKeys(a).filter((key2) => bKeys.indexOf(key2) !== -1);
     const newObj = { ...a, ...b };
-    for (const key of sharedKeys) {
-      const sharedValue = mergeValues(a[key], b[key]);
+    for (const key2 of sharedKeys) {
+      const sharedValue = mergeValues(a[key2], b[key2]);
       if (!sharedValue.valid) {
         return { valid: false };
       }
-      newObj[key] = sharedValue.data;
+      newObj[key2] = sharedValue.data;
     }
     return { valid: true, data: newObj };
   } else if (aType === ZodParsedType.array && bType === ZodParsedType.array) {
@@ -89003,10 +90337,10 @@ var ZodTuple = class _ZodTuple extends ZodType {
       status.dirty();
     }
     const items = [...ctx.data].map((item, itemIndex) => {
-      const schema = this._def.items[itemIndex] || this._def.rest;
-      if (!schema)
+      const schema2 = this._def.items[itemIndex] || this._def.rest;
+      if (!schema2)
         return null;
-      return schema._parse(new ParseInputLazyPath(ctx, item, ctx.path, itemIndex));
+      return schema2._parse(new ParseInputLazyPath(ctx, item, ctx.path, itemIndex));
     }).filter((x) => !!x);
     if (ctx.common.async) {
       return Promise.all(items).then((results) => {
@@ -89057,11 +90391,11 @@ var ZodRecord = class _ZodRecord extends ZodType {
     const pairs = [];
     const keyType = this._def.keyType;
     const valueType = this._def.valueType;
-    for (const key in ctx.data) {
+    for (const key2 in ctx.data) {
       pairs.push({
-        key: keyType._parse(new ParseInputLazyPath(ctx, key, ctx.path, key)),
-        value: valueType._parse(new ParseInputLazyPath(ctx, ctx.data[key], ctx.path, key)),
-        alwaysSet: key in ctx.data
+        key: keyType._parse(new ParseInputLazyPath(ctx, key2, ctx.path, key2)),
+        value: valueType._parse(new ParseInputLazyPath(ctx, ctx.data[key2], ctx.path, key2)),
+        alwaysSet: key2 in ctx.data
       });
     }
     if (ctx.common.async) {
@@ -89109,9 +90443,9 @@ var ZodMap = class extends ZodType {
     }
     const keyType = this._def.keyType;
     const valueType = this._def.valueType;
-    const pairs = [...ctx.data.entries()].map(([key, value], index) => {
+    const pairs = [...ctx.data.entries()].map(([key2, value], index) => {
       return {
-        key: keyType._parse(new ParseInputLazyPath(ctx, key, ctx.path, [index, "key"])),
+        key: keyType._parse(new ParseInputLazyPath(ctx, key2, ctx.path, [index, "key"])),
         value: valueType._parse(new ParseInputLazyPath(ctx, value, ctx.path, [index, "value"]))
       };
     });
@@ -89119,30 +90453,30 @@ var ZodMap = class extends ZodType {
       const finalMap = /* @__PURE__ */ new Map();
       return Promise.resolve().then(async () => {
         for (const pair of pairs) {
-          const key = await pair.key;
+          const key2 = await pair.key;
           const value = await pair.value;
-          if (key.status === "aborted" || value.status === "aborted") {
+          if (key2.status === "aborted" || value.status === "aborted") {
             return INVALID;
           }
-          if (key.status === "dirty" || value.status === "dirty") {
+          if (key2.status === "dirty" || value.status === "dirty") {
             status.dirty();
           }
-          finalMap.set(key.value, value.value);
+          finalMap.set(key2.value, value.value);
         }
         return { status: status.value, value: finalMap };
       });
     } else {
       const finalMap = /* @__PURE__ */ new Map();
       for (const pair of pairs) {
-        const key = pair.key;
+        const key2 = pair.key;
         const value = pair.value;
-        if (key.status === "aborted" || value.status === "aborted") {
+        if (key2.status === "aborted" || value.status === "aborted") {
           return INVALID;
         }
-        if (key.status === "dirty" || value.status === "dirty") {
+        if (key2.status === "dirty" || value.status === "dirty") {
           status.dirty();
         }
-        finalMap.set(key.value, value.value);
+        finalMap.set(key2.value, value.value);
       }
       return { status: status.value, value: finalMap };
     }
@@ -89520,9 +90854,9 @@ var ZodPromise = class extends ZodType {
     }));
   }
 };
-ZodPromise.create = (schema, params) => {
+ZodPromise.create = (schema2, params) => {
   return new ZodPromise({
-    type: schema,
+    type: schema2,
     typeName: ZodFirstPartyTypeKind.ZodPromise,
     ...processCreateParams(params)
   });
@@ -89650,17 +90984,17 @@ var ZodEffects = class extends ZodType {
     util.assertNever(effect);
   }
 };
-ZodEffects.create = (schema, effect, params) => {
+ZodEffects.create = (schema2, effect, params) => {
   return new ZodEffects({
-    schema,
+    schema: schema2,
     typeName: ZodFirstPartyTypeKind.ZodEffects,
     effect,
     ...processCreateParams(params)
   });
 };
-ZodEffects.createWithPreprocess = (preprocess2, schema, params) => {
+ZodEffects.createWithPreprocess = (preprocess2, schema2, params) => {
   return new ZodEffects({
-    schema,
+    schema: schema2,
     effect: { type: "preprocess", transform: preprocess2 },
     typeName: ZodFirstPartyTypeKind.ZodEffects,
     ...processCreateParams(params)
@@ -90039,8 +91373,8 @@ init_core2();
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s) {
-  const schema = s;
-  return !!schema._zod;
+  const schema2 = s;
+  return !!schema2._zod;
 }
 function objectFromShape(shape) {
   const values = Object.values(shape);
@@ -90054,33 +91388,33 @@ function objectFromShape(shape) {
     return objectType(shape);
   throw new Error("Mixed Zod versions detected in object shape.");
 }
-function safeParse2(schema, data) {
-  if (isZ4Schema(schema)) {
-    const result2 = safeParse(schema, data);
+function safeParse2(schema2, data) {
+  if (isZ4Schema(schema2)) {
+    const result2 = safeParse(schema2, data);
     return result2;
   }
-  const v3Schema = schema;
+  const v3Schema = schema2;
   const result = v3Schema.safeParse(data);
   return result;
 }
-async function safeParseAsync2(schema, data) {
-  if (isZ4Schema(schema)) {
-    const result2 = await safeParseAsync(schema, data);
+async function safeParseAsync2(schema2, data) {
+  if (isZ4Schema(schema2)) {
+    const result2 = await safeParseAsync(schema2, data);
     return result2;
   }
-  const v3Schema = schema;
+  const v3Schema = schema2;
   const result = await v3Schema.safeParseAsync(data);
   return result;
 }
-function getObjectShape(schema) {
-  if (!schema)
+function getObjectShape(schema2) {
+  if (!schema2)
     return void 0;
   let rawShape;
-  if (isZ4Schema(schema)) {
-    const v4Schema = schema;
+  if (isZ4Schema(schema2)) {
+    const v4Schema = schema2;
     rawShape = v4Schema._zod?.def?.shape;
   } else {
-    const v3Schema = schema;
+    const v3Schema = schema2;
     rawShape = v3Schema.shape;
   }
   if (!rawShape)
@@ -90094,29 +91428,29 @@ function getObjectShape(schema) {
   }
   return rawShape;
 }
-function normalizeObjectSchema(schema) {
-  if (!schema)
+function normalizeObjectSchema(schema2) {
+  if (!schema2)
     return void 0;
-  if (typeof schema === "object") {
-    const asV3 = schema;
-    const asV4 = schema;
+  if (typeof schema2 === "object") {
+    const asV3 = schema2;
+    const asV4 = schema2;
     if (!asV3._def && !asV4._zod) {
-      const values = Object.values(schema);
+      const values = Object.values(schema2);
       if (values.length > 0 && values.every((v) => typeof v === "object" && v !== null && (v._def !== void 0 || v._zod !== void 0 || typeof v.parse === "function"))) {
-        return objectFromShape(schema);
+        return objectFromShape(schema2);
       }
     }
   }
-  if (isZ4Schema(schema)) {
-    const v4Schema = schema;
+  if (isZ4Schema(schema2)) {
+    const v4Schema = schema2;
     const def = v4Schema._zod?.def;
     if (def && (def.type === "object" || def.shape !== void 0)) {
-      return schema;
+      return schema2;
     }
   } else {
-    const v3Schema = schema;
+    const v3Schema = schema2;
     if (v3Schema.shape !== void 0) {
-      return schema;
+      return schema2;
     }
   }
   return void 0;
@@ -90140,23 +91474,23 @@ function getParseErrorMessage(error2) {
   }
   return String(error2);
 }
-function getSchemaDescription(schema) {
-  return schema.description;
+function getSchemaDescription(schema2) {
+  return schema2.description;
 }
-function isSchemaOptional(schema) {
-  if (isZ4Schema(schema)) {
-    const v4Schema = schema;
+function isSchemaOptional(schema2) {
+  if (isZ4Schema(schema2)) {
+    const v4Schema = schema2;
     return v4Schema._zod?.def?.type === "optional";
   }
-  const v3Schema = schema;
-  if (typeof schema.isOptional === "function") {
-    return schema.isOptional();
+  const v3Schema = schema2;
+  if (typeof schema2.isOptional === "function") {
+    return schema2.isOptional();
   }
   return v3Schema._def?.typeName === "ZodOptional";
 }
-function getLiteralValue(schema) {
-  if (isZ4Schema(schema)) {
-    const v4Schema = schema;
+function getLiteralValue(schema2) {
+  if (isZ4Schema(schema2)) {
+    const v4Schema = schema2;
     const def2 = v4Schema._zod?.def;
     if (def2) {
       if (def2.value !== void 0)
@@ -90166,7 +91500,7 @@ function getLiteralValue(schema) {
       }
     }
   }
-  const v3Schema = schema;
+  const v3Schema = schema2;
   const def = v3Schema._def;
   if (def) {
     if (def.value !== void 0)
@@ -90175,7 +91509,7 @@ function getLiteralValue(schema) {
       return def.values[0];
     }
   }
-  const directValue = schema.value;
+  const directValue = schema2.value;
   if (directValue !== void 0)
     return directValue;
   return void 0;
@@ -91774,19 +93108,19 @@ var getRefs = (options) => {
 };
 
 // node_modules/zod-to-json-schema/dist/esm/errorMessages.js
-function addErrorMessage(res, key, errorMessage3, refs) {
+function addErrorMessage(res, key2, errorMessage3, refs) {
   if (!refs?.errorMessages)
     return;
   if (errorMessage3) {
     res.errorMessage = {
       ...res.errorMessage,
-      [key]: errorMessage3
+      [key2]: errorMessage3
     };
   }
 }
-function setResponseValueAndErrors(res, key, value, errorMessage3, refs) {
-  res[key] = value;
-  addErrorMessage(res, key, errorMessage3, refs);
+function setResponseValueAndErrors(res, key2, value, errorMessage3, refs) {
+  res[key2] = value;
+  addErrorMessage(res, key2, errorMessage3, refs);
 }
 
 // node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
@@ -92001,16 +93335,16 @@ function parseIntersectionDef(def, refs) {
   ].filter((x) => !!x);
   let unevaluatedProperties = refs.target === "jsonSchema2019-09" ? { unevaluatedProperties: false } : void 0;
   const mergedAllOf = [];
-  allOf.forEach((schema) => {
-    if (isJsonSchema7AllOfType(schema)) {
-      mergedAllOf.push(...schema.allOf);
-      if (schema.unevaluatedProperties === void 0) {
+  allOf.forEach((schema2) => {
+    if (isJsonSchema7AllOfType(schema2)) {
+      mergedAllOf.push(...schema2.allOf);
+      if (schema2.unevaluatedProperties === void 0) {
         unevaluatedProperties = void 0;
       }
     } else {
-      let nestedSchema = schema;
-      if ("additionalProperties" in schema && schema.additionalProperties === false) {
-        const { additionalProperties, ...rest } = schema;
+      let nestedSchema = schema2;
+      if ("additionalProperties" in schema2 && schema2.additionalProperties === false) {
+        const { additionalProperties, ...rest } = schema2;
         nestedSchema = rest;
       } else {
         unevaluatedProperties = void 0;
@@ -92237,60 +93571,60 @@ function escapeNonAlphaNumeric(source) {
   }
   return result;
 }
-function addFormat(schema, value, message, refs) {
-  if (schema.format || schema.anyOf?.some((x) => x.format)) {
-    if (!schema.anyOf) {
-      schema.anyOf = [];
+function addFormat(schema2, value, message, refs) {
+  if (schema2.format || schema2.anyOf?.some((x) => x.format)) {
+    if (!schema2.anyOf) {
+      schema2.anyOf = [];
     }
-    if (schema.format) {
-      schema.anyOf.push({
-        format: schema.format,
-        ...schema.errorMessage && refs.errorMessages && {
-          errorMessage: { format: schema.errorMessage.format }
+    if (schema2.format) {
+      schema2.anyOf.push({
+        format: schema2.format,
+        ...schema2.errorMessage && refs.errorMessages && {
+          errorMessage: { format: schema2.errorMessage.format }
         }
       });
-      delete schema.format;
-      if (schema.errorMessage) {
-        delete schema.errorMessage.format;
-        if (Object.keys(schema.errorMessage).length === 0) {
-          delete schema.errorMessage;
+      delete schema2.format;
+      if (schema2.errorMessage) {
+        delete schema2.errorMessage.format;
+        if (Object.keys(schema2.errorMessage).length === 0) {
+          delete schema2.errorMessage;
         }
       }
     }
-    schema.anyOf.push({
+    schema2.anyOf.push({
       format: value,
       ...message && refs.errorMessages && { errorMessage: { format: message } }
     });
   } else {
-    setResponseValueAndErrors(schema, "format", value, message, refs);
+    setResponseValueAndErrors(schema2, "format", value, message, refs);
   }
 }
-function addPattern(schema, regex, message, refs) {
-  if (schema.pattern || schema.allOf?.some((x) => x.pattern)) {
-    if (!schema.allOf) {
-      schema.allOf = [];
+function addPattern(schema2, regex, message, refs) {
+  if (schema2.pattern || schema2.allOf?.some((x) => x.pattern)) {
+    if (!schema2.allOf) {
+      schema2.allOf = [];
     }
-    if (schema.pattern) {
-      schema.allOf.push({
-        pattern: schema.pattern,
-        ...schema.errorMessage && refs.errorMessages && {
-          errorMessage: { pattern: schema.errorMessage.pattern }
+    if (schema2.pattern) {
+      schema2.allOf.push({
+        pattern: schema2.pattern,
+        ...schema2.errorMessage && refs.errorMessages && {
+          errorMessage: { pattern: schema2.errorMessage.pattern }
         }
       });
-      delete schema.pattern;
-      if (schema.errorMessage) {
-        delete schema.errorMessage.pattern;
-        if (Object.keys(schema.errorMessage).length === 0) {
-          delete schema.errorMessage;
+      delete schema2.pattern;
+      if (schema2.errorMessage) {
+        delete schema2.errorMessage.pattern;
+        if (Object.keys(schema2.errorMessage).length === 0) {
+          delete schema2.errorMessage;
         }
       }
     }
-    schema.allOf.push({
+    schema2.allOf.push({
       pattern: stringifyRegExpWithFlags(regex, refs),
       ...message && refs.errorMessages && { errorMessage: { pattern: message } }
     });
   } else {
-    setResponseValueAndErrors(schema, "pattern", stringifyRegExpWithFlags(regex, refs), message, refs);
+    setResponseValueAndErrors(schema2, "pattern", stringifyRegExpWithFlags(regex, refs), message, refs);
   }
 }
 function stringifyRegExpWithFlags(regex, refs) {
@@ -92378,17 +93712,17 @@ function parseRecordDef(def, refs) {
     return {
       type: "object",
       required: def.keyType._def.values,
-      properties: def.keyType._def.values.reduce((acc, key) => ({
+      properties: def.keyType._def.values.reduce((acc, key2) => ({
         ...acc,
-        [key]: parseDef(def.valueType._def, {
+        [key2]: parseDef(def.valueType._def, {
           ...refs,
-          currentPath: [...refs.currentPath, "properties", key]
+          currentPath: [...refs.currentPath, "properties", key2]
         }) ?? parseAnyDef(refs)
       }), {}),
       additionalProperties: refs.rejectedAdditionalProperties
     };
   }
-  const schema = {
+  const schema2 = {
     type: "object",
     additionalProperties: parseDef(def.valueType._def, {
       ...refs,
@@ -92396,17 +93730,17 @@ function parseRecordDef(def, refs) {
     }) ?? refs.allowedAdditionalProperties
   };
   if (refs.target === "openApi3") {
-    return schema;
+    return schema2;
   }
   if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodString && def.keyType._def.checks?.length) {
     const { type, ...keyType } = parseStringDef(def.keyType._def, refs);
     return {
-      ...schema,
+      ...schema2,
       propertyNames: keyType
     };
   } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodEnum) {
     return {
-      ...schema,
+      ...schema2,
       propertyNames: {
         enum: def.keyType._def.values
       }
@@ -92414,11 +93748,11 @@ function parseRecordDef(def, refs) {
   } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodBranded && def.keyType._def.type._def.typeName === ZodFirstPartyTypeKind.ZodString && def.keyType._def.type._def.checks?.length) {
     const { type, ...keyType } = parseBrandedDef(def.keyType._def, refs);
     return {
-      ...schema,
+      ...schema2,
       propertyNames: keyType
     };
   }
-  return schema;
+  return schema2;
 }
 
 // node_modules/zod-to-json-schema/dist/esm/parsers/map.js
@@ -92449,10 +93783,10 @@ function parseMapDef(def, refs) {
 // node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
 function parseNativeEnumDef(def) {
   const object3 = def.values;
-  const actualKeys = Object.keys(def.values).filter((key) => {
-    return typeof object3[object3[key]] !== "number";
+  const actualKeys = Object.keys(def.values).filter((key2) => {
+    return typeof object3[object3[key2]] !== "number";
   });
-  const actualValues = actualKeys.map((key) => object3[key]);
+  const actualValues = actualKeys.map((key2) => object3[key2]);
   const parsedTypes = Array.from(new Set(actualValues.map((values) => typeof values)));
   return {
     type: parsedTypes.length === 1 ? parsedTypes[0] === "string" ? "string" : "number" : ["string", "number"],
@@ -92691,9 +94025,9 @@ function decideAdditionalProperties(def, refs) {
       return refs.removeAdditionalStrategy === "strict" ? refs.allowedAdditionalProperties : refs.rejectedAdditionalProperties;
   }
 }
-function safeIsOptional(schema) {
+function safeIsOptional(schema2) {
   try {
-    return schema.isOptional();
+    return schema2.isOptional();
   } catch {
     return true;
   }
@@ -92749,18 +94083,18 @@ function parseSetDef(def, refs) {
     ...refs,
     currentPath: [...refs.currentPath, "items"]
   });
-  const schema = {
+  const schema2 = {
     type: "array",
     uniqueItems: true,
     items
   };
   if (def.minSize) {
-    setResponseValueAndErrors(schema, "minItems", def.minSize.value, def.minSize.message, refs);
+    setResponseValueAndErrors(schema2, "minItems", def.minSize.value, def.minSize.message, refs);
   }
   if (def.maxSize) {
-    setResponseValueAndErrors(schema, "maxItems", def.maxSize.value, def.maxSize.message, refs);
+    setResponseValueAndErrors(schema2, "maxItems", def.maxSize.value, def.maxSize.message, refs);
   }
-  return schema;
+  return schema2;
 }
 
 // node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
@@ -92941,17 +94275,17 @@ var addMeta = (def, refs, jsonSchema) => {
 };
 
 // node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
-var zodToJsonSchema = (schema, options) => {
+var zodToJsonSchema = (schema2, options) => {
   const refs = getRefs(options);
-  let definitions = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name2, schema2]) => ({
+  let definitions = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name2, schema3]) => ({
     ...acc,
-    [name2]: parseDef(schema2._def, {
+    [name2]: parseDef(schema3._def, {
       ...refs,
       currentPath: [...refs.basePath, refs.definitionPath, name2]
     }, true) ?? parseAnyDef(refs)
   }), {}) : void 0;
   const name = typeof options === "string" ? options : options?.nameStrategy === "title" ? void 0 : options?.name;
-  const main = parseDef(schema._def, name === void 0 ? refs : {
+  const main = parseDef(schema2._def, name === void 0 ? refs : {
     ...refs,
     currentPath: [...refs.basePath, refs.definitionPath, name]
   }, false) ?? parseAnyDef(refs);
@@ -93012,20 +94346,20 @@ function mapMiniTarget(t) {
     return "draft-2020-12";
   return "draft-7";
 }
-function toJsonSchemaCompat(schema, opts) {
-  if (isZ4Schema(schema)) {
-    return toJSONSchema(schema, {
+function toJsonSchemaCompat(schema2, opts) {
+  if (isZ4Schema(schema2)) {
+    return toJSONSchema(schema2, {
       target: mapMiniTarget(opts?.target),
       io: opts?.pipeStrategy ?? "input"
     });
   }
-  return zodToJsonSchema(schema, {
+  return zodToJsonSchema(schema2, {
     strictUnions: opts?.strictUnions ?? true,
     pipeStrategy: opts?.pipeStrategy ?? "input"
   });
 }
-function getMethodLiteral(schema) {
-  const shape = getObjectShape(schema);
+function getMethodLiteral(schema2) {
+  const shape = getObjectShape(schema2);
   const methodSchema = shape?.method;
   if (!methodSchema) {
     throw new Error("Schema is missing a method literal");
@@ -93036,8 +94370,8 @@ function getMethodLiteral(schema) {
   }
   return value;
 }
-function parseWithCompat(schema, data) {
-  const result = safeParse2(schema, data);
+function parseWithCompat(schema2, data) {
+  const result = safeParse2(schema2, data);
   if (!result.success) {
     throw result.error;
   }
@@ -93084,10 +94418,10 @@ var Protocol = class {
       });
       this.setRequestHandler(GetTaskPayloadRequestSchema, async (request, extra) => {
         const handleTaskResult = async () => {
-          const taskId = request.params.taskId;
+          const taskId2 = request.params.taskId;
           if (this._taskMessageQueue) {
             let queuedMessage;
-            while (queuedMessage = await this._taskMessageQueue.dequeue(taskId, extra.sessionId)) {
+            while (queuedMessage = await this._taskMessageQueue.dequeue(taskId2, extra.sessionId)) {
               if (queuedMessage.type === "response" || queuedMessage.type === "error") {
                 const message = queuedMessage.message;
                 const requestId = message.id;
@@ -93110,23 +94444,23 @@ var Protocol = class {
               await this._transport?.send(queuedMessage.message, { relatedRequestId: extra.requestId });
             }
           }
-          const task = await this._taskStore.getTask(taskId, extra.sessionId);
+          const task = await this._taskStore.getTask(taskId2, extra.sessionId);
           if (!task) {
-            throw new McpError(ErrorCode.InvalidParams, `Task not found: ${taskId}`);
+            throw new McpError(ErrorCode.InvalidParams, `Task not found: ${taskId2}`);
           }
           if (!isTerminal(task.status)) {
-            await this._waitForTaskUpdate(taskId, extra.signal);
+            await this._waitForTaskUpdate(taskId2, extra.signal);
             return await handleTaskResult();
           }
           if (isTerminal(task.status)) {
-            const result = await this._taskStore.getTaskResult(taskId, extra.sessionId);
-            this._clearTaskQueue(taskId);
+            const result = await this._taskStore.getTaskResult(taskId2, extra.sessionId);
+            this._clearTaskQueue(taskId2);
             return {
               ...result,
               _meta: {
                 ...result._meta,
                 [RELATED_TASK_META_KEY]: {
-                  taskId
+                  taskId: taskId2
                 }
               }
             };
@@ -93509,37 +94843,37 @@ var Protocol = class {
       }
       return;
     }
-    let taskId;
+    let taskId2;
     try {
       const createResult = await this.request(request, CreateTaskResultSchema, options);
       if (createResult.task) {
-        taskId = createResult.task.taskId;
+        taskId2 = createResult.task.taskId;
         yield { type: "taskCreated", task: createResult.task };
       } else {
         throw new McpError(ErrorCode.InternalError, "Task creation did not return a task");
       }
       while (true) {
-        const task2 = await this.getTask({ taskId }, options);
+        const task2 = await this.getTask({ taskId: taskId2 }, options);
         yield { type: "taskStatus", task: task2 };
         if (isTerminal(task2.status)) {
           if (task2.status === "completed") {
-            const result = await this.getTaskResult({ taskId }, resultSchema, options);
+            const result = await this.getTaskResult({ taskId: taskId2 }, resultSchema, options);
             yield { type: "result", result };
           } else if (task2.status === "failed") {
             yield {
               type: "error",
-              error: new McpError(ErrorCode.InternalError, `Task ${taskId} failed`)
+              error: new McpError(ErrorCode.InternalError, `Task ${taskId2} failed`)
             };
           } else if (task2.status === "cancelled") {
             yield {
               type: "error",
-              error: new McpError(ErrorCode.InternalError, `Task ${taskId} was cancelled`)
+              error: new McpError(ErrorCode.InternalError, `Task ${taskId2} was cancelled`)
             };
           }
           return;
         }
         if (task2.status === "input_required") {
-          const result = await this.getTaskResult({ taskId }, resultSchema, options);
+          const result = await this.getTaskResult({ taskId: taskId2 }, resultSchema, options);
           yield { type: "result", result };
           return;
         }
@@ -93837,11 +95171,11 @@ var Protocol = class {
    * Cleans up the progress handler associated with a task.
    * This should be called when a task reaches a terminal status.
    */
-  _cleanupTaskProgressHandler(taskId) {
-    const progressToken = this._taskProgressTokens.get(taskId);
+  _cleanupTaskProgressHandler(taskId2) {
+    const progressToken = this._taskProgressTokens.get(taskId2);
     if (progressToken !== void 0) {
       this._progressHandlers.delete(progressToken);
-      this._taskProgressTokens.delete(taskId);
+      this._taskProgressTokens.delete(taskId2);
     }
   }
   /**
@@ -93855,21 +95189,21 @@ var Protocol = class {
    * the error appropriately (e.g., by failing the task, logging, etc.). The Protocol layer
    * simply propagates the error.
    */
-  async _enqueueTaskMessage(taskId, message, sessionId) {
+  async _enqueueTaskMessage(taskId2, message, sessionId) {
     if (!this._taskStore || !this._taskMessageQueue) {
       throw new Error("Cannot enqueue task message: taskStore and taskMessageQueue are not configured");
     }
     const maxQueueSize = this._options?.maxTaskQueueSize;
-    await this._taskMessageQueue.enqueue(taskId, message, sessionId, maxQueueSize);
+    await this._taskMessageQueue.enqueue(taskId2, message, sessionId, maxQueueSize);
   }
   /**
    * Clears the message queue for a task and rejects any pending request resolvers.
    * @param taskId The task ID whose queue should be cleared
    * @param sessionId Optional session ID for binding the operation to a specific session
    */
-  async _clearTaskQueue(taskId, sessionId) {
+  async _clearTaskQueue(taskId2, sessionId) {
     if (this._taskMessageQueue) {
-      const messages = await this._taskMessageQueue.dequeueAll(taskId, sessionId);
+      const messages = await this._taskMessageQueue.dequeueAll(taskId2, sessionId);
       for (const message of messages) {
         if (message.type === "request" && isJSONRPCRequest(message.message)) {
           const requestId = message.message.id;
@@ -93878,7 +95212,7 @@ var Protocol = class {
             resolver(new McpError(ErrorCode.InternalError, "Task cancelled or completed"));
             this._requestResolvers.delete(requestId);
           } else {
-            this._onerror(new Error(`Resolver missing for request ${requestId} during task ${taskId} cleanup`));
+            this._onerror(new Error(`Resolver missing for request ${requestId} during task ${taskId2} cleanup`));
           }
         }
       }
@@ -93891,10 +95225,10 @@ var Protocol = class {
    * @param signal Abort signal to cancel the wait
    * @returns Promise that resolves when an update occurs or rejects if aborted
    */
-  async _waitForTaskUpdate(taskId, signal) {
+  async _waitForTaskUpdate(taskId2, signal) {
     let interval = this._options?.defaultTaskPollInterval ?? 1e3;
     try {
-      const task = await this._taskStore?.getTask(taskId);
+      const task = await this._taskStore?.getTask(taskId2);
       if (task?.pollInterval) {
         interval = task.pollInterval;
       }
@@ -93927,16 +95261,16 @@ var Protocol = class {
           params: request.params
         }, sessionId);
       },
-      getTask: async (taskId) => {
-        const task = await taskStore.getTask(taskId, sessionId);
+      getTask: async (taskId2) => {
+        const task = await taskStore.getTask(taskId2, sessionId);
         if (!task) {
           throw new McpError(ErrorCode.InvalidParams, "Failed to retrieve task: Task not found");
         }
         return task;
       },
-      storeTaskResult: async (taskId, status, result) => {
-        await taskStore.storeTaskResult(taskId, status, result, sessionId);
-        const task = await taskStore.getTask(taskId, sessionId);
+      storeTaskResult: async (taskId2, status, result) => {
+        await taskStore.storeTaskResult(taskId2, status, result, sessionId);
+        const task = await taskStore.getTask(taskId2, sessionId);
         if (task) {
           const notification = TaskStatusNotificationSchema.parse({
             method: "notifications/tasks/status",
@@ -93944,23 +95278,23 @@ var Protocol = class {
           });
           await this.notification(notification);
           if (isTerminal(task.status)) {
-            this._cleanupTaskProgressHandler(taskId);
+            this._cleanupTaskProgressHandler(taskId2);
           }
         }
       },
-      getTaskResult: (taskId) => {
-        return taskStore.getTaskResult(taskId, sessionId);
+      getTaskResult: (taskId2) => {
+        return taskStore.getTaskResult(taskId2, sessionId);
       },
-      updateTaskStatus: async (taskId, status, statusMessage) => {
-        const task = await taskStore.getTask(taskId, sessionId);
+      updateTaskStatus: async (taskId2, status, statusMessage) => {
+        const task = await taskStore.getTask(taskId2, sessionId);
         if (!task) {
-          throw new McpError(ErrorCode.InvalidParams, `Task "${taskId}" not found - it may have been cleaned up`);
+          throw new McpError(ErrorCode.InvalidParams, `Task "${taskId2}" not found - it may have been cleaned up`);
         }
         if (isTerminal(task.status)) {
-          throw new McpError(ErrorCode.InvalidParams, `Cannot update task "${taskId}" from terminal status "${task.status}" to "${status}". Terminal states (completed, failed, cancelled) cannot transition to other states.`);
+          throw new McpError(ErrorCode.InvalidParams, `Cannot update task "${taskId2}" from terminal status "${task.status}" to "${status}". Terminal states (completed, failed, cancelled) cannot transition to other states.`);
         }
-        await taskStore.updateTaskStatus(taskId, status, statusMessage, sessionId);
-        const updatedTask = await taskStore.getTask(taskId, sessionId);
+        await taskStore.updateTaskStatus(taskId2, status, statusMessage, sessionId);
+        const updatedTask = await taskStore.getTask(taskId2, sessionId);
         if (updatedTask) {
           const notification = TaskStatusNotificationSchema.parse({
             method: "notifications/tasks/status",
@@ -93968,7 +95302,7 @@ var Protocol = class {
           });
           await this.notification(notification);
           if (isTerminal(updatedTask.status)) {
-            this._cleanupTaskProgressHandler(taskId);
+            this._cleanupTaskProgressHandler(taskId2);
           }
         }
       },
@@ -93983,8 +95317,8 @@ function isPlainObject2(value) {
 }
 function mergeCapabilities(base, additional) {
   const result = { ...base };
-  for (const key in additional) {
-    const k = key;
+  for (const key2 in additional) {
+    const k = key2;
     const addValue = additional[k];
     if (addValue === void 0)
       continue;
@@ -94045,8 +95379,8 @@ var AjvJsonSchemaValidator = class {
    * @param schema - Standard JSON Schema object
    * @returns A validator function that validates input data
    */
-  getValidator(schema) {
-    const ajvValidator = "$id" in schema && typeof schema.$id === "string" ? this._ajv.getSchema(schema.$id) ?? this._ajv.compile(schema) : this._ajv.compile(schema);
+  getValidator(schema2) {
+    const ajvValidator = "$id" in schema2 && typeof schema2.$id === "string" ? this._ajv.getSchema(schema2.$id) ?? this._ajv.compile(schema2) : this._ajv.compile(schema2);
     return (input) => {
       const valid = ajvValidator(input);
       if (valid) {
@@ -94208,8 +95542,8 @@ var ExperimentalServerTasks = class {
    */
   elicitInputStream(params, options) {
     const clientCapabilities = this._server.getClientCapabilities();
-    const mode = params.mode ?? "form";
-    switch (mode) {
+    const mode2 = params.mode ?? "form";
+    switch (mode2) {
       case "url": {
         if (!clientCapabilities?.elicitation?.url) {
           throw new Error("Client does not support url elicitation.");
@@ -94223,7 +95557,7 @@ var ExperimentalServerTasks = class {
         break;
       }
     }
-    const normalizedParams = mode === "form" && params.mode === void 0 ? { ...params, mode: "form" } : params;
+    const normalizedParams = mode2 === "form" && params.mode === void 0 ? { ...params, mode: "form" } : params;
     return this.requestStream({
       method: "elicitation/create",
       params: normalizedParams
@@ -94238,8 +95572,8 @@ var ExperimentalServerTasks = class {
    *
    * @experimental
    */
-  async getTask(taskId, options) {
-    return this._server.getTask({ taskId }, options);
+  async getTask(taskId2, options) {
+    return this._server.getTask({ taskId: taskId2 }, options);
   }
   /**
    * Retrieves the result of a completed task.
@@ -94251,8 +95585,8 @@ var ExperimentalServerTasks = class {
    *
    * @experimental
    */
-  async getTaskResult(taskId, resultSchema, options) {
-    return this._server.getTaskResult({ taskId }, resultSchema, options);
+  async getTaskResult(taskId2, resultSchema, options) {
+    return this._server.getTaskResult({ taskId: taskId2 }, resultSchema, options);
   }
   /**
    * Lists tasks with optional pagination.
@@ -94274,8 +95608,8 @@ var ExperimentalServerTasks = class {
    *
    * @experimental
    */
-  async cancelTask(taskId, options) {
-    return this._server.cancelTask({ taskId }, options);
+  async cancelTask(taskId2, options) {
+    return this._server.cancelTask({ taskId: taskId2 }, options);
   }
 };
 
@@ -94606,8 +95940,8 @@ var Server = class extends Protocol {
    * @returns The result of the elicitation request.
    */
   async elicitInput(params, options) {
-    const mode = params.mode ?? "form";
-    switch (mode) {
+    const mode2 = params.mode ?? "form";
+    switch (mode2) {
       case "url": {
         if (!this._clientCapabilities?.elicitation?.url) {
           throw new Error("Client does not support url elicitation.");
@@ -94696,11 +96030,11 @@ var Server = class extends Protocol {
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
 var COMPLETABLE_SYMBOL = /* @__PURE__ */ Symbol.for("mcp.completable");
-function isCompletable(schema) {
-  return !!schema && typeof schema === "object" && COMPLETABLE_SYMBOL in schema;
+function isCompletable(schema2) {
+  return !!schema2 && typeof schema2 === "object" && COMPLETABLE_SYMBOL in schema2;
 }
-function getCompleter(schema) {
-  const meta3 = schema[COMPLETABLE_SYMBOL];
+function getCompleter(schema2) {
+  const meta3 = schema2[COMPLETABLE_SYMBOL];
   return meta3?.complete;
 }
 var McpZodTypeKind;
@@ -95223,18 +96557,18 @@ var McpServer = class {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await Promise.resolve(handler.createTask(taskExtra))
     );
-    const taskId = createTaskResult.task.taskId;
+    const taskId2 = createTaskResult.task.taskId;
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
-      const updatedTask = await extra.taskStore.getTask(taskId);
+      const updatedTask = await extra.taskStore.getTask(taskId2);
       if (!updatedTask) {
-        throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
+        throw new McpError(ErrorCode.InternalError, `Task ${taskId2} not found during polling`);
       }
       task = updatedTask;
     }
-    return await extra.taskStore.getTaskResult(taskId);
+    return await extra.taskStore.getTaskResult(taskId2);
   }
   setCompletionRequestHandler() {
     if (this._completionHandlerInitialized) {
@@ -95765,20 +97099,20 @@ function isZodRawShapeCompat(obj) {
   }
   return Object.values(obj).some(isZodTypeLike);
 }
-function getZodSchemaObject(schema) {
-  if (!schema) {
+function getZodSchemaObject(schema2) {
+  if (!schema2) {
     return void 0;
   }
-  if (isZodRawShapeCompat(schema)) {
-    return objectFromShape(schema);
+  if (isZodRawShapeCompat(schema2)) {
+    return objectFromShape(schema2);
   }
-  if (!isZodSchemaInstance(schema)) {
+  if (!isZodSchemaInstance(schema2)) {
     throw new Error("inputSchema must be a Zod schema or raw shape, received an unrecognized object");
   }
-  return schema;
+  return schema2;
 }
-function promptArgumentsFromSchema(schema) {
-  const shape = getObjectShape(schema);
+function promptArgumentsFromSchema(schema2) {
+  const shape = getObjectShape(schema2);
   if (!shape)
     return [];
   return Object.entries(shape).map(([name, field]) => {
@@ -95791,8 +97125,8 @@ function promptArgumentsFromSchema(schema) {
     };
   });
 }
-function getMethodValue(schema) {
-  const shape = getObjectShape(schema);
+function getMethodValue(schema2) {
+  const shape = getObjectShape(schema2);
   const methodSchema = shape?.method;
   if (!methodSchema) {
     throw new Error("Schema is missing a method literal");
@@ -95912,7 +97246,7 @@ var StdioServerTransport = class {
 };
 
 // src/mcp/command-resources.ts
-import { promises as fs29 } from "node:fs";
+import { promises as fs32 } from "node:fs";
 init_command_runtime_metadata();
 
 // src/mcp/skill-metadata.ts
@@ -95994,7 +97328,7 @@ function parseObject(lines3, startIndex, indent) {
       index += 1;
       continue;
     }
-    const key = normalizeFrontmatterKey(match[1]);
+    const key2 = normalizeFrontmatterKey(match[1]);
     const rawValue = match[2].trim();
     if (rawValue === ">" || rawValue === "|") {
       const blockLines = [];
@@ -96016,17 +97350,17 @@ function parseObject(lines3, startIndex, indent) {
         blockLines.push(blockLine.slice(blockIndent));
         index += 1;
       }
-      value[key] = rawValue === ">" ? collapseBlockLines(blockLines) : blockLines.join("\n").trim();
+      value[key2] = rawValue === ">" ? collapseBlockLines(blockLines) : blockLines.join("\n").trim();
       continue;
     }
     if (rawValue.length > 0) {
-      value[key] = normalizeFrontmatterKey(rawValue);
+      value[key2] = normalizeFrontmatterKey(rawValue);
       index += 1;
       continue;
     }
     const nextIndex = findNextMeaningfulLine(lines3, index + 1);
     if (nextIndex === -1) {
-      value[key] = "";
+      value[key2] = "";
       index += 1;
       continue;
     }
@@ -96034,18 +97368,18 @@ function parseObject(lines3, startIndex, indent) {
     const nextIndent = countLeadingSpaces(nextLine);
     const nextTrimmed = nextLine.trim();
     if (nextIndent <= lineIndent) {
-      value[key] = "";
+      value[key2] = "";
       index = nextIndex;
       continue;
     }
     if (nextTrimmed.startsWith("- ")) {
       const parsedArray = parseArray(lines3, nextIndex, nextIndent);
-      value[key] = parsedArray.value;
+      value[key2] = parsedArray.value;
       index = parsedArray.nextIndex;
       continue;
     }
     const parsedObject = parseObject(lines3, nextIndex, nextIndent);
-    value[key] = parsedObject.value;
+    value[key2] = parsedObject.value;
     index = parsedObject.nextIndex;
   }
   return {
@@ -96133,10 +97467,10 @@ async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath
       preferredPath ?? null,
       blueprintDiscoverableSkillPath(skillName),
       blueprintLegacySkillPath(skillName)
-    ].filter((path30) => typeof path30 === "string" && path30.length > 0)
+    ].filter((path31) => typeof path31 === "string" && path31.length > 0)
   );
-  for (const candidatePath of candidatePaths) {
-    const content = await readRelativePath(candidatePath);
+  for (const candidatePath2 of candidatePaths) {
+    const content = await readRelativePath(candidatePath2);
     if (content !== null) {
       return resolveBlueprintSkillInputsFromContent(skillName, commandPath, content);
     }
@@ -96158,7 +97492,7 @@ function bundledUrl2(relativePath) {
 }
 async function readBundledFile(relativePath) {
   try {
-    return await fs29.readFile(bundledUrl2(relativePath), "utf8");
+    return await fs32.readFile(bundledUrl2(relativePath), "utf8");
   } catch {
     return null;
   }
@@ -96311,22 +97645,22 @@ function registerBlueprintCommandResources(server) {
 }
 
 // src/mcp/response-sanitizer.ts
-import path27 from "node:path";
+import path28 from "node:path";
 
 // src/mcp/tool-result-utils.ts
-function getString(result, key) {
-  const value = result[key];
+function getString(result, key2) {
+  const value = result[key2];
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 function getNextAction(result) {
   return getString(result, "nextAction");
 }
-function getBoolean(result, key) {
-  const value = result[key];
+function getBoolean(result, key2) {
+  const value = result[key2];
   return typeof value === "boolean" ? value : null;
 }
-function getArrayCount(result, key) {
-  const value = result[key];
+function getArrayCount(result, key2) {
+  const value = result[key2];
   return Array.isArray(value) ? value.length : null;
 }
 function asRecord2(value) {
@@ -96443,7 +97777,7 @@ function trimUpdatePlanPublicFields(result) {
   const updatesDir = typeof savedPaths?.updatesDir === "string" ? savedPaths.updatesDir : null;
   const metadataPath = typeof savedPaths?.metadataPath === "string" ? savedPaths.metadataPath : null;
   const checklistPath = typeof savedPaths?.checklistPath === "string" ? savedPaths.checklistPath : null;
-  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path27.dirname(metadataPath) === updatesDir && path27.dirname(checklistPath) === updatesDir;
+  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path28.dirname(metadataPath) === updatesDir && path28.dirname(checklistPath) === updatesDir;
   if (shouldTrimUpdatesDir && savedPaths !== null) {
     const { updatesDir: _updatesDir, ...trimmedSavedPaths } = savedPaths;
     trimmedResult = {
@@ -96481,12 +97815,12 @@ function trimRedundantConfigGetSourcePath(result) {
 }
 function trimEmptyTopLevelArrayFields(result, keys) {
   let trimmedResult = result;
-  for (const key of keys) {
-    const value = trimmedResult[key];
+  for (const key2 of keys) {
+    const value = trimmedResult[key2];
     if (!Array.isArray(value) || value.length !== 0) {
       continue;
     }
-    const { [key]: _trimmedField, ...nextTrimmedResult } = trimmedResult;
+    const { [key2]: _trimmedField, ...nextTrimmedResult } = trimmedResult;
     trimmedResult = nextTrimmedResult;
   }
   return trimmedResult;
@@ -96497,18 +97831,18 @@ function trimReadinessArtifactBodies(value) {
     return void 0;
   }
   const trimmedBodies = {};
-  for (const [key, bodyValue] of Object.entries(bodies)) {
+  for (const [key2, bodyValue] of Object.entries(bodies)) {
     const body = asRecord2(bodyValue);
     if (!body) {
-      trimmedBodies[key] = bodyValue;
+      trimmedBodies[key2] = bodyValue;
       continue;
     }
     if (body.omittedReason && typeof body.content === "string") {
       const { content: _content, ...trimmedBody } = body;
-      trimmedBodies[key] = trimmedBody;
+      trimmedBodies[key2] = trimmedBody;
       continue;
     }
-    trimmedBodies[key] = body;
+    trimmedBodies[key2] = body;
   }
   return trimmedBodies;
 }
@@ -96648,9 +97982,9 @@ function shouldTrimProjectStatusBootstrapNextAction(result) {
   const recommendedNextAction = typeof bootstrap?.recommendedNextAction === "string" && bootstrap.recommendedNextAction.length > 0 ? bootstrap.recommendedNextAction : null;
   return nextAction !== null && recommendedNextAction !== null && nextAction === recommendedNextAction;
 }
-function shouldTrimNestedWarnings(result, key) {
+function shouldTrimNestedWarnings(result, key2) {
   const topLevelWarnings = result.warnings;
-  const nestedRecord = asRecord2(result[key]);
+  const nestedRecord = asRecord2(result[key2]);
   const nestedWarnings = nestedRecord?.warnings;
   if (!Array.isArray(topLevelWarnings) || !Array.isArray(nestedWarnings)) {
     return false;
@@ -96660,15 +97994,15 @@ function shouldTrimNestedWarnings(result, key) {
   }
   return nestedWarnings.every((warning) => topLevelWarnings.includes(warning));
 }
-function trimNestedWarnings(result, key) {
-  const nestedRecord = asRecord2(result[key]);
+function trimNestedWarnings(result, key2) {
+  const nestedRecord = asRecord2(result[key2]);
   if (!nestedRecord || !("warnings" in nestedRecord)) {
     return result;
   }
   const { warnings: _warnings, ...trimmedNestedRecord } = nestedRecord;
   return {
     ...result,
-    [key]: trimmedNestedRecord
+    [key2]: trimmedNestedRecord
   };
 }
 function shouldTrimPhaseContextCodebaseWarnings(result) {
@@ -96750,14 +98084,14 @@ function trimImpactAnalyzeDuplicatedTopLevelReportFields(result) {
     return result;
   }
   let trimmedResult = result;
-  for (const key of IMPACT_ANALYZE_DUPLICATE_REPORT_KEYS) {
-    if (!(key in trimmedResult) || !(key in report)) {
+  for (const key2 of IMPACT_ANALYZE_DUPLICATE_REPORT_KEYS) {
+    if (!(key2 in trimmedResult) || !(key2 in report)) {
       continue;
     }
-    if (!areEquivalentJsonValues(trimmedResult[key], report[key])) {
+    if (!areEquivalentJsonValues(trimmedResult[key2], report[key2])) {
       continue;
     }
-    const { [key]: _trimmedField, ...nextTrimmedResult } = trimmedResult;
+    const { [key2]: _trimmedField, ...nextTrimmedResult } = trimmedResult;
     trimmedResult = nextTrimmedResult;
   }
   return trimmedResult;
@@ -96782,14 +98116,14 @@ function trimReviewScopeDuplicatedAuthoringContext(result) {
     return trimEmptyTopLevelWarnings(result);
   }
   let trimmedAuthoringContext = authoringContext;
-  for (const key of ["phase", "files", "reviewMode"]) {
-    if (!(key in trimmedAuthoringContext) || !(key in result)) {
+  for (const key2 of ["phase", "files", "reviewMode"]) {
+    if (!(key2 in trimmedAuthoringContext) || !(key2 in result)) {
       continue;
     }
-    if (!areEquivalentJsonValues(trimmedAuthoringContext[key], result[key])) {
+    if (!areEquivalentJsonValues(trimmedAuthoringContext[key2], result[key2])) {
       continue;
     }
-    const { [key]: _trimmedField, ...nextTrimmedAuthoringContext } = trimmedAuthoringContext;
+    const { [key2]: _trimmedField, ...nextTrimmedAuthoringContext } = trimmedAuthoringContext;
     trimmedAuthoringContext = nextTrimmedAuthoringContext;
   }
   const warningsTrimmedResult = trimEmptyTopLevelWarnings(result);
@@ -96801,13 +98135,13 @@ function trimReviewScopeDuplicatedAuthoringContext(result) {
     authoringContext: trimmedAuthoringContext
   };
 }
-function derivePlanStringArray(plans, key) {
+function derivePlanStringArray(plans, key2) {
   if (!Array.isArray(plans)) {
     return null;
   }
   const derivedValues = [];
   for (const plan of plans) {
-    const value = asRecord2(plan)?.[key];
+    const value = asRecord2(plan)?.[key2];
     if (typeof value !== "string") {
       return null;
     }
@@ -97242,6 +98576,7 @@ function createToolResponseContent(toolName, result) {
 // src/mcp/tool-definitions.ts
 init_discuss();
 init_research();
+init_plan();
 init_artifacts();
 init_cleanup();
 init_config();
@@ -97253,9 +98588,9 @@ init_phase_topology_lock();
 init_artifacts();
 init_review();
 import { execFile as execFile9 } from "node:child_process";
-import { createHash as createHash15, randomBytes } from "node:crypto";
-import { promises as fs30 } from "node:fs";
-import path28 from "node:path";
+import { createHash as createHash16, randomBytes } from "node:crypto";
+import { promises as fs33 } from "node:fs";
+import path29 from "node:path";
 import { promisify as promisify7 } from "node:util";
 var execFileAsync7 = promisify7(execFile9);
 var GOD_REVIEW_FLAG = "--feels-like-god";
@@ -97586,7 +98921,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Path must not be empty." };
   }
-  if (path28.isAbsolute(requestedPath)) {
+  if (path29.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -97599,7 +98934,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.endsWith("/")) {
     return { valid: false, path: null, reason: "Directories are not allowed." };
   }
-  const normalizedPath = path28.posix.normalize(requestedPath);
+  const normalizedPath = path29.posix.normalize(requestedPath);
   if (normalizedPath === "." || normalizedPath === ".." || normalizedPath.startsWith("../")) {
     return {
       valid: false,
@@ -97627,15 +98962,15 @@ function hashGodReviewFileSet(args) {
       (left, right) => left.path.localeCompare(right.path)
     )
   });
-  return `sha256:${createHash15("sha256").update(payload).digest("hex")}`;
+  return `sha256:${createHash16("sha256").update(payload).digest("hex")}`;
 }
 async function hashGodReviewResolvedFileSet(args) {
   const contentHashes = await Promise.all(
     stableUniqueSorted(args.files).map(async (file2) => {
-      const content = await fs30.readFile(resolveRepoRelativePath(args.projectRoot, file2));
+      const content = await fs33.readFile(resolveRepoRelativePath(args.projectRoot, file2));
       return {
         path: file2,
-        hash: `sha256:${createHash15("sha256").update(content).digest("hex")}`
+        hash: `sha256:${createHash16("sha256").update(content).digest("hex")}`
       };
     })
   );
@@ -97678,7 +99013,7 @@ function isGeneratedReportReportPath(value) {
   return /^\.blueprint\/reports\/god-review-[A-Za-z0-9._-]+\.md$/.test(value);
 }
 function normalizeSessionOwnedPath(value) {
-  return path28.posix.normalize(normalizePathSeparators(value.trim()));
+  return path29.posix.normalize(normalizePathSeparators(value.trim()));
 }
 function validateGodReviewSessionPaths(session) {
   const issues = [];
@@ -97745,20 +99080,20 @@ function buildInitialGodReviewGroups() {
   }));
 }
 function stableHash2(value) {
-  return `sha256:${createHash15("sha256").update(value).digest("hex")}`;
+  return `sha256:${createHash16("sha256").update(value).digest("hex")}`;
 }
 function isValidRunId(value) {
   return /^[A-Za-z0-9._-]+$/.test(value) && !value.includes("..");
 }
 function generateGodReviewRunId(args) {
   const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const scopeHash = createHash15("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
+  const scopeHash = createHash16("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
   const entropy = randomBytes(3).toString("hex");
   return `god-${day}-${scopeHash}-${entropy}`;
 }
 async function pathExists10(absolutePath) {
   try {
-    await fs30.access(absolutePath);
+    await fs33.access(absolutePath);
     return true;
   } catch {
     return false;
@@ -97766,7 +99101,7 @@ async function pathExists10(absolutePath) {
 }
 async function readTextIfPresent(absolutePath) {
   try {
-    return await fs30.readFile(absolutePath, "utf8");
+    return await fs33.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -97819,7 +99154,7 @@ async function resolveExistingRepoFiles2(args) {
     }
     let stats;
     try {
-      stats = await fs30.stat(absolutePath);
+      stats = await fs33.stat(absolutePath);
     } catch {
       if (deletedFiles.has(normalized.path)) {
         resolvedFiles.add(normalized.path);
@@ -97903,7 +99238,7 @@ async function hashCurrentDiff(projectRoot, files) {
         if (trackedStatus === "tracked") {
           return null;
         }
-        const content = await fs30.readFile(
+        const content = await fs33.readFile(
           resolveRepoRelativePath(projectRoot, file2),
           "utf8"
         );
@@ -97955,7 +99290,7 @@ async function beforeGodReviewPersistenceBundleWrite(args) {
 }
 async function restoreGodReviewBundleFile(args) {
   if (args.previousContent === null) {
-    await fs30.rm(args.absolutePath, { force: true }).catch(() => void 0);
+    await fs33.rm(args.absolutePath, { force: true }).catch(() => void 0);
     return;
   }
   await writeTextFile(args.absolutePath, args.previousContent, {
@@ -98430,7 +99765,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Session path must not be empty." };
   }
-  if (path28.isAbsolute(requestedPath)) {
+  if (path29.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -98440,7 +99775,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path28.posix.normalize(requestedPath);
+  const normalizedPath = path29.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -98469,7 +99804,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Report path must not be empty." };
   }
-  if (path28.isAbsolute(requestedPath)) {
+  if (path29.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -98479,7 +99814,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path28.posix.normalize(requestedPath);
+  const normalizedPath = path29.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -99315,7 +100650,7 @@ async function validateGodReviewFixTargetEvidence(args) {
     }
     let stats;
     try {
-      stats = await fs30.stat(absolutePath);
+      stats = await fs33.stat(absolutePath);
     } catch {
       staleReasons.push(`${args.target.id} references missing file ${parsedReference.path}.`);
       continue;
@@ -99324,7 +100659,7 @@ async function validateGodReviewFixTargetEvidence(args) {
       staleReasons.push(`${args.target.id} references non-file path ${parsedReference.path}.`);
       continue;
     }
-    const fileText = await fs30.readFile(absolutePath, "utf8");
+    const fileText = await fs33.readFile(absolutePath, "utf8");
     readableFileTexts.set(parsedReference.path, fileText);
     if (parsedReference.line !== null) {
       const lineCount = fileText.split("\n").length;
@@ -99863,7 +101198,7 @@ async function startGodReviewSessionWithResolvedScope(args) {
       });
     }
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path28.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
+    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path29.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
     const groups = buildInitialGodReviewGroups();
     const nextGroupId = groups[0]?.id ?? null;
     const session = {
@@ -100956,7 +102291,7 @@ async function blueprintGodReviewCleanup(rawArgs) {
       [session.humanStatePath, humanStateAbsolutePath]
     ]) {
       if (await pathExists10(absolutePath)) {
-        await fs30.rm(absolutePath, { force: true });
+        await fs33.rm(absolutePath, { force: true });
         deletedPaths.push(relativePath);
       }
     }
@@ -101123,7 +102458,7 @@ init_impact();
 
 // src/mcp/tools/lightweight.ts
 init_v4();
-import { promises as fs31 } from "node:fs";
+import { promises as fs34 } from "node:fs";
 
 // src/mcp/lightweight-classifier.ts
 var VAGUE_TASK_PATTERNS = [
@@ -101300,7 +102635,7 @@ function buildClassification(route, confidence, reasons, allowedWrites, required
   };
 }
 function classifyLightweightScope({
-  mode,
+  mode: mode2,
   taskText,
   flags
 }) {
@@ -101375,7 +102710,7 @@ function classifyLightweightScope({
       "route"
     );
   }
-  if (mode === "fast" && qualifiesForFast(normalizedTaskText, flags)) {
+  if (mode2 === "fast" && qualifiesForFast(normalizedTaskText, flags)) {
     return buildClassification(
       "fast",
       "high",
@@ -101387,7 +102722,7 @@ function classifyLightweightScope({
   }
   if (qualifiesForQuick(normalizedTaskText)) {
     const reasons = ["Task is explicit and bounded but not trivial inline work."];
-    if (mode === "fast") {
+    if (mode2 === "fast") {
       reasons.push("Fast mode can reroute bounded non-trivial work to quick.");
     }
     if (flags?.validate || /\btests?\b/.test(normalizedTaskText)) {
@@ -101395,7 +102730,7 @@ function classifyLightweightScope({
     }
     return buildClassification(
       "quick",
-      mode === "fast" ? "high" : "medium",
+      mode2 === "fast" ? "high" : "medium",
       reasons,
       [
         "repo files",
@@ -101604,7 +102939,7 @@ async function quickRunReportStatus(projectRoot) {
   const reportPath = buildBlueprintReportPath("quick-run-latest");
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   try {
-    const stats = await fs31.stat(absolutePath);
+    const stats = await fs34.stat(absolutePath);
     return {
       name: "quick-run-latest",
       exists: true,
@@ -101724,6 +103059,7 @@ var TOOL_DEFINITIONS = [
   ...projectToolDefinitions,
   ...discussToolDefinitions,
   ...researchToolDefinitions,
+  ...planningToolDefinitions,
   ...lightweightToolDefinitions,
   ...configToolDefinitions,
   ...stateToolDefinitions,
@@ -101781,8 +103117,8 @@ var blueprintToolNames = TOOL_DEFINITIONS.map(
 
 // src/mcp/write-failure-log.ts
 init_artifacts();
-import { promises as fs32 } from "node:fs";
-import path29 from "node:path";
+import { promises as fs35 } from "node:fs";
+import path30 from "node:path";
 var BLUEPRINT_DIR2 = ".blueprint";
 var MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
 var LOG_SCHEMA_VERSION = 1;
@@ -101797,13 +103133,13 @@ function truncateString(value, maxLength = MAX_STRING_LENGTH) {
   }
   return `${value.slice(0, maxLength)}\u2026 [truncated ${value.length - maxLength} chars]`;
 }
-function sanitizeForLog(value, depth = 0, key = null) {
+function sanitizeForLog(value, depth = 0, key2 = null) {
   if (value === null || value === void 0) {
     return value;
   }
   if (typeof value === "string") {
     const normalized = value.replace(/\r\n/g, "\n");
-    if (key === "content" || key === "currentState" || key === "contextNotes") {
+    if (key2 === "content" || key2 === "currentState" || key2 === "contextNotes") {
       return {
         length: normalized.length,
         preview: truncateString(normalized)
@@ -101821,7 +103157,7 @@ function sanitizeForLog(value, depth = 0, key = null) {
     if (depth >= MAX_DEPTH) {
       return `[truncated array depth ${depth}]`;
     }
-    const items = value.slice(0, MAX_ARRAY_ITEMS).map((entry) => sanitizeForLog(entry, depth + 1, key));
+    const items = value.slice(0, MAX_ARRAY_ITEMS).map((entry) => sanitizeForLog(entry, depth + 1, key2));
     if (value.length > MAX_ARRAY_ITEMS) {
       items.push(`[truncated ${value.length - MAX_ARRAY_ITEMS} more items]`);
     }
@@ -101862,9 +103198,9 @@ function toLoggedError(error2) {
 async function appendFailureEntry(cwd, entry) {
   try {
     const projectRoot = await ensureRepoRoot(cwd);
-    const absoluteLogPath = path29.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
-    await fs32.mkdir(path29.dirname(absoluteLogPath), { recursive: true });
-    await fs32.appendFile(
+    const absoluteLogPath = path30.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+    await fs35.mkdir(path30.dirname(absoluteLogPath), { recursive: true });
+    await fs35.appendFile(
       absoluteLogPath,
       `${JSON.stringify({
         ...entry,
@@ -101910,6 +103246,9 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_research_prepare",
   "blueprint_research_record",
   "blueprint_research_submit",
+  "blueprint_plan_prepare",
+  "blueprint_plan_submit",
+  "blueprint_plan_finalize",
   "blueprint_config_set",
   "blueprint_config_set_profile",
   "blueprint_state_update",
@@ -102128,8 +103467,8 @@ var DIAGNOSTIC_SUMMARY_LIMIT = 3;
 var MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1500;
 var NON_SUCCESS_SUMMARY_STATUSES = new Set(MUTATION_FAILURE_STATUSES);
 function findSummaryPath(result) {
-  for (const key of SUMMARY_PATH_KEYS) {
-    const value = getString(result, key);
+  for (const key2 of SUMMARY_PATH_KEYS) {
+    const value = getString(result, key2);
     if (value) {
       return value;
     }
@@ -102205,13 +103544,13 @@ function buildDiagnosticSuffix(status, result) {
 function buildSubject(toolName, result) {
   const phaseNumber = getString(result, "phaseNumber");
   const artifact = getString(result, "artifact");
-  const planId2 = getString(result, "planId");
+  const planId3 = getString(result, "planId");
   const scope = getString(result, "scope");
   if (phaseNumber && artifact) {
     return `Phase ${phaseNumber} ${artifact.toLowerCase()}`;
   }
-  if (phaseNumber && planId2) {
-    return `Phase ${phaseNumber} plan ${planId2}`;
+  if (phaseNumber && planId3) {
+    return `Phase ${phaseNumber} plan ${planId3}`;
   }
   if (phaseNumber) {
     return `Phase ${phaseNumber}`;
@@ -102250,8 +103589,8 @@ function buildSubject(toolName, result) {
 }
 function buildCountSummary(result) {
   const fragments = [];
-  for (const [key, label] of SUMMARY_COUNT_KEYS) {
-    const count = getArrayCount(result, key);
+  for (const [key2, label] of SUMMARY_COUNT_KEYS) {
+    const count = getArrayCount(result, key2);
     if (count && count > 0) {
       fragments.push(`${count} ${label}`);
     }
@@ -102263,20 +103602,20 @@ function buildCountSummary(result) {
 }
 function buildUpdatePlanNotSavedCountSummary(result) {
   const fragments = [];
-  for (const [key, label] of [
+  for (const [key2, label] of [
     ["steps", "steps"],
     ["notes", "notes"],
     ["warnings", "warnings"]
   ]) {
-    const count = getArrayCount(result, key);
+    const count = getArrayCount(result, key2);
     if (count && count > 0) {
       fragments.push(`${count} ${label}`);
     }
   }
   return fragments;
 }
-function formatPositiveCount(result, key, label) {
-  const count = getArrayCount(result, key);
+function formatPositiveCount(result, key2, label) {
+  const count = getArrayCount(result, key2);
   return count && count > 0 ? `${count} ${label}` : null;
 }
 function buildPatchReapplySummary(result) {
@@ -102359,13 +103698,13 @@ function getNonSuccessSummaryVerb(status, preferredVerb) {
 function buildNonSuccessStatusSummary(toolName, subject, status, result, preferredVerb) {
   const reason = getString(result, "reason");
   const waitingState = getString(result, "waitingState");
-  const path30 = findSummaryPath(result);
+  const path31 = findSummaryPath(result);
   const content = getString(result, "content");
   const mutationFlags = buildMutationFlags(toolName, result);
   const countSummary = buildCountSummary(result);
   const details = [];
-  if (path30) {
-    details.push(`at \`${path30}\``);
+  if (path31) {
+    details.push(`at \`${path31}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
@@ -102392,8 +103731,8 @@ function buildStateNoopSummary(toolName, result) {
   const synced = getBoolean(result, "synced");
   const updatedFieldCount = getArrayCount(result, "updatedFields");
   const syncedFieldCount = getArrayCount(result, "syncedFields");
-  const path30 = findSummaryPath(result);
-  const location2 = path30 ? ` at \`${path30}\`` : "";
+  const path31 = findSummaryPath(result);
+  const location2 = path31 ? ` at \`${path31}\`` : "";
   if (toolName === "blueprint_state_update" && (updated === false || updatedFieldCount === 0)) {
     return `No state changes${location2}.`;
   }
@@ -102404,12 +103743,12 @@ function buildStateNoopSummary(toolName, result) {
 }
 function buildMutationFlags(toolName, result) {
   const flags = [];
-  for (const key of ["created", "written", "updated", "deleted", "overwritten"]) {
-    if (toolName === "blueprint_state_update" && key === "updated") {
+  for (const key2 of ["created", "written", "updated", "deleted", "overwritten"]) {
+    if (toolName === "blueprint_state_update" && key2 === "updated") {
       continue;
     }
-    if (getBoolean(result, key)) {
-      flags.push(key);
+    if (getBoolean(result, key2)) {
+      flags.push(key2);
     }
   }
   return flags;
@@ -102477,7 +103816,7 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path30 = findSummaryPath(result);
+  const path31 = findSummaryPath(result);
   const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
@@ -102518,8 +103857,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path30) {
-    details.push(`at \`${path30}\``);
+  if (path31) {
+    details.push(`at \`${path31}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);

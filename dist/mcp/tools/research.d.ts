@@ -46,7 +46,7 @@ declare const submitInput: z.ZodObject<{
 export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInput>): Promise<{
     status: string;
     freshness: {
-        status: "unknown" | "fresh" | "stale";
+        status: "unknown" | "stale" | "fresh";
         stalePaths: string[];
         unknownPaths: string[];
     };
@@ -224,7 +224,7 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
             reason: string;
         } | {
             reason: null;
-            status: "unknown" | "fresh" | "stale";
+            status: "unknown" | "stale" | "fresh";
             stalePaths: string[];
             unknownPaths: string[];
         } | null;
@@ -404,7 +404,7 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
             reason: string;
         } | {
             reason: null;
-            status: "unknown" | "fresh" | "stale";
+            status: "unknown" | "stale" | "fresh";
             stalePaths: string[];
             unknownPaths: string[];
         } | null;
@@ -589,7 +589,7 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
             reason: string;
         } | {
             reason: null;
-            status: "unknown" | "fresh" | "stale";
+            status: "unknown" | "stale" | "fresh";
             stalePaths: string[];
             unknownPaths: string[];
         } | null;
@@ -625,7 +625,7 @@ export declare function blueprintResearchRead(args: {
         error: string;
     };
     freshness: {
-        status: "unknown" | "fresh" | "stale";
+        status: "unknown" | "stale" | "fresh";
         stalePaths: string[];
         unknownPaths: string[];
     } | null;

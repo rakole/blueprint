@@ -2,6 +2,7 @@ export { blueprintPhaseCheckpointDelete, blueprintPhaseCheckpointGet, blueprintP
 export { resolvePhaseTopologySnapshot, type PhaseTopologySnapshot } from "./phase-resolution.js";
 export { blueprintPhaseArtifactRead, blueprintPhaseArtifactScaffold, blueprintPhaseArtifactWrite, blueprintPhaseUiSkipWrite } from "./phase-artifacts.js";
 import { type PhaseValidationRenderArgs } from "./phase-validation-rendering.js";
+import { type PhasePlanModelDiagnostic } from "./phase-plan-diagnostics.js";
 import type { PhaseArtifactReadResult, PhaseArtifactScaffoldResult, PhaseArtifactWriteResult, PhaseContextResult, PhaseExecutionTargetsArgs, PhaseExecutionTargetsResult, PhaseLocateResult, PhaseLookupArgs, PhasePlanAuthoringContextArgs, PhasePlanAuthoringContextResult, PhasePlanIndexResult, PhasePlanReadArgs, PhasePlanReadResult, PhasePlanReadinessArgs, PhasePlanReadinessResult, PhasePlanStandaloneValidateModelResult, PhasePlanValidateArgs, PhasePlanValidateModelArgs, PhasePlanValidationResult, PhasePlanWriteArgs, PhasePlanWriteResult, PhaseResearchStatusResult, PhaseSummaryAuthoringContextArgs, PhaseSummaryAuthoringContextResult, PhaseSummaryIndexResult, PhaseSummaryReadArgs, PhaseSummaryReadResult, PhaseSummaryStandaloneValidateModelResult, PhaseSummaryValidateModelArgs, PhaseSummaryValidateModelResult, PhaseSummaryWriteArgs, PhaseSummaryWriteResult, PhaseValidationAuthoringContextArgs, PhaseValidationAuthoringContextResult, PhaseValidationReadArgs, PhaseValidationReadResult, PhaseValidationRenderResult, PhaseValidationStandaloneValidateModelResult, PhaseValidationValidateModelArgs, PhaseValidationValidateModelResult, PhaseValidationWriteArgs, PhaseValidationWriteResult, PlanIndexArgs, RoadmapAddPhaseArgs, RoadmapAddPhaseResult, RoadmapInsertPhaseArgs, RoadmapInsertPhaseResult, RoadmapPromoteBacklogArgs, RoadmapPromoteBacklogResult, RoadmapReadArgs, RoadmapReadResult, RoadmapRemovePhaseArgs, RoadmapRemovePhaseResult } from "./phase-tool-types.js";
 export { buildBlueprintPhaseDirectoryPath } from "./phase-roadmap-mutations.js";
 export declare function blueprintPhaseValidationAuthoringContext(args: PhaseValidationAuthoringContextArgs): Promise<PhaseValidationAuthoringContextResult>;
@@ -20,6 +21,30 @@ export declare function blueprintPhaseValidationWrite(args: PhaseValidationWrite
 export declare function blueprintPhasePlanIndex(args?: PlanIndexArgs): Promise<PhasePlanIndexResult>;
 export declare function blueprintPhasePlanRead(args: PhasePlanReadArgs): Promise<PhasePlanReadResult>;
 export declare function blueprintPhasePlanValidate(args?: PhasePlanValidateArgs): Promise<PhasePlanValidationResult>;
+/** Validate a prospective complete set without publishing any candidate bytes.
+ * All candidate slots share one evidence/dependency snapshot. The durable
+ * session owner supplies locking/freshness and publication authorization.
+ */
+export declare function validatePhasePlanCandidateSet(args: {
+    cwd?: string;
+    phase: string;
+    models: Array<{
+        planId: string;
+        model: unknown;
+    }>;
+    removePlanIds?: string[];
+    requireComplete?: boolean;
+}): Promise<{
+    valid: boolean;
+    diagnostics: PhasePlanModelDiagnostic[];
+    plans: Array<{
+        planId: string;
+        path: string;
+        model: unknown;
+        content: string;
+    }>;
+    planSetValidation: PhasePlanValidationResult | null;
+}>;
 export declare function blueprintPhasePlanAuthoringContext(args?: PhasePlanAuthoringContextArgs): Promise<PhasePlanAuthoringContextResult>;
 export declare function blueprintPhasePlanReadiness(args?: PhasePlanReadinessArgs): Promise<PhasePlanReadinessResult>;
 export declare function blueprintPhasePlanValidateModel(args: PhasePlanValidateModelArgs): Promise<PhasePlanStandaloneValidateModelResult>;

@@ -262,7 +262,7 @@ The runnable command groups below are generated from the same registry as `gener
 - `/blu-execute-phase`: `execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.
 - `/blu-next`: `next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.
 - `/blu-pause-work`: `pause-work` records a canonical handoff from current Blueprint state and artifact inventory.
-- `/blu-plan-phase`: `plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.
+- `/blu-plan-phase`: `plan-phase` preserves compact plan-set candidates before validation, compiles execution-ready phase.plan artifacts, and publishes a complete checked set through MCP.
 - `/blu-research-phase`: `research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then preserves candidates before assessment and publishes planning-ready research through MCP-owned state paths.
 - `/blu-resume-work`: `resume-work` restores working context from the canonical pause handoff and records the next safe action.
 - `/blu-spec-phase`: `spec-phase` clarifies what a Blueprint phase should deliver and writes the optional phase-scoped spec artifact before later discovery and planning flows.
