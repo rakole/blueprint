@@ -4930,7 +4930,9 @@ function isRepoRelativePlanPath(value: string): boolean {
 }
 
 function isGlobPlanPath(value: string): boolean {
-  return /[*?\[\]{}]/.test(value.trim().replace(/\\/g, "/"));
+  // Paths are literal values, never shell-expanded. Brackets and braces are
+  // legal route/file names; only wildcard operators are unsupported.
+  return /[*?]/.test(value.trim());
 }
 
 function isBlueprintCommandReference(value: string): boolean {

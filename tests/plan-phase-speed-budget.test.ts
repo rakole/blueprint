@@ -51,7 +51,7 @@ const promptSurfaces: PromptSurface[] = [
 const promptBudgetThresholds = {
   commandManifestBytes: 9000,
   primarySkillBytes: 9000,
-  activeRuntimeBundleBytes: 52000
+  activeRuntimeBundleBytes: 14000
 } as const;
 
 function countMatches(source: string, pattern: RegExp): number {
@@ -383,7 +383,7 @@ test("plan-phase prompt and relay surfaces expose an informational size baseline
   );
   assert.ok(
     activeRuntimeBundleBytes <= promptBudgetThresholds.activeRuntimeBundleBytes,
-    "active runtime bundle should stay below the Wave 4 deflation budget"
+    "active runtime bundle should stay below the durable planning budget"
   );
   for (const row of rows) {
     assert.ok(

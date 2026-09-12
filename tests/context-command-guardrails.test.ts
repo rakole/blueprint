@@ -67,7 +67,7 @@ test("discovery and planning recovery rules stop repeated identical diagnostics"
   for (const file of [
     "skills/blueprint-phase-discovery/references/discuss-phase-recovery.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md",
-    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+    "skills/blueprint-phase-planning/references/plan-phase-recovery.md"
   ]) {
     assert.match(read(file), /identical (?:diagnostics|errors)|same diagnostics repeat/);
     assert.match(read(file), /source.code investigation|do not inspect MCP source/i);

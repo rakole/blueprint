@@ -302,7 +302,9 @@ function assertSinglePhaseResolutionPass(
     `${label} rescanned .blueprint/phases ${trace.counts.phasesRootScans} times: ${trace.operations.join(", ")}`
   );
   assert.ok(
-    trace.counts.phaseDirScans <= 1,
+    // Resolve identity once, then refresh the inventory inside the publication
+    // token guard so a completed concurrent publication cannot leave stale paths.
+    trace.counts.phaseDirScans <= 2,
     `${label} rescanned the selected phase directory ${trace.counts.phaseDirScans} times: ${trace.operations.join(", ")}`
   );
 }

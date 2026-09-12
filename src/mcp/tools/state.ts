@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { readPlanPublicationStatus } from "./plan-publication.js";
 
 import * as z from "zod/v4";
 
@@ -35,6 +36,7 @@ import {
   type PhaseQualityGateMissingGate
 } from "./quality-gates.js";
 import { parseRoadmapDocument } from "./phase-roadmap-parser.js";
+import { listPhaseArtifacts } from "./phase-locations.js";
 import { detectStrongExplicitNoUiSignal } from "./phase-no-ui-signals.js";
 import {
   blueprintDirectCommand,
@@ -2401,7 +2403,9 @@ async function inspectCurrentPhaseArtifacts(
   const phaseDir = matchingPhaseDirs[0];
   const phasePrefix = formatPhasePrefix(normalizedPhase);
   const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir}`;
-  const phaseArtifacts = inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`));
+  const publicationBefore = await readPlanPublicationStatus(projectRoot, phaseRoot, phasePrefix);
+  // Inventory must be captured inside the publication token guard, too.
+  const phaseArtifacts = await listPhaseArtifacts(resolveBlueprintPath(projectRoot, phaseRoot), projectRoot);
   const contextPath = `${phaseRoot}/${phasePrefix}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix}-UI-SPEC.md`;
@@ -2565,6 +2569,12 @@ async function inspectCurrentPhaseArtifacts(
   }
 
   warnings.push(...summaryWarnings, ...validationWarnings);
+  const publicationAfter = await readPlanPublicationStatus(projectRoot, phaseRoot, phasePrefix);
+  if (publicationBefore.reason || publicationAfter.reason || publicationBefore.token !== publicationAfter.token) {
+    planRoutingReadiness.executionReady = false;
+    planRoutingReadiness.warnings.push(publicationAfter.reason ?? publicationBefore.reason ??
+      "Plan publication changed during state inspection; refresh planning before execution.");
+  }
   warnings.push(...planRoutingReadiness.warnings);
   const qualityGateEvaluation = await evaluatePhaseQualityGates({
     projectRoot,

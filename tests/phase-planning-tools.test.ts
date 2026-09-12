@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promises as fs } from "node:fs";
+import { createHash } from "node:crypto";
 
 import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
@@ -2342,8 +2344,8 @@ test("phase plan readiness keeps missing spec nonblocking under the standard pla
   assert.equal(readiness.status, "ready", JSON.stringify(readiness, null, 2));
   assert.equal(readiness.authoringContext.status, "ready");
   assert.equal(
-    readiness.readSet.some((entry) => entry.path === SPEC_PATH),
-    false
+    readiness.readSet.some((entry) => entry.path === SPEC_PATH && entry.hash === "missing"),
+    true
   );
   assert.equal(hashesOnly.freshness.checked, true);
   assert.equal(hashesOnly.freshness.fresh, true);
@@ -2832,4 +2834,115 @@ test("phase plan validation reports missing phases as invalid warnings instead o
   assert.equal(result.status, "invalid");
   assert.deepEqual(result.issues, []);
   assert.match(result.warnings.join("\n"), /Phase 9 was not found/);
+});
+
+test("saved spec excludes deferred work and read-only references from scope conflicts", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  await writePhaseSpec(repoPath);
+  await writeFile(path.join(repoPath, SPEC_PATH), validSpecContent().replace(
+    "- Adding lifecycle blockers for a missing spec", "- src/legacy.ts\n- Adding lifecycle blockers for a missing spec"));
+  const model = cloneStructuredPlanModel();
+  (model.evidenceCoverage as Array<Record<string, unknown>>).push({ artifact: SPEC_PATH, status: "used", rationale: "The spec establishes scope boundaries." });
+  model.readFirst = ["src/legacy.ts"];
+  (model.tasks as Array<Record<string, unknown>>)[0].readFirst = ["src/legacy.ts"];
+  model.scope = ["Do not add src/legacy.ts to planned changes.", "Adding lifecycle blockers for a missing spec remains out of scope."];
+  model.unknownsAndDeferrals = [{ item: "Adding lifecycle blockers for a missing spec", disposition: "deferred", rationale: "The spec excludes this behavior.", followUp: "Review the separate follow-up phase." }];
+  const accepted = await blueprintPhasePlanValidateModel({ cwd: repoPath, phase: "3", model });
+  assert.equal(accepted.valid, true, JSON.stringify(accepted.diagnostics));
+  assert.equal(accepted.diagnostics.some((diagnostic) => diagnostic.code.startsWith("scope.spec_")), false);
+
+  model.scope = ["Consider how src/legacy.ts relates to the saved architecture constraints."];
+  const contextual = await blueprintPhasePlanValidateModel({ cwd: repoPath, phase: "3", model });
+  assert.equal(contextual.valid, true, JSON.stringify(contextual.diagnostics));
+  assert.ok(contextual.diagnostics.some((diagnostic) => diagnostic.code === "scope.spec_boundary_review" && diagnostic.severity === "warning"));
+
+  model.filesModified = ["src/legacy.ts"];
+  (model.tasks as Array<Record<string, unknown>>)[0].filesModified = ["src/legacy.ts"];
+  (model.fileSurfaceCoverage as Array<Record<string, unknown>>)[0].surface = "src/legacy.ts";
+  const conflicting = await blueprintPhasePlanValidateModel({ cwd: repoPath, phase: "3", model });
+  assert.equal(conflicting.valid, false);
+  assert.ok(conflicting.diagnostics.some((diagnostic) => diagnostic.code === "scope.spec_out_of_scope_conflict"));
+});
+
+test("planning freshness fingerprints project intent, requirement text, codebase, and auxiliary phase evidence", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  const paths = [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/codebase/ARCHITECTURE.md",
+    ".blueprint/phases/03-phase-discovery/03-DISCUSSION-LOG.md", ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"];
+  for (const file of paths) {
+    await mkdir(path.dirname(path.join(repoPath, file)), { recursive: true });
+    await writeFile(path.join(repoPath, file), "# Evidence\n\nInitial planning evidence.\n");
+  }
+  const readiness = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3" });
+  assert.ok(readiness.readSet.some((entry) => entry.kind === "phase.plan.schema"));
+  for (const file of paths) {
+    assert.ok(readiness.readSet.some((entry) => entry.path === file), file);
+    await writeFile(path.join(repoPath, file), "# Evidence\n\nChanged planning evidence.\n");
+  }
+  const after = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3", previousReadSet: readiness.readSet });
+  assert.equal(after.freshness.fresh, false);
+  for (const file of paths) assert.ok(after.freshness.stalePaths.includes(file), file);
+  const rejected = await blueprintPhasePlanWrite({ cwd: repoPath, phase: "3", planId: "01", model: createStructuredPlanModel(), expectedReadSet: readiness.readSet });
+  assert.equal(rejected.written, false);
+  assert.equal(rejected.freshness?.fresh, false);
+});
+
+test("planning freshness tracks research provenance and its repository source inputs", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  const sourcePath = "src/research-evidence.ts";
+  const provenancePath = ".blueprint/phases/03-phase-discovery/03-RESEARCH-PROVENANCE.json";
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await writeFile(path.join(repoPath, sourcePath), "export const value = 1;\n");
+  await writeFile(path.join(repoPath, provenancePath), JSON.stringify({ version: 1, researchHash: "a".repeat(64), readSet: [{ path: sourcePath, hash: "b".repeat(64) }], publishedAt: "2026-09-12T00:00:00Z" }));
+  const readiness = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3" });
+  assert.ok(readiness.readSet.some((entry) => entry.path === provenancePath));
+  assert.ok(readiness.readSet.some((entry) => entry.path === sourcePath));
+  await writeFile(path.join(repoPath, sourcePath), "export const value = 2;\n");
+  const changed = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3", previousReadSet: readiness.readSet });
+  assert.equal(changed.freshness.fresh, false);
+  assert.ok(changed.freshness.stalePaths.includes(sourcePath));
+});
+
+test("planning freshness survives selecting the next authoring slot but still detects saved plan edits", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  const saved = await blueprintPhasePlanWrite({ cwd: repoPath, phase: "3", planId: "01", model: createStructuredPlanModel() });
+  assert.equal(saved.written, true, JSON.stringify(saved.validation));
+  const readiness = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3", planId: "01", includeSavedPlanBodies: "target" });
+  const next = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3", planId: "02", includeSavedPlanBodies: "target", previousReadSet: readiness.readSet });
+  assert.equal(next.freshness.fresh, true, JSON.stringify(next.freshness));
+  assert.equal(next.authoringContext.planId, "02");
+  const planPath = path.join(repoPath, saved.path!);
+  await writeFile(planPath, (await readFile(planPath, "utf8")) + "\nUpdated implementation evidence.\n");
+  const stale = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3", planId: "02", previousReadSet: next.readSet });
+  assert.equal(stale.freshness.fresh, false);
+  assert.ok(stale.freshness.stalePaths.includes(saved.path!));
+});
+
+
+test("planning readiness rejects inputs changed while context summaries are assembled", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  const projectPath = path.join(repoPath, ".blueprint/PROJECT.md");
+  const originalContent = await readFile(projectPath, "utf8");
+  const originalReadFile = fs.readFile;
+  let projectReads = 0;
+  t.mock.method(fs, "readFile", async (...args: Parameters<typeof fs.readFile>) => {
+    const bytes = await originalReadFile(...args);
+    if (String(args[0]) === projectPath && ++projectReads === 2) {
+      await writeFile(projectPath, "# Project\n\nChanged project constraints during preparation.\n");
+    }
+    return bytes;
+  });
+  const readiness = await blueprintPhasePlanReadiness({ cwd: repoPath, phase: "3" });
+  assert.equal(readiness.status, "blocked");
+  assert.equal(readiness.freshness.fresh, false);
+  assert.ok(readiness.freshness.stalePaths.includes(".blueprint/PROJECT.md"));
+  assert.equal(readiness.readSet.find((entry) => entry.path === ".blueprint/PROJECT.md")?.hash,
+    createHash("sha256").update(originalContent).digest("hex"));
+  const rejected = await blueprintPhasePlanWrite({ cwd: repoPath, phase: "3", planId: "01", model: createStructuredPlanModel(), expectedReadSet: readiness.readSet });
+  assert.equal(rejected.written, false);
+  assert.equal(rejected.freshness?.fresh, false);
 });

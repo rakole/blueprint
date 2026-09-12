@@ -177,8 +177,8 @@
     "repoRelativePath": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?!.*[\\r\\n])(?!/)(?!~)(?![A-Za-z]:[\\\\/])(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[*?\\[\\]{}]).+$",
-      "description": "Concrete single-line repo-relative path. No CR/LF, absolute paths, home-relative paths, traversal, backslashes, or glob metacharacters."
+      "pattern": "^(?!.*[\\r\\n])(?!/)(?!~)(?![A-Za-z]:[\\\\/])(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[*?]).+$",
+      "description": "Concrete single-line repo-relative path. No CR/LF, absolute paths, home-relative paths, traversal, backslashes, or wildcard operators (* and ?). Brackets, braces, and parentheses are literal filename characters; paths are never expanded."
     },
     "taskId": {
       "type": "string",

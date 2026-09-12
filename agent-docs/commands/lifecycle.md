@@ -53,6 +53,10 @@ Use focused tests such as:
 - `tests/phase-research-model.test.ts`
 - `tests/research-markdown-regressions.test.ts`
 - `tests/spec-phase-artifact.test.ts`
+- `tests/plan-model.test.ts`
+- `tests/plan-lifecycle.test.ts`
+- `tests/plan-candidate-set.test.ts`
+- `tests/plan-publication.test.ts`
 - `tests/phase-planning-tools.test.ts`
 - `tests/phase-planning-contract.test.ts`
 - `tests/execute-phase-summary-tools.test.ts`

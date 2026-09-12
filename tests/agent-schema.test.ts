@@ -242,7 +242,8 @@ test("every shipped Blueprint agent is a valid Gemini subagent definition with c
 
     if (agentName === "blueprint-planner") {
       assert.match(frontmatter.description as string, /execution-ready plan drafts/i);
-      assert.match(frontmatter.description as string, /drafting new `XX-YY-PLAN\.md` content/i);
+      assert.match(frontmatter.description as string, /drafting compact plan-set candidates/i);
+      assert.match(frontmatter.description as string, /compiled by MCP into `XX-YY-PLAN\.md`/i);
     }
 
     if (agentName === "blueprint-checker") {

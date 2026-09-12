@@ -1186,6 +1186,7 @@ test("runtime metadata keeps a config-read path for every optional-subagent comm
       metadata.requiredTools.includes("blueprint_config_get") ||
       (metadata.commandName === "discuss-phase" && metadata.requiredTools.includes("blueprint_discuss_prepare")) ||
       (metadata.commandName === "research-phase" && metadata.requiredTools.includes("blueprint_research_prepare")) ||
+      (metadata.commandName === "plan-phase" && metadata.requiredTools.includes("blueprint_plan_prepare")) ||
       (metadata.requiredTools.includes("blueprint_lightweight_preflight") &&
         (metadata.commandName === "quick" || metadata.commandName === "fast"));
 
@@ -1501,23 +1502,7 @@ test("plan-phase is implemented once manifest, skill, and plan MCP tools exist",
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["plan-phase"];
   const expectedRequiredTools = [
-    "blueprint_phase_locate",
-    "blueprint_artifact_contract_read",
-    "blueprint_phase_context",
-    "blueprint_phase_research_status",
-    "blueprint_phase_artifact_read",
-    "blueprint_phase_validation_read",
-    "blueprint_review_load_findings",
-    "blueprint_phase_plan_index",
-    "blueprint_phase_plan_read",
-    "blueprint_phase_plan_readiness",
-    "blueprint_phase_plan_authoring_context",
-    "blueprint_phase_plan_validate_model",
-    "blueprint_phase_plan_write",
-    "blueprint_phase_plan_validate",
-    "blueprint_config_get",
-    "blueprint_state_load",
-    "blueprint_state_update"
+    "blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read", "blueprint_plan_finalize"
   ];
 
   assert.equal(entry.declaredStatus, "implemented");
