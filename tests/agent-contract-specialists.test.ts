@@ -151,6 +151,8 @@ test("mapping and discovery specialist agents encode concrete output modes and r
     /files\/modules, tests\/checks, alternatives, relevant risks and open blockers/,
     /Retrieval Notes/,
     /Do not present a sidecar packet as final persisted research/,
+    /prepare's schema\/example to synthesize the final model and publish/,
+    /Report honest unknowns; omit irrelevant fields and never invent evidence/,
     /Do not\s+return a full artifact, transcript, hidden chain of thought or raw search dump/,
     /no new dependency/, /platform\/standard-library API/,
     /version, maintenance, vulnerability\/license, footprint, install\/update posture/,

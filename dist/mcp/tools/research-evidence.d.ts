@@ -26,20 +26,12 @@ export type ResearchProvenance = {
     researchHash: string;
     readSet: ResearchReadSet;
     publishedAt: string;
+    planningReady?: boolean;
 };
 export declare function readPublishedResearchFreshness(root: string, researchPath: string): Promise<{
-    status: "unknown";
+    status: "fresh" | "stale" | "unknown";
     stalePaths: string[];
     unknownPaths: string[];
-    reason: string;
-} | {
-    status: "stale";
-    stalePaths: string[];
-    unknownPaths: string[];
-    reason: string;
-} | {
-    reason: null;
-    status: "unknown" | "stale" | "fresh";
-    stalePaths: string[];
-    unknownPaths: string[];
+    reason: string | null;
+    planningReady?: boolean;
 }>;

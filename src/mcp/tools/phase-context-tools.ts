@@ -7,6 +7,7 @@ import {
   DURABLE_REQUIREMENT_ID_PATTERN,
   extractMarkdownTableRows,
   canonicalizeResearchHeadingLines,
+  researchHasPlanningBlockers,
   inspectBlueprintArtifacts,
   isBootstrapStarterContext,
   resolveBlueprintPath,
@@ -758,7 +759,13 @@ export async function buildPhaseResearchStatusFromContext(
         researchValid = false;
         const message = `Saved research inputs are ${freshness.status}: ${[...freshness.stalePaths, ...freshness.unknownPaths].join(", ")}.`;
         researchIssues.push(message);
-        researchDiagnostics.push({ path: researchPath, code: "research.inputs_stale", message, repair: "Use /blu-research-phase to review changed inputs and update the saved candidate.", retryable: true, nextTool: "blueprint_research_prepare" });
+        researchDiagnostics.push({ path: researchPath, code: "research.inputs_stale", message, repair: "Use /blu-research-phase to review changed inputs and update the research.", retryable: true, nextTool: "blueprint_research_prepare" });
+      }
+      if (freshness.planningReady === false || researchHasPlanningBlockers(raw)) {
+        researchValid = false;
+        const message = "Saved research documents unresolved planning blockers.";
+        researchIssues.push(message);
+        researchDiagnostics.push({ path: researchPath, code: "research.planning_blocked", message, repair: "Resolve the blocking questions or recommendations documented in the saved research before planning.", retryable: true, nextTool: "blueprint_research_prepare" });
       }
     } catch (error) {
       researchValid = false;

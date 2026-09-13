@@ -501,7 +501,7 @@ export async function blueprintPhaseArtifactWrite(
           }
         }
 
-        if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
+        if (!validation.valid && (args.artifact === "research" || (args.validationMode ?? "strict") === "strict")) {
           return invalidPhaseArtifactWriteResult({
             resolved,
             artifact: args.artifact,

@@ -4449,31 +4449,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Phase Research",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-RESEARCH.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: [
-      "Phase Requirements",
-      "Summary",
-      "Locked Decisions From Context",
-      "User Constraints",
-      "Standard Stack",
-      "Installation And Setup",
-      "Alternatives Considered",
-      "Architecture Patterns",
-      "Don't Hand-Roll",
-      "Anti-Patterns",
-      "State Of The Art",
-      "Common Pitfalls",
-      "Open Questions",
-      "Confidence Breakdown",
-      "Code Examples",
-      "Recommendations",
-      "Sources"
-    ],
-    sectionValidations: {
-      "Open Questions": {
-        exactEmptySentinel: "- none"
-      }
-    },
-    lockedMarkers: ["**Confidence:**"],
+    requiredHeadings: ["Summary", "Recommendations", "Sources"],
+    sectionValidations: {},
+    lockedMarkers: [],
     placeholderSignals: [
       "Phase XX:",
       "<Phase Name>",
@@ -4591,33 +4569,26 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<off|ask-approved|auto|supplied|unchecked>"
     ],
     notes: [
-      "Research writes validate in strict mode by default.",
-      "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
-      "New structured research uses phase.research.modelContract and runtime rendering; the canonical authoring template remains available for legacy Markdown compatibility.",
-      "Open Questions may use the exact `- none` sentinel when no unresolved downstream question remains; structured research uses openQuestions: [] and MCP renders the empty state.",
-      "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
-      "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
-      "Planner-critical claims should use claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; validation warns instead of rejecting older valid artifacts that lack this richer source register.",
-      "Claim Support Ledger rows are preferred for planner-critical claims and should connect claim IDs to source or evidence IDs, support status, confidence, and plan impact.",
-      "Source Register rows are preferred under ## Sources and should connect source IDs to lanes, paths or URLs, access dates, repo line or symbol anchors, source types, used claims, and limitations.",
-      "Recommendation Handoff rows are preferred for planner-critical recommendations and should connect recommendation IDs to supporting claims, evidence, affected surfaces, tests/checks, and ready or blocked status.",
-      "Research validation returns warning-grade evidence diagnostics for missing or weak claim/source/recommendation support before making the richer evidence contract strict.",
-      "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
+      "Research publishes a useful evidence-backed summary and implementation recommendations with sources; Markdown may use prose, bullets or tables.",
+      "New structured research uses modelContract and runtime rendering. Only Summary, Recommendations and Sources are essential; other sections are optional and omitted when empty.",
+      "Empty questions need no sentinel. Optional metadata and incomplete requirement coverage produce advice rather than publication rejection.",
+      "Blocked recommendations and unresolved blocking questions belong in the published document; planning readiness remains separate from publication success.",
+      "Preserve actual constraints, evidence limitations and unsupported findings without inventing filler. Ready recommendations must cite supported or explicitly inferred evidence."
     ],
     modelContract: {
       schemaId: "blueprint.phase.research.model",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       schemaPath: "src/mcp/artifact-contracts/schemas/phase.research.model.schema.json",
       jsonSchema: readJsonSchemaAsset("phase.research.model.schema.json"),
       qualityRules: [
-        "Author summary, evidence-linked findings, recommendations, and sources; openQuestions and optional prose sections default to empty collections.",
-        "Draft preservation and publication readiness are distinct: save complete candidates before validation, including incomplete or unsupported research.",
-        "Source, finding and recommendation ids must be unique; every reference must resolve. Preserve explicit inference and uncertainty instead of upgrading confidence.",
-        "HIGH-confidence findings require supported status and source references. Ready recommendations require supported or explicitly inferred findings with sources, affected surfaces, and verification.",
-        "Blocking questions and blocked recommendations prevent publication but never discard a submitted candidate.",
-        "Known requirement ids and required research coverage come from the prepared saved evidence, not invented labels.",
-        "Optional prose is included only when useful. Omitted sections are rendered as not supplied; do not invent research to fill headings.",
-        "The structured model is authoring guidance, not a claim that the host applies constrained decoding. Legacy Markdown research remains readable and writable through its existing contract."
+        "Required core: summary, findings, recommendations and sources. Findings need id and finding; recommendations need id and recommendation; sources need id, lane and reference. See minimalValidExample for a complete first-pass input.",
+        "Omitted openQuestions, requirementIds, sourceIds, findingIds, affectedSurfaces and verification default to empty arrays. Singleton text lists, duplicate references, empty-state aliases, enum case and documented support aliases normalize deterministically.",
+        "Finding confidence defaults to MEDIUM. Omitted finding status defaults to inferred, except explicit HIGH with sourceIds defaults to supported; explicit contradictory status is never replaced. Recommendation status defaults to ready. Findings without evidence must explicitly say unsupported; recommendations without evidence must explicitly say blocked.",
+        "Ids must be unique within each source, finding or recommendation collection and references must resolve. Referenced requirement ids must exist in the prepared evidence; full requirement coverage is advisory.",
+        "HIGH-confidence findings require supported status and source references. Ready recommendations require supported or explicitly inferred findings with source references; never invent or inflate evidence.",
+        "Blocked recommendations and explicit blocking questions publish successfully with planningReady false and planningBlockers; resolve them before downstream planning depends on the research. Plain question strings beginning Blocking: retain blocking intent.",
+        "Affected surfaces, verification, access dates and optional prose improve research where relevant; missing optional metadata does not prevent publication. Omit unused topics instead of generating filler.",
+        "Do not include runtime identity or paths. MCP renders the final document and writes it directly; model/schema guidance is not a claim that the host guarantees constrained decoding."
       ],
       contextBindings: [
         "Phase identity, researched timestamp, canonical filename and output path are runtime-owned.",
@@ -4626,30 +4597,42 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
         "Source references identify observed repo evidence, permitted external sources or supplied material; citation entailment requires substantive research judgment."
       ],
       renderedHeadings: [
-        "Phase Requirements", "Summary", "Locked Decisions From Context", "User Constraints",
+        "Summary", "Phase Requirements", "Locked Decisions From Context", "User Constraints",
         "Standard Stack", "Installation And Setup", "Alternatives Considered", "Architecture Patterns",
         "Don't Hand-Roll", "Anti-Patterns", "State Of The Art", "Common Pitfalls", "Open Questions",
-        "Confidence Breakdown", "Code Examples", "Recommendations", "Sources"
+        "Findings", "Code Examples", "Recommendations", "Sources"
       ],
       minimalValidExample: {
-        summary: "Reuse the repository's atomic text writer for the research candidate store.",
+        summary: "Reuse the repository's atomic writer to publish complete research documents.",
         findings: [{
-          id: "CLM-001", finding: "The existing writer completes writes with an atomic rename.",
-          sourceIds: ["SRC-001"], confidence: "HIGH", requirementIds: [], status: "supported"
+          id: "CLM-001", finding: "The writer completes text writes with an atomic rename.",
+          sourceIds: ["SRC-001"], status: "supported"
         }],
         recommendations: [{
-          id: "REC-001", recommendation: "Persist candidate revisions using the existing atomic writer.",
-          findingIds: ["CLM-001"], affectedSurfaces: ["src/mcp/tools/research.ts"],
-          verification: ["Interrupt a candidate save and verify that the previous revision remains readable."],
-          requirementIds: [], status: "ready"
+          id: "REC-001", recommendation: "Publish RESEARCH.md through the existing atomic writer.",
+          findingIds: ["CLM-001"]
         }],
-        openQuestions: [],
-        sources: [{ id: "SRC-001", lane: "repo", reference: "src/mcp/tools/artifacts.ts#writeTextFile", excerpt: "The text writer renames a temporary file into place." }]
+        sources: [{ id: "SRC-001", lane: "repo", reference: "src/mcp/tools/artifacts.ts#writeTextFile" }]
       },
       exampleLeakageSignals: []
     },
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
-    renderAuthoringTemplate: renderResearchTemplate
+    renderAuthoringTemplate: (context) => `# ${phaseLabel(context)} - Research
+
+## Summary
+
+<key conclusion>
+
+## Recommendations
+
+<prescriptive recommendation with tradeoffs>
+
+## Sources
+
+<URL or repo path>
+
+<!-- Optional topics may be added when useful. No fixed table, confidence marker or empty-section sentinel is required. Replace this guidance with actual research. -->
+`
   },
   "phase.spec": {
     id: "phase.spec",

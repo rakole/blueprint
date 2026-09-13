@@ -101,15 +101,16 @@ accepts the generated model directly. Never promise draft recovery for discussio
 ## Research input boundary
 
 Research uses `blueprint_research_prepare` → investigate →
-`blueprint_research_submit`. The compact research contract is the only required
-research reference; load optional researcher instructions only when delegating an
-independent question. The parent owns source-policy approval and synthesis.
-Prepare supplies source fingerprints and a small typed authoring schema. MCP
-renders the existing research Markdown sections, so the model supplies findings,
-recommendations and evidence instead of reproducing a long document template.
-Record partial work at meaningful boundaries; read and field corrections are
-recovery tools. Do not reintroduce separate state, catalog, checkpoint or artifact
-calls into the normal research prompt.
+`blueprint_research_submit`. Load only its compact reference; optional researchers
+answer independent bounded questions while the parent owns source approval and
+synthesis. Prepare provides schema, example, grounding and actual rejection rules
+before one model generation. Submit accepts `model` directly and renders canonical
+research Markdown. Optional empty/omitted fields and honest open questions should
+not cause avoidable rejection; planning blockers are separate from publication.
+Rejected models are never saved. Repair issues in conversation at the same revision.
+Read returns canonical research and metadata only. Accepted publication has a
+metadata-only I/O journal; no separate state/catalog/checkpoint/artifact calls belong
+in the normal prompt. There is no research record tool or draft-recovery workflow.
 
 ## Planning input boundary
 

@@ -228,7 +228,6 @@ const PLAN_PHASE_REQUIRED_TOOLS = [
 const RESEARCH_PHASE_REQUIRED_TOOLS = [
   "blueprint_research_prepare",
   "blueprint_research_submit",
-  "blueprint_research_record",
   "blueprint_research_read"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
@@ -1516,13 +1515,13 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     executionProfile: "long-running-mutation",
     rootRoutable: true,
     purpose:
-      "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then preserves candidates before assessment and publishes planning-ready research through MCP-owned state paths.",
+      "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then publishes canonical research through MCP with first-attempt authoring guidance and separate planning readiness.",
     reads: [
-      "blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, candidate schema, session revision and evidence fingerprints; blueprint_research_read is view/recovery only."
+      "blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, model schema, example, grounding, rejection rules, revision and evidence fingerprints; blueprint_research_read returns canonical research and metadata only."
     ],
     writes: [
       "phase XX-RESEARCH.md",
-      "phase-scoped research session, candidate revisions and finalization journal",
+      "phase-scoped research metadata, provenance and metadata-only publication journal",
       ".blueprint/STATE.md"
     ]
   },
@@ -1535,7 +1534,7 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Use research-phase-runtime-contract.md: prepare → investigate → submit; record/read are incremental or recovery paths. Prepare owns evidence/config/freshness/schema. Submit saves candidates before assessment and journals publication/state/routing. Preserve context/spec ownership, source policy, freshness and retry guards. Returned status/path/nextAction are authoritative.",
+      "Use research-phase-runtime-contract.md: prepare → investigate → submit. Use schema/example/grounding/validationRules for one generation. Rejected models are not saved. Read canonical research/metadata; journals are metadata-only. Preserve source, intent, freshness, overwrite and retry guards.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

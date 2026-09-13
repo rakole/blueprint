@@ -1,9 +1,9 @@
 import { promises as fs } from "node:fs";
 import * as z from "zod/v4";
-import { prepareTextForPersistence, validateFieldNameSegment } from "../../shared/security.js";
+import { prepareTextForPersistence } from "../../shared/security.js";
 import { readArtifactContract } from "../artifact-contracts/index.js";
 import type { ToolDefinition } from "../tool-types.js";
-import { CODEBASE_ARTIFACTS, extractMarkdownTableRows, resolveBlueprintPath, validatePhaseArtifactContent, writeTextFile, isScaffoldGeneratedArtifact, isBootstrapStarterContext } from "./artifacts.js";
+import { CODEBASE_ARTIFACTS, extractMarkdownTableRows, resolveBlueprintPath, validatePhaseArtifactContent, writeTextFile, isScaffoldGeneratedArtifact, isBootstrapStarterContext, researchHasPlanningBlockers } from "./artifacts.js";
 import { artifactPathFor } from "./phase-locations.js";
 import { blueprintPhaseArtifactWrite } from "./phase-artifacts.js";
 import { blueprintPhaseContext } from "./phase-context-tools.js";
@@ -16,7 +16,7 @@ import { withFreshPhaseTopologyForMutation } from "./phase-resolution.js";
 import { extractMarkdownSection } from "./phase-markdown.js";
 import { validatePhaseResearchModelInput, renderPhaseResearchModelContent } from "./phase-research-model.js";
 import { canonicalResearchEvidencePath, readResearchEvidence, researchInputHash, researchBasisFreshness, readPublishedResearchFreshness, researchProvenancePath, researchDigest, stableResearchValue, type ResearchReadSet } from "./research-evidence.js";
-import { researchNumericPhase, researchLookup, researchRequestId, researchLocation, checkedResearchPayload, readResearchSession, saveResearchSession, withResearchSession, initialResearchSession, type ResearchSession, type ResearchLocation } from "./research-session.js";
+import { researchNumericPhase, researchLookup, researchRequestId, researchLocation, checkedResearchPayload, readResearchSession, saveResearchSession, withResearchSession, initialResearchSession, type ResearchSession } from "./research-session.js";
 
 const prepareInput = z.object({
   cwd: z.string().optional(), phase: researchNumericPhase.optional(),
@@ -25,9 +25,18 @@ const prepareInput = z.object({
   acknowledgeChangedInputs: z.boolean().optional(),
   reconcile: z.object({ confirmed: z.literal(true), researchHash: z.string().nullable() }).optional(),
 });
-const correctionSchema = z.object({ path: z.array(z.string()).min(1).max(20), value: z.unknown().optional(), operation: z.enum(["set", "remove"]).default("set") });
-const recordInput = z.object({ ...researchLookup, requestId: researchRequestId, expectedRevision: z.number().int().min(0), candidate: z.unknown().optional(), corrections: z.array(correctionSchema).max(50).optional(), notes: z.string().max(20000).optional() });
-const submitInput = z.object({ ...researchLookup, requestId: researchRequestId, expectedRevision: z.number().int().min(0), candidate: z.unknown().optional().describe("Complete JSON research candidate or raw string. Durably saved before schema and publication checks; get the compact model schema from prepare."), overwrite: z.boolean().optional(), reuse: z.boolean().optional(), externalSourcesApproved: z.boolean().optional() });
+const submitInput = z.object({
+  ...researchLookup, requestId: researchRequestId, expectedRevision: z.number().int().min(0),
+  model: z.unknown().optional().describe("Research model following prepare.schema and prepare.example. Validated and normalized in memory; rejected documents are never stored."),
+  candidate: z.unknown().optional().describe("Deprecated alias for model; no draft is retained."),
+  overwrite: z.boolean().optional(), reuse: z.boolean().optional(), externalSourcesApproved: z.boolean().optional(),
+});
+const validationRules = {
+  reject: ["Malformed or empty essential research content", "Broken evidence references or unsupported ready recommendations", "Unsupported HIGH confidence and unknown requirement references", "Unauthorized external sources, uncaptured repository evidence, stale inputs or changed publication targets", "Unsafe paths/content and unapproved substantive overwrite"],
+  planningOnly: ["Explicit blocking questions or blocked recommendations are saved as useful research; planning remains blocked until resolved."],
+  advisory: ["Missing optional topics, complete requirement coverage, access dates or verification detail do not reject a useful document."],
+  normalize: ["MCP supplies canonical headings, timestamps and saved context grounding.", "Use the schema's optional defaults; include only relevant prose. No exact empty sentinel, 17-section checklist or template padding is required."],
+};
 
 async function safeNextAction(proposed: string | null | undefined) {
   const catalog = await blueprintCommandCatalog();
@@ -36,7 +45,7 @@ async function safeNextAction(proposed: string | null | undefined) {
   return catalog.commands.progress?.implemented ? "Run /blu-progress to review the next safe action." : null;
 }
 function lines(section: string) {
-  return section.split("\n").map(line => line.trim()).filter(line => line && !/^\|?[-| :]+\|?$/.test(line));
+  return section.split("\n").map(line => line.trim().replace(/^[-*+]\s+/, "")).filter(line => line && !/^\|?[-| :]+\|?$/.test(line));
 }
 function contextGrounding(content: string, projectConstraints: string[]) {
   const decisions = extractMarkdownSection(content, "Implementation Decisions");
@@ -59,25 +68,15 @@ function requirementDescriptions(content: string, ids: string[]) {
     return { id, description: row?.[1] || bullet?.[1] || "See the saved phase requirements and context for this requirement's definition." };
   });
 }
-function requestKey(args: Record<string, unknown>) {
-  // Relative cwd spelling is transport context, not logical request identity.
-  const { cwd: _cwd, ...input } = args;
-  return researchDigest(stableResearchValue(input));
+function requestKey(args: z.infer<typeof submitInput>) {
+  return researchDigest(stableResearchValue({
+    phase: String(args.phase), requestId: args.requestId, expectedRevision: args.expectedRevision,
+    overwrite: args.overwrite ?? false, reuse: args.reuse ?? false, externalSourcesApproved: args.externalSourcesApproved ?? false,
+  }));
 }
-function requestReplay(session: ResearchSession, requestId: string, hash: string) {
-  const previous = Object.hasOwn(session.requests, requestId) ? session.requests[requestId] : undefined;
-  if (!previous) return null;
-  if (previous.hash !== hash) return { status: "rejected", reason: "Request ID conflict", revision: session.revision };
-  return previous.receipt ?? null;
-}
-async function saveReceipt(loc: ResearchLocation, session: ResearchSession, requestId: string, receipt: Record<string, unknown>) {
-  session.requests[requestId].receipt = receipt;
-  await saveResearchSession(loc, session);
-  return receipt;
-}
-function assessment(session: ResearchSession) {
+function assessment(session: ResearchSession, model: unknown) {
   const ids = session.grounding.requirements.map(item => item.id);
-  return validatePhaseResearchModelInput(session.candidate, { knownRequirementIds: ids, requiredRequirementIds: ids });
+  return validatePhaseResearchModelInput(model, { knownRequirementIds: ids, requiredRequirementIds: ids });
 }
 
 export async function blueprintResearchPrepare(raw: z.input<typeof prepareInput> = {}) {
@@ -85,6 +84,7 @@ export async function blueprintResearchPrepare(raw: z.input<typeof prepareInput>
   try {
     return await withResearchSession(args, async loc => {
       const session = await readResearchSession(loc) ?? initialResearchSession(loc);
+      const before = stableResearchValue(session);
       const researchPath = artifactPathFor(loc.resolved, "research");
       const contextPath = artifactPathFor(loc.resolved, "context");
       const specPath = artifactPathFor(loc.resolved, "spec");
@@ -119,6 +119,12 @@ export async function blueprintResearchPrepare(raw: z.input<typeof prepareInput>
         evidence: inputs.filter(item => item.path !== contextPath && item.path !== specPath),
         readSet, existing: { path: researchPath, hash: existing.hash, valid: existingValidation?.valid ?? false, freshness: existingFreshness, ...(existingFreshness?.status === "fresh" ? {} : { content: existing.content }) },
         schema: readArtifactContract("phase.research").modelContract?.jsonSchema,
+        example: readArtifactContract("phase.research").modelContract?.minimalValidExample,
+        grounding: {
+          requirements: requirementDescriptions(inputs.find(item => item.path === ".blueprint/REQUIREMENTS.md")?.content ?? "", [...new Set(phaseContext.requirements)]),
+          ...contextGrounding(context.content ?? "", phaseContext.projectBrief.constraints),
+        },
+        validationRules,
         checkpoint: await blueprintPhaseCheckpointGet({ cwd: loc.projectRoot, phase: session.phase, expectedOwnerCommand: "/blu-research-phase", expectedMode: "research" }),
       };
       if (args.expectedRevision !== undefined && session.revision !== args.expectedRevision) return { ...packet, status: "stale", revision: session.revision, reason: "Revision conflict" };
@@ -126,84 +132,28 @@ export async function blueprintResearchPrepare(raw: z.input<typeof prepareInput>
       const topologyChanged = !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase));
       const targetChanged = session.prepared && (existing.hash !== session.baselineHash || provenance.hash !== session.baselineProvenanceHash);
       const pending = session.journal && !session.journal.receipt;
-      const pendingRequest = Object.entries(session.requests).find(([, request]) => !request.receipt);
-      if (pendingRequest && !pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_${pendingRequest[1].operation} with requestId ${pendingRequest[0]} and identical arguments.` };
       if ((targetChanged || topologyChanged || pending && args.reconcile) && (!args.reconcile || args.reconcile.researchHash !== existing.hash || args.expectedRevision !== session.revision)) return { ...packet, status: "reconciliation_required", revision: session.revision, reason: "Review changed publication targets, then prepare with expectedRevision and reconcile containing the observed research hash." };
       if (pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_submit with requestId ${session.journal!.requestId} and identical arguments.` };
-      if (changed && changed.status !== "fresh" && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", revision: session.revision, freshness: changed, nextAction: "Review changed inputs, then prepare with expectedRevision and acknowledgeChangedInputs=true; preserve and correct the saved candidate." };
+      if (changed && changed.status !== "fresh" && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", revision: session.revision, freshness: changed, nextAction: "Review changed inputs, then prepare with expectedRevision and acknowledgeChangedInputs=true; recheck affected findings before submitting the model." };
       if (args.reconcile && session.journal) {
-        session.history.push({ revision: session.revision, kind: "publication-reconciled", journal: session.journal });
-        session.requests[session.journal.requestId].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision; this publication attempt was reconciled." };
+        delete session.requests[session.journal.requestId];
         delete session.journal;
-      }
-      if (args.reconcile && pendingRequest) {
-        if (args.expectedRevision !== session.revision || args.reconcile.researchHash !== existing.hash) return { ...packet, status: "reconciliation_required", revision: session.revision };
-        pendingRequest[1].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision." };
       }
       session.topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
       session.readSet = readSet; session.evidencePaths = evidencePaths;
       session.baselineHash = existing.hash; session.baselineProvenanceHash = provenance.hash;
       const contextUsable = contextValidation?.valid === true && !isBootstrapStarterContext(context.content ?? "");
       session.prepared = contextUsable && (!specValidation || specValidation.valid);
-      session.grounding = {
-        requirements: requirementDescriptions(inputs.find(item => item.path === ".blueprint/REQUIREMENTS.md")?.content ?? "", [...new Set(phaseContext.requirements)]),
-        ...contextGrounding(context.content ?? "", phaseContext.projectBrief.constraints),
-      };
-      session.revision++;
-      await saveResearchSession(loc, session);
-      return { ...packet, status: session.prepared ? "prepared" : "blocked", revision: session.revision, sessionPath: loc.sessionPath, candidateSaved: session.candidate !== undefined, diagnostics: [...(contextValidation?.diagnostics ?? []), ...(specValidation?.diagnostics ?? [])], nextAction: session.prepared ? "Investigate unresolved planning decisions; submit the candidate once using this revision. Prepare with evidencePaths before relying on additional repository sources." : await safeNextAction(`Run /blu-${contextUsable ? "spec" : "discuss"}-phase ${session.phase} to repair saved phase evidence.`) };
+      session.grounding = packet.grounding;
+      if (before !== stableResearchValue(session) || session.revision === 0) {
+        session.revision++;
+        await saveResearchSession(loc, session);
+      }
+      return { ...packet, status: session.prepared ? "prepared" : "blocked", revision: session.revision, sessionPath: loc.sessionPath, diagnostics: [...(contextValidation?.diagnostics ?? []), ...(specValidation?.diagnostics ?? [])], nextAction: session.prepared ? "Investigate unresolved planning decisions; use the schema, example, grounding and validationRules to submit the model once using this revision. Prepare with evidencePaths before relying on additional repository sources." : await safeNextAction(`Run /blu-${contextUsable ? "spec" : "discuss"}-phase ${session.phase} to repair saved phase evidence.`) };
     });
   } catch (error) {
     return { status: "blocked", reason: (error as Error).message, nextAction: await safeNextAction("Run /blu-progress to resolve the research preparation blocker.") };
   }
-}
-
-export async function blueprintResearchRecord(raw: z.input<typeof recordInput>) {
-  const args = recordInput.parse(raw);
-  if (args.candidate !== undefined && args.corrections?.length) throw new Error("Pass candidate or field corrections, not both.");
-  checkedResearchPayload(args);
-  return withResearchSession(args, async loc => {
-    const session = await readResearchSession(loc);
-    if (!session) return { status: "not_found", nextAction: "Call blueprint_research_prepare first." };
-    const hash = requestKey(args);
-    const replay = requestReplay(session, args.requestId, hash); if (replay) return replay;
-    const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : undefined;
-    const pendingRequest = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
-    if (pendingRequest) return { status: "partial", nextAction: `Retry blueprint_research_${pendingRequest[1].operation} requestId ${pendingRequest[0]} first.` };
-    if (session.journal && !session.journal.receipt) return { status: "partial", nextAction: `Retry blueprint_research_submit requestId ${session.journal.requestId} before changing the candidate.` };
-    if (accepted) {
-      if (accepted.revision !== session.revision || accepted.operation !== "record") return { status: "stale", revision: session.revision, reason: "Accepted request was superseded." };
-      const result = assessment(session);
-      return saveReceipt(loc, session, args.requestId, { status: "recorded", saved: true, candidateSaved: session.candidate !== undefined, revision: session.revision, sessionPath: loc.sessionPath, validation: result.validation });
-    }
-    if (session.revision !== args.expectedRevision) return { status: "stale", revision: session.revision, reason: "Revision conflict" };
-    if (args.candidate !== undefined) session.candidate = checkedResearchPayload(args.candidate);
-    for (const correction of args.corrections ?? []) {
-      correction.path.forEach(segment => {
-        validateFieldNameSegment(segment);
-        if (["__proto__", "constructor", "prototype"].includes(segment)) throw new Error("Unsafe correction path.");
-      });
-      let target = session.candidate as Record<string, unknown>;
-      for (const segment of correction.path.slice(0, -1)) {
-        if (!target || typeof target !== "object" || !Object.hasOwn(target, segment)) throw new Error("Correction parent does not exist.");
-        target = target[segment] as Record<string, unknown>;
-      }
-      if (!target || typeof target !== "object") throw new Error("Correction target is not an object.");
-      const field = correction.path.at(-1)!;
-      if (Array.isArray(target) && (!/^(0|[1-9]\d*)$/.test(field) || Number(field) > target.length)) throw new Error("Array correction requires an in-range index.");
-      if (correction.operation === "remove") { if (Array.isArray(target)) target.splice(Number(field), 1); else delete target[field]; }
-      else target[field] = checkedResearchPayload(correction.value);
-    }
-    if (args.notes !== undefined) session.notes.push(args.notes);
-    checkedResearchPayload(session.candidate ?? null);
-    session.revision++;
-    session.history.push({ revision: session.revision, kind: "record", ...(session.candidate !== undefined ? { candidate: session.candidate } : {}) });
-    session.requests[args.requestId] = { hash, revision: session.revision, operation: "record" };
-    // Candidate is durable even if model assessment throws or returns issues.
-    await saveResearchSession(loc, session);
-    const result = assessment(session);
-    return saveReceipt(loc, session, args.requestId, { status: "recorded", saved: true, candidateSaved: session.candidate !== undefined, revision: session.revision, sessionPath: loc.sessionPath, validation: result.validation, nextAction: result.validation.valid ? "Call blueprint_research_submit using this saved revision." : "Correct only the saved fields identified in diagnostics." });
-  });
 }
 
 export async function blueprintResearchRead(args: { cwd?: string; phase: string | number }) {
@@ -212,83 +162,107 @@ export async function blueprintResearchRead(args: { cwd?: string; phase: string 
     const session = await readResearchSession(loc);
     const publishedPath = artifactPathFor(loc.resolved, "research");
     const published = await readResearchEvidence(loc.projectRoot, publishedPath, 4 * 1024 * 1024).catch(async error => ({
-      path: publishedPath,
-      hash: await researchInputHash(loc.projectRoot, publishedPath).catch(() => null),
-      content: null,
-      error: (error as Error).message,
+      path: publishedPath, hash: await researchInputHash(loc.projectRoot, publishedPath).catch(() => null),
+      content: null, error: (error as Error).message,
     }));
     return { status: session || published.content ? "found" : "not_found", sessionPath: loc.sessionPath, session, published, freshness: session ? await researchBasisFreshness(loc.projectRoot, session.readSet) : null };
   });
 }
 
-// Injectable owning operations let tests exercise interruption after each durable stage.
+// Owning operations are injectable for publication interruption tests.
 export const researchSubmitDependencies = { artifactWrite: blueprintPhaseArtifactWrite, stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad, checkpointDelete: blueprintPhaseCheckpointDelete, writeText: writeTextFile };
 
 export async function blueprintResearchSubmit(raw: z.input<typeof submitInput>) {
   const args = submitInput.parse(raw);
-  if (args.reuse && args.candidate !== undefined) throw new Error("A reuse request cannot replace the candidate.");
+  if (args.model !== undefined && args.candidate !== undefined) throw new Error("Pass model only, not both model and its deprecated alias.");
+  const suppliedModel = args.model ?? args.candidate;
+  if (args.reuse && suppliedModel !== undefined) throw new Error("A reuse request cannot replace the model.");
   checkedResearchPayload(args);
   return withResearchSession(args, async loc => {
     const session = await readResearchSession(loc);
     if (!session) return { status: "not_found", saved: false, nextAction: "Call blueprint_research_prepare before submitting research." };
-    const hash = requestKey(args);
-    const replay = requestReplay(session, args.requestId, hash); if (replay) return replay;
+    const reject = (status: string, details: Record<string, unknown>) => ({
+      status, saved: false, ready: false, outcome: "rejected-not-saved", revision: session.revision, ...details,
+    });
+    const requestHash = requestKey(args);
     const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : undefined;
-    const pendingRequest = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
-    if (pendingRequest) return { status: "partial", saved: session.candidate !== undefined, nextAction: `Retry blueprint_research_${pendingRequest[1].operation} requestId ${pendingRequest[0]} first.` };
-    let journal = session.journal;
-    if (journal && journal.requestId !== args.requestId && !journal.receipt) return { status: "partial", saved: session.candidate !== undefined, nextAction: `Retry blueprint_research_submit requestId ${journal.requestId} and identical arguments.` };
+    if (accepted && accepted.hash !== requestHash) return reject("rejected", { reason: "Request ID conflict." });
+    let journal = session.journal?.requestId === args.requestId ? session.journal : undefined;
+    if (session.journal && !session.journal.receipt && !journal) return reject("partial", {
+      nextAction: `Finish blueprint_research_submit requestId ${session.journal.requestId} first, or explicitly reconcile its publication metadata.`,
+    });
+    if (!accepted && session.revision !== args.expectedRevision) return reject("stale", { reason: "Revision conflict." });
+
+    // Models live only in this invocation, including failures and normalization.
+    const result = suppliedModel === undefined ? null : assessment(session, suppliedModel);
+    if (result && (!result.model || !result.validation.valid)) return reject("needs_revision", {
+      validation: result.validation, nextAction: "Correct the indicated fields in this model and submit again with the same revision. No draft was stored.",
+    });
+    const modelHash = result?.model ? researchDigest(stableResearchValue(result.model)) : undefined;
+    if (accepted && modelHash && accepted.modelHash !== modelHash) return reject("rejected", { reason: "Request ID model conflict." });
     const researchPath = artifactPathFor(loc.resolved, "research");
     const provenancePath = researchProvenancePath(researchPath);
-    if (!journal || journal.requestId !== args.requestId) {
-      if (accepted) {
-        if (accepted.revision !== session.revision || accepted.operation !== "submit") return { status: "stale", revision: session.revision, reason: "Accepted request was superseded." };
-      } else {
-        if (session.revision !== args.expectedRevision) return { status: "stale", saved: false, revision: session.revision, reason: "Revision conflict" };
-        if (args.candidate !== undefined) session.candidate = checkedResearchPayload(args.candidate);
-        session.revision++;
-        session.history.push({ revision: session.revision, kind: "submit", ...(session.candidate !== undefined ? { candidate: session.candidate } : {}) });
-        session.requests[args.requestId] = { hash, revision: session.revision, operation: "submit" };
-        await saveResearchSession(loc, session);
-      }
-      const fail = (status: string, details: Record<string, unknown>) => saveReceipt(loc, session, args.requestId, { status, saved: session.candidate !== undefined || Boolean(args.reuse), candidateSaved: session.candidate !== undefined, revision: session.revision, sessionPath: loc.sessionPath, ...details });
+    if (accepted?.receipt) {
+      const receipt = accepted.receipt;
+      if (await researchInputHash(loc.projectRoot, researchPath) !== receipt.contentHash || await researchInputHash(loc.projectRoot, provenancePath) !== receipt.provenanceHash)
+        return reject("stale", { reason: "The previously published research has changed; prepare before another publication." });
+      const freshness = await readPublishedResearchFreshness(loc.projectRoot, researchPath);
+      if (freshness.status !== "fresh") return reject("stale", { freshness, nextAction: "Prepare and review changed evidence before reusing research." });
+      return receipt;
+    }
+    let content: string | undefined;
+    if (!journal) {
+      if (!args.reuse && !result?.model) return reject("needs_revision", { reason: "Supply the research model using prepare.schema and prepare.example." });
       const freshness = await researchBasisFreshness(loc.projectRoot, session.readSet);
-      if (!session.prepared || freshness.status !== "fresh") return fail("needs_revision", { freshness, nextAction: "Refresh blueprint_research_prepare and reconcile changed inputs; the candidate is saved." });
-      let content: string;
+      if (!session.prepared || freshness.status !== "fresh") return reject("needs_revision", { freshness, nextAction: "Refresh blueprint_research_prepare and review changed inputs before submitting the model." });
+      const researchedAt = new Date().toISOString().slice(0, 10);
+      let planningReady = result?.validation.planningReady ?? true;
+      let originalProvenance: string | null = null;
       if (args.reuse) {
         const existing = await readResearchEvidence(loc.projectRoot, researchPath, 4 * 1024 * 1024);
         const reuseFreshness = await readPublishedResearchFreshness(loc.projectRoot, researchPath);
-        if (existing.content === null || reuseFreshness.status !== "fresh" || !validatePhaseArtifactContent(existing.content, "research").valid) return fail("needs_revision", { freshness: reuseFreshness, nextAction: "Review and submit updated research; only verified-fresh published research can be reused." });
+        if (existing.content === null || reuseFreshness.status !== "fresh" || !validatePhaseArtifactContent(existing.content, "research").valid)
+          return reject("needs_revision", { freshness: reuseFreshness, nextAction: "Review and submit updated research; reuse requires verified-fresh published evidence." });
         content = existing.content;
+        originalProvenance = (await readResearchEvidence(loc.projectRoot, provenancePath)).content;
+        planningReady = reuseFreshness.planningReady !== false;
       } else {
-        const result = assessment(session);
-        if (!result.model || !result.validation.valid) return fail("needs_revision", { validation: result.validation, nextAction: "Repair the saved fields with blueprint_research_record; resubmit using the returned revision and a new requestId." });
+        const model = result!.model!;
         const config = await blueprintConfigGet({ cwd: loc.projectRoot, scope: "effective" });
-        const external = result.model.sources.some(source => source.lane === "external");
-        if (external && (config.config.research.external_sources === "off" || config.config.research.external_sources === "ask" && !args.externalSourcesApproved)) return fail("needs_revision", { reason: "External source policy does not authorize the candidate's live external evidence.", nextAction: "Honor off/ask/auto policy; record honest supplied or repository evidence, or obtain the ask approval before retrying." });
-        const missing = result.model.sources.filter(source => source.lane === "repo").map(source => {
+        const external = model.sources.some(source => source.lane === "external");
+        if (external && (config.config.research.external_sources === "off" || config.config.research.external_sources === "ask" && !args.externalSourcesApproved))
+          return reject("needs_revision", { reason: "External source policy does not authorize live external evidence.", nextAction: "Honor off/ask/auto policy; obtain the ask approval or use evidence that was actually supplied or read from the repository." });
+        const missing = model.sources.filter(source => source.lane === "repo").map(source => {
           const relative = source.reference.replace(/(?::\d+(?:-\d+)?)?(?:#.*)?$/, "");
           try { return canonicalResearchEvidencePath(loc.projectRoot, relative); } catch { return relative; }
         }).filter(p => !session.readSet.some(item => item.path === p && item.hash !== null));
-        if (missing.length) return fail("needs_revision", { missingEvidencePaths: [...new Set(missing)], nextAction: "Call blueprint_research_prepare with these evidencePaths, review the captured evidence, then resubmit the saved candidate." });
-        content = renderPhaseResearchModelContent({ resolved: loc.resolved, model: result.model, ...session.grounding, researchedAt: new Date().toISOString().slice(0, 10) });
+        if (missing.length) return reject("needs_revision", { missingEvidencePaths: [...new Set(missing)], nextAction: "Prepare with these evidencePaths, review the returned source evidence, and submit the model." });
+        content = renderPhaseResearchModelContent({ resolved: loc.resolved, model, ...session.grounding, researchedAt });
       }
       content = prepareTextForPersistence(content).content.replace(/\r\n/g, "\n");
-      if (Buffer.byteLength(content) > 4 * 1024 * 1024) return fail("needs_revision", { reason: "Rendered research exceeds 4 MiB; candidate is saved. Reduce repeated prose before publishing." });
+      if (Buffer.byteLength(content) > 4 * 1024 * 1024) return reject("needs_revision", { reason: "Rendered research exceeds 4 MiB; reduce repeated prose." });
       const validation = validatePhaseArtifactContent(content, "research");
-      if (!validation.valid) return fail("needs_revision", { validation, reason: "Rendered research did not satisfy the compatibility contract; candidate is retained." });
+      if (!validation.valid) return reject("needs_revision", { validation });
+      planningReady = planningReady && !researchHasPlanningBlockers(content);
       const observed = await researchInputHash(loc.projectRoot, researchPath);
       const observedProvenance = await researchInputHash(loc.projectRoot, provenancePath);
-      if (observed !== session.baselineHash || observedProvenance !== session.baselineProvenanceHash) return fail("stale", { reason: "Publication targets changed after preparation.", nextAction: "Prepare with explicit reconciliation against the observed target hash." });
+      if (observed !== session.baselineHash || observedProvenance !== session.baselineProvenanceHash)
+        return reject("stale", { reason: "Publication targets changed after preparation.", nextAction: "Prepare with explicit reconciliation against the observed research hash." });
       if (observed && observed !== researchDigest(content) && !args.overwrite) {
         const existing = await fs.readFile(resolveBlueprintPath(loc.projectRoot, researchPath), "utf8");
-        if (!isScaffoldGeneratedArtifact(existing)) return fail("needs_revision", { reason: "Explicit update/overwrite authorization is required.", nextAction: "After the user chooses update, submit the saved candidate with overwrite=true." });
+        if (!isScaffoldGeneratedArtifact(existing)) return reject("needs_revision", { reason: "Explicit update/overwrite authorization is required.", nextAction: "After the user chooses update, submit the model with overwrite=true." });
       }
-      // Reuse retains the original source basis, never silently rebases stale evidence.
-      const originalProvenance = args.reuse ? await readResearchEvidence(loc.projectRoot, provenancePath) : null;
-      const provenance = originalProvenance?.content ?? JSON.stringify({ version: 1, researchHash: researchDigest(content), readSet: session.readSet, publishedAt: new Date().toISOString() }, null, 2) + "\n";
-      journal = { requestId: args.requestId, requestHash: hash, revision: session.revision, content, contentHash: researchDigest(content), baselineHash: observed, provenance, provenanceHash: researchDigest(provenance), baselineProvenanceHash: observedProvenance, readSet: args.reuse ? JSON.parse(provenance).readSet : session.readSet, reuse: args.reuse ?? false, stages: {} };
+      const provenance = originalProvenance ?? JSON.stringify({ version: 1, researchHash: researchDigest(content), readSet: session.readSet, publishedAt: new Date().toISOString(), planningReady }, null, 2) + "\n";
+      session.revision++;
+      journal = {
+        requestId: args.requestId, requestHash, modelHash, researchedAt, revision: session.revision,
+        contentHash: researchDigest(content), baselineHash: observed, provenance, provenanceHash: researchDigest(provenance), baselineProvenanceHash: observedProvenance,
+        readSet: args.reuse ? JSON.parse(provenance).readSet : session.readSet, reuse: args.reuse ?? false, planningReady, stages: {},
+      };
       session.journal = journal;
+      session.requests[args.requestId] = { hash: requestHash, modelHash, revision: session.revision };
+      // Only validated publication intent is durable. No model, rendered body,
+      // rejected draft, diagnostic prose or document history is written here.
       await saveResearchSession(loc, session);
     }
     const checkpoint = () => saveResearchSession(loc, session);
@@ -307,10 +281,16 @@ export async function blueprintResearchSubmit(raw: z.input<typeof submitInput>) 
         const observed = await researchInputHash(loc.projectRoot, target);
         if (journal.stages[stage] && observed === desired) { journal.stages[stage] = "complete"; await checkpoint(); continue; }
         if (journal.stages[stage] === "complete" || observed !== baseline) throw new Error(`Publication target changed externally: ${target}. Reconcile without overwriting it.`);
+        if (stage === "artifact" && content === undefined) {
+          if (journal.reuse) content = (await readResearchEvidence(loc.projectRoot, researchPath, 4 * 1024 * 1024)).content ?? undefined;
+          else if (result?.model) content = prepareTextForPersistence(renderPhaseResearchModelContent({ resolved: loc.resolved, model: result.model, ...session.grounding, researchedAt: journal.researchedAt })).content.replace(/\r\n/g, "\n");
+          if (content === undefined) throw new Error("Resend the model to retry publication; no research document was saved before this interruption.");
+          if (researchDigest(content) !== journal.contentHash) throw new Error("The supplied model does not match the accepted publication intent.");
+        }
         journal.stages[stage] = "intent"; await checkpoint(); await assertFresh();
         if (stage === "artifact") {
-          const result = await researchSubmitDependencies.artifactWrite({ cwd: loc.projectRoot, phase: session.phase, artifact: "research", content: journal.content, overwrite: args.overwrite, expectedContentHash: baseline, expectedTopology: session.topology });
-          if (result.status === "invalid") throw new Error("Research artifact publication failed validation.");
+          const written = await researchSubmitDependencies.artifactWrite({ cwd: loc.projectRoot, phase: session.phase, artifact: "research", content: content!, overwrite: args.overwrite, expectedContentHash: baseline, expectedTopology: session.topology });
+          if (written.status === "invalid") throw new Error("Research artifact publication failed validation.");
         } else {
           await withFreshPhaseTopologyForMutation(loc.projectRoot, { phase: session.phase }, session.topology, "Research provenance publication", async () => {
             if (await researchInputHash(loc.projectRoot, target) !== baseline) throw new Error("Research provenance changed during publication.");
@@ -327,10 +307,10 @@ export async function blueprintResearchSubmit(raw: z.input<typeof submitInput>) 
         journal.stages.state = "complete"; await checkpoint();
       }
       const state = await researchSubmitDependencies.stateLoad({ cwd: loc.projectRoot });
-      const nextAction = await safeNextAction(state.derivedStatus.nextAction);
+      const nextAction = await safeNextAction(journal.planningReady ? state.derivedStatus.nextAction : `Run /blu-research-phase ${session.phase} to resolve the planning blockers documented in the saved research.`);
       if (!nextAction) throw new Error("No implemented follow-up is currently available.");
       journal.stages.routing = "complete"; await checkpoint();
-      const warnings = [...(state.warnings ?? [])];
+      const warnings = [...(state.warnings ?? []), ...(result?.validation.warnings ?? [])];
       if (journal.stages.cleanup !== "complete") {
         journal.stages.cleanup = "intent"; await checkpoint();
         const cleanup = await researchSubmitDependencies.checkpointDelete({ cwd: loc.projectRoot, phase: session.phase, expectedTopology: session.topology, expectedOwnerCommand: "/blu-research-phase", expectedMode: "research" });
@@ -340,19 +320,21 @@ export async function blueprintResearchSubmit(raw: z.input<typeof submitInput>) 
       await assertFresh();
       if (await researchInputHash(loc.projectRoot, researchPath) !== journal.contentHash) throw new Error("Research changed before final receipt.");
       if (await researchInputHash(loc.projectRoot, provenancePath) !== journal.provenanceHash) throw new Error("Research provenance changed before final receipt.");
-      journal.receipt = { status: journal.reuse ? "reused" : "published", saved: true, ready: true, revision: session.revision, path: researchPath, sessionPath: loc.sessionPath, provenancePath, stages: { ...journal.stages }, warnings, nextAction };
+      journal.receipt = { status: journal.reuse ? "reused" : "published", saved: true, ready: journal.planningReady, planningReady: journal.planningReady, revision: session.revision, path: researchPath, sessionPath: loc.sessionPath, provenancePath, contentHash: journal.contentHash, provenanceHash: journal.provenanceHash, nextAction };
+      session.requests[args.requestId].receipt = journal.receipt;
       session.baselineHash = journal.contentHash; session.baselineProvenanceHash = journal.provenanceHash;
-      return await saveReceipt(loc, session, args.requestId, journal.receipt);
+      delete session.legacyPublication;
+      await checkpoint();
+      return { ...journal.receipt, warnings, stages: { ...journal.stages } };
     } catch (error) {
-      return { status: "partial", saved: true, ready: false, revision: session.revision, sessionPath: loc.sessionPath, path: journal.stages.artifact === "complete" ? researchPath : null, stages: journal.stages, reason: (error as Error).message, nextAction: `Retry blueprint_research_submit with requestId ${args.requestId} and identical arguments; if inputs or targets changed, prepare with explicit reconciliation. The candidate is saved.` };
+      const saved = await researchInputHash(loc.projectRoot, researchPath).catch(() => null) === journal.contentHash;
+      return { status: "partial", saved, ready: false, revision: session.revision, path: saved ? researchPath : null, stages: journal.stages, reason: (error as Error).message, nextAction: `Retry blueprint_research_submit with requestId ${args.requestId} and the same expectedRevision/control flags${saved ? "; the canonical document is saved and model may be omitted" : "; resend the model because no document draft is retained"}. Reconcile changed inputs or targets explicitly.` };
     }
   });
 }
 
 export const researchToolDefinitions: ToolDefinition[] = [
-  { name: "blueprint_research_prepare", description: "Prepare one freshness-bound phase research packet and durable session revision with context, optional spec, requirements, source policy, existing research, and compact model schema.", inputSchema: prepareInput.shape, handler: args => blueprintResearchPrepare(args as z.input<typeof prepareInput>) },
-  { name: "blueprint_research_record", description: "Save a raw research candidate, incremental notes, or narrow field corrections before model validation. Revision CAS and request IDs preserve work across retries.", inputSchema: recordInput.shape, handler: args => blueprintResearchRecord(args as z.input<typeof recordInput>) },
-  { name: "blueprint_research_read", description: "Recover the exact saved research candidate, revision, history and publication journal; normal research starts with prepare.", inputSchema: researchLookup, handler: args => blueprintResearchRead(args as z.input<typeof researchLookupSchema>) },
-  { name: "blueprint_research_submit", description: "Durably save a research candidate before validation, then render and publish planner-ready research with freshness checks and resumable state/routing completion. Reuse requires fresh research; overwrite requires user update authorization.", inputSchema: submitInput.shape, handler: args => blueprintResearchSubmit(args as z.input<typeof submitInput>) },
+  { name: "blueprint_research_prepare", description: "Prepare phase evidence, source policy, model schema/example, grounding and rejection rules for first-attempt research publication. Saves only preparation metadata.", inputSchema: prepareInput.shape, handler: args => blueprintResearchPrepare(args as z.input<typeof prepareInput>) },
+  { name: "blueprint_research_read", description: "Read canonical research and publication metadata. Rejected research documents are never stored or recoverable through this tool.", inputSchema: researchLookup, handler: args => blueprintResearchRead(args as { cwd?: string; phase: string | number }) },
+  { name: "blueprint_research_submit", description: "Normalize and assess a research model in memory, then publish canonical research. Harmless formatting is normalized; useful planning blockers are documented separately. Rejected drafts are not stored. Prepare supplies the schema and example.", inputSchema: submitInput.shape, handler: args => blueprintResearchSubmit(args as z.input<typeof submitInput>) },
 ];
-const researchLookupSchema = z.object(researchLookup);

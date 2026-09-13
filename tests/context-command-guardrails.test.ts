@@ -49,6 +49,11 @@ test("phase context ownership stays discuss-led and runtime-contract scoped", as
   }
 
   assert.match(read("commands/blu-research-phase.toml"), /Treat phase context as read-only/);
+  assert.match(read("commands/blu-research-phase.toml"), /Rejected models are not saved/);
+  assert.doesNotMatch(read("commands/blu-research-phase.toml"), /blueprint_research_record|candidate/);
+  assert.deepEqual(researchContract.runtimeReference?.exactMcpDestination, [
+    "blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_read"
+  ]);
   assert.match(read("commands/blu-plan-phase.toml"), /Treat phase context as read-only/);
   assert.deepEqual(discussContract.skillInputs.shared, []);
   assert.equal(

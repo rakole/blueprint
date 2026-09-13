@@ -147,7 +147,7 @@ async function readFailureLogEntries(repoPath: string): Promise<Record<string, u
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
-test("structured write rejections are logged before the invalid result is returned", async (t) => {
+test("research write rejections log metadata without storing the rejected document", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -185,24 +185,17 @@ test("structured write rejections are logged before the invalid result is return
     (entry.result as Record<string, unknown>).status,
     "invalid"
   );
-  assert.match(
-    JSON.stringify((entry.result as Record<string, unknown>).validation),
-    /Confidence|required section|source/i
-  );
+  const validation = (entry.result as Record<string, unknown>).validation as Record<string, unknown>;
+  assert.equal(validation.valid, false);
+  assert.ok(typeof validation.issuesCount === "number" && validation.issuesCount > 0);
+  assert.ok(typeof validation.diagnosticsCount === "number" && validation.diagnosticsCount > 0);
   assert.deepEqual((entry.request as Record<string, unknown>).artifact, "research");
-  assert.equal(
-    typeof ((entry.request as Record<string, unknown>).content as Record<string, unknown>)
-      .length,
-    "number"
-  );
-  assert.match(
-    ((entry.request as Record<string, unknown>).content as Record<string, unknown>)
-      .preview as string,
-    /Missing required sections/
-  );
+  assert.equal(typeof (entry.request as Record<string, unknown>).contentLength, "number");
+  assert.equal((entry.request as Record<string, unknown>).content, undefined);
+  assert.doesNotMatch(JSON.stringify(entry), /Missing required sections|# Phase 03/);
 });
 
-test("thrown write failures are logged before the exception escapes MCP", async (t) => {
+test("research write exceptions log metadata without storing document or exception prose", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -245,14 +238,10 @@ test("thrown write failures are logged before the exception escapes MCP", async 
 
   assert.equal(entry.toolName, "blueprint_phase_artifact_write");
   assert.equal(entry.failureKind, "exception");
-  assert.match(
-    (entry.error as Record<string, unknown>).message as string,
-    /already exists/
-  );
-  assert.match(
-    (entry.error as Record<string, unknown>).stack as string,
-    /src\/mcp\/tools\/phase\.ts|executeToolHandlerWithFailureLogging/
-  );
+  assert.equal((entry.error as Record<string, unknown>).message, "Content omitted");
+  assert.equal((entry.error as Record<string, unknown>).stack, null);
+  assert.equal((entry.request as Record<string, unknown>).overwrite, false);
+  assert.doesNotMatch(JSON.stringify(entry), /Trigger overwrite protection|Seed a valid research artifact|already exists/);
 });
 
 test("non-standard mutation failure result shapes are logged durably", async (t) => {

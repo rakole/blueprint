@@ -2,85 +2,258 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "blueprint.phase.research.model",
   "title": "Blueprint Phase Research Model",
-  "description": "A small evidence-linked research core with optional prose. MCP owns identity, saved constraints, rendering and persistence. Submission saves the candidate before readiness assessment.",
+  "description": "Evidence-linked research for direct RESEARCH.md publication. MCP normalizes harmless presentation differences, renders the document and saves only the final artifact. Planning blockers are useful research and do not prevent publication.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["summary", "findings", "recommendations", "sources"],
+  "required": [
+    "summary",
+    "findings",
+    "recommendations",
+    "sources"
+  ],
   "properties": {
-    "summary": { "$ref": "#/$defs/prose" },
-    "findings": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/finding" } },
-    "recommendations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/recommendation" } },
-    "openQuestions": { "type": "array", "default": [], "items": { "$ref": "#/$defs/question" } },
-    "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },
+    "summary": {
+      "$ref": "#/$defs/prose"
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/recommendation"
+      }
+    },
+    "openQuestions": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/question"
+      },
+      "description": "Optional question records or plain question strings. A plain string beginning Blocking: normalizes to blocking true; other plain question strings are nonblocking. Empty-state aliases normalize to an empty list."
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
     "sections": {
       "type": "object",
       "additionalProperties": false,
       "default": {},
-      "description": "Include only topics that matter to the implementation decision. Each value is Markdown prose or a list of prose paragraphs. Omission means no section-specific detail was supplied, not that an investigation proved none exists.",
+      "description": "Optional Markdown prose or paragraph lists; include only topics useful to implementation decisions. Empty and omitted sections are not rendered.",
       "properties": {
-        "standardStack": { "$ref": "#/$defs/section" },
-        "installationAndSetup": { "$ref": "#/$defs/section" },
-        "alternativesConsidered": { "$ref": "#/$defs/section" },
-        "architecturePatterns": { "$ref": "#/$defs/section" },
-        "dontHandRoll": { "$ref": "#/$defs/section" },
-        "antiPatterns": { "$ref": "#/$defs/section" },
-        "stateOfTheArt": { "$ref": "#/$defs/section" },
-        "commonPitfalls": { "$ref": "#/$defs/section" },
-        "codeExamples": { "$ref": "#/$defs/section" }
+        "standardStack": {
+          "$ref": "#/$defs/section"
+        },
+        "installationAndSetup": {
+          "$ref": "#/$defs/section"
+        },
+        "alternativesConsidered": {
+          "$ref": "#/$defs/section"
+        },
+        "architecturePatterns": {
+          "$ref": "#/$defs/section"
+        },
+        "dontHandRoll": {
+          "$ref": "#/$defs/section"
+        },
+        "antiPatterns": {
+          "$ref": "#/$defs/section"
+        },
+        "stateOfTheArt": {
+          "$ref": "#/$defs/section"
+        },
+        "commonPitfalls": {
+          "$ref": "#/$defs/section"
+        },
+        "codeExamples": {
+          "$ref": "#/$defs/section"
+        }
       }
     }
   },
   "$defs": {
-    "prose": { "type": "string", "minLength": 1, "pattern": "\\S" },
-    "line": { "type": "string", "minLength": 1, "pattern": "^(?=.*\\S)[^\\r\\n]+$" },
-    "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,79}$" },
-    "ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
-    "section": { "anyOf": [{ "$ref": "#/$defs/prose" }, { "type": "array", "items": { "$ref": "#/$defs/prose" } }] },
+    "prose": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "line": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$"
+    },
+    "ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "description": "Optional metadata lists default to empty. A single string is normalized to a one-item list; repeated identical references are deduplicated."
+    },
+    "section": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/prose"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prose"
+          }
+        }
+      ]
+    },
     "finding": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "finding", "sourceIds", "confidence", "requirementIds", "status"],
+      "required": [
+        "id",
+        "finding"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "finding": { "$ref": "#/$defs/prose" },
-        "sourceIds": { "$ref": "#/$defs/ids" },
-        "confidence": { "enum": ["LOW", "MEDIUM", "HIGH"] },
-        "requirementIds": { "$ref": "#/$defs/ids" },
-        "status": { "enum": ["supported", "inferred", "unsupported"] }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "finding": {
+          "$ref": "#/$defs/prose"
+        },
+        "sourceIds": {
+          "$ref": "#/$defs/ids",
+          "default": []
+        },
+        "confidence": {
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+          ],
+          "default": "MEDIUM",
+          "description": "Optional; defaults to MEDIUM. HIGH requires supported evidence. Lowercase values and moderate are normalized."
+        },
+        "requirementIds": {
+          "$ref": "#/$defs/ids",
+          "default": []
+        },
+        "status": {
+          "enum": [
+            "supported",
+            "inferred",
+            "unsupported"
+          ],
+          "description": "Optional; defaults to inferred except explicit HIGH confidence with sourceIds defaults to supported. Explicit inferred or unsupported status is never upgraded. A finding without evidence must explicitly use unsupported.",
+          "default": "inferred"
+        }
       }
     },
     "recommendation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "recommendation", "findingIds", "affectedSurfaces", "verification", "requirementIds", "status"],
+      "required": [
+        "id",
+        "recommendation"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "recommendation": { "$ref": "#/$defs/prose" },
-        "findingIds": { "$ref": "#/$defs/ids" },
-        "affectedSurfaces": { "type": "array", "items": { "$ref": "#/$defs/line" } },
-        "verification": { "type": "array", "items": { "$ref": "#/$defs/prose" } },
-        "requirementIds": { "$ref": "#/$defs/ids" },
-        "status": { "enum": ["ready", "blocked"] }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "recommendation": {
+          "$ref": "#/$defs/prose"
+        },
+        "findingIds": {
+          "$ref": "#/$defs/ids",
+          "default": []
+        },
+        "affectedSurfaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/line"
+          },
+          "default": []
+        },
+        "verification": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prose"
+          },
+          "default": []
+        },
+        "requirementIds": {
+          "$ref": "#/$defs/ids",
+          "default": []
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "blocked"
+          ],
+          "default": "ready",
+          "description": "Ready requires evidence-linked findingIds. Blocked recommendations publish successfully and explicitly prevent downstream planning until resolved."
+        }
       }
     },
     "question": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["question", "blocking"],
-      "properties": { "question": { "$ref": "#/$defs/prose" }, "blocking": { "type": "boolean" } }
+      "required": [
+        "question"
+      ],
+      "properties": {
+        "question": {
+          "$ref": "#/$defs/prose"
+        },
+        "blocking": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only explicit true blocks planning; it never prevents saving useful research."
+        }
+      }
     },
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "lane", "reference"],
+      "required": [
+        "id",
+        "lane",
+        "reference"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "lane": { "enum": ["repo", "external", "supplied"] },
-        "reference": { "$ref": "#/$defs/line" },
-        "title": { "$ref": "#/$defs/line" },
-        "accessed": { "$ref": "#/$defs/line" },
-        "excerpt": { "$ref": "#/$defs/prose" },
-        "limitations": { "$ref": "#/$defs/prose" }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "lane": {
+          "enum": [
+            "repo",
+            "external",
+            "supplied"
+          ]
+        },
+        "reference": {
+          "$ref": "#/$defs/line"
+        },
+        "title": {
+          "$ref": "#/$defs/line"
+        },
+        "accessed": {
+          "$ref": "#/$defs/line"
+        },
+        "excerpt": {
+          "$ref": "#/$defs/prose"
+        },
+        "limitations": {
+          "$ref": "#/$defs/prose"
+        }
       }
     }
   }

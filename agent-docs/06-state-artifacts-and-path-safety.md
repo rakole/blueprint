@@ -102,8 +102,8 @@ adding model-authored artifacts or reports.
 The discuss tools own phase `XX-DISCUSS-SESSION.json` version 2. Sessions retain
 notes, sanitized history, evidence hashes and metadata-only publication journals;
 generated models and rendered drafts are never stored. Legacy sessions migrate
-through the owning tools, dropping draft payloads. Research and plan candidate
-persistence are independent and unchanged.
+through the owning tools, dropping draft payloads. Planning candidate persistence
+is independent.
 
 Prepare supplies selected evidence, sparse authoring schema, grounded defaults,
 missing essential fields, records and examples. Record accepts only notes with
@@ -121,35 +121,38 @@ requires explicit confirmation and reviewed hashes. Mutation failure logging for
 discussion and context/log writes retains control metadata and counts only, never
 freeform request/result/error prose or content snippets.
 
-## Durable Research Sessions
+## Research Metadata And Direct Publication
 
-`blueprint_research_prepare`, `blueprint_research_record`,
-`blueprint_research_read`, and `blueprint_research_submit` own version 1
-`XX-RESEARCH-SESSION.json` inside the resolved phase directory. JSON-compatible
-candidates up to 1 MiB are saved before model/readiness assessment, subject to
-the normal input security boundary. Malformed model JSON can be retained as raw
-text. Saved drafts are distinct from published, planner-ready research.
+`blueprint_research_prepare`, `blueprint_research_read` and
+`blueprint_research_submit` own phase `XX-RESEARCH-SESSION.json` metadata and
+canonical publication. Generated/rejected models, Markdown drafts and failed-document
+copies are not retained in sessions, journals, history or mutation telemetry.
+The removed record tool does not provide a second research persistence path.
+Version 2 sessions contain metadata only. Owning tools lazily migrate legacy sessions
+and strip stored document payloads; read is mutation-registered only for this migration,
+while its public purpose remains canonical document and metadata viewing.
 
-The session retains candidates, revision history, notes and request receipts.
-Mutations require revision CAS; an uncertain response is retried with the same
-request ID and identical arguments. Field set/remove corrections retain the rest
-of the candidate. Requests accepted before a crash resume assessment without
-creating another revision. Pending publication blocks unrelated candidate writes.
+Prepare supplies schema, example, grounding and rejection rules before generation.
+It fingerprints project intent, requirements, roadmap, context, optional spec,
+codebase summaries, selected repo evidence and effective config, including absent
+optional files. Changed inputs require reviewed refresh with expectedRevision and
+acknowledgment. Publication conflicts require explicit reconciliation with the
+observed research hash; refreshing inputs never silently refreshes published research.
 
-Preparation fingerprints project intent, requirements, roadmap, context, optional
-spec, codebase summaries, selected repository evidence and effective configuration,
-including absent optional files. Changed inputs need a reviewed refresh with
-expectedRevision and acknowledgment. Publication target conflicts require explicit
-reconciliation with the observed research hash; neither action discards history.
+Submit receives the generated model directly. Invalid models do not change the
+revision or create a draft; the parent repairs them in conversation and resubmits.
+Valid models render canonical RESEARCH.md with Summary, Recommendations and Sources,
+plus relevant optional sections. Honest open questions and omitted optional details
+can publish; planning blockers are distinct. Canonical blocker labels and typed
+statuses prevent planning even for legacy research without provenance. The legacy
+research writer also enforces valuable validation checks regardless of warn mode.
+MCP owns provenance, selected-phase state, implemented routing and guarded checkpoint
+cleanup. `XX-RESEARCH-PROVENANCE.json` binds publication bytes to the input basis.
 
-Submit validates meaningful evidence links and requirement coverage, renders the
-existing 17 research sections, and journals artifact, provenance, state, routing
-and owned checkpoint cleanup. Canonical Markdown still uses the guarded phase
-artifact writer. `XX-RESEARCH-PROVENANCE.json` binds its content hash to the input
-basis. Retry verifies completed output bytes before resuming remaining stages.
-Final success requires both publication hashes and the input basis to match.
-
-Planning treats stale, malformed or incomplete new provenance as invalid research.
-Legacy research without provenance keeps its existing read compatibility, but
-explicit reuse requires verified freshness. Reuse retains the original input
-basis; preparing again never silently makes stale published evidence fresh.
+An accepted publication uses a metadata-only journal: hashes, paths, stage status
+and request/revision identity. Before canonical research commits, retry with the same
+request ID requires the model; after canonical hash verification, pending stages can
+resume without it. Read exposes canonical research and metadata, never a rejected
+model. Reuse requires verified freshness and retains the original input basis.
+Legacy research remains readable; stale, malformed or incomplete provenance cannot
+establish freshness for reuse or planning.

@@ -15059,7 +15059,6 @@ var init_command_runtime_metadata = __esm({
     RESEARCH_PHASE_REQUIRED_TOOLS = [
       "blueprint_research_prepare",
       "blueprint_research_submit",
-      "blueprint_research_record",
       "blueprint_research_read"
     ];
     SPEC_PHASE_REQUIRED_TOOLS = [
@@ -16195,13 +16194,13 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-research-phase`",
         executionProfile: "long-running-mutation",
         rootRoutable: true,
-        purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then preserves candidates before assessment and publishes planning-ready research through MCP-owned state paths.",
+        purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then publishes canonical research through MCP with first-attempt authoring guidance and separate planning readiness.",
         reads: [
-          "blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, candidate schema, session revision and evidence fingerprints; blueprint_research_read is view/recovery only."
+          "blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, model schema, example, grounding, rejection rules, revision and evidence fingerprints; blueprint_research_read returns canonical research and metadata only."
         ],
         writes: [
           "phase XX-RESEARCH.md",
-          "phase-scoped research session, candidate revisions and finalization journal",
+          "phase-scoped research metadata, provenance and metadata-only publication journal",
           ".blueprint/STATE.md"
         ]
       },
@@ -16213,7 +16212,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Use research-phase-runtime-contract.md: prepare \u2192 investigate \u2192 submit; record/read are incremental or recovery paths. Prepare owns evidence/config/freshness/schema. Submit saves candidates before assessment and journals publication/state/routing. Preserve context/spec ownership, source policy, freshness and retry guards. Returned status/path/nextAction are authoritative.",
+        contractNotes: "Use research-phase-runtime-contract.md: prepare \u2192 investigate \u2192 submit. Use schema/example/grounding/validationRules for one generation. Rejected models are not saved. Read canonical research/metadata; journals are metadata-only. Preserve source, intent, freshness, overwrite and retry guards.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -23235,31 +23234,9 @@ var init_artifact_contracts = __esm({
         canonicalName: "Phase Research",
         canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-RESEARCH.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: [
-          "Phase Requirements",
-          "Summary",
-          "Locked Decisions From Context",
-          "User Constraints",
-          "Standard Stack",
-          "Installation And Setup",
-          "Alternatives Considered",
-          "Architecture Patterns",
-          "Don't Hand-Roll",
-          "Anti-Patterns",
-          "State Of The Art",
-          "Common Pitfalls",
-          "Open Questions",
-          "Confidence Breakdown",
-          "Code Examples",
-          "Recommendations",
-          "Sources"
-        ],
-        sectionValidations: {
-          "Open Questions": {
-            exactEmptySentinel: "- none"
-          }
-        },
-        lockedMarkers: ["**Confidence:**"],
+        requiredHeadings: ["Summary", "Recommendations", "Sources"],
+        sectionValidations: {},
+        lockedMarkers: [],
         placeholderSignals: [
           "Phase XX:",
           "<Phase Name>",
@@ -23377,33 +23354,26 @@ var init_artifact_contracts = __esm({
           "<off|ask-approved|auto|supplied|unchecked>"
         ],
         notes: [
-          "Research writes validate in strict mode by default.",
-          "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
-          "New structured research uses phase.research.modelContract and runtime rendering; the canonical authoring template remains available for legacy Markdown compatibility.",
-          "Open Questions may use the exact `- none` sentinel when no unresolved downstream question remains; structured research uses openQuestions: [] and MCP renders the empty state.",
-          "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
-          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
-          "Planner-critical claims should use claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; validation warns instead of rejecting older valid artifacts that lack this richer source register.",
-          "Claim Support Ledger rows are preferred for planner-critical claims and should connect claim IDs to source or evidence IDs, support status, confidence, and plan impact.",
-          "Source Register rows are preferred under ## Sources and should connect source IDs to lanes, paths or URLs, access dates, repo line or symbol anchors, source types, used claims, and limitations.",
-          "Recommendation Handoff rows are preferred for planner-critical recommendations and should connect recommendation IDs to supporting claims, evidence, affected surfaces, tests/checks, and ready or blocked status.",
-          "Research validation returns warning-grade evidence diagnostics for missing or weak claim/source/recommendation support before making the richer evidence contract strict.",
-          "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
+          "Research publishes a useful evidence-backed summary and implementation recommendations with sources; Markdown may use prose, bullets or tables.",
+          "New structured research uses modelContract and runtime rendering. Only Summary, Recommendations and Sources are essential; other sections are optional and omitted when empty.",
+          "Empty questions need no sentinel. Optional metadata and incomplete requirement coverage produce advice rather than publication rejection.",
+          "Blocked recommendations and unresolved blocking questions belong in the published document; planning readiness remains separate from publication success.",
+          "Preserve actual constraints, evidence limitations and unsupported findings without inventing filler. Ready recommendations must cite supported or explicitly inferred evidence."
         ],
         modelContract: {
           schemaId: "blueprint.phase.research.model",
-          schemaVersion: "1.0.0",
+          schemaVersion: "1.1.0",
           schemaPath: "src/mcp/artifact-contracts/schemas/phase.research.model.schema.json",
           jsonSchema: readJsonSchemaAsset("phase.research.model.schema.json"),
           qualityRules: [
-            "Author summary, evidence-linked findings, recommendations, and sources; openQuestions and optional prose sections default to empty collections.",
-            "Draft preservation and publication readiness are distinct: save complete candidates before validation, including incomplete or unsupported research.",
-            "Source, finding and recommendation ids must be unique; every reference must resolve. Preserve explicit inference and uncertainty instead of upgrading confidence.",
-            "HIGH-confidence findings require supported status and source references. Ready recommendations require supported or explicitly inferred findings with sources, affected surfaces, and verification.",
-            "Blocking questions and blocked recommendations prevent publication but never discard a submitted candidate.",
-            "Known requirement ids and required research coverage come from the prepared saved evidence, not invented labels.",
-            "Optional prose is included only when useful. Omitted sections are rendered as not supplied; do not invent research to fill headings.",
-            "The structured model is authoring guidance, not a claim that the host applies constrained decoding. Legacy Markdown research remains readable and writable through its existing contract."
+            "Required core: summary, findings, recommendations and sources. Findings need id and finding; recommendations need id and recommendation; sources need id, lane and reference. See minimalValidExample for a complete first-pass input.",
+            "Omitted openQuestions, requirementIds, sourceIds, findingIds, affectedSurfaces and verification default to empty arrays. Singleton text lists, duplicate references, empty-state aliases, enum case and documented support aliases normalize deterministically.",
+            "Finding confidence defaults to MEDIUM. Omitted finding status defaults to inferred, except explicit HIGH with sourceIds defaults to supported; explicit contradictory status is never replaced. Recommendation status defaults to ready. Findings without evidence must explicitly say unsupported; recommendations without evidence must explicitly say blocked.",
+            "Ids must be unique within each source, finding or recommendation collection and references must resolve. Referenced requirement ids must exist in the prepared evidence; full requirement coverage is advisory.",
+            "HIGH-confidence findings require supported status and source references. Ready recommendations require supported or explicitly inferred findings with source references; never invent or inflate evidence.",
+            "Blocked recommendations and explicit blocking questions publish successfully with planningReady false and planningBlockers; resolve them before downstream planning depends on the research. Plain question strings beginning Blocking: retain blocking intent.",
+            "Affected surfaces, verification, access dates and optional prose improve research where relevant; missing optional metadata does not prevent publication. Omit unused topics instead of generating filler.",
+            "Do not include runtime identity or paths. MCP renders the final document and writes it directly; model/schema guidance is not a claim that the host guarantees constrained decoding."
           ],
           contextBindings: [
             "Phase identity, researched timestamp, canonical filename and output path are runtime-owned.",
@@ -23412,8 +23382,8 @@ var init_artifact_contracts = __esm({
             "Source references identify observed repo evidence, permitted external sources or supplied material; citation entailment requires substantive research judgment."
           ],
           renderedHeadings: [
-            "Phase Requirements",
             "Summary",
+            "Phase Requirements",
             "Locked Decisions From Context",
             "User Constraints",
             "Standard Stack",
@@ -23425,37 +23395,45 @@ var init_artifact_contracts = __esm({
             "State Of The Art",
             "Common Pitfalls",
             "Open Questions",
-            "Confidence Breakdown",
+            "Findings",
             "Code Examples",
             "Recommendations",
             "Sources"
           ],
           minimalValidExample: {
-            summary: "Reuse the repository's atomic text writer for the research candidate store.",
+            summary: "Reuse the repository's atomic writer to publish complete research documents.",
             findings: [{
               id: "CLM-001",
-              finding: "The existing writer completes writes with an atomic rename.",
+              finding: "The writer completes text writes with an atomic rename.",
               sourceIds: ["SRC-001"],
-              confidence: "HIGH",
-              requirementIds: [],
               status: "supported"
             }],
             recommendations: [{
               id: "REC-001",
-              recommendation: "Persist candidate revisions using the existing atomic writer.",
-              findingIds: ["CLM-001"],
-              affectedSurfaces: ["src/mcp/tools/research.ts"],
-              verification: ["Interrupt a candidate save and verify that the previous revision remains readable."],
-              requirementIds: [],
-              status: "ready"
+              recommendation: "Publish RESEARCH.md through the existing atomic writer.",
+              findingIds: ["CLM-001"]
             }],
-            openQuestions: [],
-            sources: [{ id: "SRC-001", lane: "repo", reference: "src/mcp/tools/artifacts.ts#writeTextFile", excerpt: "The text writer renames a temporary file into place." }]
+            sources: [{ id: "SRC-001", lane: "repo", reference: "src/mcp/tools/artifacts.ts#writeTextFile" }]
           },
           exampleLeakageSignals: []
         },
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
-        renderAuthoringTemplate: renderResearchTemplate
+        renderAuthoringTemplate: (context) => `# ${phaseLabel(context)} - Research
+
+## Summary
+
+<key conclusion>
+
+## Recommendations
+
+<prescriptive recommendation with tradeoffs>
+
+## Sources
+
+<URL or repo path>
+
+<!-- Optional topics may be added when useful. No fixed table, confidence marker or empty-section sentinel is required. Replace this guidance with actual research. -->
+`
       },
       "phase.spec": {
         id: "phase.spec",
@@ -26340,17 +26318,19 @@ async function readPublishedResearchFreshness(root, researchPath) {
       const saved = await readResearchEvidence(root, researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json"), 32 * 1024 * 1024);
       const session = saved.content ? safeJsonParseObject(saved.content, { label: saved.path, maxBytes: 32 * 1024 * 1024 }) : null;
       const journal = session?.journal;
-      const incomplete = Boolean(journal?.stages?.artifact && journal.contentHash === await researchInputHash(root, researchPath));
+      const legacyPublication = session?.legacyPublication;
+      const publishedHash = await researchInputHash(root, researchPath);
+      const incomplete = Boolean(journal?.stages?.artifact && journal.contentHash === publishedHash || legacyPublication?.contentHash && legacyPublication.contentHash === publishedHash);
       return { status: "unknown", stalePaths: [], unknownPaths: [incomplete ? "publication" : "provenance"], reason: incomplete ? "Research session has not published source provenance." : "Legacy research has no recorded input fingerprints; review before reuse." };
     }
     const parsed = safeJsonParseObject(evidence.content, { label: evidence.path });
-    if (parsed.version !== 1 || typeof parsed.researchHash !== "string" || !/^[a-f0-9]{64}$/.test(parsed.researchHash) || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100 || !parsed.readSet.every((r) => {
+    if (parsed.version !== 1 || parsed.planningReady !== void 0 && typeof parsed.planningReady !== "boolean" || typeof parsed.researchHash !== "string" || !/^[a-f0-9]{64}$/.test(parsed.researchHash) || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100 || !parsed.readSet.every((r) => {
       const x = r;
       return x && typeof x.path === "string" && (x.hash === null || typeof x.hash === "string" && /^[a-f0-9]{64}$/.test(x.hash));
     })) throw new Error("Invalid research provenance.");
     if (await researchInputHash(root, researchPath) !== parsed.researchHash)
       return { status: "stale", stalePaths: [researchPath], unknownPaths: [], reason: "Research content changed after publication." };
-    return { ...await researchBasisFreshness(root, parsed.readSet), reason: null };
+    return { ...await researchBasisFreshness(root, parsed.readSet), reason: null, ...typeof parsed.planningReady === "boolean" ? { planningReady: parsed.planningReady } : {} };
   } catch (error2) {
     return { status: "unknown", stalePaths: [], unknownPaths: [researchProvenancePath(researchPath)], reason: error2.message };
   }
@@ -32906,7 +32886,7 @@ async function blueprintPhaseArtifactWrite(args) {
             );
           }
         }
-        if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
+        if (!validation.valid && (args.artifact === "research" || (args.validationMode ?? "strict") === "strict")) {
           return invalidPhaseArtifactWriteResult({
             resolved: resolved2,
             artifact: args.artifact,
@@ -33759,7 +33739,13 @@ async function buildPhaseResearchStatusFromContext(projectRoot, context) {
         researchValid = false;
         const message = `Saved research inputs are ${freshness.status}: ${[...freshness.stalePaths, ...freshness.unknownPaths].join(", ")}.`;
         researchIssues.push(message);
-        researchDiagnostics.push({ path: researchPath, code: "research.inputs_stale", message, repair: "Use /blu-research-phase to review changed inputs and update the saved candidate.", retryable: true, nextTool: "blueprint_research_prepare" });
+        researchDiagnostics.push({ path: researchPath, code: "research.inputs_stale", message, repair: "Use /blu-research-phase to review changed inputs and update the research.", retryable: true, nextTool: "blueprint_research_prepare" });
+      }
+      if (freshness.planningReady === false || researchHasPlanningBlockers(raw)) {
+        researchValid = false;
+        const message = "Saved research documents unresolved planning blockers.";
+        researchIssues.push(message);
+        researchDiagnostics.push({ path: researchPath, code: "research.planning_blocked", message, repair: "Resolve the blocking questions or recommendations documented in the saved research before planning.", retryable: true, nextTool: "blueprint_research_prepare" });
       }
     } catch (error2) {
       researchValid = false;
@@ -43341,6 +43327,7 @@ __export(artifacts_exports, {
   prepareBootstrapArtifactContents: () => prepareBootstrapArtifactContents,
   readJsonIfPresent: () => readJsonIfPresent,
   readUatArtifactState: () => readUatArtifactState,
+  researchHasPlanningBlockers: () => researchHasPlanningBlockers,
   resolveBlueprintPath: () => resolveBlueprintPath,
   resolveRepoRelativePath: () => resolveRepoRelativePath,
   toPosixPath: () => toPosixPath,
@@ -45151,6 +45138,11 @@ function extractResearchMarkdownSubsection(section, subheading) {
 function splitResearchReferenceIds(value) {
   return uniqueStrings(value.match(/\b(?:SRC|EVID|CLM|REC)-\d{3}\b/g) ?? []);
 }
+function splitResearchTypedReferenceIds(value) {
+  const normalized = value.replace(/[`"'\[\]]/g, "").trim();
+  if (!normalized || /^(?:none|null|n\/?a)$/i.test(normalized)) return [];
+  return uniqueStrings(normalized.split(/[,;\s]+/).filter(Boolean));
+}
 function isBackgroundSourceUse(value) {
   return /\b(?:background|do not use as support|out_of_scope)\b/i.test(value);
 }
@@ -45187,7 +45179,9 @@ function sourceRegisterRowReferenceText(row) {
   return [row.path_or_url].filter(Boolean).join("\n");
 }
 function sourceRegisterRowHasConcreteEvidence(row) {
-  return hasConcreteStructuredSourceReference(sourceRegisterRowReferenceText(row));
+  const reference = sourceRegisterRowReferenceText(row).trim();
+  const suppliedLabel = /^supplied$/i.test(row.lane?.trim() ?? "") && reference.length > 0 && !/^(?:none|null|undefined|n\/?a|unknown|unchecked|tbd|todo|<[^>]+>)$/i.test(reference);
+  return suppliedLabel || hasConcreteStructuredSourceReference(reference);
 }
 function evidenceRowId(row) {
   return row.evidence_id || "";
@@ -45436,49 +45430,19 @@ function stripResearchHeadingAdornment(value) {
 function normalizeResearchHeadingKey(value) {
   return stripResearchHeadingAdornment(value).replace(/[‘’‛`]/gu, "'").replace(/[“”]/gu, '"').replace(/[‐‑–—−]/gu, "-").replace(/\s*&\s*/gu, " and ").replace(/["']/gu, "").replace(/[-/]+/gu, " ").replace(/\s+/gu, " ").trim().toLowerCase();
 }
-function normalizeResearchHeadingSimilarityText(value) {
-  const normalized = stripResearchHeadingAdornment(value).replace(/[‘’‛`]/gu, "'").replace(/[“”]/gu, '"').replace(/[‐‑–—−]/gu, "-").replace(/\b(?:don't|dont)\b/giu, "do not").replace(/\s*&\s*/gu, " and ").replace(/[^A-Za-z0-9]+/gu, " ").replace(/\s+/gu, " ").trim().toLowerCase();
-  return normalized.split(" ").filter((token) => token.length > 0).map((token) => token.length > 3 && token.endsWith("s") ? token.slice(0, -1) : token).join(" ");
-}
-function researchHeadingSimilarityScore(left, right) {
-  if (left.length === 0 || right.length === 0) {
-    return 0;
-  }
-  if (left === right) {
-    return 1;
-  }
-  if (left.includes(right) || right.includes(left)) {
-    return 0.85;
-  }
-  const leftTokens = new Set(left.split(" ").filter((token) => token.length > 0));
-  const rightTokens = new Set(right.split(" ").filter((token) => token.length > 0));
-  const overlap = [...leftTokens].filter((token) => rightTokens.has(token)).length;
-  if (overlap === 0) {
-    return 0;
-  }
-  return overlap / Math.max(leftTokens.size, rightTokens.size);
-}
-function findCloseResearchHeadingVariant(canonicalHeading, candidateHeadings) {
-  const normalizedCanonical = normalizeResearchHeadingSimilarityText(canonicalHeading);
-  let bestMatch = null;
-  for (const candidateHeading of candidateHeadings) {
-    const score = researchHeadingSimilarityScore(
-      normalizedCanonical,
-      normalizeResearchHeadingSimilarityText(candidateHeading)
-    );
-    if (!bestMatch || score > bestMatch.score) {
-      bestMatch = {
-        heading: candidateHeading,
-        score
-      };
-    }
-  }
-  return bestMatch && bestMatch.score >= 0.6 ? bestMatch.heading : null;
-}
 function canonicalizeResearchRequiredHeadings(content) {
   const canonicalHeadingByKey = new Map(
-    REQUIRED_RESEARCH_SECTIONS.map((heading) => [normalizeResearchHeadingKey(heading), heading])
+    RESEARCH_CANONICAL_HEADINGS.map((heading) => [normalizeResearchHeadingKey(heading), heading])
   );
+  for (const [alias, canonical] of Object.entries({
+    Overview: "Summary",
+    "Executive Summary": "Summary",
+    "Research Summary": "Summary",
+    "Recommended Approach": "Recommendations",
+    "Implementation Guidance": "Recommendations",
+    References: "Sources",
+    Evidence: "Sources"
+  })) canonicalHeadingByKey.set(normalizeResearchHeadingKey(alias), canonical);
   const canonicalizedHeadings = [];
   const unmatchedTopLevelHeadings = [];
   const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line2, heading }) => {
@@ -45504,21 +45468,7 @@ function canonicalizeResearchRequiredHeadings(content) {
   };
 }
 function canonicalizeResearchHeadingLines(content) {
-  const normalized = canonicalizeResearchRequiredHeadings(content).content;
-  const lines3 = scanResearchMarkdown(normalized);
-  for (let index = 0; index < lines3.length; index += 1) {
-    const heading = lines3[index].heading;
-    if (heading?.level !== 2) continue;
-    const sentinel = RESEARCH_SECTION_VALIDATIONS?.[heading.title]?.exactEmptySentinel;
-    if (!sentinel) continue;
-    let end = index + 1;
-    while (end < lines3.length && (!lines3[end].heading || lines3[end].heading.level > 2)) end += 1;
-    const section = lines3.slice(index + 1, end).map((line2) => line2.text).join("\n");
-    if (!matchesFuzzyEmptySentinel(section, sentinel)) continue;
-    const contentLine = lines3.slice(index + 1, end).find((line2) => line2.text.trim().length > 0);
-    if (contentLine) contentLine.text = `${sentinel}${contentLine.text.endsWith("\r") ? "\r" : ""}`;
-  }
-  return lines3.map((line2) => line2.text).join("\n");
+  return canonicalizeResearchRequiredHeadings(content).content;
 }
 function uniqueStrings(values) {
   return [...new Set(values)];
@@ -45556,190 +45506,105 @@ function matchedDiscussionScaffoldRows(content, signals) {
   });
   return signals.filter((signal) => signal.length > 0 && rows.includes(signal));
 }
+function hasExplicitBlockedRecommendationProse(section) {
+  return /(?:^|\n)\s*(?:[-+]\s*)?blocked\b/i.test(section.replace(/[*_`]/g, ""));
+}
+function researchHasPlanningBlockers(content) {
+  const visible = stripResearchFencedCodeBlocks(canonicalizeResearchHeadingLines(content));
+  const recommendations = extractResearchMarkdownSection(visible, "Recommendations");
+  const questions = extractResearchMarkdownSection(visible, "Open Questions");
+  const plain = (value) => value.replace(/[*_`]/g, "");
+  return collectResearchRecommendationRows(visible).some((row) => /^blocked$/i.test(plain(row.status ?? "").trim())) || hasExplicitBlockedRecommendationProse(recommendations) || /(?:^|\n)\s*(?:[-+]\s*)?blocking\s*:/i.test(plain(questions)) || parseResearchMarkdownTable(questions).some((row) => /^(?:true|yes|blocking)$/i.test(plain(row.blocking ?? row.status ?? "").trim()));
+}
 function validateResearchArtifactContent(content) {
   const issues = [];
   const warnings = [];
   const diagnostics = [];
-  const canonicalizedHeadings = canonicalizeResearchRequiredHeadings(content);
   const normalizedContent = canonicalizeResearchHeadingLines(content);
-  const contentWithoutFencedCodeBlocks = stripResearchFencedCodeBlocks(normalizedContent);
-  const pushResearchIssue = (message, diagnostic) => {
+  const visible = stripResearchFencedCodeBlocks(normalizedContent);
+  const issue2 = (heading, code, message, repair) => {
     issues.push(message);
-    diagnostics.push(diagnostic);
+    diagnostics.push(phaseArtifactDiagnostic({ artifact: "research", path: heading ? `content.sections.${heading}` : "content", heading, code, message, repair }));
   };
-  if (!/^# .+ - Research[ \t]*\r?(?:\n|$)/.test(contentWithoutFencedCodeBlocks.trimStart())) {
-    pushResearchIssue(
-      "Research artifact must start with a '# ... - Research' heading.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content",
-        code: "research.title_missing",
-        message: "Research artifact must start with a '# ... - Research' heading.",
-        repair: "Start the artifact with the exact '# ... - Research' title, then retry blueprint_phase_artifact_write."
-      })
-    );
-  }
-  if (matchedScaffoldPlaceholderSignals(contentWithoutFencedCodeBlocks, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, {
-    singleSignalPatterns: [/^Phase XX:$/i]
-  }).length > 0) {
-    pushResearchIssue(
-      "Research artifact still contains scaffold placeholder text and must be replaced with real research content.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content",
-        code: "research.placeholder_present",
-        message: "Research artifact still contains scaffold placeholder text and must be replaced with real research content.",
-        repair: "Replace scaffold placeholders with phase-specific research content before retrying blueprint_phase_artifact_write."
-      })
-    );
-  }
-  const confidenceMatch = contentWithoutFencedCodeBlocks.match(
-    /^\*\*Confidence:\*\*\s*(LOW|MEDIUM|HIGH)\s*$/m
+  if (!/^#\s+\S[^\n]*\r?(?:\n|$)/.test(visible.trimStart())) issue2(
+    void 0,
+    "research.title_missing",
+    "Research needs a document title outside code examples.",
+    "Start the research document with a descriptive H1 title."
   );
-  if (!confidenceMatch) {
-    pushResearchIssue(
-      `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`,
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content",
-        code: "research.confidence_missing",
-        message: `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`,
-        allowedValues: [...RESEARCH_CONFIDENCE_VALUES],
-        repair: "Set **Confidence:** to LOW, MEDIUM, or HIGH before retrying blueprint_phase_artifact_write."
-      })
-    );
-  }
+  if (visible.includes(SCAFFOLD_GENERATED_MARKER) || matchedDiscussionScaffoldRows(visible, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS).length > 0) issue2(
+    void 0,
+    "research.placeholder_present",
+    "Research still contains unfilled scaffold placeholders.",
+    "Replace unfilled placeholders with the actual findings or omit the optional section."
+  );
+  const headings = new Set(scanResearchMarkdown(normalizedContent).filter((line2) => line2.heading?.level === 2).map((line2) => line2.heading.title));
   for (const heading of REQUIRED_RESEARCH_SECTIONS) {
-    const hasHeading = new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(
-      contentWithoutFencedCodeBlocks
-    );
-    const exactEmptySentinel = RESEARCH_SECTION_VALIDATIONS?.[heading]?.exactEmptySentinel;
-    if (!hasHeading) {
-      const closeVariant = findCloseResearchHeadingVariant(
-        heading,
-        canonicalizedHeadings.unmatchedTopLevelHeadings
-      );
-      const message = closeVariant ? `Research artifact is missing required section: ${heading}. Found similar heading "${closeVariant}", but only format-level variants of the canonical heading are auto-repaired.` : `Research artifact is missing required section: ${heading}.`;
-      pushResearchIssue(
-        message,
-        phaseArtifactDiagnostic({
-          artifact: "research",
-          path: `content.sections.${heading}`,
-          code: closeVariant ? "research.heading_shape_invalid" : "research.heading_missing",
-          message,
-          heading,
-          missing: [heading],
-          allowedValues: closeVariant ? [...REQUIRED_RESEARCH_SECTIONS] : void 0,
-          repair: closeVariant ? `Replace "${closeVariant}" with the exact canonical heading \`## ${heading}\`, populate that section with substantive research content, then retry blueprint_phase_artifact_write.` : `Add the exact canonical heading \`## ${heading}\`, populate that section with substantive research content, then retry blueprint_phase_artifact_write.`
-        })
-      );
+    const exists3 = headings.has(heading);
+    if (!exists3) {
+      issue2(heading, "research.heading_missing", `Research needs ${heading} content.`, `Include a ${heading} section with actual research; prose, bullets and tables are all accepted.`);
       continue;
     }
-    const section = extractResearchMarkdownSection(normalizedContent, heading);
-    if (section.trim().length === 0) {
-      const message = `Research artifact section ${heading} must not be empty.`;
-      pushResearchIssue(
-        message,
-        phaseArtifactDiagnostic({
-          artifact: "research",
-          path: `content.sections.${heading}`,
-          code: "research.section_empty",
-          message,
-          heading,
-          repair: `Populate the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
-        })
-      );
-      continue;
-    }
-    if (matchesExactEmptySentinel(section, exactEmptySentinel)) {
-      continue;
-    }
-    if (matchesFuzzyEmptySentinel(section, exactEmptySentinel)) {
-      const fuzzySentinel = exactEmptySentinel ?? "- none";
-      const message = `Research artifact section ${heading} must use exactly \`${fuzzySentinel}\` for the empty state instead of a prose variant.`;
-      pushResearchIssue(
-        message,
-        phaseArtifactDiagnostic({
-          artifact: "research",
-          path: `content.sections.${heading}`,
-          code: "research.inexact_empty_sentinel",
-          message,
-          heading,
-          repair: exactEmptySentinelRepairInstruction(heading, fuzzySentinel)
-        })
-      );
-      continue;
-    }
-    if (!hasSubstantiveResearchSection(section)) {
-      const message = exactEmptySentinel ? `Research artifact section ${heading} must contain substantive content after placeholders are removed or use exactly \`${exactEmptySentinel}\`.` : `Research artifact section ${heading} must contain substantive content after placeholders are removed.`;
-      pushResearchIssue(
-        message,
-        phaseArtifactDiagnostic({
-          artifact: "research",
-          path: `content.sections.${heading}`,
-          code: "research.section_non_substantive",
-          message,
-          heading,
-          repair: exactEmptySentinel ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) : `Rewrite the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
-        })
-      );
-    }
-  }
-  const phaseRequirements = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Phase Requirements");
-  if (!hasRequirementTableRows(phaseRequirements)) {
-    pushResearchIssue(
-      "Research artifact section Phase Requirements must include at least one populated requirement row.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content.sections.Phase Requirements",
-        code: "research.phase_requirements_rows_missing",
-        message: "Research artifact section Phase Requirements must include at least one populated requirement row.",
-        heading: "Phase Requirements",
-        repair: "Add at least one populated requirement row under the exact canonical heading `## Phase Requirements`, then retry blueprint_phase_artifact_write."
-      })
+    const section = extractResearchMarkdownSection(visible, heading);
+    if (!hasSubstantiveResearchSection(section)) issue2(
+      heading,
+      "research.section_non_substantive",
+      `Research section ${heading} needs actual findings rather than an empty scaffold or code-only example.`,
+      `Populate ${heading} with the actual research content.`
     );
   }
-  const recommendations = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Recommendations");
-  if (!/^- /m.test(recommendations) && collectResearchRecommendationRows(normalizedContent).length === 0) {
-    pushResearchIssue(
-      "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content.sections.Recommendations",
-        code: "research.recommendations_missing",
-        message: "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
-        heading: "Recommendations",
-        repair: "Populate the exact canonical heading `## Recommendations` with a recommendation bullet or Recommendation Handoff row, then retry blueprint_phase_artifact_write."
-      })
+  const recommendationRows = collectResearchRecommendationRows(normalizedContent);
+  const onlyBlockedRecommendations = recommendationRows.length > 0 && recommendationRows.every((row) => /^blocked$/i.test(row.status?.trim() ?? ""));
+  const recommendations = extractResearchMarkdownSection(visible, "Recommendations");
+  const explicitlyBlockedProse = hasExplicitBlockedRecommendationProse(recommendations);
+  const sources = extractResearchMarkdownSection(visible, "Sources");
+  const declaredEvidenceGap = /\bno\s+(?:source\s+)?evidence\b|\bsources? (?:are |is )?(?:unavailable|inaccessible)\b/i.test(sources);
+  if (!containsSourceEvidence(sources) && !hasStructuredSourceEvidence(normalizedContent)) {
+    if ((onlyBlockedRecommendations || explicitlyBlockedProse) && declaredEvidenceGap) warnings.push("Research documents an evidence gap; its recommendations remain blocked for planning.");
+    else issue2(
+      "Sources",
+      "research.sources_missing",
+      "Research needs a concrete source reference or an explicit evidence gap with blocked recommendations.",
+      "Cite an observed repo path, URL, DOI or supplied source; if evidence is unavailable, say so and keep the recommendations blocked."
     );
   }
-  const sources = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Sources");
-  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence(normalizedContent)) {
-    pushResearchIssue(
-      "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content.sections.Sources",
-        code: "research.sources_missing",
-        message: "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
-        heading: "Sources",
-        repair: "Populate the exact canonical heading `## Sources` with at least one cited source bullet or structured evidence row, then retry blueprint_phase_artifact_write."
-      })
-    );
+  const sourceRows = collectResearchSourceRegisterRows(normalizedContent);
+  const sourceIds = new Set(sourceRows.map(sourceRegisterRowId));
+  const evidenceIds = new Set(collectResearchEvidenceRows(normalizedContent).map(evidenceRowId));
+  const findingRows = [
+    ...collectResearchClaimRows(normalizedContent),
+    ...parseResearchMarkdownTable(extractResearchMarkdownSection(normalizedContent, "Findings")),
+    ...parseResearchMarkdownTable(extractResearchMarkdownSection(normalizedContent, "Confidence Breakdown"))
+  ];
+  const findingIds = new Set(findingRows.map((row) => row.finding_id || row.claim_id).filter(Boolean));
+  for (const row of findingRows) {
+    const status = row.support_status || row.claim_class || "";
+    const refs = splitResearchTypedReferenceIds(row.source_ids || "");
+    if (/^HIGH$/i.test(row.confidence?.trim() ?? "") && /^(?:unsupported|not_enough_evidence|inferred|inferred_from_supported)$/i.test(status.trim())) {
+      issue2("Findings", "research.high_confidence_unsupported", "A HIGH-confidence finding is explicitly unsupported or inferred.", "Keep the evidence limitation and lower confidence, or provide direct support.");
+    }
+    for (const id of refs) {
+      if (!sourceIds.has(id)) issue2("Sources", "research.source_reference_missing", `Finding references missing source ${id}.`, "Correct the reference or include its observed source.");
+    }
+    for (const id of splitResearchTypedReferenceIds(row.evidence_ids || "")) {
+      if (!sourceIds.has(id) && !evidenceIds.has(id)) issue2("Sources", "research.source_reference_missing", `Finding references missing evidence ${id}.`, "Correct the reference or include its observed evidence.");
+    }
+  }
+  for (const row of recommendationRows) {
+    const refs = splitResearchTypedReferenceIds(row.supporting_claim_ids || row.claim_ids || "");
+    for (const id of refs) {
+      if (!findingIds.has(id)) issue2("Recommendations", "research.finding_reference_missing", `Recommendation references missing finding ${id}.`, "Correct the reference or include the finding.");
+      const finding = findingRows.find((item) => (item.finding_id || item.claim_id) === id);
+      if (/^ready$/i.test(row.status?.trim() ?? "") && finding && /^(?:unsupported|not_enough_evidence)$/i.test((finding.support_status || finding.claim_class || "").trim())) issue2("Recommendations", "research.recommendation_unsupported", "A ready recommendation relies on an explicitly unsupported finding.", "Mark the recommendation blocked or supply supporting evidence.");
+    }
+    for (const id of splitResearchTypedReferenceIds(row.evidence_ids || "")) {
+      if (!sourceIds.has(id) && !evidenceIds.has(id)) issue2("Recommendations", "research.source_reference_missing", `Recommendation references missing evidence ${id}.`, "Correct the reference or include its observed evidence.");
+    }
   }
   const warningDiagnostics = researchEvidenceWarningDiagnostics(normalizedContent);
-  for (const diagnostic of warningDiagnostics) {
-    if (!warnings.includes(diagnostic.message)) {
-      warnings.push(diagnostic.message);
-    }
-  }
+  for (const diagnostic of warningDiagnostics) if (!warnings.includes(diagnostic.message)) warnings.push(diagnostic.message);
   diagnostics.push(...warningDiagnostics);
-  return {
-    valid: issues.length === 0,
-    issues,
-    warnings,
-    diagnostics
-  };
+  return { valid: issues.length === 0, issues, warnings, diagnostics };
 }
 function collectReferencedSummaryPaths(section, summaryPaths) {
   const normalizedSection = section.trim();
@@ -46908,20 +46773,6 @@ function countNonEmptyContractSections(content, headings) {
     (count, heading) => count + (extractMarkdownSection5(content, heading).trim().length > 0 ? 1 : 0),
     0
   );
-}
-function matchesExactEmptySentinel(section, exactEmptySentinel) {
-  return typeof exactEmptySentinel === "string" && section.trim() === exactEmptySentinel;
-}
-function matchesFuzzyEmptySentinel(section, exactEmptySentinel) {
-  if (typeof exactEmptySentinel !== "string") {
-    return false;
-  }
-  const normalizedSection = section.trim().toLowerCase();
-  const normalizedSentinel = exactEmptySentinel.trim().toLowerCase();
-  if (normalizedSection === normalizedSentinel) {
-    return false;
-  }
-  return /^(?:[-*]\s*)?(?:none(?: that block (?:this|the) (?:phase|fixture))?|no (?:open questions?|deferred ideas?)(?: currently)?|nothing(?: deferred)?|n\/a|na|not applicable)[.!]?$/i.test(normalizedSection);
 }
 function exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) {
   return `Populate ## ${heading} with concrete contract-compliant detail, or use exactly \`${exactEmptySentinel}\` when that section intentionally has no remaining items, then retry blueprint_phase_artifact_write.`;
@@ -54360,7 +54211,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, blueprintArtifactsTestHooks, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, RESEARCH_CONTRACT, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CANONICAL_HEADINGS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, blueprintArtifactsTestHooks, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -54599,16 +54450,15 @@ var init_artifacts = __esm({
       "deferred",
       "out_of_scope"
     ];
-    REQUIRED_RESEARCH_SECTIONS = readArtifactContract(
-      "phase.research"
-    ).requiredHeadings;
-    RESEARCH_CONFIDENCE_VALUES = ["LOW", "MEDIUM", "HIGH"];
-    RESEARCH_SECTION_VALIDATIONS = readArtifactContract(
-      "phase.research"
-    ).sectionValidations;
-    RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS = readArtifactContract(
-      "phase.research"
-    ).placeholderSignals;
+    RESEARCH_CONTRACT = readArtifactContract("phase.research");
+    REQUIRED_RESEARCH_SECTIONS = RESEARCH_CONTRACT.requiredHeadings;
+    RESEARCH_CANONICAL_HEADINGS = [
+      ...REQUIRED_RESEARCH_SECTIONS,
+      ...RESEARCH_CONTRACT.modelContract?.renderedHeadings ?? [],
+      "Confidence Breakdown",
+      "Claim Support Ledger"
+    ];
+    RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS = RESEARCH_CONTRACT.placeholderSignals;
     BOOTSTRAP_PROJECT_CONTRACT = readArtifactContract("bootstrap.project");
     PLAN_CONTRACT = readArtifactContract("phase.plan");
     REQUIRED_PLAN_SECTIONS = PLAN_CONTRACT.requiredHeadings;
@@ -56239,8 +56089,68 @@ var init_discuss = __esm({
 });
 
 // src/mcp/tools/phase-research-model.ts
+function normalizeResearchModel(object3) {
+  const list = (value) => {
+    if (value == null || typeof value === "string" && (!value.trim() || EMPTY_LIST_ALIAS.test(value.trim()))) return [];
+    if (typeof value === "string") return [value.trim()];
+    if (Array.isArray(value)) return [...new Set(value.map((item) => typeof item === "string" ? item.trim() : item))];
+    return value;
+  };
+  const enumValue = (value, aliases) => typeof value === "string" ? aliases[value.trim().toLowerCase().replace(/[ -]+/g, "_")] ?? value.trim() : value;
+  if (typeof object3.summary === "string") object3.summary = object3.summary.trim();
+  object3.openQuestions = list(object3.openQuestions);
+  if (Array.isArray(object3.openQuestions)) object3.openQuestions = object3.openQuestions.map((value) => {
+    if (typeof value === "string") {
+      const blockingPrefix = value.match(/^(?:[-*+]\s*)?(?:\*\*)?blocking(?:\*\*)?\s*:\s*(?:\*\*)?\s*/i);
+      return { question: blockingPrefix ? value.slice(blockingPrefix[0].length) : value, blocking: Boolean(blockingPrefix) };
+    }
+    const question = asJsonObject(value);
+    if (question && question.blocking === void 0) question.blocking = false;
+    if (question && typeof question.blocking === "string" && /^(?:true|false)$/i.test(question.blocking.trim())) question.blocking = question.blocking.trim().toLowerCase() === "true";
+    return value;
+  });
+  if (object3.sections == null) object3.sections = {};
+  const sections = asJsonObject(object3.sections);
+  if (sections) for (const [key2, value] of Object.entries(sections)) {
+    if (value == null || typeof value === "string" && (!value.trim() || EMPTY_LIST_ALIAS.test(value.trim()))) delete sections[key2];
+    else if (Array.isArray(value)) sections[key2] = value.filter((item) => typeof item !== "string" || item.trim() && !EMPTY_LIST_ALIAS.test(item.trim()));
+  }
+  for (const field of ["sources", "findings", "recommendations"]) {
+    if (!Array.isArray(object3[field])) continue;
+    for (const value of object3[field]) {
+      const row = asJsonObject(value);
+      if (!row) continue;
+      for (const [key2, entry] of Object.entries(row)) if (typeof entry === "string") row[key2] = entry.trim();
+      if (field === "sources") {
+        row.lane = enumValue(row.lane, { repo: "repo", repository: "repo", external: "external", web: "external", supplied: "supplied", user_supplied: "supplied" });
+        for (const optional2 of ["title", "accessed", "excerpt", "limitations"]) if (row[optional2] == null || row[optional2] === "") delete row[optional2];
+        continue;
+      }
+      row.requirementIds = list(row.requirementIds);
+      if (field === "findings") {
+        row.sourceIds = list(row.sourceIds);
+        row.confidence = enumValue(row.confidence ?? "MEDIUM", { low: "LOW", medium: "MEDIUM", moderate: "MEDIUM", high: "HIGH" });
+        const defaultStatus = row.confidence === "HIGH" && Array.isArray(row.sourceIds) && row.sourceIds.length > 0 ? "supported" : "inferred";
+        row.status = enumValue(row.status ?? defaultStatus, {
+          supported: "supported",
+          directly_supported: "supported",
+          inferred: "inferred",
+          inferred_from_supported: "inferred",
+          partially_supported: "inferred",
+          unsupported: "unsupported",
+          not_enough_evidence: "unsupported"
+        });
+      } else {
+        row.findingIds = list(row.findingIds);
+        row.affectedSurfaces = list(row.affectedSurfaces);
+        row.verification = list(row.verification);
+        row.status = enumValue(row.status ?? "ready", { ready: "ready", planning_ready: "ready", blocked: "blocked", needs_research: "blocked" });
+      }
+    }
+  }
+}
 function validatePhaseResearchModelInput(raw, context = {}) {
-  const validation = { valid: true, issues: [], warnings: [], diagnostics: [] };
+  const validation = { valid: true, planningReady: true, planningBlockers: [], issues: [], warnings: [], diagnostics: [] };
   const issue2 = (path31, code, message, repair, warning = false) => {
     (warning ? validation.warnings : validation.issues).push(message);
     validation.diagnostics.push({
@@ -56253,16 +56163,23 @@ function validatePhaseResearchModelInput(raw, context = {}) {
       nextTool: "blueprint_research_submit"
     });
     validation.valid = validation.issues.length === 0;
+    validation.planningReady = validation.valid && validation.planningBlockers.length === 0;
+  };
+  const planningBlocker = (path31, code, message, repair) => {
+    validation.planningBlockers.push(message);
+    issue2(path31, code, message, repair, true);
   };
   let object3;
   try {
-    object3 = asJsonObject(typeof raw === "string" ? safeJsonParse(raw, { label: "Research candidate", maxBytes: 1024 * 1024 }) : structuredClone(raw));
+    const text2 = typeof raw === "string" ? raw.trim() : null;
+    const fencedJson = text2?.match(/^(`{3,}|~{3,})(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n\1$/i);
+    object3 = asJsonObject(typeof raw === "string" ? safeJsonParse(fencedJson?.[2] ?? text2, { label: "Research model", maxBytes: 1024 * 1024 }) : structuredClone(raw));
   } catch (error2) {
     issue2(
       "model",
       "schema.json",
       error2 instanceof Error ? error2.message : "Research candidate is not JSON.",
-      "Correct the saved candidate's JSON syntax and resubmit that revision."
+      "Correct the JSON syntax and submit the research model."
     );
     return { model: null, validation };
   }
@@ -56275,8 +56192,7 @@ function validatePhaseResearchModelInput(raw, context = {}) {
     );
     return { model: null, validation };
   }
-  if (object3.openQuestions === void 0) object3.openQuestions = [];
-  if (object3.sections === void 0) object3.sections = {};
+  normalizeResearchModel(object3);
   const validate = researchModelValidator ??= createAjvValidator().compile(
     readArtifactContract("phase.research").modelContract.jsonSchema
   );
@@ -56288,20 +56204,20 @@ function validatePhaseResearchModelInput(raw, context = {}) {
         fieldPath,
         `schema.${error2.keyword}`,
         `Research candidate ${fieldPath} ${error2.message ?? error2.keyword}.`,
-        `Correct only ${fieldPath} using phase.research.modelContract; retain the remaining saved candidate.`
+        `Correct ${fieldPath} using phase.research.modelContract.`
       );
     }
     return { model: null, validation };
   }
   const model = object3;
-  const ids = /* @__PURE__ */ new Set();
   for (const field of ["sources", "findings", "recommendations"]) {
+    const ids = /* @__PURE__ */ new Set();
     model[field].forEach((row, index) => {
       if (ids.has(row.id)) issue2(
         `model.${field}.${index}.id`,
         "research.duplicate_id",
-        `Research id ${row.id} is duplicated.`,
-        "Give each source, finding and recommendation a unique id and update its references."
+        `Research ${field} id ${row.id} is duplicated.`,
+        "Give each row within this collection a unique id and update its references."
       );
       ids.add(row.id);
     });
@@ -56377,11 +56293,11 @@ function validatePhaseResearchModelInput(raw, context = {}) {
         "Add the finding or correct this recommendation's findingIds."
       );
     }
-    if (recommendation.status === "blocked") issue2(
+    if (recommendation.status === "blocked") planningBlocker(
       `${field}.status`,
       "research.recommendation_blocked",
       `Recommendation ${recommendation.id} is blocked.`,
-      "Resolve the implementation blocker and revise this recommendation before publication."
+      "Preserve this finding in RESEARCH.md; resolve the implementation blocker before planning relies on the recommendation."
     );
     if (recommendation.status === "ready") {
       const unsupported = recommendation.findingIds.length === 0 || recommendation.findingIds.some((id) => {
@@ -56397,20 +56313,22 @@ function validatePhaseResearchModelInput(raw, context = {}) {
       if (recommendation.affectedSurfaces.length === 0) issue2(
         `${field}.affectedSurfaces`,
         "research.affected_surfaces_missing",
-        `Ready recommendation ${recommendation.id} does not identify affected surfaces.`,
-        "Name the files, modules, contracts, product surfaces or interfaces affected."
+        `Recommendation ${recommendation.id} does not identify affected surfaces.`,
+        "Planning can identify affected files, modules or interfaces when needed.",
+        true
       );
       if (recommendation.verification.length === 0) issue2(
         `${field}.verification`,
         "research.verification_missing",
-        `Ready recommendation ${recommendation.id} lacks a verification approach.`,
-        "Describe a meaningful check of the resulting behavior."
+        `Recommendation ${recommendation.id} does not specify a verification approach.`,
+        "Planning can choose a meaningful behavioral check.",
+        true
       );
     }
     checkRequirements(recommendation.requirementIds, `${field}.requirementIds`, recommendation.status === "ready");
   });
   model.openQuestions.forEach((question, index) => {
-    if (question.blocking) issue2(
+    if (question.blocking) planningBlocker(
       `model.openQuestions.${index}.blocking`,
       "research.question_blocking",
       `Research has a blocking question: ${question.question}`,
@@ -56421,8 +56339,9 @@ function validatePhaseResearchModelInput(raw, context = {}) {
     if (!covered.has(id)) issue2(
       "model.findings",
       "research.requirement_uncovered",
-      `Required research coverage for ${id} is missing.`,
-      "Tie an evidence-backed finding or recommendation to this prepared requirement."
+      `No research finding is mapped to ${id}.`,
+      "Investigate this requirement only if an unresolved decision affects implementation; do not add generic filler.",
+      true
     );
   }
   return { model, validation };
@@ -56460,8 +56379,8 @@ function prose(value) {
   return lines3.join("\n");
 }
 function sectionProse(value) {
-  if (value === void 0 || Array.isArray(value) && value.length === 0) return "No section-specific detail was supplied in this research.";
-  return (Array.isArray(value) ? value : [value]).map(prose).join("\n\n");
+  if (value === void 0) return "";
+  return (Array.isArray(value) ? value : [value]).filter((item) => item.trim()).map(prose).join("\n\n");
 }
 function bullets(values, fallback) {
   return values?.length ? values.map((value) => `- ${prose(value).replace(/\n/g, "\n  ")}`).join("\n") : fallback;
@@ -56471,54 +56390,75 @@ function renderPhaseResearchModelContent(args) {
   const sourceIdsForFinding = new Map(model.findings.map((finding) => [finding.id, finding.sourceIds]));
   const confidence = model.findings.some((finding) => finding.confidence === "LOW" || finding.status === "unsupported") ? "LOW" : model.findings.every((finding) => finding.confidence === "HIGH" && finding.status === "supported") ? "HIGH" : "MEDIUM";
   const requirementIds = [...new Set([...model.findings, ...model.recommendations].flatMap((row) => row.requirementIds))];
-  const requirements = args.requirements ?? requirementIds.map((id) => ({ id, description: "Requirement referenced by the research; see prepared phase evidence for its definition." }));
+  const requirements = args.requirements ?? requirementIds.map((id) => ({ id, description: "" }));
   const requirementRows = requirements.map((requirement) => [
     requirement.id,
     requirement.description,
-    [...model.findings, ...model.recommendations].filter((row) => row.requirementIds.includes(requirement.id)).map((row) => row.id).join(", ") || "No specific research finding supplied."
+    [...model.findings, ...model.recommendations].filter((row) => row.requirementIds.includes(requirement.id)).map((row) => row.id).join(", ")
   ]);
-  if (requirementRows.length === 0) requirementRows.push(["Phase scope", "No numbered requirement grounding was supplied to the renderer.", "See the research summary and prepared phase context."]);
-  const optional2 = (key2) => `## ${OPTIONAL_HEADINGS[key2]}
+  const optional2 = (key2) => {
+    const detail = sectionProse(model.sections?.[key2]);
+    return detail ? `## ${OPTIONAL_HEADINGS[key2]}
 
-${sectionProse(model.sections?.[key2])}`;
+${detail}` : "";
+  };
+  const recommendationColumns = [
+    { heading: "Recommendation ID", value: (row) => row.id },
+    { heading: "Recommendation", value: (row) => row.recommendation },
+    { heading: "Supporting Claim IDs", value: (row) => row.findingIds.join(", ") },
+    { heading: "Evidence IDs", value: (row) => [...new Set(row.findingIds.flatMap((id) => sourceIdsForFinding.get(id) ?? []))].join(", ") },
+    { heading: "Affected Surfaces", value: (row) => row.affectedSurfaces.join("; ") },
+    { heading: "Tests / Checks", value: (row) => row.verification.join("; ") },
+    { heading: "Requirement IDs", value: (row) => row.requirementIds.join(", ") },
+    { heading: "Status", value: (row) => row.status }
+  ].filter((column) => model.recommendations.some((row) => column.value(row)));
+  const sourceColumns = [
+    { heading: "Source ID", key: "id" },
+    { heading: "Lane", key: "lane" },
+    { heading: "Path Or URL", key: "reference" },
+    { heading: "Title", key: "title" },
+    { heading: "Access Date", key: "accessed" },
+    { heading: "Support Span", key: "excerpt" },
+    { heading: "Limitations", key: "limitations" }
+  ].filter((column) => model.sources.some((source) => source[column.key]));
   const sections = [
     `# Phase ${args.resolved.phasePrefix.replace(/[\r\n]/g, " ")}: ${args.resolved.phaseName.replace(/[\r\n]/g, " ")} - Research
 
 **Researched:** ${args.researchedAt ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}
 **Confidence:** ${confidence}`,
-    `## Phase Requirements
-
-${table(["ID", "Description", "Research Support"], requirementRows)}`,
     `## Summary
 
 ${prose(model.summary)}`,
-    `## Locked Decisions From Context
+    requirementRows.length ? `## Phase Requirements
 
-${bullets(args.lockedDecisions, "No locked-decision grounding was supplied to the renderer.")}`,
-    `## User Constraints
+${table(["ID", "Description", "Research Support"], requirementRows)}` : "",
+    args.lockedDecisions?.length ? `## Locked Decisions From Context
 
-${bullets(args.userConstraints, "No user-constraint grounding was supplied to the renderer.")}`,
+${bullets(args.lockedDecisions, "")}` : "",
+    args.userConstraints?.length ? `## User Constraints
+
+${bullets(args.userConstraints, "")}` : "",
     ...Object.keys(OPTIONAL_HEADINGS).filter((key2) => key2 !== "codeExamples").map((key2) => optional2(key2)),
-    `## Open Questions
+    model.openQuestions.length ? `## Open Questions
 
-${model.openQuestions.length === 0 ? "- none" : model.openQuestions.map((question) => `- ${question.blocking ? "Blocking" : "Nonblocking"}: ${prose(question.question).replace(/\n/g, "\n  ")}`).join("\n")}`,
-    `## Confidence Breakdown
+${model.openQuestions.map((question) => `- ${question.blocking ? "Blocking" : "Nonblocking"}: ${prose(question.question).replace(/\n/g, "\n  ")}`).join("\n")}` : "",
+    `## Findings
 
-${table(["Finding ID", "Finding", "Support Status", "Confidence", "Source IDs", "Requirement IDs"], model.findings.map((finding) => [finding.id, finding.finding, finding.status, finding.confidence, finding.sourceIds.join(", ") || "No sources supplied", finding.requirementIds.join(", ") || "Phase scope"]))}`,
+${table(["Finding ID", "Finding", "Support Status", "Confidence", "Source IDs"], model.findings.map((finding) => [finding.id, finding.finding, finding.status, finding.confidence, finding.sourceIds.join(", ")]))}`,
     optional2("codeExamples"),
     `## Recommendations
 
-${table(["Recommendation ID", "Recommendation", "Supporting Claim IDs", "Evidence IDs", "Affected Surfaces", "Tests / Checks", "Requirement IDs", "Status"], model.recommendations.map((row) => [row.id, row.recommendation, row.findingIds.join(", "), [...new Set(row.findingIds.flatMap((id) => sourceIdsForFinding.get(id) ?? []))].join(", "), row.affectedSurfaces.join("; "), row.verification.join("; "), row.requirementIds.join(", ") || "Phase scope", row.status]))}`,
+${table(recommendationColumns.map((column) => column.heading), model.recommendations.map((row) => recommendationColumns.map((column) => column.value(row))))}`,
     `## Sources
 
-### Source Register
+${model.sources.length ? `### Source Register
 
-${model.sources.length ? table(["Source ID", "Lane", "Path Or URL", "Title", "Access Date", "Support Span", "Limitations"], model.sources.map((source) => [source.id, source.lane, source.reference, source.title ?? "Title not supplied", source.accessed ?? "Not recorded", source.excerpt ?? "No excerpt supplied", source.limitations ?? "No limitations recorded"])) : "No source evidence has been supplied."}`
+${table(sourceColumns.map((column) => column.heading), model.sources.map((source) => sourceColumns.map((column) => source[column.key] ?? "")))}` : "No source evidence is available; the recommendations remain blocked."}`
   ];
-  return `${sections.join("\n\n")}
+  return `${sections.filter(Boolean).join("\n\n")}
 `;
 }
-var phaseResearchAuthoringSchema, OPTIONAL_HEADINGS, researchModelValidator;
+var phaseResearchAuthoringSchema, OPTIONAL_HEADINGS, researchModelValidator, EMPTY_LIST_ALIAS;
 var init_phase_research_model = __esm({
   "src/mcp/tools/phase-research-model.ts"() {
     "use strict";
@@ -56541,6 +56481,7 @@ var init_phase_research_model = __esm({
       commonPitfalls: "Common Pitfalls",
       codeExamples: "Code Examples"
     };
+    EMPTY_LIST_ALIAS = /^(?:[-*+]\s*)?(?:none|no(?:ne)?\s+(?:open\s+)?questions?|no\s+recommendations?|n\/?a|null|\[\])[.!]?$/i;
   }
 });
 
@@ -56552,13 +56493,13 @@ async function researchLocation(args) {
 }
 function checkedResearchPayload(value) {
   const serialized = JSON.stringify(value);
-  if (serialized === void 0 || Buffer.byteLength(serialized) > 1024 * 1024) throw new Error("Research candidate must be JSON-compatible and at most 1 MiB.");
+  if (serialized === void 0 || Buffer.byteLength(serialized) > 1024 * 1024) throw new Error("Research model must be JSON-compatible and at most 1 MiB.");
   const inspect = (item, depth) => {
-    if (depth > 40) throw new Error("Research candidate is too deeply nested.");
-    if (typeof item === "string") prepareTextForPersistence(item, { label: "Research candidate" });
+    if (depth > 40) throw new Error("Research model is too deeply nested.");
+    if (typeof item === "string") prepareTextForPersistence(item, { label: "Research model" });
     else if (item && typeof item === "object") for (const [key2, val] of Object.entries(item)) {
-      if (["__proto__", "prototype", "constructor"].includes(key2)) throw new Error("Unsafe research candidate key.");
-      prepareTextForPersistence(key2, { label: "Research candidate key" });
+      if (["__proto__", "prototype", "constructor"].includes(key2)) throw new Error("Unsafe research model key.");
+      prepareTextForPersistence(key2, { label: "Research model key" });
       inspect(val, depth + 1);
     }
   };
@@ -56566,25 +56507,41 @@ function checkedResearchPayload(value) {
   return JSON.parse(serialized);
 }
 async function readResearchSession(loc) {
+  let raw;
   try {
-    const session = sessionSchema2.parse(safeJsonParseObject(await fs18.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 }));
-    if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseNumber !== session.phase || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Research session phase/path identity mismatch.");
-    if (session.journal) {
-      const j = session.journal;
-      const request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : void 0;
-      const provenance = safeJsonParseObject(j.provenance, { label: "Research journal provenance" });
-      if (!request || request.hash !== j.requestHash || j.revision > session.revision || researchDigest(j.content) !== j.contentHash || researchDigest(j.provenance) !== j.provenanceHash || provenance.researchHash !== j.contentHash || stableResearchValue(provenance.readSet) !== stableResearchValue(j.readSet)) throw new Error("Research publication journal integrity mismatch.");
-    }
-    return session;
+    raw = safeJsonParseObject(await fs18.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 });
   } catch (error2) {
     if (error2.code === "ENOENT") return null;
     throw error2;
   }
+  const migrate = raw.version === 1;
+  const oldJournal = raw.journal;
+  const session = sessionSchema2.parse(migrate ? {
+    ...raw,
+    version: 2,
+    requests: {},
+    journal: void 0,
+    ...oldJournal?.stages?.artifact && oldJournal.contentHash ? { legacyPublication: { contentHash: oldJournal.contentHash } } : {}
+  } : raw);
+  if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseNumber !== session.phase || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Research session phase/path identity mismatch.");
+  if (session.journal) {
+    const j = session.journal;
+    const request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : void 0;
+    const provenance = safeJsonParseObject(j.provenance, { label: "Research journal provenance" });
+    if (!request || request.hash !== j.requestHash || request.modelHash !== j.modelHash || j.revision > session.revision || !j.receipt && j.revision !== session.revision || researchDigest(j.provenance) !== j.provenanceHash || provenance.researchHash !== j.contentHash || stableResearchValue(provenance.readSet) !== stableResearchValue(j.readSet)) throw new Error("Research publication journal integrity mismatch.");
+  }
+  if (migrate) {
+    session.prepared = false;
+    session.topology = phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase);
+    session.revision++;
+    await saveResearchSession(loc, session);
+  }
+  return session;
 }
 async function saveResearchSession(loc, session) {
-  sessionSchema2.parse(session);
-  const text2 = JSON.stringify(session, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
-  if (Buffer.byteLength(text2) > 32 * 1024 * 1024) throw new Error("Research session exceeds 32 MiB; retained history must be archived through runtime maintenance.");
+  const metadata = sessionSchema2.parse(session);
+  const text2 = JSON.stringify(metadata, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
+  if (Buffer.byteLength(text2) > 4 * 1024 * 1024) throw new Error("Research publication metadata exceeds 4 MiB.");
   await withBlueprintRepoLock(loc.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, async () => {
     const current = await researchLocation({ cwd: loc.projectRoot, phase: session.phase });
     if (current.sessionPath !== loc.sessionPath || !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) throw new Error("Phase topology changed; refresh research preparation before saving.");
@@ -56596,7 +56553,7 @@ async function withResearchSession(args, task) {
   return withBlueprintRepoLock(root, "research-session", async () => task(await researchLocation({ ...args, cwd: root })));
 }
 function initialResearchSession(loc) {
-  return { version: 1, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, readSet: [], evidencePaths: [], baselineHash: null, baselineProvenanceHash: null, grounding: { requirements: [], lockedDecisions: [], userConstraints: [] }, notes: [], history: [], requests: {} };
+  return { version: 2, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, readSet: [], evidencePaths: [], baselineHash: null, baselineProvenanceHash: null, grounding: { requirements: [], lockedDecisions: [], userConstraints: [] }, requests: {} };
 }
 var researchNumericPhase, researchLookup, researchRequestId, hash2, readSetSchema, topologySchema, receiptSchema, journalSchema, sessionSchema2;
 var init_research_session = __esm({
@@ -56620,12 +56577,25 @@ var init_research_session = __esm({
       phaseDir: string2(),
       roadmapEntry: object2({ phaseNumber: string2(), phasePrefix: string2(), phaseName: string2(), completed: boolean2(), summary: string2().nullable(), goal: string2().nullable(), successCriteria: string2().nullable(), requirements: array(string2()) }).nullable()
     });
-    receiptSchema = record(string2(), unknown());
+    receiptSchema = object2({
+      status: _enum(["published", "reused"]),
+      saved: literal(true),
+      ready: boolean2(),
+      planningReady: boolean2(),
+      revision: number2().int(),
+      path: string2(),
+      sessionPath: string2(),
+      provenancePath: string2(),
+      contentHash: hash2,
+      provenanceHash: hash2,
+      nextAction: string2()
+    });
     journalSchema = object2({
       requestId: researchRequestId,
       requestHash: hash2,
       revision: number2().int().min(0),
-      content: string2(),
+      modelHash: hash2.optional(),
+      researchedAt: string2(),
       contentHash: hash2,
       baselineHash: hash2.nullable(),
       provenance: string2(),
@@ -56633,11 +56603,12 @@ var init_research_session = __esm({
       baselineProvenanceHash: hash2.nullable(),
       readSet: readSetSchema,
       reuse: boolean2(),
+      planningReady: boolean2(),
       stages: partialRecord(_enum(["artifact", "provenance", "state", "routing", "cleanup"]), _enum(["intent", "complete"])),
       receipt: receiptSchema.optional()
     });
     sessionSchema2 = object2({
-      version: literal(1),
+      version: literal(2),
       phase: string2(),
       topology: topologySchema,
       revision: number2().int().min(0),
@@ -56647,10 +56618,8 @@ var init_research_session = __esm({
       baselineHash: hash2.nullable(),
       baselineProvenanceHash: hash2.nullable(),
       grounding: object2({ requirements: array(object2({ id: string2(), description: string2() })), lockedDecisions: array(string2()), userConstraints: array(string2()) }),
-      candidate: unknown().optional(),
-      notes: array(string2()),
-      history: array(object2({ revision: number2().int(), kind: string2(), candidate: unknown().optional(), journal: journalSchema.optional() })),
-      requests: record(string2(), object2({ hash: hash2, revision: number2().int().min(0), operation: _enum(["record", "submit"]), receipt: receiptSchema.optional() })),
+      requests: record(researchRequestId, object2({ hash: hash2, modelHash: hash2.optional(), revision: number2().int().min(0), receipt: receiptSchema.optional() })),
+      legacyPublication: object2({ contentHash: hash2 }).optional(),
       journal: journalSchema.optional()
     });
   }
@@ -56665,7 +56634,7 @@ async function safeNextAction(proposed) {
   return catalog.commands.progress?.implemented ? "Run /blu-progress to review the next safe action." : null;
 }
 function lines(section) {
-  return section.split("\n").map((line2) => line2.trim()).filter((line2) => line2 && !/^\|?[-| :]+\|?$/.test(line2));
+  return section.split("\n").map((line2) => line2.trim().replace(/^[-*+]\s+/, "")).filter((line2) => line2 && !/^\|?[-| :]+\|?$/.test(line2));
 }
 function contextGrounding(content, projectConstraints) {
   const decisions = extractMarkdownSection3(content, "Implementation Decisions");
@@ -56689,29 +56658,25 @@ function requirementDescriptions(content, ids) {
   });
 }
 function requestKey(args) {
-  const { cwd: _cwd, ...input } = args;
-  return researchDigest(stableResearchValue(input));
+  return researchDigest(stableResearchValue({
+    phase: String(args.phase),
+    requestId: args.requestId,
+    expectedRevision: args.expectedRevision,
+    overwrite: args.overwrite ?? false,
+    reuse: args.reuse ?? false,
+    externalSourcesApproved: args.externalSourcesApproved ?? false
+  }));
 }
-function requestReplay(session, requestId, hash4) {
-  const previous = Object.hasOwn(session.requests, requestId) ? session.requests[requestId] : void 0;
-  if (!previous) return null;
-  if (previous.hash !== hash4) return { status: "rejected", reason: "Request ID conflict", revision: session.revision };
-  return previous.receipt ?? null;
-}
-async function saveReceipt(loc, session, requestId, receipt2) {
-  session.requests[requestId].receipt = receipt2;
-  await saveResearchSession(loc, session);
-  return receipt2;
-}
-function assessment(session) {
+function assessment(session, model) {
   const ids = session.grounding.requirements.map((item) => item.id);
-  return validatePhaseResearchModelInput(session.candidate, { knownRequirementIds: ids, requiredRequirementIds: ids });
+  return validatePhaseResearchModelInput(model, { knownRequirementIds: ids, requiredRequirementIds: ids });
 }
 async function blueprintResearchPrepare(raw = {}) {
   const args = prepareInput2.parse(raw);
   try {
     return await withResearchSession(args, async (loc) => {
       const session = await readResearchSession(loc) ?? initialResearchSession(loc);
+      const before = stableResearchValue(session);
       const researchPath = artifactPathFor(loc.resolved, "research");
       const contextPath = artifactPathFor(loc.resolved, "context");
       const specPath = artifactPathFor(loc.resolved, "spec");
@@ -56750,6 +56715,12 @@ async function blueprintResearchPrepare(raw = {}) {
         readSet,
         existing: { path: researchPath, hash: existing.hash, valid: existingValidation?.valid ?? false, freshness: existingFreshness, ...existingFreshness?.status === "fresh" ? {} : { content: existing.content } },
         schema: readArtifactContract("phase.research").modelContract?.jsonSchema,
+        example: readArtifactContract("phase.research").modelContract?.minimalValidExample,
+        grounding: {
+          requirements: requirementDescriptions(inputs.find((item) => item.path === ".blueprint/REQUIREMENTS.md")?.content ?? "", [...new Set(phaseContext.requirements)]),
+          ...contextGrounding(context.content ?? "", phaseContext.projectBrief.constraints)
+        },
+        validationRules,
         checkpoint: await blueprintPhaseCheckpointGet({ cwd: loc.projectRoot, phase: session.phase, expectedOwnerCommand: "/blu-research-phase", expectedMode: "research" })
       };
       if (args.expectedRevision !== void 0 && session.revision !== args.expectedRevision) return { ...packet, status: "stale", revision: session.revision, reason: "Revision conflict" };
@@ -56757,19 +56728,12 @@ async function blueprintResearchPrepare(raw = {}) {
       const topologyChanged = !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase));
       const targetChanged = session.prepared && (existing.hash !== session.baselineHash || provenance.hash !== session.baselineProvenanceHash);
       const pending = session.journal && !session.journal.receipt;
-      const pendingRequest2 = Object.entries(session.requests).find(([, request]) => !request.receipt);
-      if (pendingRequest2 && !pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_${pendingRequest2[1].operation} with requestId ${pendingRequest2[0]} and identical arguments.` };
       if ((targetChanged || topologyChanged || pending && args.reconcile) && (!args.reconcile || args.reconcile.researchHash !== existing.hash || args.expectedRevision !== session.revision)) return { ...packet, status: "reconciliation_required", revision: session.revision, reason: "Review changed publication targets, then prepare with expectedRevision and reconcile containing the observed research hash." };
       if (pending && !args.reconcile) return { ...packet, status: "partial", revision: session.revision, nextAction: `Retry blueprint_research_submit with requestId ${session.journal.requestId} and identical arguments.` };
-      if (changed && changed.status !== "fresh" && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", revision: session.revision, freshness: changed, nextAction: "Review changed inputs, then prepare with expectedRevision and acknowledgeChangedInputs=true; preserve and correct the saved candidate." };
+      if (changed && changed.status !== "fresh" && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", revision: session.revision, freshness: changed, nextAction: "Review changed inputs, then prepare with expectedRevision and acknowledgeChangedInputs=true; recheck affected findings before submitting the model." };
       if (args.reconcile && session.journal) {
-        session.history.push({ revision: session.revision, kind: "publication-reconciled", journal: session.journal });
-        session.requests[session.journal.requestId].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision; this publication attempt was reconciled." };
+        delete session.requests[session.journal.requestId];
         delete session.journal;
-      }
-      if (args.reconcile && pendingRequest2) {
-        if (args.expectedRevision !== session.revision || args.reconcile.researchHash !== existing.hash) return { ...packet, status: "reconciliation_required", revision: session.revision };
-        pendingRequest2[1].receipt = { status: "superseded", saved: true, revision: session.revision, nextAction: "Use the current prepared revision." };
       }
       session.topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
       session.readSet = readSet;
@@ -56778,66 +56742,16 @@ async function blueprintResearchPrepare(raw = {}) {
       session.baselineProvenanceHash = provenance.hash;
       const contextUsable = contextValidation?.valid === true && !isBootstrapStarterContext(context.content ?? "");
       session.prepared = contextUsable && (!specValidation || specValidation.valid);
-      session.grounding = {
-        requirements: requirementDescriptions(inputs.find((item) => item.path === ".blueprint/REQUIREMENTS.md")?.content ?? "", [...new Set(phaseContext.requirements)]),
-        ...contextGrounding(context.content ?? "", phaseContext.projectBrief.constraints)
-      };
-      session.revision++;
-      await saveResearchSession(loc, session);
-      return { ...packet, status: session.prepared ? "prepared" : "blocked", revision: session.revision, sessionPath: loc.sessionPath, candidateSaved: session.candidate !== void 0, diagnostics: [...contextValidation?.diagnostics ?? [], ...specValidation?.diagnostics ?? []], nextAction: session.prepared ? "Investigate unresolved planning decisions; submit the candidate once using this revision. Prepare with evidencePaths before relying on additional repository sources." : await safeNextAction(`Run /blu-${contextUsable ? "spec" : "discuss"}-phase ${session.phase} to repair saved phase evidence.`) };
+      session.grounding = packet.grounding;
+      if (before !== stableResearchValue(session) || session.revision === 0) {
+        session.revision++;
+        await saveResearchSession(loc, session);
+      }
+      return { ...packet, status: session.prepared ? "prepared" : "blocked", revision: session.revision, sessionPath: loc.sessionPath, diagnostics: [...contextValidation?.diagnostics ?? [], ...specValidation?.diagnostics ?? []], nextAction: session.prepared ? "Investigate unresolved planning decisions; use the schema, example, grounding and validationRules to submit the model once using this revision. Prepare with evidencePaths before relying on additional repository sources." : await safeNextAction(`Run /blu-${contextUsable ? "spec" : "discuss"}-phase ${session.phase} to repair saved phase evidence.`) };
     });
   } catch (error2) {
     return { status: "blocked", reason: error2.message, nextAction: await safeNextAction("Run /blu-progress to resolve the research preparation blocker.") };
   }
-}
-async function blueprintResearchRecord(raw) {
-  const args = recordInput2.parse(raw);
-  if (args.candidate !== void 0 && args.corrections?.length) throw new Error("Pass candidate or field corrections, not both.");
-  checkedResearchPayload(args);
-  return withResearchSession(args, async (loc) => {
-    const session = await readResearchSession(loc);
-    if (!session) return { status: "not_found", nextAction: "Call blueprint_research_prepare first." };
-    const hash4 = requestKey(args);
-    const replay2 = requestReplay(session, args.requestId, hash4);
-    if (replay2) return replay2;
-    const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
-    const pendingRequest2 = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
-    if (pendingRequest2) return { status: "partial", nextAction: `Retry blueprint_research_${pendingRequest2[1].operation} requestId ${pendingRequest2[0]} first.` };
-    if (session.journal && !session.journal.receipt) return { status: "partial", nextAction: `Retry blueprint_research_submit requestId ${session.journal.requestId} before changing the candidate.` };
-    if (accepted) {
-      if (accepted.revision !== session.revision || accepted.operation !== "record") return { status: "stale", revision: session.revision, reason: "Accepted request was superseded." };
-      const result2 = assessment(session);
-      return saveReceipt(loc, session, args.requestId, { status: "recorded", saved: true, candidateSaved: session.candidate !== void 0, revision: session.revision, sessionPath: loc.sessionPath, validation: result2.validation });
-    }
-    if (session.revision !== args.expectedRevision) return { status: "stale", revision: session.revision, reason: "Revision conflict" };
-    if (args.candidate !== void 0) session.candidate = checkedResearchPayload(args.candidate);
-    for (const correction2 of args.corrections ?? []) {
-      correction2.path.forEach((segment) => {
-        validateFieldNameSegment(segment);
-        if (["__proto__", "constructor", "prototype"].includes(segment)) throw new Error("Unsafe correction path.");
-      });
-      let target = session.candidate;
-      for (const segment of correction2.path.slice(0, -1)) {
-        if (!target || typeof target !== "object" || !Object.hasOwn(target, segment)) throw new Error("Correction parent does not exist.");
-        target = target[segment];
-      }
-      if (!target || typeof target !== "object") throw new Error("Correction target is not an object.");
-      const field = correction2.path.at(-1);
-      if (Array.isArray(target) && (!/^(0|[1-9]\d*)$/.test(field) || Number(field) > target.length)) throw new Error("Array correction requires an in-range index.");
-      if (correction2.operation === "remove") {
-        if (Array.isArray(target)) target.splice(Number(field), 1);
-        else delete target[field];
-      } else target[field] = checkedResearchPayload(correction2.value);
-    }
-    if (args.notes !== void 0) session.notes.push(args.notes);
-    checkedResearchPayload(session.candidate ?? null);
-    session.revision++;
-    session.history.push({ revision: session.revision, kind: "record", ...session.candidate !== void 0 ? { candidate: session.candidate } : {} });
-    session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "record" };
-    await saveResearchSession(loc, session);
-    const result = assessment(session);
-    return saveReceipt(loc, session, args.requestId, { status: "recorded", saved: true, candidateSaved: session.candidate !== void 0, revision: session.revision, sessionPath: loc.sessionPath, validation: result.validation, nextAction: result.validation.valid ? "Call blueprint_research_submit using this saved revision." : "Correct only the saved fields identified in diagnostics." });
-  });
 }
 async function blueprintResearchRead(args) {
   object2(researchLookup).parse(args);
@@ -56855,48 +56769,69 @@ async function blueprintResearchRead(args) {
 }
 async function blueprintResearchSubmit(raw) {
   const args = submitInput.parse(raw);
-  if (args.reuse && args.candidate !== void 0) throw new Error("A reuse request cannot replace the candidate.");
+  if (args.model !== void 0 && args.candidate !== void 0) throw new Error("Pass model only, not both model and its deprecated alias.");
+  const suppliedModel = args.model ?? args.candidate;
+  if (args.reuse && suppliedModel !== void 0) throw new Error("A reuse request cannot replace the model.");
   checkedResearchPayload(args);
   return withResearchSession(args, async (loc) => {
     const session = await readResearchSession(loc);
     if (!session) return { status: "not_found", saved: false, nextAction: "Call blueprint_research_prepare before submitting research." };
-    const hash4 = requestKey(args);
-    const replay2 = requestReplay(session, args.requestId, hash4);
-    if (replay2) return replay2;
+    const reject = (status, details) => ({
+      status,
+      saved: false,
+      ready: false,
+      outcome: "rejected-not-saved",
+      revision: session.revision,
+      ...details
+    });
+    const requestHash2 = requestKey(args);
     const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
-    const pendingRequest2 = Object.entries(session.requests).find(([id, request]) => id !== args.requestId && !request.receipt);
-    if (pendingRequest2) return { status: "partial", saved: session.candidate !== void 0, nextAction: `Retry blueprint_research_${pendingRequest2[1].operation} requestId ${pendingRequest2[0]} first.` };
-    let journal = session.journal;
-    if (journal && journal.requestId !== args.requestId && !journal.receipt) return { status: "partial", saved: session.candidate !== void 0, nextAction: `Retry blueprint_research_submit requestId ${journal.requestId} and identical arguments.` };
+    if (accepted && accepted.hash !== requestHash2) return reject("rejected", { reason: "Request ID conflict." });
+    let journal = session.journal?.requestId === args.requestId ? session.journal : void 0;
+    if (session.journal && !session.journal.receipt && !journal) return reject("partial", {
+      nextAction: `Finish blueprint_research_submit requestId ${session.journal.requestId} first, or explicitly reconcile its publication metadata.`
+    });
+    if (!accepted && session.revision !== args.expectedRevision) return reject("stale", { reason: "Revision conflict." });
+    const result = suppliedModel === void 0 ? null : assessment(session, suppliedModel);
+    if (result && (!result.model || !result.validation.valid)) return reject("needs_revision", {
+      validation: result.validation,
+      nextAction: "Correct the indicated fields in this model and submit again with the same revision. No draft was stored."
+    });
+    const modelHash = result?.model ? researchDigest(stableResearchValue(result.model)) : void 0;
+    if (accepted && modelHash && accepted.modelHash !== modelHash) return reject("rejected", { reason: "Request ID model conflict." });
     const researchPath = artifactPathFor(loc.resolved, "research");
     const provenancePath = researchProvenancePath(researchPath);
-    if (!journal || journal.requestId !== args.requestId) {
-      if (accepted) {
-        if (accepted.revision !== session.revision || accepted.operation !== "submit") return { status: "stale", revision: session.revision, reason: "Accepted request was superseded." };
-      } else {
-        if (session.revision !== args.expectedRevision) return { status: "stale", saved: false, revision: session.revision, reason: "Revision conflict" };
-        if (args.candidate !== void 0) session.candidate = checkedResearchPayload(args.candidate);
-        session.revision++;
-        session.history.push({ revision: session.revision, kind: "submit", ...session.candidate !== void 0 ? { candidate: session.candidate } : {} });
-        session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "submit" };
-        await saveResearchSession(loc, session);
-      }
-      const fail = (status, details) => saveReceipt(loc, session, args.requestId, { status, saved: session.candidate !== void 0 || Boolean(args.reuse), candidateSaved: session.candidate !== void 0, revision: session.revision, sessionPath: loc.sessionPath, ...details });
+    if (accepted?.receipt) {
+      const receipt2 = accepted.receipt;
+      if (await researchInputHash(loc.projectRoot, researchPath) !== receipt2.contentHash || await researchInputHash(loc.projectRoot, provenancePath) !== receipt2.provenanceHash)
+        return reject("stale", { reason: "The previously published research has changed; prepare before another publication." });
+      const freshness = await readPublishedResearchFreshness(loc.projectRoot, researchPath);
+      if (freshness.status !== "fresh") return reject("stale", { freshness, nextAction: "Prepare and review changed evidence before reusing research." });
+      return receipt2;
+    }
+    let content;
+    if (!journal) {
+      if (!args.reuse && !result?.model) return reject("needs_revision", { reason: "Supply the research model using prepare.schema and prepare.example." });
       const freshness = await researchBasisFreshness(loc.projectRoot, session.readSet);
-      if (!session.prepared || freshness.status !== "fresh") return fail("needs_revision", { freshness, nextAction: "Refresh blueprint_research_prepare and reconcile changed inputs; the candidate is saved." });
-      let content;
+      if (!session.prepared || freshness.status !== "fresh") return reject("needs_revision", { freshness, nextAction: "Refresh blueprint_research_prepare and review changed inputs before submitting the model." });
+      const researchedAt = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      let planningReady = result?.validation.planningReady ?? true;
+      let originalProvenance = null;
       if (args.reuse) {
         const existing = await readResearchEvidence(loc.projectRoot, researchPath, 4 * 1024 * 1024);
         const reuseFreshness = await readPublishedResearchFreshness(loc.projectRoot, researchPath);
-        if (existing.content === null || reuseFreshness.status !== "fresh" || !validatePhaseArtifactContent(existing.content, "research").valid) return fail("needs_revision", { freshness: reuseFreshness, nextAction: "Review and submit updated research; only verified-fresh published research can be reused." });
+        if (existing.content === null || reuseFreshness.status !== "fresh" || !validatePhaseArtifactContent(existing.content, "research").valid)
+          return reject("needs_revision", { freshness: reuseFreshness, nextAction: "Review and submit updated research; reuse requires verified-fresh published evidence." });
         content = existing.content;
+        originalProvenance = (await readResearchEvidence(loc.projectRoot, provenancePath)).content;
+        planningReady = reuseFreshness.planningReady !== false;
       } else {
-        const result = assessment(session);
-        if (!result.model || !result.validation.valid) return fail("needs_revision", { validation: result.validation, nextAction: "Repair the saved fields with blueprint_research_record; resubmit using the returned revision and a new requestId." });
+        const model = result.model;
         const config2 = await blueprintConfigGet({ cwd: loc.projectRoot, scope: "effective" });
-        const external = result.model.sources.some((source) => source.lane === "external");
-        if (external && (config2.config.research.external_sources === "off" || config2.config.research.external_sources === "ask" && !args.externalSourcesApproved)) return fail("needs_revision", { reason: "External source policy does not authorize the candidate's live external evidence.", nextAction: "Honor off/ask/auto policy; record honest supplied or repository evidence, or obtain the ask approval before retrying." });
-        const missing = result.model.sources.filter((source) => source.lane === "repo").map((source) => {
+        const external = model.sources.some((source) => source.lane === "external");
+        if (external && (config2.config.research.external_sources === "off" || config2.config.research.external_sources === "ask" && !args.externalSourcesApproved))
+          return reject("needs_revision", { reason: "External source policy does not authorize live external evidence.", nextAction: "Honor off/ask/auto policy; obtain the ask approval or use evidence that was actually supplied or read from the repository." });
+        const missing = model.sources.filter((source) => source.lane === "repo").map((source) => {
           const relative = source.reference.replace(/(?::\d+(?:-\d+)?)?(?:#.*)?$/, "");
           try {
             return canonicalResearchEvidencePath(loc.projectRoot, relative);
@@ -56904,24 +56839,42 @@ async function blueprintResearchSubmit(raw) {
             return relative;
           }
         }).filter((p) => !session.readSet.some((item) => item.path === p && item.hash !== null));
-        if (missing.length) return fail("needs_revision", { missingEvidencePaths: [...new Set(missing)], nextAction: "Call blueprint_research_prepare with these evidencePaths, review the captured evidence, then resubmit the saved candidate." });
-        content = renderPhaseResearchModelContent({ resolved: loc.resolved, model: result.model, ...session.grounding, researchedAt: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) });
+        if (missing.length) return reject("needs_revision", { missingEvidencePaths: [...new Set(missing)], nextAction: "Prepare with these evidencePaths, review the returned source evidence, and submit the model." });
+        content = renderPhaseResearchModelContent({ resolved: loc.resolved, model, ...session.grounding, researchedAt });
       }
       content = prepareTextForPersistence(content).content.replace(/\r\n/g, "\n");
-      if (Buffer.byteLength(content) > 4 * 1024 * 1024) return fail("needs_revision", { reason: "Rendered research exceeds 4 MiB; candidate is saved. Reduce repeated prose before publishing." });
+      if (Buffer.byteLength(content) > 4 * 1024 * 1024) return reject("needs_revision", { reason: "Rendered research exceeds 4 MiB; reduce repeated prose." });
       const validation = validatePhaseArtifactContent(content, "research");
-      if (!validation.valid) return fail("needs_revision", { validation, reason: "Rendered research did not satisfy the compatibility contract; candidate is retained." });
+      if (!validation.valid) return reject("needs_revision", { validation });
+      planningReady = planningReady && !researchHasPlanningBlockers(content);
       const observed = await researchInputHash(loc.projectRoot, researchPath);
       const observedProvenance = await researchInputHash(loc.projectRoot, provenancePath);
-      if (observed !== session.baselineHash || observedProvenance !== session.baselineProvenanceHash) return fail("stale", { reason: "Publication targets changed after preparation.", nextAction: "Prepare with explicit reconciliation against the observed target hash." });
+      if (observed !== session.baselineHash || observedProvenance !== session.baselineProvenanceHash)
+        return reject("stale", { reason: "Publication targets changed after preparation.", nextAction: "Prepare with explicit reconciliation against the observed research hash." });
       if (observed && observed !== researchDigest(content) && !args.overwrite) {
         const existing = await fs19.readFile(resolveBlueprintPath(loc.projectRoot, researchPath), "utf8");
-        if (!isScaffoldGeneratedArtifact(existing)) return fail("needs_revision", { reason: "Explicit update/overwrite authorization is required.", nextAction: "After the user chooses update, submit the saved candidate with overwrite=true." });
+        if (!isScaffoldGeneratedArtifact(existing)) return reject("needs_revision", { reason: "Explicit update/overwrite authorization is required.", nextAction: "After the user chooses update, submit the model with overwrite=true." });
       }
-      const originalProvenance = args.reuse ? await readResearchEvidence(loc.projectRoot, provenancePath) : null;
-      const provenance = originalProvenance?.content ?? JSON.stringify({ version: 1, researchHash: researchDigest(content), readSet: session.readSet, publishedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n";
-      journal = { requestId: args.requestId, requestHash: hash4, revision: session.revision, content, contentHash: researchDigest(content), baselineHash: observed, provenance, provenanceHash: researchDigest(provenance), baselineProvenanceHash: observedProvenance, readSet: args.reuse ? JSON.parse(provenance).readSet : session.readSet, reuse: args.reuse ?? false, stages: {} };
+      const provenance = originalProvenance ?? JSON.stringify({ version: 1, researchHash: researchDigest(content), readSet: session.readSet, publishedAt: (/* @__PURE__ */ new Date()).toISOString(), planningReady }, null, 2) + "\n";
+      session.revision++;
+      journal = {
+        requestId: args.requestId,
+        requestHash: requestHash2,
+        modelHash,
+        researchedAt,
+        revision: session.revision,
+        contentHash: researchDigest(content),
+        baselineHash: observed,
+        provenance,
+        provenanceHash: researchDigest(provenance),
+        baselineProvenanceHash: observedProvenance,
+        readSet: args.reuse ? JSON.parse(provenance).readSet : session.readSet,
+        reuse: args.reuse ?? false,
+        planningReady,
+        stages: {}
+      };
       session.journal = journal;
+      session.requests[args.requestId] = { hash: requestHash2, modelHash, revision: session.revision };
       await saveResearchSession(loc, session);
     }
     const checkpoint = () => saveResearchSession(loc, session);
@@ -56944,12 +56897,18 @@ async function blueprintResearchSubmit(raw) {
           continue;
         }
         if (journal.stages[stage] === "complete" || observed !== baseline) throw new Error(`Publication target changed externally: ${target}. Reconcile without overwriting it.`);
+        if (stage === "artifact" && content === void 0) {
+          if (journal.reuse) content = (await readResearchEvidence(loc.projectRoot, researchPath, 4 * 1024 * 1024)).content ?? void 0;
+          else if (result?.model) content = prepareTextForPersistence(renderPhaseResearchModelContent({ resolved: loc.resolved, model: result.model, ...session.grounding, researchedAt: journal.researchedAt })).content.replace(/\r\n/g, "\n");
+          if (content === void 0) throw new Error("Resend the model to retry publication; no research document was saved before this interruption.");
+          if (researchDigest(content) !== journal.contentHash) throw new Error("The supplied model does not match the accepted publication intent.");
+        }
         journal.stages[stage] = "intent";
         await checkpoint();
         await assertFresh();
         if (stage === "artifact") {
-          const result = await researchSubmitDependencies.artifactWrite({ cwd: loc.projectRoot, phase: session.phase, artifact: "research", content: journal.content, overwrite: args.overwrite, expectedContentHash: baseline, expectedTopology: session.topology });
-          if (result.status === "invalid") throw new Error("Research artifact publication failed validation.");
+          const written = await researchSubmitDependencies.artifactWrite({ cwd: loc.projectRoot, phase: session.phase, artifact: "research", content, overwrite: args.overwrite, expectedContentHash: baseline, expectedTopology: session.topology });
+          if (written.status === "invalid") throw new Error("Research artifact publication failed validation.");
         } else {
           await withFreshPhaseTopologyForMutation(loc.projectRoot, { phase: session.phase }, session.topology, "Research provenance publication", async () => {
             if (await researchInputHash(loc.projectRoot, target) !== baseline) throw new Error("Research provenance changed during publication.");
@@ -56969,11 +56928,11 @@ async function blueprintResearchSubmit(raw) {
         await checkpoint();
       }
       const state = await researchSubmitDependencies.stateLoad({ cwd: loc.projectRoot });
-      const nextAction = await safeNextAction(state.derivedStatus.nextAction);
+      const nextAction = await safeNextAction(journal.planningReady ? state.derivedStatus.nextAction : `Run /blu-research-phase ${session.phase} to resolve the planning blockers documented in the saved research.`);
       if (!nextAction) throw new Error("No implemented follow-up is currently available.");
       journal.stages.routing = "complete";
       await checkpoint();
-      const warnings = [...state.warnings ?? []];
+      const warnings = [...state.warnings ?? [], ...result?.validation.warnings ?? []];
       if (journal.stages.cleanup !== "complete") {
         journal.stages.cleanup = "intent";
         await checkpoint();
@@ -56985,16 +56944,20 @@ async function blueprintResearchSubmit(raw) {
       await assertFresh();
       if (await researchInputHash(loc.projectRoot, researchPath) !== journal.contentHash) throw new Error("Research changed before final receipt.");
       if (await researchInputHash(loc.projectRoot, provenancePath) !== journal.provenanceHash) throw new Error("Research provenance changed before final receipt.");
-      journal.receipt = { status: journal.reuse ? "reused" : "published", saved: true, ready: true, revision: session.revision, path: researchPath, sessionPath: loc.sessionPath, provenancePath, stages: { ...journal.stages }, warnings, nextAction };
+      journal.receipt = { status: journal.reuse ? "reused" : "published", saved: true, ready: journal.planningReady, planningReady: journal.planningReady, revision: session.revision, path: researchPath, sessionPath: loc.sessionPath, provenancePath, contentHash: journal.contentHash, provenanceHash: journal.provenanceHash, nextAction };
+      session.requests[args.requestId].receipt = journal.receipt;
       session.baselineHash = journal.contentHash;
       session.baselineProvenanceHash = journal.provenanceHash;
-      return await saveReceipt(loc, session, args.requestId, journal.receipt);
+      delete session.legacyPublication;
+      await checkpoint();
+      return { ...journal.receipt, warnings, stages: { ...journal.stages } };
     } catch (error2) {
-      return { status: "partial", saved: true, ready: false, revision: session.revision, sessionPath: loc.sessionPath, path: journal.stages.artifact === "complete" ? researchPath : null, stages: journal.stages, reason: error2.message, nextAction: `Retry blueprint_research_submit with requestId ${args.requestId} and identical arguments; if inputs or targets changed, prepare with explicit reconciliation. The candidate is saved.` };
+      const saved = await researchInputHash(loc.projectRoot, researchPath).catch(() => null) === journal.contentHash;
+      return { status: "partial", saved, ready: false, revision: session.revision, path: saved ? researchPath : null, stages: journal.stages, reason: error2.message, nextAction: `Retry blueprint_research_submit with requestId ${args.requestId} and the same expectedRevision/control flags${saved ? "; the canonical document is saved and model may be omitted" : "; resend the model because no document draft is retained"}. Reconcile changed inputs or targets explicitly.` };
     }
   });
 }
-var prepareInput2, correctionSchema, recordInput2, submitInput, researchSubmitDependencies, researchToolDefinitions, researchLookupSchema;
+var prepareInput2, submitInput, validationRules, researchSubmitDependencies, researchToolDefinitions;
 var init_research = __esm({
   "src/mcp/tools/research.ts"() {
     "use strict";
@@ -57023,17 +56986,28 @@ var init_research = __esm({
       acknowledgeChangedInputs: boolean2().optional(),
       reconcile: object2({ confirmed: literal(true), researchHash: string2().nullable() }).optional()
     });
-    correctionSchema = object2({ path: array(string2()).min(1).max(20), value: unknown().optional(), operation: _enum(["set", "remove"]).default("set") });
-    recordInput2 = object2({ ...researchLookup, requestId: researchRequestId, expectedRevision: number2().int().min(0), candidate: unknown().optional(), corrections: array(correctionSchema).max(50).optional(), notes: string2().max(2e4).optional() });
-    submitInput = object2({ ...researchLookup, requestId: researchRequestId, expectedRevision: number2().int().min(0), candidate: unknown().optional().describe("Complete JSON research candidate or raw string. Durably saved before schema and publication checks; get the compact model schema from prepare."), overwrite: boolean2().optional(), reuse: boolean2().optional(), externalSourcesApproved: boolean2().optional() });
+    submitInput = object2({
+      ...researchLookup,
+      requestId: researchRequestId,
+      expectedRevision: number2().int().min(0),
+      model: unknown().optional().describe("Research model following prepare.schema and prepare.example. Validated and normalized in memory; rejected documents are never stored."),
+      candidate: unknown().optional().describe("Deprecated alias for model; no draft is retained."),
+      overwrite: boolean2().optional(),
+      reuse: boolean2().optional(),
+      externalSourcesApproved: boolean2().optional()
+    });
+    validationRules = {
+      reject: ["Malformed or empty essential research content", "Broken evidence references or unsupported ready recommendations", "Unsupported HIGH confidence and unknown requirement references", "Unauthorized external sources, uncaptured repository evidence, stale inputs or changed publication targets", "Unsafe paths/content and unapproved substantive overwrite"],
+      planningOnly: ["Explicit blocking questions or blocked recommendations are saved as useful research; planning remains blocked until resolved."],
+      advisory: ["Missing optional topics, complete requirement coverage, access dates or verification detail do not reject a useful document."],
+      normalize: ["MCP supplies canonical headings, timestamps and saved context grounding.", "Use the schema's optional defaults; include only relevant prose. No exact empty sentinel, 17-section checklist or template padding is required."]
+    };
     researchSubmitDependencies = { artifactWrite: blueprintPhaseArtifactWrite, stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad, checkpointDelete: blueprintPhaseCheckpointDelete, writeText: writeTextFile };
     researchToolDefinitions = [
-      { name: "blueprint_research_prepare", description: "Prepare one freshness-bound phase research packet and durable session revision with context, optional spec, requirements, source policy, existing research, and compact model schema.", inputSchema: prepareInput2.shape, handler: (args) => blueprintResearchPrepare(args) },
-      { name: "blueprint_research_record", description: "Save a raw research candidate, incremental notes, or narrow field corrections before model validation. Revision CAS and request IDs preserve work across retries.", inputSchema: recordInput2.shape, handler: (args) => blueprintResearchRecord(args) },
-      { name: "blueprint_research_read", description: "Recover the exact saved research candidate, revision, history and publication journal; normal research starts with prepare.", inputSchema: researchLookup, handler: (args) => blueprintResearchRead(args) },
-      { name: "blueprint_research_submit", description: "Durably save a research candidate before validation, then render and publish planner-ready research with freshness checks and resumable state/routing completion. Reuse requires fresh research; overwrite requires user update authorization.", inputSchema: submitInput.shape, handler: (args) => blueprintResearchSubmit(args) }
+      { name: "blueprint_research_prepare", description: "Prepare phase evidence, source policy, model schema/example, grounding and rejection rules for first-attempt research publication. Saves only preparation metadata.", inputSchema: prepareInput2.shape, handler: (args) => blueprintResearchPrepare(args) },
+      { name: "blueprint_research_read", description: "Read canonical research and publication metadata. Rejected research documents are never stored or recoverable through this tool.", inputSchema: researchLookup, handler: (args) => blueprintResearchRead(args) },
+      { name: "blueprint_research_submit", description: "Normalize and assess a research model in memory, then publish canonical research. Harmless formatting is normalized; useful planning blockers are documented separately. Rejected drafts are not stored. Prepare supplies the schema and example.", inputSchema: submitInput.shape, handler: (args) => blueprintResearchSubmit(args) }
     ];
-    researchLookupSchema = object2(researchLookup);
   }
 });
 
@@ -57572,7 +57546,7 @@ function replay(session, id, hash4) {
   if (previous && previous.hash !== hash4) return { status: "rejected", reason: "Request ID conflict", revision: session.revision };
   return previous?.receipt ?? null;
 }
-async function saveReceipt2(loc, session, id, value) {
+async function saveReceipt(loc, session, id, value) {
   session.requests[id].receipt = value;
   await savePlanSession(loc, session);
   return value;
@@ -57773,7 +57747,7 @@ async function blueprintPlanSubmit(raw) {
       const freshness = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
       const result = await assess2(loc, session);
       const valid = session.prepared && !session.needsIntent && freshness.status === "fresh" && result.valid;
-      return await saveReceipt2(loc, session, args.requestId, { status: valid ? "ready" : "needs_revision", ...responseBase(loc, session), validation: validationSummary(result), planIds: result.planIds, freshness, checkerRequired: session.checkerRequired, ...valid ? { reviewPacket: { revision: session.revision, candidateHash: session.candidateHash, plans: result.plans.map(({ planId: planId3, path: path31, model }) => ({ planId: planId3, path: path31, model })) } } : {}, nextAction: valid ? session.checkerRequired ? "Review this complete candidate set; finalize with the review verdict bound to this revision and candidateHash." : "Call blueprint_plan_finalize with this revision." : session.needsIntent ? "The draft is saved. Call blueprint_plan_prepare with an explicit add/revise/replace mode before requesting readiness or publication." : "The candidate is saved. Refresh stale preparation or correct only the fields identified by diagnostics, then submit with a new requestId." });
+      return await saveReceipt(loc, session, args.requestId, { status: valid ? "ready" : "needs_revision", ...responseBase(loc, session), validation: validationSummary(result), planIds: result.planIds, freshness, checkerRequired: session.checkerRequired, ...valid ? { reviewPacket: { revision: session.revision, candidateHash: session.candidateHash, plans: result.plans.map(({ planId: planId3, path: path31, model }) => ({ planId: planId3, path: path31, model })) } } : {}, nextAction: valid ? session.checkerRequired ? "Review this complete candidate set; finalize with the review verdict bound to this revision and candidateHash." : "Call blueprint_plan_finalize with this revision." : session.needsIntent ? "The draft is saved. Call blueprint_plan_prepare with an explicit add/revise/replace mode before requesting readiness or publication." : "The candidate is saved. Refresh stale preparation or correct only the fields identified by diagnostics, then submit with a new requestId." });
     } catch (error2) {
       return { status: "partial", ...responseBase(loc, session), reason: error2.message, nextAction: `The candidate is saved. Retry blueprint_plan_submit with requestId ${args.requestId} and identical arguments to resume assessment.` };
     }
@@ -57858,7 +57832,7 @@ async function blueprintPlanFinalize(raw) {
       session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "finalize" };
       await savePlanSession(loc, session);
     } else if (accepted.operation !== "finalize" || accepted.revision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Accepted request was superseded." };
-    const fail = (status, details) => saveReceipt2(loc, session, args.requestId, { status, ...responseBase(loc, session), ready: false, ...details });
+    const fail = (status, details) => saveReceipt(loc, session, args.requestId, { status, ...responseBase(loc, session), ready: false, ...details });
     let journal = session.journal?.requestId === args.requestId ? session.journal : void 0;
     if (!journal) {
       try {
@@ -103074,7 +103048,7 @@ var MAX_OBJECT_KEYS = 25;
 var MAX_STRING_LENGTH = 800;
 var MAX_STACK_LENGTH = 4e3;
 function metadataOnlyInvocation(toolName, args) {
-  return toolName.startsWith("blueprint_discuss_") || toolName === "blueprint_phase_artifact_write" && (args.artifact === "context" || args.artifact === "discussion-log" || args.model !== void 0);
+  return toolName.startsWith("blueprint_discuss_") || toolName.startsWith("blueprint_research_") || toolName === "blueprint_phase_artifact_write" && (args.artifact === "context" || args.artifact === "discussion-log" || args.artifact === "research" || args.model !== void 0 || args.candidate !== void 0);
 }
 function failureMetadata(value, depth = 0) {
   const metadata = {};
@@ -103123,7 +103097,7 @@ function failureMetadata(value, depth = 0) {
   if (value.model !== void 0) metadata.modelSupplied = true;
   if (value.candidate !== void 0) metadata.candidateSupplied = true;
   if (typeof value.content === "string") metadata.contentLength = value.content.length;
-  if (["context", "discussion-log"].includes(value.artifact)) metadata.artifact = value.artifact;
+  if (["context", "discussion-log", "research"].includes(value.artifact)) metadata.artifact = value.artifact;
   return metadata;
 }
 function truncateString(value, maxLength = MAX_STRING_LENGTH) {
@@ -103243,7 +103217,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_discuss_record",
   "blueprint_discuss_finalize",
   "blueprint_research_prepare",
-  "blueprint_research_record",
+  "blueprint_research_read",
   "blueprint_research_submit",
   "blueprint_plan_prepare",
   "blueprint_plan_submit",

@@ -48,6 +48,8 @@ export type PhaseResearchStructuredModel = {
 };
 export type PhaseResearchModelValidation = {
     valid: boolean;
+    planningReady: boolean;
+    planningBlockers: string[];
     issues: string[];
     warnings: string[];
     diagnostics: PhaseArtifactValidationDiagnostic[];
@@ -56,7 +58,7 @@ export type PhaseResearchModelValidationContext = {
     knownRequirementIds?: readonly string[];
     requiredRequirementIds?: readonly string[];
 };
-/** Validate readiness without throwing or discarding a schema-valid candidate. */
+/** Publication validity is separate from whether this research resolves planning blockers. */
 export declare function validatePhaseResearchModelInput(raw: unknown, context?: PhaseResearchModelValidationContext): {
     model: PhaseResearchStructuredModel | null;
     validation: PhaseResearchModelValidation;

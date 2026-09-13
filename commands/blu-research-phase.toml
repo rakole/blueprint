@@ -1,15 +1,15 @@
-description = "Investigate phase implementation decisions and preserve research through MCP."
+description = "Investigate implementation decisions and publish canonical phase research through MCP."
 prompt = """
 Command: `/blu-research-phase`. Execution profile: `long-running-mutation`.
 Use the `blueprint-phase-discovery` skill and its `research-phase-runtime-contract.md` input.
 
 Normal flow: prepare → investigate → submit.
-- Prepare supplies phase evidence, config, freshness, revision and candidate schema. Treat phase context as read-only; route missing or unusable context to `/blu-discuss-phase`. Optional spec stays read-only and missing spec is nonblocking.
-- Honor `research.external_sources` off/ask/auto and one required approval gate. Investigate consequential questions; use `blueprint-researcher` only when enabled, available and useful.
-- Submit using the returned schema. MCP saves candidates before assessment and renders Markdown. A saved `needs_revision` draft is not planning-ready.
-- Reuse only verified-fresh research; review and explicitly update unknown legacy research. Publication replacement requires an update/overwrite decision.
-- Recovery uses narrow corrections and idempotent retries. MCP owns publication/state/routing; returned status/path/revision/nextAction are authoritative. No separate state/catalog/checkpoint calls.
+- Use prepare's schema, example, grounding and validationRules before generating one final model. Treat phase context as read-only; route unusable context to `/blu-discuss-phase`. Optional spec stays read-only; missing spec is nonblocking.
+- Honor `research.external_sources` off/ask/auto. Use `blueprint-researcher` only when enabled, available and useful.
+- Submit model directly; MCP renders canonical RESEARCH.md. Omit irrelevant optional fields and report honest open questions. Publication and planning readiness are separate.
+- Reuse only verified-fresh research; unknown legacy research needs review and update. Publication replacement requires explicit overwrite authorization.
+- Rejected models are not saved: repair in conversation at the same revision. Accepted publication has a metadata-only I/O journal. Read returns canonical research and metadata. No separate state/catalog/checkpoint calls.
 
-Use only these Blueprint MCP tools: `mcp_blueprint_blueprint_research_prepare`, `mcp_blueprint_blueprint_research_submit`, `mcp_blueprint_blueprint_research_record`, `mcp_blueprint_blueprint_research_read`.
-Explicit phase arguments are numeric references. Writes stay MCP-owned in the selected `.blueprint/phases/<phase>/` and `.blueprint/STATE.md`. Report phase, saved/published outcome, path, evidence limits, blockers and safe nextAction; recommend only implemented commands.
+Use only these Blueprint MCP tools: `mcp_blueprint_blueprint_research_prepare`, `mcp_blueprint_blueprint_research_submit`, `mcp_blueprint_blueprint_research_read`.
+Explicit phase arguments are numeric references. Writes stay MCP-owned in the selected `.blueprint/phases/<phase>/` and `.blueprint/STATE.md`. Report publication outcome, returned path, evidence limits, planning blockers and safe nextAction; recommend only implemented commands.
 """

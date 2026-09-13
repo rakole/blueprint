@@ -1285,7 +1285,6 @@ test("research-phase is implemented once manifest, skill, and external-policy-aw
   assert.deepEqual(entry.requiredTools, [
     "blueprint_research_prepare",
     "blueprint_research_submit",
-    "blueprint_research_record",
     "blueprint_research_read"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-researcher"]);

@@ -52,10 +52,11 @@ model directly to finalize. Generated or rejected documents are not stored.
 Read recovers notes/history. The active contract owns config-controlled research,
 confirmation gates, evidence preservation, receipts and MCP-derived routing.
 
-For research, use prepare → investigate → submit. MCP preserves candidates before
-assessment, renders research, and owns publication/state/routing recovery. Record
-is optional for longer investigations and narrow corrections; read is recovery or
-view only. Load only the research runtime reference, never the sibling contract.
+For research, use prepare → investigate → submit. Use prepare's schema, example,
+grounding and rejection rules before generating one model for direct publication.
+MCP renders canonical research; rejected models are not saved. Read returns only
+canonical research and metadata. Load only the research runtime reference, never
+the sibling contract.
 
 For spec, UI and assumptions, the sibling-only contract retains their shared call,
 schema, checkpoint, ownership and completion rules; the command reference owns details.
