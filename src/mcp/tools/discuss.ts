@@ -5,7 +5,6 @@ import {
   prepareTextForPersistence,
   safeJsonParseObject,
   resolveRepoRelativeInputPathSync,
-  validateFieldNameSegment,
 } from "../../shared/security.js";
 import {
   ensureRepoRoot,
@@ -29,6 +28,7 @@ import {
   phaseContextAuthoringSchema,
   renderPhaseContextModelContent,
   validatePhaseContextModelInput,
+  type PhaseContextModelDefaults,
 } from "./phase-context-model.js";
 import { blueprintStateUpdate, blueprintStateLoad } from "./state.js";
 import {
@@ -41,8 +41,8 @@ const recordSchema = z.object({
   id: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/),
   type: z.enum(["decision", "open-question", "deferred"]),
   value: z.string().min(1),
-  rationale: z.string().min(1),
-  evidence: z.array(z.string()),
+  rationale: z.string().default(""),
+  evidence: z.array(z.string()).default([]),
   rejectedOptions: z.array(z.string()).optional(),
   blocking: z.boolean().optional(),
   downstreamOwner: z.string().optional(),
@@ -58,31 +58,28 @@ type Event = {
   revision: number;
   requestId: string;
   records?: DiscussRecord[];
-  candidate?: unknown;
   kind: string;
   basis?: Basis;
   baseline?: DiscussSession["baseline"];
-  journal?: Journal;
 };
 type Journal = {
   requestId: string;
   requestHash: string;
   revision: number;
-  context: { path: string; hash: string; model: Record<string, unknown> };
-  log?: { path: string; hash: string; content: string };
+  context: { path: string; hash: string };
+  log?: { path: string; hash: string };
   stages: Record<string, "intent" | "complete">;
-  receipt?: Record<string, unknown>;
-  warnings?: string[];
+  complete?: boolean;
+  modelHash?: string;
 };
 export type DiscussSession = {
-  version: 1;
+  version: 2;
   phase: string;
   topology: PhaseTopologyFingerprint;
   revision: number;
   basis: Basis;
   baseline: { context: string | null; log: string | null };
   records: DiscussRecord[];
-  candidate?: unknown;
   history: Event[];
   requests: Record<string, { hash: string; revision: number }>;
   journal?: Journal;
@@ -98,30 +95,12 @@ const recordInput = z.object({
   requestId: idSchema,
   expectedRevision: z.number().int().min(0),
   records: z.array(recordSchema).max(100).optional(),
-  model: phaseContextAuthoringSchema
-    .optional()
-    .describe(
-      "Typed canonical context. Use candidate instead to salvage incomplete or invalid drafts.",
-    ),
-  candidate: z
-    .unknown()
-    .optional()
-    .describe("Lossless raw JSON salvage; saved before context schema checks."),
-  corrections: z
-    .array(
-      z.object({
-        path: z.array(z.string()).min(1).max(20),
-        value: z.unknown().optional(),
-        operation: z.enum(["set", "remove"]).default("set"),
-      }),
-    )
-    .max(50)
-    .optional(),
-});
+}).strict();
 const finalizeInput = z.object({
   ...lookupShape,
   requestId: idSchema,
   expectedRevision: z.number().int().min(0),
+  model: phaseContextAuthoringSchema.optional().describe("Final context model. Required for a new publication or before context commits; omit only when retrying verified canonical context."),
   overwrite: z.boolean().optional(),
   includeLog: z.boolean().optional(),
 });
@@ -174,7 +153,7 @@ async function location(args: Lookup) {
   };
 }
 const sessionSchema = z.object({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
   phase: z.string().regex(/^\d+(?:\.\d+)*$/),
   revision: z.number().int().min(0),
   topology: z.object({
@@ -206,14 +185,14 @@ const sessionSchema = z.object({
     log: z.string().nullable(),
   }),
   records: z.array(recordSchema),
-  candidate: z.unknown().optional(),
   history: z.array(
     z.object({
       revision: z.number().int(),
       requestId: z.string(),
       kind: z.string(),
       records: z.array(recordSchema).optional(),
-      candidate: z.unknown().optional(),
+      basis: z.object({ prepared: z.boolean(), readSet: z.array(z.object({ path: z.string(), hash: z.string().nullable() })), evidencePaths: z.array(z.string()).optional() }).optional(),
+      baseline: z.object({ context: z.string().nullable(), log: z.string().nullable() }).optional(),
     }),
   ),
   requests: z.record(
@@ -228,13 +207,13 @@ const sessionSchema = z.object({
       context: z.object({
         path: z.string(),
         hash: z.string(),
-        model: z.record(z.string(), z.unknown()),
       }),
       log: z
-        .object({ path: z.string(), hash: z.string(), content: z.string() })
+        .object({ path: z.string(), hash: z.string() })
         .optional(),
       stages: z.record(z.string(), z.enum(["intent", "complete"])),
-      receipt: z.record(z.string(), z.unknown()).optional(),
+      complete: z.boolean().optional(),
+      modelHash: z.string().optional(),
     })
     .optional(),
 });
@@ -273,8 +252,10 @@ async function readSession(
       await fs.readFile(resolveBlueprintPath(root, relative), "utf8"),
       { label: relative, maxBytes: 32 * 1024 * 1024 },
     );
-    sessionSchema.parse(parsed);
-    const session = parsed as unknown as DiscussSession;
+    const session = sessionSchema.parse(parsed) as unknown as DiscussSession;
+    // Zod projects an allowlist: legacy models, nested archived journals, and rich
+    // receipts never leave this reader. Only an owning mutation writes this v2 view.
+    session.version = 2;
     const prefix = session.topology.phasePrefix;
     const sessionPathPattern = new RegExp(`^\\.blueprint/phases/${prefix.replaceAll(".", "\\.")}(?:-[^/]+)?/${prefix.replaceAll(".", "\\.")}-DISCUSS-SESSION\\.json$`);
     if (
@@ -290,17 +271,16 @@ async function readSession(
       const receipt = session.requests[journal.requestId];
       const contextPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-CONTEXT.md`;
       const logPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-DISCUSSION-LOG.md`;
-      const model = validatePhaseContextModelInput(journal.context.model).model;
-      if (!model || journal.context.path !== contextPath ||
+      if (journal.context.path !== contextPath ||
         (journal.log && journal.log.path !== logPath) ||
         journal.revision > session.revision || !receipt ||
         receipt.revision !== journal.revision || receipt.hash !== journal.requestHash ||
         Object.keys(journal.stages).some((stage) => !["context", "log", "state", "refresh", "cleanup"].includes(stage)) ||
-        digest(prepareTextForPersistence(renderPhaseContextModelContent({ resolved: { phasePrefix: session.topology.phasePrefix, phaseName: session.topology.phaseName ?? "" }, model })).content.replace(/\r\n/g, "\n")) !== journal.context.hash ||
-        (journal.log && digest(journal.log.content) !== journal.log.hash))
+        !/^[a-f0-9]{64}$/.test(journal.context.hash) ||
+        (journal.log && !/^[a-f0-9]{64}$/.test(journal.log.hash)))
         throw new Error("Discuss publication journal identity or integrity mismatch.");
     }
-    return parsed as unknown as DiscussSession;
+    return session;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
@@ -338,7 +318,7 @@ async function initial(
   loc: Awaited<ReturnType<typeof location>>,
 ): Promise<DiscussSession> {
   return {
-    version: 1,
+    version: 2,
     phase: loc.resolved.phaseNumber,
     topology: phaseTopologyFingerprintFromLocation(
       loc.resolved,
@@ -440,19 +420,20 @@ export async function prepareDiscussInputBasis(
         revision: session.revision,
         changedPaths,
         affectedRecordIds: session.records.map((r) => r.id),
-        candidateNeedsReview: session.candidate !== undefined,
         nextAction:
-          "Review affected records and candidate against this packet, save corrections, then prepare with expectedRevision and acknowledgeChangedInputs=true.",
+          "Review affected records against this packet, save updated notes, then prepare with expectedRevision and acknowledgeChangedInputs=true.",
       };
     if (args.acknowledgeChangedInputs && args.expectedRevision === undefined)
       throw new Error("Input acknowledgment requires expectedRevision.");
-    if (session.basis.prepared && !changedPaths.length && !args.reconcile)
+    if (session.basis.prepared && !changedPaths.length && !args.reconcile) {
+      await save(loc.projectRoot, loc.sessionPath, session);
       return {
         status: "prepared",
         revision: session.revision,
         path: loc.sessionPath,
         reused: true,
       };
+    }
     if (args.reconcile) {
       if (
         args.expectedRevision === undefined ||
@@ -486,7 +467,6 @@ export async function prepareDiscussInputBasis(
         kind: "reconciliation",
         basis: session.basis,
         baseline: session.baseline,
-        journal: session.journal,
       });
       session.baseline = actual;
       session.topology = phaseTopologyFingerprintFromLocation(
@@ -494,7 +474,7 @@ export async function prepareDiscussInputBasis(
         loc.matchedPhase,
       );
       delete session.journal;
-    } else if (session.journal && !session.journal.receipt)
+    } else if (session.journal && !session.journal.complete)
       return {
         status: "blocked",
         nextAction:
@@ -525,11 +505,11 @@ export async function prepareDiscussInputBasis(
     };
   });
 }
-function assemble(session: DiscussSession): unknown {
-  const candidate = structuredClone(session.candidate);
-  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
-    return candidate;
-  const model = candidate as Record<string, unknown>;
+function assemble(session: DiscussSession, input: unknown): unknown {
+  const supplied = structuredClone(input);
+  if (!supplied || typeof supplied !== "object" || Array.isArray(supplied))
+    return supplied;
+  const model = supplied as Record<string, unknown>;
   if (session.records.length) {
     const ids = new Set(session.records.map((r) => r.id));
     const isOwned = (text: unknown) =>
@@ -543,12 +523,12 @@ function assemble(session: DiscussSession): unknown {
       ...session.records
         .filter(
           (r) =>
-            r.type === "decision" ||
+            (r.type === "decision" && (!r.status || r.status === "accepted" || r.status === "resolved")) ||
             (r.type === "open-question" && r.status === "resolved"),
         )
         .map((r) => ({
           decision: `[${r.id}] ${r.value}`,
-          tradeoffOrConstraint: `${r.rationale}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}${r.rejectedOptions?.length ? ` Rejected options: ${r.rejectedOptions.join("; ")}` : ""}`,
+          tradeoffOrConstraint: `${r.rationale}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}${r.rejectedOptions?.length ? ` Rejected options: ${r.rejectedOptions.join("; ")}` : ""}` || "none",
         })),
     ];
     for (const [field, type] of [
@@ -565,7 +545,7 @@ function assemble(session: DiscussSession): unknown {
             (!isOwned(item) && item.toLowerCase() !== "none"),
         ),
         ...session.records
-          .filter((r) => r.type === type && r.status !== "resolved")
+          .filter((r) => (r.type === type && r.status !== "resolved") || (r.type === "decision" && r.status === (type === "deferred" ? "deferred" : "open")))
           .map(
             (r) =>
               `[${r.id}] ${r.value}; Rationale: ${r.rationale}${r.downstreamOwner ? ` (Owner: ${r.downstreamOwner})` : ""}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}`,
@@ -578,18 +558,12 @@ function assemble(session: DiscussSession): unknown {
 function assess(
   session: DiscussSession,
   resolved: Awaited<ReturnType<typeof location>>["resolved"],
+  input: unknown, defaults: PhaseContextModelDefaults,
 ) {
-  const model = assemble(session);
-  const shape = validatePhaseContextModelInput(model);
+  const normalized = validatePhaseContextModelInput(input, defaults);
+  const shape = normalized.model ? validatePhaseContextModelInput(assemble(session, normalized.model)) : normalized;
   const blockers = session.records
-    .filter(
-      (r) =>
-        (r.type === "open-question" &&
-          r.status !== "resolved" &&
-          (r.blocking || !r.downstreamOwner)) ||
-        (r.type === "decision" &&
-          (r.blocking || r.status === "open" || r.status === "deferred")),
-    )
+    .filter((r) => r.blocking === true && r.status !== "resolved")
     .map((r) => r.id);
   if (!shape.model)
     return {
@@ -612,13 +586,6 @@ function assess(
     content,
   };
 }
-function compactReadiness(assessment: ReturnType<typeof assess>) {
-  return {
-    ready: assessment.ready,
-    blockers: assessment.blockers,
-    validation: assessment.validation,
-  };
-}
 export async function blueprintDiscussRecord(raw: z.input<typeof recordInput>) {
   const args = recordInput.parse(raw);
   checkedPayload(args);
@@ -626,13 +593,6 @@ export async function blueprintDiscussRecord(raw: z.input<typeof recordInput>) {
     const session =
       (await readSession(loc.projectRoot, loc.sessionPath)) ??
       (await initial(loc));
-    if (args.model !== undefined) {
-      if (args.candidate !== undefined || args.corrections?.length)
-        throw new Error(
-          "Pass model, candidate, or corrections, not multiple authoring inputs.",
-        );
-      args.candidate = args.model;
-    }
     const requestHash = digest(stable(args));
     const replay = Object.hasOwn(session.requests, args.requestId)
       ? session.requests[args.requestId]
@@ -644,6 +604,7 @@ export async function blueprintDiscussRecord(raw: z.input<typeof recordInput>) {
           reason: "Request ID conflict",
           revision: session.revision,
         };
+      await save(loc.projectRoot, loc.sessionPath, session);
       return {
         status: "reused",
         revision: replay.revision,
@@ -657,45 +618,12 @@ export async function blueprintDiscussRecord(raw: z.input<typeof recordInput>) {
         reason: "Revision conflict",
         revision: session.revision,
       };
-    if (session.journal && !session.journal.receipt)
+    if (session.journal && !session.journal.complete)
       return {
         status: "blocked",
         nextAction:
           "Retry blueprint_discuss_finalize with the existing requestId before recording more answers.",
       };
-    if (args.candidate !== undefined && args.corrections?.length)
-      throw new Error("Pass candidate or field corrections, not both.");
-    if (args.candidate !== undefined)
-      session.candidate = checkedPayload(args.candidate);
-    if (args.corrections?.length) {
-      for (const correction of args.corrections) {
-        correction.path.forEach((segment) => {
-          validateFieldNameSegment(segment);
-          if (["__proto__", "prototype", "constructor"].includes(segment))
-            throw new Error("Unsafe correction path.");
-        });
-        let target = session.candidate as Record<string, unknown>;
-        for (const segment of correction.path.slice(0, -1)) {
-          if (
-            !target ||
-            typeof target !== "object" ||
-            !Object.hasOwn(target, segment)
-          )
-            throw new Error("Correction parent does not exist.");
-          target = target[segment] as Record<string, unknown>;
-        }
-        if (!target || typeof target !== "object")
-          throw new Error("Correction target is not an object.");
-        const field = correction.path.at(-1)!;
-        if (correction.operation === "remove") {
-          if (Array.isArray(target)) {
-            if (!/^(?:0|[1-9]\d*)$/.test(field))
-              throw new Error("Array correction requires an index.");
-            target.splice(Number(field), 1);
-          } else delete target[field];
-        } else target[field] = checkedPayload(correction.value);
-      }
-    }
     for (const record of args.records ?? []) {
       const index = session.records.findIndex((r) => r.id === record.id);
       if (index === -1) session.records.push(record);
@@ -707,27 +635,13 @@ export async function blueprintDiscussRecord(raw: z.input<typeof recordInput>) {
       requestId: args.requestId,
       kind: "record",
       records: args.records,
-      ...(args.candidate !== undefined || args.corrections?.length
-        ? { candidate: session.candidate }
-        : {}),
     });
     session.requests[args.requestId] = {
       hash: requestHash,
       revision: session.revision,
     };
-    // Receipt is durable before readiness/schema evaluation; invalid drafts survive new processes.
     await save(loc.projectRoot, loc.sessionPath, session);
-    const assessment = assess(session, loc.resolved);
-    return {
-      status: "recorded",
-      revision: session.revision,
-      path: loc.sessionPath,
-      candidateSaved: session.candidate !== undefined,
-      readiness: compactReadiness(assessment),
-      nextAction: assessment.ready
-        ? "Call blueprint_discuss_finalize after preparing fresh inputs."
-        : "Repair fields or resolve blocking questions using blueprint_discuss_record.",
-    };
+    return { status: "recorded", revision: session.revision, path: loc.sessionPath };
   });
 }
 export async function blueprintDiscussRead(args: Lookup) {
@@ -738,9 +652,6 @@ export async function blueprintDiscussRead(args: Lookup) {
       status: session ? "found" : "not_found",
       path: loc.sessionPath,
       session,
-      readiness: session
-        ? compactReadiness(assess(session, loc.resolved))
-        : null,
     };
   });
 }
@@ -755,7 +666,7 @@ function renderLog(session: DiscussSession, prefix: string) {
         ),
       )
       .join("\n") ||
-    "No incremental answers recorded; candidate context supplied."
+    "No incremental answers recorded."
   }\n\n## Follow-Ups\n\n${
     session.records
       .filter((r) => r.type !== "decision" && r.status !== "resolved")
@@ -775,34 +686,32 @@ export const discussFinalizeDependencies = {
 export async function blueprintDiscussFinalize(
   raw: z.input<typeof finalizeInput>,
 ) {
-  const args = finalizeInput.parse(raw);
+  const transport = finalizeInput.safeParse(raw);
+  if (!transport.success) return { status: "rejected", saved: false, outcome: "rejected-not-saved", diagnostics: transport.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) };
+  const args = transport.data;
+  try { if (args.model !== undefined) checkedPayload(args.model); } catch (error) { return { status: "rejected", saved: false, outcome: "rejected-not-saved", diagnostics: [{ path: "model", message: (error as Error).message }] }; }
   return locked(args, async (loc) => {
     const session = await readSession(loc.projectRoot, loc.sessionPath);
     if (!session)
       return {
-        status: "not_found",
+        status: "not_found", saved: false, outcome: "rejected-not-saved",
         nextAction: "Call blueprint_discuss_record.",
       };
-    const requestHash = digest(stable(args));
+    const { model: inputModel, ...identity } = args;
+    const requestHash = digest(stable(identity));
     let journal = session.journal;
-    if (
-      journal?.requestId === args.requestId &&
-      journal.requestHash !== requestHash
-    )
-      return { status: "rejected", reason: "Request ID conflict" };
-    if (journal?.requestId === args.requestId && journal.receipt)
-      return { ...journal.receipt, status: "reused" };
-    if (journal && journal.requestId !== args.requestId && !journal.receipt)
-      return {
-        status: "blocked",
-        nextAction: `Retry blueprint_discuss_finalize requestId ${journal.requestId}.`,
-      };
+    let publicationModel: ReturnType<typeof validatePhaseContextModelInput>["model"] = null;
+    if (journal?.requestId === args.requestId && journal.revision !== session.revision) return { status: "stale", saved: false, outcome: "rejected-not-saved", reason: "Revision conflict" };
+    if (journal?.requestId === args.requestId && journal.requestHash !== requestHash)
+      return { status: "rejected", saved: false, outcome: "rejected-not-saved", reason: "Request ID conflict" };
+    if (journal && journal.requestId !== args.requestId && !journal.complete)
+      return { status: "blocked", saved: false, outcome: "rejected-not-saved", nextAction: `Retry blueprint_discuss_finalize requestId ${journal.requestId}.` };
     if (!journal || journal.requestId !== args.requestId) {
       if (Object.hasOwn(session.requests, args.requestId))
-        return { status: "rejected", reason: "Request ID already used" };
+        return { status: "rejected", saved: false, outcome: "rejected-not-saved", reason: "Request ID already used" };
       if (session.revision !== args.expectedRevision)
         return {
-          status: "stale",
+          status: "stale", saved: false, outcome: "rejected-not-saved",
           reason: "Revision conflict",
           revision: session.revision,
         };
@@ -813,19 +722,20 @@ export async function blueprintDiscussFinalize(
         )
       )
         return {
-          status: "stale",
+          status: "stale", saved: false, outcome: "rejected-not-saved",
           reason: "Phase topology changed",
           nextAction:
             "Run blueprint_discuss_prepare with explicit target reconciliation.",
         };
-      const assessment = assess(session, loc.resolved);
+      const evidence = await collectDiscussEvidence({ cwd: loc.projectRoot, phase: session.phase, evidencePaths: session.basis.evidencePaths });
+      if (evidence.status !== "collected") return { ...evidence, saved: false };
+      const assessment = assess(session, loc.resolved, inputModel, discussAuthoring(evidence.packet, session.records).defaults);
       if (!assessment.ready || !assessment.model || !assessment.content)
         return {
-          status: "blocked",
-          draftPersisted: true,
-          readiness: compactReadiness(assessment),
-          nextAction:
-            "Repair the saved candidate or blocking records using blueprint_discuss_record.",
+          status: "blocked", saved: false, outcome: "rejected-not-saved",
+          diagnostics: assessment.validation.diagnostics,
+          blockers: assessment.blockers,
+          nextAction: "Correct the addressed fields or resolve explicitly blocking notes, then submit model again.",
         };
       const freshness = await basisFreshness(
         loc.projectRoot,
@@ -833,8 +743,7 @@ export async function blueprintDiscussFinalize(
       );
       if (!session.basis.prepared || freshness.status !== "fresh")
         return {
-          status: "stale",
-          draftPersisted: true,
+          status: "stale", saved: false, outcome: "rejected-not-saved",
           freshness,
           nextAction:
             "Run blueprint_discuss_prepare to refresh the authoritative input packet and reconcile affected decisions.",
@@ -862,10 +771,10 @@ export async function blueprintDiscussFinalize(
         const observed = await hashPath(loc.projectRoot, target);
         if (observed !== session.baseline[kind])
           return {
-            status: "stale",
+            status: "stale", saved: false, outcome: "rejected-not-saved",
             reason: `Stale ${kind} baseline`,
             nextAction:
-              "Run blueprint_discuss_prepare with explicit target reconciliation after reviewing changed canonical artifacts; the saved draft remains editable.",
+              "Run blueprint_discuss_prepare with explicit target reconciliation after reviewing changed canonical artifacts; resubmit the model after reconciliation.",
           };
         if (observed && !args.overwrite) {
           const existing = await fs.readFile(
@@ -877,7 +786,7 @@ export async function blueprintDiscussFinalize(
             digest(kind === "context" ? content : log!) !== observed
           )
             return {
-              status: "blocked",
+              status: "blocked", saved: false, outcome: "rejected-not-saved",
               reason: `Explicit overwrite confirmation required for ${target}`,
               nextAction:
                 "Obtain explicit overwrite confirmation, then retry with overwrite=true.",
@@ -886,7 +795,7 @@ export async function blueprintDiscussFinalize(
       }
       if (log && !validatePhaseArtifactContent(log, "discussion-log").valid)
         return {
-          status: "blocked",
+          status: "blocked", saved: false, outcome: "rejected-not-saved",
           reason: "Generated discussion log failed validation",
           nextAction: "Repair saved records before retrying.",
         };
@@ -897,19 +806,19 @@ export async function blueprintDiscussFinalize(
         context: {
           path: artifactPathFor(loc.resolved, "context"),
           hash: digest(content),
-          model: assessment.model,
         },
         ...(log
           ? {
               log: {
                 path: artifactPathFor(loc.resolved, "discussion-log"),
-                content: log,
                 hash: digest(log),
               },
             }
           : {}),
         stages: {},
+        modelHash: digest(stable(inputModel)),
       };
+      publicationModel = assessment.model;
       session.journal = journal;
       session.requests[args.requestId] = {
         hash: requestHash,
@@ -936,6 +845,17 @@ export async function blueprintDiscussFinalize(
     };
     try {
       await assertTopology();
+      if (inputModel !== undefined && journal.modelHash && digest(stable(inputModel)) !== journal.modelHash)
+        throw new Error("Request ID conflict: model differs from publication intent.");
+      if (!publicationModel && await hashPath(loc.projectRoot, journal.context.path) !== journal.context.hash) {
+        if (inputModel === undefined) throw new Error("Resubmit model with the same requestId; context was not committed.");
+        const evidence = await collectDiscussEvidence({ cwd: loc.projectRoot, phase: session.phase, evidencePaths: session.basis.evidencePaths });
+        if (evidence.status !== "collected") throw new Error("Unable to refresh evidence.");
+        const assessment = assess(session, loc.resolved, inputModel, discussAuthoring(evidence.packet, session.records).defaults);
+        if (!assessment.ready || !assessment.model || !assessment.content || digest(prepareTextForPersistence(assessment.content).content.replace(/\r\n/g, "\n")) !== journal.context.hash)
+          throw new Error("Resubmitted model does not match validated publication intent.");
+        publicationModel = assessment.model;
+      }
       const freshness = await basisFreshness(loc.projectRoot, session.basis.readSet);
       if (!session.basis.prepared || freshness.status !== "fresh")
         throw new Error("Discussion evidence changed or is unknown; run blueprint_discuss_prepare with explicit target reconciliation and review changed inputs.");
@@ -943,21 +863,19 @@ export async function blueprintDiscussFinalize(
         const item = journal[kind];
         if (!item) continue;
         const observed = await hashPath(loc.projectRoot, item.path);
-        if (journal.stages[kind]) {
-          if (observed === item.hash) {
-            journal.stages[kind] = "complete";
-            await checkpoint();
-            continue;
-          }
-          if (journal.stages[kind] === "complete")
-            throw new Error(
-              `Published ${kind} changed externally; preserve it and reconcile manually.`,
-            );
+        if (observed === item.hash) {
+          journal.stages[kind] = "complete";
+          await checkpoint();
+          continue;
         }
+        if (journal.stages[kind] === "complete")
+          throw new Error(`Published ${kind} changed externally; preserve it and reconcile manually.`);
         if (observed !== session.baseline[kind])
           throw new Error(
             `Stale ${kind} baseline; preserve canonical content and reconcile through a new prepared session.`,
           );
+        if (kind === "log" && digest(prepareTextForPersistence(renderLog(session, loc.resolved.phasePrefix)).content.replace(/\r\n/g, "\n")) !== item.hash)
+          throw new Error("Discussion log no longer matches stable note history; reconcile publication metadata.");
         journal.stages[kind] = "intent";
         await checkpoint();
         await assertTopology();
@@ -966,8 +884,8 @@ export async function blueprintDiscussFinalize(
           phase: session.phase,
           artifact: kind === "log" ? "discussion-log" : "context",
           ...(kind === "context"
-            ? { model: journal.context.model }
-            : { content: journal.log!.content }),
+            ? { model: publicationModel! }
+            : { content: prepareTextForPersistence(renderLog(session, loc.resolved.phasePrefix)).content.replace(/\r\n/g, "\n") }),
           overwrite: args.overwrite,
           expectedContentHash: session.baseline[kind],
           expectedTopology: session.topology,
@@ -985,7 +903,7 @@ export async function blueprintDiscussFinalize(
         journal.stages.state = "intent";
         await checkpoint();
         await assertTopology();
-        const stateUpdate = await discussFinalizeDependencies.stateUpdate({
+        await discussFinalizeDependencies.stateUpdate({
           cwd: loc.projectRoot,
           base: "synced",
           patch: {
@@ -993,10 +911,7 @@ export async function blueprintDiscussFinalize(
             activeCommand: "/blu-discuss-phase",
           },
         });
-        journal.warnings = [
-          ...(journal.warnings ?? []),
-          ...stateUpdate.warnings,
-        ];
+
         journal.stages.state = "complete";
         await checkpoint();
       }
@@ -1008,7 +923,6 @@ export async function blueprintDiscussFinalize(
       journal.stages.refresh = "complete";
       await checkpoint();
       const warnings: string[] = [
-        ...(journal.warnings ?? []),
         ...(state.warnings ?? []),
       ];
       if (journal.stages.cleanup !== "complete") {
@@ -1025,7 +939,9 @@ export async function blueprintDiscussFinalize(
         journal.stages.cleanup = "complete";
         await checkpoint();
       }
-      journal.receipt = {
+      const receipt = {
+        saved: true,
+        outcome: "complete",
         status: "finalized",
         revision: session.revision,
         path: loc.sessionPath,
@@ -1037,20 +953,22 @@ export async function blueprintDiscussFinalize(
         warnings,
         nextAction: state.derivedStatus.nextAction,
       };
+      journal.complete = true;
       session.baseline = {
         context: journal.context.hash,
         log: journal.log?.hash ?? session.baseline.log,
       };
       await checkpoint();
-      return journal.receipt;
+      return receipt;
     } catch (error) {
       return {
         status: "partial",
-        draftPersisted: true,
+        saved: (await hashPath(loc.projectRoot, journal.context.path)) === journal.context.hash,
+        outcome: (await hashPath(loc.projectRoot, journal.context.path)) === journal.context.hash ? "saved-but-state-incomplete" : "rejected-not-saved",
         revision: session.revision,
         stages: journal.stages,
         reason: (error as Error).message,
-        nextAction: `Retry blueprint_discuss_finalize with the same requestId ${args.requestId} and identical arguments after resolving the reported failure. If canonical targets or topology changed, use blueprint_discuss_prepare with explicit target reconciliation.`,
+        nextAction: `Retry blueprint_discuss_finalize with the same requestId ${args.requestId} and the same revision and options after resolving the reported failure. Resend model if context was not committed; it may be omitted once canonical context matches the journal hash. If canonical targets or topology changed, use blueprint_discuss_prepare with explicit target reconciliation.`,
       };
     }
   });
@@ -1102,18 +1020,17 @@ export async function blueprintDiscussPrepare(
   return {
     ...result,
     packet: evidence.packet,
+    authoring: discussAuthoring(evidence.packet, saved.session?.records ?? []),
     readSet: evidence.readSet,
     session: saved.session
       ? {
           revision: saved.session.revision,
           records: saved.session.records,
-          candidateAvailable: saved.session.candidate !== undefined,
-          readiness: saved.readiness,
           publication: saved.session.journal
             ? {
                 requestId: saved.session.journal.requestId,
                 stages: saved.session.journal.stages,
-                receipt: saved.session.journal.receipt,
+                complete: saved.session.journal.complete,
               }
             : null,
         }
@@ -1132,7 +1049,7 @@ export const discussToolDefinitions: ToolDefinition[] = [
   {
     name: "blueprint_discuss_record",
     description:
-      "Append durable discussion records and losslessly save a raw candidate before schema/readiness checks. Repair fields with revision CAS; request IDs are idempotent.",
+      "Save resumable discussion notes with revision CAS and idempotent request IDs. No document models are stored.",
     inputSchema: recordInput.shape,
     handler: (args) =>
       blueprintDiscussRecord(args as z.input<typeof recordInput>),
@@ -1140,16 +1057,60 @@ export const discussToolDefinitions: ToolDefinition[] = [
   {
     name: "blueprint_discuss_read",
     description:
-      "Read the complete versioned discussion session, exact saved candidate, decision history and publication journal.",
+      "Read discussion notes, note history, and safe publication metadata.",
     inputSchema: lookupShape,
     handler: (args) => blueprintDiscussRead(args as Lookup),
   },
   {
     name: "blueprint_discuss_finalize",
     description:
-      "Publish a valid saved candidate and record-derived context/log with stale-target checks and recoverable state synchronization. overwrite requires explicit user confirmation.",
+      "Validate and directly publish the supplied model and record-derived context/log with stale-target checks and recoverable state synchronization. overwrite requires explicit user confirmation.",
     inputSchema: finalizeInput.shape,
     handler: (args) =>
       blueprintDiscussFinalize(args as z.input<typeof finalizeInput>),
   },
 ];
+
+/** Derived only from the already collected evidence packet; never persisted in a session. */
+function discussAuthoring(packet: Extract<Awaited<ReturnType<typeof collectDiscussEvidence>>, { status: "collected" }>["packet"], records: DiscussRecord[]) {
+  const phase = packet.selectedPhase;
+  const spec = packet.artifacts.spec.status === "present" && packet.artifacts.spec.validation?.valid ? packet.artifacts.spec.content ?? "" : "";
+  const section = (heading: string) => {
+    const parts = spec.split(/^(?:#{2,3}\s+|\*\*)(?=[A-Za-z])/m);
+    const text = parts.find((part) => part.split("\n")[0].replace(/[:*]/g, "").trim().toLowerCase() === heading.toLowerCase());
+    return text?.split("\n").slice(1).filter((line) => /^\s*[-*]\s+/.test(line)).map((line) => line.replace(/^\s*[-*]\s+(?:\[[ xX]\]\s+)?/, "").trim()).filter(Boolean);
+  };
+  const specGoal = spec.split(/^##\s+/m).find((part) => part.split("\n")[0].trim() === "Goal")?.split("\n").slice(1).join("\n").trim();
+  const project = packet.sources.find((item) => item.path === ".blueprint/PROJECT.md")?.content;
+  const vision = project?.split(/^##\s+/m).find((part) => part.split("\n")[0].trim().toLowerCase() === "vision")?.split("\n").slice(1).join("\n");
+  const brief = (vision ?? project?.replace(/^#.*$/gm, ""))?.trim().split(/\n\s*\n/)[0].trim();
+  const config = packet.config.config;
+  const criteria = section("Acceptance Criteria") ?? phase.successCriteria?.split("\n").map((line) => line.replace(/^\s*(?:[-*]|\d+\.)\s+/, "").trim()).filter(Boolean);
+  const defaults: PhaseContextModelDefaults = {
+    phaseBoundary: {
+      ...((specGoal || phase.goal) ? { goal: specGoal || phase.goal! } : {}),
+      ...(criteria?.length ? { successCriteria: criteria } : {}),
+      ...(section("In Scope")?.length ? { inScope: section("In Scope") } : {}),
+      ...(section("Out of Scope")?.length ? { outOfScope: section("Out of Scope") } : {}),
+    },
+    discoveryGrounding: {
+      ...(brief ? { projectBrief: brief } : {}),
+      requirementsGrounding: phase.requirements,
+      workflowPosture: `Mode: ${config.mode}; discussion: ${config.workflow.discuss_mode}; research before questions: ${config.workflow.research_before_questions}; automatic advancement: ${config.workflow.auto_advance}.`,
+      confirmedDecisions: records.filter((r) => r.type === "decision" && (!r.status || r.status === "accepted" || r.status === "resolved")).map((r) => `[${r.id}] ${r.value}`),
+    },
+    canonicalReferences: [...(spec ? [{ source: packet.artifacts.spec.path, relevance: "Saved specification boundaries and acceptance criteria" }] : []), ...packet.sources.filter((item) => item.content !== null && [".blueprint/ROADMAP.md", ".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md"].includes(item.path)).map((item) => ({ source: item.path, relevance: "Prepared phase grounding" }))],
+  };
+  return {
+    schema: z.toJSONSchema(phaseContextAuthoringSchema), defaults,
+    missingEssentialFields: ["goal", "inScope", "successCriteria"].filter((key) => {
+      const value = defaults.phaseBoundary?.[key as keyof NonNullable<PhaseContextModelDefaults["phaseBoundary"]>];
+      return !value || !value.length;
+    }).map((key) => `phaseBoundary.${key}`),
+    records,
+    examples: [
+      { phaseBoundary: { goal: "Export data", inScope: ["CSV export"], successCriteria: ["CSV downloads"] } },
+      { phaseBoundary: { goal: "Export data", inScope: ["CSV export"], outOfScope: ["Scheduled exports"], successCriteria: ["CSV downloads"] }, implementationDecisions: [{ decision: "Use UTF-8" }], openQuestions: ["Default filename"], canonicalReferences: [{ source: "User interview" }] },
+    ],
+  };
+}
