@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
-import * as z from "zod/v4";
+import { validatePhaseArtifactContent } from "../src/mcp/tools/artifacts.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 import { validPhaseContextModel } from "./helpers/context-model.js";
 import { blueprintDiscussPrepare, blueprintDiscussRecord, blueprintDiscussRead, blueprintDiscussFinalize, discussFinalizeDependencies, discussToolDefinitions } from "../src/mcp/tools/discuss.js";
@@ -34,15 +34,33 @@ for (const [name, model] of Object.entries({
   none: { ...sparse, openQuestions: ["Nothing open"], deferredIdeas: ["None."], dependencies: { externalConstraints: null } },
   ordinary: { ...sparse, canonicalReferences: [{ source: "User interview" }], implementationDecisions: [{ decision: "UTF-8" }] },
   batch: { ...sparse, discoveryGrounding: { workflowPosture: "batch-mode" } },
+  emptyOptional: { ...sparse, discoveryGrounding: {}, implementationDecisions: [], specificIdeas: [], existingCodeInsights: [], dependencies: {}, openQuestions: [], deferredIdeas: [], canonicalReferences: [] },
+  ownerlessQuestion: { ...sparse, openQuestions: ["Should the filename include the export date?"] },
+  substantiveNone: { ...sparse, openQuestions: ["None of the clients have confirmed their filename preference."], deferredIdeas: ["Nothing should be compressed until performance measurements justify it."] },
 })) {
   test(`first submission accepts ${name} with prepared defaults`, async () => {
     const cwd = await fixture();
     try {
       const prepared = await blueprintDiscussPrepare({ cwd, phase: 3 });
       assert.deepEqual(prepared.authoring.missingEssentialFields, ["phaseBoundary.inScope"]);
-      const result = await blueprintDiscussFinalize({ cwd, phase: 3, expectedRevision: prepared.revision!, requestId: "save", model });
+      const notes = await blueprintDiscussRecord({ cwd, phase: 3, expectedRevision: prepared.revision!, requestId: "notes", records: [
+        { id: "encoding", type: "decision", value: "Preserve UTF-8 in every export" },
+        { id: "later", type: "deferred", value: "Consider XLSX in a later phase" },
+      ] });
+      const result = await blueprintDiscussFinalize({ cwd, phase: 3, expectedRevision: notes.revision!, requestId: "save", model });
       assert.equal(result.status, "finalized", JSON.stringify(result));
       assert.equal(result.saved, true);
+      const context = await readFile(path.join(cwd, dir, "03-CONTEXT.md"), "utf8");
+      assert.equal(validatePhaseArtifactContent(context, "context").valid, true);
+      assert.match(context, /\[encoding\] Preserve UTF-8 in every export/);
+      assert.match(context, /\[later\] Consider XLSX in a later phase/);
+      assert.equal(context.match(/^## /gm)?.length, 9);
+      if (name === "multiline") assert.match(context, /CSV<br>UTF-8/);
+      if (name === "ownerlessQuestion") assert.match(context, /Should the filename include the export date\?/);
+      if (name === "substantiveNone") {
+        assert.match(context, /None of the clients have confirmed/);
+        assert.match(context, /Nothing should be compressed until/);
+      }
       const saved = await readFile(path.join(cwd, sessionFile), "utf8");
       assert.equal(saved.includes('"model"'), false);
       assert.equal(saved.includes('"content"'), false);
@@ -73,6 +91,10 @@ test("notes survive restart, CAS, replay, and model omission of every note categ
     const decisions = content.split("## Implementation Decisions")[1].split("## ")[0];
     assert.ok(!decisions.includes("open-decision"));
     assert.ok(!decisions.includes("deferred-decision"));
+    const log = await readFile(path.join(cwd, dir, "03-DISCUSSION-LOG.md"), "utf8");
+    const followUps = log.split("## Follow-Ups")[1];
+    for (const id of ["pending", "later", "open-decision", "deferred-decision"]) assert.ok(followUps.includes(`[${id}]`), id);
+    for (const id of ["accepted", "resolved"]) assert.ok(!followUps.includes(`[${id}]`), id);
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
 test("invalid submissions have addressed diagnostics and persist no document marker", async () => {
@@ -111,7 +133,7 @@ test("v1 read projects sanitized notes without rewrite; next mutation strips all
     assert.ok(migrated.includes("Use CSV"));
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
-for (const stage of ["context", "log", "state", "refresh"] as const) {
+for (const stage of ["context", "log", "state", "refresh", "cleanup"] as const) {
   test(`metadata journal recovers failure at ${stage}`, async () => {
     const cwd = await fixture();
     const original = { ...discussFinalizeDependencies };
@@ -121,6 +143,7 @@ for (const stage of ["context", "log", "state", "refresh"] as const) {
       if (stage === "context" || stage === "log") discussFinalizeDependencies.artifactWrite = async (input) => { if (input.artifact === (stage === "log" ? "discussion-log" : "context")) throw new Error("Simulated failure"); return original.artifactWrite(input); };
       if (stage === "state") discussFinalizeDependencies.stateUpdate = async () => { throw new Error("Simulated failure"); };
       if (stage === "refresh") discussFinalizeDependencies.stateLoad = async () => { throw new Error("Simulated failure"); };
+      if (stage === "cleanup") discussFinalizeDependencies.checkpointDelete = async () => { throw new Error("Simulated failure"); };
       const partial = await blueprintDiscussFinalize({ ...args, model: sparse });
       assert.equal(partial.status, "partial", JSON.stringify(partial));
       assert.equal(partial.saved, stage !== "context");
@@ -292,5 +315,45 @@ test("concurrent notes updates enforce one revision winner", async () => {
     const results = await Promise.all(["first", "second"].map((id) => blueprintDiscussRecord({ cwd, phase: 3, expectedRevision: prepared.revision!, requestId: id, records: [{ id, type: "decision", value: id }] })));
     assert.deepEqual(results.map((item) => item.status).sort(), ["recorded", "stale"]);
     assert.equal((await blueprintDiscussRead({ cwd, phase: 3 })).session!.records.length, 1);
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
+
+
+test("multiline note fields preserve prose without injecting canonical log structure", async () => {
+  const cwd = await fixture();
+  try {
+    const prepared = await blueprintDiscussPrepare({ cwd, phase: 3 });
+    const record = {
+      id: "multiline", type: "open-question" as const,
+      value: "Choose format\n## Notes\n| injected | row |",
+      rationale: "Compare exports\r## Summary",
+      evidence: ["Interview\r\n## Follow-Ups", "Fixture | CSV"],
+      rejectedOptions: ["Binary\n- unrelated item"],
+      downstreamOwner: "Research\n## New heading", status: "open" as const,
+    };
+    const recorded = await blueprintDiscussRecord({ cwd, phase: 3, expectedRevision: prepared.revision!, requestId: "notes", records: [record] });
+    const result = await blueprintDiscussFinalize({ cwd, phase: 3, expectedRevision: recorded.revision!, requestId: "save", model: sparse, includeLog: true });
+    assert.equal(result.status, "finalized", JSON.stringify(result));
+    const log = await readFile(path.join(cwd, dir, "03-DISCUSSION-LOG.md"), "utf8");
+    assert.equal(validatePhaseArtifactContent(log, "discussion-log").valid, true);
+    assert.deepEqual(log.match(/^## .+$/gm), ["## Summary", "## Notes", "## Follow-Ups"]);
+    assert.equal(log.match(/^- /gm)?.length, 2);
+    assert.ok(!/^\|/m.test(log));
+    for (const prose of ["Choose format", "Compare exports", "Interview", "Fixture", "Binary", "Research"]) assert.ok(log.includes(prose), prose);
+    assert.ok(log.includes("\\| injected \\| row \\|"));
+    assert.match(log, /Status: open/);
+    const recovered = await blueprintDiscussRead({ cwd, phase: 3 });
+    assert.deepEqual(recovered.session!.records[0], record);
+    assert.deepEqual(recovered.session!.history.find((event) => event.kind === "record")!.records, [record]);
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
+
+test("finalize without a session routes to preparation before authoring", async () => {
+  const cwd = await fixture();
+  try {
+    const result = await blueprintDiscussFinalize({ cwd, phase: 3, expectedRevision: 0, requestId: "save", model: sparse });
+    assert.equal(result.status, "not_found");
+    assert.equal(result.saved, false);
+    assert.equal(result.nextAction, "Call blueprint_discuss_prepare.");
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });

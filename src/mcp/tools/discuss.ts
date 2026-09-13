@@ -655,6 +655,11 @@ export async function blueprintDiscussRead(args: Lookup) {
     };
   });
 }
+function logInline(value: string): string {
+  // Notes remain exact in session history; their log projection cannot create
+  // headings, list items, or table rows outside the owning record.
+  return value.replace(/\r\n?|\n/g, " ").replace(/\|/g, "\\|").trim();
+}
 function renderLog(session: DiscussSession, prefix: string) {
   return `# Phase ${prefix} Discussion Log\n\n## Summary\n\n${session.records.length} durable records; revision ${session.revision}.\n\n## Notes\n\n${
     session.history
@@ -662,17 +667,17 @@ function renderLog(session: DiscussSession, prefix: string) {
       .flatMap((e) =>
         e.records!.map(
           (r) =>
-            `- Revision ${e.revision} [${r.id}] (${r.type}): ${r.value}\n  Rationale: ${r.rationale}\n  Evidence: ${r.evidence.join("; ") || "Not supplied"}${r.rejectedOptions?.length ? `\n  Rejected options: ${r.rejectedOptions.join("; ")}` : ""}`,
+            `- Revision ${e.revision} [${r.id}] (${r.type}): ${logInline(r.value)}\n  Status: ${r.status ?? (r.type === "decision" ? "accepted" : r.type === "deferred" ? "deferred" : "open")}\n  Rationale: ${logInline(r.rationale)}\n  Evidence: ${r.evidence.map(logInline).join("; ") || "Not supplied"}${r.rejectedOptions?.length ? `\n  Rejected options: ${r.rejectedOptions.map(logInline).join("; ")}` : ""}${r.downstreamOwner ? `\n  Owner: ${logInline(r.downstreamOwner)}` : ""}`,
         ),
       )
       .join("\n") ||
     "No incremental answers recorded."
   }\n\n## Follow-Ups\n\n${
     session.records
-      .filter((r) => r.type !== "decision" && r.status !== "resolved")
+      .filter((r) => r.status !== "resolved" && (r.type !== "decision" || r.status === "open" || r.status === "deferred"))
       .map(
         (r) =>
-          `- [${r.id}] ${r.value}${r.downstreamOwner ? ` — ${r.downstreamOwner}` : ""}`,
+          `- [${r.id}] ${logInline(r.value)}${r.downstreamOwner ? ` — ${logInline(r.downstreamOwner)}` : ""}`,
       )
       .join("\n") || "- none"
   }\n`;
@@ -695,7 +700,7 @@ export async function blueprintDiscussFinalize(
     if (!session)
       return {
         status: "not_found", saved: false, outcome: "rejected-not-saved",
-        nextAction: "Call blueprint_discuss_record.",
+        nextAction: "Call blueprint_discuss_prepare.",
       };
     const { model: inputModel, ...identity } = args;
     const requestHash = digest(stable(identity));

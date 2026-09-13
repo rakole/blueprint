@@ -48,7 +48,15 @@ function failureMetadata(value: Record<string, unknown>, depth = 0): Record<stri
   const statuses = new Set(["invalid", "blocked", "rejected", "stale", "partial", "failed", "error", "reconciliation_required", "not_found", "project_missing", "needs_revision", "refused", "outcome-unknown"]);
   if (typeof value.status === "string" && statuses.has(value.status)) metadata.status = value.status;
   if (["rejected-not-saved", "saved-but-state-incomplete", "complete"].includes(value.outcome as string)) metadata.outcome = value.outcome;
-  const knownCodes = new Set(["schema.missing", "schema.type", "context.missing_essential_intent", "markdown.placeholder_text", "markdown.missing_h1"]);
+  const knownCodes = new Set([
+    "schema.missing", "schema.type", "schema.required", "schema.additionalProperties",
+    "schema.pattern", "schema.minLength", "schema.maxLength", "schema.minItems",
+    "schema.maxItems", "schema.enum", "schema.const", "schema.anyOf", "schema.oneOf",
+    "context.missing_essential_intent", "context.missing_required_section",
+    "markdown.placeholder_text", "markdown.missing_h1", "markdown.no_populated_contract_sections",
+    "markdown.invalid_render", "markdown.empty",
+    "write.exactly_one_input", "write.unsupported_model", "write.model_only", "write.invalid",
+  ]);
   if (Array.isArray(value.diagnostics)) metadata.diagnosticCodes = [...new Set(value.diagnostics.slice(0, MAX_ARRAY_ITEMS).flatMap((item) => {
     const code = item && typeof item === "object" ? (item as Record<string, unknown>).code : undefined;
     return typeof code === "string" && knownCodes.has(code) ? [code] : [];

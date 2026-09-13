@@ -685,3 +685,21 @@ test("legacy document fields rejected by actual discuss record never enter the f
   assert.equal(log.includes(marker), false);
   assert.equal(JSON.parse(log.trim()).request.candidateSupplied, true);
 });
+
+
+test("content failure logs retain fixed validator codes and discard unknown code prose", async (t) => {
+  const cwd = await createPhaseRepo();
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const marker = "UNIQUE_DIAGNOSTIC_PROSE_07a8";
+  const codes = ["schema.required", "schema.additionalProperties", "schema.pattern", "schema.minLength", "schema.minItems", "write.model_only"];
+  await executeToolHandlerWithFailureLogging({
+    name: "blueprint_phase_artifact_write", description: "fixture",
+    handler: async () => ({ status: "invalid", validation: { valid: false, diagnostics: [
+      ...codes.map((code) => ({ code, path: marker, message: marker })),
+      { code: marker, message: marker },
+    ] } }),
+  }, { cwd, artifact: "context", model: { [marker]: marker } });
+  const log = await readFile(path.join(cwd, MCP_WRITE_FAILURE_LOG_PATH), "utf8");
+  assert.equal(log.includes(marker), false);
+  assert.deepEqual(JSON.parse(log.trim()).result.validation.diagnosticCodes, codes);
+});
