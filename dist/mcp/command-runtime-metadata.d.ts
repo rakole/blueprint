@@ -659,7 +659,7 @@ export declare const RESEARCH_PHASE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Low: writes research artifacts only.";
     };
-    readonly requiredTools: readonly ["blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_record", "blueprint_research_read"];
+    readonly requiredTools: readonly ["blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_read"];
     readonly optionalAgents: readonly ["blueprint-researcher"];
     readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"];
     readonly spec: {
@@ -667,19 +667,19 @@ export declare const RESEARCH_PHASE_RUNTIME_METADATA: {
         readonly title: "`/blu-research-phase`";
         readonly executionProfile: "long-running-mutation";
         readonly rootRoutable: true;
-        readonly purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then preserves candidates before assessment and publishes planning-ready research through MCP-owned state paths.";
-        readonly reads: readonly ["blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, candidate schema, session revision and evidence fingerprints; blueprint_research_read is view/recovery only."];
-        readonly writes: readonly ["phase XX-RESEARCH.md", "phase-scoped research session, candidate revisions and finalization journal", ".blueprint/STATE.md"];
+        readonly purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then publishes canonical research through MCP with first-attempt authoring guidance and separate planning readiness.";
+        readonly reads: readonly ["blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, model schema, example, grounding, rejection rules, revision and evidence fingerprints; blueprint_research_read returns canonical research and metadata only."];
+        readonly writes: readonly ["phase XX-RESEARCH.md", "phase-scoped research metadata, provenance and metadata-only publication journal", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
         readonly waveTitle: "Core Lifecycle";
         readonly command: "research-phase";
         readonly primarySkill: "blueprint-phase-discovery";
-        readonly exactMcpDestination: readonly ["blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_record", "blueprint_research_read"];
+        readonly exactMcpDestination: readonly ["blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_read"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Use research-phase-runtime-contract.md: prepare → investigate → submit; record/read are incremental or recovery paths. Prepare owns evidence/config/freshness/schema. Submit saves candidates before assessment and journals publication/state/routing. Preserve context/spec ownership, source policy, freshness and retry guards. Returned status/path/nextAction are authoritative.";
+        readonly contractNotes: "Use research-phase-runtime-contract.md: prepare → investigate → submit. Use schema/example/grounding/validationRules for one generation. Rejected models are not saved. Read canonical research/metadata; journals are metadata-only. Preserve source, intent, freshness, overwrite and retry guards.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -2523,7 +2523,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Low: writes research artifacts only.";
         };
-        readonly requiredTools: readonly ["blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_record", "blueprint_research_read"];
+        readonly requiredTools: readonly ["blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_read"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
         readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"];
         readonly spec: {
@@ -2531,19 +2531,19 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly title: "`/blu-research-phase`";
             readonly executionProfile: "long-running-mutation";
             readonly rootRoutable: true;
-            readonly purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then preserves candidates before assessment and publishes planning-ready research through MCP-owned state paths.";
-            readonly reads: readonly ["blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, candidate schema, session revision and evidence fingerprints; blueprint_research_read is view/recovery only."];
-            readonly writes: readonly ["phase XX-RESEARCH.md", "phase-scoped research session, candidate revisions and finalization journal", ".blueprint/STATE.md"];
+            readonly purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then publishes canonical research through MCP with first-attempt authoring guidance and separate planning readiness.";
+            readonly reads: readonly ["blueprint_research_prepare selects the phase and supplies usable context, optional spec evidence, requirements, effective config, existing research freshness, model schema, example, grounding, rejection rules, revision and evidence fingerprints; blueprint_research_read returns canonical research and metadata only."];
+            readonly writes: readonly ["phase XX-RESEARCH.md", "phase-scoped research metadata, provenance and metadata-only publication journal", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;
             readonly waveTitle: "Core Lifecycle";
             readonly command: "research-phase";
             readonly primarySkill: "blueprint-phase-discovery";
-            readonly exactMcpDestination: readonly ["blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_record", "blueprint_research_read"];
+            readonly exactMcpDestination: readonly ["blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_read"];
             readonly optionalAgents: readonly ["blueprint-researcher"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Use research-phase-runtime-contract.md: prepare → investigate → submit; record/read are incremental or recovery paths. Prepare owns evidence/config/freshness/schema. Submit saves candidates before assessment and journals publication/state/routing. Preserve context/spec ownership, source policy, freshness and retry guards. Returned status/path/nextAction are authoritative.";
+            readonly contractNotes: "Use research-phase-runtime-contract.md: prepare → investigate → submit. Use schema/example/grounding/validationRules for one generation. Rejected models are not saved. Read canonical research/metadata; journals are metadata-only. Preserve source, intent, freshness, overwrite and retry guards.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

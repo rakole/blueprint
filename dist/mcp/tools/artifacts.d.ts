@@ -729,6 +729,8 @@ type ResearchHeadingCanonicalizationResult = {
 };
 export declare function canonicalizeResearchRequiredHeadings(content: string): ResearchHeadingCanonicalizationResult;
 export declare function canonicalizeResearchHeadingLines(content: string): string;
+/** Publication may succeed with explicit blockers; planning must still honor them without provenance. */
+export declare function researchHasPlanningBlockers(content: string): boolean;
 export declare function validateResearchArtifactContent(content: string): {
     valid: boolean;
     issues: string[];

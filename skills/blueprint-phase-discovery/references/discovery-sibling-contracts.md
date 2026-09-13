@@ -74,7 +74,7 @@ does not grant broader tool scope to a command.
 
 Research does not load this sibling contract. Its own compact runtime reference
 allows `blueprint_research_prepare`, `blueprint_research_submit`,
-`blueprint_research_record` and `blueprint_research_read` only.
+and `blueprint_research_read` only.
 
 ### `/blu-ui-phase`
 
@@ -132,9 +132,10 @@ allows `blueprint_research_prepare`, `blueprint_research_submit`,
 
 ### Research Ownership
 
-Research uses its own prepare/investigate/submit lifecycle and candidate schema;
-MCP preserves drafts before assessment and renders the canonical research artifact.
-Sibling commands read published research but do not own research revisions.
+Research uses its own prepare/investigate/submit lifecycle. Prepare supplies the
+model schema, example, grounding and rejection rules for first-attempt authoring.
+MCP renders and publishes canonical research; rejected models are not saved.
+Sibling commands read published research but do not own its publication.
 
 ### `spec-phase`
 
@@ -166,8 +167,8 @@ Keep `/blu-spec-phase` compact in this shared skill:
 ### `research-phase`
 
 Research loads only `research-phase-runtime-contract.md`. Its prepare packet owns
-context/spec/config/evidence reads; submit owns draft preservation, publication,
-state sync and implemented routing. Record/read are incremental or recovery paths.
+context/spec/config/evidence reads and authoring guidance; submit owns canonical
+publication, state sync and implemented routing. Read returns research and metadata.
 Missing spec is nonblocking, context and spec remain read-only, and source policy,
 explicit replacement decisions and freshness checks still apply. This sibling
 contract does not add primitive calls or checkpoint duties to research.
@@ -221,7 +222,7 @@ Before claiming completion, verify:
 - Persistence, when allowed, happened only through the owning MCP tools; returned `status`, `written`, `created`, `updated`, `path`, `validation`, `warnings`, and `reason` fields were treated as authoritative. For `/blu-list-phase-assumptions`, verify no write-capable MCP tool, task tracker, or hidden planning helper was called.
 - Required gates were satisfied before action: artifact overwrite/reuse/update, discuss checkpoint resume-versus-discard, research external-source policy, UI contract-versus-skip, `workflow.ui_safety_gate` rationale, checker-requested revisions, and checkpoint owner/mode cleanup guards.
 - Validation, checker, model-check, or MCP rejection results were repaired through the same normalized draft and retried when the active contract allows it; otherwise the run stopped with a checkpoint or waiting state and an honest blocker. Invalid, partial, scaffold-only, skipped, or silently reused invalid work was not described as successful completion.
-- For `/blu-research-phase`, follow its own lifecycle reference; saved candidates and planning-ready publication are distinct outcomes, and stale or unknown research is never silently reused.
+- For `/blu-research-phase`, follow its own lifecycle reference; publication and planning readiness are distinct outcomes, rejected models are not saved, and stale or unknown research is never silently reused.
 - For `/blu-research-phase`, progress stayed concise, any
   `research.external_sources=ask` branch recorded `accept`, `decline`, or
   `cancel`, parent-only fallback was explicit when relevant, and the final

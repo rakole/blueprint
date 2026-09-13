@@ -2088,16 +2088,13 @@ ${seed.assumptions.map((value) => `- ${value}`).join("\n") || "- none"}
 `;
 }
 
-const REQUIRED_RESEARCH_SECTIONS = readArtifactContract(
-  "phase.research"
-).requiredHeadings;
-const RESEARCH_CONFIDENCE_VALUES = ["LOW", "MEDIUM", "HIGH"] as const;
-const RESEARCH_SECTION_VALIDATIONS = readArtifactContract(
-  "phase.research"
-).sectionValidations;
-const RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS = readArtifactContract(
-  "phase.research"
-).placeholderSignals;
+const RESEARCH_CONTRACT = readArtifactContract("phase.research");
+const REQUIRED_RESEARCH_SECTIONS = RESEARCH_CONTRACT.requiredHeadings;
+const RESEARCH_CANONICAL_HEADINGS = [
+  ...REQUIRED_RESEARCH_SECTIONS, ...(RESEARCH_CONTRACT.modelContract?.renderedHeadings ?? []),
+  "Confidence Breakdown", "Claim Support Ledger"
+];
+const RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS = RESEARCH_CONTRACT.placeholderSignals;
 const BOOTSTRAP_PROJECT_CONTRACT = readArtifactContract("bootstrap.project");
 const PLAN_CONTRACT = readArtifactContract("phase.plan");
 const REQUIRED_PLAN_SECTIONS = PLAN_CONTRACT.requiredHeadings;
@@ -3996,6 +3993,12 @@ function splitResearchReferenceIds(value: string): string[] {
   return uniqueStrings(value.match(/\b(?:SRC|EVID|CLM|REC)-\d{3}\b/g) ?? []);
 }
 
+function splitResearchTypedReferenceIds(value: string): string[] {
+  const normalized = value.replace(/[`"'\[\]]/g, "").trim();
+  if (!normalized || /^(?:none|null|n\/?a)$/i.test(normalized)) return [];
+  return uniqueStrings(normalized.split(/[,;\s]+/).filter(Boolean));
+}
+
 function isBackgroundSourceUse(value: string): boolean {
   return /\b(?:background|do not use as support|out_of_scope)\b/i.test(value);
 }
@@ -4051,7 +4054,11 @@ function sourceRegisterRowReferenceText(row: ResearchMarkdownRow): string {
 }
 
 function sourceRegisterRowHasConcreteEvidence(row: ResearchMarkdownRow): boolean {
-  return hasConcreteStructuredSourceReference(sourceRegisterRowReferenceText(row));
+  const reference = sourceRegisterRowReferenceText(row).trim();
+  // Supplied references can be named interview notes or quoted material without a public URL.
+  const suppliedLabel = /^supplied$/i.test(row.lane?.trim() ?? "") && reference.length > 0 &&
+    !/^(?:none|null|undefined|n\/?a|unknown|unchecked|tbd|todo|<[^>]+>)$/i.test(reference);
+  return suppliedLabel || hasConcreteStructuredSourceReference(reference);
 }
 
 function evidenceRowId(row: ResearchMarkdownRow): string {
@@ -4418,73 +4425,6 @@ function normalizeResearchHeadingKey(value: string): string {
     .toLowerCase();
 }
 
-function normalizeResearchHeadingSimilarityText(value: string): string {
-  const normalized = stripResearchHeadingAdornment(value)
-    .replace(/[‘’‛`]/gu, "'")
-    .replace(/[“”]/gu, "\"")
-    .replace(/[‐‑–—−]/gu, "-")
-    .replace(/\b(?:don't|dont)\b/giu, "do not")
-    .replace(/\s*&\s*/gu, " and ")
-    .replace(/[^A-Za-z0-9]+/gu, " ")
-    .replace(/\s+/gu, " ")
-    .trim()
-    .toLowerCase();
-
-  return normalized
-    .split(" ")
-    .filter((token) => token.length > 0)
-    .map((token) => (token.length > 3 && token.endsWith("s") ? token.slice(0, -1) : token))
-    .join(" ");
-}
-
-function researchHeadingSimilarityScore(left: string, right: string): number {
-  if (left.length === 0 || right.length === 0) {
-    return 0;
-  }
-
-  if (left === right) {
-    return 1;
-  }
-
-  if (left.includes(right) || right.includes(left)) {
-    return 0.85;
-  }
-
-  const leftTokens = new Set(left.split(" ").filter((token) => token.length > 0));
-  const rightTokens = new Set(right.split(" ").filter((token) => token.length > 0));
-  const overlap = [...leftTokens].filter((token) => rightTokens.has(token)).length;
-
-  if (overlap === 0) {
-    return 0;
-  }
-
-  return overlap / Math.max(leftTokens.size, rightTokens.size);
-}
-
-function findCloseResearchHeadingVariant(
-  canonicalHeading: string,
-  candidateHeadings: readonly string[]
-): string | null {
-  const normalizedCanonical = normalizeResearchHeadingSimilarityText(canonicalHeading);
-  let bestMatch: { heading: string; score: number } | null = null;
-
-  for (const candidateHeading of candidateHeadings) {
-    const score = researchHeadingSimilarityScore(
-      normalizedCanonical,
-      normalizeResearchHeadingSimilarityText(candidateHeading)
-    );
-
-    if (!bestMatch || score > bestMatch.score) {
-      bestMatch = {
-        heading: candidateHeading,
-        score
-      };
-    }
-  }
-
-  return bestMatch && bestMatch.score >= 0.6 ? bestMatch.heading : null;
-}
-
 type ResearchHeadingCanonicalizationResult = {
   content: string;
   canonicalizedHeadings: Array<{
@@ -4498,8 +4438,13 @@ export function canonicalizeResearchRequiredHeadings(
   content: string
 ): ResearchHeadingCanonicalizationResult {
   const canonicalHeadingByKey = new Map(
-    REQUIRED_RESEARCH_SECTIONS.map((heading) => [normalizeResearchHeadingKey(heading), heading] as const)
+    RESEARCH_CANONICAL_HEADINGS.map((heading) => [normalizeResearchHeadingKey(heading), heading] as const)
   );
+  for (const [alias, canonical] of Object.entries({
+    Overview: "Summary", "Executive Summary": "Summary", "Research Summary": "Summary",
+    "Recommended Approach": "Recommendations", "Implementation Guidance": "Recommendations",
+    References: "Sources", Evidence: "Sources"
+  })) canonicalHeadingByKey.set(normalizeResearchHeadingKey(alias), canonical);
   const canonicalizedHeadings: Array<{ from: string; to: string }> = [];
   const unmatchedTopLevelHeadings: string[] = [];
   const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line, heading }) => {
@@ -4531,21 +4476,7 @@ export function canonicalizeResearchRequiredHeadings(
 }
 
 export function canonicalizeResearchHeadingLines(content: string): string {
-  const normalized = canonicalizeResearchRequiredHeadings(content).content;
-  const lines = scanResearchMarkdown(normalized);
-  for (let index = 0; index < lines.length; index += 1) {
-    const heading = lines[index].heading;
-    if (heading?.level !== 2) continue;
-    const sentinel = RESEARCH_SECTION_VALIDATIONS?.[heading.title]?.exactEmptySentinel;
-    if (!sentinel) continue;
-    let end = index + 1;
-    while (end < lines.length && (!lines[end].heading || lines[end].heading!.level > 2)) end += 1;
-    const section = lines.slice(index + 1, end).map((line) => line.text).join("\n");
-    if (!matchesFuzzyEmptySentinel(section, sentinel)) continue;
-    const contentLine = lines.slice(index + 1, end).find((line) => line.text.trim().length > 0);
-    if (contentLine) contentLine.text = `${sentinel}${contentLine.text.endsWith("\r") ? "\r" : ""}`;
-  }
-  return lines.map((line) => line.text).join("\n");
+  return canonicalizeResearchRequiredHeadings(content).content;
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -4599,6 +4530,22 @@ function matchedDiscussionScaffoldRows(content: string, signals: readonly string
   return signals.filter((signal) => signal.length > 0 && rows.includes(signal));
 }
 
+function hasExplicitBlockedRecommendationProse(section: string): boolean {
+  return /(?:^|\n)\s*(?:[-+]\s*)?blocked\b/i.test(section.replace(/[*_`]/g, ""));
+}
+
+/** Publication may succeed with explicit blockers; planning must still honor them without provenance. */
+export function researchHasPlanningBlockers(content: string): boolean {
+  const visible = stripResearchFencedCodeBlocks(canonicalizeResearchHeadingLines(content));
+  const recommendations = extractResearchMarkdownSection(visible, "Recommendations");
+  const questions = extractResearchMarkdownSection(visible, "Open Questions");
+  const plain = (value: string): string => value.replace(/[*_`]/g, "");
+  return collectResearchRecommendationRows(visible).some((row) => /^blocked$/i.test(plain(row.status ?? "").trim()))
+    || hasExplicitBlockedRecommendationProse(recommendations)
+    || /(?:^|\n)\s*(?:[-+]\s*)?blocking\s*:/i.test(plain(questions))
+    || parseResearchMarkdownTable(questions).some((row) => /^(?:true|yes|blocking)$/i.test(plain(row.blocking ?? row.status ?? "").trim()));
+}
+
 export function validateResearchArtifactContent(content: string): {
   valid: boolean;
   issues: string[];
@@ -4608,240 +4555,81 @@ export function validateResearchArtifactContent(content: string): {
   const issues: string[] = [];
   const warnings: string[] = [];
   const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
-  const canonicalizedHeadings = canonicalizeResearchRequiredHeadings(content);
   const normalizedContent = canonicalizeResearchHeadingLines(content);
-  const contentWithoutFencedCodeBlocks = stripResearchFencedCodeBlocks(normalizedContent);
-  const pushResearchIssue = (
-    message: string,
-    diagnostic: PhaseArtifactValidationDiagnostic
-  ): void => {
+  const visible = stripResearchFencedCodeBlocks(normalizedContent);
+  const issue = (heading: string | undefined, code: string, message: string, repair: string): void => {
     issues.push(message);
-    diagnostics.push(diagnostic);
+    diagnostics.push(phaseArtifactDiagnostic({ artifact: "research", path: heading ? `content.sections.${heading}` : "content", heading, code, message, repair }));
   };
 
-  if (!/^# .+ - Research[ \t]*\r?(?:\n|$)/.test(contentWithoutFencedCodeBlocks.trimStart())) {
-    pushResearchIssue(
-      "Research artifact must start with a '# ... - Research' heading.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content",
-        code: "research.title_missing",
-        message: "Research artifact must start with a '# ... - Research' heading.",
-        repair:
-          "Start the artifact with the exact '# ... - Research' title, then retry blueprint_phase_artifact_write."
-      })
-    );
-  }
+  if (!/^#\s+\S[^\n]*\r?(?:\n|$)/.test(visible.trimStart())) issue(undefined, "research.title_missing",
+    "Research needs a document title outside code examples.", "Start the research document with a descriptive H1 title.");
+  if (visible.includes(SCAFFOLD_GENERATED_MARKER) || matchedDiscussionScaffoldRows(visible, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS).length > 0) issue(undefined, "research.placeholder_present",
+    "Research still contains unfilled scaffold placeholders.", "Replace unfilled placeholders with the actual findings or omit the optional section.");
 
-  if (
-    matchedScaffoldPlaceholderSignals(contentWithoutFencedCodeBlocks, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, {
-      singleSignalPatterns: [/^Phase XX:$/i]
-    }).length > 0
-  ) {
-    pushResearchIssue(
-      "Research artifact still contains scaffold placeholder text and must be replaced with real research content.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content",
-        code: "research.placeholder_present",
-        message:
-          "Research artifact still contains scaffold placeholder text and must be replaced with real research content.",
-        repair:
-          "Replace scaffold placeholders with phase-specific research content before retrying blueprint_phase_artifact_write."
-      })
-    );
-  }
-
-  const confidenceMatch = contentWithoutFencedCodeBlocks.match(
-    /^\*\*Confidence:\*\*\s*(LOW|MEDIUM|HIGH)\s*$/m
-  );
-
-  if (!confidenceMatch) {
-    pushResearchIssue(
-      `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`,
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content",
-        code: "research.confidence_missing",
-        message: `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`,
-        allowedValues: [...RESEARCH_CONFIDENCE_VALUES],
-        repair:
-          "Set **Confidence:** to LOW, MEDIUM, or HIGH before retrying blueprint_phase_artifact_write."
-      })
-    );
-  }
-
+  const headings = new Set(scanResearchMarkdown(normalizedContent).filter((line) => line.heading?.level === 2).map((line) => line.heading!.title));
   for (const heading of REQUIRED_RESEARCH_SECTIONS) {
-    const hasHeading = new RegExp(`(?:^|\\n)## ${escapeRegex(heading)}\\s*$`, "m").test(
-      contentWithoutFencedCodeBlocks
-    );
-    const exactEmptySentinel = RESEARCH_SECTION_VALIDATIONS?.[heading]?.exactEmptySentinel;
-
-    if (!hasHeading) {
-      const closeVariant = findCloseResearchHeadingVariant(
-        heading,
-        canonicalizedHeadings.unmatchedTopLevelHeadings
-      );
-      const message = closeVariant
-        ? `Research artifact is missing required section: ${heading}. Found similar heading "${closeVariant}", but only format-level variants of the canonical heading are auto-repaired.`
-        : `Research artifact is missing required section: ${heading}.`;
-
-      pushResearchIssue(
-        message,
-        phaseArtifactDiagnostic({
-          artifact: "research",
-          path: `content.sections.${heading}`,
-          code: closeVariant ? "research.heading_shape_invalid" : "research.heading_missing",
-          message,
-          heading,
-          missing: [heading],
-          allowedValues: closeVariant ? [...REQUIRED_RESEARCH_SECTIONS] : undefined,
-          repair: closeVariant
-            ? `Replace "${closeVariant}" with the exact canonical heading \`## ${heading}\`, populate that section with substantive research content, then retry blueprint_phase_artifact_write.`
-            : `Add the exact canonical heading \`## ${heading}\`, populate that section with substantive research content, then retry blueprint_phase_artifact_write.`
-        })
-      );
+    const exists = headings.has(heading);
+    if (!exists) {
+      issue(heading, "research.heading_missing", `Research needs ${heading} content.`, `Include a ${heading} section with actual research; prose, bullets and tables are all accepted.`);
       continue;
     }
-
-    const section = extractResearchMarkdownSection(normalizedContent, heading);
-
-    if (section.trim().length === 0) {
-      const message = `Research artifact section ${heading} must not be empty.`;
-
-      pushResearchIssue(
-        message,
-        phaseArtifactDiagnostic({
-          artifact: "research",
-          path: `content.sections.${heading}`,
-          code: "research.section_empty",
-          message,
-          heading,
-          repair: `Populate the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
-        })
-      );
-      continue;
-    }
-
-    if (matchesExactEmptySentinel(section, exactEmptySentinel)) {
-      continue;
-    }
-
-    if (matchesFuzzyEmptySentinel(section, exactEmptySentinel)) {
-      const fuzzySentinel = exactEmptySentinel ?? "- none";
-      const message = `Research artifact section ${heading} must use exactly \`${fuzzySentinel}\` for the empty state instead of a prose variant.`;
-
-      pushResearchIssue(
-        message,
-        phaseArtifactDiagnostic({
-          artifact: "research",
-          path: `content.sections.${heading}`,
-          code: "research.inexact_empty_sentinel",
-          message,
-          heading,
-          repair: exactEmptySentinelRepairInstruction(heading, fuzzySentinel)
-        })
-      );
-      continue;
-    }
-
-    if (!hasSubstantiveResearchSection(section)) {
-      const message = exactEmptySentinel
-        ? `Research artifact section ${heading} must contain substantive content after placeholders are removed or use exactly \`${exactEmptySentinel}\`.`
-        : `Research artifact section ${heading} must contain substantive content after placeholders are removed.`;
-
-      pushResearchIssue(
-        message,
-        phaseArtifactDiagnostic({
-          artifact: "research",
-          path: `content.sections.${heading}`,
-          code: "research.section_non_substantive",
-          message,
-          heading,
-          repair: exactEmptySentinel
-            ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel)
-            : `Rewrite the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
-        })
-      );
-    }
+    const section = extractResearchMarkdownSection(visible, heading);
+    if (!hasSubstantiveResearchSection(section)) issue(heading, "research.section_non_substantive",
+      `Research section ${heading} needs actual findings rather than an empty scaffold or code-only example.`,
+      `Populate ${heading} with the actual research content.`);
   }
 
-  const phaseRequirements = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Phase Requirements");
-
-  if (!hasRequirementTableRows(phaseRequirements)) {
-    pushResearchIssue(
-      "Research artifact section Phase Requirements must include at least one populated requirement row.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content.sections.Phase Requirements",
-        code: "research.phase_requirements_rows_missing",
-        message:
-          "Research artifact section Phase Requirements must include at least one populated requirement row.",
-        heading: "Phase Requirements",
-        repair:
-          "Add at least one populated requirement row under the exact canonical heading `## Phase Requirements`, then retry blueprint_phase_artifact_write."
-      })
-    );
+  const recommendationRows = collectResearchRecommendationRows(normalizedContent);
+  const onlyBlockedRecommendations = recommendationRows.length > 0 && recommendationRows.every((row) => /^blocked$/i.test(row.status?.trim() ?? ""));
+  const recommendations = extractResearchMarkdownSection(visible, "Recommendations");
+  const explicitlyBlockedProse = hasExplicitBlockedRecommendationProse(recommendations);
+  const sources = extractResearchMarkdownSection(visible, "Sources");
+  const declaredEvidenceGap = /\bno\s+(?:source\s+)?evidence\b|\bsources? (?:are |is )?(?:unavailable|inaccessible)\b/i.test(sources);
+  if (!containsSourceEvidence(sources) && !hasStructuredSourceEvidence(normalizedContent)) {
+    if ((onlyBlockedRecommendations || explicitlyBlockedProse) && declaredEvidenceGap) warnings.push("Research documents an evidence gap; its recommendations remain blocked for planning.");
+    else issue("Sources", "research.sources_missing", "Research needs a concrete source reference or an explicit evidence gap with blocked recommendations.",
+      "Cite an observed repo path, URL, DOI or supplied source; if evidence is unavailable, say so and keep the recommendations blocked.");
   }
 
-  const recommendations = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Recommendations");
-
-  if (
-    !/^- /m.test(recommendations) &&
-    collectResearchRecommendationRows(normalizedContent).length === 0
-  ) {
-    pushResearchIssue(
-      "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content.sections.Recommendations",
-        code: "research.recommendations_missing",
-        message:
-          "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
-        heading: "Recommendations",
-        repair:
-          "Populate the exact canonical heading `## Recommendations` with a recommendation bullet or Recommendation Handoff row, then retry blueprint_phase_artifact_write."
-      })
-    );
+  // Structured evidence rows enable objective consistency checks without imposing a table format.
+  const sourceRows = collectResearchSourceRegisterRows(normalizedContent);
+  const sourceIds = new Set(sourceRows.map(sourceRegisterRowId));
+  const evidenceIds = new Set(collectResearchEvidenceRows(normalizedContent).map(evidenceRowId));
+  const findingRows = [
+    ...collectResearchClaimRows(normalizedContent),
+    ...parseResearchMarkdownTable(extractResearchMarkdownSection(normalizedContent, "Findings")),
+    ...parseResearchMarkdownTable(extractResearchMarkdownSection(normalizedContent, "Confidence Breakdown")),
+  ];
+  const findingIds = new Set(findingRows.map((row) => row.finding_id || row.claim_id).filter(Boolean));
+  for (const row of findingRows) {
+    const status = row.support_status || row.claim_class || "";
+    const refs = splitResearchTypedReferenceIds(row.source_ids || "");
+    if (/^HIGH$/i.test(row.confidence?.trim() ?? "") && /^(?:unsupported|not_enough_evidence|inferred|inferred_from_supported)$/i.test(status.trim())) {
+      issue("Findings", "research.high_confidence_unsupported", "A HIGH-confidence finding is explicitly unsupported or inferred.", "Keep the evidence limitation and lower confidence, or provide direct support.");
+    }
+    for (const id of refs) {
+      if (!sourceIds.has(id)) issue("Sources", "research.source_reference_missing", `Finding references missing source ${id}.`, "Correct the reference or include its observed source.");
+    }
+    for (const id of splitResearchTypedReferenceIds(row.evidence_ids || "")) {
+      if (!sourceIds.has(id) && !evidenceIds.has(id)) issue("Sources", "research.source_reference_missing", `Finding references missing evidence ${id}.`, "Correct the reference or include its observed evidence.");
+    }
   }
-
-  const sources = extractResearchMarkdownSection(contentWithoutFencedCodeBlocks, "Sources");
-
-  if (
-    (!/^- /m.test(sources) || !containsSourceEvidence(sources)) &&
-    !hasStructuredSourceEvidence(normalizedContent)
-  ) {
-    pushResearchIssue(
-      "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content.sections.Sources",
-        code: "research.sources_missing",
-        message:
-          "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
-        heading: "Sources",
-        repair:
-          "Populate the exact canonical heading `## Sources` with at least one cited source bullet or structured evidence row, then retry blueprint_phase_artifact_write."
-      })
-    );
+  for (const row of recommendationRows) {
+    const refs = splitResearchTypedReferenceIds(row.supporting_claim_ids || row.claim_ids || "");
+    for (const id of refs) {
+      if (!findingIds.has(id)) issue("Recommendations", "research.finding_reference_missing", `Recommendation references missing finding ${id}.`, "Correct the reference or include the finding.");
+      const finding = findingRows.find((item) => (item.finding_id || item.claim_id) === id);
+      if (/^ready$/i.test(row.status?.trim() ?? "") && finding && /^(?:unsupported|not_enough_evidence)$/i.test((finding.support_status || finding.claim_class || "").trim())) issue("Recommendations", "research.recommendation_unsupported", "A ready recommendation relies on an explicitly unsupported finding.", "Mark the recommendation blocked or supply supporting evidence.");
+    }
+    for (const id of splitResearchTypedReferenceIds(row.evidence_ids || "")) {
+      if (!sourceIds.has(id) && !evidenceIds.has(id)) issue("Recommendations", "research.source_reference_missing", `Recommendation references missing evidence ${id}.`, "Correct the reference or include its observed evidence.");
+    }
   }
-
   const warningDiagnostics = researchEvidenceWarningDiagnostics(normalizedContent);
-
-  for (const diagnostic of warningDiagnostics) {
-    if (!warnings.includes(diagnostic.message)) {
-      warnings.push(diagnostic.message);
-    }
-  }
-
+  for (const diagnostic of warningDiagnostics) if (!warnings.includes(diagnostic.message)) warnings.push(diagnostic.message);
   diagnostics.push(...warningDiagnostics);
-
-  return {
-    valid: issues.length === 0,
-    issues,
-    warnings,
-    diagnostics
-  };
+  return { valid: issues.length === 0, issues, warnings, diagnostics };
 }
 
 function collectReferencedSummaryPaths(section: string, summaryPaths: string[]): string[] {

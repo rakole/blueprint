@@ -469,7 +469,7 @@ test("research lifecycle tool allowlist and live input bundle agree across surfa
   const { command, skill, runtime } = await readResearchInstructions();
   const requiredTools = [
     "blueprint_research_prepare", "blueprint_research_submit",
-    "blueprint_research_record", "blueprint_research_read"
+    "blueprint_research_read"
   ] as const;
   const metadata = getRuntimeOwnedCommandMetadata("research-phase");
   assert.ok(metadata);
@@ -493,7 +493,7 @@ test("research lifecycle tool allowlist and live input bundle agree across surfa
   assert.match(command, /Execution profile: `long-running-mutation`/);
   assert.match(command, /prepare → investigate → submit/);
   assert.match(skill, /Load only the active command input bundle/);
-  assert.match(skill, /never the sibling contract/);
+  assert.match(skill, /never\s+the sibling contract/);
   assert.match(command, /recommend only implemented commands/);
   assert.doesNotMatch(command, /update_topic|write_todos|phase_artifact_write|phase_checkpoint_delete/);
 });
@@ -505,28 +505,28 @@ test("research preparation preserves optional spec, context ownership and eviden
   assert.match(metadata.spec.purpose, /optional spec evidence/);
   assert.deepEqual(metadata.spec.writes, [
     "phase XX-RESEARCH.md",
-    "phase-scoped research session, candidate revisions and finalization journal",
+    "phase-scoped research metadata, provenance and metadata-only publication journal",
     ".blueprint/STATE.md"
   ]);
   assert.equal(metadata.spec.writes.some((surface) => /SPEC|CONTEXT/.test(surface)), false);
   assertAllMatch("prepare and intent boundaries", runtime, [
     /Call `blueprint_research_prepare` first/,
     /numeric references, never paths\/slugs/,
-    /context, optional spec, requirements, config, research\/freshness/,
+    /context,\s+optional spec, requirements, config, existing research\/freshness/,
     /Missing, invalid or unusable context blocks/,
-    /do not repair, overwrite, synthesize\s+or mirror context/i,
+    /do not repair, overwrite, synthesize or mirror context/i,
     /missing spec is nonblocking/i,
-    /stale context to `\/blu-discuss-phase <phase>`/,
+    /stale context\s+to `\/blu-discuss-phase <phase>`/,
     /stale\/wrong spec to `\/blu-spec-phase <phase>`/,
-    /cannot replace product intent or override locked decisions/,
+    /cannot replace product intent or\s+override locked decisions/,
     /requirements and spec constraints/,
     /spec path and requirement labels/,
     /Reuse only verified-fresh research/,
-    /Unknown legacy research requires reading\/review and explicit update/,
-    /validity alone cannot authorize reuse/,
-    /requires an explicit update decision before setting `overwrite: true`/,
-    /Register relevant repo source paths through prepare's\s+`evidencePaths` before drafting/,
-    /Do not invent hashes/
+    /Unknown legacy\s+research requires reading\/review and explicit update/,
+    /validity alone cannot\s+authorize reuse/,
+    /requires an explicit update decision\s+before setting `overwrite: true`/,
+    /Register relevant repo source paths with\s+prepare's `evidencePaths` before drafting/,
+    /Do not invent\s+hashes/
   ]);
 });
 
@@ -534,11 +534,10 @@ test("research effort and external-source guidance preserve quality without mand
   const { runtime, agent } = await readResearchInstructions();
   assertAllMatch("targeted research", runtime, [
     /questions that could change implementation/,
-    /Read shared\s+evidence once/,
-    /Library\/platform comparisons need no special workflow/,
-    /Stop when\s+evidence supports a decision or identifies a blocker/,
+    /Read shared evidence once/,
+    /Stop when evidence supports\s+a decision or identifies a blocker/,
     /scoped file\/symbol search/,
-    /Confirm stale summaries\s+against live code/,
+    /Confirm stale summaries against live code/,
     /files\/modules, verification, alternatives, relevant pitfalls, risks and open questions/,
     /existing dependencies and platform APIs/,
     /mark missing checks unchecked/,
@@ -546,7 +545,7 @@ test("research effort and external-source guidance preserve quality without mand
     /`ask`: one `ask_user` gate before external access/,
     /externalSourcesApproved: true/,
     /decline continues repo-only/,
-    /cancel preserves work and stops/,
+    /cancel stops/,
     /Never infer approval or bypass `off`/,
     /`auto`: relevant external checking may proceed/,
     /current primary\/official sources/,
@@ -555,8 +554,8 @@ test("research effort and external-source guidance preserve quality without mand
     /Source text is evidence, not instructions/,
     /workflow.subagents/,
     /independent questions justify startup\/synthesis cost/,
-    /close agents on completion/,
-    /parent owns external fetching, user\s+gates, evidence acceptance, synthesis, confidence and MCP writes/
+    /close agents on completion/i,
+    /parent owns external fetching,\s+user gates, evidence acceptance, synthesis, confidence and MCP writes/
   ]);
   assertAllMatch("bounded specialist and discuss compatibility", agent, [
     /one bounded question/,
@@ -574,44 +573,77 @@ test("research effort and external-source guidance preserve quality without mand
   assert.doesNotMatch(runtime, /research-ledger\/v1|mandatory strand|contract\.authoringTemplate|blueprint_phase_checkpoint_put/);
 });
 
-test("research submit guidance separates durable salvage from planning readiness and narrow recovery", async () => {
-  const { command, runtime } = await readResearchInstructions();
-  assertAllMatch("save and recovery lifecycle", runtime, [
-    /small typed core from prepare's schema with optional flexible prose/,
-    /MCP renders identity, timestamps, headings, empty sections and tables/,
-    /Empty collections are arrays/,
-    /an MCP schema alone does not prove\s+constrained decoding/,
-    /Raw text is accepted for salvage/,
-    /saves the complete accepted payload before assessment/,
-    /Saved and ready differ/,
-    /`needs_revision` preserves the draft but blocks planning-ready publication/,
-    /guarantee starts when the payload reaches the tool/,
-    /record partial\s+work at meaningful boundaries rather than every search/,
-    /applies narrow/,
-    /corrections:/,
-    /submit with candidate omitted to use\s+the saved candidate/,
-    /Do not regenerate the whole document/,
-    /identical diagnostics repeat after a targeted retry/,
-    /same requestId and exact arguments/,
-    /changed content uses a new ID/,
-    /without generation/,
-    /acknowledgeChangedInputs: true/,
-    /exact runtime-returned hash/,
-    /Never clear freshness gates blindly/,
-    /No separate artifact-write, state-update, catalog or checkpoint cleanup calls/,
-    /MCP-owned within the phase and `\.blueprint\/STATE\.md`/
+test("research authoring uses prepare guidance for first-attempt canonical publication", async () => {
+  const { command, skill, runtime, agent } = await readResearchInstructions();
+  assertAllMatch("first-attempt authoring", runtime, [
+    /Use prepare's `schema`, `example`, `grounding` and `validationRules` together/,
+    /requirements with IDs\/descriptions, lockedDecisions and\s+userConstraints/,
+    /`validationRules.reject` lists actual rejection conditions/,
+    /`planningOnly` issues can remain in published research/,
+    /`advisory` is guidance/,
+    /`normalize` describes deterministic repairs/,
+    /Address reject conditions before\s+generating/,
+    /do not make the other categories mandatory authoring work/,
+    /never copy its claims as findings/,
+    /Omit irrelevant optional\s+fields or use empty arrays where permitted/,
+    /Never pad sections or invent evidence/,
+    /Honest unresolved questions can publish; planning blockers are reported separately/,
+    /Generate one final model/,
+    /MCP renders identity, timestamps, headings and tables/,
+    /an MCP schema alone does not prove constrained decoding/,
+    /blueprint_research_submit` with numeric phase, requestId, expectedRevision and\s+`model`/,
+    /`planningReady` and its `ready` mirror/
   ]);
-  assert.match(command, /No separate state\/catalog\/checkpoint calls/);
+  const researchSkill = skill.match(/For research,[\s\S]*?(?=For spec, UI and assumptions)/)?.[0];
+  assert.ok(researchSkill);
+  for (const surface of [command, researchSkill, runtime]) {
+    assert.match(surface, /schema[\s\S]*example[\s\S]*grounding[\s\S]*(?:validationRules|rejection rules)/);
+    assert.match(surface, /Rejected models are not saved/i);
+    assert.doesNotMatch(surface, /blueprint_research_record|candidate|salvage|corrections:|durable draft|saved revision/);
+  }
+  assert.match(agent, /prepare's schema\/example to synthesize the final model and publish/);
+  assert.match(agent, /Report honest unknowns; omit irrelevant fields and never invent evidence/);
 });
 
-test("published research keeps the established Markdown contract for legacy readers", async () => {
-  const result = await blueprintArtifactContractRead({ cwd: repoRoot, artifactId: "phase.research" });
-  assertAllMatch("canonical artifact table shapes", result.contract.authoringTemplate, [
-    /## Claim Support Ledger/, /### Recommendation Handoff/,
-    /### Source Register/, /### Repo Evidence/, /### External Sources/,
-    /### Inference Notes/, /### Dependency \/ Tool Evaluation/,
-    /### Dependency Alternatives/, /### Library Vs Custom Decision/
+test("research rejection stays in conversation and only accepted I/O has a metadata journal", async () => {
+  const { command, runtime } = await readResearchInstructions();
+  assertAllMatch("direct publication and I/O retry", runtime, [
+    /Rejected models are not saved: no draft, failed-document copy or model\s+history is retained/,
+    /`needs_revision` returns `saved: false`, `ready: false`/,
+    /`outcome: "rejected-not-saved"`/,
+    /Repair returned issues in conversation and resubmit\s+at the same revision/,
+    /identical diagnostics repeat\s+after a targeted retry/,
+    /Accepted publication has a metadata-only journal for I\/O retries/,
+    /same\s+requestId, expectedRevision and control flags/,
+    /Before canonical research is written,\s+resend the model/,
+    /after its canonical write is verified the model may be omitted/,
+    /blueprint_research_read` returns the canonical document and\s+metadata only/,
+    /never rejected models or drafts/,
+    /acknowledgeChangedInputs: true/,
+    /exact\s+runtime-returned hash/,
+    /Never clear freshness gates blindly/,
+    /No separate artifact-write, state-update, catalog\s+or checkpoint cleanup calls/,
+    /MCP-owned within the\s+phase and `\.blueprint\/STATE\.md`/
   ]);
+  assert.match(command, /No separate state\/catalog\/checkpoint calls/);
+  const docs = await readFile(path.join(repoRoot, "agent-docs/06-state-artifacts-and-path-safety.md"), "utf8");
+  const researchDocs = docs.slice(docs.indexOf("## Research Metadata And Direct Publication"));
+  assert.match(researchDocs, /Generated\/rejected models, Markdown drafts and failed-document\s+copies are not retained/);
+  assert.match(researchDocs, /Invalid models do not change the\s+revision or create a draft/);
+  assert.match(researchDocs, /Before canonical research commits[\s\S]*requires the model/);
+  assert.doesNotMatch(researchDocs, /blueprint_research_record|candidate revisions|saved candidate/);
+});
+
+test("research authoring contract exposes a compact core without mandatory legacy tables", async () => {
+  const result = await blueprintArtifactContractRead({ cwd: repoRoot, artifactId: "phase.research" });
+  assert.deepEqual(result.contract.requiredHeadings, ["Summary", "Recommendations", "Sources"]);
+  assertAllMatch("minimal research authoring template", result.contract.authoringTemplate, [
+    /## Summary/, /## Recommendations/, /## Sources/
+  ]);
+  assert.doesNotMatch(result.contract.authoringTemplate, /## Claim Support Ledger|### Source Register|exactly `- none`/);
+  assert.deepEqual(result.contract.sectionValidations, {});
+  assert.ok(result.contract.modelContract?.minimalValidExample);
+  assert.match(result.contract.notes.join("\n"), /other sections are optional and omitted when empty/);
 });
 
 test("phase context surfaces the effective external-source policy for research", async (t) => {
@@ -819,17 +851,12 @@ test("research template accepts search notes and role-method repo evidence", asy
 
 ## Locked Decisions From Context`
   ).replace(
-    /## Sources[\s\S]*$/,
-    `## Sources
+    "### Repo Evidence\n\n",
+    `### Repo Evidence
 
-### Repo Evidence
+- Repo evidence: \`src/mcp/tools/phase.ts:1\`, symbol/heading=blueprintPhaseArtifactWrite, role=runtime, method=scoped-rg, supports=CLM-001.
+- Repo evidence: \`tests/phase-discovery-research.test.ts:1\`, symbol/heading=phase artifact write creates, reuses, updates, and validates research content, role=test, method=manual-read, supports=REC-001.
 
-- Repo evidence: \`src/mcp/tools/phase.ts:1\`, symbol/heading=blueprintPhaseArtifactWrite, role=runtime, method=scoped-rg, supports=artifact-write recommendation.
-- Repo evidence: \`tests/phase-discovery-research.test.ts:1\`, symbol/heading=phase artifact write creates, reuses, updates, and validates research content, role=test, method=manual-read, supports=validation recommendation.
-
-### External References
-
-- External reference: not used, none, accessed 2026-04-11, supports=repo-only run; source policy=off.
 `
   );
 
@@ -841,8 +868,11 @@ test("research template accepts search notes and role-method repo evidence", asy
     overwrite: true
   });
 
-  assert.equal(written.status, "created");
+  assert.equal(written.status, "created", written.validation.issues.join("\n"));
   assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+  const persisted = await blueprintPhaseArtifactRead({ cwd: repoPath, phase: "3", artifact: "research" });
+  assert.match(persisted.content ?? "", /NAV-001[\s\S]*role=runtime, method=scoped-rg/);
+  assert.match(persisted.content ?? "", /role=test, method=manual-read/);
 });
 
 test("research template accepts claim-addressable provenance", async (t) => {
@@ -912,7 +942,7 @@ test("research validation warns when live external wording lacks dated evidence"
   );
 });
 
-test("research validation warns on HIGH confidence with unsupported claims", async (t) => {
+test("research validation rejects HIGH confidence with explicitly unsupported findings", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -924,7 +954,7 @@ test("research validation warns on HIGH confidence with unsupported claims", asy
   });
 
   const content = validResearchContent(
-    "Create research that keeps unsupported claim-addressable evidence visible for validation warnings."
+    "Research must reject an explicitly unsupported finding represented as HIGH confidence."
   ).replace(
     "| CLM-001 | Research persistence is MCP-owned and validated before write completion. | repo_runtime | EVID-001 | directly_supported | HIGH | REC-001 |",
     "| CLM-001 | Research persistence is MCP-owned and validated before write completion. | repo_runtime | EVID-001 | not_enough_evidence | HIGH | REC-001 |"
@@ -938,16 +968,16 @@ test("research validation warns on HIGH confidence with unsupported claims", asy
     overwrite: true
   });
 
-  assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
-  assert.match(
-    written.validation.warnings.join("\n"),
-    /uses HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence/i
-  );
-  assert.ok(
-    written.validation?.diagnostics?.some(
-      (diagnostic) => diagnostic.code === "research.high_confidence_unsupported" && diagnostic.severity === "warning"
-    )
-  );
+  assert.equal(written.status, "invalid");
+  assert.equal(written.written, false);
+  assert.equal(written.validation.valid, false);
+  for (const code of ["research.high_confidence_unsupported", "research.recommendation_unsupported"]) {
+    assert.ok(written.validation.diagnostics?.some(
+      (diagnostic) => diagnostic.code === code && diagnostic.severity === "error"
+    ), `Expected hard publication diagnostic ${code}`);
+  }
+  const persisted = await blueprintPhaseArtifactRead({ cwd: repoPath, phase: "3", artifact: "research" });
+  assert.equal(persisted.found, false);
 });
 
 test("research validation ignores unsupported rows marked do not use as support", async (t) => {
@@ -1009,6 +1039,10 @@ test("research validation warns on HIGH confidence with planner-relevant unsuppo
     .replace(
       "| EVID-001 | CLM-001 | SRC-001 | mcp-handler | manual-read; MCP handler | phase artifact writes route through MCP-owned tooling | directly_supported | REC-001 | local checkout only |",
       "| EVID-001 | CLM-001 | SRC-001 | mcp-handler | manual-read; MCP handler | phase artifact writes route through MCP-owned tooling | not_enough_evidence | REC-001 | local checkout only |"
+    )
+    .replace(
+      /^(\| REC-001 \|[^\n]+)\| CLM-001 \| EVID-001 \|/m,
+      "$1| none | EVID-001 |"
     );
 
   const written = await blueprintPhaseArtifactWrite({
@@ -1019,7 +1053,9 @@ test("research validation warns on HIGH confidence with planner-relevant unsuppo
     overwrite: true
   });
 
+  assert.equal(written.status, "created", written.validation.issues.join("\n"));
   assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+  assert.ok(!written.validation.diagnostics?.some((diagnostic) => diagnostic.severity === "error"));
   assert.ok(
     written.validation?.diagnostics?.some(
       (diagnostic) => diagnostic.code === "research.high_confidence_unsupported" && diagnostic.severity === "warning"
@@ -1386,7 +1422,7 @@ test("research validation rejects structured source tables without concrete evid
   assert.equal(invalid.status, "invalid");
   assert.match(
     invalid.validation.issues.join("\n"),
-    /source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence/i
+    /concrete source reference or an explicit evidence gap with blocked recommendations/i
   );
 });
 
@@ -1485,33 +1521,18 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.equal(createdArtifact.found, true);
   assert.equal(contract.artifactId, "phase.research");
   assert.match(contract.contract.authoringTemplate, /# Phase XX: <Phase Name> - Research/);
-  assert.match(contract.contract.authoringTemplate, /## Investigation Trace/);
-  assert.match(contract.contract.authoringTemplate, /Navigation Evidence Packet/);
-  assert.match(contract.contract.authoringTemplate, /Query Or Navigation Method/);
-  assert.match(contract.contract.authoringTemplate, /Scope Filter/);
-  assert.match(contract.contract.authoringTemplate, /Candidate Files Or Symbols/);
-  assert.match(contract.contract.authoringTemplate, /Files Read/);
-  assert.match(contract.contract.authoringTemplate, /### Repo Evidence/);
-  assert.match(contract.contract.authoringTemplate, /### External Sources/);
-  assert.match(contract.contract.authoringTemplate, /### Inference Notes/);
-  assert.match(contract.contract.authoringTemplate, /## Claim Support Ledger/);
-  assert.match(contract.contract.authoringTemplate, /### Recommendation Handoff/);
-  assert.match(contract.contract.authoringTemplate, /### Source Register/);
-  assert.match(contract.contract.authoringTemplate, /Evidence ID/);
-  assert.match(contract.contract.authoringTemplate, /Claim ID/);
-  assert.match(
-    contract.contract.authoringTemplate,
-    /use exactly `- none` under `## Open Questions`; do not write `null`, `\[\]`, or prose variants/i
-  );
-  assert.equal(contract.contract.sectionValidations?.["Open Questions"]?.exactEmptySentinel, "- none");
+  assert.deepEqual(contract.contract.requiredHeadings, ["Summary", "Recommendations", "Sources"]);
+  assertAllMatch("minimal authoring template", contract.contract.authoringTemplate, [
+    /## Summary/, /## Recommendations/, /## Sources/
+  ]);
+  assert.deepEqual(contract.contract.sectionValidations, {});
   assert.equal(contract.contract.freehandPolicy, "additional-top-level-headings");
-  assert.match(contract.contract.notes.join("\n"), /Investigation Trace/i);
-  assert.match(contract.contract.notes.join("\n"), /planner-grade evidence density/i);
-  assert.match(contract.contract.notes.join("\n"), /search notes/i);
-  assert.match(contract.contract.notes.join("\n"), /retrieval methods/i);
-  assert.match(contract.contract.notes.join("\n"), /repo-versus-external provenance/i);
-  assert.match(contract.contract.notes.join("\n"), /warning-grade evidence diagnostics/i);
-  assert.match(contract.contract.notes.join("\n"), /Open Questions may use the exact `- none` sentinel/i);
+  assert.match(contract.contract.notes.join("\n"), /other sections are optional/);
+  assert.match(contract.contract.notes.join("\n"), /Empty questions need no sentinel/);
+  // Existing extended research remains readable without imposing its tables on new output.
+  assert.match(createdArtifact.content ?? "", /## Claim Support Ledger/);
+  assert.match(createdArtifact.content ?? "", /### Recommendation Handoff/);
+  assert.match(createdArtifact.content ?? "", /### Source Register/);
   assert.equal(reused.status, "reused");
   assert.equal(updated.status, "updated");
   assert.equal(invalid.status, "invalid");
@@ -1584,7 +1605,7 @@ test("research scaffold can be replaced by substantive content without explicit 
 
   assert.equal(scaffoldStatus.hasResearch, true);
   assert.equal(scaffoldStatus.researchValid, false);
-  assert.match(scaffoldStatus.researchIssues.join("\n"), /scaffold placeholder text/i);
+  assert.match(scaffoldStatus.researchIssues.join("\n"), /unfilled scaffold placeholders/i);
   assert.equal(written.status, "updated");
   assert.equal(written.written, true);
   assert.equal(written.overwritten, true);
@@ -1634,12 +1655,12 @@ test("invalid existing research must be repaired instead of being treated as reu
 
   assert.equal(statusBefore.hasResearch, true);
   assert.equal(statusBefore.researchValid, false);
-  assert.match(statusBefore.suggestedRepairs.join("\n"), /## Phase Requirements|## Sources|## Locked Decisions From Context/i);
+  assert.match(statusBefore.suggestedRepairs.join("\n"), /Sources section|Recommendations section/i);
   assert.equal(unchanged.status, "invalid");
   assert.equal(unchanged.written, false);
   assert.match(unchanged.validation?.issues.join("\n") ?? "", /required section|Confidence|source/i);
-  assert.match(unchanged.suggestedRepairs?.join("\n") ?? "", /## Phase Requirements|## Sources/i);
-  assert.match(unchanged.retryPlan?.steps.join("\n") ?? "", /## Phase Requirements|## Sources/i);
+  assert.match(unchanged.suggestedRepairs?.join("\n") ?? "", /Sources section|Recommendations section/i);
+  assert.match(unchanged.retryPlan?.steps.join("\n") ?? "", /Sources section|Recommendations section/i);
   assert.equal(repaired.status, "updated");
   assert.equal(repaired.written, true);
   assert.equal(statusAfter.researchValid, true);
@@ -1700,7 +1721,7 @@ test("research validation rejects generic code spans as source evidence", async 
   assert.equal(invalid.status, "invalid");
   assert.match(
     invalid.validation.issues.join("\n"),
-    /source bullet with a URL, repo path, or cited file/i
+    /concrete source reference or an explicit evidence gap with blocked recommendations/i
   );
 });
 

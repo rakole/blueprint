@@ -35,12 +35,12 @@ type MutationFailureEntry = {
   };
 };
 
-// Discussion documents must never be retained by the diagnostic side channel.
+// Discussion and research documents must never be retained by the diagnostic side channel.
 // Select by invocation, including models rejected for an incorrect artifact kind.
 function metadataOnlyInvocation(toolName: string, args: Record<string, unknown>): boolean {
-  return toolName.startsWith("blueprint_discuss_") ||
+  return toolName.startsWith("blueprint_discuss_") || toolName.startsWith("blueprint_research_") ||
     (toolName === "blueprint_phase_artifact_write" &&
-      (args.artifact === "context" || args.artifact === "discussion-log" || args.model !== undefined));
+      (args.artifact === "context" || args.artifact === "discussion-log" || args.artifact === "research" || args.model !== undefined || args.candidate !== undefined));
 }
 
 function failureMetadata(value: Record<string, unknown>, depth = 0): Record<string, unknown> {
@@ -73,7 +73,7 @@ function failureMetadata(value: Record<string, unknown>, depth = 0): Record<stri
   if (value.model !== undefined) metadata.modelSupplied = true;
   if (value.candidate !== undefined) metadata.candidateSupplied = true;
   if (typeof value.content === "string") metadata.contentLength = value.content.length;
-  if (["context", "discussion-log"].includes(value.artifact as string)) metadata.artifact = value.artifact;
+  if (["context", "discussion-log", "research"].includes(value.artifact as string)) metadata.artifact = value.artifact;
   return metadata;
 }
 

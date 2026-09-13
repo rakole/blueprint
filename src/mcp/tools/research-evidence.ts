@@ -53,26 +53,28 @@ export function researchProvenancePath(researchPath: string) {
   return researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json");
 }
 
-export type ResearchProvenance = { version: 1; researchHash: string; readSet: ResearchReadSet; publishedAt: string };
+export type ResearchProvenance = { version: 1; researchHash: string; readSet: ResearchReadSet; publishedAt: string; planningReady?: boolean };
 
-export async function readPublishedResearchFreshness(root: string, researchPath: string) {
+export async function readPublishedResearchFreshness(root: string, researchPath: string): Promise<{ status: "fresh" | "stale" | "unknown"; stalePaths: string[]; unknownPaths: string[]; reason: string | null; planningReady?: boolean }> {
   try {
     const evidence = await readResearchEvidence(root, researchProvenancePath(researchPath));
     if (evidence.content === null) {
       const saved = await readResearchEvidence(root, researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json"), 32 * 1024 * 1024);
       const session = saved.content ? safeJsonParseObject(saved.content, { label: saved.path, maxBytes: 32 * 1024 * 1024 }) : null;
       const journal = session?.journal as { contentHash?: string; stages?: { artifact?: string } } | undefined;
-      const incomplete = Boolean(journal?.stages?.artifact && journal.contentHash === await researchInputHash(root, researchPath));
+      const legacyPublication = session?.legacyPublication as { contentHash?: string } | undefined;
+      const publishedHash = await researchInputHash(root, researchPath);
+      const incomplete = Boolean(journal?.stages?.artifact && journal.contentHash === publishedHash || legacyPublication?.contentHash && legacyPublication.contentHash === publishedHash);
       return { status: "unknown" as const, stalePaths: [] as string[], unknownPaths: [incomplete ? "publication" : "provenance"], reason: incomplete ? "Research session has not published source provenance." : "Legacy research has no recorded input fingerprints; review before reuse." };
     }
     const parsed = safeJsonParseObject(evidence.content, { label: evidence.path });
-    if (parsed.version !== 1 || typeof parsed.researchHash !== "string" || !/^[a-f0-9]{64}$/.test(parsed.researchHash) || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100 || !parsed.readSet.every((r: unknown) => {
+    if (parsed.version !== 1 || (parsed.planningReady !== undefined && typeof parsed.planningReady !== "boolean") || typeof parsed.researchHash !== "string" || !/^[a-f0-9]{64}$/.test(parsed.researchHash) || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100 || !parsed.readSet.every((r: unknown) => {
       const x = r as { path?: unknown; hash?: unknown } | null;
       return x && typeof x.path === "string" && (x.hash === null || typeof x.hash === "string" && /^[a-f0-9]{64}$/.test(x.hash));
     })) throw new Error("Invalid research provenance.");
     if (await researchInputHash(root, researchPath) !== parsed.researchHash)
       return { status: "stale" as const, stalePaths: [researchPath], unknownPaths: [] as string[], reason: "Research content changed after publication." };
-    return { ...await researchBasisFreshness(root, parsed.readSet as ResearchReadSet), reason: null };
+    return { ...await researchBasisFreshness(root, parsed.readSet as ResearchReadSet), reason: null, ...(typeof parsed.planningReady === "boolean" ? { planningReady: parsed.planningReady } : {}) };
   } catch (error) {
     return { status: "unknown" as const, stalePaths: [] as string[], unknownPaths: [researchProvenancePath(researchPath)], reason: (error as Error).message };
   }

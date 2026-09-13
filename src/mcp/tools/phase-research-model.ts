@@ -56,6 +56,8 @@ export type PhaseResearchStructuredModel = {
 
 export type PhaseResearchModelValidation = {
   valid: boolean;
+  planningReady: boolean;
+  planningBlockers: string[];
   issues: string[];
   warnings: string[];
   diagnostics: PhaseArtifactValidationDiagnostic[];
@@ -68,12 +70,73 @@ export type PhaseResearchModelValidationContext = {
 
 let researchModelValidator: ValidateFunction | undefined;
 
-/** Validate readiness without throwing or discarding a schema-valid candidate. */
+const EMPTY_LIST_ALIAS = /^(?:[-*+]\s*)?(?:none|no(?:ne)?\s+(?:open\s+)?questions?|no\s+recommendations?|n\/?a|null|\[\])[.!]?$/i;
+
+/** Normalize presentation choices only; never create evidence or increase confidence. */
+function normalizeResearchModel(object: Record<string, unknown>): void {
+  const list = (value: unknown): unknown => {
+    if (value == null || (typeof value === "string" && (!value.trim() || EMPTY_LIST_ALIAS.test(value.trim())))) return [];
+    if (typeof value === "string") return [value.trim()];
+    if (Array.isArray(value)) return [...new Set(value.map((item) => typeof item === "string" ? item.trim() : item))];
+    return value;
+  };
+  const enumValue = (value: unknown, aliases: Record<string, string>): unknown =>
+    typeof value === "string" ? aliases[value.trim().toLowerCase().replace(/[ -]+/g, "_")] ?? value.trim() : value;
+  if (typeof object.summary === "string") object.summary = object.summary.trim();
+  object.openQuestions = list(object.openQuestions);
+  if (Array.isArray(object.openQuestions)) object.openQuestions = object.openQuestions.map((value) => {
+    if (typeof value === "string") {
+      const blockingPrefix = value.match(/^(?:[-*+]\s*)?(?:\*\*)?blocking(?:\*\*)?\s*:\s*(?:\*\*)?\s*/i);
+      return { question: blockingPrefix ? value.slice(blockingPrefix[0].length) : value, blocking: Boolean(blockingPrefix) };
+    }
+    const question = asJsonObject(value);
+    if (question && question.blocking === undefined) question.blocking = false;
+    if (question && typeof question.blocking === "string" && /^(?:true|false)$/i.test(question.blocking.trim())) question.blocking = question.blocking.trim().toLowerCase() === "true";
+    return value;
+  });
+  if (object.sections == null) object.sections = {};
+  const sections = asJsonObject(object.sections);
+  if (sections) for (const [key, value] of Object.entries(sections)) {
+    if (value == null || (typeof value === "string" && (!value.trim() || EMPTY_LIST_ALIAS.test(value.trim())))) delete sections[key];
+    else if (Array.isArray(value)) sections[key] = value.filter((item) => typeof item !== "string" || (item.trim() && !EMPTY_LIST_ALIAS.test(item.trim())));
+  }
+  for (const field of ["sources", "findings", "recommendations"] as const) {
+    if (!Array.isArray(object[field])) continue;
+    for (const value of object[field]) {
+      const row = asJsonObject(value);
+      if (!row) continue;
+      for (const [key, entry] of Object.entries(row)) if (typeof entry === "string") row[key] = entry.trim();
+      if (field === "sources") {
+        row.lane = enumValue(row.lane, { repo: "repo", repository: "repo", external: "external", web: "external", supplied: "supplied", user_supplied: "supplied" });
+        for (const optional of ["title", "accessed", "excerpt", "limitations"]) if (row[optional] == null || row[optional] === "") delete row[optional];
+        continue;
+      }
+      row.requirementIds = list(row.requirementIds);
+      if (field === "findings") {
+        row.sourceIds = list(row.sourceIds);
+        row.confidence = enumValue(row.confidence ?? "MEDIUM", { low: "LOW", medium: "MEDIUM", moderate: "MEDIUM", high: "HIGH" });
+        const defaultStatus = row.confidence === "HIGH" && Array.isArray(row.sourceIds) && row.sourceIds.length > 0 ? "supported" : "inferred";
+        row.status = enumValue(row.status ?? defaultStatus, {
+          supported: "supported", directly_supported: "supported", inferred: "inferred",
+          inferred_from_supported: "inferred", partially_supported: "inferred",
+          unsupported: "unsupported", not_enough_evidence: "unsupported",
+        });
+      } else {
+        row.findingIds = list(row.findingIds);
+        row.affectedSurfaces = list(row.affectedSurfaces);
+        row.verification = list(row.verification);
+        row.status = enumValue(row.status ?? "ready", { ready: "ready", planning_ready: "ready", blocked: "blocked", needs_research: "blocked" });
+      }
+    }
+  }
+}
+
+/** Publication validity is separate from whether this research resolves planning blockers. */
 export function validatePhaseResearchModelInput(
   raw: unknown,
   context: PhaseResearchModelValidationContext = {},
 ): { model: PhaseResearchStructuredModel | null; validation: PhaseResearchModelValidation } {
-  const validation: PhaseResearchModelValidation = { valid: true, issues: [], warnings: [], diagnostics: [] };
+  const validation: PhaseResearchModelValidation = { valid: true, planningReady: true, planningBlockers: [], issues: [], warnings: [], diagnostics: [] };
   const issue = (path: string, code: string, message: string, repair: string, warning = false): void => {
     (warning ? validation.warnings : validation.issues).push(message);
     validation.diagnostics.push({
@@ -81,15 +144,22 @@ export function validatePhaseResearchModelInput(
       retryable: true, nextTool: "blueprint_research_submit",
     });
     validation.valid = validation.issues.length === 0;
+    validation.planningReady = validation.valid && validation.planningBlockers.length === 0;
+  };
+  const planningBlocker = (path: string, code: string, message: string, repair: string): void => {
+    validation.planningBlockers.push(message);
+    issue(path, code, message, repair, true);
   };
   let object: Record<string, unknown> | null;
   try {
+    const text = typeof raw === "string" ? raw.trim() : null;
+    const fencedJson = text?.match(/^(`{3,}|~{3,})(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n\1$/i);
     object = asJsonObject(typeof raw === "string"
-      ? safeJsonParse(raw, { label: "Research candidate", maxBytes: 1024 * 1024 })
+      ? safeJsonParse(fencedJson?.[2] ?? text!, { label: "Research model", maxBytes: 1024 * 1024 })
       : structuredClone(raw));
   } catch (error) {
     issue("model", "schema.json", error instanceof Error ? error.message : "Research candidate is not JSON.",
-      "Correct the saved candidate's JSON syntax and resubmit that revision.");
+      "Correct the JSON syntax and submit the research model.");
     return { model: null, validation };
   }
   if (!object) {
@@ -97,8 +167,7 @@ export function validatePhaseResearchModelInput(
       "Supply the structured research core from phase.research.modelContract.");
     return { model: null, validation };
   }
-  if (object.openQuestions === undefined) object.openQuestions = [];
-  if (object.sections === undefined) object.sections = {};
+  normalizeResearchModel(object);
   const validate = researchModelValidator ??= createAjvValidator().compile(
     readArtifactContract("phase.research").modelContract!.jsonSchema,
   );
@@ -107,16 +176,16 @@ export function validatePhaseResearchModelInput(
       const property = error.params.missingProperty ?? error.params.additionalProperty;
       const fieldPath = `model${error.instancePath.replace(/\//g, ".")}${typeof property === "string" ? `.${property}` : ""}`;
       issue(fieldPath, `schema.${error.keyword}`, `Research candidate ${fieldPath} ${error.message ?? error.keyword}.`,
-        `Correct only ${fieldPath} using phase.research.modelContract; retain the remaining saved candidate.`);
+        `Correct ${fieldPath} using phase.research.modelContract.`);
     }
     return { model: null, validation };
   }
   const model = object as unknown as PhaseResearchStructuredModel;
-  const ids = new Set<string>();
   for (const field of ["sources", "findings", "recommendations"] as const) {
+    const ids = new Set<string>();
     model[field].forEach((row, index) => {
       if (ids.has(row.id)) issue(`model.${field}.${index}.id`, "research.duplicate_id",
-        `Research id ${row.id} is duplicated.`, "Give each source, finding and recommendation a unique id and update its references.");
+        `Research ${field} id ${row.id} is duplicated.`, "Give each row within this collection a unique id and update its references.");
       ids.add(row.id);
     });
   }
@@ -168,8 +237,8 @@ export function validatePhaseResearchModelInput(
       if (!findings.has(id)) issue(`${field}.findingIds`, "research.finding_reference_missing",
         `Recommendation ${recommendation.id} references missing finding ${id}.`, "Add the finding or correct this recommendation's findingIds.");
     }
-    if (recommendation.status === "blocked") issue(`${field}.status`, "research.recommendation_blocked",
-      `Recommendation ${recommendation.id} is blocked.`, "Resolve the implementation blocker and revise this recommendation before publication.");
+    if (recommendation.status === "blocked") planningBlocker(`${field}.status`, "research.recommendation_blocked",
+      `Recommendation ${recommendation.id} is blocked.`, "Preserve this finding in RESEARCH.md; resolve the implementation blocker before planning relies on the recommendation.");
     if (recommendation.status === "ready") {
       const unsupported = recommendation.findingIds.length === 0 || recommendation.findingIds.some((id) => {
         const finding = findings.get(id);
@@ -178,19 +247,19 @@ export function validatePhaseResearchModelInput(
       if (unsupported) issue(`${field}.findingIds`, "research.recommendation_unsupported",
         `Ready recommendation ${recommendation.id} lacks supported findings.`, "Supply evidence-linked findings or mark this recommendation blocked.");
       if (recommendation.affectedSurfaces.length === 0) issue(`${field}.affectedSurfaces`, "research.affected_surfaces_missing",
-        `Ready recommendation ${recommendation.id} does not identify affected surfaces.`, "Name the files, modules, contracts, product surfaces or interfaces affected.");
+        `Recommendation ${recommendation.id} does not identify affected surfaces.`, "Planning can identify affected files, modules or interfaces when needed.", true);
       if (recommendation.verification.length === 0) issue(`${field}.verification`, "research.verification_missing",
-        `Ready recommendation ${recommendation.id} lacks a verification approach.`, "Describe a meaningful check of the resulting behavior.");
+        `Recommendation ${recommendation.id} does not specify a verification approach.`, "Planning can choose a meaningful behavioral check.", true);
     }
     checkRequirements(recommendation.requirementIds, `${field}.requirementIds`, recommendation.status === "ready");
   });
   model.openQuestions.forEach((question, index) => {
-    if (question.blocking) issue(`model.openQuestions.${index}.blocking`, "research.question_blocking",
+    if (question.blocking) planningBlocker(`model.openQuestions.${index}.blocking`, "research.question_blocking",
       `Research has a blocking question: ${question.question}`, "Resolve this question or explain why it no longer blocks planning and revise its status.");
   });
   for (const id of context.requiredRequirementIds ?? []) {
     if (!covered.has(id)) issue("model.findings", "research.requirement_uncovered",
-      `Required research coverage for ${id} is missing.`, "Tie an evidence-backed finding or recommendation to this prepared requirement.");
+      `No research finding is mapped to ${id}.`, "Investigate this requirement only if an unresolved decision affects implementation; do not add generic filler.", true);
   }
   return { model, validation };
 }
@@ -232,8 +301,8 @@ function prose(value: string): string {
 }
 
 function sectionProse(value: string | string[] | undefined): string {
-  if (value === undefined || (Array.isArray(value) && value.length === 0)) return "No section-specific detail was supplied in this research.";
-  return (Array.isArray(value) ? value : [value]).map(prose).join("\n\n");
+  if (value === undefined) return "";
+  return (Array.isArray(value) ? value : [value]).filter((item) => item.trim()).map(prose).join("\n\n");
 }
 
 function bullets(values: string[] | undefined, fallback: string): string {
@@ -253,23 +322,41 @@ export function renderPhaseResearchModelContent(args: {
   const confidence = model.findings.some((finding) => finding.confidence === "LOW" || finding.status === "unsupported") ? "LOW"
     : model.findings.every((finding) => finding.confidence === "HIGH" && finding.status === "supported") ? "HIGH" : "MEDIUM";
   const requirementIds = [...new Set([...model.findings, ...model.recommendations].flatMap((row) => row.requirementIds))];
-  const requirements = args.requirements ?? requirementIds.map((id) => ({ id, description: "Requirement referenced by the research; see prepared phase evidence for its definition." }));
+  const requirements = args.requirements ?? requirementIds.map((id) => ({ id, description: "" }));
   const requirementRows = requirements.map((requirement) => [requirement.id, requirement.description,
-    [...model.findings, ...model.recommendations].filter((row) => row.requirementIds.includes(requirement.id)).map((row) => row.id).join(", ") || "No specific research finding supplied."]);
-  if (requirementRows.length === 0) requirementRows.push(["Phase scope", "No numbered requirement grounding was supplied to the renderer.", "See the research summary and prepared phase context."]);
-  const optional = (key: keyof typeof OPTIONAL_HEADINGS): string => `## ${OPTIONAL_HEADINGS[key]}\n\n${sectionProse(model.sections?.[key])}`;
+    [...model.findings, ...model.recommendations].filter((row) => row.requirementIds.includes(requirement.id)).map((row) => row.id).join(", ")]);
+  const optional = (key: keyof typeof OPTIONAL_HEADINGS): string => {
+    const detail = sectionProse(model.sections?.[key]);
+    return detail ? `## ${OPTIONAL_HEADINGS[key]}\n\n${detail}` : "";
+  };
+  const recommendationColumns = [
+    { heading: "Recommendation ID", value: (row: PhaseResearchStructuredModel["recommendations"][number]) => row.id },
+    { heading: "Recommendation", value: (row: PhaseResearchStructuredModel["recommendations"][number]) => row.recommendation },
+    { heading: "Supporting Claim IDs", value: (row: PhaseResearchStructuredModel["recommendations"][number]) => row.findingIds.join(", ") },
+    { heading: "Evidence IDs", value: (row: PhaseResearchStructuredModel["recommendations"][number]) => [...new Set(row.findingIds.flatMap((id) => sourceIdsForFinding.get(id) ?? []))].join(", ") },
+    { heading: "Affected Surfaces", value: (row: PhaseResearchStructuredModel["recommendations"][number]) => row.affectedSurfaces.join("; ") },
+    { heading: "Tests / Checks", value: (row: PhaseResearchStructuredModel["recommendations"][number]) => row.verification.join("; ") },
+    { heading: "Requirement IDs", value: (row: PhaseResearchStructuredModel["recommendations"][number]) => row.requirementIds.join(", ") },
+    { heading: "Status", value: (row: PhaseResearchStructuredModel["recommendations"][number]) => row.status },
+  ].filter((column) => model.recommendations.some((row) => column.value(row)));
+  const sourceColumns = [
+    { heading: "Source ID", key: "id" }, { heading: "Lane", key: "lane" },
+    { heading: "Path Or URL", key: "reference" }, { heading: "Title", key: "title" },
+    { heading: "Access Date", key: "accessed" }, { heading: "Support Span", key: "excerpt" },
+    { heading: "Limitations", key: "limitations" },
+  ].filter((column) => model.sources.some((source) => source[column.key as keyof typeof source]));
   const sections = [
     `# Phase ${args.resolved.phasePrefix.replace(/[\r\n]/g, " ")}: ${args.resolved.phaseName.replace(/[\r\n]/g, " ")} - Research\n\n**Researched:** ${args.researchedAt ?? new Date().toISOString().slice(0, 10)}\n**Confidence:** ${confidence}`,
-    `## Phase Requirements\n\n${table(["ID", "Description", "Research Support"], requirementRows)}`,
     `## Summary\n\n${prose(model.summary)}`,
-    `## Locked Decisions From Context\n\n${bullets(args.lockedDecisions, "No locked-decision grounding was supplied to the renderer.")}`,
-    `## User Constraints\n\n${bullets(args.userConstraints, "No user-constraint grounding was supplied to the renderer.")}`,
+    requirementRows.length ? `## Phase Requirements\n\n${table(["ID", "Description", "Research Support"], requirementRows)}` : "",
+    args.lockedDecisions?.length ? `## Locked Decisions From Context\n\n${bullets(args.lockedDecisions, "")}` : "",
+    args.userConstraints?.length ? `## User Constraints\n\n${bullets(args.userConstraints, "")}` : "",
     ...Object.keys(OPTIONAL_HEADINGS).filter((key) => key !== "codeExamples").map((key) => optional(key as keyof typeof OPTIONAL_HEADINGS)),
-    `## Open Questions\n\n${model.openQuestions.length === 0 ? "- none" : model.openQuestions.map((question) => `- ${question.blocking ? "Blocking" : "Nonblocking"}: ${prose(question.question).replace(/\n/g, "\n  ")}`).join("\n")}`,
-    `## Confidence Breakdown\n\n${table(["Finding ID", "Finding", "Support Status", "Confidence", "Source IDs", "Requirement IDs"], model.findings.map((finding) => [finding.id, finding.finding, finding.status, finding.confidence, finding.sourceIds.join(", ") || "No sources supplied", finding.requirementIds.join(", ") || "Phase scope"]))}`,
+    model.openQuestions.length ? `## Open Questions\n\n${model.openQuestions.map((question) => `- ${question.blocking ? "Blocking" : "Nonblocking"}: ${prose(question.question).replace(/\n/g, "\n  ")}`).join("\n")}` : "",
+    `## Findings\n\n${table(["Finding ID", "Finding", "Support Status", "Confidence", "Source IDs"], model.findings.map((finding) => [finding.id, finding.finding, finding.status, finding.confidence, finding.sourceIds.join(", ")]))}`,
     optional("codeExamples"),
-    `## Recommendations\n\n${table(["Recommendation ID", "Recommendation", "Supporting Claim IDs", "Evidence IDs", "Affected Surfaces", "Tests / Checks", "Requirement IDs", "Status"], model.recommendations.map((row) => [row.id, row.recommendation, row.findingIds.join(", "), [...new Set(row.findingIds.flatMap((id) => sourceIdsForFinding.get(id) ?? []))].join(", "), row.affectedSurfaces.join("; "), row.verification.join("; "), row.requirementIds.join(", ") || "Phase scope", row.status]))}`,
-    `## Sources\n\n### Source Register\n\n${model.sources.length ? table(["Source ID", "Lane", "Path Or URL", "Title", "Access Date", "Support Span", "Limitations"], model.sources.map((source) => [source.id, source.lane, source.reference, source.title ?? "Title not supplied", source.accessed ?? "Not recorded", source.excerpt ?? "No excerpt supplied", source.limitations ?? "No limitations recorded"])) : "No source evidence has been supplied."}`,
+    `## Recommendations\n\n${table(recommendationColumns.map((column) => column.heading), model.recommendations.map((row) => recommendationColumns.map((column) => column.value(row))))}`,
+    `## Sources\n\n${model.sources.length ? `### Source Register\n\n${table(sourceColumns.map((column) => column.heading), model.sources.map((source) => sourceColumns.map((column) => source[column.key as keyof typeof source] ?? "")))}` : "No source evidence is available; the recommendations remain blocked."}`,
   ];
-  return `${sections.join("\n\n")}\n`;
+  return `${sections.filter(Boolean).join("\n\n")}\n`;
 }

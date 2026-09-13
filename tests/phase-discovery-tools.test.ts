@@ -1179,9 +1179,9 @@ test("phase research status returns heading-scoped diagnostics and repairs for i
   assert.ok(
     status.researchDiagnostics.some(
       (diagnostic) =>
-        diagnostic.path === "content.sections.Phase Requirements" &&
+        diagnostic.path === "content.sections.Recommendations" &&
         diagnostic.code === "research.heading_missing" &&
-        /## Phase Requirements/.test(diagnostic.repair)
+        /Recommendations section/.test(diagnostic.repair)
     )
   );
   assert.ok(
@@ -1189,10 +1189,11 @@ test("phase research status returns heading-scoped diagnostics and repairs for i
       (diagnostic) =>
         diagnostic.path === "content.sections.Sources" &&
         diagnostic.code === "research.heading_missing" &&
-        /## Sources/.test(diagnostic.repair)
+        /Sources section/.test(diagnostic.repair)
     )
   );
-  assert.match(status.suggestedRepairs.join("\n"), /## Phase Requirements|## Sources/i);
+  assert.match(status.suggestedRepairs.join("\n"), /Recommendations section|Sources section/i);
+  assert.equal(status.researchDiagnostics.some(diagnostic => diagnostic.path === "content.sections.Phase Requirements"), false);
 });
 
 test("phase research status exposes config-aware plan-phase readiness", async (t) => {

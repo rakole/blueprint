@@ -42,8 +42,8 @@ test("research registry exposes its source-owned compact model and keeps legacy 
   const contract = readArtifactContract("phase.research");
   const schema = JSON.parse(await readFile(new URL("../src/mcp/artifact-contracts/schemas/phase.research.model.schema.json", import.meta.url), "utf8"));
   assert.deepEqual(contract.modelContract?.jsonSchema, schema);
-  assert.deepEqual(contract.modelContract?.renderedHeadings, contract.requiredHeadings);
-  assert.equal(contract.requiredHeadings.length, 17);
+  assert.deepEqual(contract.requiredHeadings, ["Summary", "Recommendations", "Sources"]);
+  assert.ok(contract.modelContract?.renderedHeadings.includes("Findings"));
   assert.ok("authoringTemplate" in contract);
   assert.equal(validatePhaseResearchModelInput(contract.modelContract?.minimalValidExample).validation.valid, true);
   assert.equal(phaseResearchAuthoringSchema.safeParse(candidate()).success, true);
@@ -58,6 +58,7 @@ test("JSON and typed inputs produce the same model; optional fields default with
   assert.deepEqual(parsed.model?.sections, {});
   assert.equal(raw.openQuestions, undefined);
   assert.deepEqual(validatePhaseResearchModelInput(JSON.stringify(raw)), parsed);
+  assert.deepEqual(validatePhaseResearchModelInput(`\`\`\`json\n${JSON.stringify(raw)}\n\`\`\``), parsed);
 });
 
 test("malformed JSON, nonobjects, whitespace and unexpected identity fields are field-addressable errors", () => {
@@ -100,13 +101,16 @@ test("a ready recommendation cannot depend on unsupported or unreferenced findin
   }
 });
 
-test("blocked recommendations and blocking questions remain durable but unready", () => {
+test("blocked recommendations and blocking questions publish on the first attempt but prevent planning", () => {
   const raw = candidate();
   raw.recommendations[0].status = "blocked";
   raw.openQuestions.push({ question: "Which format does the consumer accept?", blocking: true });
   const result = validatePhaseResearchModelInput(raw);
   assert.ok(result.model);
-  assert.equal(result.validation.valid, false);
+  assert.equal(result.validation.valid, true);
+  assert.equal(result.validation.planningReady, false);
+  assert.equal(result.validation.planningBlockers.length, 2);
+  assert.equal(validateResearchArtifactContent(render(result.model!)).valid, true);
   assert.ok(result.validation.diagnostics.some((entry) => entry.code === "research.recommendation_blocked"));
   assert.ok(result.validation.diagnostics.some((entry) => entry.code === "research.question_blocking"));
   raw.recommendations[0].status = "ready";
@@ -114,11 +118,13 @@ test("blocked recommendations and blocking questions remain durable but unready"
   assert.equal(validatePhaseResearchModelInput(raw).validation.valid, true);
 });
 
-test("ready recommendations need concrete affected surfaces and verification", () => {
+test("missing affected surfaces and verification are advice rather than publication gates", () => {
   const raw = candidate();
   raw.recommendations[0].affectedSurfaces = [];
   raw.recommendations[0].verification = [];
   const result = validatePhaseResearchModelInput(raw);
+  assert.equal(result.validation.valid, true);
+  assert.equal(result.validation.planningReady, true);
   assert.ok(result.validation.diagnostics.some((entry) => entry.code === "research.affected_surfaces_missing"));
   assert.ok(result.validation.diagnostics.some((entry) => entry.code === "research.verification_missing"));
 });
@@ -144,14 +150,16 @@ test("external sources require usable URL or DOI and preserve missing-date uncer
   assert.equal(validatePhaseResearchModelInput(raw).validation.valid, false);
 });
 
-test("renderer preserves all canonical headings, grounded constraints and ordinary legacy validity", () => {
+test("renderer preserves meaningful grounding with a compact first-pass publishable document", () => {
   const content = render(candidate());
   const headings = [...content.matchAll(/^## (.+)$/gm)].map((entry) => entry[1]);
-  assert.deepEqual(headings, readArtifactContract("phase.research").requiredHeadings);
+  for (const heading of readArtifactContract("phase.research").requiredHeadings) assert.ok(headings.includes(heading));
+  assert.ok(headings.length < 17);
+  assert.ok(headings.includes("Findings"));
   assert.ok(content.includes("**Researched:** 2026-09-12"));
   assert.ok(content.includes("MCP tools own runtime-state writes."));
   assert.ok(content.includes("Keep source changes inside the phase research workflow."));
-  assert.ok(content.includes("## Open Questions\n\n- none"));
+  assert.ok(!content.includes("## Open Questions"));
   assert.equal(validateResearchArtifactContent(content).valid, true, JSON.stringify(validateResearchArtifactContent(content).issues));
 });
 
@@ -186,9 +194,121 @@ test("omitted optional sections report omission without inventing a stack, setup
   const raw = candidate();
   raw.sections = { alternativesConsidered: [] };
   const content = render(raw);
-  assert.ok(content.includes("## Standard Stack\n\nNo section-specific detail was supplied in this research."));
-  assert.ok(content.includes("## Alternatives Considered\n\nNo section-specific detail was supplied in this research."));
-  assert.ok(content.includes("Not recorded"));
+  assert.ok(!content.includes("## Standard Stack"));
+  assert.ok(!content.includes("## Alternatives Considered"));
+  assert.ok(!content.includes("Not recorded"));
+  assert.ok(!content.includes("No section-specific detail"));
   assert.ok(!content.includes("No new dependency required"));
   assert.equal(content, render(raw), "Caller-supplied research timestamp makes rendering deterministic.");
+});
+
+test("representative first-pass research inputs publish without formatting or completeness repairs", () => {
+  const fixtures = [
+    {
+      name: "sparse repository research",
+      value: {
+        summary: "The artifact writer already preserves atomic publication.",
+        findings: [{ id: "F1", finding: "The writer renames a temporary file into place.", sourceIds: "S1" }],
+        recommendations: [{ id: "R1", recommendation: "Reuse that writer for publication.", findingIds: "F1" }],
+        sources: [{ id: "S1", lane: "Repository", reference: "src/mcp/tools/artifacts.ts" }],
+      },
+    },
+    {
+      name: "external evidence with enum aliases and no ritual metadata",
+      value: {
+        summary: "An atomic replacement avoids exposing partial files.",
+        findings: [{ id: "F1", finding: "Rename replaces the target directory entry.", sourceIds: ["S1", "S1"], confidence: "medium", status: "Directly Supported" }],
+        recommendations: [{ id: "R1", recommendation: "Use rename for the final publication step.", findingIds: "F1", status: "READY" }],
+        sources: [{ id: "S1", lane: "EXTERNAL", reference: "https://nodejs.org/api/fs.html#fspromisesrenameoldpath-newpath", title: "", accessed: null }],
+        openQuestions: "No open questions.", sections: { codeExamples: "", standardStack: [] },
+      },
+    },
+    {
+      name: "named supplied source without a public URL",
+      value: {
+        summary: "The stakeholder requires preserving an audit trail.",
+        findings: [{ id: "F1", finding: "The stakeholder needs a durable audit trail.", sourceIds: ["S1"], status: "supported" }],
+        recommendations: [{ id: "R1", recommendation: "Preserve the audit events when storing the final artifact.", findingIds: ["F1"] }],
+        sources: [{ id: "S1", lane: "supplied", reference: "Stakeholder interview notes from September 12", excerpt: "Keep the audit trail." }],
+      },
+    },
+    {
+      name: "valuable blocked research with an explicit evidence gap",
+      value: {
+        summary: "The supplied material does not establish the storage consistency guarantee.",
+        findings: [{ id: "F1", finding: "The behavior remains unverified.", status: "unsupported", confidence: "low" }],
+        recommendations: [{ id: "R1", recommendation: "Determine the consistency guarantee before choosing the cache.", status: "blocked" }],
+        sources: [], openQuestions: [{ question: "Does the storage provider guarantee read-after-write consistency?", blocking: true }],
+      },
+    },
+  ];
+  for (const fixture of fixtures) {
+    const result = validatePhaseResearchModelInput(fixture.value, { requiredRequirementIds: ["REQ-01"] });
+    assert.equal(result.validation.valid, true, `${fixture.name}: ${result.validation.issues.join("; ")}`);
+    assert.ok(result.model, fixture.name);
+    const content = renderPhaseResearchModelContent({ resolved: { phasePrefix: "01", phaseName: "Research" }, model: result.model!, researchedAt: "2026-09-13" });
+    const markdown = validateResearchArtifactContent(content);
+    assert.equal(markdown.valid, true, `${fixture.name}: ${markdown.issues.join("; ")}`);
+    assert.ok(!content.includes("No section-specific detail"), fixture.name);
+  }
+});
+
+test("missing requirement coverage warns while invented requirement references still fail", () => {
+  const result = validatePhaseResearchModelInput(candidate(), { knownRequirementIds: ["RES-01", "RES-02"], requiredRequirementIds: ["RES-01", "RES-02"] });
+  assert.equal(result.validation.valid, true);
+  assert.equal(result.validation.planningReady, true);
+  assert.ok(result.validation.warnings.some((warning) => warning.includes("RES-02")));
+  assert.equal(validatePhaseResearchModelInput(candidate(), { knownRequirementIds: [] }).validation.valid, false);
+});
+
+test("normalization does not upgrade unsupported findings or hide broken references", () => {
+  const model = candidate();
+  model.findings[0].status = "unsupported";
+  model.findings[0].confidence = "HIGH";
+  const result = validatePhaseResearchModelInput(model);
+  assert.equal(result.validation.valid, false);
+  assert.equal(result.validation.planningReady, false);
+  assert.ok(result.validation.issues.some((issue) => issue.includes("HIGH")));
+  assert.ok(result.validation.issues.some((issue) => issue.includes("Ready recommendation")));
+});
+
+test("typed reference namespaces permit concise local numeric ids without ambiguity", () => {
+  const raw = candidate();
+  raw.sources[0].id = "1";
+  raw.findings[0].id = "1";
+  raw.findings[0].sourceIds = ["1"];
+  raw.recommendations[0].id = "1";
+  raw.recommendations[0].findingIds = ["1"];
+  const result = validatePhaseResearchModelInput(raw);
+  assert.equal(result.validation.valid, true, result.validation.issues.join("\n"));
+  assert.equal(validateResearchArtifactContent(render(result.model!)).valid, true);
+});
+
+test("explicit HIGH with source references does not need redundant supported status on the first attempt", () => {
+  const raw = candidate();
+  delete (raw.findings[0] as Partial<typeof raw.findings[0]>).status;
+  const result = validatePhaseResearchModelInput(raw);
+  assert.equal(result.validation.valid, true, result.validation.issues.join("\n"));
+  assert.equal(result.model!.findings[0].status, "supported");
+  assert.equal(result.model!.findings[0].confidence, "HIGH");
+  assert.equal(validateResearchArtifactContent(render(result.model!)).valid, true);
+  for (const status of ["inferred", "unsupported"] as const) {
+    raw.findings[0].status = status;
+    assert.equal(validatePhaseResearchModelInput(raw).validation.valid, false, status);
+  }
+  delete (raw.findings[0] as Partial<typeof raw.findings[0]>).status;
+  raw.findings[0].sourceIds = [];
+  assert.equal(validatePhaseResearchModelInput(raw).validation.valid, false, "HIGH never invents missing evidence");
+});
+
+test("plain Blocking question strings preserve planning blockers during normalization", () => {
+  for (const prefix of ["Blocking: ", "blocking: ", "- **Blocking:** ", "**Blocking**: "]) {
+    const raw = { ...candidate(), openQuestions: [`${prefix}Which retention policy is required?`] };
+    const result = validatePhaseResearchModelInput(raw);
+    assert.equal(result.validation.valid, true, prefix);
+    assert.equal(result.validation.planningReady, false, prefix);
+    assert.equal(result.validation.planningBlockers.length, 1, prefix);
+    assert.deepEqual(result.model!.openQuestions, [{ question: "Which retention policy is required?", blocking: true }]);
+    assert.ok(render(result.model!).includes("Blocking: Which retention policy is required?"));
+  }
 });
