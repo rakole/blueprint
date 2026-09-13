@@ -10,11 +10,12 @@ import {
   blueprintDiscussPrepare,
   blueprintDiscussRecord,
   blueprintDiscussRead,
-  blueprintDiscussFinalize,
+  blueprintDiscussFinalize as directFinalize,
   discussToolDefinitions,
 } from "../src/mcp/tools/discuss.js";
 import { blueprintPhaseArtifactRead } from "../src/mcp/tools/phase-artifacts.js";
 import { BLUEPRINT_MUTATION_TOOL_NAMES } from "../src/mcp/mutation-failure-logging.js";
+const blueprintDiscussFinalize = (args: Parameters<typeof directFinalize>[0]) => directFinalize({ model: validPhaseContextModel({ openQuestions: [], deferredIdeas: [] }), ...args });
 const relative = ".blueprint/phases/03-discovery";
 async function fixture(seed = true) {
   const cwd = await createGitRepo("discuss-prepare-");
@@ -83,19 +84,15 @@ test("prepare resolves, bounds prior evidence, reuses revision, and sparse typed
       phase: "3",
       requestId: "answer",
       expectedRevision: first.revision!,
-      model,
+      records: [],
     });
     assert.equal(recorded.status, "recorded");
-    assert.equal(
-      recorded.readiness.ready,
-      true,
-      JSON.stringify(recorded.readiness),
-    );
     const finalized = await blueprintDiscussFinalize({
       cwd,
       phase: "3",
       requestId: "publish",
       expectedRevision: recorded.revision!,
+      model,
     });
     assert.equal(finalized.status, "finalized", JSON.stringify(finalized));
     assert.equal(
@@ -125,7 +122,7 @@ test("optional spec appearance and plan inventory invalidate publication and req
       phase: "3",
       requestId: "draft",
       expectedRevision: prepared.revision!,
-      candidate: validPhaseContextModel(),
+
       records: [
         {
           id: "choice",
@@ -204,106 +201,6 @@ test("planned missing directory is seeded through scaffold, unknown and ambiguou
     await rm(cwd, { recursive: true, force: true });
   }
 });
-test("record MCP schema advertises canonical typed fields while raw candidate survives transport validation", () => {
-  const tool = discussToolDefinitions.find(
-    (t) => t.name === "blueprint_discuss_record",
-  )!;
-  const schema = z.toJSONSchema(z.object(tool.inputSchema));
-  assert.ok(JSON.stringify(schema.properties?.model).includes("phaseBoundary"));
-  assert.ok(
-    JSON.stringify(schema.properties?.model).includes("successCriteria"),
-  );
-  assert.ok(
-    z
-      .object(tool.inputSchema)
-      .safeParse({
-        phase: "3",
-        requestId: "raw",
-        expectedRevision: 0,
-        candidate: { phaseBoundary: [] },
-      }).success,
-  );
-  assert.ok(BLUEPRINT_MUTATION_TOOL_NAMES.has("blueprint_discuss_prepare"));
-});
-test("unsettled decision records block finalize even when a valid candidate is saved", async () => {
-  const cwd = await fixture();
-  try {
-    const prepared = await blueprintDiscussPrepare({ cwd, phase: "3" });
-    const recorded = await blueprintDiscussRecord({
-      cwd,
-      phase: "3",
-      requestId: "open",
-      expectedRevision: prepared.revision!,
-      candidate: validPhaseContextModel(),
-      records: [
-        {
-          id: "unsettled",
-          type: "decision",
-          value: "Choose persistence",
-          rationale: "Need confidence",
-          evidence: [],
-          status: "open",
-        },
-      ],
-    });
-    assert.equal(recorded.readiness.ready, false);
-    assert.deepEqual(
-      (await blueprintDiscussRead({ cwd, phase: "3" })).readiness.blockers,
-      ["unsettled"],
-    );
-  } finally {
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
-test("raw malformed draft repairs by field removal then publishes without replacing prior context early", async () => {
-  const cwd = await fixture();
-  try {
-    const prepared = await blueprintDiscussPrepare({ cwd, phase: 3 });
-    const candidate = {
-      ...validPhaseContextModel(),
-      extra: "exact draft detail",
-      phaseBoundary: [],
-    };
-    const record = await blueprintDiscussRecord({
-      cwd,
-      phase: 3,
-      requestId: "malformed",
-      expectedRevision: prepared.revision!,
-      candidate,
-    });
-    assert.deepEqual(
-      (await blueprintDiscussRead({ cwd, phase: 3 })).session!.candidate,
-      candidate,
-    );
-    const corrected = await blueprintDiscussRecord({
-      cwd,
-      phase: 3,
-      requestId: "repair",
-      expectedRevision: record.revision!,
-      corrections: [
-        { path: ["extra"], operation: "remove" },
-        {
-          path: ["phaseBoundary"],
-          value: validPhaseContextModel().phaseBoundary,
-        },
-      ],
-    });
-    assert.equal(corrected.readiness.ready, true);
-    assert.equal(
-      (
-        await blueprintDiscussFinalize({
-          cwd,
-          phase: 3,
-          requestId: "fixed",
-          expectedRevision: corrected.revision!,
-        })
-      ).status,
-      "finalized",
-    );
-  } finally {
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
 test("effective host defaults changes invalidate prepared basis even without project config changes", async () => {
   const cwd = await fixture();
   const previous = process.env.BLUEPRINT_GLOBAL_HOME;
@@ -359,7 +256,7 @@ test("appearance of a previously absent prior phase invalidates prepared inputs"
     const prior = path.join(cwd, ".blueprint/phases/02-foundation");
     await rm(prior, { recursive: true });
     const prepared = await blueprintDiscussPrepare({ cwd, phase: 3 });
-    const record = await blueprintDiscussRecord({ cwd, phase: 3, requestId: "candidate", expectedRevision: prepared.revision!, candidate: validPhaseContextModel() });
+    const record = await blueprintDiscussRecord({ cwd, phase: 3, requestId: "notes", expectedRevision: prepared.revision!, records: [] });
     await mkdir(prior);
     await writeFile(path.join(prior, "02-CONTEXT.md"), "# Newly available dependency\n");
     const result = await blueprintDiscussFinalize({ cwd, phase: 3, requestId: "publish", expectedRevision: record.revision! });

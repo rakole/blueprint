@@ -4587,6 +4587,18 @@ function matchedScaffoldPlaceholderSignals(
   ]);
 }
 
+// Match actual unfilled rows/cells, never labels embedded in authored prose.
+function matchedDiscussionScaffoldRows(content: string, signals: readonly string[]): string[] {
+  const rows = stripResearchFencedCodeBlocks(content).split(/\r?\n/).flatMap((line) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith(">")) return [];
+    return trimmed.startsWith("|")
+      ? trimmed.split("|").map((cell) => cell.trim())
+      : [trimmed.replace(/^[-*+]\s+/, "")];
+  });
+  return signals.filter((signal) => signal.length > 0 && rows.includes(signal));
+}
+
 export function validateResearchArtifactContent(content: string): {
   valid: boolean;
   issues: string[];
@@ -6607,10 +6619,6 @@ function countNonEmptyContractSections(
   );
 }
 
-function hasSubstantiveContractSection(section: string): boolean {
-  return hasBootstrapText(section, 3);
-}
-
 function matchesExactEmptySentinel(section: string, exactEmptySentinel: string | undefined): boolean {
   return typeof exactEmptySentinel === "string" && section.trim() === exactEmptySentinel;
 }
@@ -7073,277 +7081,6 @@ export function isExplicitUiSkipRationale(content: string): boolean {
   );
 }
 
-const UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS: Array<{
-  mode: string;
-  pattern: RegExp;
-}> = [
-  { mode: "power mode", pattern: /\bpower[\s-]?mode\b/i },
-  { mode: "chain mode", pattern: /\bchain[\s-]?mode\b/i },
-  { mode: "auto mode", pattern: /\bauto[\s-]?mode\b/i },
-  { mode: "batch mode", pattern: /\bbatch[\s-]?mode\b/i },
-  { mode: "auto-advance", pattern: /\bauto[\s-]?advance(?:ment|s|d)?\b/i }
-];
-
-const UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN =
-  /\b(?:supports?|supported|ships?|shipped|available|enabled|routable|provides?|offers?|runs?|implements|implemented)\b/i;
-
-const UNSUPPORTED_MODE_NEGATION_PATTERN =
-  /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
-
-type DiscussPhaseAntiPatternDiagnostic = {
-  path: string;
-  code: string;
-  message: string;
-  repair: string;
-};
-
-function validateUnsupportedDiscussModeClaims(
-  content: string,
-  artifactLabel: string
-): DiscussPhaseAntiPatternDiagnostic[] {
-  const diagnostics: DiscussPhaseAntiPatternDiagnostic[] = [];
-  const flaggedModes = new Set<string>();
-
-  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-    if (UNSUPPORTED_MODE_NEGATION_PATTERN.test(line)) {
-      continue;
-    }
-
-    if (!UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN.test(line)) {
-      continue;
-    }
-
-    for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
-      if (pattern.test(line) && !flaggedModes.has(mode)) {
-        diagnostics.push({
-          path: "content.unsupportedModeClaims",
-          code: "discuss.unsupported_mode_claim",
-          message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`,
-          repair:
-            "Remove shipped/available claims for unsupported discuss-phase modes, or restate them as explicit non-goals or unavailable behavior."
-        });
-        flaggedModes.add(mode);
-      }
-    }
-  }
-
-  return diagnostics;
-}
-
-function markdownSectionLines(section: string): string[] {
-  return section
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
-}
-
-function hasConcreteCanonicalReference(section: string): boolean {
-  return markdownSectionLines(section)
-    .filter(
-      (line) =>
-        !/^(?:none|n\/a|na|not applicable|no canonical references?|no saved references?)\b/i.test(
-          line
-        )
-    )
-    .some((line) =>
-      /https?:\/\/\S+|(?:^|[\s`])(?:\.blueprint|src|tests|docs|commands|skills|agents|hooks|scripts|dist)\/[^\s`,)]+|\b(?:ROADMAP|STATE|PROJECT|REQUIREMENTS|MEMORY|AGENTS|README|CHANGELOG)\.md\b|\b(?:roadmap|requirements?|project brief|state|saved phase artifacts?|phase artifacts?|context artifact|discussion log)\b|\b[\w.-]+\.(?:ts|tsx|js|mjs|json|toml|md|yaml|yml)\b/i.test(
-        line
-      )
-    );
-}
-
-function hasDeferredIdeaSignal(section: string): boolean {
-  return /\b(?:deferred ideas?|later follow-?ups?|future follow-?ups?|follow-?up ideas?|scope creep|revisit|after this phase|next phase|backlog|parking lot)\b/i.test(
-    section
-  );
-}
-
-function hasConcreteDeferredIdeas(section: string): boolean {
-  return markdownSectionLines(section)
-    .filter(
-      (line) =>
-        !/^(?:none|n\/a|na|not applicable|no\b.*(?:deferred|follow-?up|ideas?)|nothing deferred)\b/i.test(
-          line
-        )
-    )
-    .some((line) => countMeaningfulWords(line) >= 3);
-}
-
-function hasConcreteOpenQuestions(section: string): boolean {
-  return markdownSectionLines(section)
-    .filter(
-      (line) =>
-        !/^(?:none|n\/a|na|not applicable|no open questions?|nothing open)\b/i.test(line)
-    )
-    .some((line) => countMeaningfulWords(line) >= 3);
-}
-
-function hasCarryForwardRiskSignal(section: string): boolean {
-  return /\b(?:deferred risks?|open risks?|risk watchlist|consequence if wrong)\b/i.test(section);
-}
-
-function hasOpenGrayAreaSignal(section: string): boolean {
-  return /\b(?:open gray areas?|open items for discuss-phase|open risks and dependency questions)\b/i.test(
-    section
-  );
-}
-
-function hasConcreteRiskCarryForward(section: string): boolean {
-  return markdownSectionLines(section)
-    .filter((line) => !/^(?:none|n\/a|na|not applicable|nothing deferred|nothing open)\b/i.test(line))
-    .some((line) =>
-      /\b(?:risk|uncertain|uncertainty|if wrong|unknown|unresolved|needs confirmation|dependency review)\b/i.test(
-        line
-      )
-    );
-}
-
-const RAW_HANDOFF_PACKET_LABEL_PATTERNS = [
-  /^starter(?:[-\s]+(?:seed|phase|context))?\s+handoff(?:\s+packet)?\b:?/i,
-  /^downstream handoff packet\b:?/i,
-  /^source refs?\b:?/i,
-  /^(?:deferred|open)\s+risks?\b:?/i,
-  /^open (?:gray areas?|items for discuss-phase|risks and dependency questions)\b:?/i,
-  /^(?:researchBrief|uiBrief|planBrief|planInventory|routingGates)\b:?/i
-] as const;
-
-function containsRawHandoffPacketLabel(content: string): boolean {
-  return content
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
-    .filter((line) => line.length > 0)
-    .some((line) =>
-      RAW_HANDOFF_PACKET_LABEL_PATTERNS.some((pattern) => pattern.test(line))
-    );
-}
-
-function validateDiscussPhaseContextAntiPatterns(content: string): {
-  diagnostics: DiscussPhaseAntiPatternDiagnostic[];
-  warnings: string[];
-} {
-  const diagnostics: DiscussPhaseAntiPatternDiagnostic[] = [];
-  const warnings: string[] = [];
-  const canonicalReferences = extractMarkdownSection(content, "Canonical References");
-  const deferredIdeas = extractMarkdownSection(content, "Deferred Ideas");
-  const openQuestions = extractMarkdownSection(content, "Open Questions");
-  const deferredSourceSections = [
-    "Discovery Grounding",
-    "Implementation Decisions",
-    "Specific Ideas",
-    "Existing Code Insights",
-    "Dependencies"
-  ]
-    .map((heading) => extractMarkdownSection(content, heading))
-    .join("\n");
-
-  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
-
-  if (containsRawHandoffPacketLabel(content)) {
-    diagnostics.push({
-      path: "content.rawHandoffLabels",
-      code: "context.raw_handoff_label",
-      message:
-        "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections.",
-      repair:
-        "Map starter or handoff packet substance into canonical phase.context sections and remove raw packet labels before retrying."
-    });
-  }
-
-  if (!hasConcreteCanonicalReference(canonicalReferences)) {
-    diagnostics.push({
-      path: "content.sections.Canonical References",
-      code: "context.missing_canonical_reference",
-      message:
-        "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL.",
-      repair:
-        "Add a concrete Canonical References entry naming the saved artifact, repo path, command output, URL, or source used to ground the context."
-    });
-  }
-
-  if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
-    diagnostics.push({
-      path: "content.sections.Deferred Ideas",
-      code: "context.dropped_deferred_ideas",
-      message:
-        "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section.",
-      repair:
-        "Move each deferred or later follow-up idea into ## Deferred Ideas, or use exactly `- none` only when no deferred ideas exist."
-    });
-  }
-
-  if (
-    hasCarryForwardRiskSignal(deferredSourceSections) &&
-    !hasConcreteRiskCarryForward(deferredIdeas) &&
-    !hasConcreteRiskCarryForward(openQuestions)
-  ) {
-    diagnostics.push({
-      path: "content.sections.Open Questions",
-      code: "context.dropped_risk_carry_forward",
-      message:
-        "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas.",
-      repair:
-        "Preserve each deferred risk or consequence-if-wrong note as a concrete Open Questions or Deferred Ideas bullet before retrying."
-    });
-  }
-
-  if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
-    diagnostics.push({
-      path: "content.sections.Open Questions",
-      code: "context.dropped_open_questions",
-      message:
-        "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions.",
-      repair:
-        "Move open gray areas into ## Open Questions as concrete questions, or use exactly `- none` only when no open questions remain."
-    });
-  }
-
-  if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
-    warnings.push(
-      "Context artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
-    );
-  }
-
-  const editorialCodes = new Set(["context.dropped_deferred_ideas", "context.dropped_risk_carry_forward", "context.dropped_open_questions"]);
-  warnings.push(...diagnostics.filter((d) => editorialCodes.has(d.code)).map((d) => d.message));
-  return { diagnostics: diagnostics.filter((d) => !editorialCodes.has(d.code)), warnings };
-}
-
-function validateDiscussPhaseDiscussionLogAntiPatterns(content: string): {
-  diagnostics: DiscussPhaseAntiPatternDiagnostic[];
-  warnings: string[];
-} {
-  const diagnostics: DiscussPhaseAntiPatternDiagnostic[] = [];
-  const warnings: string[] = [];
-  const followUps = extractMarkdownSection(content, "Follow-Ups");
-  const discussionSections = ["Summary", "Notes"]
-    .map((heading) => extractMarkdownSection(content, heading))
-    .join("\n");
-
-  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
-
-  if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
-    diagnostics.push({
-      path: "content.sections.Follow-Ups",
-      code: "discussion-log.dropped_follow_ups",
-      message:
-        "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section.",
-      repair:
-        "Move deferred or later follow-up ideas into ## Follow-Ups, or avoid mentioning them in Summary/Notes when none exist."
-    });
-  }
-
-  if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
-    warnings.push(
-      "Discussion log artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
-    );
-  }
-
-  return { diagnostics, warnings };
-}
-
 function isLegacyPhaseContextShell(content: string): boolean {
   if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
     return false;
@@ -7406,13 +7143,7 @@ export function validatePhaseArtifactContent(
   const placeholderSignals =
     artifact === "ui-spec"
       ? contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal))
-      : matchedScaffoldPlaceholderSignals(content, contract.placeholderSignals, {
-          includeScaffoldMarker: artifact !== "context",
-          singleSignalPatterns:
-            artifact === "discussion-log"
-              ? [/^Record the major discussion outcomes/i]
-              : []
-        });
+      : matchedDiscussionScaffoldRows(content, contract.placeholderSignals);
 
   for (const signal of placeholderSignals) {
     const issue = `${artifactLabel} still contains placeholder scaffold text: ${signal}.`;
@@ -7429,7 +7160,7 @@ export function validatePhaseArtifactContent(
 
   const presentRequiredSections = countNonEmptyContractSections(content, contract.requiredHeadings);
   const missingRequiredSections = contract.requiredHeadings.filter(
-    (heading) => extractMarkdownSection(content, heading).trim().length === 0
+    (heading) => artifact === "context" ? !content.split(/\r?\n/).some((line) => line.trim() === `## ${heading}`) : extractMarkdownSection(content, heading).trim().length === 0
   );
   const uiSpecMode =
     artifact === "ui-spec" ? detectUiSpecAuthoringMode(content, contract.requiredHeadings) : undefined;
@@ -7540,87 +7271,13 @@ export function validatePhaseArtifactContent(
       );
   }
 
-  if (artifact === "context") {
-    for (const heading of contract.requiredHeadings) {
-      const section = extractMarkdownSection(content, heading);
-      const exactEmptySentinel = contract.sectionValidations?.[heading]?.exactEmptySentinel;
-
-      if (section.trim().length === 0) {
-        continue;
-      }
-
-      if (matchesExactEmptySentinel(section, exactEmptySentinel)) {
-        continue;
-      }
-
-      if (matchesFuzzyEmptySentinel(section, exactEmptySentinel)) {
-        const fuzzySentinel = exactEmptySentinel ?? "- none";
-        const issue = `Context artifact section ${heading} must use exactly \`${fuzzySentinel}\` for the empty state instead of a prose variant.`;
-        issues.push(issue);
-        diagnostics.push(
-          phaseArtifactDiagnostic({
-            artifact,
-            path: `content.sections.${heading}`,
-            code: "context.inexact_empty_sentinel",
-            message: issue,
-            heading,
-            repair: exactEmptySentinelRepairInstruction(heading, fuzzySentinel)
-          })
-        );
-        continue;
-      }
-
-      if (!hasSubstantiveContractSection(section)) {
-        const issue = exactEmptySentinel
-          ? `Context artifact section ${heading} must contain substantive downstream-planning detail or use exactly \`${exactEmptySentinel}\`.`
-          : `Context artifact section ${heading} must contain substantive downstream-planning detail.`;
-        issues.push(issue);
-        diagnostics.push(
-          phaseArtifactDiagnostic({
-            artifact,
-            path: `content.sections.${heading}`,
-            code: "context.non_substantive_required_section",
-            message: issue,
-            heading,
-            repair: exactEmptySentinel
-              ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel)
-              : undefined
-          })
-        );
-      }
-    }
-
-    const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
-    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
-    diagnostics.push(
-      ...discussValidation.diagnostics.map((diagnostic) =>
-        phaseArtifactDiagnostic({
-          artifact,
-          path: diagnostic.path,
-          code: diagnostic.code,
-          message: diagnostic.message,
-          repair: diagnostic.repair
-        })
-      )
-    );
-    warnings.push(...discussValidation.warnings);
-  }
-
-  if (artifact === "discussion-log") {
-    const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
-    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
-    diagnostics.push(
-      ...discussValidation.diagnostics.map((diagnostic) =>
-        phaseArtifactDiagnostic({
-          artifact,
-          path: diagnostic.path,
-          code: diagnostic.code,
-          message: diagnostic.message,
-          repair: diagnostic.repair
-        })
-      )
-    );
-    warnings.push(...discussValidation.warnings);
+  // Context's typed authoring boundary validates essential intent; Markdown
+  // compatibility requires canonical headings, not lexical prose heuristics.
+  const contextBoundary = artifact === "context" ? (content.split(/^## Phase Boundary[ \t]*\r?$/m)[1]?.split(/^## /m)[0].trim() ?? "") : "";
+  if (artifact === "context" && /^(?:[-*]\s*)?(?:none|n\/a|not applicable)?[.!]?$/i.test(contextBoundary)) {
+    const issue = "Context artifact requires a populated Phase Boundary.";
+    issues.push(issue);
+    diagnostics.push(phaseArtifactDiagnostic({ artifact, path: "content.sections.Phase Boundary", code: "context.missing_essential_intent", message: issue }));
   }
 
   if (artifact !== "ui-spec" && artifact !== "context" && missingRequiredSections.length > 0) {

@@ -46,11 +46,11 @@ files, installed extensions, or host-global state. Phase context belongs only to
 `/blu-discuss-phase`; research, UI and planning read it and route back for repair.
 Blueprint never creates or repairs repo-root `CONTEXT.md`.
 
-For discuss, use prepare → record → finalize; read is recovery/view only. Its
-record tool exposes the canonical typed context schema and raw candidate salvage.
-Effective config in prepare controls optional bounded researcher use. Require
-explicit substantive-overwrite and target-reconciliation gates, preserve evidence
-and deferred ideas, report durable receipts and exact MCP-derived routing.
+For discuss, prepare supplies schema and grounded defaults. Resolve missing
+essentials, save resumable notes only with record, then generate once and pass
+model directly to finalize. Generated or rejected documents are not stored.
+Read recovers notes/history. The active contract owns config-controlled research,
+confirmation gates, evidence preservation, receipts and MCP-derived routing.
 
 For research, use prepare → investigate → submit. MCP preserves candidates before
 assessment, renders research, and owns publication/state/routing recovery. Record

@@ -44,7 +44,7 @@ test("discuss active bundle is bounded and uses registered prepare/record/finali
   const bytes = [discussCommandPath, discussSkillPath, discussRuntimeContractPath].reduce((n, p) => n + Buffer.byteLength(readRepoText(p)), 0);
   assert.ok(bytes < 13000, `Active discuss prompt bytes: ${bytes}`);
   const runtime = readRepoText(discussRuntimeContractPath);
-  for (const rule of [/user pick areas/, /authoritative WHAT\/WHY/, /explicit user confirmation/, /candidate.*save incomplete/s, /corrections/, /downstreamOwner/, /record history/, /derivedStatus.nextAction/, /workflow.subagents/, /same.*requestId/s]) assert.match(runtime, rule);
+  for (const rule of [/user pick areas/, /authoritative WHAT\/WHY/, /explicit user confirmation/, /missingEssentialFields/, /model, the current expectedRevision/, /Generated and rejected documents are not stored/, /downstreamOwner/, /record history/, /derivedStatus.nextAction/, /workflow.subagents/, /same.*requestId/s]) assert.match(runtime, rule);
   assert.doesNotMatch(runtime, /nine.read|checkpoint.per.area|prior.context sweep/i);
 });
 
@@ -335,7 +335,7 @@ test("discuss-phase context validation allows intentional placeholder token pros
   assert.doesNotMatch(validation.issues.join("\n"), /placeholder scaffold text/i);
 });
 
-test("discuss-phase context validation rejects malformed Open Questions empty-state variants", () => {
+test("discuss-phase context validation accepts varied Open Questions empty-state variants", () => {
   const invalidSections = [
     "none",
     "- None that block this fixture.",
@@ -348,13 +348,11 @@ test("discuss-phase context validation rejects malformed Open Questions empty-st
       "context"
     );
 
-    assert.equal(validation.valid, false);
-    assert.match(validation.issues.join("\n"), /Open Questions/i);
-    assert.match(validation.issues.join("\n"), /exactly `- none`|substantive downstream-planning detail or use exactly `- none`/i);
+    assert.equal(validation.valid, true, validation.issues.join("\n"));
   }
 });
 
-test("discuss-phase context validation accepts only exact Deferred Ideas none sentinel", () => {
+test("discuss-phase context validation accepts varied Deferred Ideas none sentinel", () => {
   const baseContext = buildValidDiscussContext("- none").replace(
     "- Later follow-up: Reuse the same section-level pattern for future contracts only when needed.",
     "- Implementation note: Keep section-level validation deterministic for current contracts."
@@ -378,11 +376,7 @@ test("discuss-phase context validation accepts only exact Deferred Ideas none se
       "context"
     );
 
-    assert.equal(invalid.valid, false);
-    assert.match(invalid.issues.join("\n"), /Deferred Ideas/i);
-    assert.ok(
-      invalid.diagnostics.some((diagnostic) => diagnostic.code === "context.inexact_empty_sentinel")
-    );
+    assert.equal(invalid.valid, true, invalid.issues.join("\n"));
   }
 });
 
@@ -426,7 +420,7 @@ test("discuss-phase context write preserves the exact Open Questions none sentin
   assert.doesNotMatch(saved, /None that block this phase|no open questions currently/i);
 });
 
-test("discuss-phase context write rejects deferredIdeas none alias in the structured model", async (t) => {
+test("discuss-phase context write normalizes deferredIdeas none alias in the structured model", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -440,10 +434,8 @@ test("discuss-phase context write rejects deferredIdeas none alias in the struct
     overwrite: true
   });
 
-  assert.equal(writeResult.status, "invalid");
-  assert.equal(writeResult.written, false);
-  assert.match(writeResult.validation.issues.join("\n"), /model\.deferredIdeas/i);
-  assert.match(writeResult.validation.issues.join("\n"), /Open Questions compatibility only/i);
+  assert.equal(writeResult.status, "created");
+  assert.equal(writeResult.written, true);
 });
 
 test("discuss-phase context write replaces starter handoff packet with carried-forward model content", async (t) => {
@@ -835,7 +827,7 @@ test("discuss-phase keeps checkpoint when final synced state update fails", asyn
   );
 });
 
-test("discuss-phase context validation blocks runtime anti-patterns and preserves checkpoint", async (t) => {
+test("discuss-phase context validation accepts product mode descriptions and preserves checkpoint", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -876,16 +868,8 @@ test("discuss-phase context validation blocks runtime anti-patterns and preserve
     phase: "3"
   });
 
-  assert.equal(invalidContext.status, "invalid");
-  assert.equal(invalidContext.written, false);
-  assert.match(invalidContext.validation.issues.join("\n"), /unsupported discuss-phase behavior/i);
-  assert.ok(
-    invalidContext.validation.diagnostics.some(
-      (diagnostic) =>
-        diagnostic.code === "discuss.unsupported_mode_claim" &&
-        diagnostic.path === "content.unsupportedModeClaims"
-    )
-  );
+  assert.equal(invalidContext.status, "created");
+  assert.equal(invalidContext.written, true);
   assert.equal(retained.found, true);
   const validationAreas = retained.checkpoint?.areaQueue as Array<Record<string, unknown>>;
   assert.equal(validationAreas[1]?.title, "Plan inventory warning");
@@ -917,7 +901,7 @@ test("discuss-phase context validation allows future implementation planning tex
   );
 });
 
-test("discuss-phase context validation blocks implemented-mode claims but not bare future planning verbs", async (t) => {
+test("discuss-phase context validation accepts mode descriptions without keyword policing", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -934,9 +918,9 @@ test("discuss-phase context validation blocks implemented-mode claims but not ba
     overwrite: true
   });
 
-  assert.equal(implementedToday.status, "invalid");
+  assert.equal(implementedToday.status, "created");
   assert.ok(
-    implementedToday.validation.diagnostics.some(
+    !implementedToday.validation.diagnostics.some(
       (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
     )
   );
@@ -952,9 +936,9 @@ test("discuss-phase context validation blocks implemented-mode claims but not ba
     overwrite: true
   });
 
-  assert.equal(implementsClaim.status, "invalid");
+  assert.equal(implementsClaim.status, "updated");
   assert.ok(
-    implementsClaim.validation.diagnostics.some(
+    !implementsClaim.validation.diagnostics.some(
       (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
     )
   );
@@ -970,7 +954,7 @@ test("discuss-phase context validation blocks implemented-mode claims but not ba
     overwrite: true
   });
 
-  assert.equal(futurePlanning.status, "created");
+  assert.equal(futurePlanning.status, "updated");
   assert.ok(
     !futurePlanning.validation.diagnostics.some(
       (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
@@ -978,7 +962,7 @@ test("discuss-phase context validation blocks implemented-mode claims but not ba
   );
 });
 
-test("discuss-phase context validation warns about possible dropped deferred risks from starter handoff", () => {
+test("discuss-phase context validation accepts deferred risk prose from starter handoff", () => {
   const validation = validatePhaseArtifactContent(
     buildValidDiscussContext("- none")
       .replace(
@@ -993,11 +977,10 @@ test("discuss-phase context validation warns about possible dropped deferred ris
   );
 
   assert.equal(validation.valid, true);
-  assert.match(validation.warnings.join("\n"), /deferred risks or consequence-if-wrong notes/i);
 
 });
 
-test("discuss-phase context validation blocks verbatim starter handoff packet copy", () => {
+test("discuss-phase context validation accepts useful starter handoff packet copy", () => {
   const validation = validatePhaseArtifactContent(
     buildValidDiscussContext("- none").replace(
       "## Specific Ideas\n- Specific idea 1: Keep the authoring template explicit so the model does not invent filler prose.\n- Specific idea 2: Preserve exact sentinel behavior through validation and repair loops.\n- Later follow-up: Reuse the same section-level pattern for future contracts only when needed.",
@@ -1006,21 +989,11 @@ test("discuss-phase context validation blocks verbatim starter handoff packet co
     "context"
   );
 
-  assert.equal(validation.valid, false);
-  assert.ok(
-    validation.diagnostics.some(
-      (diagnostic) =>
-        diagnostic.code === "context.raw_handoff_label" &&
-        diagnostic.path === "content.rawHandoffLabels"
-    )
-  );
-  assert.match(
-    validation.issues.join("\n"),
-    /raw starter or handoff packet headings\/labels/i
-  );
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.diagnostics, []);
 });
 
-test("discuss-phase context validation points dropped follow-up signals at canonical sections", () => {
+test("discuss-phase context validation accepts follow-up prose without inferring omissions", () => {
   const validation = validatePhaseArtifactContent(
     buildValidDiscussContext("- none")
       .replace(
@@ -1035,8 +1008,6 @@ test("discuss-phase context validation points dropped follow-up signals at canon
   );
 
   assert.equal(validation.valid, true);
-  assert.match(validation.warnings.join("\n"), /Deferred Ideas/);
-  assert.match(validation.warnings.join("\n"), /Open Questions/);
 
 });
 
@@ -1075,7 +1046,7 @@ test("discuss-phase write keeps overwrite explicit for authored invalid artifact
   );
 });
 
-test("discuss-phase discussion-log validation blocks dropped follow-ups and mode claims", async (t) => {
+test("discuss-phase discussion-log validation accepts mode and follow-up prose without heuristics", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1099,23 +1070,8 @@ test("discuss-phase discussion-log validation blocks dropped follow-ups and mode
     overwrite: true
   });
 
-  assert.equal(invalidDiscussion.status, "invalid");
-  assert.match(invalidDiscussion.validation.issues.join("\n"), /chain mode/i);
-  assert.match(invalidDiscussion.validation.issues.join("\n"), /Follow-Ups section/i);
-  assert.ok(
-    invalidDiscussion.validation.diagnostics.some(
-      (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
-    )
-  );
-  assert.ok(
-    invalidDiscussion.validation.diagnostics.some(
-      (diagnostic) => diagnostic.code === "discussion-log.dropped_follow_ups"
-    )
-  );
-  assert.match(
-    invalidDiscussion.suggestedRepairs?.join("\n") ?? "",
-    /Remove shipped\/available claims[\s\S]*Move deferred or later follow-up ideas/i
-  );
+  assert.equal(invalidDiscussion.status, "created");
+  assert.deepEqual(invalidDiscussion.validation.diagnostics, []);
 });
 
 test("discuss-phase checkpoint reads flag research-owned continuation state as unsafe", async (t) => {

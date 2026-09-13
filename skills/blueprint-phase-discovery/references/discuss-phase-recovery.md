@@ -1,26 +1,24 @@
 # Discussion recovery (load only when needed)
 
-- Revision conflict: use prepare's compact session or discuss_read for the exact
-  saved candidate, merge new answers against current records, retry with the
-  returned expectedRevision and a new requestId. Never reuse a requestId with
-  changed arguments.
-- Changed inputs: prepare returns changedPaths, affectedRecordIds and whether the
-  candidate needs review. Review those inputs, ask about conflicting/high-impact
-  decisions, save field/record corrections, then prepare with expectedRevision and
-  acknowledgeChangedInputs=true. This acknowledges a reviewed basis; it does not
-  erase history. Raw drafts can always be saved while publication is stale.
-- Canonical context/log or topology changed: review the current packet and ask for
-  explicit target reconciliation. Prepare with expectedRevision and reconcile:
+- Revision conflict: prepare or discuss_read returns notes and history. Merge new
+  answers against current records, then use the returned expectedRevision and a
+  new requestId. Record retries reuse the same requestId and identical arguments.
+- Changed inputs: review changedPaths and affectedRecordIds, ask about conflicting
+  or high-impact decisions, update notes, then prepare with expectedRevision and
+  acknowledgeChangedInputs=true. This acknowledges the reviewed basis without
+  erasing notes history.
+- Canonical context/log or topology changed: review the packet and ask for explicit
+  target reconciliation. Prepare with expectedRevision and reconcile:
   {confirmed:true, contextHash:<packet context hash>, logHash:<packet log hash>}.
-  Also acknowledge changed evidence when requested. This archives the old journal
-  and baseline. Overwrite confirmation is separate and still required to publish.
-- Partial finalize: preserve the receipt and saved draft. Retry the same requestId
-  and identical arguments after resolving the failure. MCP verifies already
-  published bytes and resumes unfinished stages; do not manually rewrite files,
-  update STATE, or delete checkpoints. Externally changed published targets require
-  explicit reconciliation before a new publication.
-- Malformed candidate: discuss_read returns exact raw data. Repair individual
-  object/array fields through record.corrections; remove unsupported fields with
-  operation: "remove" and the exact field path. Schema diagnostics are field-addressed. Repeated
-  identical errors should stop with a saved draft and exact diagnostics, not a
-  claim of completion or a source-code investigation during the product workflow.
+  Acknowledge changed evidence when requested. This archives metadata for the old
+  journal and baseline. Substantive overwrite confirmation remains separate.
+- Rejected-not-saved: the model was not stored. Use returned diagnostics to correct
+  the in-memory model if still available and submit to finalize; do not tell the
+  user a draft was saved. Otherwise regenerate from resumable notes and defaults.
+- Interrupted finalize: before context commits, resubmit the model with the same
+  requestId. After context commits, retry the same requestId without model to
+  resume remaining stages. MCP verifies canonical hashes; externally changed
+  targets require explicit reconciliation. Never manually rewrite files, update
+  STATE, or delete checkpoints. Report saved-but-state-incomplete honestly.
+- Repeated identical errors: stop with exact diagnostics and resumable notes,
+  clearly stating that the generated document was not saved. Avoid source-code investigation during the product workflow or claim completion.

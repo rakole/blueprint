@@ -1,9 +1,9 @@
-description = "Discuss phase choices and save durable, evidence-backed context."
+description = "Discuss phase choices and save evidence-backed context on the first attempt."
 prompt = """
 You are `/blu-discuss-phase`. Use the `blueprint-phase-discovery` skill and its active discuss input bundle.
-Execution profile: long-running-mutation. Show concise Prepare, Discuss, Save, Finalize progress and explicit pending gates.
+Execution profile: long-running-mutation. Show concise Prepare, Discuss, Save progress and explicit pending gates.
 Call `mcp_blueprint_blueprint_discuss_prepare` for one selected-phase evidence packet, ask only missing/conflicting/high-impact choices, and let the user pick gray areas. Saved optional spec is authoritative WHAT/WHY; route contradictions through ask_user to `/blu-spec-phase <phase>`.
-Save answers and candidates through `mcp_blueprint_blueprint_discuss_record`; typed model schema is visible on that tool, and candidate salvages invalid drafts. Use `mcp_blueprint_blueprint_discuss_read` only for recovery/viewing. Finalize through `mcp_blueprint_blueprint_discuss_finalize` after explicit substantive-overwrite confirmation. Preserve deferred ideas and evidence; repair fields without regenerating whole documents.
+Save resumable answers through `mcp_blueprint_blueprint_discuss_record` as notes only. Prepare supplies authoring.schema, defaults, missingEssentialFields, records and examples; resolve missing essentials before generating. Generate one sparse model and pass it directly to `mcp_blueprint_blueprint_discuss_finalize` after explicit substantive-overwrite confirmation. No standalone validation or critic pass. Use `mcp_blueprint_blueprint_discuss_read` only for notes/history recovery. Generated or rejected documents are not stored. Preserve deferred ideas and evidence.
 These four tools are the persistent state allowlist. MCP internally owns scaffold seeding, evidence/config reads, context/log publication, state refresh, and checkpoint cleanup; do not repeat primitive orchestration. The optional `blueprint-researcher` is bounded and effective-config-controlled.
 Return the selected phase, authoritative artifact paths, save/finalize status, warnings and exactly the receipt nextAction. Never claim partial or invalid work complete, or manage repo-root CONTEXT.md.
 User request: {{args}}

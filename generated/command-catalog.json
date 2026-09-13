@@ -525,15 +525,15 @@
       "sourceId": "src/mcp/command-runtime-metadata.ts#discuss-phase",
       "executionProfile": "long-running-mutation",
       "rootRoutable": true,
-      "purpose": "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, durable resumability, validation repair, and MCP-owned phase artifact writes.",
+      "purpose": "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, resumable notes, first-attempt authoring, and MCP-owned phase artifact writes.",
       "reads": [
-        "blueprint_discuss_prepare bundles selected phase, roadmap, effective config, artifacts, bounded relevant prior context, codebase evidence, plan inventory and session readiness; canonical baselines and mutable state remain separate."
+        "blueprint_discuss_prepare bundles selected phase, roadmap, effective config, artifacts, bounded relevant prior context, codebase evidence, plan inventory, notes and authoring schema/defaults/missing essentials; canonical baselines and mutable state remain separate."
       ],
       "writes": [
         "starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases",
         "phase XX-CONTEXT.md",
         "optional phase XX-DISCUSSION-LOG.md",
-        "durable phase XX-DISCUSS-SESSION.json records, evidence basis and publication journal",
+        "phase XX-DISCUSS-SESSION.json v2 notes, evidence basis and metadata-only publication journal; no generated document drafts",
         ".blueprint/STATE.md"
       ],
       "risk": "Medium: can replace or extend phase context artifacts.",
@@ -568,7 +568,7 @@
           "read-before-edit",
           ".blueprint write guard"
         ],
-        "contractNotes": "Use prepare -> record -> finalize, with read for recovery/viewing. Prepare owns bundled evidence, planned-phase scaffold seeding, effective config, optional authoritative spec and bounded prior context; changed inputs require explicit acknowledgment. Record exposes the canonical typed model and raw candidate salvage before validation, field repair, CAS and idempotent answer history. Finalize owns fresh-basis checks, confirmed overwrite, record-derived context/log publication, recoverable journal, selected-phase synced state and exact derivedStatus.nextAction. Ask only missing/conflicting/high-impact gray areas, let users pick areas, gate spec contradictions, and keep researcher bounded and config-controlled.",
+        "contractNotes": "Use prepare -> record -> finalize, with read for recovery/viewing. Prepare owns bundled evidence, planned-phase scaffold seeding, effective config, optional authoritative spec and bounded prior context; changed inputs require explicit acknowledgment. Prepare supplies sparse authoring schema, grounded defaults and missingEssentialFields; resolve essentials before generating once. Record is notes-only with CAS and idempotent answer history. Pass model directly to finalize without standalone validation or critic passes. Generated and rejected documents are not stored. Finalize owns fresh-basis checks, confirmed overwrite, context/log publication, metadata-only recoverable journal, saved/outcome receipts, selected-phase synced state and exact derivedStatus.nextAction. Ask only missing/conflicting/high-impact gray areas, let users pick areas, gate spec contradictions, and keep researcher bounded and config-controlled.",
         "evidenceState": [
           "locked",
           "runtime-owned",

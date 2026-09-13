@@ -190,9 +190,7 @@ test("phase context model diagnostics include field-aware repair guidance", asyn
   });
 
   assert.equal(invalid.status, "invalid");
-  assert.ok(invalid.diagnostics?.some((diagnostic) => diagnostic.path === "model.phaseBoundary"));
   assert.ok(invalid.diagnostics?.some((diagnostic) => diagnostic.path === "model.specificIdeas"));
-  assert.match(invalid.suggestedRepairs?.join("\n") ?? "", /Add model\.phaseBoundary/i);
   assert.match(invalid.suggestedRepairs?.join("\n") ?? "", /Set model\.specificIdeas to the type required/i);
 });
 
@@ -221,14 +219,14 @@ test("phase context model diagnostics reject scalar openQuestions none", async (
   assert.doesNotMatch(invalid.suggestedRepairs?.join("\n") ?? "", /scalar openQuestions: "none"/i);
 });
 
-test("phase context model diagnostics keep nested required-field repair paths intact", async (t) => {
+test("phase context model diagnostics keep nested type repair paths intact", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
   const model = validPhaseContextModel();
 
-  delete (model.dependencies as { priorPhaseArtifacts?: unknown }).priorPhaseArtifacts;
+  (model.dependencies as { priorPhaseArtifacts: unknown }).priorPhaseArtifacts = 7;
 
   const invalid = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
@@ -245,7 +243,7 @@ test("phase context model diagnostics keep nested required-field repair paths in
   );
   assert.match(
     invalid.suggestedRepairs?.join("\n") ?? "",
-    /Add model\.dependencies\.priorPhaseArtifacts/i
+    /Set model\.dependencies\.priorPhaseArtifacts/i
   );
   assert.doesNotMatch(
     invalid.suggestedRepairs?.join("\n") ?? "",
@@ -253,7 +251,7 @@ test("phase context model diagnostics keep nested required-field repair paths in
   );
 });
 
-test("phase context write rejects none alias outside openQuestions", async (t) => {
+test("phase context write normalizes none alias outside openQuestions", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -268,17 +266,8 @@ test("phase context write rejects none alias outside openQuestions", async (t) =
     })
   });
 
-  assert.equal(invalid.status, "invalid");
-  assert.ok(
-    invalid.diagnostics?.some(
-      (diagnostic) => diagnostic.path === "model.deferredIdeas"
-    )
-  );
-  assert.match(invalid.validation.issues.join("\n"), /\[\"none\"\].*Open Questions compatibility only/i);
-  assert.match(
-    invalid.suggestedRepairs?.join("\n") ?? "",
-    /Use deferredIdeas: \[\] when nothing is deferred/i
-  );
+  assert.equal(invalid.status, "created");
+  assert.equal(invalid.written, true);
 });
 
 test("phase research status surfaces underlying context validation issues", async (t) => {
@@ -353,4 +342,56 @@ test("global artifact validation includes phase context discussion and UI spec a
   );
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-discuss-phase/);
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-ui-phase/);
+});
+
+test("sparse context models normalize defaults, optional aliases, and safe multiline prose", async (t) => {
+  const { validatePhaseContextModelInput, renderPhaseContextModelContent, phaseContextAuthoringSchema } = await import("../src/mcp/tools/phase-context-model.js");
+  const { validatePhaseArtifactContent } = await import("../src/mcp/tools/artifacts.js");
+  const defaults = { phaseBoundary: { goal: "Ship exports", inScope: ["CSV"], successCriteria: ["Exports open"] } };
+  const cases = [
+    {},
+    { specificIdeas: null, deferredIdeas: ["none"], dependencies: { externalConstraints: ["N/A"] } },
+    { implementationDecisions: [{ decision: "Use CSV" }], canonicalReferences: [{ source: "Customer interview" }] },
+    { specificIdeas: ["Nothing should be dropped.", "None of the exporters support XML.", "Batch mode is supported."] },
+    { phaseBoundary: { goal: "Ship exports\n## Fake heading" }, implementationDecisions: [{ decision: "CSV | TSV\n## Fake row" }] },
+  ];
+  const z = await import("zod/v4");
+  const transport = z.object({ model: phaseContextAuthoringSchema });
+  for (const candidate of cases) {
+    assert.equal(transport.safeParse({ model: candidate }).success, true, JSON.stringify(candidate));
+    const result = validatePhaseContextModelInput(candidate, defaults);
+    assert.ok(result.model, JSON.stringify(result.validation));
+    const content = renderPhaseContextModelContent({ resolved: { phasePrefix: "03", phaseName: "Exports" }, model: result.model });
+    assert.equal(validatePhaseArtifactContent(content, "context").valid, true, content);
+    assert.equal(content.split("\n").filter((line) => line.startsWith("## ")).length, 9);
+    assert.doesNotMatch(content, /^## Fake/m);
+  }
+  const normalized = validatePhaseContextModelInput(cases[1], defaults).model!;
+  assert.deepEqual(normalized.specificIdeas, []);
+  assert.deepEqual(normalized.deferredIdeas, []);
+  assert.deepEqual(normalized.dependencies.externalConstraints, []);
+  assert.deepEqual(validatePhaseContextModelInput(cases[3], defaults).model!.specificIdeas, cases[3].specificIdeas);
+
+  const repoPath = await createPhaseRepo();
+  t.after(() => rm(path.dirname(repoPath), { recursive: true, force: true }));
+  const saved = await blueprintPhaseArtifactWrite({ cwd: repoPath, phase: "3", artifact: "context", model: defaults });
+  assert.equal(saved.written, true, JSON.stringify(saved.validation));
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+  assert.doesNotMatch(JSON.stringify(status), /context\.missing_required_section|context\.non_substantive/);
+});
+
+test("context authoring retains essential intent, type, and unsafe-input validation", async () => {
+  const { validatePhaseContextModelInput } = await import("../src/mcp/tools/phase-context-model.js");
+  const boundary = { goal: "Ship", inScope: ["CSV"], successCriteria: ["Works"] };
+  for (const candidate of [
+    {}, { phaseBoundary: { ...boundary, goal: "none" } },
+    { phaseBoundary: { ...boundary, inScope: [] } },
+    { phaseBoundary: { ...boundary, successCriteria: null } },
+    { phaseBoundary: boundary, dependencies: 7 },
+    { phaseBoundary: boundary, implementationDecisions: [{}] },
+    { phaseBoundary: boundary, canonicalReferences: [{ relevance: "Useful" }] },
+    { phaseBoundary: boundary, specificIdeas: "none" },
+    { phaseBoundary: boundary, specificIdeas: ["unsafe\u0000text"] },
+    JSON.parse(JSON.stringify({ phaseBoundary: boundary }).replace('"phaseBoundary":', '"__proto__":{},"phaseBoundary":')),
+  ]) assert.equal(validatePhaseContextModelInput(candidate).model, null, JSON.stringify(candidate));
 });

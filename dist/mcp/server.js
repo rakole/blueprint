@@ -16113,13 +16113,13 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-discuss-phase`",
         executionProfile: "long-running-mutation",
         rootRoutable: true,
-        purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, durable resumability, validation repair, and MCP-owned phase artifact writes.",
-        reads: ["blueprint_discuss_prepare bundles selected phase, roadmap, effective config, artifacts, bounded relevant prior context, codebase evidence, plan inventory and session readiness; canonical baselines and mutable state remain separate."],
+        purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, resumable notes, first-attempt authoring, and MCP-owned phase artifact writes.",
+        reads: ["blueprint_discuss_prepare bundles selected phase, roadmap, effective config, artifacts, bounded relevant prior context, codebase evidence, plan inventory, notes and authoring schema/defaults/missing essentials; canonical baselines and mutable state remain separate."],
         writes: [
           "starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases",
           "phase XX-CONTEXT.md",
           "optional phase XX-DISCUSSION-LOG.md",
-          "durable phase XX-DISCUSS-SESSION.json records, evidence basis and publication journal",
+          "phase XX-DISCUSS-SESSION.json v2 notes, evidence basis and metadata-only publication journal; no generated document drafts",
           ".blueprint/STATE.md"
         ]
       },
@@ -16131,7 +16131,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: DISCUSS_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Use prepare -> record -> finalize, with read for recovery/viewing. Prepare owns bundled evidence, planned-phase scaffold seeding, effective config, optional authoritative spec and bounded prior context; changed inputs require explicit acknowledgment. Record exposes the canonical typed model and raw candidate salvage before validation, field repair, CAS and idempotent answer history. Finalize owns fresh-basis checks, confirmed overwrite, record-derived context/log publication, recoverable journal, selected-phase synced state and exact derivedStatus.nextAction. Ask only missing/conflicting/high-impact gray areas, let users pick areas, gate spec contradictions, and keep researcher bounded and config-controlled.",
+        contractNotes: "Use prepare -> record -> finalize, with read for recovery/viewing. Prepare owns bundled evidence, planned-phase scaffold seeding, effective config, optional authoritative spec and bounded prior context; changed inputs require explicit acknowledgment. Prepare supplies sparse authoring schema, grounded defaults and missingEssentialFields; resolve essentials before generating once. Record is notes-only with CAS and idempotent answer history. Pass model directly to finalize without standalone validation or critic passes. Generated and rejected documents are not stored. Finalize owns fresh-basis checks, confirmed overwrite, context/log publication, metadata-only recoverable journal, saved/outcome receipts, selected-phase synced state and exact derivedStatus.nextAction. Ask only missing/conflicting/high-impact gray areas, let users pick areas, gate spec contradictions, and keep researcher bounded and config-controlled.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -19436,7 +19436,7 @@ function renderContextAuthoringTemplate(context) {
 <!--
 Final saved content only.
 Replace every section below with the real phase goal, grounding, decisions, ideas, code insights, dependencies, deferred ideas, and canonical references.
-For Open Questions and Deferred Ideas, replace the section with concrete bullets or use the exact sentinel \`- none\` when nothing remains open or deferred.
+For Open Questions and Deferred Ideas, preserve concrete items when present; optional sections may be empty.
 Do not preserve scaffold labels, example bullets, or this guidance block in the final saved artifact.
 -->
 
@@ -21352,21 +21352,15 @@ var init_artifact_contracts = __esm({
     PHASE_CONTEXT_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/phase.context.model.schema.json";
     PHASE_CONTEXT_MODEL_CONTRACT = {
       schemaId: "blueprint.phase.context.model",
-      schemaVersion: "1.1.0",
+      schemaVersion: "1.2.0",
       schemaPath: PHASE_CONTEXT_MODEL_SCHEMA_PATH,
       jsonSchema: readJsonSchemaAsset(PHASE_CONTEXT_MODEL_SCHEMA_FILE),
       qualityRules: [
-        "Optional implementationDecisions, specificIdeas, existingCodeInsights and dependencies.requiredFollowUpReads default to empty arrays; no applicable item needs invented filler.",
-        "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, or content; the write tool owns identity and path derivation.",
-        "Preserve phase boundary separation: goal, in-scope work, out-of-scope work, and success criteria must stay distinct so downstream planning can narrow safely.",
-        "Discovery grounding must cite concrete project brief, requirements, workflow posture, and confirmed decisions rather than placeholder or generic process prose.",
-        "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
-        "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
-        "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
-        'Open questions must list concrete unresolved questions when any remain; use `openQuestions: []` when the section has no unresolved questions left so MCP can render the canonical `- none` Markdown row. Keep `["none"]` as compatibility-only input when encountered in older saved models.',
-        "Deferred ideas must list concrete carry-forward ideas when any remain; use an empty array only when nothing is deferred.",
-        "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
-        "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
+        "Provide goal, inScope, and successCriteria when grounded defaults do not supply them.",
+        'Optional groups and lists may be omitted; optional null lists normalize to empty arrays. Text lists also accept complete empty-state aliases such as ["none"]; decision/reference row lists use [].',
+        "Decision rows require decision text; reference rows require source text. Rationale and relevance are optional.",
+        "MCP owns identity, paths, canonical headings, safe multiline rendering, and persistence.",
+        "Preserve substantive decisions, deferred ideas, and uncertainty without inventing filler."
       ],
       contextBindings: [
         "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus blueprint_phase_artifact_write arguments.",
@@ -23173,17 +23167,6 @@ var init_artifact_contracts = __esm({
           "Deferred Ideas",
           "Canonical References"
         ],
-        sectionValidations: {
-          "Implementation Decisions": { exactEmptySentinel: "- none" },
-          "Specific Ideas": { exactEmptySentinel: "- none" },
-          "Existing Code Insights": { exactEmptySentinel: "- none" },
-          "Open Questions": {
-            exactEmptySentinel: "- none"
-          },
-          "Deferred Ideas": {
-            exactEmptySentinel: "- none"
-          }
-        },
         lockedMarkers: [],
         placeholderSignals: [
           "Goal:",
@@ -23211,7 +23194,7 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Discovery context is phase-scoped and MCP-owned.",
-          "Open Questions may use the exact `- none` sentinel only when no unresolved questions remain.",
+          "Optional sections may be empty; MCP renders omitted lists as `- none`.",
           "Scaffold rendering is for first-write seeding and intentionally includes placeholder labels plus the scaffold footer marker so downstream overwrite logic can recognize it.",
           "Authoring rendering preserves the canonical headings but uses final-write-safe guidance instead of literal placeholder labels that write validation rejects.",
           "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
@@ -32298,8 +32281,11 @@ var init_phase_json_helpers = __esm({
 });
 
 // src/mcp/tools/phase-context-model.ts
+function contextInline(value) {
+  return value.replace(/\r\n?/g, "\n").split("\n").map((line2) => line2.trim()).join("<br>");
+}
 function renderContextBulletList(items) {
-  return items.map((item) => `- ${item}`).join("\n");
+  return items.map((item) => `- ${contextInline(item)}`).join("\n");
 }
 function renderContextOptionalBulletList(items, options) {
   if (items.length === 0) {
@@ -32322,7 +32308,7 @@ function renderPhaseContextModelContent(args) {
 
 ## Phase Boundary
 
-- **Goal** ${args.model.phaseBoundary.goal}
+- **Goal** ${contextInline(args.model.phaseBoundary.goal)}
 - **In scope**
 ${renderContextBulletList(args.model.phaseBoundary.inScope)}
 - **Out of scope**
@@ -32332,10 +32318,10 @@ ${renderContextBulletList(args.model.phaseBoundary.successCriteria)}
 
 ## Discovery Grounding
 
-- **Project brief** ${args.model.discoveryGrounding.projectBrief}
+- **Project brief** ${contextInline(args.model.discoveryGrounding.projectBrief)}
 - **Requirements grounding**
 ${renderContextBulletList(args.model.discoveryGrounding.requirementsGrounding)}
-- **Workflow posture** ${args.model.discoveryGrounding.workflowPosture}
+- **Workflow posture** ${contextInline(args.model.discoveryGrounding.workflowPosture)}
 - **Confirmed decisions**
 ${renderContextBulletList(args.model.discoveryGrounding.confirmedDecisions)}
 
@@ -32382,18 +32368,37 @@ ${renderContextTable(
   )}
 `;
 }
-function validatePhaseContextModelInput(model) {
+function validatePhaseContextModelInput(model, defaults) {
   const modelObject = asJsonObject(structuredClone(model));
   if (modelObject) {
-    for (const field of [
-      "implementationDecisions",
-      "specificIdeas",
-      "existingCodeInsights"
-    ])
-      if (modelObject[field] === void 0) modelObject[field] = [];
-    const dependencies2 = asJsonObject(modelObject.dependencies);
-    if (dependencies2 && dependencies2.requiredFollowUpReads === void 0)
-      dependencies2.requiredFollowUpReads = [];
+    for (const group of ["phaseBoundary", "discoveryGrounding", "dependencies"]) {
+      if (modelObject[group] === void 0) modelObject[group] = {};
+      const value = asJsonObject(modelObject[group]);
+      if (value) modelObject[group] = { ...defaults?.[group], ...value };
+    }
+    for (const [key2, value] of Object.entries(defaults ?? {})) {
+      if (modelObject[key2] === void 0) modelObject[key2] = structuredClone(value);
+    }
+    const lists = [
+      [modelObject, ["implementationDecisions", "specificIdeas", "existingCodeInsights", "openQuestions", "deferredIdeas", "canonicalReferences"]],
+      [asJsonObject(modelObject.phaseBoundary), ["outOfScope"]],
+      [asJsonObject(modelObject.discoveryGrounding), ["requirementsGrounding", "confirmedDecisions"]],
+      [asJsonObject(modelObject.dependencies), ["priorPhaseArtifacts", "externalConstraints", "requiredFollowUpReads"]]
+    ];
+    for (const [object3, keys] of lists) if (object3) for (const key2 of keys) {
+      const value = object3[key2];
+      if (value == null || !["implementationDecisions", "canonicalReferences"].includes(key2) && Array.isArray(value) && value.length === 1 && typeof value[0] === "string" && emptyAlias.test(value[0].trim())) object3[key2] = [];
+    }
+    const grounding = asJsonObject(modelObject.discoveryGrounding);
+    if (grounding) {
+      for (const key2 of ["projectBrief", "workflowPosture"]) if (grounding[key2] === void 0) grounding[key2] = "none";
+    }
+    for (const [key2, field] of [["implementationDecisions", "tradeoffOrConstraint"], ["canonicalReferences", "relevance"]]) {
+      if (Array.isArray(modelObject[key2])) for (const row of modelObject[key2]) {
+        const object3 = asJsonObject(row);
+        if (object3 && object3[field] === void 0) object3[field] = "none";
+      }
+    }
   }
   const diagnostics = [];
   if (!modelObject) {
@@ -32456,11 +32461,12 @@ function validatePhaseContextModelInput(model) {
       }
     };
   }
-  diagnostics.push(
-    ...phaseContextModelSentinelDiagnostics(
-      modelObject
-    )
-  );
+  const boundary = asJsonObject(modelObject?.phaseBoundary);
+  for (const key2 of ["goal", "inScope", "successCriteria"]) {
+    const value = boundary?.[key2];
+    const valid = key2 === "goal" ? typeof value === "string" && value.trim().length > 0 && !emptyAlias.test(value.trim()) : Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string" && item.trim().length > 0 && !emptyAlias.test(item.trim()));
+    if (!valid) diagnostics.push({ path: `model.phaseBoundary.${key2}`, code: "context.missing_essential_intent", message: `Phase boundary ${key2} requires substantive content after grounded defaults.`, repair: `Supply phaseBoundary.${key2}.`, retryable: true, nextTool: "blueprint_discuss_finalize" });
+  }
   if (diagnostics.length > 0) {
     return {
       model: null,
@@ -32501,40 +32507,7 @@ function phaseContextModelSchemaRepair(keyword, pathValue, missingProperty) {
   }
   return "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.";
 }
-function phaseContextModelSentinelDiagnostics(model) {
-  const diagnostics = [];
-  const aliasSensitiveFields = [
-    {
-      path: "model.dependencies.priorPhaseArtifacts",
-      items: model.dependencies.priorPhaseArtifacts,
-      repair: 'Use dependencies.priorPhaseArtifacts: [] when no prior artifacts apply; do not pass ["none"] as model content.'
-    },
-    {
-      path: "model.dependencies.externalConstraints",
-      items: model.dependencies.externalConstraints,
-      repair: 'Use dependencies.externalConstraints: [] when no external constraints apply; do not pass ["none"] as model content.'
-    },
-    {
-      path: "model.deferredIdeas",
-      items: model.deferredIdeas,
-      repair: 'Use deferredIdeas: [] when nothing is deferred; do not pass ["none"] as model content.'
-    }
-  ];
-  for (const field of aliasSensitiveFields) {
-    if (field.items.length === 1 && field.items[0].trim().toLowerCase() === "none") {
-      diagnostics.push({
-        path: field.path,
-        code: "schema.none_alias_forbidden",
-        message: `phase.context model field ${field.path} must use an empty array for the canonical none state; ["none"] is reserved for Open Questions compatibility only.`,
-        repair: field.repair,
-        retryable: true,
-        nextTool: "blueprint_phase_artifact_write"
-      });
-    }
-  }
-  return diagnostics;
-}
-var phaseContextAuthoringSchema, contextModelValidator;
+var phaseContextAuthoringSchema, contextModelValidator, emptyAlias;
 var init_phase_context_model = __esm({
   "src/mcp/tools/phase-context-model.ts"() {
     "use strict";
@@ -32545,6 +32518,7 @@ var init_phase_context_model = __esm({
     phaseContextAuthoringSchema = fromJSONSchema(
       readArtifactContract("phase.context").modelContract.jsonSchema
     );
+    emptyAlias = /^(?:none|n\/a|na|not applicable|nothing(?: (?:deferred|open))?|no (?:open questions?|deferred ideas?|dependencies|references?))(?:[.!])?$/i;
   }
 });
 
@@ -45574,6 +45548,14 @@ function matchedScaffoldPlaceholderSignals(content, placeholderSignals, options 
     ...matchedSignals.length >= MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES ? matchedSignals : []
   ]);
 }
+function matchedDiscussionScaffoldRows(content, signals) {
+  const rows = stripResearchFencedCodeBlocks(content).split(/\r?\n/).flatMap((line2) => {
+    const trimmed = line2.trim();
+    if (trimmed.startsWith(">")) return [];
+    return trimmed.startsWith("|") ? trimmed.split("|").map((cell) => cell.trim()) : [trimmed.replace(/^[-*+]\s+/, "")];
+  });
+  return signals.filter((signal) => signal.length > 0 && rows.includes(signal));
+}
 function validateResearchArtifactContent(content) {
   const issues = [];
   const warnings = [];
@@ -46927,9 +46909,6 @@ function countNonEmptyContractSections(content, headings) {
     0
   );
 }
-function hasSubstantiveContractSection(section) {
-  return hasBootstrapText(section, 3);
-}
 function matchesExactEmptySentinel(section, exactEmptySentinel) {
   return typeof exactEmptySentinel === "string" && section.trim() === exactEmptySentinel;
 }
@@ -47263,165 +47242,6 @@ function isExplicitUiSkipRationale(content) {
     outcomeMode
   );
 }
-function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
-  const diagnostics = [];
-  const flaggedModes = /* @__PURE__ */ new Set();
-  for (const line2 of content.replace(/\r\n/g, "\n").split("\n")) {
-    if (UNSUPPORTED_MODE_NEGATION_PATTERN.test(line2)) {
-      continue;
-    }
-    if (!UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN.test(line2)) {
-      continue;
-    }
-    for (const { mode: mode2, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
-      if (pattern.test(line2) && !flaggedModes.has(mode2)) {
-        diagnostics.push({
-          path: "content.unsupportedModeClaims",
-          code: "discuss.unsupported_mode_claim",
-          message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode2}.`,
-          repair: "Remove shipped/available claims for unsupported discuss-phase modes, or restate them as explicit non-goals or unavailable behavior."
-        });
-        flaggedModes.add(mode2);
-      }
-    }
-  }
-  return diagnostics;
-}
-function markdownSectionLines(section) {
-  return section.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0).filter((line2) => !/^[#>*`|_\-\s]+$/.test(line2));
-}
-function hasConcreteCanonicalReference(section) {
-  return markdownSectionLines(section).filter(
-    (line2) => !/^(?:none|n\/a|na|not applicable|no canonical references?|no saved references?)\b/i.test(
-      line2
-    )
-  ).some(
-    (line2) => /https?:\/\/\S+|(?:^|[\s`])(?:\.blueprint|src|tests|docs|commands|skills|agents|hooks|scripts|dist)\/[^\s`,)]+|\b(?:ROADMAP|STATE|PROJECT|REQUIREMENTS|MEMORY|AGENTS|README|CHANGELOG)\.md\b|\b(?:roadmap|requirements?|project brief|state|saved phase artifacts?|phase artifacts?|context artifact|discussion log)\b|\b[\w.-]+\.(?:ts|tsx|js|mjs|json|toml|md|yaml|yml)\b/i.test(
-      line2
-    )
-  );
-}
-function hasDeferredIdeaSignal(section) {
-  return /\b(?:deferred ideas?|later follow-?ups?|future follow-?ups?|follow-?up ideas?|scope creep|revisit|after this phase|next phase|backlog|parking lot)\b/i.test(
-    section
-  );
-}
-function hasConcreteDeferredIdeas(section) {
-  return markdownSectionLines(section).filter(
-    (line2) => !/^(?:none|n\/a|na|not applicable|no\b.*(?:deferred|follow-?up|ideas?)|nothing deferred)\b/i.test(
-      line2
-    )
-  ).some((line2) => countMeaningfulWords(line2) >= 3);
-}
-function hasConcreteOpenQuestions(section) {
-  return markdownSectionLines(section).filter(
-    (line2) => !/^(?:none|n\/a|na|not applicable|no open questions?|nothing open)\b/i.test(line2)
-  ).some((line2) => countMeaningfulWords(line2) >= 3);
-}
-function hasCarryForwardRiskSignal(section) {
-  return /\b(?:deferred risks?|open risks?|risk watchlist|consequence if wrong)\b/i.test(section);
-}
-function hasOpenGrayAreaSignal(section) {
-  return /\b(?:open gray areas?|open items for discuss-phase|open risks and dependency questions)\b/i.test(
-    section
-  );
-}
-function hasConcreteRiskCarryForward(section) {
-  return markdownSectionLines(section).filter((line2) => !/^(?:none|n\/a|na|not applicable|nothing deferred|nothing open)\b/i.test(line2)).some(
-    (line2) => /\b(?:risk|uncertain|uncertainty|if wrong|unknown|unresolved|needs confirmation|dependency review)\b/i.test(
-      line2
-    )
-  );
-}
-function containsRawHandoffPacketLabel(content) {
-  return content.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0).some(
-    (line2) => RAW_HANDOFF_PACKET_LABEL_PATTERNS.some((pattern) => pattern.test(line2))
-  );
-}
-function validateDiscussPhaseContextAntiPatterns(content) {
-  const diagnostics = [];
-  const warnings = [];
-  const canonicalReferences = extractMarkdownSection5(content, "Canonical References");
-  const deferredIdeas = extractMarkdownSection5(content, "Deferred Ideas");
-  const openQuestions = extractMarkdownSection5(content, "Open Questions");
-  const deferredSourceSections = [
-    "Discovery Grounding",
-    "Implementation Decisions",
-    "Specific Ideas",
-    "Existing Code Insights",
-    "Dependencies"
-  ].map((heading) => extractMarkdownSection5(content, heading)).join("\n");
-  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
-  if (containsRawHandoffPacketLabel(content)) {
-    diagnostics.push({
-      path: "content.rawHandoffLabels",
-      code: "context.raw_handoff_label",
-      message: "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections.",
-      repair: "Map starter or handoff packet substance into canonical phase.context sections and remove raw packet labels before retrying."
-    });
-  }
-  if (!hasConcreteCanonicalReference(canonicalReferences)) {
-    diagnostics.push({
-      path: "content.sections.Canonical References",
-      code: "context.missing_canonical_reference",
-      message: "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL.",
-      repair: "Add a concrete Canonical References entry naming the saved artifact, repo path, command output, URL, or source used to ground the context."
-    });
-  }
-  if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
-    diagnostics.push({
-      path: "content.sections.Deferred Ideas",
-      code: "context.dropped_deferred_ideas",
-      message: "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section.",
-      repair: "Move each deferred or later follow-up idea into ## Deferred Ideas, or use exactly `- none` only when no deferred ideas exist."
-    });
-  }
-  if (hasCarryForwardRiskSignal(deferredSourceSections) && !hasConcreteRiskCarryForward(deferredIdeas) && !hasConcreteRiskCarryForward(openQuestions)) {
-    diagnostics.push({
-      path: "content.sections.Open Questions",
-      code: "context.dropped_risk_carry_forward",
-      message: "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas.",
-      repair: "Preserve each deferred risk or consequence-if-wrong note as a concrete Open Questions or Deferred Ideas bullet before retrying."
-    });
-  }
-  if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
-    diagnostics.push({
-      path: "content.sections.Open Questions",
-      code: "context.dropped_open_questions",
-      message: "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions.",
-      repair: "Move open gray areas into ## Open Questions as concrete questions, or use exactly `- none` only when no open questions remain."
-    });
-  }
-  if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
-    warnings.push(
-      "Context artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
-    );
-  }
-  const editorialCodes = /* @__PURE__ */ new Set(["context.dropped_deferred_ideas", "context.dropped_risk_carry_forward", "context.dropped_open_questions"]);
-  warnings.push(...diagnostics.filter((d) => editorialCodes.has(d.code)).map((d) => d.message));
-  return { diagnostics: diagnostics.filter((d) => !editorialCodes.has(d.code)), warnings };
-}
-function validateDiscussPhaseDiscussionLogAntiPatterns(content) {
-  const diagnostics = [];
-  const warnings = [];
-  const followUps = extractMarkdownSection5(content, "Follow-Ups");
-  const discussionSections = ["Summary", "Notes"].map((heading) => extractMarkdownSection5(content, heading)).join("\n");
-  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
-  if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
-    diagnostics.push({
-      path: "content.sections.Follow-Ups",
-      code: "discussion-log.dropped_follow_ups",
-      message: "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section.",
-      repair: "Move deferred or later follow-up ideas into ## Follow-Ups, or avoid mentioning them in Summary/Notes when none exist."
-    });
-  }
-  if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
-    warnings.push(
-      "Discussion log artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
-    );
-  }
-  return { diagnostics, warnings };
-}
 function isLegacyPhaseContextShell(content) {
   if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
     return false;
@@ -47462,10 +47282,7 @@ function validatePhaseArtifactContent(content, artifact) {
       })
     );
   }
-  const placeholderSignals = artifact === "ui-spec" ? contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal)) : matchedScaffoldPlaceholderSignals(content, contract.placeholderSignals, {
-    includeScaffoldMarker: artifact !== "context",
-    singleSignalPatterns: artifact === "discussion-log" ? [/^Record the major discussion outcomes/i] : []
-  });
+  const placeholderSignals = artifact === "ui-spec" ? contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal)) : matchedDiscussionScaffoldRows(content, contract.placeholderSignals);
   for (const signal of placeholderSignals) {
     const issue2 = `${artifactLabel} still contains placeholder scaffold text: ${signal}.`;
     issues.push(issue2);
@@ -47480,7 +47297,7 @@ function validatePhaseArtifactContent(content, artifact) {
   }
   const presentRequiredSections = countNonEmptyContractSections(content, contract.requiredHeadings);
   const missingRequiredSections = contract.requiredHeadings.filter(
-    (heading) => extractMarkdownSection5(content, heading).trim().length === 0
+    (heading) => artifact === "context" ? !content.split(/\r?\n/).some((line2) => line2.trim() === `## ${heading}`) : extractMarkdownSection5(content, heading).trim().length === 0
   );
   const uiSpecMode = artifact === "ui-spec" ? detectUiSpecAuthoringMode(content, contract.requiredHeadings) : void 0;
   if (artifact === "ui-spec" && isExplicitUiSkipRationale(content)) {
@@ -47578,77 +47395,11 @@ function validatePhaseArtifactContent(content, artifact) {
       })
     );
   }
-  if (artifact === "context") {
-    for (const heading of contract.requiredHeadings) {
-      const section = extractMarkdownSection5(content, heading);
-      const exactEmptySentinel = contract.sectionValidations?.[heading]?.exactEmptySentinel;
-      if (section.trim().length === 0) {
-        continue;
-      }
-      if (matchesExactEmptySentinel(section, exactEmptySentinel)) {
-        continue;
-      }
-      if (matchesFuzzyEmptySentinel(section, exactEmptySentinel)) {
-        const fuzzySentinel = exactEmptySentinel ?? "- none";
-        const issue2 = `Context artifact section ${heading} must use exactly \`${fuzzySentinel}\` for the empty state instead of a prose variant.`;
-        issues.push(issue2);
-        diagnostics.push(
-          phaseArtifactDiagnostic({
-            artifact,
-            path: `content.sections.${heading}`,
-            code: "context.inexact_empty_sentinel",
-            message: issue2,
-            heading,
-            repair: exactEmptySentinelRepairInstruction(heading, fuzzySentinel)
-          })
-        );
-        continue;
-      }
-      if (!hasSubstantiveContractSection(section)) {
-        const issue2 = exactEmptySentinel ? `Context artifact section ${heading} must contain substantive downstream-planning detail or use exactly \`${exactEmptySentinel}\`.` : `Context artifact section ${heading} must contain substantive downstream-planning detail.`;
-        issues.push(issue2);
-        diagnostics.push(
-          phaseArtifactDiagnostic({
-            artifact,
-            path: `content.sections.${heading}`,
-            code: "context.non_substantive_required_section",
-            message: issue2,
-            heading,
-            repair: exactEmptySentinel ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) : void 0
-          })
-        );
-      }
-    }
-    const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
-    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
-    diagnostics.push(
-      ...discussValidation.diagnostics.map(
-        (diagnostic) => phaseArtifactDiagnostic({
-          artifact,
-          path: diagnostic.path,
-          code: diagnostic.code,
-          message: diagnostic.message,
-          repair: diagnostic.repair
-        })
-      )
-    );
-    warnings.push(...discussValidation.warnings);
-  }
-  if (artifact === "discussion-log") {
-    const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
-    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
-    diagnostics.push(
-      ...discussValidation.diagnostics.map(
-        (diagnostic) => phaseArtifactDiagnostic({
-          artifact,
-          path: diagnostic.path,
-          code: diagnostic.code,
-          message: diagnostic.message,
-          repair: diagnostic.repair
-        })
-      )
-    );
-    warnings.push(...discussValidation.warnings);
+  const contextBoundary = artifact === "context" ? content.split(/^## Phase Boundary[ \t]*\r?$/m)[1]?.split(/^## /m)[0].trim() ?? "" : "";
+  if (artifact === "context" && /^(?:[-*]\s*)?(?:none|n\/a|not applicable)?[.!]?$/i.test(contextBoundary)) {
+    const issue2 = "Context artifact requires a populated Phase Boundary.";
+    issues.push(issue2);
+    diagnostics.push(phaseArtifactDiagnostic({ artifact, path: "content.sections.Phase Boundary", code: "context.missing_essential_intent", message: issue2 }));
   }
   if (artifact !== "ui-spec" && artifact !== "context" && missingRequiredSections.length > 0) {
     warnings.push(
@@ -54609,7 +54360,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, blueprintArtifactsTestHooks, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, blueprintArtifactsTestHooks, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -55131,23 +54882,6 @@ var init_artifacts = __esm({
       "completed",
       "done"
     ]);
-    UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS = [
-      { mode: "power mode", pattern: /\bpower[\s-]?mode\b/i },
-      { mode: "chain mode", pattern: /\bchain[\s-]?mode\b/i },
-      { mode: "auto mode", pattern: /\bauto[\s-]?mode\b/i },
-      { mode: "batch mode", pattern: /\bbatch[\s-]?mode\b/i },
-      { mode: "auto-advance", pattern: /\bauto[\s-]?advance(?:ment|s|d)?\b/i }
-    ];
-    UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN = /\b(?:supports?|supported|ships?|shipped|available|enabled|routable|provides?|offers?|runs?|implements|implemented)\b/i;
-    UNSUPPORTED_MODE_NEGATION_PATTERN = /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
-    RAW_HANDOFF_PACKET_LABEL_PATTERNS = [
-      /^starter(?:[-\s]+(?:seed|phase|context))?\s+handoff(?:\s+packet)?\b:?/i,
-      /^downstream handoff packet\b:?/i,
-      /^source refs?\b:?/i,
-      /^(?:deferred|open)\s+risks?\b:?/i,
-      /^open (?:gray areas?|items for discuss-phase|risks and dependency questions)\b:?/i,
-      /^(?:researchBrief|uiBrief|planBrief|planInventory|routingGates)\b:?/i
-    ];
     REQUIRED_VERIFICATION_SECTIONS = readArtifactContract(
       "phase.verification"
     ).requiredHeadings;
@@ -55627,8 +55361,8 @@ async function readSession(root, relative) {
       await fs17.readFile(resolveBlueprintPath(root, relative), "utf8"),
       { label: relative, maxBytes: 32 * 1024 * 1024 }
     );
-    sessionSchema.parse(parsed);
-    const session = parsed;
+    const session = sessionSchema.parse(parsed);
+    session.version = 2;
     const prefix = session.topology.phasePrefix;
     const sessionPathPattern = new RegExp(`^\\.blueprint/phases/${prefix.replaceAll(".", "\\.")}(?:-[^/]+)?/${prefix.replaceAll(".", "\\.")}-DISCUSS-SESSION\\.json$`);
     if (session.phase !== session.topology.phaseNumber || !/^\d+(?:\.\d+)*$/.test(prefix) || prefix.replace(/^0+(?=\d)/, "") !== session.phase || !sessionPathPattern.test(relative) || !sessionPathPattern.test(`${session.topology.phaseDir}/${prefix}-DISCUSS-SESSION.json`))
@@ -55638,11 +55372,10 @@ async function readSession(root, relative) {
       const receipt2 = session.requests[journal.requestId];
       const contextPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-CONTEXT.md`;
       const logPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-DISCUSSION-LOG.md`;
-      const model = validatePhaseContextModelInput(journal.context.model).model;
-      if (!model || journal.context.path !== contextPath || journal.log && journal.log.path !== logPath || journal.revision > session.revision || !receipt2 || receipt2.revision !== journal.revision || receipt2.hash !== journal.requestHash || Object.keys(journal.stages).some((stage) => !["context", "log", "state", "refresh", "cleanup"].includes(stage)) || digest(prepareTextForPersistence(renderPhaseContextModelContent({ resolved: { phasePrefix: session.topology.phasePrefix, phaseName: session.topology.phaseName ?? "" }, model })).content.replace(/\r\n/g, "\n")) !== journal.context.hash || journal.log && digest(journal.log.content) !== journal.log.hash)
+      if (journal.context.path !== contextPath || journal.log && journal.log.path !== logPath || journal.revision > session.revision || !receipt2 || receipt2.revision !== journal.revision || receipt2.hash !== journal.requestHash || Object.keys(journal.stages).some((stage) => !["context", "log", "state", "refresh", "cleanup"].includes(stage)) || !/^[a-f0-9]{64}$/.test(journal.context.hash) || journal.log && !/^[a-f0-9]{64}$/.test(journal.log.hash))
         throw new Error("Discuss publication journal identity or integrity mismatch.");
     }
-    return parsed;
+    return session;
   } catch (error2) {
     if (error2.code === "ENOENT") return null;
     throw error2;
@@ -55676,7 +55409,7 @@ async function locked(args, task) {
 }
 async function initial(loc) {
   return {
-    version: 1,
+    version: 2,
     phase: loc.resolved.phaseNumber,
     topology: phaseTopologyFingerprintFromLocation(
       loc.resolved,
@@ -55744,18 +55477,19 @@ async function prepareDiscussInputBasis(args) {
         revision: session.revision,
         changedPaths,
         affectedRecordIds: session.records.map((r) => r.id),
-        candidateNeedsReview: session.candidate !== void 0,
-        nextAction: "Review affected records and candidate against this packet, save corrections, then prepare with expectedRevision and acknowledgeChangedInputs=true."
+        nextAction: "Review affected records against this packet, save updated notes, then prepare with expectedRevision and acknowledgeChangedInputs=true."
       };
     if (args.acknowledgeChangedInputs && args.expectedRevision === void 0)
       throw new Error("Input acknowledgment requires expectedRevision.");
-    if (session.basis.prepared && !changedPaths.length && !args.reconcile)
+    if (session.basis.prepared && !changedPaths.length && !args.reconcile) {
+      await save(loc.projectRoot, loc.sessionPath, session);
       return {
         status: "prepared",
         revision: session.revision,
         path: loc.sessionPath,
         reused: true
       };
+    }
     if (args.reconcile) {
       if (args.expectedRevision === void 0 || args.reconcile.confirmed !== true)
         throw new Error(
@@ -55781,8 +55515,7 @@ async function prepareDiscussInputBasis(args) {
         requestId: `reconcile-${session.revision + 1}`,
         kind: "reconciliation",
         basis: session.basis,
-        baseline: session.baseline,
-        journal: session.journal
+        baseline: session.baseline
       });
       session.baseline = actual;
       session.topology = phaseTopologyFingerprintFromLocation(
@@ -55790,7 +55523,7 @@ async function prepareDiscussInputBasis(args) {
         loc.matchedPhase
       );
       delete session.journal;
-    } else if (session.journal && !session.journal.receipt)
+    } else if (session.journal && !session.journal.complete)
       return {
         status: "blocked",
         nextAction: "Retry blueprint_discuss_finalize with the existing requestId, or use blueprint_discuss_prepare with explicit target reconciliation."
@@ -55820,11 +55553,11 @@ async function prepareDiscussInputBasis(args) {
     };
   });
 }
-function assemble(session) {
-  const candidate = structuredClone(session.candidate);
-  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
-    return candidate;
-  const model = candidate;
+function assemble(session, input) {
+  const supplied = structuredClone(input);
+  if (!supplied || typeof supplied !== "object" || Array.isArray(supplied))
+    return supplied;
+  const model = supplied;
   if (session.records.length) {
     const ids = new Set(session.records.map((r) => r.id));
     const isOwned = (text2) => typeof text2 === "string" && [...ids].some((id) => text2.startsWith(`[${id}] `));
@@ -55832,10 +55565,10 @@ function assemble(session) {
     model.implementationDecisions = [
       ...decisions.filter((item) => !isOwned(item?.decision ?? "")),
       ...session.records.filter(
-        (r) => r.type === "decision" || r.type === "open-question" && r.status === "resolved"
+        (r) => r.type === "decision" && (!r.status || r.status === "accepted" || r.status === "resolved") || r.type === "open-question" && r.status === "resolved"
       ).map((r) => ({
         decision: `[${r.id}] ${r.value}`,
-        tradeoffOrConstraint: `${r.rationale}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}${r.rejectedOptions?.length ? ` Rejected options: ${r.rejectedOptions.join("; ")}` : ""}`
+        tradeoffOrConstraint: `${r.rationale}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}${r.rejectedOptions?.length ? ` Rejected options: ${r.rejectedOptions.join("; ")}` : ""}` || "none"
       }))
     ];
     for (const [field, type] of [
@@ -55847,7 +55580,7 @@ function assemble(session) {
         ...existing.filter(
           (item) => typeof item !== "string" || !isOwned(item) && item.toLowerCase() !== "none"
         ),
-        ...session.records.filter((r) => r.type === type && r.status !== "resolved").map(
+        ...session.records.filter((r) => r.type === type && r.status !== "resolved" || r.type === "decision" && r.status === (type === "deferred" ? "deferred" : "open")).map(
           (r) => `[${r.id}] ${r.value}; Rationale: ${r.rationale}${r.downstreamOwner ? ` (Owner: ${r.downstreamOwner})` : ""}${r.evidence.length ? ` Evidence: ${r.evidence.join("; ")}` : ""}`
         )
       ];
@@ -55855,12 +55588,10 @@ function assemble(session) {
   }
   return model;
 }
-function assess(session, resolved) {
-  const model = assemble(session);
-  const shape = validatePhaseContextModelInput(model);
-  const blockers = session.records.filter(
-    (r) => r.type === "open-question" && r.status !== "resolved" && (r.blocking || !r.downstreamOwner) || r.type === "decision" && (r.blocking || r.status === "open" || r.status === "deferred")
-  ).map((r) => r.id);
+function assess(session, resolved, input, defaults) {
+  const normalized = validatePhaseContextModelInput(input, defaults);
+  const shape = normalized.model ? validatePhaseContextModelInput(assemble(session, normalized.model)) : normalized;
+  const blockers = session.records.filter((r) => r.blocking === true && r.status !== "resolved").map((r) => r.id);
   if (!shape.model)
     return {
       ready: false,
@@ -55882,25 +55613,11 @@ function assess(session, resolved) {
     content
   };
 }
-function compactReadiness(assessment2) {
-  return {
-    ready: assessment2.ready,
-    blockers: assessment2.blockers,
-    validation: assessment2.validation
-  };
-}
 async function blueprintDiscussRecord(raw) {
   const args = recordInput.parse(raw);
   checkedPayload(args);
   return locked(args, async (loc) => {
     const session = await readSession(loc.projectRoot, loc.sessionPath) ?? await initial(loc);
-    if (args.model !== void 0) {
-      if (args.candidate !== void 0 || args.corrections?.length)
-        throw new Error(
-          "Pass model, candidate, or corrections, not multiple authoring inputs."
-        );
-      args.candidate = args.model;
-    }
     const requestHash2 = digest(stable(args));
     const replay2 = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
     if (replay2) {
@@ -55910,6 +55627,7 @@ async function blueprintDiscussRecord(raw) {
           reason: "Request ID conflict",
           revision: session.revision
         };
+      await save(loc.projectRoot, loc.sessionPath, session);
       return {
         status: "reused",
         revision: replay2.revision,
@@ -55923,40 +55641,11 @@ async function blueprintDiscussRecord(raw) {
         reason: "Revision conflict",
         revision: session.revision
       };
-    if (session.journal && !session.journal.receipt)
+    if (session.journal && !session.journal.complete)
       return {
         status: "blocked",
         nextAction: "Retry blueprint_discuss_finalize with the existing requestId before recording more answers."
       };
-    if (args.candidate !== void 0 && args.corrections?.length)
-      throw new Error("Pass candidate or field corrections, not both.");
-    if (args.candidate !== void 0)
-      session.candidate = checkedPayload(args.candidate);
-    if (args.corrections?.length) {
-      for (const correction2 of args.corrections) {
-        correction2.path.forEach((segment) => {
-          validateFieldNameSegment(segment);
-          if (["__proto__", "prototype", "constructor"].includes(segment))
-            throw new Error("Unsafe correction path.");
-        });
-        let target = session.candidate;
-        for (const segment of correction2.path.slice(0, -1)) {
-          if (!target || typeof target !== "object" || !Object.hasOwn(target, segment))
-            throw new Error("Correction parent does not exist.");
-          target = target[segment];
-        }
-        if (!target || typeof target !== "object")
-          throw new Error("Correction target is not an object.");
-        const field = correction2.path.at(-1);
-        if (correction2.operation === "remove") {
-          if (Array.isArray(target)) {
-            if (!/^(?:0|[1-9]\d*)$/.test(field))
-              throw new Error("Array correction requires an index.");
-            target.splice(Number(field), 1);
-          } else delete target[field];
-        } else target[field] = checkedPayload(correction2.value);
-      }
-    }
     for (const record2 of args.records ?? []) {
       const index = session.records.findIndex((r) => r.id === record2.id);
       if (index === -1) session.records.push(record2);
@@ -55967,23 +55656,14 @@ async function blueprintDiscussRecord(raw) {
       revision: session.revision,
       requestId: args.requestId,
       kind: "record",
-      records: args.records,
-      ...args.candidate !== void 0 || args.corrections?.length ? { candidate: session.candidate } : {}
+      records: args.records
     });
     session.requests[args.requestId] = {
       hash: requestHash2,
       revision: session.revision
     };
     await save(loc.projectRoot, loc.sessionPath, session);
-    const assessment2 = assess(session, loc.resolved);
-    return {
-      status: "recorded",
-      revision: session.revision,
-      path: loc.sessionPath,
-      candidateSaved: session.candidate !== void 0,
-      readiness: compactReadiness(assessment2),
-      nextAction: assessment2.ready ? "Call blueprint_discuss_finalize after preparing fresh inputs." : "Repair fields or resolve blocking questions using blueprint_discuss_record."
-    };
+    return { status: "recorded", revision: session.revision, path: loc.sessionPath };
   });
 }
 async function blueprintDiscussRead(args) {
@@ -55993,10 +55673,12 @@ async function blueprintDiscussRead(args) {
     return {
       status: session ? "found" : "not_found",
       path: loc.sessionPath,
-      session,
-      readiness: session ? compactReadiness(assess(session, loc.resolved)) : null
+      session
     };
   });
+}
+function logInline(value) {
+  return value.replace(/\r\n?|\n/g, " ").replace(/\|/g, "\\|").trim();
 }
 function renderLog(session, prefix) {
   return `# Phase ${prefix} Discussion Log
@@ -56009,46 +55691,57 @@ ${session.records.length} durable records; revision ${session.revision}.
 
 ${session.history.filter((e) => e.records?.length).flatMap(
     (e) => e.records.map(
-      (r) => `- Revision ${e.revision} [${r.id}] (${r.type}): ${r.value}
-  Rationale: ${r.rationale}
-  Evidence: ${r.evidence.join("; ") || "Not supplied"}${r.rejectedOptions?.length ? `
-  Rejected options: ${r.rejectedOptions.join("; ")}` : ""}`
+      (r) => `- Revision ${e.revision} [${r.id}] (${r.type}): ${logInline(r.value)}
+  Status: ${r.status ?? (r.type === "decision" ? "accepted" : r.type === "deferred" ? "deferred" : "open")}
+  Rationale: ${logInline(r.rationale)}
+  Evidence: ${r.evidence.map(logInline).join("; ") || "Not supplied"}${r.rejectedOptions?.length ? `
+  Rejected options: ${r.rejectedOptions.map(logInline).join("; ")}` : ""}${r.downstreamOwner ? `
+  Owner: ${logInline(r.downstreamOwner)}` : ""}`
     )
-  ).join("\n") || "No incremental answers recorded; candidate context supplied."}
+  ).join("\n") || "No incremental answers recorded."}
 
 ## Follow-Ups
 
-${session.records.filter((r) => r.type !== "decision" && r.status !== "resolved").map(
-    (r) => `- [${r.id}] ${r.value}${r.downstreamOwner ? ` \u2014 ${r.downstreamOwner}` : ""}`
+${session.records.filter((r) => r.status !== "resolved" && (r.type !== "decision" || r.status === "open" || r.status === "deferred")).map(
+    (r) => `- [${r.id}] ${logInline(r.value)}${r.downstreamOwner ? ` \u2014 ${logInline(r.downstreamOwner)}` : ""}`
   ).join("\n") || "- none"}
 `;
 }
 async function blueprintDiscussFinalize(raw) {
-  const args = finalizeInput.parse(raw);
+  const transport = finalizeInput.safeParse(raw);
+  if (!transport.success) return { status: "rejected", saved: false, outcome: "rejected-not-saved", diagnostics: transport.error.issues.map((issue2) => ({ path: issue2.path.join("."), message: issue2.message })) };
+  const args = transport.data;
+  try {
+    if (args.model !== void 0) checkedPayload(args.model);
+  } catch (error2) {
+    return { status: "rejected", saved: false, outcome: "rejected-not-saved", diagnostics: [{ path: "model", message: error2.message }] };
+  }
   return locked(args, async (loc) => {
     const session = await readSession(loc.projectRoot, loc.sessionPath);
     if (!session)
       return {
         status: "not_found",
-        nextAction: "Call blueprint_discuss_record."
+        saved: false,
+        outcome: "rejected-not-saved",
+        nextAction: "Call blueprint_discuss_prepare."
       };
-    const requestHash2 = digest(stable(args));
+    const { model: inputModel, ...identity2 } = args;
+    const requestHash2 = digest(stable(identity2));
     let journal = session.journal;
+    let publicationModel = null;
+    if (journal?.requestId === args.requestId && journal.revision !== session.revision) return { status: "stale", saved: false, outcome: "rejected-not-saved", reason: "Revision conflict" };
     if (journal?.requestId === args.requestId && journal.requestHash !== requestHash2)
-      return { status: "rejected", reason: "Request ID conflict" };
-    if (journal?.requestId === args.requestId && journal.receipt)
-      return { ...journal.receipt, status: "reused" };
-    if (journal && journal.requestId !== args.requestId && !journal.receipt)
-      return {
-        status: "blocked",
-        nextAction: `Retry blueprint_discuss_finalize requestId ${journal.requestId}.`
-      };
+      return { status: "rejected", saved: false, outcome: "rejected-not-saved", reason: "Request ID conflict" };
+    if (journal && journal.requestId !== args.requestId && !journal.complete)
+      return { status: "blocked", saved: false, outcome: "rejected-not-saved", nextAction: `Retry blueprint_discuss_finalize requestId ${journal.requestId}.` };
     if (!journal || journal.requestId !== args.requestId) {
       if (Object.hasOwn(session.requests, args.requestId))
-        return { status: "rejected", reason: "Request ID already used" };
+        return { status: "rejected", saved: false, outcome: "rejected-not-saved", reason: "Request ID already used" };
       if (session.revision !== args.expectedRevision)
         return {
           status: "stale",
+          saved: false,
+          outcome: "rejected-not-saved",
           reason: "Revision conflict",
           revision: session.revision
         };
@@ -56058,16 +55751,22 @@ async function blueprintDiscussFinalize(raw) {
       ))
         return {
           status: "stale",
+          saved: false,
+          outcome: "rejected-not-saved",
           reason: "Phase topology changed",
           nextAction: "Run blueprint_discuss_prepare with explicit target reconciliation."
         };
-      const assessment2 = assess(session, loc.resolved);
+      const evidence = await collectDiscussEvidence({ cwd: loc.projectRoot, phase: session.phase, evidencePaths: session.basis.evidencePaths });
+      if (evidence.status !== "collected") return { ...evidence, saved: false };
+      const assessment2 = assess(session, loc.resolved, inputModel, discussAuthoring(evidence.packet, session.records).defaults);
       if (!assessment2.ready || !assessment2.model || !assessment2.content)
         return {
           status: "blocked",
-          draftPersisted: true,
-          readiness: compactReadiness(assessment2),
-          nextAction: "Repair the saved candidate or blocking records using blueprint_discuss_record."
+          saved: false,
+          outcome: "rejected-not-saved",
+          diagnostics: assessment2.validation.diagnostics,
+          blockers: assessment2.blockers,
+          nextAction: "Correct the addressed fields or resolve explicitly blocking notes, then submit model again."
         };
       const freshness = await basisFreshness(
         loc.projectRoot,
@@ -56076,7 +55775,8 @@ async function blueprintDiscussFinalize(raw) {
       if (!session.basis.prepared || freshness.status !== "fresh")
         return {
           status: "stale",
-          draftPersisted: true,
+          saved: false,
+          outcome: "rejected-not-saved",
           freshness,
           nextAction: "Run blueprint_discuss_prepare to refresh the authoritative input packet and reconcile affected decisions."
         };
@@ -56096,8 +55796,10 @@ async function blueprintDiscussFinalize(raw) {
         if (observed !== session.baseline[kind])
           return {
             status: "stale",
+            saved: false,
+            outcome: "rejected-not-saved",
             reason: `Stale ${kind} baseline`,
-            nextAction: "Run blueprint_discuss_prepare with explicit target reconciliation after reviewing changed canonical artifacts; the saved draft remains editable."
+            nextAction: "Run blueprint_discuss_prepare with explicit target reconciliation after reviewing changed canonical artifacts; resubmit the model after reconciliation."
           };
         if (observed && !args.overwrite) {
           const existing = await fs17.readFile(
@@ -56107,6 +55809,8 @@ async function blueprintDiscussFinalize(raw) {
           if (!isScaffoldGeneratedArtifact(existing) && digest(kind === "context" ? content : log) !== observed)
             return {
               status: "blocked",
+              saved: false,
+              outcome: "rejected-not-saved",
               reason: `Explicit overwrite confirmation required for ${target}`,
               nextAction: "Obtain explicit overwrite confirmation, then retry with overwrite=true."
             };
@@ -56115,6 +55819,8 @@ async function blueprintDiscussFinalize(raw) {
       if (log && !validatePhaseArtifactContent(log, "discussion-log").valid)
         return {
           status: "blocked",
+          saved: false,
+          outcome: "rejected-not-saved",
           reason: "Generated discussion log failed validation",
           nextAction: "Repair saved records before retrying."
         };
@@ -56124,18 +55830,18 @@ async function blueprintDiscussFinalize(raw) {
         revision: session.revision,
         context: {
           path: artifactPathFor(loc.resolved, "context"),
-          hash: digest(content),
-          model: assessment2.model
+          hash: digest(content)
         },
         ...log ? {
           log: {
             path: artifactPathFor(loc.resolved, "discussion-log"),
-            content: log,
             hash: digest(log)
           }
         } : {},
-        stages: {}
+        stages: {},
+        modelHash: digest(stable(inputModel))
       };
+      publicationModel = assessment2.model;
       session.journal = journal;
       session.requests[args.requestId] = {
         hash: requestHash2,
@@ -56159,6 +55865,17 @@ async function blueprintDiscussFinalize(raw) {
     };
     try {
       await assertTopology();
+      if (inputModel !== void 0 && journal.modelHash && digest(stable(inputModel)) !== journal.modelHash)
+        throw new Error("Request ID conflict: model differs from publication intent.");
+      if (!publicationModel && await hashPath(loc.projectRoot, journal.context.path) !== journal.context.hash) {
+        if (inputModel === void 0) throw new Error("Resubmit model with the same requestId; context was not committed.");
+        const evidence = await collectDiscussEvidence({ cwd: loc.projectRoot, phase: session.phase, evidencePaths: session.basis.evidencePaths });
+        if (evidence.status !== "collected") throw new Error("Unable to refresh evidence.");
+        const assessment2 = assess(session, loc.resolved, inputModel, discussAuthoring(evidence.packet, session.records).defaults);
+        if (!assessment2.ready || !assessment2.model || !assessment2.content || digest(prepareTextForPersistence(assessment2.content).content.replace(/\r\n/g, "\n")) !== journal.context.hash)
+          throw new Error("Resubmitted model does not match validated publication intent.");
+        publicationModel = assessment2.model;
+      }
       const freshness = await basisFreshness(loc.projectRoot, session.basis.readSet);
       if (!session.basis.prepared || freshness.status !== "fresh")
         throw new Error("Discussion evidence changed or is unknown; run blueprint_discuss_prepare with explicit target reconciliation and review changed inputs.");
@@ -56166,21 +55883,19 @@ async function blueprintDiscussFinalize(raw) {
         const item = journal[kind];
         if (!item) continue;
         const observed = await hashPath(loc.projectRoot, item.path);
-        if (journal.stages[kind]) {
-          if (observed === item.hash) {
-            journal.stages[kind] = "complete";
-            await checkpoint();
-            continue;
-          }
-          if (journal.stages[kind] === "complete")
-            throw new Error(
-              `Published ${kind} changed externally; preserve it and reconcile manually.`
-            );
+        if (observed === item.hash) {
+          journal.stages[kind] = "complete";
+          await checkpoint();
+          continue;
         }
+        if (journal.stages[kind] === "complete")
+          throw new Error(`Published ${kind} changed externally; preserve it and reconcile manually.`);
         if (observed !== session.baseline[kind])
           throw new Error(
             `Stale ${kind} baseline; preserve canonical content and reconcile through a new prepared session.`
           );
+        if (kind === "log" && digest(prepareTextForPersistence(renderLog(session, loc.resolved.phasePrefix)).content.replace(/\r\n/g, "\n")) !== item.hash)
+          throw new Error("Discussion log no longer matches stable note history; reconcile publication metadata.");
         journal.stages[kind] = "intent";
         await checkpoint();
         await assertTopology();
@@ -56188,7 +55903,7 @@ async function blueprintDiscussFinalize(raw) {
           cwd: loc.projectRoot,
           phase: session.phase,
           artifact: kind === "log" ? "discussion-log" : "context",
-          ...kind === "context" ? { model: journal.context.model } : { content: journal.log.content },
+          ...kind === "context" ? { model: publicationModel } : { content: prepareTextForPersistence(renderLog(session, loc.resolved.phasePrefix)).content.replace(/\r\n/g, "\n") },
           overwrite: args.overwrite,
           expectedContentHash: session.baseline[kind],
           expectedTopology: session.topology
@@ -56206,7 +55921,7 @@ async function blueprintDiscussFinalize(raw) {
         journal.stages.state = "intent";
         await checkpoint();
         await assertTopology();
-        const stateUpdate = await discussFinalizeDependencies.stateUpdate({
+        await discussFinalizeDependencies.stateUpdate({
           cwd: loc.projectRoot,
           base: "synced",
           patch: {
@@ -56214,10 +55929,6 @@ async function blueprintDiscussFinalize(raw) {
             activeCommand: "/blu-discuss-phase"
           }
         });
-        journal.warnings = [
-          ...journal.warnings ?? [],
-          ...stateUpdate.warnings
-        ];
         journal.stages.state = "complete";
         await checkpoint();
       }
@@ -56229,7 +55940,6 @@ async function blueprintDiscussFinalize(raw) {
       journal.stages.refresh = "complete";
       await checkpoint();
       const warnings = [
-        ...journal.warnings ?? [],
         ...state.warnings ?? []
       ];
       if (journal.stages.cleanup !== "complete") {
@@ -56246,7 +55956,9 @@ async function blueprintDiscussFinalize(raw) {
         journal.stages.cleanup = "complete";
         await checkpoint();
       }
-      journal.receipt = {
+      const receipt2 = {
+        saved: true,
+        outcome: "complete",
         status: "finalized",
         revision: session.revision,
         path: loc.sessionPath,
@@ -56258,20 +55970,22 @@ async function blueprintDiscussFinalize(raw) {
         warnings,
         nextAction: state.derivedStatus.nextAction
       };
+      journal.complete = true;
       session.baseline = {
         context: journal.context.hash,
         log: journal.log?.hash ?? session.baseline.log
       };
       await checkpoint();
-      return journal.receipt;
+      return receipt2;
     } catch (error2) {
       return {
         status: "partial",
-        draftPersisted: true,
+        saved: await hashPath(loc.projectRoot, journal.context.path) === journal.context.hash,
+        outcome: await hashPath(loc.projectRoot, journal.context.path) === journal.context.hash ? "saved-but-state-incomplete" : "rejected-not-saved",
         revision: session.revision,
         stages: journal.stages,
         reason: error2.message,
-        nextAction: `Retry blueprint_discuss_finalize with the same requestId ${args.requestId} and identical arguments after resolving the reported failure. If canonical targets or topology changed, use blueprint_discuss_prepare with explicit target reconciliation.`
+        nextAction: `Retry blueprint_discuss_finalize with the same requestId ${args.requestId} and the same revision and options after resolving the reported failure. Resend model if context was not committed; it may be omitted once canonical context matches the journal hash. If canonical targets or topology changed, use blueprint_discuss_prepare with explicit target reconciliation.`
       };
     }
   });
@@ -56308,18 +56022,60 @@ async function blueprintDiscussPrepare(raw) {
   return {
     ...result,
     packet: evidence.packet,
+    authoring: discussAuthoring(evidence.packet, saved.session?.records ?? []),
     readSet: evidence.readSet,
     session: saved.session ? {
       revision: saved.session.revision,
       records: saved.session.records,
-      candidateAvailable: saved.session.candidate !== void 0,
-      readiness: saved.readiness,
       publication: saved.session.journal ? {
         requestId: saved.session.journal.requestId,
         stages: saved.session.journal.stages,
-        receipt: saved.session.journal.receipt
+        complete: saved.session.journal.complete
       } : null
     } : null
+  };
+}
+function discussAuthoring(packet, records) {
+  const phase = packet.selectedPhase;
+  const spec = packet.artifacts.spec.status === "present" && packet.artifacts.spec.validation?.valid ? packet.artifacts.spec.content ?? "" : "";
+  const section = (heading) => {
+    const parts = spec.split(/^(?:#{2,3}\s+|\*\*)(?=[A-Za-z])/m);
+    const text2 = parts.find((part) => part.split("\n")[0].replace(/[:*]/g, "").trim().toLowerCase() === heading.toLowerCase());
+    return text2?.split("\n").slice(1).filter((line2) => /^\s*[-*]\s+/.test(line2)).map((line2) => line2.replace(/^\s*[-*]\s+(?:\[[ xX]\]\s+)?/, "").trim()).filter(Boolean);
+  };
+  const specGoal = spec.split(/^##\s+/m).find((part) => part.split("\n")[0].trim() === "Goal")?.split("\n").slice(1).join("\n").trim();
+  const project = packet.sources.find((item) => item.path === ".blueprint/PROJECT.md")?.content;
+  const vision = project?.split(/^##\s+/m).find((part) => part.split("\n")[0].trim().toLowerCase() === "vision")?.split("\n").slice(1).join("\n");
+  const brief = (vision ?? project?.replace(/^#.*$/gm, ""))?.trim().split(/\n\s*\n/)[0].trim();
+  const config2 = packet.config.config;
+  const criteria = section("Acceptance Criteria") ?? phase.successCriteria?.split("\n").map((line2) => line2.replace(/^\s*(?:[-*]|\d+\.)\s+/, "").trim()).filter(Boolean);
+  const defaults = {
+    phaseBoundary: {
+      ...specGoal || phase.goal ? { goal: specGoal || phase.goal } : {},
+      ...criteria?.length ? { successCriteria: criteria } : {},
+      ...section("In Scope")?.length ? { inScope: section("In Scope") } : {},
+      ...section("Out of Scope")?.length ? { outOfScope: section("Out of Scope") } : {}
+    },
+    discoveryGrounding: {
+      ...brief ? { projectBrief: brief } : {},
+      requirementsGrounding: phase.requirements,
+      workflowPosture: `Mode: ${config2.mode}; discussion: ${config2.workflow.discuss_mode}; research before questions: ${config2.workflow.research_before_questions}; automatic advancement: ${config2.workflow.auto_advance}.`,
+      confirmedDecisions: records.filter((r) => r.type === "decision" && (!r.status || r.status === "accepted" || r.status === "resolved")).map((r) => `[${r.id}] ${r.value}`)
+    },
+    canonicalReferences: [...spec ? [{ source: packet.artifacts.spec.path, relevance: "Saved specification boundaries and acceptance criteria" }] : [], ...packet.sources.filter((item) => item.content !== null && [".blueprint/ROADMAP.md", ".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md"].includes(item.path)).map((item) => ({ source: item.path, relevance: "Prepared phase grounding" }))]
+  };
+  return {
+    schema: toJSONSchema(phaseContextAuthoringSchema),
+    defaults,
+    missingEssentialFields: ["goal", "inScope", "successCriteria"].filter((key2) => {
+      const value = defaults.phaseBoundary?.[key2];
+      return !value || !value.length;
+    }).map((key2) => `phaseBoundary.${key2}`),
+    records,
+    examples: [
+      { phaseBoundary: { goal: "Export data", inScope: ["CSV export"], successCriteria: ["CSV downloads"] } },
+      { phaseBoundary: { goal: "Export data", inScope: ["CSV export"], outOfScope: ["Scheduled exports"], successCriteria: ["CSV downloads"] }, implementationDecisions: [{ decision: "Use UTF-8" }], openQuestions: ["Default filename"], canonicalReferences: [{ source: "User interview" }] }
+    ]
   };
 }
 var recordSchema, numericPhase, lookupShape, idSchema, recordInput, finalizeInput, digest, stable, sessionSchema, discussFinalizeDependencies, prepareInput, discussToolDefinitions;
@@ -56341,8 +56097,8 @@ var init_discuss = __esm({
       id: string2().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/),
       type: _enum(["decision", "open-question", "deferred"]),
       value: string2().min(1),
-      rationale: string2().min(1),
-      evidence: array(string2()),
+      rationale: string2().default(""),
+      evidence: array(string2()).default([]),
       rejectedOptions: array(string2()).optional(),
       blocking: boolean2().optional(),
       downstreamOwner: string2().optional(),
@@ -56355,23 +56111,13 @@ var init_discuss = __esm({
       ...lookupShape,
       requestId: idSchema,
       expectedRevision: number2().int().min(0),
-      records: array(recordSchema).max(100).optional(),
-      model: phaseContextAuthoringSchema.optional().describe(
-        "Typed canonical context. Use candidate instead to salvage incomplete or invalid drafts."
-      ),
-      candidate: unknown().optional().describe("Lossless raw JSON salvage; saved before context schema checks."),
-      corrections: array(
-        object2({
-          path: array(string2()).min(1).max(20),
-          value: unknown().optional(),
-          operation: _enum(["set", "remove"]).default("set")
-        })
-      ).max(50).optional()
-    });
+      records: array(recordSchema).max(100).optional()
+    }).strict();
     finalizeInput = object2({
       ...lookupShape,
       requestId: idSchema,
       expectedRevision: number2().int().min(0),
+      model: phaseContextAuthoringSchema.optional().describe("Final context model. Required for a new publication or before context commits; omit only when retrying verified canonical context."),
       overwrite: boolean2().optional(),
       includeLog: boolean2().optional()
     });
@@ -56383,7 +56129,7 @@ var init_discuss = __esm({
       ) : item
     );
     sessionSchema = object2({
-      version: literal(1),
+      version: union([literal(1), literal(2)]),
       phase: string2().regex(/^\d+(?:\.\d+)*$/),
       revision: number2().int().min(0),
       topology: object2({
@@ -56417,14 +56163,14 @@ var init_discuss = __esm({
         log: string2().nullable()
       }),
       records: array(recordSchema),
-      candidate: unknown().optional(),
       history: array(
         object2({
           revision: number2().int(),
           requestId: string2(),
           kind: string2(),
           records: array(recordSchema).optional(),
-          candidate: unknown().optional()
+          basis: object2({ prepared: boolean2(), readSet: array(object2({ path: string2(), hash: string2().nullable() })), evidencePaths: array(string2()).optional() }).optional(),
+          baseline: object2({ context: string2().nullable(), log: string2().nullable() }).optional()
         })
       ),
       requests: record(
@@ -56437,12 +56183,12 @@ var init_discuss = __esm({
         revision: number2().int(),
         context: object2({
           path: string2(),
-          hash: string2(),
-          model: record(string2(), unknown())
+          hash: string2()
         }),
-        log: object2({ path: string2(), hash: string2(), content: string2() }).optional(),
+        log: object2({ path: string2(), hash: string2() }).optional(),
         stages: record(string2(), _enum(["intent", "complete"])),
-        receipt: record(string2(), unknown()).optional()
+        complete: boolean2().optional(),
+        modelHash: string2().optional()
       }).optional()
     });
     discussFinalizeDependencies = {
@@ -56472,19 +56218,19 @@ var init_discuss = __esm({
       },
       {
         name: "blueprint_discuss_record",
-        description: "Append durable discussion records and losslessly save a raw candidate before schema/readiness checks. Repair fields with revision CAS; request IDs are idempotent.",
+        description: "Save resumable discussion notes with revision CAS and idempotent request IDs. No document models are stored.",
         inputSchema: recordInput.shape,
         handler: (args) => blueprintDiscussRecord(args)
       },
       {
         name: "blueprint_discuss_read",
-        description: "Read the complete versioned discussion session, exact saved candidate, decision history and publication journal.",
+        description: "Read discussion notes, note history, and safe publication metadata.",
         inputSchema: lookupShape,
         handler: (args) => blueprintDiscussRead(args)
       },
       {
         name: "blueprint_discuss_finalize",
-        description: "Publish a valid saved candidate and record-derived context/log with stale-target checks and recoverable state synchronization. overwrite requires explicit user confirmation.",
+        description: "Validate and directly publish the supplied model and record-derived context/log with stale-target checks and recoverable state synchronization. overwrite requires explicit user confirmation.",
         inputSchema: finalizeInput.shape,
         handler: (args) => blueprintDiscussFinalize(args)
       }
@@ -103327,6 +103073,59 @@ var MAX_ARRAY_ITEMS = 20;
 var MAX_OBJECT_KEYS = 25;
 var MAX_STRING_LENGTH = 800;
 var MAX_STACK_LENGTH = 4e3;
+function metadataOnlyInvocation(toolName, args) {
+  return toolName.startsWith("blueprint_discuss_") || toolName === "blueprint_phase_artifact_write" && (args.artifact === "context" || args.artifact === "discussion-log" || args.model !== void 0);
+}
+function failureMetadata(value, depth = 0) {
+  const metadata = {};
+  const statuses = /* @__PURE__ */ new Set(["invalid", "blocked", "rejected", "stale", "partial", "failed", "error", "reconciliation_required", "not_found", "project_missing", "needs_revision", "refused", "outcome-unknown"]);
+  if (typeof value.status === "string" && statuses.has(value.status)) metadata.status = value.status;
+  if (["rejected-not-saved", "saved-but-state-incomplete", "complete"].includes(value.outcome)) metadata.outcome = value.outcome;
+  const knownCodes = /* @__PURE__ */ new Set([
+    "schema.missing",
+    "schema.type",
+    "schema.required",
+    "schema.additionalProperties",
+    "schema.pattern",
+    "schema.minLength",
+    "schema.maxLength",
+    "schema.minItems",
+    "schema.maxItems",
+    "schema.enum",
+    "schema.const",
+    "schema.anyOf",
+    "schema.oneOf",
+    "context.missing_essential_intent",
+    "context.missing_required_section",
+    "markdown.placeholder_text",
+    "markdown.missing_h1",
+    "markdown.no_populated_contract_sections",
+    "markdown.invalid_render",
+    "markdown.empty",
+    "write.exactly_one_input",
+    "write.unsupported_model",
+    "write.model_only",
+    "write.invalid"
+  ]);
+  if (Array.isArray(value.diagnostics)) metadata.diagnosticCodes = [...new Set(value.diagnostics.slice(0, MAX_ARRAY_ITEMS).flatMap((item) => {
+    const code = item && typeof item === "object" ? item.code : void 0;
+    return typeof code === "string" && knownCodes.has(code) ? [code] : [];
+  }))];
+  for (const key2 of ["revision", "expectedRevision", "recordCount", "valid", "written", "saved", "overwrite", "includeLog"]) {
+    if (typeof value[key2] === "boolean" || typeof value[key2] === "number" && Number.isFinite(value[key2])) metadata[key2] = value[key2];
+  }
+  for (const key2 of ["records", "issues", "warnings", "diagnostics"]) {
+    if (Array.isArray(value[key2])) metadata[`${key2}Count`] = value[key2].length;
+  }
+  if (depth < MAX_DEPTH && value.validation && typeof value.validation === "object") {
+    metadata.validation = failureMetadata(value.validation, depth + 1);
+  }
+  if (value.model !== void 0) metadata.modelSupplied = true;
+  if (value.candidate !== void 0) metadata.candidateSupplied = true;
+  if (typeof value.content === "string") metadata.contentLength = value.content.length;
+  if (["context", "discussion-log"].includes(value.artifact)) metadata.artifact = value.artifact;
+  return metadata;
+}
 function truncateString(value, maxLength = MAX_STRING_LENGTH) {
   if (value.length <= maxLength) {
     return value;
@@ -103421,8 +103220,8 @@ async function logRejectedMutationResult(toolName, args, result) {
     toolName,
     failureKind: "rejected",
     cwd: typeof args.cwd === "string" ? args.cwd : null,
-    request: sanitizeForLog(args),
-    result: sanitizeForLog(result)
+    request: metadataOnlyInvocation(toolName, args) ? failureMetadata(args) : sanitizeForLog(args),
+    result: metadataOnlyInvocation(toolName, args) ? failureMetadata(result) : sanitizeForLog(result)
   });
 }
 async function logThrownMutationError(toolName, args, error2) {
@@ -103432,8 +103231,8 @@ async function logThrownMutationError(toolName, args, error2) {
     toolName,
     failureKind: "exception",
     cwd: typeof args.cwd === "string" ? args.cwd : null,
-    request: sanitizeForLog(args),
-    error: toLoggedError(error2)
+    request: metadataOnlyInvocation(toolName, args) ? failureMetadata(args) : sanitizeForLog(args),
+    error: metadataOnlyInvocation(toolName, args) ? { name: "MutationError", message: "Content omitted", stack: null } : toLoggedError(error2)
   });
 }
 

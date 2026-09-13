@@ -18,7 +18,7 @@ test("phase.context exposes a schema-backed model contract without a read-time a
   assert.ok(modelContract);
   assert.equal("authoringTemplate" in contract, false);
   assert.equal(modelContract.schemaId, "blueprint.phase.context.model");
-  assert.equal(modelContract.schemaVersion, "1.1.0");
+  assert.equal(modelContract.schemaVersion, "1.2.0");
   assert.equal(
     modelContract.schemaPath,
     "src/mcp/artifact-contracts/schemas/phase.context.model.schema.json"
@@ -31,22 +31,15 @@ test("phase.context exposes a schema-backed model contract without a read-time a
 
   assert.equal(
     contract.sectionValidations?.["Open Questions"]?.exactEmptySentinel,
-    "- none"
+    undefined
   );
   assert.equal(
     contract.sectionValidations?.["Deferred Ideas"]?.exactEmptySentinel,
-    "- none"
+    undefined
   );
 
   const required = modelContract.jsonSchema.required as string[];
-  assert.deepEqual(required, [
-    "phaseBoundary",
-    "discoveryGrounding",
-    "dependencies",
-    "openQuestions",
-    "deferredIdeas",
-    "canonicalReferences"
-  ]);
+  assert.deepEqual(required, []);
 
   const properties = modelContract.jsonSchema.properties as Record<string, unknown>;
   assert.equal("cwd" in properties, false);
@@ -63,7 +56,7 @@ test("phase.context exposes a schema-backed model contract without a read-time a
   );
   assert.match(
     String((properties.openQuestions as { description?: string }).description),
-    /\["none"\].*older saved model inputs/i
+    /\["none"\].*accepted/i
   );
   assert.match(
     String((properties.deferredIdeas as { description?: string }).description),
@@ -77,12 +70,12 @@ test("phase.context exposes a schema-backed model contract without a read-time a
   );
   assert.ok(
     modelContract.qualityRules.some((rule) =>
-      /preserve the exact headings in renderedHeadings/i.test(rule)
+      /canonical headings/i.test(rule)
     )
   );
   assert.ok(
     modelContract.qualityRules.some((rule) =>
-      /openQuestions: \[\].*no unresolved questions left/i.test(rule)
+      /Optional groups and lists/i.test(rule)
     )
   );
   assert.ok(
