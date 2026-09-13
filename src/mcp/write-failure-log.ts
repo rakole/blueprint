@@ -35,6 +35,40 @@ type MutationFailureEntry = {
   };
 };
 
+// Discussion documents must never be retained by the diagnostic side channel.
+// Select by invocation, including models rejected for an incorrect artifact kind.
+function metadataOnlyInvocation(toolName: string, args: Record<string, unknown>): boolean {
+  return toolName.startsWith("blueprint_discuss_") ||
+    (toolName === "blueprint_phase_artifact_write" &&
+      (args.artifact === "context" || args.artifact === "discussion-log" || args.model !== undefined));
+}
+
+function failureMetadata(value: Record<string, unknown>, depth = 0): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {};
+  const statuses = new Set(["invalid", "blocked", "rejected", "stale", "partial", "failed", "error", "reconciliation_required", "not_found", "project_missing", "needs_revision", "refused", "outcome-unknown"]);
+  if (typeof value.status === "string" && statuses.has(value.status)) metadata.status = value.status;
+  if (["rejected-not-saved", "saved-but-state-incomplete", "complete"].includes(value.outcome as string)) metadata.outcome = value.outcome;
+  const knownCodes = new Set(["schema.missing", "schema.type", "context.missing_essential_intent", "markdown.placeholder_text", "markdown.missing_h1"]);
+  if (Array.isArray(value.diagnostics)) metadata.diagnosticCodes = [...new Set(value.diagnostics.slice(0, MAX_ARRAY_ITEMS).flatMap((item) => {
+    const code = item && typeof item === "object" ? (item as Record<string, unknown>).code : undefined;
+    return typeof code === "string" && knownCodes.has(code) ? [code] : [];
+  }))];
+  for (const key of ["revision", "expectedRevision", "recordCount", "valid", "written", "saved", "overwrite", "includeLog"]) {
+    if (typeof value[key] === "boolean" || (typeof value[key] === "number" && Number.isFinite(value[key]))) metadata[key] = value[key];
+  }
+  for (const key of ["records", "issues", "warnings", "diagnostics"]) {
+    if (Array.isArray(value[key])) metadata[`${key}Count`] = value[key].length;
+  }
+  if (depth < MAX_DEPTH && value.validation && typeof value.validation === "object") {
+    metadata.validation = failureMetadata(value.validation as Record<string, unknown>, depth + 1);
+  }
+  if (value.model !== undefined) metadata.modelSupplied = true;
+  if (value.candidate !== undefined) metadata.candidateSupplied = true;
+  if (typeof value.content === "string") metadata.contentLength = value.content.length;
+  if (["context", "discussion-log"].includes(value.artifact as string)) metadata.artifact = value.artifact;
+  return metadata;
+}
+
 function truncateString(value: string, maxLength = MAX_STRING_LENGTH): string {
   if (value.length <= maxLength) {
     return value;
@@ -169,8 +203,8 @@ export async function logRejectedMutationResult(
     toolName,
     failureKind: "rejected",
     cwd: typeof args.cwd === "string" ? args.cwd : null,
-    request: sanitizeForLog(args),
-    result: sanitizeForLog(result)
+    request: metadataOnlyInvocation(toolName, args) ? failureMetadata(args) : sanitizeForLog(args),
+    result: metadataOnlyInvocation(toolName, args) ? failureMetadata(result) : sanitizeForLog(result)
   });
 }
 
@@ -185,7 +219,9 @@ export async function logThrownMutationError(
     toolName,
     failureKind: "exception",
     cwd: typeof args.cwd === "string" ? args.cwd : null,
-    request: sanitizeForLog(args),
-    error: toLoggedError(error)
+    request: metadataOnlyInvocation(toolName, args) ? failureMetadata(args) : sanitizeForLog(args),
+    error: metadataOnlyInvocation(toolName, args)
+      ? { name: "MutationError", message: "Content omitted", stack: null }
+      : toLoggedError(error)
   });
 }

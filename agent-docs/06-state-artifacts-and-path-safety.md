@@ -97,30 +97,29 @@ Some tools inspect prompt-like content for injection markers, unsafe display
 markers, encoded payloads, and control characters. Preserve this boundary when
 adding model-authored artifacts or reports.
 
-## Durable Discussion Sessions
+## Discussion Notes And Direct Publication
 
-`blueprint_discuss_prepare`, `blueprint_discuss_record`, `blueprint_discuss_read`, and
-`blueprint_discuss_finalize` own
-`.blueprint/phases/<phase-slug>/XX-DISCUSS-SESSION.json` (version 1).
-The store retains raw candidate revisions, stable decision records, request
-receipts, evidence hashes (including absent optional inputs), and publication
-journals. It is runtime-owned state, never a freehand artifact. Canonical context
-and optional discussion logs retain their existing artifact contracts and are
-published through the guarded phase artifact writer.
+The discuss tools own phase `XX-DISCUSS-SESSION.json` version 2. Sessions retain
+notes, sanitized history, evidence hashes and metadata-only publication journals;
+generated models and rendered drafts are never stored. Legacy sessions migrate
+through the owning tools, dropping draft payloads. Research and plan candidate
+persistence are independent and unchanged.
 
-The public prepare tool bundles independent evidence reads and binds the exact
-content hashes through the internal `prepareDiscussInputBasis` hook. Optional
-absence, selected plan inventory and effective config (including host defaults)
-are checked again at publication. STATE and canonical context/log baselines are
-separate from evidence freshness. Unchanged prepares reuse the session revision;
-changed inputs require expectedRevision and acknowledgment after record review.
-The record tool exposes the canonical typed model plus broad raw candidate salvage
-and field set/remove corrections. Optional presentation fields default to empty
-arrays; typed records own blocking status and prose heuristics remain warnings.
-Explicitly confirmed target reconciliation requires the expected session revision
-and reviewed context/log hashes; it archives prior journal and baseline evidence
-before rebasing. Finalize retries verify publication bytes before resuming later
-stages. Session history remains durable after publication or reconciliation.
+Prepare supplies selected evidence, sparse authoring schema, grounded defaults,
+missing essential fields, records and examples. Record accepts only notes with
+CAS and idempotent request IDs. Resolve missing essentials before generating one
+model, then pass it directly to finalize. Optional empty fields are valid; only
+explicit blocking:true unresolved notes block publication.
+
+Finalize checks freshness, topology, overwrite and revision gates, writes canonical
+context and the derived optional log, then syncs selected-phase state and cleans
+checkpoints. Its saved/outcome receipt distinguishes rejection, saved context with
+incomplete state, and completion. Journals contain hashes, paths and stage metadata.
+Before context commits, retry requires the model; afterwards the same request ID
+can resume without it after canonical hash verification. Target reconciliation
+requires explicit confirmation and reviewed hashes. Mutation failure logging for
+discussion and context/log writes retains control metadata and counts only, never
+freeform request/result/error prose or content snippets.
 
 ## Durable Research Sessions
 

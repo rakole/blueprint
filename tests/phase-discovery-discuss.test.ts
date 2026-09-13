@@ -44,7 +44,7 @@ test("discuss active bundle is bounded and uses registered prepare/record/finali
   const bytes = [discussCommandPath, discussSkillPath, discussRuntimeContractPath].reduce((n, p) => n + Buffer.byteLength(readRepoText(p)), 0);
   assert.ok(bytes < 13000, `Active discuss prompt bytes: ${bytes}`);
   const runtime = readRepoText(discussRuntimeContractPath);
-  for (const rule of [/user pick areas/, /authoritative WHAT\/WHY/, /explicit user confirmation/, /candidate.*save incomplete/s, /corrections/, /downstreamOwner/, /record history/, /derivedStatus.nextAction/, /workflow.subagents/, /same.*requestId/s]) assert.match(runtime, rule);
+  for (const rule of [/user pick areas/, /authoritative WHAT\/WHY/, /explicit user confirmation/, /missingEssentialFields/, /model, the current expectedRevision/, /Generated and rejected documents are not stored/, /downstreamOwner/, /record history/, /derivedStatus.nextAction/, /workflow.subagents/, /same.*requestId/s]) assert.match(runtime, rule);
   assert.doesNotMatch(runtime, /nine.read|checkpoint.per.area|prior.context sweep/i);
 });
 

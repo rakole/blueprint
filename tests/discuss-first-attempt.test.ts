@@ -27,6 +27,8 @@ test("transport preserves missing fields for grounded defaults", () => {
 });
 for (const [name, model] of Object.entries({
   sparse,
+  labels: { phaseBoundary: { goal: "Goal: export user data.", inScope: ["In scope: CSV export."], outOfScope: ["Out of scope: batch processing."], successCriteria: ["CSV opens correctly."] } },
+  quoted: { ...sparse, specificIdeas: ['Discuss the tokens "<specific idea 1>" and "<specific idea 2>" in documentation.'] },
   short: { phaseBoundary: { goal: "Export", inScope: ["CSV"], successCriteria: ["Downloads"] } },
   multiline: { phaseBoundary: { inScope: ["CSV\nUTF-8"] }, specificIdeas: ["One\nTwo"] },
   none: { ...sparse, openQuestions: ["Nothing open"], deferredIdeas: ["None."], dependencies: { externalConstraints: null } },

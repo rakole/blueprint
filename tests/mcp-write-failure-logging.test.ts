@@ -638,3 +638,50 @@ test("god review stale and refused mutation results are logged durably", async (
     assert.equal((entry.result as Record<string, unknown>).status, cases[index]?.result.status);
   }
 });
+
+
+test("discussion and context failures retain metadata without any document or diagnostic prose", async (t) => {
+  const cwd = await createPhaseRepo();
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const marker = "UNIQUE_DOCUMENT_REJECTION_PAYLOAD_7fe22";
+  for (const [name, extra] of [
+    ["blueprint_discuss_prepare", {}],
+    ["blueprint_discuss_record", { candidate: { nested: marker } }],
+    ["blueprint_discuss_finalize", { model: { nested: { unknown: marker } } }],
+    ["blueprint_phase_artifact_write", { artifact: "context", content: marker }],
+    ["blueprint_phase_artifact_write", { artifact: "discussion-log", content: marker }],
+    ["blueprint_phase_artifact_write", { artifact: "research", model: { goal: marker } }],
+  ] as Array<[string, Record<string, unknown>]>) {
+    const args = { cwd, expectedRevision: 2, records: [{ value: marker }], ...extra, unknown: marker };
+    const result = { status: "rejected", saved: false, outcome: "rejected-not-saved", message: marker,
+      diagnostics: [{ code: "schema.type", message: marker, path: marker }, { code: marker }],
+      validation: { issues: [marker], diagnostics: [{ code: marker, message: marker }] }, nested: { content: marker } };
+    assert.equal(await executeToolHandlerWithFailureLogging({ name, description: "fixture", handler: async () => result }, args), result);
+    let log = await readFile(path.join(cwd, MCP_WRITE_FAILURE_LOG_PATH), "utf8");
+    assert.equal(log.includes(marker), false, `${name} rejection leaked content`);
+    const entry = JSON.parse(log.trim().split("\n").at(-1)!);
+    assert.equal(entry.request.expectedRevision, 2);
+    assert.equal(entry.result.diagnosticsCount, 2);
+    assert.deepEqual(entry.result.diagnosticCodes, ["schema.type"]);
+    const error = new Error(marker);
+    error.name = marker;
+    error.stack = marker;
+    await assert.rejects(executeToolHandlerWithFailureLogging({ name, description: "fixture", handler: async () => { throw error; } }, args), error);
+    log = await readFile(path.join(cwd, MCP_WRITE_FAILURE_LOG_PATH), "utf8");
+    assert.equal(log.includes(marker), false, `${name} exception leaked content`);
+  }
+});
+
+test("legacy document fields rejected by actual discuss record never enter the failure log", async (t) => {
+  const cwd = await createPhaseRepo();
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const { discussToolDefinitions } = await import("../src/mcp/tools/discuss.js");
+  const record = discussToolDefinitions.find((tool) => tool.name === "blueprint_discuss_record")!;
+  const marker = "UNIQUE_LEGACY_MODEL_CONTENT_c661";
+  await assert.rejects(executeToolHandlerWithFailureLogging(record, {
+    cwd, phase: 3, expectedRevision: 0, requestId: "legacy", candidate: { [marker]: marker }, model: { goal: marker }
+  }));
+  const log = await readFile(path.join(cwd, MCP_WRITE_FAILURE_LOG_PATH), "utf8");
+  assert.equal(log.includes(marker), false);
+  assert.equal(JSON.parse(log.trim()).request.candidateSupplied, true);
+});

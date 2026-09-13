@@ -40,7 +40,7 @@ These commands are runnable because the live catalog marks them `implemented`.
 
 | Command | Purpose | Risk | Execution profile |
 | --- | --- | --- | --- |
-| `/blu-discuss-phase <phase>` | `discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, durable resumability, validation repair, and MCP-owned phase artifact writes. | Medium: can replace or extend phase context artifacts. | `long-running-mutation` |
+| `/blu-discuss-phase <phase>` | `discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, resumable notes, first-attempt authoring, and MCP-owned phase artifact writes. | Medium: can replace or extend phase context artifacts. | `long-running-mutation` |
 | `/blu-execute-phase <phase>` | `execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion. | High: drives real repo mutation during implementation and records execution summaries. | `long-running-mutation` |
 | `/blu-next` | `next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands. | Low: read-only next-step routing from project status, effective config, state, artifacts, and the live command catalog. | `router` |
 | `/blu-pause-work` | `pause-work` records a canonical handoff from current Blueprint state and artifact inventory. | Low: writes handoff and state artifacts only. | `interactive-read` |

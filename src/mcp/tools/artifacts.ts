@@ -4587,6 +4587,18 @@ function matchedScaffoldPlaceholderSignals(
   ]);
 }
 
+// Match actual unfilled rows/cells, never labels embedded in authored prose.
+function matchedDiscussionScaffoldRows(content: string, signals: readonly string[]): string[] {
+  const rows = stripResearchFencedCodeBlocks(content).split(/\r?\n/).flatMap((line) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith(">")) return [];
+    return trimmed.startsWith("|")
+      ? trimmed.split("|").map((cell) => cell.trim())
+      : [trimmed.replace(/^[-*+]\s+/, "")];
+  });
+  return signals.filter((signal) => signal.length > 0 && rows.includes(signal));
+}
+
 export function validateResearchArtifactContent(content: string): {
   valid: boolean;
   issues: string[];
@@ -7131,13 +7143,7 @@ export function validatePhaseArtifactContent(
   const placeholderSignals =
     artifact === "ui-spec"
       ? contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal))
-      : matchedScaffoldPlaceholderSignals(content, contract.placeholderSignals, {
-          includeScaffoldMarker: artifact !== "context",
-          singleSignalPatterns:
-            artifact === "discussion-log"
-              ? [/^Record the major discussion outcomes/i]
-              : []
-        });
+      : matchedDiscussionScaffoldRows(content, contract.placeholderSignals);
 
   for (const signal of placeholderSignals) {
     const issue = `${artifactLabel} still contains placeholder scaffold text: ${signal}.`;

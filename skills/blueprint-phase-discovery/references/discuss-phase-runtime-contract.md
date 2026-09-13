@@ -2,7 +2,7 @@
 
 `/blu-discuss-phase` turns phase intent into durable, evidence-backed context.
 Execution profile: `long-running-mutation`. Keep visible progress concise:
-Prepare → Discuss → Save → Finalize. While waiting, name the selected phase,
+Prepare → Discuss → Save. While waiting, name the selected phase,
 pending choice or blocker, and next safe action. Host visibility helpers are
 optional; they never own persistence or completion.
 
@@ -12,7 +12,8 @@ Call `blueprint_discuss_prepare` with the numeric phase (or omit to resolve it).
 Use its selected phase, which can differ from ambientCurrentPhase, throughout.
 The packet includes roadmap goal/requirements, effective config, context/spec/log
 content and validation, plan inventory, bounded relevant prior context, codebase
-evidence, checkpoint, and compact durable session. Independent reads are bundled
+evidence, checkpoint, and compact notes session. Prepare also supplies authoring.schema, defaults,
+missingEssentialFields, records and examples from the selected evidence. Independent reads are bundled
 inside MCP. Do not repeat primitive read/config/contract/checkpoint calls.
 A missing directory is seeded only for a proven planned ROADMAP phase through
 the existing scaffold owner. Ambiguous or unknown targets stop with the returned diagnostic. Completed phases
@@ -49,27 +50,24 @@ area is settled. This preserves remaining areas across sessions.
 After each meaningful answer, call `blueprint_discuss_record` with stable record
 IDs, a unique requestId and the returned expectedRevision. Include rationale,
 evidence, rejected options and unresolved/deferred status without losing nuance.
-Decision records must be settled. Unresolved questions need blocking=true or an
-explicit downstreamOwner; an unresolved blocking record prevents publication.
+Only explicit blocking=true unresolved notes prevent publication. downstreamOwner
+is optional; do not force an owner or invent filler for an ordinary open question.
 Deferred ideas remain durable even when outside this phase. Updates reuse record
 IDs; request retries reuse identical requestId and arguments. Never save chat-only
 state as if it were durable. Report the save receipt before continuing.
 
-Build context with the record tool's typed `model` field sourced from the canonical
-phase.context schema. MCP supplies identity, paths and Markdown. Honest empty
-optional sections use arrays or omission; do not invent filler. Substantive goal,
-scope, success criteria, grounding and evidence are required. Use the broad
-`candidate` field to save incomplete or malformed JSON drafts before validation;
-raw salvage and typed authoring are alternatives in one record call.
+Resolve authoring.missingEssentialFields from evidence or focused user answers before
+generating. Use authoring.schema and defaults for one sparse context model; MCP
+supplies phase identity, paths, normalized optional sections and Markdown. Empty
+optional fields and omission are valid. Do not require a standalone validation
+call, a critic pass or a saved draft before writing.
 
-`blueprint_discuss_read` is for recovering/viewing a saved candidate or history,
-not a normal extra read. Resume from the prepared session's records and readiness;
-ask before discarding/replacing substantive work. Legacy checkpoints are evidence,
-not current truth: reconcile their decisions against the packet and save records.
-For changed-input or canonical-target reconciliation, read
-`discuss-phase-recovery.md` only when needed. Preserve prior valid context while
-repairing. Return field diagnostics and fix only those fields with `corrections`;
-do not regenerate the whole document. Editorial warnings merit review, not filler.
+`blueprint_discuss_read` recovers notes, history and publication metadata only.
+Generated and rejected documents are not stored. Resume from prepared notes; ask
+before replacing substantive decisions. Legacy checkpoints are evidence, not
+current truth: reconcile their decisions against the packet and save notes.
+Load `discuss-phase-recovery.md` only for changed inputs, targets or interrupted
+publication. Preserve prior valid context while resolving blockers.
 
 ## Optional bounded research
 
@@ -85,8 +83,8 @@ substitute generic web/browser/shell-only agents or broaden write scope.
 
 ## Finalize and report
 
-When answers and candidate are ready, call `blueprint_discuss_finalize` with the
-current expectedRevision and a new requestId. MCP derives a log from record history
+When answers are ready, generate once and call `blueprint_discuss_finalize` with
+model, the current expectedRevision and a new requestId. MCP derives a log from record history
 when multiple records, revisions or rejected options warrant it. includeLog is an
 explicit preference override; never author the log as model-written Markdown.
 Require explicit user confirmation before overwrite=true replaces substantive
@@ -95,10 +93,13 @@ phase `XX-CONTEXT.md`, never repo-root `CONTEXT.md`.
 
 Finalize owns validation, fresh-evidence checks, canonical context/log writes,
 synced selected-phase state update, refreshed routing, and guarded checkpoint
-cleanup. Do not duplicate these calls. A rejected candidate stays saved: repair
-fields, resolve blockers, then finalize. A partial publication uses the same
-requestId and identical arguments to resume its journal; consult recovery guidance
-for changed targets. Never describe invalid, stale or partial results as complete.
+cleanup. Do not duplicate these calls. Report saved and outcome distinctly:
+rejected-not-saved means the generated document was not saved;
+saved-but-state-incomplete means context exists but completion needs recovery;
+complete means all publication stages finished. Never describe partial results as
+complete. Before context commits, a retry needs the model again. After it commits,
+the same requestId can resume without model; MCP verifies canonical hashes before
+finishing state and cleanup. Notes remain resumable in either case.
 
 Receipt: selected phase, MCP-returned context/log paths, covered decisions and
 remaining deferred items, warnings/blockers, and exactly the returned
