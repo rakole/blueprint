@@ -2,6 +2,7 @@ import * as z from "zod/v4";
 import { type PhaseTopologyFingerprint } from "./phase-topology-lock.js";
 import { blueprintPhaseArtifactWrite } from "./phase-artifacts.js";
 import { blueprintPhaseCheckpointDelete } from "./phase-checkpoints.js";
+import { type PhaseContextModelDefaults } from "./phase-context-model.js";
 import { blueprintStateUpdate, blueprintStateLoad } from "./state.js";
 import type { ToolDefinition } from "../tool-types.js";
 declare const recordSchema: z.ZodObject<{
@@ -12,8 +13,8 @@ declare const recordSchema: z.ZodObject<{
         "open-question": "open-question";
     }>;
     value: z.ZodString;
-    rationale: z.ZodString;
-    evidence: z.ZodArray<z.ZodString>;
+    rationale: z.ZodDefault<z.ZodString>;
+    evidence: z.ZodDefault<z.ZodArray<z.ZodString>>;
     rejectedOptions: z.ZodOptional<z.ZodArray<z.ZodString>>;
     blocking: z.ZodOptional<z.ZodBoolean>;
     downstreamOwner: z.ZodOptional<z.ZodString>;
@@ -37,11 +38,9 @@ type Event = {
     revision: number;
     requestId: string;
     records?: DiscussRecord[];
-    candidate?: unknown;
     kind: string;
     basis?: Basis;
     baseline?: DiscussSession["baseline"];
-    journal?: Journal;
 };
 type Journal = {
     requestId: string;
@@ -50,19 +49,17 @@ type Journal = {
     context: {
         path: string;
         hash: string;
-        model: Record<string, unknown>;
     };
     log?: {
         path: string;
         hash: string;
-        content: string;
     };
     stages: Record<string, "intent" | "complete">;
-    receipt?: Record<string, unknown>;
-    warnings?: string[];
+    complete?: boolean;
+    modelHash?: string;
 };
 export type DiscussSession = {
-    version: 1;
+    version: 2;
     phase: string;
     topology: PhaseTopologyFingerprint;
     revision: number;
@@ -72,7 +69,6 @@ export type DiscussSession = {
         log: string | null;
     };
     records: DiscussRecord[];
-    candidate?: unknown;
     history: Event[];
     requests: Record<string, {
         hash: string;
@@ -95,8 +91,8 @@ declare const recordInput: z.ZodObject<{
             "open-question": "open-question";
         }>;
         value: z.ZodString;
-        rationale: z.ZodString;
-        evidence: z.ZodArray<z.ZodString>;
+        rationale: z.ZodDefault<z.ZodString>;
+        evidence: z.ZodDefault<z.ZodArray<z.ZodString>>;
         rejectedOptions: z.ZodOptional<z.ZodArray<z.ZodString>>;
         blocking: z.ZodOptional<z.ZodBoolean>;
         downstreamOwner: z.ZodOptional<z.ZodString>;
@@ -107,22 +103,13 @@ declare const recordInput: z.ZodObject<{
             open: "open";
         }>>;
     }, z.core.$strip>>>;
-    model: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-    candidate: z.ZodOptional<z.ZodUnknown>;
-    corrections: z.ZodOptional<z.ZodArray<z.ZodObject<{
-        path: z.ZodArray<z.ZodString>;
-        value: z.ZodOptional<z.ZodUnknown>;
-        operation: z.ZodDefault<z.ZodEnum<{
-            set: "set";
-            remove: "remove";
-        }>>;
-    }, z.core.$strip>>>;
     cwd: z.ZodOptional<z.ZodString>;
     phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 declare const finalizeInput: z.ZodObject<{
     requestId: z.ZodString;
     expectedRevision: z.ZodNumber;
+    model: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
     overwrite: z.ZodOptional<z.ZodBoolean>;
     includeLog: z.ZodOptional<z.ZodBoolean>;
     cwd: z.ZodOptional<z.ZodString>;
@@ -154,7 +141,6 @@ export declare function prepareDiscussInputBasis(args: Lookup & {
     affectedRecordIds?: undefined;
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
     path?: undefined;
     reused?: undefined;
@@ -165,7 +151,6 @@ export declare function prepareDiscussInputBasis(args: Lookup & {
     affectedRecordIds: string[];
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
     path?: undefined;
     reused?: undefined;
@@ -181,7 +166,6 @@ export declare function prepareDiscussInputBasis(args: Lookup & {
     revision?: undefined;
     affectedRecordIds?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
     path?: undefined;
     reused?: undefined;
@@ -190,7 +174,6 @@ export declare function prepareDiscussInputBasis(args: Lookup & {
     revision: number;
     changedPaths: string[];
     affectedRecordIds: string[];
-    candidateNeedsReview: boolean;
     nextAction: string;
     reason?: undefined;
     freshness?: undefined;
@@ -205,7 +188,6 @@ export declare function prepareDiscussInputBasis(args: Lookup & {
     affectedRecordIds?: undefined;
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
 } | {
     status: string;
@@ -215,7 +197,6 @@ export declare function prepareDiscussInputBasis(args: Lookup & {
     affectedRecordIds?: undefined;
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     path?: undefined;
     reused?: undefined;
 } | {
@@ -226,7 +207,6 @@ export declare function prepareDiscussInputBasis(args: Lookup & {
     affectedRecordIds?: undefined;
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
     reused?: undefined;
 }>;
@@ -237,8 +217,6 @@ export declare function blueprintDiscussRecord(raw: z.input<typeof recordInput>)
     currentRevision?: undefined;
     path?: undefined;
     nextAction?: undefined;
-    candidateSaved?: undefined;
-    readiness?: undefined;
 } | {
     status: string;
     revision: number;
@@ -246,8 +224,6 @@ export declare function blueprintDiscussRecord(raw: z.input<typeof recordInput>)
     path: string;
     reason?: undefined;
     nextAction?: undefined;
-    candidateSaved?: undefined;
-    readiness?: undefined;
 } | {
     status: string;
     nextAction: string;
@@ -255,41 +231,18 @@ export declare function blueprintDiscussRecord(raw: z.input<typeof recordInput>)
     revision?: undefined;
     currentRevision?: undefined;
     path?: undefined;
-    candidateSaved?: undefined;
-    readiness?: undefined;
 } | {
     status: string;
     revision: number;
     path: string;
-    candidateSaved: boolean;
-    readiness: {
-        ready: boolean;
-        blockers: string[];
-        validation: {
-            valid: boolean;
-            issues: string[];
-            warnings: string[];
-            diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-        };
-    };
-    nextAction: string;
     reason?: undefined;
     currentRevision?: undefined;
+    nextAction?: undefined;
 }>;
 export declare function blueprintDiscussRead(args: Lookup): Promise<{
     status: string;
     path: string;
     session: DiscussSession | null;
-    readiness: {
-        ready: boolean;
-        blockers: string[];
-        validation: {
-            valid: boolean;
-            issues: string[];
-            warnings: string[];
-            diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-        };
-    } | null;
 }>;
 export declare const discussFinalizeDependencies: {
     artifactWrite: typeof blueprintPhaseArtifactWrite;
@@ -297,7 +250,208 @@ export declare const discussFinalizeDependencies: {
     stateLoad: typeof blueprintStateLoad;
     checkpointDelete: typeof blueprintPhaseCheckpointDelete;
 };
-export declare function blueprintDiscussFinalize(raw: z.input<typeof finalizeInput>): Promise<Record<string, unknown>>;
+export declare function blueprintDiscussFinalize(raw: z.input<typeof finalizeInput>): Promise<{
+    saved: boolean;
+    outcome: string;
+    status: string;
+    revision: number;
+    path: string;
+    stages: {
+        [x: string]: "complete" | "intent";
+    };
+    contextPath: string;
+    logPath: string | null;
+    coveredRecordIds: string[];
+    state: {
+        state: import("./state.js").BlueprintState;
+        metadata: import("./state.js").BlueprintStateMetadata;
+        blockers: string[];
+        warnings?: string[];
+        derivedStatus: {
+            projectStatus: string;
+            currentPhase: string | null;
+            nextAction: string;
+            hasBlockers: boolean;
+            milestoneAudit: {
+                found: boolean;
+                verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" | null;
+                gapSections: {
+                    requirement: {
+                        gapId: string;
+                        surface: string;
+                        evidence: string;
+                        repair: string;
+                    }[];
+                    integration: {
+                        gapId: string;
+                        surface: string;
+                        evidence: string;
+                        repair: string;
+                    }[];
+                    flow: {
+                        gapId: string;
+                        surface: string;
+                        evidence: string;
+                        repair: string;
+                    }[];
+                    optional: {
+                        gapId: string;
+                        surface: string;
+                        evidence: string;
+                        repair: string;
+                    }[];
+                };
+                hasActionableGaps: boolean;
+                hasArchivalBlockers: boolean;
+                nextSafeAction: string | null;
+                readyForCompletion: boolean;
+            };
+        };
+    };
+    warnings: string[];
+    nextAction: string;
+} | {
+    status: string;
+    saved: boolean;
+    outcome: string;
+    nextAction: string;
+    reason?: undefined;
+    revision?: undefined;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    freshness?: undefined;
+    stages?: undefined;
+} | {
+    status: string;
+    saved: boolean;
+    outcome: string;
+    reason: string;
+    nextAction?: undefined;
+    revision?: undefined;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    freshness?: undefined;
+    stages?: undefined;
+} | {
+    status: string;
+    saved: boolean;
+    outcome: string;
+    reason: string;
+    revision: number;
+    nextAction?: undefined;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    freshness?: undefined;
+    stages?: undefined;
+} | {
+    status: string;
+    saved: boolean;
+    outcome: string;
+    reason: string;
+    nextAction: string;
+    revision?: undefined;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    freshness?: undefined;
+    stages?: undefined;
+} | {
+    saved: boolean;
+    status: "blocked";
+    selection: import("./phase-tool-types.js").PhaseLocateResult;
+    reason: string | null;
+    changedPaths?: undefined;
+    root?: undefined;
+    phase?: undefined;
+    readSet?: undefined;
+    packet?: undefined;
+    outcome?: undefined;
+    nextAction?: undefined;
+    revision?: undefined;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    freshness?: undefined;
+    stages?: undefined;
+} | {
+    saved: boolean;
+    status: "blocked";
+    reason: string;
+    selection?: undefined;
+    changedPaths?: undefined;
+    root?: undefined;
+    phase?: undefined;
+    readSet?: undefined;
+    packet?: undefined;
+    outcome?: undefined;
+    nextAction?: undefined;
+    revision?: undefined;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    freshness?: undefined;
+    stages?: undefined;
+} | {
+    saved: boolean;
+    status: "stale";
+    reason: string;
+    changedPaths: string[];
+    selection?: undefined;
+    root?: undefined;
+    phase?: undefined;
+    readSet?: undefined;
+    packet?: undefined;
+    outcome?: undefined;
+    nextAction?: undefined;
+    revision?: undefined;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    freshness?: undefined;
+    stages?: undefined;
+} | {
+    status: string;
+    saved: boolean;
+    outcome: string;
+    diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
+    blockers: string[];
+    nextAction: string;
+    reason?: undefined;
+    revision?: undefined;
+    freshness?: undefined;
+    stages?: undefined;
+} | {
+    status: string;
+    saved: boolean;
+    outcome: string;
+    freshness: {
+        status: string;
+        stalePaths: string[];
+        unknownPaths: string[];
+        warnings: string[];
+    };
+    nextAction: string;
+    reason?: undefined;
+    revision?: undefined;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    stages?: undefined;
+} | {
+    status: string;
+    saved: boolean;
+    outcome: string;
+    revision: number;
+    stages: Record<string, "complete" | "intent">;
+    reason: string;
+    nextAction: string;
+    diagnostics?: undefined;
+    blockers?: undefined;
+    freshness?: undefined;
+} | {
+    status: string;
+    saved: boolean;
+    outcome: string;
+    diagnostics: {
+        path: string;
+        message: string;
+    }[];
+}>;
 declare const prepareInput: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
     phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
@@ -534,6 +688,47 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         planInventory: string[];
         warnings: string[];
     };
+    authoring: {
+        schema: z.core.ZodStandardJSONSchemaPayload<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        defaults: PhaseContextModelDefaults;
+        missingEssentialFields: string[];
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        examples: ({
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                successCriteria: string[];
+                outOfScope?: undefined;
+            };
+            implementationDecisions?: undefined;
+            openQuestions?: undefined;
+            canonicalReferences?: undefined;
+        } | {
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                outOfScope: string[];
+                successCriteria: string[];
+            };
+            implementationDecisions: {
+                decision: string;
+            }[];
+            openQuestions: string[];
+            canonicalReferences: {
+                source: string;
+            }[];
+        })[];
+    };
     readSet: {
         path: string;
         hash: string | null;
@@ -551,21 +746,10 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             downstreamOwner?: string | undefined;
             status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
         }[];
-        candidateAvailable: boolean;
-        readiness: {
-            ready: boolean;
-            blockers: string[];
-            validation: {
-                valid: boolean;
-                issues: string[];
-                warnings: string[];
-                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-            };
-        } | null;
         publication: {
             requestId: string;
             stages: Record<string, "complete" | "intent">;
-            receipt: Record<string, unknown> | undefined;
+            complete: boolean | undefined;
         } | null;
     } | null;
     status: string;
@@ -574,7 +758,6 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
     affectedRecordIds?: undefined;
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
     path?: undefined;
     reused?: undefined;
@@ -775,6 +958,47 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         planInventory: string[];
         warnings: string[];
     };
+    authoring: {
+        schema: z.core.ZodStandardJSONSchemaPayload<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        defaults: PhaseContextModelDefaults;
+        missingEssentialFields: string[];
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        examples: ({
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                successCriteria: string[];
+                outOfScope?: undefined;
+            };
+            implementationDecisions?: undefined;
+            openQuestions?: undefined;
+            canonicalReferences?: undefined;
+        } | {
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                outOfScope: string[];
+                successCriteria: string[];
+            };
+            implementationDecisions: {
+                decision: string;
+            }[];
+            openQuestions: string[];
+            canonicalReferences: {
+                source: string;
+            }[];
+        })[];
+    };
     readSet: {
         path: string;
         hash: string | null;
@@ -792,21 +1016,10 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             downstreamOwner?: string | undefined;
             status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
         }[];
-        candidateAvailable: boolean;
-        readiness: {
-            ready: boolean;
-            blockers: string[];
-            validation: {
-                valid: boolean;
-                issues: string[];
-                warnings: string[];
-                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-            };
-        } | null;
         publication: {
             requestId: string;
             stages: Record<string, "complete" | "intent">;
-            receipt: Record<string, unknown> | undefined;
+            complete: boolean | undefined;
         } | null;
     } | null;
     status: string;
@@ -815,7 +1028,6 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
     affectedRecordIds: string[];
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
     path?: undefined;
     reused?: undefined;
@@ -1016,6 +1228,47 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         planInventory: string[];
         warnings: string[];
     };
+    authoring: {
+        schema: z.core.ZodStandardJSONSchemaPayload<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        defaults: PhaseContextModelDefaults;
+        missingEssentialFields: string[];
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        examples: ({
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                successCriteria: string[];
+                outOfScope?: undefined;
+            };
+            implementationDecisions?: undefined;
+            openQuestions?: undefined;
+            canonicalReferences?: undefined;
+        } | {
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                outOfScope: string[];
+                successCriteria: string[];
+            };
+            implementationDecisions: {
+                decision: string;
+            }[];
+            openQuestions: string[];
+            canonicalReferences: {
+                source: string;
+            }[];
+        })[];
+    };
     readSet: {
         path: string;
         hash: string | null;
@@ -1033,21 +1286,10 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             downstreamOwner?: string | undefined;
             status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
         }[];
-        candidateAvailable: boolean;
-        readiness: {
-            ready: boolean;
-            blockers: string[];
-            validation: {
-                valid: boolean;
-                issues: string[];
-                warnings: string[];
-                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-            };
-        } | null;
         publication: {
             requestId: string;
             stages: Record<string, "complete" | "intent">;
-            receipt: Record<string, unknown> | undefined;
+            complete: boolean | undefined;
         } | null;
     } | null;
     status: string;
@@ -1061,7 +1303,6 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
     revision?: undefined;
     affectedRecordIds?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
     path?: undefined;
     reused?: undefined;
@@ -1262,6 +1503,47 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         planInventory: string[];
         warnings: string[];
     };
+    authoring: {
+        schema: z.core.ZodStandardJSONSchemaPayload<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        defaults: PhaseContextModelDefaults;
+        missingEssentialFields: string[];
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        examples: ({
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                successCriteria: string[];
+                outOfScope?: undefined;
+            };
+            implementationDecisions?: undefined;
+            openQuestions?: undefined;
+            canonicalReferences?: undefined;
+        } | {
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                outOfScope: string[];
+                successCriteria: string[];
+            };
+            implementationDecisions: {
+                decision: string;
+            }[];
+            openQuestions: string[];
+            canonicalReferences: {
+                source: string;
+            }[];
+        })[];
+    };
     readSet: {
         path: string;
         hash: string | null;
@@ -1279,28 +1561,16 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             downstreamOwner?: string | undefined;
             status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
         }[];
-        candidateAvailable: boolean;
-        readiness: {
-            ready: boolean;
-            blockers: string[];
-            validation: {
-                valid: boolean;
-                issues: string[];
-                warnings: string[];
-                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-            };
-        } | null;
         publication: {
             requestId: string;
             stages: Record<string, "complete" | "intent">;
-            receipt: Record<string, unknown> | undefined;
+            complete: boolean | undefined;
         } | null;
     } | null;
     status: string;
     revision: number;
     changedPaths: string[];
     affectedRecordIds: string[];
-    candidateNeedsReview: boolean;
     nextAction: string;
     reason?: undefined;
     freshness?: undefined;
@@ -1503,6 +1773,47 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         planInventory: string[];
         warnings: string[];
     };
+    authoring: {
+        schema: z.core.ZodStandardJSONSchemaPayload<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        defaults: PhaseContextModelDefaults;
+        missingEssentialFields: string[];
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        examples: ({
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                successCriteria: string[];
+                outOfScope?: undefined;
+            };
+            implementationDecisions?: undefined;
+            openQuestions?: undefined;
+            canonicalReferences?: undefined;
+        } | {
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                outOfScope: string[];
+                successCriteria: string[];
+            };
+            implementationDecisions: {
+                decision: string;
+            }[];
+            openQuestions: string[];
+            canonicalReferences: {
+                source: string;
+            }[];
+        })[];
+    };
     readSet: {
         path: string;
         hash: string | null;
@@ -1520,21 +1831,10 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             downstreamOwner?: string | undefined;
             status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
         }[];
-        candidateAvailable: boolean;
-        readiness: {
-            ready: boolean;
-            blockers: string[];
-            validation: {
-                valid: boolean;
-                issues: string[];
-                warnings: string[];
-                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-            };
-        } | null;
         publication: {
             requestId: string;
             stages: Record<string, "complete" | "intent">;
-            receipt: Record<string, unknown> | undefined;
+            complete: boolean | undefined;
         } | null;
     } | null;
     status: string;
@@ -1545,7 +1845,6 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
     affectedRecordIds?: undefined;
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
 } | {
     packet: {
@@ -1744,6 +2043,47 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         planInventory: string[];
         warnings: string[];
     };
+    authoring: {
+        schema: z.core.ZodStandardJSONSchemaPayload<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        defaults: PhaseContextModelDefaults;
+        missingEssentialFields: string[];
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        examples: ({
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                successCriteria: string[];
+                outOfScope?: undefined;
+            };
+            implementationDecisions?: undefined;
+            openQuestions?: undefined;
+            canonicalReferences?: undefined;
+        } | {
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                outOfScope: string[];
+                successCriteria: string[];
+            };
+            implementationDecisions: {
+                decision: string;
+            }[];
+            openQuestions: string[];
+            canonicalReferences: {
+                source: string;
+            }[];
+        })[];
+    };
     readSet: {
         path: string;
         hash: string | null;
@@ -1761,21 +2101,10 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             downstreamOwner?: string | undefined;
             status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
         }[];
-        candidateAvailable: boolean;
-        readiness: {
-            ready: boolean;
-            blockers: string[];
-            validation: {
-                valid: boolean;
-                issues: string[];
-                warnings: string[];
-                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-            };
-        } | null;
         publication: {
             requestId: string;
             stages: Record<string, "complete" | "intent">;
-            receipt: Record<string, unknown> | undefined;
+            complete: boolean | undefined;
         } | null;
     } | null;
     status: string;
@@ -1785,7 +2114,6 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
     affectedRecordIds?: undefined;
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     path?: undefined;
     reused?: undefined;
 } | {
@@ -1985,6 +2313,47 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
         planInventory: string[];
         warnings: string[];
     };
+    authoring: {
+        schema: z.core.ZodStandardJSONSchemaPayload<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        defaults: PhaseContextModelDefaults;
+        missingEssentialFields: string[];
+        records: {
+            id: string;
+            type: "deferred" | "decision" | "open-question";
+            value: string;
+            rationale: string;
+            evidence: string[];
+            rejectedOptions?: string[] | undefined;
+            blocking?: boolean | undefined;
+            downstreamOwner?: string | undefined;
+            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+        }[];
+        examples: ({
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                successCriteria: string[];
+                outOfScope?: undefined;
+            };
+            implementationDecisions?: undefined;
+            openQuestions?: undefined;
+            canonicalReferences?: undefined;
+        } | {
+            phaseBoundary: {
+                goal: string;
+                inScope: string[];
+                outOfScope: string[];
+                successCriteria: string[];
+            };
+            implementationDecisions: {
+                decision: string;
+            }[];
+            openQuestions: string[];
+            canonicalReferences: {
+                source: string;
+            }[];
+        })[];
+    };
     readSet: {
         path: string;
         hash: string | null;
@@ -2002,21 +2371,10 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             downstreamOwner?: string | undefined;
             status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
         }[];
-        candidateAvailable: boolean;
-        readiness: {
-            ready: boolean;
-            blockers: string[];
-            validation: {
-                valid: boolean;
-                issues: string[];
-                warnings: string[];
-                diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
-            };
-        } | null;
         publication: {
             requestId: string;
             stages: Record<string, "complete" | "intent">;
-            receipt: Record<string, unknown> | undefined;
+            complete: boolean | undefined;
         } | null;
     } | null;
     status: string;
@@ -2026,7 +2384,6 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
     affectedRecordIds?: undefined;
     freshness?: undefined;
     changedPaths?: undefined;
-    candidateNeedsReview?: undefined;
     nextAction?: undefined;
     reused?: undefined;
 }>;

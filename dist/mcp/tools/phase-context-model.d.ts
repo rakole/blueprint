@@ -36,11 +36,16 @@ export type PhaseContextStructuredModel = {
         relevance: string;
     }>;
 };
+export type PhaseContextModelDefaults = Partial<Omit<PhaseContextStructuredModel, "phaseBoundary" | "discoveryGrounding" | "dependencies">> & {
+    phaseBoundary?: Partial<PhaseContextStructuredModel["phaseBoundary"]>;
+    discoveryGrounding?: Partial<PhaseContextStructuredModel["discoveryGrounding"]>;
+    dependencies?: Partial<PhaseContextStructuredModel["dependencies"]>;
+};
 export declare function renderPhaseContextModelContent(args: {
     resolved: PhaseContextResolvedLocation;
     model: PhaseContextStructuredModel;
 }): string;
-export declare function validatePhaseContextModelInput(model: unknown): {
+export declare function validatePhaseContextModelInput(model: unknown, defaults?: PhaseContextModelDefaults): {
     model: null;
     validation: ReturnType<typeof validatePhaseArtifactContent>;
 } | {
