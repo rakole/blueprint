@@ -5,14 +5,7 @@
   "description": "Model-authored payload for phase.context. Runtime-owned phase identity, artifact kind, paths, canonical filename, and final Markdown persistence are supplied by MCP tools.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "phaseBoundary",
-    "discoveryGrounding",
-    "dependencies",
-    "openQuestions",
-    "deferredIdeas",
-    "canonicalReferences"
-  ],
+  "required": [],
   "properties": {
     "phaseBoundary": {
       "$ref": "#/$defs/phaseBoundary",
@@ -23,7 +16,10 @@
       "description": "Content rendered under Discovery Grounding."
     },
     "implementationDecisions": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Decision rows rendered under Implementation Decisions.",
       "items": {
         "$ref": "#/$defs/implementationDecision"
@@ -31,7 +27,10 @@
       "default": []
     },
     "specificIdeas": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Concrete ideas rendered under Specific Ideas.",
       "items": {
         "$ref": "#/$defs/nonEmptyString"
@@ -39,7 +38,10 @@
       "default": []
     },
     "existingCodeInsights": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Concrete codebase observations, reusable patterns, gaps, or cautions rendered under Existing Code Insights.",
       "items": {
         "$ref": "#/$defs/nonEmptyString"
@@ -51,106 +53,122 @@
       "description": "Dependency context rendered under Dependencies."
     },
     "openQuestions": {
-      "type": "array",
-      "description": "Open questions rendered under Open Questions. Use an empty array when no open questions remain; MCP renders the canonical - none sentinel. The legacy compatibility alias [\"none\"] may still appear in older saved model inputs.",
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Open questions rendered under Open Questions. Use an empty array when no open questions remain; omitted/null lists and complete aliases such as [\"none\"] are accepted and render as - none.",
       "items": {
         "$ref": "#/$defs/nonEmptyString"
-      }
+      },
+      "default": []
     },
     "deferredIdeas": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Deferred ideas, scope creep, or later follow-ups rendered under Deferred Ideas. Use an empty array only when nothing is deferred; MCP renders the canonical - none sentinel.",
       "items": {
         "$ref": "#/$defs/nonEmptyString"
-      }
+      },
+      "default": []
     },
     "canonicalReferences": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Evidence pointers rendered under Canonical References.",
-      "minItems": 1,
       "items": {
         "$ref": "#/$defs/canonicalReference"
-      }
+      },
+      "default": []
     }
   },
   "$defs": {
     "nonEmptyString": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
-      "description": "Non-empty single-line string with at least one non-whitespace character. CR/LF is rejected because model strings are rendered into Markdown bullets."
+      "pattern": "^(?=[\\s\\S]*\\S)[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]*$",
+      "description": "Non-empty text. Multiline prose is safely rendered by MCP."
     },
     "repoOrSourceReference": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
-      "description": "Single-line repo-relative path, command output label, document reference, or explicitly labeled external source."
+      "pattern": "^(?=[\\s\\S]*\\S)[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]*$",
+      "description": "Non-empty text. Multiline prose is safely rendered by MCP."
     },
     "phaseBoundary": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "goal",
-        "inScope",
-        "outOfScope",
-        "successCriteria"
-      ],
+      "required": [],
       "properties": {
         "goal": {
           "$ref": "#/$defs/nonEmptyString"
         },
         "inScope": {
-          "type": "array",
-          "minItems": 1,
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/nonEmptyString"
-          }
+          },
+          "default": []
         },
         "outOfScope": {
-          "type": "array",
-          "minItems": 1,
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/nonEmptyString"
-          }
+          },
+          "default": []
         },
         "successCriteria": {
-          "type": "array",
-          "minItems": 1,
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/nonEmptyString"
-          }
+          },
+          "default": []
         }
       }
     },
     "discoveryGrounding": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "projectBrief",
-        "requirementsGrounding",
-        "workflowPosture",
-        "confirmedDecisions"
-      ],
+      "required": [],
       "properties": {
         "projectBrief": {
           "$ref": "#/$defs/nonEmptyString"
         },
         "requirementsGrounding": {
-          "type": "array",
-          "minItems": 1,
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/nonEmptyString"
-          }
+          },
+          "default": []
         },
         "workflowPosture": {
           "$ref": "#/$defs/nonEmptyString"
         },
         "confirmedDecisions": {
-          "type": "array",
-          "minItems": 1,
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/nonEmptyString"
-          }
+          },
+          "default": []
         }
       }
     },
@@ -158,8 +176,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "decision",
-        "tradeoffOrConstraint"
+        "decision"
       ],
       "properties": {
         "decision": {
@@ -173,25 +190,33 @@
     "dependencies": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "priorPhaseArtifacts",
-        "externalConstraints"
-      ],
+      "required": [],
       "properties": {
         "priorPhaseArtifacts": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/repoOrSourceReference"
-          }
+          },
+          "default": []
         },
         "externalConstraints": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/nonEmptyString"
-          }
+          },
+          "default": []
         },
         "requiredFollowUpReads": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/repoOrSourceReference"
           },
@@ -203,8 +228,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "source",
-        "relevance"
+        "source"
       ],
       "properties": {
         "source": {

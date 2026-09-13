@@ -54,8 +54,20 @@ export type PhaseContextStructuredModel = {
   }>;
 };
 
+function contextInline(value: string): string {
+  return value.replace(/\r\n?/g, "\n").split("\n").map((line) => line.trim()).join("<br>");
+}
+
+export type PhaseContextModelDefaults = Partial<Omit<PhaseContextStructuredModel, "phaseBoundary" | "discoveryGrounding" | "dependencies">> & {
+  phaseBoundary?: Partial<PhaseContextStructuredModel["phaseBoundary"]>;
+  discoveryGrounding?: Partial<PhaseContextStructuredModel["discoveryGrounding"]>;
+  dependencies?: Partial<PhaseContextStructuredModel["dependencies"]>;
+};
+
+const emptyAlias = /^(?:none|n\/a|na|not applicable|nothing(?: (?:deferred|open))?|no (?:open questions?|deferred ideas?|dependencies|references?))(?:[.!])?$/i;
+
 function renderContextBulletList(items: string[]): string {
-  return items.map((item) => `- ${item}`).join("\n");
+  return items.map((item) => `- ${contextInline(item)}`).join("\n");
 }
 
 function renderContextOptionalBulletList(
@@ -93,7 +105,7 @@ export function renderPhaseContextModelContent(args: {
 
 ## Phase Boundary
 
-- **Goal** ${args.model.phaseBoundary.goal}
+- **Goal** ${contextInline(args.model.phaseBoundary.goal)}
 - **In scope**
 ${renderContextBulletList(args.model.phaseBoundary.inScope)}
 - **Out of scope**
@@ -103,10 +115,10 @@ ${renderContextBulletList(args.model.phaseBoundary.successCriteria)}
 
 ## Discovery Grounding
 
-- **Project brief** ${args.model.discoveryGrounding.projectBrief}
+- **Project brief** ${contextInline(args.model.discoveryGrounding.projectBrief)}
 - **Requirements grounding**
 ${renderContextBulletList(args.model.discoveryGrounding.requirementsGrounding)}
-- **Workflow posture** ${args.model.discoveryGrounding.workflowPosture}
+- **Workflow posture** ${contextInline(args.model.discoveryGrounding.workflowPosture)}
 - **Confirmed decisions**
 ${renderContextBulletList(args.model.discoveryGrounding.confirmedDecisions)}
 
@@ -160,20 +172,38 @@ ${renderContextTable(
 
 export function validatePhaseContextModelInput(
   model: unknown,
+  defaults?: PhaseContextModelDefaults,
 ):
   | { model: null; validation: ReturnType<typeof validatePhaseArtifactContent> }
   | { model: PhaseContextStructuredModel; validation: null } {
   const modelObject = asJsonObject(structuredClone(model));
   if (modelObject) {
-    for (const field of [
-      "implementationDecisions",
-      "specificIdeas",
-      "existingCodeInsights",
-    ])
-      if (modelObject[field] === undefined) modelObject[field] = [];
-    const dependencies = asJsonObject(modelObject.dependencies);
-    if (dependencies && dependencies.requiredFollowUpReads === undefined)
-      dependencies.requiredFollowUpReads = [];
+    for (const group of ["phaseBoundary", "discoveryGrounding", "dependencies"] as const) {
+      if (modelObject[group] === undefined) modelObject[group] = {};
+      const value = asJsonObject(modelObject[group]);
+      if (value) modelObject[group] = { ...defaults?.[group], ...value };
+    }
+    for (const [key, value] of Object.entries(defaults ?? {})) {
+      if (modelObject[key] === undefined) modelObject[key] = structuredClone(value);
+    }
+    const lists: Array<[Record<string, unknown> | null, string[]]> = [
+      [modelObject, ["implementationDecisions", "specificIdeas", "existingCodeInsights", "openQuestions", "deferredIdeas", "canonicalReferences"]],
+      [asJsonObject(modelObject.phaseBoundary), ["outOfScope"]],
+      [asJsonObject(modelObject.discoveryGrounding), ["requirementsGrounding", "confirmedDecisions"]],
+      [asJsonObject(modelObject.dependencies), ["priorPhaseArtifacts", "externalConstraints", "requiredFollowUpReads"]],
+    ];
+    for (const [object, keys] of lists) if (object) for (const key of keys) {
+      const value = object[key];
+      if (value == null || (!["implementationDecisions", "canonicalReferences"].includes(key) && Array.isArray(value) && value.length === 1 && typeof value[0] === "string" && emptyAlias.test(value[0].trim()))) object[key] = [];
+    }
+    const grounding = asJsonObject(modelObject.discoveryGrounding);
+    if (grounding) for (const key of ["projectBrief", "workflowPosture"]) if (grounding[key] === undefined) grounding[key] = "none";
+    for (const [key, field] of [["implementationDecisions", "tradeoffOrConstraint"], ["canonicalReferences", "relevance"]]) {
+      if (Array.isArray(modelObject[key])) for (const row of modelObject[key]) {
+        const object = asJsonObject(row);
+        if (object && object[field] === undefined) object[field] = "none";
+      }
+    }
   }
   const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
 
@@ -264,11 +294,14 @@ export function validatePhaseContextModelInput(
     };
   }
 
-  diagnostics.push(
-    ...phaseContextModelSentinelDiagnostics(
-      modelObject as unknown as PhaseContextStructuredModel,
-    ),
-  );
+  const boundary = asJsonObject(modelObject?.phaseBoundary);
+  for (const key of ["goal", "inScope", "successCriteria"]) {
+    const value = boundary?.[key];
+    const valid = key === "goal"
+      ? typeof value === "string" && value.trim().length > 0 && !emptyAlias.test(value.trim())
+      : Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string" && item.trim().length > 0 && !emptyAlias.test(item.trim()));
+    if (!valid) diagnostics.push({ path: `model.phaseBoundary.${key}`, code: "context.missing_essential_intent", message: `Phase boundary ${key} requires substantive content after grounded defaults.`, repair: `Supply phaseBoundary.${key}.`, retryable: true, nextTool: "blueprint_discuss_finalize" });
+  }
 
   if (diagnostics.length > 0) {
     return {
@@ -322,53 +355,4 @@ function phaseContextModelSchemaRepair(
   }
 
   return "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.";
-}
-
-function phaseContextModelSentinelDiagnostics(
-  model: PhaseContextStructuredModel,
-): PhaseArtifactValidationDiagnostic[] {
-  const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
-
-  const aliasSensitiveFields: Array<{
-    path: string;
-    items: string[];
-    repair: string;
-  }> = [
-    {
-      path: "model.dependencies.priorPhaseArtifacts",
-      items: model.dependencies.priorPhaseArtifacts,
-      repair:
-        'Use dependencies.priorPhaseArtifacts: [] when no prior artifacts apply; do not pass ["none"] as model content.',
-    },
-    {
-      path: "model.dependencies.externalConstraints",
-      items: model.dependencies.externalConstraints,
-      repair:
-        'Use dependencies.externalConstraints: [] when no external constraints apply; do not pass ["none"] as model content.',
-    },
-    {
-      path: "model.deferredIdeas",
-      items: model.deferredIdeas,
-      repair:
-        'Use deferredIdeas: [] when nothing is deferred; do not pass ["none"] as model content.',
-    },
-  ];
-
-  for (const field of aliasSensitiveFields) {
-    if (
-      field.items.length === 1 &&
-      field.items[0].trim().toLowerCase() === "none"
-    ) {
-      diagnostics.push({
-        path: field.path,
-        code: "schema.none_alias_forbidden",
-        message: `phase.context model field ${field.path} must use an empty array for the canonical none state; [\"none\"] is reserved for Open Questions compatibility only.`,
-        repair: field.repair,
-        retryable: true,
-        nextTool: "blueprint_phase_artifact_write",
-      });
-    }
-  }
-
-  return diagnostics;
 }

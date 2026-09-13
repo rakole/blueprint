@@ -612,7 +612,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.doesNotMatch(contextAuthoringTemplate, /<prior phase artifacts>/);
   assert.match(
     contextAuthoringTemplate,
-    /use the exact sentinel `- none` when nothing remains open or deferred/i
+    /optional sections may be empty/i
   );
   assert.doesNotMatch(contextAuthoringTemplate, /<open question 1 or none>/);
   assert.match(contextAuthoringTemplate, /## Deferred Ideas/);
@@ -644,11 +644,11 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   );
   assert.equal(
     contextContract.sectionValidations?.["Open Questions"]?.exactEmptySentinel,
-    "- none"
+    undefined
   );
   assert.equal(
     contextContract.sectionValidations?.["Deferred Ideas"]?.exactEmptySentinel,
-    "- none"
+    undefined
   );
   assert.ok(contextContract.placeholderSignals.includes("<implementation decision 1>"));
   assert.ok(contextContract.placeholderSignals.includes("<specific idea 1>"));
@@ -659,21 +659,21 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.ok(contextContract.placeholderSignals.includes("<source 1>"));
   assert.ok(
     contextContract.modelContract?.qualityRules.some((rule) =>
-      /use `openQuestions: \[\]` when the section has no unresolved questions left[\s\S]*`\["none"\]` as compatibility-only/i.test(
+      /Text lists also accept complete empty-state aliases/i.test(
         rule
       )
     )
   );
   assert.ok(
     contextContract.modelContract?.qualityRules.some((rule) =>
-      /Deferred ideas must list concrete carry-forward ideas[\s\S]*empty array only when nothing is deferred/i.test(
+      /Preserve substantive decisions, deferred ideas/i.test(
         rule
       )
     )
   );
   assert.match(contextContract.notes.join("\n"), /Scaffold rendering is for first-write seeding/i);
   assert.match(contextContract.notes.join("\n"), /Authoring rendering preserves the canonical headings/i);
-  assert.match(contextContract.notes.join("\n"), /exact `- none` sentinel/i);
+  assert.match(contextContract.notes.join("\n"), /Optional sections may be empty/i);
   assert.match(contextContract.notes.join("\n"), /downstream planning/i);
   const contextAuthoringValidation = validatePhaseArtifactContent(
     contextAuthoringTemplate,
@@ -682,7 +682,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.equal(contextAuthoringValidation.valid, false);
   assert.match(
     contextAuthoringValidation.issues.join("\n"),
-    /missing required contract sections|must contain substantive downstream-planning detail/i
+    /missing required contract sections|requires a populated Phase Boundary/i
   );
   assert.ok(Array.isArray(listed.contracts));
   assert.ok(listed.contracts.length >= 10);

@@ -801,7 +801,7 @@ function renderContextAuthoringTemplate(context?: ArtifactTemplateContext): stri
 <!--
 Final saved content only.
 Replace every section below with the real phase goal, grounding, decisions, ideas, code insights, dependencies, deferred ideas, and canonical references.
-For Open Questions and Deferred Ideas, replace the section with concrete bullets or use the exact sentinel \`- none\` when nothing remains open or deferred.
+For Open Questions and Deferred Ideas, preserve concrete items when present; optional sections may be empty.
 Do not preserve scaffold labels, example bullets, or this guidance block in the final saved artifact.
 -->
 
@@ -831,21 +831,15 @@ const PHASE_CONTEXT_MODEL_SCHEMA_PATH =
 
 const PHASE_CONTEXT_MODEL_CONTRACT: ArtifactModelContract = {
   schemaId: "blueprint.phase.context.model",
-  schemaVersion: "1.1.0",
+  schemaVersion: "1.2.0",
   schemaPath: PHASE_CONTEXT_MODEL_SCHEMA_PATH,
   jsonSchema: readJsonSchemaAsset(PHASE_CONTEXT_MODEL_SCHEMA_FILE),
   qualityRules: [
-    "Optional implementationDecisions, specificIdeas, existingCodeInsights and dependencies.requiredFollowUpReads default to empty arrays; no applicable item needs invented filler.",
-    "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, or content; the write tool owns identity and path derivation.",
-    "Preserve phase boundary separation: goal, in-scope work, out-of-scope work, and success criteria must stay distinct so downstream planning can narrow safely.",
-    "Discovery grounding must cite concrete project brief, requirements, workflow posture, and confirmed decisions rather than placeholder or generic process prose.",
-    "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
-    "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
-    "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
-    "Open questions must list concrete unresolved questions when any remain; use `openQuestions: []` when the section has no unresolved questions left so MCP can render the canonical `- none` Markdown row. Keep `[\"none\"]` as compatibility-only input when encountered in older saved models.",
-    "Deferred ideas must list concrete carry-forward ideas when any remain; use an empty array only when nothing is deferred.",
-    "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
-    "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
+    "Provide goal, inScope, and successCriteria when grounded defaults do not supply them.",
+    "Optional groups and lists may be omitted; optional null lists normalize to empty arrays. Text lists also accept complete empty-state aliases such as [\"none\"]; decision/reference row lists use [].",
+    "Decision rows require decision text; reference rows require source text. Rationale and relevance are optional.",
+    "MCP owns identity, paths, canonical headings, safe multiline rendering, and persistence.",
+    "Preserve substantive decisions, deferred ideas, and uncertainty without inventing filler."
   ],
   contextBindings: [
     "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus blueprint_phase_artifact_write arguments.",
@@ -4387,17 +4381,6 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Deferred Ideas",
       "Canonical References"
     ],
-    sectionValidations: {
-      "Implementation Decisions": { exactEmptySentinel: "- none" },
-      "Specific Ideas": { exactEmptySentinel: "- none" },
-      "Existing Code Insights": { exactEmptySentinel: "- none" },
-      "Open Questions": {
-        exactEmptySentinel: "- none"
-      },
-      "Deferred Ideas": {
-        exactEmptySentinel: "- none"
-      }
-    },
     lockedMarkers: [],
     placeholderSignals: [
       "Goal:",
@@ -4425,7 +4408,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     notes: [
       "Discovery context is phase-scoped and MCP-owned.",
-      "Open Questions may use the exact `- none` sentinel only when no unresolved questions remain.",
+      "Optional sections may be empty; MCP renders omitted lists as `- none`.",
       "Scaffold rendering is for first-write seeding and intentionally includes placeholder labels plus the scaffold footer marker so downstream overwrite logic can recognize it.",
       "Authoring rendering preserves the canonical headings but uses final-write-safe guidance instead of literal placeholder labels that write validation rejects.",
       "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
