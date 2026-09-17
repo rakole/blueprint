@@ -669,10 +669,10 @@ export declare function blueprintResearchSubmit(raw: z.input<typeof submitInput>
 } | {
     warnings: string[];
     stages: {
+        artifact?: "complete" | "intent" | undefined;
         provenance?: "complete" | "intent" | undefined;
         cleanup?: "complete" | "intent" | undefined;
         state?: "complete" | "intent" | undefined;
-        artifact?: "complete" | "intent" | undefined;
         routing?: "complete" | "intent" | undefined;
     };
     status: "reused" | "published";
@@ -693,7 +693,7 @@ export declare function blueprintResearchSubmit(raw: z.input<typeof submitInput>
     ready: boolean;
     revision: number;
     path: string | null;
-    stages: Partial<Record<"provenance" | "cleanup" | "state" | "artifact" | "routing", "complete" | "intent">>;
+    stages: Partial<Record<"artifact" | "provenance" | "cleanup" | "state" | "routing", "complete" | "intent">>;
     reason: string;
     nextAction: string;
 }>;

@@ -1,0 +1,146 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  CODEBASE_DOCUMENT_IDS,
+  codebaseDocumentModelSchema,
+  codebaseMapModelSchema,
+  compileCodebaseDocument,
+  compileCodebaseMap,
+  validateCodebaseContent
+} from "../src/mcp/codebase-authoring.js";
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
+
+test("sparse first submissions compile and validate for all seven documents", () => {
+  const model = Object.fromEntries(CODEBASE_DOCUMENT_IDS.map(id => [id, {
+    summary: `${id}: TypeScript modules use native ESM.`, evidencePaths: ["package.json"]
+  }]));
+  const compiled = compileCodebaseMap(model);
+  assert.equal(Object.keys(compiled).length, 7);
+  for (const id of CODEBASE_DOCUMENT_IDS) {
+    const content = compiled[id]!;
+    assert.deepEqual(validateCodebaseContent(content, `codebase.${id}`), { valid: true, issues: [], warnings: [] });
+    assert.match(content, /## Purpose\n\n/);
+    assert.match(content, /## Evidence\n\n- `package.json`/);
+    assert.deepEqual(readArtifactContract(`codebase.${id}`).requiredHeadings, ["Purpose"]);
+  }
+});
+
+test("optional omissions and empty sections need no filler", () => {
+  const content = compileCodebaseDocument("concerns", {
+    summary: "No defects were found in the inspected parser.", evidencePaths: ["src/parser.ts"],
+    sections: [
+      { heading: "Risks", content: "None" },
+      { heading: "Gaps", content: "\n \t" },
+      { heading: "", content: "" },
+      { heading: "Evidence", content: "" }
+    ]
+  });
+  assert.match(content, /## Risks\n\nNone/);
+  assert.doesNotMatch(content, /## Gaps/);
+  assert.equal(content.match(/^## Evidence$/gm)?.length, 1);
+  assert.equal(validateCodebaseContent(content, "codebase.concerns").valid, true);
+  assert.deepEqual(compileCodebaseMap({}), {});
+});
+
+test("multiline prose, code headings, Unicode and framework paths survive compilation", () => {
+  const summary = "日本語のルートを管理します。\n\n第二段落。\n\n```md\n# Example title\n## Evidence\n<runtime>\n```";
+  const content = compileCodebaseDocument("structure", {
+    summary, evidencePaths: ["app/[id]/page.tsx", "src/日本語.ts", "src/odd`name.ts"],
+    sections: [{ heading: "Directory Map", content: "Routing lives in `app/[id]/page.tsx`.\n\n~~~md\n## Purpose\n~~~" }]
+  });
+  assert.ok(content.includes(summary));
+  assert.ok(content.includes("- `app/[id]/page.tsx`"));
+  assert.ok(content.includes("- `src/日本語.ts`"));
+  assert.ok(content.includes("- ``src/odd`name.ts``"));
+  assert.equal(validateCodebaseContent(content, "codebase.structure").valid, true);
+});
+
+test("heading normalization rejects conflicting names and preserves identical or empty duplicates", () => {
+  const base = { summary: "TypeScript modules use native ESM.", evidencePaths: ["package.json"] };
+  assert.throws(() => compileCodebaseDocument("stack", { ...base, sections: [
+    { heading: " Runtime ", content: "Node.js" }, { heading: "## RUNTIME", content: "Deno" }
+  ] }), /conflicting content/);
+  assert.throws(() => compileCodebaseDocument("stack", { ...base, sections: [
+    { heading: "  pUrPose \n", content: "Another purpose" }
+  ] }), /Purpose or Evidence/);
+  assert.throws(() => compileCodebaseDocument("stack", { ...base, sections: [
+    { heading: "", content: "A meaningful finding" }
+  ] }), /topic name/);
+  const content = compileCodebaseDocument("stack", { ...base, sections: [
+    { heading: "  Error\n  Handling  ", content: "Explicit typed results." },
+    { heading: "error handling", content: "Explicit typed results.\n" },
+    { heading: "ERROR HANDLING", content: "" }
+  ] });
+  assert.match(content, /## Error Handling\n\nExplicit typed results\./);
+  assert.equal(content.match(/Explicit typed results/g)?.length, 1);
+});
+
+test("runtime-owned headings cannot be injected by nested Markdown or unclosed code", () => {
+  const content = compileCodebaseDocument("testing", {
+    summary: "Tests use the built-in runner.\n\n## Runner details\n\n```md\n## Evidence\nExample",
+    evidencePaths: ["tests/parser.test.ts"]
+  });
+  assert.match(content, /#### Runner details/);
+  assert.match(content, /Example\n```\n\n## Evidence\n\n- `tests\/parser.test.ts`/);
+  assert.equal(validateCodebaseContent(content, "codebase.testing").valid, true);
+});
+
+test("concise legacy Markdown and short grounded sections remain valid", () => {
+  assert.equal(validateCodebaseContent("# Stack\n\nTypeScript\n", "codebase.stack").valid, true);
+  assert.equal(validateCodebaseContent("# Concerns\n\n## Purpose\n\nNo concerns found.\n\n## Risks\n\nNone\n", "codebase.concerns").valid, true);
+  const legacy = validateCodebaseContent("# Structure\n\n日本語\n", "codebase.structure");
+  assert.equal(legacy.valid, true);
+  assert.match(legacy.warnings[0]!, /legacy concise/);
+});
+
+test("quoted documentation and literal placeholder examples are not rejected", () => {
+  const content = `# Stack
+
+The template demonstrates this token: <runtime>
+
+The guide quotes \`Generated by \`blueprint_artifact_scaffold\`\` as the old footer.
+
+> Generated by \`/blu-map-codebase\`
+
+\`\`\`md
+## Runtime
+- Primary language or runtime: <runtime>
+*Generated by \`blueprint_artifact_scaffold\`*
+\`\`\`
+`;
+  assert.equal(validateCodebaseContent(content, "codebase.stack").valid, true);
+  assert.equal(codebaseDocumentModelSchema.safeParse({ summary: content, evidencePaths: ["templates/stack.md"] }).success, true);
+});
+
+test("genuine scaffold artifacts and placeholder-only summaries remain invalid", () => {
+  for (const id of CODEBASE_DOCUMENT_IDS) {
+    const contract = readArtifactContract(`codebase.${id}`);
+    assert.equal(validateCodebaseContent(contract.scaffoldTemplate, `codebase.${id}`).valid, false);
+    assert.equal(validateCodebaseContent(contract.authoringTemplate, `codebase.${id}`).valid, false);
+  }
+  for (const summary of ["", "\n", "<runtime>", "TODO", "## Only a heading", "<!-- still empty -->"]) {
+    assert.equal(codebaseDocumentModelSchema.safeParse({ summary, evidencePaths: ["package.json"] }).success, false, summary);
+  }
+  assert.equal(validateCodebaseContent("No title\nUseful findings.", "codebase.stack").valid, false);
+  assert.equal(validateCodebaseContent("# Stack\n\n## Evidence\n\n- `package.json`", "codebase.stack").valid, false);
+  assert.equal(validateCodebaseContent("# Stack\n\n```md\nFindings", "codebase.stack").valid, false);
+});
+
+test("schemas reject unknown fields and missing evidence without imposing filler", () => {
+  const document = { summary: "TypeScript", evidencePaths: ["package.json"] };
+  assert.equal(codebaseMapModelSchema.safeParse({ stack: document }).success, true);
+  assert.equal(codebaseMapModelSchema.safeParse({ stack: document, other: document }).success, false);
+  assert.equal(codebaseDocumentModelSchema.safeParse({ ...document, ignored: "meaningful instructions" }).success, false);
+  assert.equal(codebaseDocumentModelSchema.safeParse({ ...document, sections: [{ heading: "Runtime", content: "Node", ignored: "extra" }] }).success, false);
+  assert.equal(codebaseDocumentModelSchema.safeParse({ ...document, evidencePaths: [] }).success, false);
+  assert.equal(codebaseDocumentModelSchema.safeParse({ ...document, evidencePaths: ["\n"] }).success, false);
+});
+
+test("unfinished HTML comments cannot swallow runtime-owned evidence", () => {
+  const content = compileCodebaseDocument("stack", {
+    summary: "package.json selects ESM.\n<!-- unfinished author note",
+    evidencePaths: ["package.json"]
+  });
+  assert.match(content, /<!-- unfinished author note\n-->\n\n## Evidence/);
+  assert.equal(validateCodebaseContent(content, "codebase.stack").valid, true);
+});

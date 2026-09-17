@@ -1,9 +1,12 @@
 import { promises as fs } from "node:fs";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 
 import {
   ensureRepoRoot,
-  toRepoRelativePath
+  resolveBlueprintPath,
+  toRepoRelativePath,
+  withBlueprintRepoLock
 } from "./tools/artifacts.js";
 
 const BLUEPRINT_DIR = ".blueprint";
@@ -14,6 +17,10 @@ const MAX_ARRAY_ITEMS = 20;
 const MAX_OBJECT_KEYS = 25;
 const MAX_STRING_LENGTH = 800;
 const MAX_STACK_LENGTH = 4000;
+const FAILURE_LOG_LOCK = "mcp-write-failure-log";
+const MAP_FAILURE_TOOLS = new Set([
+  "blueprint_codebase_artifact_write", "blueprint_map_prepare", "blueprint_map_submit"
+]);
 
 type ToolResult = Record<string, unknown>;
 
@@ -35,10 +42,10 @@ type MutationFailureEntry = {
   };
 };
 
-// Discussion, research and planning documents must never be retained by the diagnostic side channel.
+// Generated documents must never be retained by the diagnostic side channel.
 // Select by invocation, including models rejected for an incorrect artifact kind.
 function metadataOnlyInvocation(toolName: string, args: Record<string, unknown>): boolean {
-  return toolName.startsWith("blueprint_discuss_") || toolName.startsWith("blueprint_research_") ||
+  return MAP_FAILURE_TOOLS.has(toolName) || toolName.startsWith("blueprint_discuss_") || toolName.startsWith("blueprint_research_") ||
     ["blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read", "blueprint_phase_plan_write"].includes(toolName) ||
     (toolName === "blueprint_phase_artifact_write" &&
       (args.artifact === "context" || args.artifact === "discussion-log" || args.artifact === "research" || args.model !== undefined || args.candidate !== undefined));
@@ -58,11 +65,14 @@ function failureMetadata(value: Record<string, unknown>, depth = 0): Record<stri
     "markdown.invalid_render", "markdown.empty",
     "write.exactly_one_input", "write.unsupported_model", "write.model_only", "write.invalid",
   ]);
-  if (Array.isArray(value.diagnostics)) metadata.diagnosticCodes = [...new Set(value.diagnostics.slice(0, MAX_ARRAY_ITEMS).flatMap((item) => {
-    const code = item && typeof item === "object" ? (item as Record<string, unknown>).code : undefined;
-    return typeof code === "string" && knownCodes.has(code) ? [code] : [];
-  }))];
-  for (const key of ["revision", "expectedRevision", "recordCount", "valid", "written", "saved", "overwrite", "includeLog"]) {
+  if (Array.isArray(value.diagnostics) || Array.isArray(value.diagnosticCodes)) {
+    const codes = Array.isArray(value.diagnostics)
+      ? value.diagnostics.slice(0, MAX_ARRAY_ITEMS).map(item => item && typeof item === "object" ? (item as Record<string, unknown>).code : undefined)
+      : (value.diagnosticCodes as unknown[]).slice(0, MAX_ARRAY_ITEMS);
+    metadata.diagnosticCodes = [...new Set(codes.filter((code): code is string => typeof code === "string" && knownCodes.has(code)))];
+  }
+  for (const key of ["revision", "expectedRevision", "recordCount", "valid", "written", "saved", "overwrite", "includeLog",
+    "contentLength", "recordsCount", "issuesCount", "warningsCount", "diagnosticsCount", "modelSupplied", "candidateSupplied"]) {
     if (typeof value[key] === "boolean" || (typeof value[key] === "number" && Number.isFinite(value[key]))) metadata[key] = value[key];
   }
   for (const key of ["records", "issues", "warnings", "diagnostics"]) {
@@ -76,6 +86,67 @@ function failureMetadata(value: Record<string, unknown>, depth = 0): Record<stri
   if (typeof value.content === "string") metadata.contentLength = value.content.length;
   if (["context", "discussion-log", "research"].includes(value.artifact as string)) metadata.artifact = value.artifact;
   return metadata;
+}
+
+function recordOrEmpty(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+// Only the owning map tools call this migration. Canonical codebase documents
+// are never changed, and unrelated diagnostics retain their exact bytes.
+export async function scrubLegacyCodebaseFailureLog(
+  cwd?: string
+): Promise<{ scrubbedEntries: number }> {
+  const projectRoot = await ensureRepoRoot(cwd);
+  const logPath = resolveBlueprintPath(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+  try {
+    await fs.access(logPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { scrubbedEntries: 0 };
+    throw error;
+  }
+  return withBlueprintRepoLock(projectRoot, FAILURE_LOG_LOCK, async () => {
+    const info = await fs.lstat(logPath);
+    if (!info.isFile()) throw new Error("Mutation failure log must be a regular file.");
+    const original = await fs.readFile(logPath, "utf8");
+    let scrubbedEntries = 0;
+    const sanitized = original.replace(/[^\n]+(?:\n|$)/g, (line) => {
+      let entry: Record<string, unknown>;
+      try { entry = recordOrEmpty(JSON.parse(line)); } catch { return line; }
+      if (typeof entry.toolName !== "string" || !MAP_FAILURE_TOOLS.has(entry.toolName)) return line;
+      const replacement: Record<string, unknown> = {
+        schemaVersion: LOG_SCHEMA_VERSION,
+        timestamp: entry.timestamp,
+        toolName: entry.toolName,
+        failureKind: entry.failureKind,
+        cwd: entry.cwd,
+        projectRoot: entry.projectRoot,
+        request: failureMetadata(recordOrEmpty(entry.request))
+      };
+      if (entry.result !== undefined) replacement.result = failureMetadata(recordOrEmpty(entry.result));
+      if (entry.error !== undefined) replacement.error = { name: "MutationError", message: "Content omitted", stack: null };
+      // Compare parsed records so already-private rows keep their original layout.
+      if (JSON.stringify(entry) === JSON.stringify(replacement)) return line;
+      scrubbedEntries++;
+      const ending = line.endsWith("\r\n") ? "\r\n" : line.endsWith("\n") ? "\n" : "";
+      return `${JSON.stringify(replacement)}${ending}`;
+    });
+    if (scrubbedEntries > 0) {
+      // The text persistence helper normalizes line endings; this log migration
+      // must preserve unrelated NDJSON rows byte-for-byte instead.
+      const temporary = `${logPath}.${process.pid}.${randomUUID()}.tmp`;
+      try {
+        await fs.writeFile(temporary, sanitized, { encoding: "utf8", flag: "wx", mode: info.mode });
+        await fs.chmod(temporary, info.mode);
+        await fs.rename(temporary, logPath);
+      } finally {
+        await fs.rm(temporary, { force: true });
+      }
+    }
+    return { scrubbedEntries };
+  });
 }
 
 function truncateString(value: string, maxLength = MAX_STRING_LENGTH): string {
@@ -183,17 +254,21 @@ async function appendFailureEntry(
 ): Promise<string | null> {
   try {
     const projectRoot = await ensureRepoRoot(cwd);
-    const absoluteLogPath = path.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+    const absoluteLogPath = resolveBlueprintPath(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
 
-    await fs.mkdir(path.dirname(absoluteLogPath), { recursive: true });
-    await fs.appendFile(
-      absoluteLogPath,
-      `${JSON.stringify({
-        ...entry,
-        projectRoot
-      })}\n`,
-      "utf8"
-    );
+    await withBlueprintRepoLock(projectRoot, FAILURE_LOG_LOCK, async () => {
+      await fs.mkdir(path.dirname(absoluteLogPath), { recursive: true });
+      try {
+        if (!(await fs.lstat(absoluteLogPath)).isFile()) throw new Error("Mutation failure log must be a regular file.");
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      await fs.appendFile(
+        absoluteLogPath,
+        `${JSON.stringify({ ...entry, projectRoot })}\n`,
+        "utf8"
+      );
+    });
 
     return toRepoRelativePath(projectRoot, absoluteLogPath);
   } catch {

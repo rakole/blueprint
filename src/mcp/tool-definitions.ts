@@ -1,3 +1,4 @@
+import { mapToolDefinitions } from "./tools/map.js";
 import { discussToolDefinitions } from "./tools/discuss.js";
 import { researchToolDefinitions } from "./tools/research.js";
 import { planningToolDefinitions } from "./tools/plan.js";
@@ -22,6 +23,7 @@ import { workspaceToolDefinitions } from "./tools/workspace.js";
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...projectToolDefinitions,
+  ...mapToolDefinitions,
   ...discussToolDefinitions,
   ...researchToolDefinitions,
   ...planningToolDefinitions,
@@ -56,6 +58,8 @@ const REQUIRED_READ_PATH_TOOL_NAMES = [
   "blueprint_artifact_validate"
 ] as const;
 const REQUIRED_MAPPING_TOOL_NAMES = [
+  "blueprint_map_prepare",
+  "blueprint_map_submit",
   "blueprint_artifact_summary_digest",
   "blueprint_codebase_artifact_write"
 ] as const;

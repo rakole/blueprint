@@ -1188,6 +1188,7 @@ test("runtime metadata keeps a config-read path for every optional-subagent comm
       (metadata.commandName === "discuss-phase" && metadata.requiredTools.includes("blueprint_discuss_prepare")) ||
       (metadata.commandName === "research-phase" && metadata.requiredTools.includes("blueprint_research_prepare")) ||
       (metadata.commandName === "plan-phase" && metadata.requiredTools.includes("blueprint_plan_prepare")) ||
+      (metadata.commandName === "map-codebase" && metadata.requiredTools.includes("blueprint_map_prepare")) ||
       (metadata.requiredTools.includes("blueprint_lightweight_preflight") &&
         (metadata.commandName === "quick" || metadata.commandName === "fast"));
 
@@ -1241,7 +1242,7 @@ test("map-codebase runtime contract builds from metadata when docs are unavailab
   assert.equal(contract.catalog.specPath, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec?.path, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec?.executionProfile, "long-running-mutation");
-  assert.deepEqual(contract.spec?.reads, []);
+  assert.deepEqual(contract.spec?.reads, [...MAP_CODEBASE_RUNTIME_METADATA.spec.reads]);
   assert.deepEqual(contract.spec?.writes, [...MAP_CODEBASE_RUNTIME_METADATA.spec.writes]);
   assert.equal(contract.runtimeReference?.path, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
   assert.equal(
@@ -1266,8 +1267,8 @@ test("map-codebase runtime contract builds from metadata when docs are unavailab
     false
   );
   assert.doesNotMatch(JSON.stringify(contract.skillInputs), /docs\//);
-  assert.match(contract.runtimeReference?.contractNotes ?? "", /reuse as the default/i);
-  assert.match(contract.runtimeReference?.contractNotes ?? "", /ask_user confirmation/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /Reuse valid maps without generation/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /explicit refresh request authorizes overwrite/i);
   assert.match(contract.runtimeReference?.contractNotes ?? "", /\/blu-new-project/i);
 });
 

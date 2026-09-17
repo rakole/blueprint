@@ -1,230 +1,122 @@
 # Blueprint Map Runtime Contract
 
-This reference is the runtime-heavy contract for `/blu-map-codebase`.
+This reference owns evidence selection and useful mapping content. Prepare's
+returned schema, example, required keys, and blocking rules are the authoring
+contract; do not duplicate or guess them from legacy Markdown templates.
 
-Use it together with `skills/blueprint-map/SKILL.md` and
-`agents/blueprint-mapper.md` so mapping output is useful as future planning and
-execution evidence, not merely valid markdown.
+## Evidence Before Authoring
 
-## Contract Authority
+Start with a targeted inventory of the repository: use `git ls-files` for tracked
+paths or `rg --files` with explicit relevant roots. Choose actual files, not
+folders, covering the repository's languages and build/dependency manifests,
+representative entrypoints, major modules, tests, configuration, documentation,
+and integration boundaries. Select focus-area evidence when requested. Adapt to
+the repository rather than assuming particular languages or directory names.
+Exclude dependency trees, generated build output, unrelated docs, and Blueprint
+runtime state from source analysis. Inventory is for path selection, not a
+request to read every file.
 
-- `mcp_blueprint_blueprint_artifact_contract_read` is the heading authority.
-- The returned `contract.authoringTemplate` is the canonical shape for each
-  artifact before drafting or repair.
-- This reference is the richness and evidence authority: it tells the model how
-  much concrete, path-backed analysis belongs inside those canonical headings.
-- Do not add new artifact names, new state roots, or non-Blueprint persistence
-  paths.
+Call `mcp_blueprint_blueprint_map_prepare` with those repo-relative `inputs` and
+optional `focus` before reading their content or generating documents. Prepare
+hashes the selected evidence and target bundle. Its opaque `snapshot` is a
+runtime receipt: return it unchanged, never calculate or alter it. Read the exact
+selected inputs after prepare. If more evidence is needed, prepare again with the
+expanded selection before using the new files to author content. Re-read any
+changed evidence and use the latest snapshot.
 
-## Shared Runtime Contract
+Never read secret-bearing files such as `.env` contents. Describe authentication
+sources or configuration names without credential values. Evidence paths must
+refer to selected files; distinguish observed facts, supported inference, and
+unknowns. Do not invent a successful test run from a configured test command.
 
-- Execution profile: `long-running-mutation`.
-- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`,
-  `Validate`, `Route`.
-- In-flight status fields: resolved scope, active stage, pending gate,
-  execution mode, next safe action.
+## Authoring And Publication
 
-Map the codebase workflow to those stages:
+Use the returned authoring packet to write one `documents` object keyed by
+`stack`, `architecture`, `structure`, `conventions`, `testing`, `integrations`,
+and `concerns` as needed. Each authored document supplies a substantive `summary`
+and `evidencePaths`; `sections` contains optional `{heading, content}` entries.
+The runtime renders canonical titles and required headings. Omit irrelevant
+sections instead of adding filler. Natural multiline prose, code examples, and
+honest unknowns should retain their meaning; obey actual returned blocking rules.
 
-1. `Resolve`: confirm repo root, optional focus area, mapping target bundle, and
-   whether this is a map-first brownfield run or an initialized refresh.
-2. `Read`: inspect project status, canonical artifact contracts, existing
-   bundle state, and repo-relative evidence inputs before any write.
-3. `Decide`: choose reuse, confirmed refresh, or repair. Existing edited docs
-   are reused by default.
-4. `Execute`: collect evidence and author rich canonical drafts with concrete
-   file paths.
-5. `Persist`: write only through `mcp_blueprint_blueprint_codebase_artifact_write`.
-6. `Validate`: repair invalid artifacts per returned issues, then validate the
-   complete bundle.
-7. `Route`: summarize created, reused, repaired, and blocked artifacts and end
-   with the next safe implemented command.
+Provide every `requiredDocuments` key. Submit reuses omitted valid existing
+documents, so do not regenerate them without a refresh request. A complete valid
+prepare result can finish as reuse without submit when no focus or refresh was
+requested. A supplied focus authorizes targeted refresh of affected documents;
+read their existing canonical contents after prepare (covered by target hashes),
+preserve necessary context, and reuse unaffected documents. The user does not manually
+edit Blueprint documents: there is no heavily-edited classification or routine
+reuse-versus-refresh gate. Explicit refresh/replacement authorizes `overwrite:
+true`; ask only if replacement of populated documents is not already authorized.
 
-## Evidence Collection
+The parent calls `mcp_blueprint_blueprint_map_submit` once with `snapshot` and
+`documents`. All new and reused documents must validate before publication.
+Separate scaffold, digest, per-document writes, and post-submit validation are
+not part of the normal workflow. Keep all persistence in MCP and only use the
+seven canonical codebase artifacts.
 
-Collect repo evidence from the target repository root only, using repo-relative
-paths in all MCP calls and all artifact prose.
+## Useful Content
 
-Minimum evidence inputs:
+Write enough concrete, path-backed analysis to guide a future contributor. Scale
+detail to the repository and evidence; counts, prose length, and irrelevant
+sections are not quality targets. The following are content prompts, not a
+second schema or mandatory filler checklist.
 
-- `package.json` when present
-- source files from `src`, `app`, `lib`, and `commands` when present
-- tests from `tests` and `test` when present
-- docs from `docs` and root documentation files
-- tracked files from `git ls-files`
+| Document | Useful questions to answer from selected evidence |
+| --- | --- |
+| `STACK.md` | Which languages, runtimes, dependency managers, important packages, and build tools are used? Where are versions and constraints declared? Which commands are available? |
+| `ARCHITECTURE.md` | What are the main responsibilities and boundaries? How does a representative request, job, or operation flow through the system? Where do data, errors, and side effects cross boundaries? |
+| `STRUCTURE.md` | Where are source, tests, configuration, documentation, and generated outputs? Which entrypoints and central files should a contributor inspect first? Where should related changes go? |
+| `CONVENTIONS.md` | Which naming, module, error-handling, configuration, and documentation patterns are visible in representative files? Which patterns should new code follow, and what remains uncertain? |
+| `TESTING.md` | Which test frameworks, fixtures, and commands exist? Which behaviors have representative tests? Which gaps are observed, and which coverage questions remain unverified? |
+| `INTEGRATIONS.md` | Which external services, libraries, protocols, storage systems, and system tools are involved? Where are adapters and authentication boundaries? What operational constraints are visible? |
+| `CONCERNS.md` | Which specific risks, fragile paths, missing behavior, or test gaps are supported by evidence? What follow-up would resolve each important concern? Which assumptions still need verification? |
 
-Never read secret-bearing files such as `.env` contents. It is fine to mention
-that a secret/config file exists, but do not copy credential values into
-artifacts.
+Use concrete repo paths within substantive explanations as well as the supplied
+`evidencePaths`. Avoid generic advice and speculative redesign. For small repos,
+a concise accurate map can be sufficient; for larger repos, cover major seams
+and disclose scope limits. Focused mapping deepens relevant parts of this same
+bundle without discarding necessary repository context.
 
-## Capability-Gated Mapping
+## Optional Mapper Lanes
 
-Prefer bounded mapper decomposition when the host exposes a suitable code
-analysis subagent or task mechanism.
+Use capability-gated delegation only when effective `workflow.subagents=true`
+and independent code analysis would materially help. A single parent pass is the
+fallback; there is no forced per-document order or per-document tool call.
+Possible bounded lanes are tech (`stack`, `integrations`), architecture
+(`structure`, `architecture`), quality (`conventions`, `testing`), and concerns
+(`concerns`). Select only the lanes needed for the required or authorized scope.
 
-Use four lanes:
+Each mapper is read-only and receives exact selected evidence paths, document
+keys, schema/example, focus, and explicit stop conditions. It returns structured
+document content to the parent. If it needs another file, it reports the missing
+path so the parent can prepare an expanded snapshot before analysis continues.
+Close completed lanes promptly. Browser, web, generic page-inspection, or
+search-only agents are not substitutes for repository code analysis.
 
-- tech lane: `STACK.md`, `INTEGRATIONS.md`
-- architecture lane: `STRUCTURE.md`, `ARCHITECTURE.md`
-- quality lane: `CONVENTIONS.md`, `TESTING.md`
-- concerns lane: `CONCERNS.md`
+## Rejection, Freshness, And Recovery
 
-The lane output must either be persisted through Blueprint MCP tools or returned
-to the parent as canonical draft content for MCP persistence. Browser, web,
-generic page-inspection, or search-only agents are not acceptable substitutes
-for code-analysis mapper agents.
+- Authoring rejection: fix returned blocking issues in conversation, retaining
+  substantive intent. Retry against the current snapshot if it remains valid.
+  Rejected content is never saved or logged; there are no failed-draft archives.
+- Advisory warnings: report meaningful uncertainty; do not force a regeneration
+  when publication succeeded or valid reuse was returned.
+- Stale evidence or target: prepare again, inspect what changed, and revise only
+  affected content. Do not bypass freshness with guessed hashes or overwrite.
+- Partial publication: report the incomplete result. Retry the same snapshot and
+  identical documents using the owning submit tool so its metadata-only recovery
+  marker can reconcile accepted writes. If the original model is unavailable or
+  source evidence changed, prepare with `restart:true`, read fresh evidence, and
+  submit all seven documents with `overwrite:true`. This replaces the pending
+  operation only after the new bundle validates; existing canonical files remain.
+  Do not switch to raw writes or invent a
+  successful receipt. Recovery metadata contains identity, hashes, paths, and
+  stages, never document bodies.
+- Readiness block: do not author or mutate around it. Greenfield/scaffold-only
+  maps route to `/blu-new-project`; broken partial core state to `/blu-health`.
 
-## Single-Agent Fallback
-
-When code-analysis subagents are unavailable, the main agent must author exactly
-one artifact at a time in this order:
-
-1. `STACK.md`
-2. `STRUCTURE.md`
-3. `ARCHITECTURE.md`
-4. `CONVENTIONS.md`
-5. `TESTING.md`
-6. `INTEGRATIONS.md`
-7. `CONCERNS.md`
-
-For each artifact:
-
-1. Read only the evidence needed for that artifact plus the corresponding
-   `contract.authoringTemplate`.
-2. Draft the artifact with the canonical headings and rich path-backed content.
-3. Call `mcp_blueprint_blueprint_codebase_artifact_write`.
-4. If the write returns `status: "invalid"`, repair the same draft from returned
-   `issues`, re-check the canonical `contract.authoringTemplate`, and retry
-   that artifact before moving on.
-5. Keep only a compact carry-forward note: artifact path, write status, key
-   evidence roots, and unresolved warnings.
-6. Do not re-read or restate prior completed artifact bodies unless a later
-   repair requires it.
-
-This fallback is deliberately sequential to reduce active context pressure while
-still producing documentation that is useful to future agents.
-
-## Rich Artifact Templates
-
-The headings below match the current codebase artifact contract. Keep the
-headings unchanged unless `contract.authoringTemplate` says otherwise. Fill each
-section with concrete repo paths and current-state facts.
-
-### `STACK.md`
-
-Required headings: `Purpose`, `Runtime`, `Tooling`, `Dependencies`, `Notes`.
-
-Content expectations:
-
-- `Runtime`: identify languages, runtime versions or constraints, module system,
-  package manager, lockfiles, and config files. Cite paths such as
-  `package.json`, `tsconfig.json`, or runtime entrypoints.
-- `Tooling`: list build, typecheck, test, smoke, and integration commands from
-  real scripts or config. Cite paths such as `package.json` and `scripts/*`.
-- `Dependencies`: explain critical runtime and development packages with why
-  they matter. Cite package manifests and representative source imports.
-- `Notes`: include platform requirements, generated outputs, and constraints
-  that future implementers must respect.
-
-### `STRUCTURE.md`
-
-Required headings: `Purpose`, `Directory Map`, `Key Files`, `Seams`, `Notes`.
-
-Content expectations:
-
-- `Directory Map`: describe where code, commands, skills, agents, tests, docs,
-  hooks, build outputs, and runtime state live. Cite concrete directories such
-  as `src/mcp/tools`, `commands`, `skills`, and `tests`.
-- `Key Files`: identify entrypoints, manifests, central registries, and files
-  future agents should open first.
-- `Seams`: name ownership boundaries and safe modification points, such as
-  command manifests versus MCP tools versus artifact contracts.
-- `Notes`: state where new code or docs should be placed and what areas should
-  not be mixed.
-
-### `ARCHITECTURE.md`
-
-Required headings: `Purpose`, `Overview`, `Boundaries`, `Flow`, `Notes`.
-
-Content expectations:
-
-- `Overview`: name the dominant architecture and top-level runtime shape.
-- `Boundaries`: explain the major layers and responsibilities with file paths.
-- `Flow`: describe command routing, MCP tool execution, persistence, validation,
-  and error/failure logging paths.
-- `Notes`: include practical implementation guidance, especially where runtime
-  contracts are doc-derived or validation-derived.
-
-### `CONVENTIONS.md`
-
-Required headings: `Purpose`, `Naming`, `Module Boundaries`, `Error Handling`,
-`Documentation`, `Notes`.
-
-Content expectations:
-
-- `Naming`: describe file, type, function, command, artifact, and tool naming
-  patterns with examples from real paths.
-- `Module Boundaries`: state import style, package/module layout, and ownership
-  conventions future code should follow.
-- `Error Handling`: document thrown-error versus structured-status patterns,
-  overwrite confirmation behavior, and failure logging conventions.
-- `Documentation`: explain where command specs, runtime references, skill docs,
-  and durable notes belong.
-- `Notes`: be prescriptive; say what future agents should do, not just what the
-  repo happens to contain.
-
-### `TESTING.md`
-
-Required headings: `Purpose`, `Framework`, `Commands`, `Coverage`, `Notes`.
-
-Content expectations:
-
-- `Framework`: identify test runner, assertion library, fixture style, and
-  integration-test dependencies from concrete files.
-- `Commands`: list full, focused, integration, and smoke commands when present.
-- `Coverage`: map major behavior areas to representative tests, and name gaps or
-  metadata-only coverage explicitly.
-- `Notes`: include how to add tests for command metadata, MCP behavior, artifact
-  contracts, and fixtures.
-
-### `INTEGRATIONS.md`
-
-Required headings: `Purpose`, `External Systems`, `SDKs And APIs`,
-`Authentication And Secrets`, `Notes`.
-
-Content expectations:
-
-- `External Systems`: list host CLIs, external services, system CLIs, and runtime
-  protocols the repo integrates with. Cite manifests or source files.
-- `SDKs And APIs`: identify SDK packages, MCP resources/tools, and integration
-  entrypoints.
-- `Authentication And Secrets`: state where auth is host-managed, environment
-  mediated, or intentionally absent. Do not include secret values.
-- `Notes`: include operational boundaries that matter for local development and
-  extension execution.
-
-### `CONCERNS.md`
-
-Required headings: `Purpose`, `Risks`, `Gaps`, `Follow-Ups`, `Questions`,
-`Notes`.
-
-Content expectations:
-
-- `Risks`: identify concrete technical debt, fragile paths, security concerns,
-  performance concerns, or contract drift risks. Cite files.
-- `Gaps`: distinguish missing behavior, thin tests, metadata-only coverage, and
-  unknowns that could affect later lifecycle commands.
-- `Follow-Ups`: give specific repair or investigation actions, not vague wishes.
-- `Questions`: list assumptions that future planning should verify.
-- `Notes`: preserve caution about high-risk areas and safe modification patterns.
-
-## Completion Criteria
-
-A mapping run is complete only when:
-
-- all seven artifacts exist under `.blueprint/codebase/`
-- each artifact follows its canonical headings from `contract.authoringTemplate`
-- each artifact contains concrete repo paths and evidence-backed analysis
-- invalid write results were repaired per artifact before moving on
-- `mcp_blueprint_blueprint_artifact_validate` reports a valid bundle
-- the final response reports created, reused, repaired, and blocked artifacts
+Completion requires all seven canonical documents to be valid, demonstrated by
+prepare's reuse result or submit's successful receipt. Report returned paths and
+created/updated/reused outcomes, warnings or blockers, and the implemented-only
+next action. A successful map-first repo is `mapped-only` and proceeds to
+`/blu-new-project`; an initialized project proceeds to `/blu-progress`.

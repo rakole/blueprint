@@ -1,3 +1,4 @@
+import { assertCodebasePublicationComplete } from "./artifacts.js";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -15,6 +16,7 @@ export function canonicalResearchEvidencePath(root: string, relative: string) {
 }
 
 export async function readResearchEvidence(root: string, relative: string, maxBytes = 256 * 1024) {
+  await assertCodebasePublicationComplete(root, relative);
   const absolute = resolveRepoRelativeInputPathSync(root, relative);
   try {
     const bytes = await fs.readFile(absolute);
@@ -31,6 +33,7 @@ export async function researchInputHash(root: string, relative: string): Promise
     const config = await blueprintConfigGet({ cwd: root, scope: "effective" });
     return researchDigest(stableResearchValue({ config: config.config, provenance: config.provenance }));
   }
+  await assertCodebasePublicationComplete(root, relative);
   try { return researchDigest(await fs.readFile(resolveRepoRelativeInputPathSync(root, relative))); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
 }

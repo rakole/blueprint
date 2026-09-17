@@ -1,3 +1,4 @@
+import { mapToolDefinitions } from "./map.js";
 import {
   bootstrapAuthoringSchema,
   compileBootstrapAuthoringModel,
@@ -895,7 +896,8 @@ async function buildCommandCatalogEntry(
   // so the mutually dependent tool families are fully initialized.
   const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName) &&
     !researchToolDefinitions.some(definition => definition.name === toolName) &&
-    !planningToolDefinitions.some(definition => definition.name === toolName));
+    !planningToolDefinitions.some(definition => definition.name === toolName) &&
+    !mapToolDefinitions.some(definition => definition.name === toolName));
   const requiredToolsSatisfied = missingTools.length === 0;
   const runtimeInputsSatisfied = missingRuntimeInputs.length === 0;
 

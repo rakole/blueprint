@@ -2549,7 +2549,7 @@ test("invalid report and codebase writes return structured repair guidance", asy
 
 ## Purpose
 
-- Runtime evidence exists.
+- <runtime>
 `
   });
 
@@ -2559,9 +2559,9 @@ test("invalid report and codebase writes return structured repair guidance", asy
   assert.match(invalidReport.suggestedRepairs?.join("\n") ?? "", /blueprint_artifact_contract_read/);
   assert.match(invalidReport.suggestedRepairs?.join("\n") ?? "", /do not hand-write \.blueprint directly/i);
   assert.equal(invalidCodebase.status, "invalid");
-  assert.ok(invalidCodebase.diagnostics?.some((diagnostic) => diagnostic.code === "codebase.missing_required_section"));
-  assert.match(invalidCodebase.suggestedRepairs?.join("\n") ?? "", /blueprint_artifact_scaffold/);
-  assert.match(invalidCodebase.suggestedRepairs?.join("\n") ?? "", /Runtime/);
+  assert.ok(invalidCodebase.diagnostics?.some((diagnostic) => diagnostic.code === "codebase.invalid"));
+  assert.match(invalidCodebase.suggestedRepairs?.join("\n") ?? "", /blueprint_artifact_contract_read/);
+  assert.match(invalidCodebase.issues.join("\n"), /placeholder/);
 });
 
 test("audit-fix narrowing keeps pipe-safe table cells, reports clean missing-field diagnostics, preserves no-change sentinels, and still rejects stale inventory or dry-run mutation claims", async (t) => {

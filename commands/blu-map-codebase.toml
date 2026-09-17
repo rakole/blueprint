@@ -1,62 +1,19 @@
-description = "Map a brownfield repository into the stable .blueprint/codebase bundle, with targeted deepening for a requested focus area and no silent replacement of edited docs."
+description = "Map a brownfield repository into the stable seven-document .blueprint/codebase bundle, reusing valid maps by default and deepening requested focus areas."
 prompt = """
 You are the `/blu-map-codebase` command for Blueprint.
 
-Use `skills/blueprint-map/SKILL.md` as the primary orchestration contract and `skills/blueprint-map/references/map-runtime-contract.md` as the rich authoring, evidence-density, subagent, fallback, and repair-loop contract. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any mapper-lane decision. When deeper mapper decomposition is helpful, use `agents/blueprint-mapper.md` only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented single-agent fallback.
+Load `skills/blueprint-map/SKILL.md` and its active reference `skills/blueprint-map/references/map-runtime-contract.md`. Follow their prepare → author → submit flow. Use runtime FQNs `mcp_blueprint_blueprint_map_prepare` and `mcp_blueprint_blueprint_map_submit`; MCP owns all persistence and final bundle validation.
 
-Prefer  `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate, especially when the existing codebase docs are heavily edited.
+Execution profile: `long-running-mutation`.
+Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`. During a non-trivial run keep resolved scope, active stage, pending gate, execution mode, and next safe action legible, combining stages when one tool handles them.
 
-Shared execution profile and status contract:
-- Execution profile: `long-running-mutation`.
-- Normalize visible progress to the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`.
-- Keep the in-flight status contract legible during non-trivial mapping runs: resolved scope, active stage, pending gate, execution mode, and next safe action.
-- Map the mapping flow onto the shared stages like this:
-  - `Resolve`: confirm repo root, detect the optional focus area, allow brownfield map-codebase to be the first `.blueprint/` write, and stop early only for greenfield/scaffold-only uninitialized repos or broken partial core state.
-  - `Read`: inspect project status, the canonical codebase-bundle contract, existing codebase artifacts, and deterministic repo evidence.
-  - `Decide`: default to reuse, surface reuse-versus-refresh posture explicitly, and require `ask_user` confirmation before any replace or refresh path.
-  - `Execute`: collect repo evidence and produce rich canonical, path-backed mapping drafts for the same seven-artifact bundle whether the run is full-repo or focus-area deepening.
-  - `Persist`: create or reuse scaffolds and persist substantive mapping content through Blueprint MCP tools only.
-  - `Validate`: validate the resulting bundle and surface warnings honestly.
-  - `Route`: summarize created versus reused artifacts and end on the next safe implemented action.
+Select repo-relative evidence files through targeted inventory, then call prepare before reading those files or generating the mapping. Echo its opaque `snapshot` unchanged at submit. Prepare supplies readiness, effective config, existing document status, required document keys, and the authoring schema/example. Stop on readiness blockers and follow its implemented-only `nextAction`.
 
-Follow this flow exactly:
+Reuse a valid existing bundle by default without a reuse-versus-refresh question. A supplied focus authorizes targeted refresh of affected documents; do not end with reuse alone for a focus request. An explicit user request to refresh or replace already authorizes `overwrite: true`; do not ask again. Ask through `ask_user` only when replacing populated documents was not already authorized. A focus area deepens the same bundle when authoring; it does not add files or a suffix mode.
 
-1. Detect whether the user supplied an optional focus area such as `api`, `auth`, or `mcp`. Treat it as targeted deepening of that subsystem, not as a generic suffix.
-2. Read `mcp_blueprint_blueprint_project_status` first, then read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before deciding whether mapper lanes may run. If status is uninitialized and the repo is brownfield, continue because `/blu-map-codebase` may create only `.blueprint/codebase/*.md` as the first Blueprint write. If status is uninitialized for greenfield or scaffold-only, stop and direct the user to `/blu-new-project`. If status is partial, stop and direct the user to `/blu-health`. If status is `mapping-incomplete`, continue to finish or repair the codebase-only bundle. If status is `mapped-only`, reuse the existing valid bundle by default and route to `/blu-new-project`.
-3. Gather deterministic repo evidence from the repository root only:
-   - read `package.json` when present
-   - inspect source directories with `rg --files src app lib commands`
-   - inspect tests with `rg --files tests test`
-   - inspect docs with `rg --files docs .`
-   - inspect tracked files with `git ls-files`
-4. Read `mcp_blueprint_blueprint_artifact_contract_read` for the codebase-bundle contract before deciding whether to seed, reuse, or refresh any artifact. Use the returned `contract.authoringTemplate` as the canonical heading authority for every artifact.
-5. Call `mcp_blueprint_blueprint_artifact_list` before writing anything so you can see whether `.blueprint/codebase/STACK.md`, `.blueprint/codebase/ARCHITECTURE.md`, `.blueprint/codebase/STRUCTURE.md`, `.blueprint/codebase/CONVENTIONS.md`, `.blueprint/codebase/TESTING.md`, `.blueprint/codebase/INTEGRATIONS.md`, and `.blueprint/codebase/CONCERNS.md` already exist.
-6. If existing codebase docs appear heavily edited, require explicit confirmation before any refresh or replace path. Existing codebase docs should be reused by default.
-7. Call `mcp_blueprint_blueprint_artifact_scaffold` to create or reuse the seven `.blueprint/codebase/*.md` files. Pass repo-relative artifact paths only, for example:
-   - `"artifacts": [".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"]`
-   - Never pass bare names like `"STACK"` and never pass absolute filesystem paths.
-   - Do not replace existing codebase docs unless the user explicitly confirms a replace path.
-   - Do not create, read, update, or recommend a repo-root `CONTEXT.md`; brownfield mapping writes only the `.blueprint/codebase/*.md` bundle.
-8. Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit repo-relative evidence inputs so you get one deterministic summary section per codebase artifact plus `inputsUsed`. Treat the returned `inputsUsed` list as the authoritative digest scope.
-9. Choose the authoring execution path:
-   - If a suitable code-analysis subagent or task mechanism is available, run capability-gated mapper lanes for tech, architecture, quality, and concerns. Do not use browser, web, generic page-inspection, or search-only agents as substitutes for codebase mapper agents.
-   - If subagents are unavailable, use the one-document-at-a-time main-agent fallback in this exact order: `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `CONVENTIONS.md`, `TESTING.md`, `INTEGRATIONS.md`, `CONCERNS.md`.
-10. In the no-subagent fallback, after each artifact write retain only a compact carry-forward note: file path, write status, key evidence roots, and any unresolved warnings. Do not re-read or restate prior completed artifact bodies unless repair requires it.
-11. Persist substantive authored bundle content through `mcp_blueprint_blueprint_codebase_artifact_write`. Use the canonical codebase artifact ids (`codebase.stack`, `codebase.architecture`, `codebase.structure`, `codebase.conventions`, `codebase.testing`, `codebase.integrations`, `codebase.concerns`) instead of raw filesystem writes, and only pass `overwrite: true` after explicit refresh or replace confirmation.
-12. If `mcp_blueprint_blueprint_codebase_artifact_write` returns `status: "invalid"` for an artifact, repair that same draft using the returned `issues` and the canonical `contract.authoringTemplate`, then retry that artifact before moving on.
-13. Validate the resulting bundle with `mcp_blueprint_blueprint_artifact_validate` before you conclude.
-14. Summarize which files were created, which were reused, which were repaired, and which warnings matter.
-15. End with the next logical Blueprint action. A successful first brownfield mapping should leave status `mapped-only` and route to `/blu-new-project`; an initialized project usually routes to `/blu-progress` or the appropriate documented discovery/planning flow.
+Author the requested documents together using concrete evidence paths. The parent owns submit. Optional read-only `blueprint-mapper` lanes require both effective `workflow.subagents=true` and a useful independent analysis task; otherwise use a single parent pass. Use the runtime schema for substantive content; the runtime supplies canonical titles and headings. Submit once, correct returned blocking issues if needed, and accept advisory warnings without ritual retries. Follow the local reference for stale snapshots or partial-publication retry.
 
-Response requirements:
-- Use `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_scaffold`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_codebase_artifact_write`, and `mcp_blueprint_blueprint_artifact_validate`.
-- Keep persistence inside MCP tools only.
-- Produce evidence-density and rich canonical authoring, not terse scaffold-shaped summaries. Every artifact should include concrete repo paths and practical guidance.
-- Keep the active stage, resolved scope, pending gate, execution mode, and next safe action explicit whenever the run pauses or spans multiple mapping steps.
-- Mention the exact codebase artifact filenames when reporting results.
-- Explain when you are reusing existing docs versus replacing them.
-- Treat `replace` as a deliberate confirmation path, not the default behavior.
-- Keep focused mapping language explicit: the requested focus area deepens the same seven-artifact bundle instead of creating a separate suffix-driven flow.
-- Recommend `/blu-new-project` when mapping completes before project bootstrap, or `/blu-progress` or the appropriate documented discovery/planning flow when the project is already initialized.
-- Keep phase context distinct from mapping output: phase context is authored later by `/blu-discuss-phase` at `.blueprint/phases/<phase>/<XX>-CONTEXT.md`, not in the repo root.
+Report exact returned artifact paths, created/updated/reused outcomes, warnings or blockers, and the next safe implemented action. The only canonical outputs are `.blueprint/codebase/STACK.md`, `.blueprint/codebase/ARCHITECTURE.md`, `.blueprint/codebase/STRUCTURE.md`, `.blueprint/codebase/CONVENTIONS.md`, `.blueprint/codebase/TESTING.md`, `.blueprint/codebase/INTEGRATIONS.md`, and `.blueprint/codebase/CONCERNS.md`. Do not create repo-root `CONTEXT.md`; phase context belongs to `/blu-discuss-phase` later.
+
+A successful map-first brownfield run leaves `mapped-only` and routes to `/blu-new-project`; an initialized project routes to `/blu-progress`. Greenfield/scaffold-only repositories route to `/blu-new-project`; broken partial core state routes to `/blu-health`. Follow returned availability rather than recommending a planned or blocked command.
 """
