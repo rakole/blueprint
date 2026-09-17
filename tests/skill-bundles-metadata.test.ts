@@ -31,7 +31,7 @@ const SKILL_BUNDLES = [
   },
   {
     name: "blueprint-phase-planning",
-    description: "Preserve plan-set drafts, coordinate bounded review",
+    description: "Prepare grounded plan models, coordinate bounded review",
     commands: ["/blu-plan-phase"]
   },
   {

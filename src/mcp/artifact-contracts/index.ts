@@ -1369,20 +1369,20 @@ const PHASE_PLAN_MODEL_SCHEMA_PATH =
 
 const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
   schemaId: "blueprint.phase.plan.model",
-  schemaVersion: "1.1.0",
+  schemaVersion: "1.2.0",
   schemaPath: PHASE_PLAN_MODEL_SCHEMA_PATH,
   jsonSchema: readJsonSchemaAsset(PHASE_PLAN_MODEL_SCHEMA_FILE),
   qualityRules: [
     "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, planId, artifact, path, or content; the write tool owns identity and path derivation.",
-    "Author against the narrowed taskSchema returned by blueprint_phase_plan_authoring_context or blueprint_phase_plan_validate_model so roadmap requirements, saved evidence artifacts, and dependency ids stay deterministic.",
+    "For /blu-plan-phase, use the compact schema/example from blueprint_plan_prepare; MCP compiles IDs, waves and all coverage ledgers. The full model schema is the downstream execution contract for primitive callers.",
     "Top-level requirements contains only the known requirement ids this specific plan covers now; requirementCoverage is the complete ledger and must account for every known phase requirement exactly once as covered, deferred, or irrelevant with a concrete rationale.",
     "Evidence coverage is runtime-narrowed and dynamic: every saved context, research, UI, review, prior plan, summary, validation, or other evidence artifact in the current task schema must appear in evidenceCoverage as used, deferred, irrelevant, or unavailable with rationale.",
-    "Re-read blueprint_phase_plan_authoring_context immediately before each validation/write because saved plan files become intentional known evidence artifacts for later plan slots.",
+    "The direct planning lifecycle validates the complete prospective set together; primitive callers must use a current authoring context when saved evidence changes.",
     "Every declared filesModified entry must be covered by at least one task and one verification item in fileSurfaceCoverage.",
     "Declare external services the agent cannot safely assume are ready in externalServicePrerequisites. Keep the examples generic: container runtimes, databases, queues, emulators, local API servers, search services, caches, brokers, auth sandboxes, and third-party SaaS test tenants are all valid when the plan truly depends on them.",
     "The rendered plan must preserve the exact headings in renderedHeadings, including External Service Prerequisites, Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
-    "Acceptance criteria and verification entries must be grep, test, command, file-read, or artifact-validation verifiable; do not use vague manual-only acceptance.",
-    "Do not copy minimal example wording, placeholder prose, static-for-now language, or generic none rows where real unknowns or deferrals exist."
+    "Acceptance criteria and verification describe observable outcomes. Keyword-based judgments are advisory; semantic adequacy belongs to review. Multiline prose and code are preserved by MCP rendering.",
+    "Record real unknowns and deferrals honestly. Omitted optional sections need no invented none rows or follow-up. Example phrase overlap is advisory; unresolved scaffold placeholders remain invalid."
   ],
   contextBindings: [
     "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus blueprint_phase_plan_write arguments.",

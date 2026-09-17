@@ -629,12 +629,16 @@ test("god review stale and refused mutation results are logged durably", async (
 });
 
 
-test("discussion and context failures retain metadata without any document or diagnostic prose", async (t) => {
+test("discussion, research and planning failures retain metadata without any document or diagnostic prose", async (t) => {
   const cwd = await createPhaseRepo();
   t.after(() => rm(cwd, { recursive: true, force: true }));
   const marker = "UNIQUE_DOCUMENT_REJECTION_PAYLOAD_7fe22";
   for (const [name, extra] of [
     ["blueprint_discuss_prepare", {}],
+    ["blueprint_plan_prepare", { evidencePaths: [marker] }],
+    ["blueprint_plan_submit", { model: { plans: [{ goal: marker }] }, review: { summary: marker } }],
+    ["blueprint_plan_read", {}],
+    ["blueprint_phase_plan_write", { content: marker, model: { goal: marker } }],
     ["blueprint_discuss_record", { candidate: { nested: marker } }],
     ["blueprint_discuss_finalize", { model: { nested: { unknown: marker } } }],
     ["blueprint_phase_artifact_write", { artifact: "context", content: marker }],

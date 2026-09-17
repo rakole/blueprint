@@ -136,24 +136,25 @@ export function partitionPhasePlanDiagnostics(
 export function summarizePhasePlanRepairs(
   diagnostics: PhasePlanModelDiagnostic[]
 ): PhasePlanRepairSummary {
+  const blocking = diagnostics.filter(isBlockingPhasePlanDiagnostic);
   const firstPassActions = uniquePreservingOrder(
-    diagnostics.map((diagnostic) => diagnostic.repairAction ?? "replace")
+    blocking.map((diagnostic) => diagnostic.repairAction ?? "replace")
   );
-  const reReadAuthoringContext = diagnostics.some(
+  const reReadAuthoringContext = blocking.some(
     (diagnostic) =>
       diagnostic.repairAction === "re-read-context" ||
       diagnostic.code === "schema.exactCoverage" ||
       diagnostic.source === "scope"
   );
   const retryInstruction =
-    diagnostics.length === 0
+    blocking.length === 0
       ? "No repair is required; the model is ready to render."
       : reReadAuthoringContext
-        ? "Re-read blueprint_phase_plan_authoring_context, repair every diagnostic in the returned model, then retry validation once."
-        : "Repair every diagnostic in the returned model before retrying validation once.";
+        ? "Re-read blueprint_phase_plan_authoring_context, repair the blocking diagnostics, then retry validation once. Warnings do not require a retry."
+        : "Repair the blocking diagnostics before retrying validation once. Warnings do not require a retry.";
 
   return {
-    blockingCount: diagnostics.filter(isBlockingPhasePlanDiagnostic).length,
+    blockingCount: blocking.length,
     firstPassActions,
     reReadAuthoringContext,
     retryInstruction
@@ -400,12 +401,13 @@ export function phasePlanModelResidualDiagnostics(
   for (const signal of leakedSignals) {
     diagnostics.push(
       phasePlanDiagnostic({
+        severity: "warning",
         source: "residual",
         path: "model",
         code: "content.example_leakage",
-        message: `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
+        message: `Phase plan model contains wording also present in ${modelContract.schemaId}: ${signal}.`,
         context: { signal },
-        suggestion: "Replace copied example wording with evidence from the selected phase."
+        suggestion: "Check that the wording fits this phase. A shared example phrase alone does not establish copied or invalid content."
       })
     );
   }

@@ -23,7 +23,7 @@ timeout_mins: 18
 
 Return a compact plan-set candidate for one resolved phase. Preserve locked
 requirements and decisions while choosing concrete tasks, verification and
-coherent dependency boundaries. The parent saves candidates before validation;
+coherent dependency boundaries. The parent reviews and submits the complete model;
 your output need not recreate Markdown or generated coverage ledgers.
 
 ## Parent-Owned Responsibilities
@@ -38,10 +38,10 @@ accept/revise/route decision.
 ## Expected Handoff Packet From Parent
 
 - Resolved phase, phase goal, effective config and readiness.
-- Compact candidate schema and saved plan inventory.
+- Compact model schema, grounded example, validation rules and saved plan inventory.
 - Parent-supplied locked constraints and parent-supplied runtime contract excerpts.
 - Evidence paths, hashes and excerpts, including locked decisions and optional spec.
-- Current candidate revision/hash and prior findings for a revision pass.
+- Current complete model and prior findings for a revision pass.
 - A short investigationTrace and decisions that must survive targeted repair.
 
 Use read-only `read_file` on supplied paths when exact evidence is needed.
@@ -64,7 +64,7 @@ verification boundaries when appropriate. Preserve full locked scope; do not
 silently replace required behavior with stubs or promises of future wiring.
 A read-only reference or explicit exclusion is not planned implementation work.
 
-Return a complete candidate when feasible, otherwise the recoverable partial
-candidate and exact blocker. On revision, edit affected tasks/decisions only;
+Return a complete model when feasible, otherwise identify the exact blocker
+before asking the parent to publish. Rejected drafts are not stored. On revision, edit affected tasks/decisions only;
 carry forward unrelated accepted reasoning. Do not keep regenerating a plan in
 response to identical findings.

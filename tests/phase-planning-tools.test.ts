@@ -1779,7 +1779,7 @@ test("phase plan model allows intentional placeholder token prose in narrative f
   assert.equal(written.written, true);
 });
 
-test("phase plan model schema rejects newline injection in frontmatter-rendered fields", async (t) => {
+test("phase plans escape multiline narrative while rejecting multiline identities and paths", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1796,13 +1796,6 @@ test("phase plan model schema rejects newline injection in frontmatter-rendered 
         model.title = "Plan 01\ngap_closure: true";
       },
       expectedPath: /model\.title/
-    },
-    {
-      name: "objective",
-      mutate: (model) => {
-        model.objective = "Ship structured phase plan model writes.\ngap_closure: true";
-      },
-      expectedPath: /model\.objective/
     },
     {
       name: "frontmatter list item",
@@ -1841,6 +1834,14 @@ test("phase plan model schema rejects newline injection in frontmatter-rendered 
 
   const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
   assert.deepEqual(index.plans, []);
+
+  const objective = "Ship structured phase plan model writes.\ngap_closure: true";
+  const saved = await blueprintPhasePlanWrite({ cwd: repoPath, phase: "3", planId: "01",
+    model: createStructuredPlanModel({ objective }) });
+  assert.equal(saved.written, true, JSON.stringify(saved));
+  const read = await blueprintPhasePlanRead({ cwd: repoPath, phase: "3", planId: "01" });
+  assert.equal(read.metadata?.objective, objective);
+  assert.equal(read.metadata?.gapClosure, false);
 });
 
 test("phase plan authoring rejects invented requirement coverage when roadmap requirements are absent", async (t) => {
@@ -2377,7 +2378,7 @@ test("phase plan model writes preserve MCP-owned phase and plan provenance", asy
   assert.match(savedContent, /^# Phase 03: Phase Discovery - Plan 02$/m);
 });
 
-test("phase plan structured model writes reject invalid identity, coverage, examples, evidence, surfaces, and commands", async (t) => {
+test("phase plan validation blocks identity and coverage defects while wording checks remain advisory", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -2402,7 +2403,7 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
     planId: "01",
     model: missingRequirementCoverage
   });
-  const leakedExample = await blueprintPhasePlanWrite({
+  const leakedExample = await blueprintPhasePlanValidateModel({
     cwd: repoPath,
     phase: "3",
     planId: "01",
@@ -2413,7 +2414,7 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
   const unverifiableModel = cloneStructuredPlanModel();
   const unverifiableTasks = unverifiableModel.tasks as Array<Record<string, unknown>>;
   unverifiableTasks[0].acceptanceCriteria = ["Make the implementation reliable and polished."];
-  const unverifiable = await blueprintPhasePlanWrite({
+  const unverifiable = await blueprintPhasePlanValidateModel({
     cwd: repoPath,
     phase: "3",
     planId: "01",
@@ -2472,13 +2473,10 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
     missingRequirement.validation.issues.join("\n"),
     /requirementCoverage must include exactly one row for known roadmap requirement LIFE-02/
   );
-  assert.equal(leakedExample.status, "invalid");
-  assert.match(leakedExample.validation.issues.join("\n"), /copied example leakage signal/);
-  assert.equal(unverifiable.status, "invalid");
-  assert.match(
-    unverifiable.validation.issues.join("\n"),
-    /subjective language/
-  );
+  assert.equal(leakedExample.status, "valid", JSON.stringify(leakedExample.diagnostics));
+  assert.ok(leakedExample.diagnostics.some((item) => item.code === "content.example_leakage" && item.severity === "warning"));
+  assert.equal(unverifiable.status, "valid", JSON.stringify(unverifiable.diagnostics));
+  assert.ok(unverifiable.diagnostics.some((item) => item.code === "markdown.verifiability_guidance" && item.severity === "warning"));
   assert.equal(missingEvidence.status, "invalid");
   assert.ok(missingEvidence.modelValidation);
   assert.equal(missingEvidence.modelValidation.status, "invalid");
@@ -2577,7 +2575,7 @@ test("phase planning validation reports missing dependencies, cycles, wave order
   assert.match(result.issues.join("\n"), /depends_on references missing plan "99"/);
   assert.match(result.issues.join("\n"), /Plan dependency cycle detected: 01 -> 03 -> 01/);
   assert.match(result.issues.join("\n"), /wave 1 must come after dependency 03 in wave 1/);
-  assert.match(result.issues.join("\n"), /frontmatter title must replace placeholder plan id YY with "02"/);
+  assert.match(result.warnings.join("\n"), /frontmatter title must replace placeholder plan id YY with "02"/);
   assert.match(result.issues.join("\n"), /plan heading must replace placeholder plan id YY with "02"/);
   assert.match(result.issues.join("\n"), /does not cover roadmap requirements: LIFE-02/);
 });

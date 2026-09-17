@@ -172,7 +172,7 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   );
 
   assert.equal(planContract.contract.modelContract?.schemaId, "blueprint.phase.plan.model");
-  assert.equal(planContract.contract.modelContract?.schemaVersion, "1.1.0");
+  assert.equal(planContract.contract.modelContract?.schemaVersion, "1.2.0");
   assert.equal(
     planContract.contract.modelContract?.schemaPath,
     "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json"

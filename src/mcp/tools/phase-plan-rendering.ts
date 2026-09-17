@@ -1,7 +1,5 @@
 import {
-  markdownCell,
-  normalizeTextContent,
-  renderBulletList
+  normalizeTextContent
 } from "./phase-markdown.js";
 import { normalizePlanId } from "./phase-plan-identifiers.js";
 import { uniquePreservingOrder } from "./phase-collection-helpers.js";
@@ -77,7 +75,20 @@ export type PhasePlanStructuredModel = {
 };
 
 function quoteYamlScalar(value: string): string {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")}"`;
+  // JSON string quoting is valid YAML and keeps multiline prose inside one
+  // scalar rather than letting it inject frontmatter fields.
+  return JSON.stringify(value);
+}
+
+function renderBulletList(items: string[]): string {
+  if (items.length === 0) return "- none";
+  return items.map(item => `- ${item.replace(/\r\n?/g, "\n").trim().replace(/\n/g, "\n    ")}`).join("\n");
+}
+
+function renderNarrative(value: string): string {
+  // Nest multiline content in a list item so embedded headings/fences cannot
+  // consume or impersonate the following canonical plan sections.
+  return /[\r\n]|^\s*(?:#{1,6}\s|`{3}|~{3}|---)/.test(value) ? renderBulletList([value]) : value;
 }
 
 function renderYamlList(items: string[]): string {
@@ -85,7 +96,9 @@ function renderYamlList(items: string[]): string {
 }
 
 function renderMarkdownTableRows(rows: string[][]): string {
-  return rows.map((row) => `| ${row.map((cell) => markdownCell(cell)).join(" | ")} |`).join("\n");
+  return rows.map((row) => `| ${row.map((cell) => cell.replace(/\r\n?/g, "\n").trim()
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\|/g, "\\|").replace(/\n/g, "<br>")).join(" | ")} |`).join("\n");
 }
 
 export function renderPhasePlanModelContent(
@@ -189,7 +202,7 @@ autonomous: ${model.autonomous}
 
 ## Goal
 
-${model.goal}
+${renderNarrative(model.goal)}
 
 ## Scope
 

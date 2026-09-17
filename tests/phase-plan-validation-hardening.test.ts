@@ -12,6 +12,7 @@ import {
   blueprintPhasePlanWrite
 } from "../src/mcp/tools/phase.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
+import { validatePlanArtifactContent } from "../src/mcp/tools/artifacts.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -1409,7 +1410,7 @@ test("strict plan writes reject absolute and traversing task file references", a
   assert.equal(result.status, "invalid");
   assert.equal(result.written, false);
   assert.match(result.validation?.issues.join("\n") ?? "", /Task 1 subsection Read First/i);
-  assert.match(result.validation?.issues.join("\n") ?? "", /Task 1 subsection Action/i);
+  assert.match(result.validation?.warnings.join("\n") ?? "", /Task 1 subsection Action/i);
   assert.match(result.validation?.issues.join("\n") ?? "", /absolute or traversing path/i);
   assert.equal(
     await pathExists(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-06-PLAN.md")),
@@ -1453,7 +1454,7 @@ test("strict plan writes allow /blu command mentions in task text but still reje
   assert.doesNotMatch(outsideRepoResult.validation?.issues.join("\n") ?? "", /\/blu-progress/);
 });
 
-test("strict plan writes reject weak task subsections and subjective acceptance criteria", async (t) => {
+test("strict plan writes reject empty scaffolds while weak wording remains advisory", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1471,8 +1472,7 @@ test("strict plan writes reject weak task subsections and subjective acceptance 
   assert.equal(result.written, false);
   assert.match(result.validation?.issues.join("\n") ?? "", /concrete heading/i);
   assert.match(result.validation?.issues.join("\n") ?? "", /concrete content/i);
-  assert.match(result.validation?.issues.join("\n") ?? "", /objectively checkable/i);
-  assert.match(result.validation?.issues.join("\n") ?? "", /subjective language/i);
+  assert.match(result.validation?.warnings.join("\n") ?? "", /objectively checkable/i);
 });
 
 test("strict plan writes allow concrete task headings that mention placeholder work", async (t) => {
@@ -1702,4 +1702,78 @@ test("structured plan paths still reject traversal, absolute paths, and wildcard
     assert.equal(result.valid, false, file);
     assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === "schema.pattern"), file);
   }
+});
+
+test("first strict write accepts domain wording, referenced paths, and an honest no-unknowns row", async (t) => {
+  const cwd = await createPhaseRepo();
+  t.after(() => rm(path.dirname(cwd), { recursive: true, force: true }));
+  const model = validPlanModel();
+  model.title = 'Plan 9 migration: preserve "quoted" input';
+  model.tasks[0].action = ["Reject ../escape.ts and /tmp/input.ts as user-supplied traversal examples."];
+  model.tasks[0].acceptanceCriteria = ["Ordering remains stable for equal priority values."];
+  model.unknownsAndDeferrals = [{ item: "none", disposition: "none", rationale: "No unresolved decisions.", followUp: "none" }];
+  const saved = await blueprintPhasePlanWrite({ cwd, phase: "3", planId: "14", model, authoringMode: "model-only" });
+  assert.equal(saved.written, true, JSON.stringify(saved));
+  const read = await blueprintPhasePlanRead({ cwd, phase: "3", planId: "14" });
+  assert.equal(read.validation?.valid, true, JSON.stringify(read));
+  assert.equal(read.metadata?.title, model.title);
+  const set = await blueprintPhasePlanValidate({ cwd, phase: "3" });
+  assert.equal(set.status, "valid", JSON.stringify(set));
+  assert.match(set.warnings.join("\n"), /title references plan 09/);
+});
+
+test("PLAN code examples cannot truncate sections or supply required task headings", () => {
+  for (const fence of ["```", "~~~~"]) {
+    const example = `${fence}markdown\n## Example output\n### Task 99: Example\n#### Acceptance Criteria\n- Example output only\n${fence}\n`;
+    const content = validPlanContent("01", 1).replace(
+      "#### Action\n\n", `#### Action\n\n${example}\n`
+    );
+    const valid = validatePlanArtifactContent(content, "3");
+    assert.equal(valid.valid, true, JSON.stringify(valid));
+    const missing = validatePlanArtifactContent(content.replace(
+      "#### Acceptance Criteria\n\n- src/mcp/tools/artifacts.ts contains validatePlanArtifactContent and the new checks pass under a strict write.", ""
+    ), "3");
+    assert.equal(missing.valid, false);
+    assert.match(missing.issues.join("\n"), /Acceptance Criteria/);
+  }
+});
+
+test("PLAN frontmatter round-trips quoted commas, backslashes, and multiline criteria", () => {
+  const title = 'Preserve "value, one" and literal \\n';
+  const criterion = 'The \"value, one\" remains stable.\nA second line verifies the decoded text.';
+  const content = validPlanContent("01", 1)
+    .replace('title: "Plan 01"', `title: ${JSON.stringify(title)}`)
+    .replace("files_modified:\n  - src/mcp/tools/artifacts.ts", 'files_modified: ["src/value,one.ts", "src/value,two.ts"]')
+    .replace("acceptance_criteria:\n  - tests/phase-plan-validation-hardening.test.ts exits 0", `acceptance_criteria: [${JSON.stringify(criterion)}]`);
+  const result = validatePlanArtifactContent(content, "3");
+  assert.equal(result.valid, true, JSON.stringify(result));
+  assert.equal(result.metadata.title, title);
+  assert.deepEqual(result.metadata.filesModified, ["src/value,one.ts", "src/value,two.ts"]);
+  assert.deepEqual(result.metadata.acceptanceCriteria, [criterion]);
+  const unsafe = validatePlanArtifactContent(content.replace('"src/value,one.ts"', '"src/line\\nfile.ts"'), "3");
+  assert.equal(unsafe.valid, false, "Decoded control characters remain invalid file paths.");
+});
+
+test("quoted scaffold phrases inside PLAN examples do not reject actual authored work", () => {
+  const content = validPlanContent("01", 1).replace("#### Action\n\n", [
+    "#### Action", "", "- Diagnose the literal scaffold input shown below.", "", "```markdown",
+    "Replace with the goal-backward must-haves this plan cannot drop.", "```", ""
+  ].join("\n"));
+  assert.equal(validatePlanArtifactContent(content, "3").valid, true);
+});
+
+test("external service metadata preserves multiline setup and readiness instructions", async (t) => {
+  const cwd = await createPhaseRepo();
+  t.after(() => rm(path.dirname(cwd), { recursive: true, force: true }));
+  const model = validPlanModel();
+  const service = {
+    service: "Fixture server", category: "development", purpose: "Serve the integration fixture.",
+    userSetup: "Start the fixture server.\nConfirm its port is available.",
+    readinessCheck: "curl localhost:8080\nprintf '<br> & done'", canAgentProceedWithoutIt: false
+  };
+  const saved = await blueprintPhasePlanWrite({ cwd, phase: "3", planId: "14",
+    model: { ...model, externalServicePrerequisites: [service] } });
+  assert.equal(saved.written, true, JSON.stringify(saved));
+  const read = await blueprintPhasePlanRead({ cwd, phase: "3", planId: "14" });
+  assert.deepEqual(read.metadata?.externalServicePrerequisites, [service]);
 });
