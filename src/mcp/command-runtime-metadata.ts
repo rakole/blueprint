@@ -221,8 +221,7 @@ const DISCUSS_PHASE_REQUIRED_TOOLS = [
 const PLAN_PHASE_REQUIRED_TOOLS = [
   "blueprint_plan_prepare",
   "blueprint_plan_submit",
-  "blueprint_plan_read",
-  "blueprint_plan_finalize"
+  "blueprint_plan_read"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const RESEARCH_PHASE_REQUIRED_TOOLS = [
@@ -1471,14 +1470,14 @@ export const PLAN_PHASE_RUNTIME_METADATA = {
     title: "`/blu-plan-phase`",
     executionProfile: "long-running-mutation",
     rootRoutable: true,
-    purpose: "`plan-phase` preserves compact plan-set candidates before validation, compiles execution-ready phase.plan artifacts, and publishes a complete checked set through MCP.",
+    purpose: "`plan-phase` prepares grounded authoring inputs, compiles compact models into execution-ready phase.plan artifacts, and publishes a complete checked set without storing rejected drafts.",
     reads: [
-      "blueprint_plan_prepare supplies a stable phase evidence snapshot, optional XX-SPEC.md, project and requirement grounding, research/UI readiness, effective config, saved-plan inventory and compact candidate schema; blueprint_plan_read recovers saved revisions."
+      "blueprint_plan_prepare supplies a stable phase evidence snapshot, optional XX-SPEC.md, project and requirement grounding, research/UI readiness, effective config, saved-plan inventory and compact schema/example/validation rules; blueprint_plan_read returns canonical plans and metadata."
     ],
     writes: [
-      "phase-scoped original plan candidates, revisions, evidence fingerprints and publication journal",
-      ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_plan_finalize",
-      ".blueprint/STATE.md through finalizer-owned synced state update"
+      "phase-scoped preparation metadata, evidence fingerprints and metadata-only publication journal",
+      ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_plan_submit",
+      ".blueprint/STATE.md through submit-owned synced state update"
     ]
   },
   runtimeReference: {
@@ -1489,7 +1488,7 @@ export const PLAN_PHASE_RUNTIME_METADATA = {
     exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
     optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-    contractNotes: "Use blueprint_plan_prepare -> blueprint_plan_submit -> blueprint_plan_finalize, with blueprint_plan_read for recovery. Prepare owns phase resolution, effective config, stable evidence fingerprints and saved-plan add/revise/replace selection. Use saved research instead of live browsing; required context/research/UI readiness blocks drafting, while missing XX-SPEC.md is nonblocking. Author the compact plan-set candidate using the returned schema; MCP derives slots, waves, aggregate file lists and coverage ledgers. Submit saves the exact original candidate before validation, supports revision-CAS field corrections, and retains invalid drafts without canonical publication. Review the complete saved candidate with blueprint-checker when workflow.plan_check is enabled; bind the verdict to its revision and candidateHash. Use blueprint-planner only for useful bounded decomposition, preserving the no-subagent fallback. Finalize requires current evidence, full plan-set validation and explicit overwrite authorization for revise/replace; its publication journal and marker block execution of partial sets and resume interrupted writes. Finalizer owns base: synced state update and state-aware routing to implemented follow-ups. Never infer completion from candidate saved/valid status; require the published receipt. No raw .blueprint writes, Markdown fallback to canonical paths, scaffold seeding or warn-mode publication.",
+    contractNotes: "Use blueprint_plan_prepare -> author/review -> blueprint_plan_submit, with blueprint_plan_read for canonical plans and recovery metadata. Prepare owns phase resolution, effective config, stable evidence fingerprints, saved-plan add/revise/replace selection, compact schema, grounded example and actual rejection rules. Use saved research instead of live browsing; required context/research/UI readiness blocks drafting, while missing XX-SPEC.md is nonblocking. MCP derives IDs, slots, waves, aggregate files and coverage ledgers; harmless formatting and optional omissions do not require repair. Review the complete model with blueprint-checker when workflow.plan_check is enabled and submit its verdict with that same model. Use blueprint-planner only for bounded decomposition, preserving the no-subagent fallback. Submit validates the full set in memory and publishes canonical plans directly. Rejected documents, rendered drafts and diagnostic prose are never retained. Keep current evidence, full requirement coverage and explicit overwrite authorization for revise/replace. A metadata-only journal and publication marker protect partial sets; retry with the same model while files remain unwritten, then omit the model after canonical commit. Submit owns base: synced state update and state-aware routing to implemented follow-ups. Require a published receipt for completion. No raw .blueprint writes, Markdown fallback, scaffold seeding or warn-mode publication.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

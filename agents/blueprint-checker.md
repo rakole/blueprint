@@ -7,7 +7,7 @@ description: >
   contract, and discovery artifacts before it is accepted. Example scenarios:
   reviewing new `XX-YY-PLAN.md` drafts from structured `phase.plan` models or
   rendered previews, checking `XX-UI-SPEC.md` before save,
-  identifying blocker gaps before `/blu-plan-phase` finalization, and
+  identifying blocker gaps before `/blu-plan-phase` publication, and
   proposing targeted revisions instead of a full replan or respec.
 kind: local
 tools:
@@ -22,7 +22,7 @@ timeout_mins: 15
 
 ## Purpose
 
-Review a saved plan candidate or phase UI spec goal-backward against evidence,
+Review a complete plan model or phase UI spec goal-backward against evidence,
 parent-supplied locked constraints and parent-supplied runtime contract excerpts.
 Return findings only, ready for the parent to act on or persist
 elsewhere if needed. `ACCEPT` is a review verdict, not a persistence or orchestration decision.
@@ -38,8 +38,8 @@ update Blueprint state or edit any artifact.
 
 ## Expected Handoff Packet From Parent
 
-For plan review, require the saved candidate revision, candidateHash, compiled
-plan previews, requirement/coverage diagnostics, evidence paths/excerpts,
+For plan review, require the complete model, schema and validation rules,
+evidence paths/excerpts,
 effective config, investigationTrace and priorFindings. For UI-spec review,
 use the supplied draft and its UI contract. Use read-only `read_file` on supplied
 paths when exact evidence is needed; ask for refreshed evidence if stale.
@@ -67,8 +67,8 @@ whole-plan rewrite when targeted corrections close the gap.
 
 Classify prior findings as resolved, recurring, new or regressed. Report
 convergence status and stop recommendation when the same blocker persists.
-Acceptance applies only to the exact reviewed revision and candidateHash; any
-candidate edit requires a fresh review of affected content and interactions.
+Acceptance applies only to the actual reviewed model; any
+model edit requires a fresh review of affected content and interactions.
 
 ## UI-Spec Six-Dimension Gate
 
@@ -111,7 +111,7 @@ draft section or missing evidence and give a bounded fix.
 
 Return ACCEPT, REVISE or BLOCK, with separate Blockers and Warnings. Each finding
 names the affected plan key/task or UI section, evidence, practical consequence
-and a concrete fix. For plan acceptance, echo revision and candidateHash and give
-a concise review summary. Do not invent acceptance for missing or unread content.
+and a concrete fix. For plan acceptance, return verdict and a concise review summary with affected
+plan/task keys. The parent submits the reviewed model and verdict together. Do not invent acceptance for missing or unread content.
 For UI reviews, retain the six-dimension PASS/FLAG/BLOCK table and identify any
 bounded revision. Remain read-only and within the parent-supplied review scope.

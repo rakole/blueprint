@@ -13,32 +13,19 @@ declare const journalSchema: z.ZodObject<{
     requestId: z.ZodString;
     requestHash: z.ZodString;
     revision: z.ZodNumber;
-    candidateHash: z.ZodString;
-    baselineMarker: z.ZodNullable<z.ZodString>;
-    review: z.ZodOptional<z.ZodObject<{
-        revision: z.ZodNumber;
-        candidateHash: z.ZodString;
-        verdict: z.ZodEnum<{
-            revise: "revise";
-            accept: "accept";
-        }>;
-        summary: z.ZodString;
-    }, z.core.$strip>>;
+    modelHash: z.ZodString;
+    baselineMarkerToken: z.ZodString;
     files: z.ZodArray<z.ZodObject<{
         planId: z.ZodString;
-        title: z.ZodString;
         wave: z.ZodNumber;
         taskCount: z.ZodNumber;
         path: z.ZodString;
         hash: z.ZodString;
-        content: z.ZodString;
         baselineHash: z.ZodNullable<z.ZodString>;
-        backup: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>;
     removed: z.ZodArray<z.ZodObject<{
         path: z.ZodString;
         baselineHash: z.ZodString;
-        backup: z.ZodString;
     }, z.core.$strip>>;
     stages: z.ZodRecord<z.ZodEnum<{
         files: "files";
@@ -49,12 +36,51 @@ declare const journalSchema: z.ZodObject<{
         complete: "complete";
         intent: "intent";
     }>>;
-    receipt: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    receipt: z.ZodOptional<z.ZodObject<{
+        status: z.ZodLiteral<"published">;
+        saved: z.ZodLiteral<true>;
+        ready: z.ZodLiteral<true>;
+        revision: z.ZodNumber;
+        sessionPath: z.ZodString;
+        paths: z.ZodArray<z.ZodString>;
+        plans: z.ZodArray<z.ZodObject<{
+            planId: z.ZodString;
+            wave: z.ZodNumber;
+            taskCount: z.ZodNumber;
+            path: z.ZodString;
+        }, z.core.$strip>>;
+        removedPaths: z.ZodArray<z.ZodString>;
+        stages: z.ZodRecord<z.ZodEnum<{
+            files: "files";
+            state: "state";
+            routing: "routing";
+            commit: "commit";
+        }> & z.core.$partial, z.ZodEnum<{
+            complete: "complete";
+            intent: "intent";
+        }>>;
+        nextAction: z.ZodString;
+    }, z.core.$strip>>;
 }, z.core.$strip>;
 declare const schema: z.ZodObject<{
-    version: z.ZodLiteral<1>;
+    version: z.ZodLiteral<2>;
     phase: z.ZodString;
-    topology: z.ZodCustom<PhaseTopologyFingerprint, PhaseTopologyFingerprint>;
+    topology: z.ZodObject<{
+        phaseNumber: z.ZodString;
+        phasePrefix: z.ZodString;
+        phaseName: z.ZodNullable<z.ZodString>;
+        phaseDir: z.ZodString;
+        roadmapEntry: z.ZodNullable<z.ZodObject<{
+            phaseNumber: z.ZodString;
+            phasePrefix: z.ZodString;
+            phaseName: z.ZodString;
+            completed: z.ZodBoolean;
+            summary: z.ZodNullable<z.ZodString>;
+            goal: z.ZodNullable<z.ZodString>;
+            successCriteria: z.ZodNullable<z.ZodString>;
+            requirements: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>;
     revision: z.ZodNumber;
     prepared: z.ZodBoolean;
     needsIntent: z.ZodDefault<z.ZodBoolean>;
@@ -82,51 +108,24 @@ declare const schema: z.ZodObject<{
     knownRequirements: z.ZodArray<z.ZodString>;
     knownEvidenceArtifacts: z.ZodArray<z.ZodString>;
     checkerRequired: z.ZodBoolean;
-    candidate: z.ZodOptional<z.ZodUnknown>;
-    candidateHash: z.ZodNullable<z.ZodString>;
-    history: z.ZodArray<z.ZodObject<{
+    requests: z.ZodRecord<z.ZodString, z.ZodObject<{
+        hash: z.ZodString;
+        modelHash: z.ZodString;
         revision: z.ZodNumber;
-        kind: z.ZodString;
-        candidate: z.ZodOptional<z.ZodUnknown>;
-        readSet: z.ZodOptional<z.ZodArray<z.ZodObject<{
-            path: z.ZodString;
-            hash: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>>;
-        targets: z.ZodOptional<z.ZodArray<z.ZodObject<{
-            path: z.ZodString;
-            hash: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>>;
-        journal: z.ZodOptional<z.ZodObject<{
-            requestId: z.ZodString;
-            requestHash: z.ZodString;
+        receipt: z.ZodOptional<z.ZodObject<{
+            status: z.ZodLiteral<"published">;
+            saved: z.ZodLiteral<true>;
+            ready: z.ZodLiteral<true>;
             revision: z.ZodNumber;
-            candidateHash: z.ZodString;
-            baselineMarker: z.ZodNullable<z.ZodString>;
-            review: z.ZodOptional<z.ZodObject<{
-                revision: z.ZodNumber;
-                candidateHash: z.ZodString;
-                verdict: z.ZodEnum<{
-                    revise: "revise";
-                    accept: "accept";
-                }>;
-                summary: z.ZodString;
-            }, z.core.$strip>>;
-            files: z.ZodArray<z.ZodObject<{
+            sessionPath: z.ZodString;
+            paths: z.ZodArray<z.ZodString>;
+            plans: z.ZodArray<z.ZodObject<{
                 planId: z.ZodString;
-                title: z.ZodString;
                 wave: z.ZodNumber;
                 taskCount: z.ZodNumber;
                 path: z.ZodString;
-                hash: z.ZodString;
-                content: z.ZodString;
-                baselineHash: z.ZodNullable<z.ZodString>;
-                backup: z.ZodNullable<z.ZodString>;
             }, z.core.$strip>>;
-            removed: z.ZodArray<z.ZodObject<{
-                path: z.ZodString;
-                baselineHash: z.ZodString;
-                backup: z.ZodString;
-            }, z.core.$strip>>;
+            removedPaths: z.ZodArray<z.ZodString>;
             stages: z.ZodRecord<z.ZodEnum<{
                 files: "files";
                 state: "state";
@@ -136,48 +135,29 @@ declare const schema: z.ZodObject<{
                 complete: "complete";
                 intent: "intent";
             }>>;
-            receipt: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            nextAction: z.ZodString;
         }, z.core.$strip>>;
     }, z.core.$strip>>;
-    requests: z.ZodRecord<z.ZodString, z.ZodObject<{
-        hash: z.ZodString;
-        operation: z.ZodEnum<{
-            submit: "submit";
-            finalize: "finalize";
-        }>;
-        revision: z.ZodNumber;
-        receipt: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    legacyPublication: z.ZodOptional<z.ZodObject<{
+        markerToken: z.ZodString;
     }, z.core.$strip>>;
     journal: z.ZodOptional<z.ZodObject<{
         requestId: z.ZodString;
         requestHash: z.ZodString;
         revision: z.ZodNumber;
-        candidateHash: z.ZodString;
-        baselineMarker: z.ZodNullable<z.ZodString>;
-        review: z.ZodOptional<z.ZodObject<{
-            revision: z.ZodNumber;
-            candidateHash: z.ZodString;
-            verdict: z.ZodEnum<{
-                revise: "revise";
-                accept: "accept";
-            }>;
-            summary: z.ZodString;
-        }, z.core.$strip>>;
+        modelHash: z.ZodString;
+        baselineMarkerToken: z.ZodString;
         files: z.ZodArray<z.ZodObject<{
             planId: z.ZodString;
-            title: z.ZodString;
             wave: z.ZodNumber;
             taskCount: z.ZodNumber;
             path: z.ZodString;
             hash: z.ZodString;
-            content: z.ZodString;
             baselineHash: z.ZodNullable<z.ZodString>;
-            backup: z.ZodNullable<z.ZodString>;
         }, z.core.$strip>>;
         removed: z.ZodArray<z.ZodObject<{
             path: z.ZodString;
             baselineHash: z.ZodString;
-            backup: z.ZodString;
         }, z.core.$strip>>;
         stages: z.ZodRecord<z.ZodEnum<{
             files: "files";
@@ -188,10 +168,36 @@ declare const schema: z.ZodObject<{
             complete: "complete";
             intent: "intent";
         }>>;
-        receipt: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        receipt: z.ZodOptional<z.ZodObject<{
+            status: z.ZodLiteral<"published">;
+            saved: z.ZodLiteral<true>;
+            ready: z.ZodLiteral<true>;
+            revision: z.ZodNumber;
+            sessionPath: z.ZodString;
+            paths: z.ZodArray<z.ZodString>;
+            plans: z.ZodArray<z.ZodObject<{
+                planId: z.ZodString;
+                wave: z.ZodNumber;
+                taskCount: z.ZodNumber;
+                path: z.ZodString;
+            }, z.core.$strip>>;
+            removedPaths: z.ZodArray<z.ZodString>;
+            stages: z.ZodRecord<z.ZodEnum<{
+                files: "files";
+                state: "state";
+                routing: "routing";
+                commit: "commit";
+            }> & z.core.$partial, z.ZodEnum<{
+                complete: "complete";
+                intent: "intent";
+            }>>;
+            nextAction: z.ZodString;
+        }, z.core.$strip>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
-export type PlanSession = z.infer<typeof schema>;
+export type PlanSession = Omit<z.infer<typeof schema>, "topology"> & {
+    topology: PhaseTopologyFingerprint;
+};
 export type PlanJournal = z.infer<typeof journalSchema>;
 export type PlanLocation = Awaited<ReturnType<typeof planLocation>>;
 export declare function planPublicationPath(phaseDir: string, phasePrefix: string): string;

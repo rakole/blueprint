@@ -15,7 +15,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_research_submit",
   "blueprint_plan_prepare",
   "blueprint_plan_submit",
-  "blueprint_plan_finalize",
+  "blueprint_plan_read",
   "blueprint_config_set",
   "blueprint_config_set_profile",
   "blueprint_state_update",

@@ -19,17 +19,19 @@ test("planning lifecycle preserves its functional gates and useful execution han
   ]) assert.ok(contract.includes(phrase), phrase);
 });
 
-test("candidate preservation precedes semantic review and publication", () => {
-  assert.match(contract, /Submit the entire candidate[\s\S]*before semantic review/);
-  assert.match(contract, /saves the exact original before parsing\/validation/);
-  assert.match(contract, /Raw JSON text and incomplete objects are recoverable/);
-  assert.match(contract, /Field corrections create a new revision/);
-  assert.match(contract, /retry identical arguments with the same requestId/);
-  assert.match(contract, /Any candidate edit invalidates the prior verdict/);
-  assert.match(contract, /revision and candidateHash, verdict and concrete summary/);
-  assert.match(contract, /existing accepted plans remain intact/);
+test("reviewed models publish directly without failed draft storage", () => {
+  assert.match(contract, /before submission/);
+  assert.match(contract, /Rejected documents are never stored/);
+  assert.match(contract, /schema, example and validation rules/);
+  assert.match(contract, /No separate validation, draft-save or finalize call/);
+  assert.match(contract, /Fix diagnosed fields[\s\S]*same revision/);
+  assert.match(contract, /same requestId/);
+  assert.match(contract, /Any model edit invalidates acceptance/);
+  assert.match(contract, /review.verdict and review.summary/);
+  assert.match(contract, /Existing accepted plans remain intact/);
   assert.match(contract, /pending publication marker blocks readers\/execution/);
-  assert.match(contract, /Candidate saved\/valid is insufficient/);
+  assert.match(contract, /partial saved result is insufficient/);
+  assert.doesNotMatch(contract, /blueprint_plan_finalize|candidateHash|recoverable candidates/);
 });
 
 test("normal planning uses one compact schema and deterministic compilation", () => {

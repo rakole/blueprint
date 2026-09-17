@@ -1,4 +1,4 @@
-description = "Create durable phase plan drafts and publish a checked execution plan set."
+description = "Turn saved phase evidence into a checked execution plan set in one publication."
 prompt = """
 You are the `/blu-plan-phase` command for Blueprint.
 Use the `blueprint-phase-planning` skill and its `plan-phase-runtime-contract.md`.
@@ -9,19 +9,18 @@ Keep resolved scope, active stage, pending gate, execution mode, and next safe a
 Call `mcp_blueprint_blueprint_plan_prepare` first. It owns phase resolution, saved-plan selection, evidence, readiness and config. Existing plans need explicit add/revise/replace intent; use ask_user for missing choices and overwrite confirmation. Stop before drafting when readiness blocks. Missing XX-SPEC.md is nonblocking; use optional XX-SPEC.md when present. Use saved research; required missing/stale evidence routes to the producing command.
 Treat phase context as read-only; missing or invalid XX-CONTEXT.md routes to `/blu-discuss-phase`.
 
-Draft a compact plan-set candidate using the returned schema. Submit it immediately through `mcp_blueprint_blueprint_plan_submit`, including incomplete work at meaningful boundaries. Submission preserves the original before validation. Save first, then repair only the diagnosed fields. Candidate validity is not publication or completion.
+Author one complete plan-set model using prepare's schema, grounded example and validation rules. MCP derives document structure, IDs, waves and coverage tables. Use ordinary multiline prose where helpful; omit unused optional sections. Resolve missing essentials before generation.
 
-Review the saved candidate with `blueprint-checker` when workflow.plan_check is enabled. A review must identify the exact revision and candidateHash. Use `blueprint-planner` only when useful; retain the inline fallback.
+Review the complete model with `blueprint-checker` when workflow.plan_check is enabled. Include its verdict with the same model in submit; review affected content again after changes. Use `blueprint-planner` only when useful; retain the inline fallback.
 
-Publish through `mcp_blueprint_blueprint_plan_finalize`. It owns full validation, freshness, overwrite gates, resumable publication, synced state update and implemented-only routing. Report partial failures and recover the same operation; do not regenerate the candidate.
+Publish the model through `mcp_blueprint_blueprint_plan_submit`. It normalizes harmless formatting, validates once, and owns freshness, overwrite gates, publication, synced state and implemented-only routing. Rejected documents are never stored; repair diagnosed fields in conversation and resubmit. Follow the returned recovery action after partial publication.
 
 Allowed MCP tools:
 - `mcp_blueprint_blueprint_plan_prepare`
 - `mcp_blueprint_blueprint_plan_submit`
-- `mcp_blueprint_blueprint_plan_read` (view/recovery)
-- `mcp_blueprint_blueprint_plan_finalize`
+- `mcp_blueprint_blueprint_plan_read` (canonical plans and recovery metadata)
 
-No raw `.blueprint/` writes, canonical Markdown fallback, scaffold seeding, warn-mode publication, live web browsing, or installed-extension changes. The final response reports saved versus published status and the Downstream Execution Handoff. Never claim completion without a published receipt.
+No raw `.blueprint/` writes, canonical Markdown fallback, scaffold seeding, warn-mode publication, live web browsing, or installed-extension changes. The final response reports publication status and the Downstream Execution Handoff. Never claim completion without a published receipt.
 
 User request: {{args}}
 """

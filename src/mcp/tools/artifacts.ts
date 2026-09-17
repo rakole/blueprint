@@ -3404,18 +3404,26 @@ function extractPlanTemplatePlaceholderListItems(template: string): string[] {
   });
 }
 
-function hasSubstantivePlanListContent(section: string): boolean {
-  const normalizedSection = stripPlanPlaceholderSignals(section);
-  const bulletLines = normalizedSection
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line))
-    .map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => !/^[#>*`|_\-\s]+$/.test(line))
-    .filter((line) => !/^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(line));
+function isSubstantivePlanLine(line: string): boolean {
+  const value = line.trim();
+  // Formatting and empty fenced examples are not content. Concrete prose may
+  // be terse or non-English; word counts and command keywords cannot decide it.
+  return !/^(?:`{3,}|~{3,})(?:[\w+-]+)?\s*$/u.test(value) &&
+    /[\p{L}\p{N}]/u.test(value) && !isBlankOrPlaceholderPlanLine(value);
+}
 
-  return bulletLines.length > 0;
+function hasSubstantivePlanListContent(section: string): boolean {
+  let inList = false;
+  return stripPlanPlaceholderSignals(section).split("\n").some((line) => {
+    const bullet = /^\s*(?:[-*+]\s+|\d+\.\s+)(.*)$/.exec(line);
+    if (bullet) {
+      inList = true;
+      return isSubstantivePlanLine(bullet[1]);
+    }
+    if (inList && /^(?: {2,}|\t)/.test(line)) return isSubstantivePlanLine(line);
+    if (line.trim()) inList = false;
+    return false;
+  });
 }
 
 function escapeRegex(value: string): string {
@@ -3431,11 +3439,22 @@ function extractFrontmatter(content: string): string | null {
 function normalizeFrontmatterScalar(value: string): string {
   const trimmed = value.trim();
 
+  // The plan renderer emits JSON-compatible quoted YAML scalars. Decode their
+  // escapes so quotes, newlines and literal path characters round-trip.
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    try {
+      const decoded: unknown = JSON.parse(trimmed);
+      if (typeof decoded === "string") return decoded.trim();
+    } catch {
+      // Keep support for older hand-authored YAML quoting below.
+    }
+  }
+
   if (
     (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
   ) {
-    return trimmed.slice(1, -1).trim();
+    return trimmed.slice(1, -1).replace(/''/g, "'").trim();
   }
 
   return trimmed;
@@ -3448,10 +3467,8 @@ function parseInlineArray(value: string): string[] {
     return [];
   }
 
-  return trimmed
-    .slice(1, -1)
-    .split(",")
-    .map((entry) => normalizeFrontmatterScalar(entry))
+  return Array.from(trimmed.slice(1, -1).matchAll(/\s*("(?:\\.|[^"\\])*"|'(?:''|[^'])*'|[^,]+)\s*(?:,|$)/g))
+    .map((entry) => normalizeFrontmatterScalar(entry[1]))
     .filter((entry) => entry.length > 0);
 }
 
@@ -3579,7 +3596,9 @@ function parsePlanExternalServicePrerequisites(section: string): Array<{
   readinessCheck: string;
   canAgentProceedWithoutIt: boolean;
 }> {
-  const rows = extractMarkdownTableRows(section);
+  const rows = extractMarkdownTableRows(section).map((row) => row.map((cell) =>
+    cell.replace(/<br\s*\/?\s*>/gi, "\n").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+  ));
 
   if (
     rows.length === 1 &&
@@ -4675,6 +4694,14 @@ function extractTaskSubsection(taskBlock: string, subsectionHeading: string): st
   return match?.[1]?.trim() ?? "";
 }
 
+function planSyntaxContent(content: string): string {
+  // Preserve example text for substantive-content checks while preventing its
+  // headings from opening or closing actual plan sections or task blocks.
+  return scanResearchMarkdown(content.replace(/\r\n/g, "\n")).map(({ text, fenced }) =>
+    fenced && /^#{1,6}[ \t]/u.test(text) ? `    ${text}` : text
+  ).join("\n");
+}
+
 function isPlaceholderOnlyTaskHeading(headingText: string): boolean {
   const title = headingText.replace(/^Task\s+\d+(?::\s*)?/i, "").trim();
 
@@ -4689,12 +4716,6 @@ function isBlankOrPlaceholderPlanLine(line: string): boolean {
     /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
       line
     )
-  );
-}
-
-function isSubjectivePlanLine(line: string): boolean {
-  return /(?:\blooks\b|\bfeels\b|\bsounds\b|\bseems\b|\bgood\b|\bbetter\b|\bnice\b|\bclean\b|\bclear\b|\brobust\b|\bstable\b|\bfast\b|\bsimple\b|\beasy\b|\beasier\b|\bseamless\b|\bhelpful\b|\buseful\b|\bintuitive\b|\bpolished\b|\bworking\b|\bworks\b)/i.test(
-    line
   );
 }
 
@@ -4713,6 +4734,7 @@ function normalizePlanPathForValidation(value: string): string {
 }
 
 function isRepoRelativePlanPath(value: string): boolean {
+  if (/[\u0000-\u001f\u007f]/u.test(value)) return false;
   const rawValue = value.trim().replace(/\\/g, "/");
 
   if (rawValue.length === 0) {
@@ -4945,30 +4967,7 @@ function hasConcretePlanSubsectionContent(section: string): boolean {
     return false;
   }
 
-  return meaningfulLines.some((line) => {
-    if (isBlankOrPlaceholderPlanLine(line)) {
-      return false;
-    }
-
-    if (
-      /`[^`]+`/.test(line) ||
-      /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line) ||
-      /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line) ||
-      /\/blu-[\w-]+(?:\b|$)/i.test(line) ||
-      /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line) ||
-      (!isGlobPlanPath(line) && isRepoRelativePlanPath(line))
-    ) {
-      return true;
-    }
-
-    if (isSubjectivePlanLine(line)) {
-      return false;
-    }
-
-    const words = line.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g) ?? [];
-
-    return words.length >= 3;
-  });
+  return meaningfulLines.some(isSubstantivePlanLine);
 }
 
 function validateObjectivePlanBulletList(section: string, artifactLabel: string): {
@@ -5002,13 +5001,6 @@ function validateObjectivePlanBulletList(section: string, artifactLabel: string)
 
   for (const bullet of bulletItems) {
     if (!objectiveSignals.some((signal) => signal.test(bullet))) {
-      if (isSubjectivePlanLine(bullet)) {
-        issues.push(
-          `${artifactLabel} must use objectively checkable bullets instead of subjective language: ${bullet}.`
-        );
-        continue;
-      }
-
       warnings.push(
         `${artifactLabel} must use grep/test-verifiable or otherwise objectively checkable bullets: ${bullet}.`
       );
@@ -5047,16 +5039,14 @@ function validatePlanTaskBlock(taskBlock: string, taskNumber: number): {
     }
   }
 
-  for (const subsectionHeading of ["Read First", "Action"]) {
-    const subsection = extractTaskSubsection(taskBlock, subsectionHeading);
-
-    issues.push(
-      ...validatePlanTaskPathList(
-        subsection,
-        `Task ${taskNumber} subsection ${subsectionHeading}`
-      )
-    );
-  }
+  issues.push(...validatePlanTaskPathList(
+    extractTaskSubsection(taskBlock, "Read First"), `Task ${taskNumber} subsection Read First`
+  ));
+  // Action prose includes rejected inputs, URLs, fixtures and shell examples.
+  // Declared file lists enforce ownership; token matches in prose are advisory.
+  warnings.push(...validatePlanTaskPathList(
+    extractTaskSubsection(taskBlock, "Action"), `Task ${taskNumber} subsection Action`
+  ));
 
   const acceptanceCriteria = extractTaskSubsection(taskBlock, "Acceptance Criteria");
   const acceptanceCriteriaValidation = validateObjectivePlanBulletList(
@@ -9141,15 +9131,16 @@ export function validatePlanArtifactContent(
 } {
   const issues: string[] = [];
   const warnings: string[] = [];
+  content = planSyntaxContent(content);
   const metadata = parsePlanFrontmatter(content);
 
   if (!extractFrontmatter(content)) {
     issues.push("Plan artifact must start with YAML-style frontmatter.");
   }
 
-  const placeholderSignals = matchedScaffoldPlaceholderSignals(content, PLAN_PLACEHOLDER_SIGNALS, {
-    singleSignalPatterns: [/^Replace with /i]
-  });
+  const placeholderSignals = matchedDiscussionScaffoldRows(content, [
+    ...PLAN_PLACEHOLDER_SIGNALS, SCAFFOLD_GENERATED_MARKER
+  ]);
 
   if (placeholderSignals.length > 0) {
     issues.push(

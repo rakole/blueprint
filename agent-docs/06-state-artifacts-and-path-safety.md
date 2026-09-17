@@ -102,8 +102,7 @@ adding model-authored artifacts or reports.
 The discuss tools own phase `XX-DISCUSS-SESSION.json` version 2. Sessions retain
 notes, sanitized history, evidence hashes and metadata-only publication journals;
 generated models and rendered drafts are never stored. Legacy sessions migrate
-through the owning tools, dropping draft payloads. Planning candidate persistence
-is independent.
+through the owning tools, dropping draft payloads. Planning publication follows the metadata-only pattern below.
 
 Prepare supplies selected evidence, sparse authoring schema, grounded defaults,
 missing essential fields, records and examples. Record accepts only notes with
@@ -156,3 +155,19 @@ resume without it. Read exposes canonical research and metadata, never a rejecte
 model. Reuse requires verified freshness and retains the original input basis.
 Legacy research remains readable; stale, malformed or incomplete provenance cannot
 establish freshness for reuse or planning.
+
+## Planning Direct Publication
+
+Plan prepare/read/submit own version 2 XX-PLAN-SESSION.json metadata. Prepare
+supplies schema, example, defaults and actual blockers before generation. Submit
+accepts the complete model and configured review together, validates in memory,
+then publishes the full canonical set. Rejected models, raw JSON, rendered drafts,
+backups, review prose and diagnostic text are not retained. Legacy v1 sessions
+migrate through the owning tools, dropping document payloads.
+
+The journal retains hashes, paths and publication stages only. A pending marker
+keeps partially published sets out of execution. Before all required files commit,
+retry needs the same model; after canonical bytes match the journal, state/routing
+can finish without it. Reconciliation reviews observed hashes and preserves
+unrelated changes; it does not restore document backups. Planning and legacy plan
+writer failure telemetry retain bounded control metadata only.

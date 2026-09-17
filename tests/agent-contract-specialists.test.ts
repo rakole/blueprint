@@ -296,7 +296,7 @@ test("lifecycle planning specialist agents keep parent-owned orchestration and p
   assert.match(planner, /Do not persist plan files/);
   assert.match(planner, /full locked scope/);
   assert.match(checker, /Do not persist verdicts/);
-  assert.match(checker, /revision and candidateHash/);
+  assert.match(checker, /submits the reviewed model and verdict together/);
   assert.match(checker, /`ACCEPT` is a review verdict, not a persistence or orchestration decision/);
 });
 

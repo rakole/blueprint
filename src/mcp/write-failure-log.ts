@@ -35,10 +35,11 @@ type MutationFailureEntry = {
   };
 };
 
-// Discussion and research documents must never be retained by the diagnostic side channel.
+// Discussion, research and planning documents must never be retained by the diagnostic side channel.
 // Select by invocation, including models rejected for an incorrect artifact kind.
 function metadataOnlyInvocation(toolName: string, args: Record<string, unknown>): boolean {
   return toolName.startsWith("blueprint_discuss_") || toolName.startsWith("blueprint_research_") ||
+    ["blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read", "blueprint_phase_plan_write"].includes(toolName) ||
     (toolName === "blueprint_phase_artifact_write" &&
       (args.artifact === "context" || args.artifact === "discussion-log" || args.artifact === "research" || args.model !== undefined || args.candidate !== undefined));
 }

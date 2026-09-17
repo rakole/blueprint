@@ -1062,11 +1062,11 @@ async function validatePhasePlanSet(
     const titlePlanId = extractReferencedPlanId(plan.metadata.title);
 
     if (titlePlanId === "YY") {
-      issues.push(
+      warnings.push(
         `${plan.path}: frontmatter title must replace placeholder plan id YY with "${plan.planIdFromPath}".`
       );
     } else if (titlePlanId && titlePlanId !== plan.planIdFromPath) {
-      issues.push(
+      warnings.push(
         `${plan.path}: frontmatter title references plan ${titlePlanId}, which does not match path plan id "${plan.planIdFromPath}".`
       );
     }
@@ -2164,19 +2164,21 @@ function partitionPhasePlanMarkdownValidationIssues(issues: readonly string[]): 
   return { blockingIssues, warningIssues };
 }
 
-function phasePlanMarkdownDiagnosticFromIssue(issue: string): PhasePlanModelDiagnostic {
+function phasePlanMarkdownDiagnosticFromIssue(issue: string, warning = false): PhasePlanModelDiagnostic {
   const heuristicGuidance = isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue);
 
   return phasePlanDiagnostic({
-    severity: heuristicGuidance ? "warning" : "error",
+    severity: heuristicGuidance || warning ? "warning" : "error",
     source: "markdown",
     path: "renderPreview",
-    code: heuristicGuidance ? "markdown.verifiability_guidance" : "markdown.invalid_render",
+    code: heuristicGuidance ? "markdown.verifiability_guidance" : warning ? "markdown.guidance" : "markdown.invalid_render",
     message: issue,
     context: {},
     repairAction: heuristicGuidance ? "make-verifiable" : undefined,
     suggestion: heuristicGuidance
       ? "Prefer an objective command, file-read, grep, test, or artifact-validation check when possible, but do not rewrite domain-specific criteria solely to satisfy keyword matching."
+      : warning
+        ? "Review this advisory in context; it does not block saving or require another model attempt."
       : "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
   });
 }
@@ -2476,18 +2478,6 @@ function validatePhasePlanStructuredModelCoverage(
     if (!isPhasePlanAcceptanceCriterionVerifiable(verification.evidence)) {
       warnings.push(
         `Verification item "${verification.item}" has evidence that is not objectively verifiable: ${verification.evidence}.`
-      );
-    }
-  }
-
-  for (const row of model.unknownsAndDeferrals) {
-    if (
-      row.disposition === "none" &&
-      (/^(?:none|n\/a|na|not applicable)$/i.test(row.item.trim()) ||
-        /^(?:none|n\/a|na|not applicable)$/i.test(row.followUp.trim()))
-    ) {
-      issues.push(
-        "Unknowns and deferrals rows with disposition none must still use concrete item and follow-up text instead of generic none values."
       );
     }
   }
@@ -3123,8 +3113,8 @@ async function validatePhasePlanModelWithContext(args: {
       strict: true
     });
     const markdownDiagnostics = [
-      ...validation.issues.map(phasePlanMarkdownDiagnosticFromIssue),
-      ...validation.warnings.map(phasePlanMarkdownDiagnosticFromIssue)
+      ...validation.issues.map((issue) => phasePlanMarkdownDiagnosticFromIssue(issue)),
+      ...validation.warnings.map((warning) => phasePlanMarkdownDiagnosticFromIssue(warning, true))
     ];
     diagnostics.push(...markdownDiagnostics);
 

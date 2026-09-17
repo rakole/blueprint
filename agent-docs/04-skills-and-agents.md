@@ -114,13 +114,14 @@ in the normal prompt. There is no research record tool or draft-recovery workflo
 
 ## Planning input boundary
 
-Plan uses `blueprint_plan_prepare` -> `blueprint_plan_submit` ->
-`blueprint_plan_finalize`; read is recovery/view only. The compact candidate
-schema is supplied by prepare. MCP derives numeric slots, waves and coverage
-ledgers, preserving the existing phase.plan execution shape. Submit retains raw
-candidates before assessment. Review verdicts bind to candidate revision/hash.
-Load planning recovery guidance only for conflicts or interrupted publication.
-Do not reintroduce primitive artifact/state orchestration into the normal prompt.
+Plan uses `blueprint_plan_prepare` -> author/review -> `blueprint_plan_submit`.
+Prepare supplies compact schema, example, actual rejection rules and grounded
+evidence. MCP derives IDs, slots, waves and coverage ledgers, preserving the
+phase.plan execution shape. Review the complete model before submit when enabled;
+include that verdict with the same model. No separate draft-save or finalize call.
+Rejected documents are never saved. Read returns canonical plans and metadata.
+Load recovery guidance only for conflicts or interrupted publication. Do not
+reintroduce primitive artifact/state orchestration into the normal prompt.
 
 ## Bootstrap input boundary
 

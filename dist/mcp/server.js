@@ -15053,8 +15053,7 @@ var init_command_runtime_metadata = __esm({
     PLAN_PHASE_REQUIRED_TOOLS = [
       "blueprint_plan_prepare",
       "blueprint_plan_submit",
-      "blueprint_plan_read",
-      "blueprint_plan_finalize"
+      "blueprint_plan_read"
     ];
     RESEARCH_PHASE_REQUIRED_TOOLS = [
       "blueprint_research_prepare",
@@ -16152,14 +16151,14 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-plan-phase`",
         executionProfile: "long-running-mutation",
         rootRoutable: true,
-        purpose: "`plan-phase` preserves compact plan-set candidates before validation, compiles execution-ready phase.plan artifacts, and publishes a complete checked set through MCP.",
+        purpose: "`plan-phase` prepares grounded authoring inputs, compiles compact models into execution-ready phase.plan artifacts, and publishes a complete checked set without storing rejected drafts.",
         reads: [
-          "blueprint_plan_prepare supplies a stable phase evidence snapshot, optional XX-SPEC.md, project and requirement grounding, research/UI readiness, effective config, saved-plan inventory and compact candidate schema; blueprint_plan_read recovers saved revisions."
+          "blueprint_plan_prepare supplies a stable phase evidence snapshot, optional XX-SPEC.md, project and requirement grounding, research/UI readiness, effective config, saved-plan inventory and compact schema/example/validation rules; blueprint_plan_read returns canonical plans and metadata."
         ],
         writes: [
-          "phase-scoped original plan candidates, revisions, evidence fingerprints and publication journal",
-          ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_plan_finalize",
-          ".blueprint/STATE.md through finalizer-owned synced state update"
+          "phase-scoped preparation metadata, evidence fingerprints and metadata-only publication journal",
+          ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_plan_submit",
+          ".blueprint/STATE.md through submit-owned synced state update"
         ]
       },
       runtimeReference: {
@@ -16170,7 +16169,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
         optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Use blueprint_plan_prepare -> blueprint_plan_submit -> blueprint_plan_finalize, with blueprint_plan_read for recovery. Prepare owns phase resolution, effective config, stable evidence fingerprints and saved-plan add/revise/replace selection. Use saved research instead of live browsing; required context/research/UI readiness blocks drafting, while missing XX-SPEC.md is nonblocking. Author the compact plan-set candidate using the returned schema; MCP derives slots, waves, aggregate file lists and coverage ledgers. Submit saves the exact original candidate before validation, supports revision-CAS field corrections, and retains invalid drafts without canonical publication. Review the complete saved candidate with blueprint-checker when workflow.plan_check is enabled; bind the verdict to its revision and candidateHash. Use blueprint-planner only for useful bounded decomposition, preserving the no-subagent fallback. Finalize requires current evidence, full plan-set validation and explicit overwrite authorization for revise/replace; its publication journal and marker block execution of partial sets and resume interrupted writes. Finalizer owns base: synced state update and state-aware routing to implemented follow-ups. Never infer completion from candidate saved/valid status; require the published receipt. No raw .blueprint writes, Markdown fallback to canonical paths, scaffold seeding or warn-mode publication.",
+        contractNotes: "Use blueprint_plan_prepare -> author/review -> blueprint_plan_submit, with blueprint_plan_read for canonical plans and recovery metadata. Prepare owns phase resolution, effective config, stable evidence fingerprints, saved-plan add/revise/replace selection, compact schema, grounded example and actual rejection rules. Use saved research instead of live browsing; required context/research/UI readiness blocks drafting, while missing XX-SPEC.md is nonblocking. MCP derives IDs, slots, waves, aggregate files and coverage ledgers; harmless formatting and optional omissions do not require repair. Review the complete model with blueprint-checker when workflow.plan_check is enabled and submit its verdict with that same model. Use blueprint-planner only for bounded decomposition, preserving the no-subagent fallback. Submit validates the full set in memory and publishes canonical plans directly. Rejected documents, rendered drafts and diagnostic prose are never retained. Keep current evidence, full requirement coverage and explicit overwrite authorization for revise/replace. A metadata-only journal and publication marker protect partial sets; retry with the same model while files remain unwritten, then omit the model after canonical commit. Submit owns base: synced state update and state-aware routing to implemented follow-ups. Require a published receipt for completion. No raw .blueprint writes, Markdown fallback, scaffold seeding or warn-mode publication.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -18951,7 +18950,7 @@ function cloneSectionValidations(value) {
     return void 0;
   }
   return Object.fromEntries(
-    Object.entries(value).map(([heading, validation]) => [heading, { ...validation }])
+    Object.entries(value).map(([heading2, validation]) => [heading2, { ...validation }])
   );
 }
 function readJsonSchemaAsset(schemaFileName) {
@@ -21429,20 +21428,20 @@ var init_artifact_contracts = __esm({
     PHASE_PLAN_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json";
     PHASE_PLAN_MODEL_CONTRACT = {
       schemaId: "blueprint.phase.plan.model",
-      schemaVersion: "1.1.0",
+      schemaVersion: "1.2.0",
       schemaPath: PHASE_PLAN_MODEL_SCHEMA_PATH,
       jsonSchema: readJsonSchemaAsset(PHASE_PLAN_MODEL_SCHEMA_FILE),
       qualityRules: [
         "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, planId, artifact, path, or content; the write tool owns identity and path derivation.",
-        "Author against the narrowed taskSchema returned by blueprint_phase_plan_authoring_context or blueprint_phase_plan_validate_model so roadmap requirements, saved evidence artifacts, and dependency ids stay deterministic.",
+        "For /blu-plan-phase, use the compact schema/example from blueprint_plan_prepare; MCP compiles IDs, waves and all coverage ledgers. The full model schema is the downstream execution contract for primitive callers.",
         "Top-level requirements contains only the known requirement ids this specific plan covers now; requirementCoverage is the complete ledger and must account for every known phase requirement exactly once as covered, deferred, or irrelevant with a concrete rationale.",
         "Evidence coverage is runtime-narrowed and dynamic: every saved context, research, UI, review, prior plan, summary, validation, or other evidence artifact in the current task schema must appear in evidenceCoverage as used, deferred, irrelevant, or unavailable with rationale.",
-        "Re-read blueprint_phase_plan_authoring_context immediately before each validation/write because saved plan files become intentional known evidence artifacts for later plan slots.",
+        "The direct planning lifecycle validates the complete prospective set together; primitive callers must use a current authoring context when saved evidence changes.",
         "Every declared filesModified entry must be covered by at least one task and one verification item in fileSurfaceCoverage.",
         "Declare external services the agent cannot safely assume are ready in externalServicePrerequisites. Keep the examples generic: container runtimes, databases, queues, emulators, local API servers, search services, caches, brokers, auth sandboxes, and third-party SaaS test tenants are all valid when the plan truly depends on them.",
         "The rendered plan must preserve the exact headings in renderedHeadings, including External Service Prerequisites, Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
-        "Acceptance criteria and verification entries must be grep, test, command, file-read, or artifact-validation verifiable; do not use vague manual-only acceptance.",
-        "Do not copy minimal example wording, placeholder prose, static-for-now language, or generic none rows where real unknowns or deferrals exist."
+        "Acceptance criteria and verification describe observable outcomes. Keyword-based judgments are advisory; semantic adequacy belongs to review. Multiline prose and code are preserved by MCP rendering.",
+        "Record real unknowns and deferrals honestly. Omitted optional sections need no invented none rows or follow-up. Example phrase overlap is advisory; unresolved scaffold placeholders remain invalid."
       ],
       contextBindings: [
         "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus blueprint_phase_plan_write arguments.",
@@ -26516,8 +26515,8 @@ async function resolveExistingRepoFiles(args) {
     warnings
   };
 }
-function extractMarkdownSection2(content, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function extractMarkdownSection2(content, heading2) {
+  const escapedHeading = heading2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = content.match(
     new RegExp(`(?:^|\\n)##\\s+${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n##\\s+|$)`, "i")
   );
@@ -26537,8 +26536,8 @@ function collectListItems(block) {
     return numberedMatch ? [numberedMatch[1].trim()] : [];
   }).filter((item) => item.length > 0);
 }
-function extractMarkdownSectionItems(content, heading) {
-  return [...new Set(collectListItems(extractMarkdownSection2(content, heading)))];
+function extractMarkdownSectionItems(content, heading2) {
+  return [...new Set(collectListItems(extractMarkdownSection2(content, heading2)))];
 }
 function extractPathCandidatesFromSection(section) {
   const candidates = /* @__PURE__ */ new Set();
@@ -27841,15 +27840,15 @@ function summarizeSavedArtifact(raw) {
   const meaningfulLines = withoutFrontmatter.filter(
     (line2) => line2.length > 0 && !line2.startsWith("*Generated by")
   );
-  const heading = meaningfulLines.find((line2) => line2.startsWith("#"));
+  const heading2 = meaningfulLines.find((line2) => line2.startsWith("#"));
   const bodyLine = meaningfulLines.find((line2) => !line2.startsWith("#"));
   return {
-    title: heading?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
+    title: heading2?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
     summary: bodyLine ?? "Artifact content is present and available for review."
   };
 }
-function extractMarkdownSection3(markdown, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function extractMarkdownSection3(markdown, heading2) {
+  const escapedHeading = heading2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
   );
@@ -27901,10 +27900,10 @@ function normalizeLineForPrefixMatching(line2) {
   return line2.replace(/^(?:[-*+]\s+|\d+\.\s+)/, "").trim();
 }
 function collectContextSignalLines(content) {
-  const heading = extractMarkdownHeading(content);
+  const heading2 = extractMarkdownHeading(content);
   const contentLines = content.replace(/\r\n/g, "\n").split("\n").map(normalizeSignalLine).filter((line2) => line2.length > 0 && !line2.startsWith("#"));
   return [
-    ...heading ? [normalizeSignalLine(heading)] : [],
+    ...heading2 ? [normalizeSignalLine(heading2)] : [],
     ...contentLines
   ].filter(
     (line2) => !CONTEXT_LINE_PREFIXES_TO_IGNORE.some(
@@ -28077,9 +28076,9 @@ function readRoadmapPhaseDetailSignals(raw) {
   const phases = [];
   for (const rawBlock of phaseDetails.split(/^### Phase\s+/gm).slice(1)) {
     const newlineIndex = rawBlock.indexOf("\n");
-    const heading = newlineIndex === -1 ? rawBlock.trim() : rawBlock.slice(0, newlineIndex).trim();
+    const heading2 = newlineIndex === -1 ? rawBlock.trim() : rawBlock.slice(0, newlineIndex).trim();
     const body = newlineIndex === -1 ? "" : rawBlock.slice(newlineIndex + 1);
-    const match = heading.match(/^(\d+(?:\.\d+)?)(?=$|\s|:|-|–|—)/);
+    const match = heading2.match(/^(\d+(?:\.\d+)?)(?=$|\s|:|-|–|—)/);
     if (!match) {
       continue;
     }
@@ -28150,15 +28149,15 @@ function parseFrontmatter2(raw) {
     })
   );
 }
-function extractMarkdownSection4(markdown, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function extractMarkdownSection4(markdown, heading2) {
+  const escapedHeading = heading2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
   );
   return match?.[1]?.trim() ?? "";
 }
-function parseBulletSection(markdown, heading) {
-  const section = extractMarkdownSection4(markdown, heading);
+function parseBulletSection(markdown, heading2) {
+  const section = extractMarkdownSection4(markdown, heading2);
   return section.split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).filter((line2) => line2.length > 0 && line2.toLowerCase() !== "none");
 }
 function renderBulletSection(title, values) {
@@ -29848,9 +29847,9 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, opt
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-function extractMarkdownSectionLines(content, heading) {
+function extractMarkdownSectionLines(content, heading2) {
   const lines3 = content.split(/\r?\n/);
-  const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`);
+  const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading2)}\\s*$`);
   const startIndex = lines3.findIndex((line2) => headingPattern.test(line2.trim()));
   if (startIndex === -1) {
     return [];
@@ -34431,13 +34430,20 @@ var init_phase_collection_helpers = __esm({
 
 // src/mcp/tools/phase-plan-rendering.ts
 function quoteYamlScalar(value) {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  return JSON.stringify(value);
+}
+function renderBulletList2(items) {
+  if (items.length === 0) return "- none";
+  return items.map((item) => `- ${item.replace(/\r\n?/g, "\n").trim().replace(/\n/g, "\n    ")}`).join("\n");
+}
+function renderNarrative(value) {
+  return /[\r\n]|^\s*(?:#{1,6}\s|`{3}|~{3}|---)/.test(value) ? renderBulletList2([value]) : value;
 }
 function renderYamlList(items) {
   return items.map((item) => `  - ${quoteYamlScalar(item)}`).join("\n");
 }
 function renderMarkdownTableRows(rows) {
-  return rows.map((row) => `| ${row.map((cell) => markdownCell(cell)).join(" | ")} |`).join("\n");
+  return rows.map((row) => `| ${row.map((cell) => cell.replace(/\r\n?/g, "\n").trim().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\|/g, "\\|").replace(/\n/g, "<br>")).join(" | ")} |`).join("\n");
 }
 function renderPhasePlanModelContent(model, resolved, planId3) {
   const acceptanceCriteria = uniquePreservingOrder(
@@ -34450,15 +34456,15 @@ function renderPhasePlanModelContent(model, resolved, planId3) {
 
 #### Read First
 
-${renderBulletList(task.readFirst)}
+${renderBulletList2(task.readFirst)}
 
 #### Action
 
-${renderBulletList(task.action)}
+${renderBulletList2(task.action)}
 
 #### Acceptance Criteria
 
-${renderBulletList(task.acceptanceCriteria)}`
+${renderBulletList2(task.acceptanceCriteria)}`
   ).join("\n\n");
   const externalServiceRows = renderMarkdownTableRows(
     model.externalServicePrerequisites.length > 0 ? model.externalServicePrerequisites.map((row) => [
@@ -34531,11 +34537,11 @@ autonomous: ${model.autonomous}
 
 ## Goal
 
-${model.goal}
+${renderNarrative(model.goal)}
 
 ## Scope
 
-${renderBulletList(model.scope)}
+${renderBulletList2(model.scope)}
 
 ## Tasks
 
@@ -34549,11 +34555,11 @@ ${externalServiceRows}
 
 ## Verification
 
-${renderBulletList(verificationItems)}
+${renderBulletList2(verificationItems)}
 
 ## Must Haves
 
-${renderBulletList(model.mustHaves)}
+${renderBulletList2(model.mustHaves)}
 
 ## Requirement Coverage
 
@@ -35962,8 +35968,8 @@ function phaseValidationRoutingRules(phaseNumber, noUat = false) {
 function normalizeSummaryEvidenceHeading(value) {
   return value.replace(/\s+#+\s*$/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
-function extractSummaryEvidenceSection(markdown, heading) {
-  const expectedHeading = normalizeSummaryEvidenceHeading(heading);
+function extractSummaryEvidenceSection(markdown, heading2) {
+  const expectedHeading = normalizeSummaryEvidenceHeading(heading2);
   const lines3 = markdown.replace(/\r\n/g, "\n").split("\n");
   let startIndex = -1;
   let startLevel = 0;
@@ -35989,7 +35995,7 @@ function extractSummaryEvidenceSection(markdown, heading) {
   return lines3.slice(startIndex, endIndex).join("\n").trim();
 }
 function mergeSummarySections(content, headings) {
-  return headings.flatMap((heading) => sectionToList(extractSummaryEvidenceSection(content, heading)));
+  return headings.flatMap((heading2) => sectionToList(extractSummaryEvidenceSection(content, heading2)));
 }
 async function collectValidationAuthoringSummaryEvidence(projectRoot, summaries, completedPlanIds) {
   const summaryPaths = [];
@@ -36782,15 +36788,16 @@ function partitionPhasePlanDiagnostics(diagnostics) {
   return { blocking, warnings };
 }
 function summarizePhasePlanRepairs(diagnostics) {
+  const blocking = diagnostics.filter(isBlockingPhasePlanDiagnostic);
   const firstPassActions = uniquePreservingOrder(
-    diagnostics.map((diagnostic) => diagnostic.repairAction ?? "replace")
+    blocking.map((diagnostic) => diagnostic.repairAction ?? "replace")
   );
-  const reReadAuthoringContext = diagnostics.some(
+  const reReadAuthoringContext = blocking.some(
     (diagnostic) => diagnostic.repairAction === "re-read-context" || diagnostic.code === "schema.exactCoverage" || diagnostic.source === "scope"
   );
-  const retryInstruction = diagnostics.length === 0 ? "No repair is required; the model is ready to render." : reReadAuthoringContext ? "Re-read blueprint_phase_plan_authoring_context, repair every diagnostic in the returned model, then retry validation once." : "Repair every diagnostic in the returned model before retrying validation once.";
+  const retryInstruction = blocking.length === 0 ? "No repair is required; the model is ready to render." : reReadAuthoringContext ? "Re-read blueprint_phase_plan_authoring_context, repair the blocking diagnostics, then retry validation once. Warnings do not require a retry." : "Repair the blocking diagnostics before retrying validation once. Warnings do not require a retry.";
   return {
-    blockingCount: diagnostics.filter(isBlockingPhasePlanDiagnostic).length,
+    blockingCount: blocking.length,
     firstPassActions,
     reReadAuthoringContext,
     retryInstruction
@@ -36947,12 +36954,13 @@ function phasePlanModelResidualDiagnostics(model) {
   for (const signal of leakedSignals) {
     diagnostics.push(
       phasePlanDiagnostic({
+        severity: "warning",
         source: "residual",
         path: "model",
         code: "content.example_leakage",
-        message: `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
+        message: `Phase plan model contains wording also present in ${modelContract.schemaId}: ${signal}.`,
         context: { signal },
-        suggestion: "Replace copied example wording with evidence from the selected phase."
+        suggestion: "Check that the wording fits this phase. A shared example phrase alone does not establish copied or invalid content."
       })
     );
   }
@@ -37779,14 +37787,14 @@ function buildRemovePhaseRecovery(targetPhaseNumber, roadmap) {
   );
   return recovery;
 }
-function extractHeadingPhaseDetails(heading) {
-  if (!heading) {
+function extractHeadingPhaseDetails(heading2) {
+  if (!heading2) {
     return {
       phaseNumber: null,
       phaseName: null
     };
   }
-  const match = heading.match(/^Phase\s+(\d+(?:\.\d+)?):\s+(.+?)\s+-\s+Plan\s+\S+\s*$/);
+  const match = heading2.match(/^Phase\s+(\d+(?:\.\d+)?):\s+(.+?)\s+-\s+Plan\s+\S+\s*$/);
   if (!match) {
     return {
       phaseNumber: null,
@@ -37944,11 +37952,11 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
     }
     const titlePlanId = extractReferencedPlanId(plan.metadata.title);
     if (titlePlanId === "YY") {
-      issues.push(
+      warnings.push(
         `${plan.path}: frontmatter title must replace placeholder plan id YY with "${plan.planIdFromPath}".`
       );
     } else if (titlePlanId && titlePlanId !== plan.planIdFromPath) {
-      issues.push(
+      warnings.push(
         `${plan.path}: frontmatter title references plan ${titlePlanId}, which does not match path plan id "${plan.planIdFromPath}".`
       );
     }
@@ -38662,17 +38670,17 @@ function partitionPhasePlanMarkdownValidationIssues(issues) {
   }
   return { blockingIssues, warningIssues };
 }
-function phasePlanMarkdownDiagnosticFromIssue(issue2) {
+function phasePlanMarkdownDiagnosticFromIssue(issue2, warning = false) {
   const heuristicGuidance = isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue2);
   return phasePlanDiagnostic({
-    severity: heuristicGuidance ? "warning" : "error",
+    severity: heuristicGuidance || warning ? "warning" : "error",
     source: "markdown",
     path: "renderPreview",
-    code: heuristicGuidance ? "markdown.verifiability_guidance" : "markdown.invalid_render",
+    code: heuristicGuidance ? "markdown.verifiability_guidance" : warning ? "markdown.guidance" : "markdown.invalid_render",
     message: issue2,
     context: {},
     repairAction: heuristicGuidance ? "make-verifiable" : void 0,
-    suggestion: heuristicGuidance ? "Prefer an objective command, file-read, grep, test, or artifact-validation check when possible, but do not rewrite domain-specific criteria solely to satisfy keyword matching." : "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
+    suggestion: heuristicGuidance ? "Prefer an objective command, file-read, grep, test, or artifact-validation check when possible, but do not rewrite domain-specific criteria solely to satisfy keyword matching." : warning ? "Review this advisory in context; it does not block saving or require another model attempt." : "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
   });
 }
 async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, targetPath, artifacts) {
@@ -38902,13 +38910,6 @@ function validatePhasePlanStructuredModelCoverage(model) {
       );
     }
   }
-  for (const row of model.unknownsAndDeferrals) {
-    if (row.disposition === "none" && (/^(?:none|n\/a|na|not applicable)$/i.test(row.item.trim()) || /^(?:none|n\/a|na|not applicable)$/i.test(row.followUp.trim()))) {
-      issues.push(
-        "Unknowns and deferrals rows with disposition none must still use concrete item and follow-up text instead of generic none values."
-      );
-    }
-  }
   return { issues, warnings };
 }
 function findPhasePlanTaskIndex(model, taskId2) {
@@ -39077,8 +39078,8 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
 function normalizeSpecBoundaryComparisonValue(value) {
   return value.toLowerCase().replace(/[`*_]/g, "").replace(/\s+/g, " ").trim();
 }
-function extractMarkdownSubsection(markdown, heading) {
-  const expectedHeading = normalizeSpecBoundaryComparisonValue(heading);
+function extractMarkdownSubsection(markdown, heading2) {
+  const expectedHeading = normalizeSpecBoundaryComparisonValue(heading2);
   const lines3 = markdown.replace(/\r\n/g, "\n").split("\n");
   let startIndex = -1;
   let startLevel = 0;
@@ -39375,8 +39376,8 @@ async function validatePhasePlanModelWithContext(args) {
       strict: true
     });
     const markdownDiagnostics = [
-      ...validation.issues.map(phasePlanMarkdownDiagnosticFromIssue),
-      ...validation.warnings.map(phasePlanMarkdownDiagnosticFromIssue)
+      ...validation.issues.map((issue2) => phasePlanMarkdownDiagnosticFromIssue(issue2)),
+      ...validation.warnings.map((warning) => phasePlanMarkdownDiagnosticFromIssue(warning, true))
     ];
     diagnostics.push(...markdownDiagnostics);
     if (!markdownDiagnostics.some(isBlockingPhasePlanDiagnostic)) {
@@ -43707,8 +43708,8 @@ ${body}${recoverySection}
 `;
 }
 function parseCaptureRowBlock(block, target) {
-  const [heading, ...restLines] = block.trim().split("\n");
-  const headingMatch = heading?.match(/^### ([A-Z]+-\d+)$/);
+  const [heading2, ...restLines] = block.trim().split("\n");
+  const headingMatch = heading2?.match(/^### ([A-Z]+-\d+)$/);
   if (!headingMatch) {
     return null;
   }
@@ -44850,8 +44851,8 @@ async function withBlueprintRepoLock(projectRoot, lockName, task) {
     await releaseBlueprintRepoLock(lockHandle);
   }
 }
-function extractMarkdownSection5(markdown, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function extractMarkdownSection5(markdown, heading2) {
+  const escapedHeading = heading2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
   );
@@ -44867,15 +44868,27 @@ function stripPlanPlaceholderSignals(section) {
   );
 }
 function extractPlanTemplatePlaceholderListItems(template) {
-  return ["Verification", "Must Haves"].flatMap((heading) => {
-    const section = extractMarkdownSection5(template, heading);
+  return ["Verification", "Must Haves"].flatMap((heading2) => {
+    const section = extractMarkdownSection5(template, heading2);
     return section.split("\n").map((line2) => line2.trim()).filter((line2) => /^[-*+]\s+/.test(line2));
   });
 }
+function isSubstantivePlanLine(line2) {
+  const value = line2.trim();
+  return !/^(?:`{3,}|~{3,})(?:[\w+-]+)?\s*$/u.test(value) && /[\p{L}\p{N}]/u.test(value) && !isBlankOrPlaceholderPlanLine(value);
+}
 function hasSubstantivePlanListContent(section) {
-  const normalizedSection = stripPlanPlaceholderSignals(section);
-  const bulletLines = normalizedSection.split("\n").map((line2) => line2.trim()).filter((line2) => /^[-*+]\s+/.test(line2) || /^\d+\.\s+/.test(line2)).map((line2) => line2.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line2) => line2.length > 0).filter((line2) => !/^[#>*`|_\-\s]+$/.test(line2)).filter((line2) => !/^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(line2));
-  return bulletLines.length > 0;
+  let inList = false;
+  return stripPlanPlaceholderSignals(section).split("\n").some((line2) => {
+    const bullet = /^\s*(?:[-*+]\s+|\d+\.\s+)(.*)$/.exec(line2);
+    if (bullet) {
+      inList = true;
+      return isSubstantivePlanLine(bullet[1]);
+    }
+    if (inList && /^(?: {2,}|\t)/.test(line2)) return isSubstantivePlanLine(line2);
+    if (line2.trim()) inList = false;
+    return false;
+  });
 }
 function escapeRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -44886,8 +44899,15 @@ function extractFrontmatter(content) {
 }
 function normalizeFrontmatterScalar(value) {
   const trimmed = value.trim();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    try {
+      const decoded = JSON.parse(trimmed);
+      if (typeof decoded === "string") return decoded.trim();
+    } catch {
+    }
+  }
   if (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
-    return trimmed.slice(1, -1).trim();
+    return trimmed.slice(1, -1).replace(/''/g, "'").trim();
   }
   return trimmed;
 }
@@ -44896,7 +44916,7 @@ function parseInlineArray(value) {
   if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
     return [];
   }
-  return trimmed.slice(1, -1).split(",").map((entry) => normalizeFrontmatterScalar(entry)).filter((entry) => entry.length > 0);
+  return Array.from(trimmed.slice(1, -1).matchAll(/\s*("(?:\\.|[^"\\])*"|'(?:''|[^'])*'|[^,]+)\s*(?:,|$)/g)).map((entry) => normalizeFrontmatterScalar(entry[1])).filter((entry) => entry.length > 0);
 }
 function parsePlanFrontmatter(content) {
   const frontmatter = extractFrontmatter(content);
@@ -44989,7 +45009,9 @@ function parseExternalServiceProceedWithoutIt(value) {
   return null;
 }
 function parsePlanExternalServicePrerequisites(section) {
-  const rows = extractMarkdownTableRows(section);
+  const rows = extractMarkdownTableRows(section).map((row) => row.map(
+    (cell) => cell.replace(/<br\s*\/?\s*>/gi, "\n").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+  ));
   if (rows.length === 1 && rows[0]?.length >= 6 && rows[0][0]?.trim().toLowerCase() === "none" && rows[0][1]?.trim().toLowerCase() === "none") {
     return [];
   }
@@ -45179,9 +45201,9 @@ function sourceRegisterRowReferenceText(row) {
   return [row.path_or_url].filter(Boolean).join("\n");
 }
 function sourceRegisterRowHasConcreteEvidence(row) {
-  const reference = sourceRegisterRowReferenceText(row).trim();
-  const suppliedLabel = /^supplied$/i.test(row.lane?.trim() ?? "") && reference.length > 0 && !/^(?:none|null|undefined|n\/?a|unknown|unchecked|tbd|todo|<[^>]+>)$/i.test(reference);
-  return suppliedLabel || hasConcreteStructuredSourceReference(reference);
+  const reference2 = sourceRegisterRowReferenceText(row).trim();
+  const suppliedLabel = /^supplied$/i.test(row.lane?.trim() ?? "") && reference2.length > 0 && !/^(?:none|null|undefined|n\/?a|unknown|unchecked|tbd|todo|<[^>]+>)$/i.test(reference2);
+  return suppliedLabel || hasConcreteStructuredSourceReference(reference2);
 }
 function evidenceRowId(row) {
   return row.evidence_id || "";
@@ -45400,17 +45422,17 @@ function scanResearchMarkdown(content) {
       activeFence = { marker: opening[1][0], length: opening[1].length };
       return { text: text2, fenced: true };
     }
-    const heading = text2.match(/^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*\r?$/u);
+    const heading2 = text2.match(/^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*\r?$/u);
     return {
       text: text2,
       fenced: false,
-      ...heading ? { heading: { level: heading[1].length, title: stripResearchHeadingAdornment(heading[2]) } } : {}
+      ...heading2 ? { heading: { level: heading2[1].length, title: stripResearchHeadingAdornment(heading2[2]) } } : {}
     };
   });
 }
-function extractResearchMarkdownSection(content, heading, level = 2) {
+function extractResearchMarkdownSection(content, heading2, level = 2) {
   const lines3 = scanResearchMarkdown(content);
-  const start = lines3.findIndex((line2) => line2.heading?.level === level && line2.heading.title === heading);
+  const start = lines3.findIndex((line2) => line2.heading?.level === level && line2.heading.title === heading2);
   if (start === -1) return "";
   const next = lines3.findIndex((line2, index) => index > start && line2.heading !== void 0 && line2.heading.level <= level);
   return lines3.slice(start + 1, next === -1 ? void 0 : next).map((line2) => line2.text).join("\n").trim();
@@ -45432,7 +45454,7 @@ function normalizeResearchHeadingKey(value) {
 }
 function canonicalizeResearchRequiredHeadings(content) {
   const canonicalHeadingByKey = new Map(
-    RESEARCH_CANONICAL_HEADINGS.map((heading) => [normalizeResearchHeadingKey(heading), heading])
+    RESEARCH_CANONICAL_HEADINGS.map((heading2) => [normalizeResearchHeadingKey(heading2), heading2])
   );
   for (const [alias, canonical] of Object.entries({
     Overview: "Summary",
@@ -45445,9 +45467,9 @@ function canonicalizeResearchRequiredHeadings(content) {
   })) canonicalHeadingByKey.set(normalizeResearchHeadingKey(alias), canonical);
   const canonicalizedHeadings = [];
   const unmatchedTopLevelHeadings = [];
-  const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line2, heading }) => {
-    if (heading?.level !== 2) return line2;
-    const originalHeading = heading.title;
+  const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line2, heading: heading2 }) => {
+    if (heading2?.level !== 2) return line2;
+    const originalHeading = heading2.title;
     const canonicalHeading = canonicalHeadingByKey.get(normalizeResearchHeadingKey(originalHeading));
     if (!canonicalHeading) {
       unmatchedTopLevelHeadings.push(originalHeading);
@@ -45485,19 +45507,6 @@ function hasSubstantiveResearchSection(section) {
     return /[\p{L}\p{N}]/u.test(line2);
   });
 }
-function matchedScaffoldPlaceholderSignals(content, placeholderSignals, options = {}) {
-  const matchedSignals = uniqueStrings(
-    placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal))
-  );
-  const singleSignalMatches = matchedSignals.filter(
-    (signal) => options.singleSignalPatterns?.some((pattern) => pattern.test(signal))
-  );
-  return uniqueStrings([
-    ...(options.includeScaffoldMarker ?? true) && content.includes(SCAFFOLD_GENERATED_MARKER) ? [SCAFFOLD_GENERATED_MARKER] : [],
-    ...singleSignalMatches,
-    ...matchedSignals.length >= MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES ? matchedSignals : []
-  ]);
-}
 function matchedDiscussionScaffoldRows(content, signals) {
   const rows = stripResearchFencedCodeBlocks(content).split(/\r?\n/).flatMap((line2) => {
     const trimmed = line2.trim();
@@ -45522,9 +45531,9 @@ function validateResearchArtifactContent(content) {
   const diagnostics = [];
   const normalizedContent = canonicalizeResearchHeadingLines(content);
   const visible = stripResearchFencedCodeBlocks(normalizedContent);
-  const issue2 = (heading, code, message, repair) => {
+  const issue2 = (heading2, code, message, repair) => {
     issues.push(message);
-    diagnostics.push(phaseArtifactDiagnostic({ artifact: "research", path: heading ? `content.sections.${heading}` : "content", heading, code, message, repair }));
+    diagnostics.push(phaseArtifactDiagnostic({ artifact: "research", path: heading2 ? `content.sections.${heading2}` : "content", heading: heading2, code, message, repair }));
   };
   if (!/^#\s+\S[^\n]*\r?(?:\n|$)/.test(visible.trimStart())) issue2(
     void 0,
@@ -45539,18 +45548,18 @@ function validateResearchArtifactContent(content) {
     "Replace unfilled placeholders with the actual findings or omit the optional section."
   );
   const headings = new Set(scanResearchMarkdown(normalizedContent).filter((line2) => line2.heading?.level === 2).map((line2) => line2.heading.title));
-  for (const heading of REQUIRED_RESEARCH_SECTIONS) {
-    const exists3 = headings.has(heading);
+  for (const heading2 of REQUIRED_RESEARCH_SECTIONS) {
+    const exists3 = headings.has(heading2);
     if (!exists3) {
-      issue2(heading, "research.heading_missing", `Research needs ${heading} content.`, `Include a ${heading} section with actual research; prose, bullets and tables are all accepted.`);
+      issue2(heading2, "research.heading_missing", `Research needs ${heading2} content.`, `Include a ${heading2} section with actual research; prose, bullets and tables are all accepted.`);
       continue;
     }
-    const section = extractResearchMarkdownSection(visible, heading);
+    const section = extractResearchMarkdownSection(visible, heading2);
     if (!hasSubstantiveResearchSection(section)) issue2(
-      heading,
+      heading2,
       "research.section_non_substantive",
-      `Research section ${heading} needs actual findings rather than an empty scaffold or code-only example.`,
-      `Populate ${heading} with the actual research content.`
+      `Research section ${heading2} needs actual findings rather than an empty scaffold or code-only example.`,
+      `Populate ${heading2} with the actual research content.`
     );
   }
   const recommendationRows = collectResearchRecommendationRows(normalizedContent);
@@ -45618,13 +45627,13 @@ function collectReferencedSummaryPaths(section, summaryPaths) {
 }
 function validateRequiredMarkdownSections(content, artifactLabel, headings) {
   const issues = [];
-  for (const heading of headings) {
-    if (!new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(content)) {
-      issues.push(`${artifactLabel} is missing required section: ${heading}.`);
+  for (const heading2 of headings) {
+    if (!new RegExp(`(?:^|\\n)## ${escapeRegex2(heading2)}\\s*$`, "m").test(content)) {
+      issues.push(`${artifactLabel} is missing required section: ${heading2}.`);
       continue;
     }
-    if (extractMarkdownSection5(content, heading).trim().length === 0) {
-      issues.push(`${artifactLabel} section ${heading} must not be empty.`);
+    if (extractMarkdownSection5(content, heading2).trim().length === 0) {
+      issues.push(`${artifactLabel} section ${heading2} must not be empty.`);
     }
   }
   return issues;
@@ -45636,6 +45645,11 @@ function extractTaskSubsection(taskBlock, subsectionHeading) {
   );
   return match?.[1]?.trim() ?? "";
 }
+function planSyntaxContent(content) {
+  return scanResearchMarkdown(content.replace(/\r\n/g, "\n")).map(
+    ({ text: text2, fenced }) => fenced && /^#{1,6}[ \t]/u.test(text2) ? `    ${text2}` : text2
+  ).join("\n");
+}
 function isPlaceholderOnlyTaskHeading(headingText) {
   const title = headingText.replace(/^Task\s+\d+(?::\s*)?/i, "").trim();
   return /^(?:todo|to do|tbd|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
@@ -45644,11 +45658,6 @@ function isPlaceholderOnlyTaskHeading(headingText) {
 }
 function isBlankOrPlaceholderPlanLine(line2) {
   return line2.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
-    line2
-  );
-}
-function isSubjectivePlanLine(line2) {
-  return /(?:\blooks\b|\bfeels\b|\bsounds\b|\bseems\b|\bgood\b|\bbetter\b|\bnice\b|\bclean\b|\bclear\b|\brobust\b|\bstable\b|\bfast\b|\bsimple\b|\beasy\b|\beasier\b|\bseamless\b|\bhelpful\b|\buseful\b|\bintuitive\b|\bpolished\b|\bworking\b|\bworks\b)/i.test(
     line2
   );
 }
@@ -45663,6 +45672,7 @@ function normalizePlanPathForValidation(value) {
   return normalized;
 }
 function isRepoRelativePlanPath(value) {
+  if (/[\u0000-\u001f\u007f]/u.test(value)) return false;
   const rawValue = value.trim().replace(/\\/g, "/");
   if (rawValue.length === 0) {
     return false;
@@ -45796,19 +45806,7 @@ function hasConcretePlanSubsectionContent(section) {
   if (meaningfulLines.length === 0) {
     return false;
   }
-  return meaningfulLines.some((line2) => {
-    if (isBlankOrPlaceholderPlanLine(line2)) {
-      return false;
-    }
-    if (/`[^`]+`/.test(line2) || /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line2) || /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line2) || /\/blu-[\w-]+(?:\b|$)/i.test(line2) || /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line2) || !isGlobPlanPath(line2) && isRepoRelativePlanPath(line2)) {
-      return true;
-    }
-    if (isSubjectivePlanLine(line2)) {
-      return false;
-    }
-    const words = line2.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g) ?? [];
-    return words.length >= 3;
-  });
+  return meaningfulLines.some(isSubstantivePlanLine);
 }
 function validateObjectivePlanBulletList(section, artifactLabel) {
   const issues = [];
@@ -45828,12 +45826,6 @@ function validateObjectivePlanBulletList(section, artifactLabel) {
   ];
   for (const bullet of bulletItems) {
     if (!objectiveSignals.some((signal) => signal.test(bullet))) {
-      if (isSubjectivePlanLine(bullet)) {
-        issues.push(
-          `${artifactLabel} must use objectively checkable bullets instead of subjective language: ${bullet}.`
-        );
-        continue;
-      }
       warnings.push(
         `${artifactLabel} must use grep/test-verifiable or otherwise objectively checkable bullets: ${bullet}.`
       );
@@ -45845,8 +45837,8 @@ function validatePlanTaskBlock(taskBlock, taskNumber) {
   const issues = [];
   const warnings = [];
   const lines3 = taskBlock.split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0);
-  const heading = lines3[0] ?? "";
-  const headingText = heading.replace(/^###\s+/, "").trim();
+  const heading2 = lines3[0] ?? "";
+  const headingText = heading2.replace(/^###\s+/, "").trim();
   if (headingText.length === 0 || /^Task\s+\d+(?::\s*)?$/i.test(headingText) || isPlaceholderOnlyTaskHeading(headingText)) {
     issues.push(`Task ${taskNumber} must use a concrete heading.`);
   }
@@ -45856,15 +45848,14 @@ function validatePlanTaskBlock(taskBlock, taskNumber) {
       issues.push(`Task ${taskNumber} subsection ${subsectionHeading} must contain concrete content.`);
     }
   }
-  for (const subsectionHeading of ["Read First", "Action"]) {
-    const subsection = extractTaskSubsection(taskBlock, subsectionHeading);
-    issues.push(
-      ...validatePlanTaskPathList(
-        subsection,
-        `Task ${taskNumber} subsection ${subsectionHeading}`
-      )
-    );
-  }
+  issues.push(...validatePlanTaskPathList(
+    extractTaskSubsection(taskBlock, "Read First"),
+    `Task ${taskNumber} subsection Read First`
+  ));
+  warnings.push(...validatePlanTaskPathList(
+    extractTaskSubsection(taskBlock, "Action"),
+    `Task ${taskNumber} subsection Action`
+  ));
   const acceptanceCriteria = extractTaskSubsection(taskBlock, "Acceptance Criteria");
   const acceptanceCriteriaValidation = validateObjectivePlanBulletList(
     acceptanceCriteria,
@@ -46048,8 +46039,8 @@ function summarizeMarkdownTableRow(line2) {
   }
   return cells[0] ?? "";
 }
-function scoreDigestSectionHeading(heading) {
-  const normalized = heading.trim().toLowerCase();
+function scoreDigestSectionHeading(heading2) {
+  const normalized = heading2.trim().toLowerCase();
   const highPriorityPatterns = [
     /(?:^|\b)verdict(?:\b|$)/i,
     /(?:^|\b)decision(?:\b|$)/i,
@@ -46215,7 +46206,7 @@ function validateCodebaseArtifactContent(content, artifactId) {
     contract.requiredHeadings
   );
   const populatedRequiredSections = contract.requiredHeadings.filter(
-    (heading) => extractMarkdownSection5(content, heading).trim().length > 0
+    (heading2) => extractMarkdownSection5(content, heading2).trim().length > 0
   );
   const normalizedLines = content.replace(/\r\n/g, "\n").split("\n").map((line2) => line2.trim());
   const meaningfulLines = normalizedLines.filter(
@@ -46244,14 +46235,14 @@ function validateCodebaseArtifactContent(content, artifactId) {
       `${contract.canonicalName} artifact must include either substantive mapped prose or at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`
     );
   }
-  for (const heading of contract.requiredHeadings) {
-    const section = extractMarkdownSection5(content, heading);
+  for (const heading2 of contract.requiredHeadings) {
+    const section = extractMarkdownSection5(content, heading2);
     if (section.trim().length === 0) {
       continue;
     }
     if (!hasBootstrapText(section, 2)) {
       issues.push(
-        `${contract.canonicalName} artifact section ${heading} must contain substantive repo evidence instead of scaffold placeholders.`
+        `${contract.canonicalName} artifact section ${heading2} must contain substantive repo evidence instead of scaffold placeholders.`
       );
     }
   }
@@ -46382,9 +46373,9 @@ function validateBootstrapRequirementsArtifact(content, options = {}) {
       "Traceability Notes",
       "Open Questions"
     ];
-    for (const heading of requiredHeadings) {
-      if (extractMarkdownSection5(content, heading).trim().length === 0) {
-        issues.push(`Requirements artifact is missing required section: ${heading}.`);
+    for (const heading2 of requiredHeadings) {
+      if (extractMarkdownSection5(content, heading2).trim().length === 0) {
+        issues.push(`Requirements artifact is missing required section: ${heading2}.`);
       }
     }
     if (!hasRequirementTableRows(requirementsTable)) {
@@ -46432,7 +46423,7 @@ function validateBootstrapRequirementsArtifact(content, options = {}) {
       required: false
     }
   ];
-  for (const { summaryLabel, heading, section, required: required2 } of scopeSummaryEntries) {
+  for (const { summaryLabel, heading: heading2, section, required: required2 } of scopeSummaryEntries) {
     const scopeMatch = scopeSummary.match(
       new RegExp(`^-\\s*${summaryLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:\\s*(.+)$`, "im")
     );
@@ -46440,8 +46431,8 @@ function validateBootstrapRequirementsArtifact(content, options = {}) {
     const hasScopeEntries = summaryValue.length > 0 && !/^none$/i.test(summaryValue);
     const summaryRequirementIds = hasScopeEntries ? extractRequirementIdsFromMarkdown(summaryValue) : [];
     const groupedRequirementIds = extractBootstrapRequirementListIds(section);
-    scopeSummaryIds.set(heading, summaryRequirementIds);
-    groupedScopeIds.set(heading, groupedRequirementIds);
+    scopeSummaryIds.set(heading2, summaryRequirementIds);
+    groupedScopeIds.set(heading2, groupedRequirementIds);
     if (required2 && !hasScopeEntries && isBootstrapShape) {
       issues.push(
         "Requirements artifact section Scope Summary must list committed v1 requirement IDs."
@@ -46452,13 +46443,13 @@ function validateBootstrapRequirementsArtifact(content, options = {}) {
     }
     if (section.trim().length === 0) {
       issues.push(
-        `Requirements artifact section ${heading} must include grouped requirement entries with durable IDs.`
+        `Requirements artifact section ${heading2} must include grouped requirement entries with durable IDs.`
       );
       continue;
     }
     if (!/###\s+\S+/m.test(section) || !/^- `[^`]+`:\s*\S+/m.test(section)) {
       issues.push(
-        `Requirements artifact section ${heading} must include grouped requirement entries with durable IDs.`
+        `Requirements artifact section ${heading2} must include grouped requirement entries with durable IDs.`
       );
     }
   }
@@ -46477,12 +46468,12 @@ function validateBootstrapRequirementsArtifact(content, options = {}) {
         );
       }
     }
-    for (const { heading } of scopeSummaryEntries) {
-      const summaryRequirementIds2 = scopeSummaryIds.get(heading) ?? [];
-      const groupedRequirementIds = groupedScopeIds.get(heading) ?? [];
+    for (const { heading: heading2 } of scopeSummaryEntries) {
+      const summaryRequirementIds2 = scopeSummaryIds.get(heading2) ?? [];
+      const groupedRequirementIds = groupedScopeIds.get(heading2) ?? [];
       if (summaryRequirementIds2.length !== groupedRequirementIds.length) {
         issues.push(
-          `Requirements artifact section ${heading} must list the same requirement IDs as Scope Summary.`
+          `Requirements artifact section ${heading2} must list the same requirement IDs as Scope Summary.`
         );
         continue;
       }
@@ -46490,7 +46481,7 @@ function validateBootstrapRequirementsArtifact(content, options = {}) {
       const groupedRequirementIdSet = new Set(groupedRequirementIds);
       if (summaryRequirementIds2.some((requirementId) => !groupedRequirementIdSet.has(requirementId)) || groupedRequirementIds.some((requirementId) => !summaryRequirementIdSet.has(requirementId))) {
         issues.push(
-          `Requirements artifact section ${heading} must list the same requirement IDs as Scope Summary.`
+          `Requirements artifact section ${heading2} must list the same requirement IDs as Scope Summary.`
         );
       }
     }
@@ -46770,12 +46761,12 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
 }
 function countNonEmptyContractSections(content, headings) {
   return headings.reduce(
-    (count, heading) => count + (extractMarkdownSection5(content, heading).trim().length > 0 ? 1 : 0),
+    (count, heading2) => count + (extractMarkdownSection5(content, heading2).trim().length > 0 ? 1 : 0),
     0
   );
 }
-function exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) {
-  return `Populate ## ${heading} with concrete contract-compliant detail, or use exactly \`${exactEmptySentinel}\` when that section intentionally has no remaining items, then retry blueprint_phase_artifact_write.`;
+function exactEmptySentinelRepairInstruction(heading2, exactEmptySentinel) {
+  return `Populate ## ${heading2} with concrete contract-compliant detail, or use exactly \`${exactEmptySentinel}\` when that section intentionally has no remaining items, then retry blueprint_phase_artifact_write.`;
 }
 function detectUiSpecAuthoringMode(content, requiredHeadings) {
   if (isExplicitUiSkipRationale(content)) {
@@ -46789,9 +46780,9 @@ function detectUiSpecAuthoringMode(content, requiredHeadings) {
     return "skip";
   }
   const contractHeadings = requiredHeadings.filter(
-    (heading) => heading !== "Outcome Mode" && heading !== "Next Safe Action"
+    (heading2) => heading2 !== "Outcome Mode" && heading2 !== "Next Safe Action"
   );
-  if (contractHeadings.some((heading) => extractMarkdownSection5(content, heading).trim().length > 0)) {
+  if (contractHeadings.some((heading2) => extractMarkdownSection5(content, heading2).trim().length > 0)) {
     return "contract";
   }
   return "unknown";
@@ -46905,20 +46896,20 @@ function validateSpecArtifactContent(content) {
     );
   }
   const missingRequiredSections = contract.requiredHeadings.filter(
-    (heading) => extractMarkdownSection5(content, heading).trim().length === 0
+    (heading2) => extractMarkdownSection5(content, heading2).trim().length === 0
   );
   if (missingRequiredSections.length > 0) {
     const issue2 = `Spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`;
     issues.push(issue2);
     diagnostics.push(
       ...missingRequiredSections.map(
-        (heading) => phaseArtifactDiagnostic({
+        (heading2) => phaseArtifactDiagnostic({
           artifact,
-          path: `content.sections.${heading}`,
+          path: `content.sections.${heading2}`,
           code: "spec.missing_required_section",
-          message: `Spec artifact is missing required contract section: ${heading}.`,
-          heading,
-          missing: [heading]
+          message: `Spec artifact is missing required contract section: ${heading2}.`,
+          heading: heading2,
+          missing: [heading2]
         })
       )
     );
@@ -47099,7 +47090,7 @@ function isLegacyPhaseContextShell(content) {
   }
   const contextContract = readArtifactContract("phase.context");
   const hasNoModernContextSections = contextContract.requiredHeadings.every(
-    (heading) => extractMarkdownSection5(content, heading).trim().length === 0
+    (heading2) => extractMarkdownSection5(content, heading2).trim().length === 0
   );
   if (!hasNoModernContextSections) {
     return false;
@@ -47148,7 +47139,7 @@ function validatePhaseArtifactContent(content, artifact) {
   }
   const presentRequiredSections = countNonEmptyContractSections(content, contract.requiredHeadings);
   const missingRequiredSections = contract.requiredHeadings.filter(
-    (heading) => artifact === "context" ? !content.split(/\r?\n/).some((line2) => line2.trim() === `## ${heading}`) : extractMarkdownSection5(content, heading).trim().length === 0
+    (heading2) => artifact === "context" ? !content.split(/\r?\n/).some((line2) => line2.trim() === `## ${heading2}`) : extractMarkdownSection5(content, heading2).trim().length === 0
   );
   const uiSpecMode = artifact === "ui-spec" ? detectUiSpecAuthoringMode(content, contract.requiredHeadings) : void 0;
   if (artifact === "ui-spec" && isExplicitUiSkipRationale(content)) {
@@ -47187,16 +47178,16 @@ function validatePhaseArtifactContent(content, artifact) {
     issues.push(issue2);
     diagnostics.push(
       ...missingRequiredSections.map(
-        (heading) => {
-          const exactEmptySentinel = contract.sectionValidations?.[heading]?.exactEmptySentinel;
+        (heading2) => {
+          const exactEmptySentinel = contract.sectionValidations?.[heading2]?.exactEmptySentinel;
           return phaseArtifactDiagnostic({
             artifact,
-            path: `content.sections.${heading}`,
+            path: `content.sections.${heading2}`,
             code: "context.missing_required_section",
-            message: `Context artifact is missing required contract section: ${heading}.`,
-            heading,
-            missing: [heading],
-            repair: exactEmptySentinel ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) : void 0
+            message: `Context artifact is missing required contract section: ${heading2}.`,
+            heading: heading2,
+            missing: [heading2],
+            repair: exactEmptySentinel ? exactEmptySentinelRepairInstruction(heading2, exactEmptySentinel) : void 0
           });
         }
       )
@@ -47206,13 +47197,13 @@ function validatePhaseArtifactContent(content, artifact) {
     issues.push(issue2);
     diagnostics.push(
       ...missingRequiredSections.map(
-        (heading) => phaseArtifactDiagnostic({
+        (heading2) => phaseArtifactDiagnostic({
           artifact,
-          path: `content.sections.${heading}`,
+          path: `content.sections.${heading2}`,
           code: "ui-spec.missing_required_section",
-          message: `UI spec artifact is missing required contract section: ${heading}.`,
-          heading,
-          missing: [heading],
+          message: `UI spec artifact is missing required contract section: ${heading2}.`,
+          heading: heading2,
+          missing: [heading2],
           uiSpecMode
         })
       )
@@ -47287,30 +47278,30 @@ function hasActionableValidationListSignal(section) {
 function isLiteralNoneValidationCell(value) {
   return normalizeValidationSignal(value ?? "") === "none";
 }
-function hasMarkdownSection(content, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function hasMarkdownSection(content, heading2) {
+  const escapedHeading = heading2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*(?:\\n|$)`).test(content);
 }
-function validateOptionalVerificationListSection(content, heading, issues) {
-  if (!hasMarkdownSection(content, heading)) {
+function validateOptionalVerificationListSection(content, heading2, issues) {
+  if (!hasMarkdownSection(content, heading2)) {
     return;
   }
-  const section = extractMarkdownSection5(content, heading);
+  const section = extractMarkdownSection5(content, heading2);
   if (!hasActionableValidationListSignal(section) && !/\bnone\b/i.test(section)) {
-    issues.push(`Verification artifact optional section ${heading} must include at least one populated bullet.`);
+    issues.push(`Verification artifact optional section ${heading2} must include at least one populated bullet.`);
   }
 }
-function validateOptionalVerificationTableSection(content, heading, requiredColumns, issues) {
-  if (!hasMarkdownSection(content, heading)) {
+function validateOptionalVerificationTableSection(content, heading2, requiredColumns, issues) {
+  if (!hasMarkdownSection(content, heading2)) {
     return;
   }
-  const rows = extractMarkdownTableDataRows(extractMarkdownSection5(content, heading));
+  const rows = extractMarkdownTableDataRows(extractMarkdownSection5(content, heading2));
   if (rows.length === 0) {
-    issues.push(`Verification artifact optional section ${heading} must include at least one populated table row.`);
+    issues.push(`Verification artifact optional section ${heading2} must include at least one populated table row.`);
     return;
   }
   if (rows.some((cells) => cells.length < requiredColumns)) {
-    issues.push(`Verification artifact optional section ${heading} must keep all expected table columns populated.`);
+    issues.push(`Verification artifact optional section ${heading2} must keep all expected table columns populated.`);
   }
 }
 function hasActionableVerificationStructuredGapSignal(content) {
@@ -47951,7 +47942,7 @@ function validateReportArtifactContent(content, reportName2) {
     "Optional Gaps"
   ];
   const hasStructuredMilestoneAuditGapSections = isMilestoneAudit ? milestoneAuditGapHeadings.some(
-    (heading) => new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(content)
+    (heading2) => new RegExp(`(?:^|\\n)## ${escapeRegex2(heading2)}\\s*$`, "m").test(content)
   ) : false;
   const hasLegacyMilestoneAuditGapSummary = isMilestoneAudit ? /(?:^|\n)## Gaps Found\s*$/m.test(content) : false;
   const legacyMilestoneAuditCompatibility = isMilestoneAudit && hasLegacyMilestoneAuditGapSummary && !hasStructuredMilestoneAuditGapSections;
@@ -48031,16 +48022,16 @@ function validateReportArtifactContent(content, reportName2) {
       ])
     );
     if (hasStructuredGapSections) {
-      for (const [heading, section] of gapSections) {
+      for (const [heading2, section] of gapSections) {
         const rows = extractMarkdownTableRows(section);
         if (rows.length === 0) {
-          issues.push(`Report artifact section ${heading} must include at least one structured gap row.`);
+          issues.push(`Report artifact section ${heading2} must include at least one structured gap row.`);
           continue;
         }
         for (const row of rows) {
           if (row.length !== 4) {
             issues.push(
-              `Report artifact section ${heading} must keep each gap row in the Gap ID, Surface, Evidence, and Repair columns.`
+              `Report artifact section ${heading2} must keep each gap row in the Gap ID, Surface, Evidence, and Repair columns.`
             );
             continue;
           }
@@ -48050,7 +48041,7 @@ function validateReportArtifactContent(content, reportName2) {
     if (!hasStructuredGapSections && hasLegacyGapSummary) {
       const filteredValidationIssues = validation.issues.filter(
         (issue2) => !milestoneAuditGapHeadings.some(
-          (heading) => issue2.includes(`missing required section: ${heading}`) || issue2.includes(`section ${heading} must not be empty.`)
+          (heading2) => issue2.includes(`missing required section: ${heading2}`) || issue2.includes(`section ${heading2} must not be empty.`)
         )
       );
       return {
@@ -48127,15 +48118,15 @@ function validateReportArtifactContent(content, reportName2) {
   }
   return validation;
 }
-function extractReportMarkerValue(content, heading, marker) {
-  const section = extractMarkdownSection5(content, heading);
+function extractReportMarkerValue(content, heading2, marker) {
+  const section = extractMarkdownSection5(content, heading2);
   const match = section.match(
     new RegExp(`^- \\*\\*${escapeRegex2(marker)}:\\*\\*\\s*(.+)$`, "m")
   );
   return match?.[1]?.trim() ?? null;
 }
-function validateReportEnumMarker(content, heading, marker, allowedValues, artifactLabel) {
-  const value = extractReportMarkerValue(content, heading, marker);
+function validateReportEnumMarker(content, heading2, marker, allowedValues, artifactLabel) {
+  const value = extractReportMarkerValue(content, heading2, marker);
   if (value === null) {
     return [];
   }
@@ -48370,15 +48361,15 @@ function extractSummaryMarkdownHeadingText(line2) {
     text: match[2].trim()
   } : null;
 }
-function hasSummaryMarkdownHeading(content, heading) {
-  const expectedHeading = normalizeSummaryHeading(heading);
+function hasSummaryMarkdownHeading(content, heading2) {
+  const expectedHeading = normalizeSummaryHeading(heading2);
   return content.replace(/\r\n/g, "\n").split("\n").some((line2) => {
     const parsed = extractSummaryMarkdownHeadingText(line2.trim());
     return parsed ? normalizeSummaryHeading(parsed.text) === expectedHeading : false;
   });
 }
-function extractSummaryMarkdownSection(content, heading) {
-  const expectedHeading = normalizeSummaryHeading(heading);
+function extractSummaryMarkdownSection(content, heading2) {
+  const expectedHeading = normalizeSummaryHeading(heading2);
   const lines3 = content.replace(/\r\n/g, "\n").split("\n");
   let startIndex = -1;
   let startLevel = 0;
@@ -48607,16 +48598,16 @@ function validateSummaryArtifactContent(content) {
   if (!firstNonEmptyLine || !extractSummaryMarkdownHeadingText(firstNonEmptyLine)) {
     warnings.push("Summary artifact should start with a Markdown heading.");
   }
-  const requiredSectionWarnings = contract.requiredHeadings.flatMap((heading) => {
-    if (!hasSummaryMarkdownHeading(normalizedContent, heading)) {
-      return [`Summary artifact is missing preferred section: ${heading}.`];
+  const requiredSectionWarnings = contract.requiredHeadings.flatMap((heading2) => {
+    if (!hasSummaryMarkdownHeading(normalizedContent, heading2)) {
+      return [`Summary artifact is missing preferred section: ${heading2}.`];
     }
-    if (extractSummaryMarkdownSection(normalizedContent, heading).trim().length === 0) {
-      return [`Summary artifact section ${heading} should not be empty.`];
+    if (extractSummaryMarkdownSection(normalizedContent, heading2).trim().length === 0) {
+      return [`Summary artifact section ${heading2} should not be empty.`];
     }
     return [];
   });
-  const hasLegacyConciseSummary = ["Outcome", "Changes Made", "Verification", "Follow-Ups", "Evidence"].every((heading) => extractSummaryMarkdownSection(normalizedContent, heading).trim().length > 0);
+  const hasLegacyConciseSummary = ["Outcome", "Changes Made", "Verification", "Follow-Ups", "Evidence"].every((heading2) => extractSummaryMarkdownSection(normalizedContent, heading2).trim().length > 0);
   warnings.push(...requiredSectionWarnings);
   for (const marker of ["Plan", "Status"]) {
     if (!extractSummaryMarkerValue(normalizedContent, marker)) {
@@ -48687,13 +48678,15 @@ function validateStrictSummaryArtifactContent(content, options = {}) {
 function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   const issues = [];
   const warnings = [];
+  content = planSyntaxContent(content);
   const metadata = parsePlanFrontmatter(content);
   if (!extractFrontmatter(content)) {
     issues.push("Plan artifact must start with YAML-style frontmatter.");
   }
-  const placeholderSignals = matchedScaffoldPlaceholderSignals(content, PLAN_PLACEHOLDER_SIGNALS, {
-    singleSignalPatterns: [/^Replace with /i]
-  });
+  const placeholderSignals = matchedDiscussionScaffoldRows(content, [
+    ...PLAN_PLACEHOLDER_SIGNALS,
+    SCAFFOLD_GENERATED_MARKER
+  ]);
   if (placeholderSignals.length > 0) {
     issues.push(
       "Plan artifact still contains scaffold placeholder text and must be replaced with execution-ready content."
@@ -48749,12 +48742,12 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   if (metadata.autonomous === null) {
     issues.push("Plan frontmatter must declare autonomous as true or false.");
   }
-  for (const heading of REQUIRED_PLAN_SECTIONS) {
+  for (const heading2 of REQUIRED_PLAN_SECTIONS) {
     if (!new RegExp(
-      `(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`,
+      `(?:^|\\n)## ${escapeRegex2(heading2)}\\s*$`,
       "m"
     ).test(content)) {
-      issues.push(`Plan artifact is missing required section: ${heading}.`);
+      issues.push(`Plan artifact is missing required section: ${heading2}.`);
     }
   }
   const tasksSection = extractMarkdownSection5(content, "Tasks");
@@ -49137,11 +49130,11 @@ function buildScaffoldPhaseDirectoryPath(phaseNumber, phaseTitle) {
   return `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slugifyPhaseName(phaseTitle.trim())}`;
 }
 async function prepareCarryForwardBootstrapReceipt(args) {
-  const receipt2 = emptyCarryForwardBootstrapReceipt();
+  const receipt = emptyCarryForwardBootstrapReceipt();
   const requestedContextArtifact = args.artifacts.map((artifact) => parsePhaseArtifactRequest(artifact)).find((artifact) => artifact?.kind === "CONTEXT") ?? null;
   const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   if (!args.bootstrapSeed || requestedContextArtifact === null || !await pathExists2(roadmapPath)) {
-    return receipt2;
+    return receipt;
   }
   const roadmap = parseRoadmapDocument(await fs15.readFile(roadmapPath, "utf8"));
   const firstPhaseNumber = computeNextWholePhaseNumber(roadmap.phases);
@@ -49151,11 +49144,11 @@ async function prepareCarryForwardBootstrapReceipt(args) {
   const firstContextPath = `${firstPhaseDir}/${firstPhasePrefix}-CONTEXT.md`;
   const previewedFirstPhase = args.bootstrapSeed.roadmapPhases?.[0]?.phase?.trim() ? normalizePhaseNumber(args.bootstrapSeed.roadmapPhases[0].phase) : normalizePhaseNumber(requestedContextArtifact.phasePrefix);
   const highestBasePhaseNumber = String(Number.parseInt(firstPhaseNumber, 10) - 1);
-  receipt2.highestBasePhaseNumber = highestBasePhaseNumber;
-  receipt2.firstPhaseNumber = firstPhaseNumber;
-  receipt2.firstPhasePrefix = firstPhasePrefix;
-  receipt2.firstPhaseDir = firstPhaseDir;
-  receipt2.firstContextPath = firstContextPath;
+  receipt.highestBasePhaseNumber = highestBasePhaseNumber;
+  receipt.firstPhaseNumber = firstPhaseNumber;
+  receipt.firstPhasePrefix = firstPhasePrefix;
+  receipt.firstPhaseDir = firstPhaseDir;
+  receipt.firstContextPath = firstContextPath;
   if (previewedFirstPhase !== firstPhaseNumber) {
     throw new Error(
       `Carry-forward scaffold preview is stale: bootstrapSeed first phase ${previewedFirstPhase} no longer matches the live next whole phase ${firstPhaseNumber}. Re-run /blu-new-milestone after re-reading ${BLUEPRINT_DIR}/ROADMAP.md.`
@@ -49196,7 +49189,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
       `Carry-forward scaffold would overwrite existing Phase ${firstPhaseNumber} starter artifacts at ${firstPhaseDir}. Re-run with explicit overwrite approval before writing starter docs.`
     );
   }
-  return receipt2;
+  return receipt;
 }
 function prepareBootstrapArtifactContents(context) {
   const contents = {
@@ -50380,7 +50373,7 @@ function summarizeArtifactContent(content) {
   const meaningfulLines = withoutFrontmatter.filter(
     (line2) => line2.length > 0 && !line2.startsWith("*Generated by")
   );
-  const heading = meaningfulLines.find((line2) => line2.startsWith("#"));
+  const heading2 = meaningfulLines.find((line2) => line2.startsWith("#"));
   const h1Index = meaningfulLines.findIndex((line2) => /^#\s+/.test(line2));
   const firstSectionIndex = meaningfulLines.findIndex(
     (line2, index) => index > h1Index && /^##\s+/.test(line2)
@@ -50413,7 +50406,7 @@ function summarizeArtifactContent(content) {
     })
   ].filter((part) => part.length > 0);
   return {
-    title: heading?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
+    title: heading2?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
     summary: summaryParts.length > 0 ? summaryParts.join(" | ") : "Artifact content is present and available for review.",
     evidence: []
   };
@@ -50663,15 +50656,15 @@ function reportMarkdownWriteDiagnostics(args) {
   return args.issues.map((issue2) => {
     const missingSection = issue2.match(/missing required section:\s*([^.]+)\./i)?.[1]?.trim();
     const emptySection = issue2.match(/section\s+(.+?)\s+must not be empty/i)?.[1]?.trim();
-    const heading = missingSection ?? emptySection;
+    const heading2 = missingSection ?? emptySection;
     const expectedHeadings = contract?.requiredHeadings ?? [];
     return mcpWriteDiagnostic({
-      path: heading ? `content.sections.${heading}` : args.pathValue,
+      path: heading2 ? `content.sections.${heading2}` : args.pathValue,
       code: missingSection ? "markdown.missing_required_section" : emptySection ? "markdown.empty_required_section" : "markdown.invalid",
       message: issue2,
       missing: missingSection ? [missingSection] : void 0,
       allowedValues: expectedHeadings.length > 0 ? [...expectedHeadings] : void 0,
-      repair: heading ? `Add and populate the ## ${heading} section. Expected sections for ${contractId ?? args.reportName}: ${expectedHeadings.join(", ")}. Read blueprint_artifact_contract_read before retrying; do not hand-write .blueprint directly.` : `Repair the Markdown against ${contractId ?? args.reportName}; read blueprint_artifact_contract_read for the canonical scaffold before retrying.`,
+      repair: heading2 ? `Add and populate the ## ${heading2} section. Expected sections for ${contractId ?? args.reportName}: ${expectedHeadings.join(", ")}. Read blueprint_artifact_contract_read before retrying; do not hand-write .blueprint directly.` : `Repair the Markdown against ${contractId ?? args.reportName}; read blueprint_artifact_contract_read for the canonical scaffold before retrying.`,
       retryable: true
     });
   });
@@ -50681,14 +50674,14 @@ function codebaseWriteDiagnostics(args) {
   return args.issues.map((issue2) => {
     const missingSection = issue2.match(/missing required section:\s*([^.]+)\./i)?.[1]?.trim();
     const emptySection = issue2.match(/section\s+(.+?)\s+must/i)?.[1]?.trim();
-    const heading = missingSection ?? emptySection;
+    const heading2 = missingSection ?? emptySection;
     return mcpWriteDiagnostic({
-      path: heading ? `content.sections.${heading}` : args.pathValue,
+      path: heading2 ? `content.sections.${heading2}` : args.pathValue,
       code: missingSection ? "codebase.missing_required_section" : emptySection ? "codebase.invalid_required_section" : "codebase.invalid",
       message: issue2,
       missing: missingSection ? [missingSection] : void 0,
       allowedValues: [...contract.requiredHeadings],
-      repair: heading ? `Add and populate the ## ${heading} section using concrete repository evidence. Expected sections for ${args.artifactId}: ${contract.requiredHeadings.join(", ")}. Use blueprint_artifact_contract_read or blueprint_artifact_scaffold before retrying.` : `Repair ${args.artifactId} against its artifact contract and retry through the MCP write tool.`,
+      repair: heading2 ? `Add and populate the ## ${heading2} section using concrete repository evidence. Expected sections for ${args.artifactId}: ${contract.requiredHeadings.join(", ")}. Use blueprint_artifact_contract_read or blueprint_artifact_scaffold before retrying.` : `Repair ${args.artifactId} against its artifact contract and retry through the MCP write tool.`,
       retryable: true
     });
   });
@@ -53323,7 +53316,7 @@ async function collectAuditFixResidualDiagnostics(args) {
 function markdownCell2(value) {
   return String(value ?? "none").replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, " ").replace(/\|/g, "\\|").trim() || "none";
 }
-function renderBulletList2(items, fallback = "none") {
+function renderBulletList3(items, fallback = "none") {
   const normalized = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
   return (normalized.length > 0 ? normalized : [fallback]).map((item) => `- ${item}`).join("\n");
 }
@@ -53358,7 +53351,7 @@ ${renderMarkdownTable(["Metric", "Value"], runMetricsRows)}
 - Confidence: ${model.classification.confidence}
 - Validation Budget: ${model.classification.validationBudget}
 - Reasons:
-${renderBulletList2(model.classification.reasons).replace(/^/gm, "  ")}
+${renderBulletList3(model.classification.reasons).replace(/^/gm, "  ")}
 
 ## Depth Used
 
@@ -53367,7 +53360,7 @@ ${renderBulletList2(model.classification.reasons).replace(/^/gm, "  ")}
 - Validation: ${model.depthUsed.validation}
 - Tracker Used: ${model.depthUsed.trackerUsed ? "true" : "false"}
 - Subagents:
-${renderBulletList2(model.depthUsed.subagents).replace(/^/gm, "  ")}
+${renderBulletList3(model.depthUsed.subagents).replace(/^/gm, "  ")}
 
 ## Evidence Read
 
@@ -53406,11 +53399,11 @@ ${renderMarkdownTable(
 
 ## Risks
 
-${renderBulletList2(model.risks)}
+${renderBulletList3(model.risks)}
 
 ## Deferred Work
 
-${renderBulletList2(model.deferredWork)}
+${renderBulletList3(model.deferredWork)}
 ${runMetricsSection}
 
 ## Next Safe Action
@@ -53455,11 +53448,11 @@ function renderAddTestsReportModelContent(args) {
 
 ## Coverage Goal
 
-${renderBulletList2(args.model.coverageGoal)}
+${renderBulletList3(args.model.coverageGoal)}
 
 ## Evidence Used
 
-${renderBulletList2(args.model.evidenceUsed)}
+${renderBulletList3(args.model.evidenceUsed)}
 
 ### Summary Evidence
 
@@ -53545,7 +53538,7 @@ ${renderMarkdownTable(
 
 ## Follow-Up Fixes
 
-${renderBulletList2(args.model.followUpFixes)}
+${renderBulletList3(args.model.followUpFixes)}
 
 ## Next Safe Action
 
@@ -53583,11 +53576,11 @@ function renderAuditFixReportModelContent(args) {
 
 ## Evidence Used
 
-${renderBulletList2(args.context.selectedEvidencePaths)}
+${renderBulletList3(args.context.selectedEvidencePaths)}
 
 ### Scope Files
 
-${renderBulletList2(args.context.scopeFiles)}
+${renderBulletList3(args.context.scopeFiles)}
 
 ### Summary Evidence
 
@@ -53605,7 +53598,7 @@ ${renderMarkdownTable(
 
 ## Fix Scope
 
-${renderBulletList2(args.model.remediationSummary)}
+${renderBulletList3(args.model.remediationSummary)}
 
 ${renderMarkdownTable(
     ["Finding", "Evidence Source", "Severity", "Classification", "Reason", "Files", "Narrow Verification"],
@@ -53676,7 +53669,7 @@ ${renderMarkdownTable(
 
 ## Follow-Up Fixes
 
-${renderBulletList2(args.model.followUpFixes)}
+${renderBulletList3(args.model.followUpFixes)}
 
 - Todo capture: ${args.model.todoCapture.status} - ${args.model.todoCapture.evidence}
 
@@ -54211,7 +54204,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, RESEARCH_CONTRACT, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CANONICAL_HEADINGS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, blueprintArtifactsTestHooks, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, RESEARCH_CONTRACT, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CANONICAL_HEADINGS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, blueprintArtifactsTestHooks, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -54469,7 +54462,6 @@ var init_artifacts = __esm({
     PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS = extractPlanTemplatePlaceholderListItems(
       PLAN_CONTRACT.authoringTemplate
     );
-    MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES = 3;
     ARTIFACT_RENDERERS = {
       ".blueprint/PROJECT.md": renderProjectArtifact,
       ".blueprint/REQUIREMENTS.md": renderRequirementsArtifact,
@@ -55219,10 +55211,10 @@ async function readSession(root, relative) {
       throw new Error("Discuss session phase/path identity mismatch.");
     const journal = session.journal;
     if (journal) {
-      const receipt2 = session.requests[journal.requestId];
+      const receipt = session.requests[journal.requestId];
       const contextPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-CONTEXT.md`;
       const logPath = `${session.topology.phaseDir}/${session.topology.phasePrefix}-DISCUSSION-LOG.md`;
-      if (journal.context.path !== contextPath || journal.log && journal.log.path !== logPath || journal.revision > session.revision || !receipt2 || receipt2.revision !== journal.revision || receipt2.hash !== journal.requestHash || Object.keys(journal.stages).some((stage) => !["context", "log", "state", "refresh", "cleanup"].includes(stage)) || !/^[a-f0-9]{64}$/.test(journal.context.hash) || journal.log && !/^[a-f0-9]{64}$/.test(journal.log.hash))
+      if (journal.context.path !== contextPath || journal.log && journal.log.path !== logPath || journal.revision > session.revision || !receipt || receipt.revision !== journal.revision || receipt.hash !== journal.requestHash || Object.keys(journal.stages).some((stage) => !["context", "log", "state", "refresh", "cleanup"].includes(stage)) || !/^[a-f0-9]{64}$/.test(journal.context.hash) || journal.log && !/^[a-f0-9]{64}$/.test(journal.log.hash))
         throw new Error("Discuss publication journal identity or integrity mismatch.");
     }
     return session;
@@ -55469,9 +55461,9 @@ async function blueprintDiscussRecord(raw) {
   return locked(args, async (loc) => {
     const session = await readSession(loc.projectRoot, loc.sessionPath) ?? await initial(loc);
     const requestHash2 = digest(stable(args));
-    const replay2 = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
-    if (replay2) {
-      if (replay2.hash !== requestHash2)
+    const replay = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
+    if (replay) {
+      if (replay.hash !== requestHash2)
         return {
           status: "rejected",
           reason: "Request ID conflict",
@@ -55480,7 +55472,7 @@ async function blueprintDiscussRecord(raw) {
       await save(loc.projectRoot, loc.sessionPath, session);
       return {
         status: "reused",
-        revision: replay2.revision,
+        revision: replay.revision,
         currentRevision: session.revision,
         path: loc.sessionPath
       };
@@ -55806,7 +55798,7 @@ async function blueprintDiscussFinalize(raw) {
         journal.stages.cleanup = "complete";
         await checkpoint();
       }
-      const receipt2 = {
+      const receipt = {
         saved: true,
         outcome: "complete",
         status: "finalized",
@@ -55826,7 +55818,7 @@ async function blueprintDiscussFinalize(raw) {
         log: journal.log?.hash ?? session.baseline.log
       };
       await checkpoint();
-      return receipt2;
+      return receipt;
     } catch (error2) {
       return {
         status: "partial",
@@ -55888,9 +55880,9 @@ async function blueprintDiscussPrepare(raw) {
 function discussAuthoring(packet, records) {
   const phase = packet.selectedPhase;
   const spec = packet.artifacts.spec.status === "present" && packet.artifacts.spec.validation?.valid ? packet.artifacts.spec.content ?? "" : "";
-  const section = (heading) => {
+  const section = (heading2) => {
     const parts = spec.split(/^(?:#{2,3}\s+|\*\*)(?=[A-Za-z])/m);
-    const text2 = parts.find((part) => part.split("\n")[0].replace(/[:*]/g, "").trim().toLowerCase() === heading.toLowerCase());
+    const text2 = parts.find((part) => part.split("\n")[0].replace(/[:*]/g, "").trim().toLowerCase() === heading2.toLowerCase());
     return text2?.split("\n").slice(1).filter((line2) => /^\s*[-*]\s+/.test(line2)).map((line2) => line2.replace(/^\s*[-*]\s+(?:\[[ xX]\]\s+)?/, "").trim()).filter(Boolean);
   };
   const specGoal = spec.split(/^##\s+/m).find((part) => part.split("\n")[0].trim() === "Goal")?.split("\n").slice(1).join("\n").trim();
@@ -56346,10 +56338,10 @@ function validatePhaseResearchModelInput(raw, context = {}) {
   }
   return { model, validation };
 }
-function isExternalReference(reference) {
-  if (/^(?:doi:\s*)?10\.\d{4,9}\/\S+$/i.test(reference)) return true;
+function isExternalReference(reference2) {
+  if (/^(?:doi:\s*)?10\.\d{4,9}\/\S+$/i.test(reference2)) return true;
   try {
-    const url2 = new URL(reference);
+    const url2 = new URL(reference2);
     return ["http:", "https:"].includes(url2.protocol) && url2.hostname.length > 0;
   } catch {
     return false;
@@ -56802,12 +56794,12 @@ async function blueprintResearchSubmit(raw) {
     const researchPath = artifactPathFor(loc.resolved, "research");
     const provenancePath = researchProvenancePath(researchPath);
     if (accepted?.receipt) {
-      const receipt2 = accepted.receipt;
-      if (await researchInputHash(loc.projectRoot, researchPath) !== receipt2.contentHash || await researchInputHash(loc.projectRoot, provenancePath) !== receipt2.provenanceHash)
+      const receipt = accepted.receipt;
+      if (await researchInputHash(loc.projectRoot, researchPath) !== receipt.contentHash || await researchInputHash(loc.projectRoot, provenancePath) !== receipt.provenanceHash)
         return reject("stale", { reason: "The previously published research has changed; prepare before another publication." });
       const freshness = await readPublishedResearchFreshness(loc.projectRoot, researchPath);
       if (freshness.status !== "fresh") return reject("stale", { freshness, nextAction: "Prepare and review changed evidence before reusing research." });
-      return receipt2;
+      return receipt;
     }
     let content;
     if (!journal) {
@@ -57012,12 +57004,44 @@ var init_research = __esm({
 });
 
 // src/mcp/tools/plan-model.ts
+function planningPreparedSchema(context) {
+  const allowed = (values) => values.length ? _enum(values) : never();
+  const plan = authoringSchema.shape.plans.element;
+  const prepared = authoringSchema.extend({
+    plans: array(plan.extend({
+      tasks: array(plan.shape.tasks.element.extend({
+        requirements: array(allowed(context.knownRequirements)).min(1)
+      })).min(1),
+      evidence: array(strictObject({
+        artifact: allowed(context.knownEvidenceArtifacts),
+        rationale: narrative
+      })).optional().describe("Cite only these saved phase artifacts. Put repository source paths in task.readFirst.")
+    })).min(1)
+  });
+  return toJSONSchema(prepared, { io: "input" });
+}
+function planningModelExample(context) {
+  return {
+    plans: [{
+      title: "Implement the selected phase behavior",
+      goal: "Deliver the behavior described by the selected requirement through the existing application boundary.",
+      tasks: [{
+        title: "Implement and verify the required behavior",
+        filesModified: ["src/feature.ts", "tests/feature.test.ts"],
+        requirements: [...context.knownRequirements],
+        action: ["Replace these illustrative paths with the concrete repository files to change. Describe the implementation using the prepared context and research."],
+        acceptanceCriteria: ["The feature test exercises the required behavior and passes with the repository's test command."],
+        ...context.knownEvidenceArtifacts[0] ? { readFirst: [context.knownEvidenceArtifacts[0]] } : {}
+      }]
+    }]
+  };
+}
 function numericIdentity(value) {
   if (!/^[0-9]+$/.test(value) || /^0+$/.test(value)) return null;
   return BigInt(value).toString();
 }
 function candidatePath(segments) {
-  return "candidate" + segments.map((part) => typeof part === "number" ? `[${part}]` : `.${String(part)}`).join("");
+  return "model" + segments.map((part) => typeof part === "number" ? `[${part}]` : `.${String(part)}`).join("");
 }
 function compilePlanCandidate(raw, context) {
   const result = { valid: false, diagnostics: [], models: [], planIds: [] };
@@ -57029,8 +57053,20 @@ function compilePlanCandidate(raw, context) {
   try {
     input = typeof raw === "string" ? safeJsonParse(raw, { label: "Planning candidate", maxBytes: 1024 * 1024 }) : raw;
   } catch (error2) {
-    issue2("candidate", "schema.json", error2 instanceof Error ? error2.message : "Planning candidate is not valid JSON.");
+    issue2("model", "schema.json", error2 instanceof Error ? error2.message : "Planning candidate is not valid JSON.");
     return result;
+  }
+  if (input && typeof input === "object" && "plans" in input && Array.isArray(input.plans)) {
+    input = {
+      ...input,
+      plans: input.plans.map((plan, index) => {
+        if (!plan || typeof plan !== "object" || Array.isArray(plan)) return plan;
+        const entries = Object.entries(plan);
+        const ignored = entries.filter(([field]) => runtimePlanFields.has(field)).map(([field]) => field);
+        if (ignored.length) issue2(`model.plans[${index}]`, "planning.derived_fields", `MCP recomputed supplied bookkeeping: ${ignored.join(", ")}.`, "warning");
+        return Object.fromEntries(entries.filter(([field]) => !runtimePlanFields.has(field)));
+      })
+    };
   }
   const parsed = authoringSchema.safeParse(input);
   if (!parsed.success) {
@@ -57043,7 +57079,38 @@ function compilePlanCandidate(raw, context) {
     }
     return result;
   }
-  const candidate = parsed.data;
+  const explicitKeys = new Set(parsed.data.plans.flatMap((plan) => plan.key ? [plan.key] : []));
+  let nextKey = 1;
+  const candidate = {
+    ...parsed.data,
+    plans: parsed.data.plans.map((plan) => {
+      let planKey = plan.key;
+      if (!planKey) {
+        while (explicitKeys.has(`plan${nextKey}`)) nextKey += 1;
+        planKey = `plan${nextKey++}`;
+        explicitKeys.add(planKey);
+      }
+      const explicitTaskIds = new Set(plan.tasks.flatMap((task) => task.id ? [task.id] : []));
+      let nextTask = 1;
+      const tasks = plan.tasks.map((task) => {
+        let id = task.id;
+        if (!id) {
+          while (explicitTaskIds.has(`T${nextTask}`)) nextTask += 1;
+          id = `T${nextTask++}`;
+          explicitTaskIds.add(id);
+        }
+        return { ...task, id, readFirst: task.readFirst?.length ? task.readFirst : context.knownEvidenceArtifacts.slice(0, 1) };
+      });
+      return {
+        ...plan,
+        key: planKey,
+        dependsOn: plan.dependsOn ?? [],
+        scope: plan.scope?.length ? plan.scope : [plan.goal],
+        mustHaves: plan.mustHaves?.length ? plan.mustHaves : uniquePreservingOrder(tasks.flatMap((task) => task.acceptanceCriteria)),
+        tasks
+      };
+    })
+  };
   const requirements = uniquePreservingOrder(context.knownRequirements);
   const knownRequirements = new Set(requirements);
   const evidenceArtifacts = uniquePreservingOrder(context.knownEvidenceArtifacts);
@@ -57073,7 +57140,7 @@ function compilePlanCandidate(raw, context) {
     }
   }
   if (context.mode === "revise" && targets.length !== candidate.plans.length) {
-    issue2("candidate.plans", "planning.target_count", "Revise requires one candidate plan for each targetPlanIds entry, in the selected order.");
+    issue2("model.plans", "planning.target_count", "Revise requires one candidate plan for each targetPlanIds entry, in the selected order.");
   }
   if (context.mode === "add" && context.targetPlanIds.length > 0) {
     issue2("context.targetPlanIds", "planning.add_targets", "Add assigns new slots and cannot select saved targets.");
@@ -57083,7 +57150,7 @@ function compilePlanCandidate(raw, context) {
   result.planIds = candidate.plans.map((_, index) => context.mode === "revise" ? targets[index] : context.mode === "replace" && index < targets.length ? targets[index] : normalizePlanId((maxSaved + BigInt(index + 1 - (context.mode === "replace" ? targets.length : 0))).toString()));
   const localIds = /* @__PURE__ */ new Map();
   for (const [index, plan] of candidate.plans.entries()) {
-    if (localIds.has(plan.key)) issue2(`candidate.plans[${index}].key`, "planning.duplicate_key", `Plan key ${plan.key} must be unique.`);
+    if (localIds.has(plan.key)) issue2(`model.plans[${index}].key`, "planning.duplicate_key", `Plan key ${plan.key} must be unique.`);
     else localIds.set(plan.key, result.planIds[index]);
   }
   const candidateIds = new Set(result.planIds);
@@ -57097,7 +57164,7 @@ function compilePlanCandidate(raw, context) {
       const saved = identity2 ? savedByNumber.get(identity2) : void 0;
       const target = localIds.get(dependency) ?? (saved && (context.mode !== "replace" || retainedIds.has(saved.planId)) ? saved.planId : void 0);
       if (!target) {
-        issue2(`candidate.plans[${index}].dependsOn[${dependencyIndex}]`, "planning.dependency_missing", `Dependency ${dependency} is not a candidate key or a retained saved plan. Use candidate keys to reference plans in this submission.`);
+        issue2(`model.plans[${index}].dependsOn[${dependencyIndex}]`, "planning.dependency_missing", `Dependency ${dependency} is not a candidate key or a retained saved plan. Use candidate keys to reference plans in this submission.`);
       } else {
         resolved.push(target);
       }
@@ -57122,7 +57189,7 @@ function compilePlanCandidate(raw, context) {
   const visited = /* @__PURE__ */ new Set();
   const visit = (id) => {
     if (visiting.has(id)) {
-      issue2("candidate.plans", "planning.dependency_cycle", `Dependency cycle reaches plan ${id}.`);
+      issue2("model.plans", "planning.dependency_cycle", `Dependency cycle reaches plan ${id}.`);
       return 0;
     }
     if (visited.has(id)) return waves.get(id) ?? 1;
@@ -57130,12 +57197,12 @@ function compilePlanCandidate(raw, context) {
     const minimumWave = Math.max(0, ...(dependencies2.get(id) ?? []).map(visit)) + 1;
     if (retainedIds.has(id)) {
       if ((waves.get(id) ?? 0) < minimumWave) {
-        issue2("candidate.plans", "planning.saved_wave_conflict", `Saved plan ${id} would need wave ${minimumWave} or later. Include that plan in the revision targets to recompute its wave.`);
+        issue2("model.plans", "planning.saved_wave_conflict", `Saved plan ${id} would need wave ${minimumWave} or later. Include that plan in the revision targets to recompute its wave.`);
       }
     } else {
       waves.set(id, minimumWave);
       if (!Number.isSafeInteger(minimumWave)) {
-        issue2("candidate.plans", "planning.wave_overflow", `Plan ${id} would exceed the supported integer wave range.`);
+        issue2("model.plans", "planning.wave_overflow", `Plan ${id} would exceed the supported integer wave range.`);
       }
     }
     visiting.delete(id);
@@ -57145,8 +57212,8 @@ function compilePlanCandidate(raw, context) {
   for (const id of dependencies2.keys()) visit(id);
   const deferrals = /* @__PURE__ */ new Map();
   for (const [index, row] of (candidate.deferrals ?? []).entries()) {
-    if (!knownRequirements.has(row.requirement)) issue2(`candidate.deferrals[${index}].requirement`, "planning.requirement_unknown", `Unknown requirement ${row.requirement}.`);
-    if (deferrals.has(row.requirement)) issue2(`candidate.deferrals[${index}].requirement`, "planning.duplicate_deferral", `Requirement ${row.requirement} has multiple deferrals.`);
+    if (!knownRequirements.has(row.requirement)) issue2(`model.deferrals[${index}].requirement`, "planning.requirement_unknown", `Unknown requirement ${row.requirement}.`);
+    if (deferrals.has(row.requirement)) issue2(`model.deferrals[${index}].requirement`, "planning.duplicate_deferral", `Requirement ${row.requirement} has multiple deferrals.`);
     deferrals.set(row.requirement, row);
   }
   const owners = /* @__PURE__ */ new Map();
@@ -57154,34 +57221,31 @@ function compilePlanCandidate(raw, context) {
   for (const [index, plan] of candidate.plans.entries()) {
     const id = result.planIds[index];
     const taskIds = /* @__PURE__ */ new Set();
-    const citedEvidence = /* @__PURE__ */ new Set();
     for (const [taskIndex, task] of plan.tasks.entries()) {
-      if (taskIds.has(task.id)) issue2(`candidate.plans[${index}].tasks[${taskIndex}].id`, "planning.duplicate_task", `Task id ${task.id} must be unique within its plan.`);
+      if (taskIds.has(task.id)) issue2(`model.plans[${index}].tasks[${taskIndex}].id`, "planning.duplicate_task", `Task id ${task.id} must be unique within its plan.`);
       taskIds.add(task.id);
       for (const [requirementIndex, requirement] of task.requirements.entries()) {
-        if (!knownRequirements.has(requirement)) issue2(`candidate.plans[${index}].tasks[${taskIndex}].requirements[${requirementIndex}]`, "planning.requirement_unknown", `Unknown requirement ${requirement}.`);
+        if (!knownRequirements.has(requirement)) issue2(`model.plans[${index}].tasks[${taskIndex}].requirements[${requirementIndex}]`, "planning.requirement_unknown", `Unknown requirement ${requirement}.`);
         owners.set(requirement, uniquePreservingOrder([...owners.get(requirement) ?? [], id]));
       }
     }
     for (const [evidenceIndex, evidence] of (plan.evidence ?? []).entries()) {
-      if (!knownEvidence.has(evidence.artifact)) issue2(`candidate.plans[${index}].evidence[${evidenceIndex}].artifact`, "planning.evidence_unknown", `Evidence ${evidence.artifact} is not in the prepared evidence inventory.`);
-      if (citedEvidence.has(evidence.artifact)) issue2(`candidate.plans[${index}].evidence[${evidenceIndex}].artifact`, "planning.duplicate_evidence", `Evidence ${evidence.artifact} is cited more than once.`);
-      citedEvidence.add(evidence.artifact);
+      if (!knownEvidence.has(evidence.artifact)) issue2(`model.plans[${index}].evidence[${evidenceIndex}].artifact`, "planning.evidence_unknown", `Evidence ${evidence.artifact} is not in the prepared evidence inventory.`);
     }
     for (const file2 of uniquePreservingOrder(plan.tasks.flatMap((task) => task.filesModified))) {
       const wave = waves.get(id) ?? 1;
       const ownershipKey = `${wave}:${file2}`;
       const prior = fileOwners.get(ownershipKey);
-      if (prior) issue2(`candidate.plans[${index}].tasks`, "planning.file_ownership_conflict", `Plans ${prior.id} and ${id} both modify ${file2} in wave ${wave}. Add a dependency or split ownership.`);
+      if (prior) issue2(`model.plans[${index}].tasks`, "planning.file_ownership_conflict", `Plans ${prior.id} and ${id} both modify ${file2} in wave ${wave}. Add a dependency or split ownership.`);
       else fileOwners.set(ownershipKey, { id, wave });
     }
   }
   for (const [requirement, row] of deferrals) {
-    if (owners.has(requirement)) issue2("candidate.deferrals", "planning.deferral_conflict", `Requirement ${row.requirement} is both assigned to candidate tasks and deferred for the phase.`);
+    if (owners.has(requirement)) issue2("model.deferrals", "planning.deferral_conflict", `Requirement ${row.requirement} is both assigned to candidate tasks and deferred for the phase.`);
   }
   for (const requirement of requirements) {
     if (!owners.has(requirement) && !deferrals.has(requirement) && !retained.some((plan) => plan.requirements?.includes(requirement))) {
-      issue2("candidate.plans", "planning.requirement_unassigned", `Requirement ${requirement} is not assigned by this candidate. Final plan-set coverage must resolve it before execution.`, "warning");
+      issue2("model.plans", "planning.requirement_unassigned", `Requirement ${requirement} is not assigned by this candidate. Final plan-set coverage must resolve it before execution.`, "warning");
     }
   }
   if (hasErrors()) return result;
@@ -57194,7 +57258,10 @@ function compilePlanCandidate(raw, context) {
       readFirst: uniquePreservingOrder(task.readFirst)
     }));
     const filesModified = uniquePreservingOrder(tasks.flatMap((task) => task.filesModified));
-    const citedEvidence = new Map((plan.evidence ?? []).map((row) => [row.artifact, row.rationale]));
+    const citedEvidence = /* @__PURE__ */ new Map();
+    for (const row of plan.evidence ?? []) {
+      citedEvidence.set(row.artifact, uniquePreservingOrder([...citedEvidence.has(row.artifact) ? [citedEvidence.get(row.artifact)] : [], row.rationale]).join("\n"));
+    }
     const checks = plan.verification?.length ? plan.verification : tasks.flatMap((task) => task.acceptanceCriteria.map((criterion) => ({
       item: `Verify ${task.id}: ${criterion}`,
       method: /(?:^|`)(?:npm|npx|pnpm|yarn|node|python3?|pytest|cargo|go|make|rg|grep)\s/.test(criterion) ? "command" : "file-read",
@@ -57272,7 +57339,7 @@ function compilePlanCandidate(raw, context) {
   result.valid = true;
   return result;
 }
-var narrative, repoPath, taskId, key, verification, unknownOrDeferral, authoringSchema, planningCandidateJsonSchema;
+var narrative, heading, repoPath, taskId, reference, key, verification, unknownOrDeferral, authoringSchema, runtimePlanFields, planningCandidateJsonSchema, planningDerivedFields, planningValidationRules;
 var init_plan_model = __esm({
   "src/mcp/tools/plan-model.ts"() {
     "use strict";
@@ -57280,13 +57347,15 @@ var init_plan_model = __esm({
     init_security();
     init_phase_collection_helpers();
     init_phase_plan_identifiers();
-    narrative = string2().min(1).regex(/\S/, "Use concrete nonblank text.").regex(/^[^\r\n\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+$/, "Use one line per entry; the original candidate remains saved for correction.");
+    narrative = string2().min(1).regex(/\S/, "Use concrete nonblank text.").regex(/^[^\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+$/, "Text cannot contain control characters other than tabs and line endings.").transform((value) => value.replace(/\r\n?/g, "\n").trim());
+    heading = narrative.transform((value) => value.replace(/[\t\n]/g, " "));
     repoPath = string2().min(1).regex(
       /^(?!\s)(?!.*\s$)(?!.*[\u0000-\u001f\u007f])(?!\/)(?!~)(?![A-Za-z]:)(?!.*\\)(?!.*(?:^|\/)\.\.?(?:\/|$))(?!.*\/\/)(?!.*[*?])(?!.*\/$).*\S.*$/,
       "Use a concrete repo-relative file path without traversal, wildcard operators (* and ?), or control characters. Brackets, braces and parentheses are literal filename characters."
     );
-    taskId = string2().regex(/^[A-Za-z0-9._-]+$/);
-    key = string2().regex(/^[A-Za-z][A-Za-z0-9._-]*$/).describe("Local plan key. Dependencies use these keys or existing numeric plan ids.");
+    taskId = string2().trim().regex(/^[A-Za-z0-9._-]+$/);
+    reference = string2().trim().min(1).regex(/^[^\u0000-\u001f\u007f]+$/);
+    key = reference.refine((value) => !/^[0-9]+$/.test(value), "Numeric keys are reserved for existing saved plan ids.").describe("Optional local plan key, referenced by dependsOn. Any nonnumeric text is allowed. Omit for a single independent plan.");
     verification = strictObject({
       item: narrative,
       method: _enum(["test", "grep", "command", "file-read", "artifact-validation"]),
@@ -57300,21 +57369,21 @@ var init_plan_model = __esm({
     });
     authoringSchema = strictObject({
       plans: array(strictObject({
-        key,
-        title: narrative,
+        key: key.optional(),
+        title: heading,
         goal: narrative,
-        scope: array(narrative).min(1),
-        dependsOn: array(string2().regex(/^(?:[A-Za-z][A-Za-z0-9._-]*|[0-9]+)$/)),
+        scope: array(narrative).optional().describe("Optional narrower scope; defaults to the goal."),
+        dependsOn: array(reference).optional().describe("Local plan keys or retained saved numeric plan ids. Defaults to no dependencies."),
         tasks: array(strictObject({
-          id: taskId,
-          title: narrative,
-          readFirst: array(repoPath).min(1),
+          id: taskId.optional().describe("Optional task reference; MCP assigns T1, T2, etc. when omitted."),
+          title: heading,
+          readFirst: array(repoPath).optional().describe("Additional executor context. When omitted or empty, MCP selects a prepared evidence artifact."),
           filesModified: array(repoPath).min(1),
-          requirements: array(narrative).min(1),
+          requirements: array(reference).min(1),
           action: array(narrative).min(1),
           acceptanceCriteria: array(narrative).min(1)
         })).min(1),
-        mustHaves: array(narrative).min(1),
+        mustHaves: array(narrative).optional().describe("Optional goal-backward facts; defaults to the task acceptance criteria."),
         autonomous: boolean2().optional(),
         gapClosure: boolean2().optional(),
         externalServicePrerequisites: array(strictObject({
@@ -57326,16 +57395,46 @@ var init_plan_model = __esm({
           canAgentProceedWithoutIt: boolean2()
         })).optional(),
         verification: array(verification).optional(),
-        evidence: array(strictObject({ artifact: repoPath, rationale: narrative })).describe("Only explicitly cited saved evidence, with the reason it informed this plan.").optional(),
+        evidence: array(strictObject({ artifact: repoPath, rationale: narrative })).describe("Only phase-artifact paths from prepare.knownEvidenceArtifacts, with the reason used. Repository source files belong in task.readFirst; prepare narrows the allowed citation values.").optional(),
         unknownsAndDeferrals: array(unknownOrDeferral).optional()
       })).min(1),
       deferrals: array(strictObject({
-        requirement: narrative,
+        requirement: reference,
         rationale: narrative,
         followUp: narrative
       })).optional()
     });
-    planningCandidateJsonSchema = toJSONSchema(authoringSchema);
+    runtimePlanFields = /* @__PURE__ */ new Set([
+      "planId",
+      "path",
+      "wave",
+      "status",
+      "objective",
+      "requirements",
+      "filesModified",
+      "readFirst",
+      "requirementCoverage",
+      "evidenceCoverage",
+      "fileSurfaceCoverage"
+    ]);
+    planningCandidateJsonSchema = toJSONSchema(authoringSchema, { io: "input" });
+    planningDerivedFields = [
+      "Canonical plan ids and paths, planned status, dependency waves, objective, aggregate requirements/files/read-first lists, and coverage tables are computed by MCP.",
+      "Omitted keys and task ids receive stable local identifiers. Empty or omitted dependencies mean no dependencies.",
+      "Empty or omitted scope uses the goal; mustHaves and verification use authored acceptance criteria; readFirst uses prepared evidence.",
+      "Optional evidence, service prerequisites, deferrals, and unknowns need only describe relevant facts. Empty arrays or omitted sections need no filler rows."
+    ];
+    planningValidationRules = {
+      reject: [
+        "Missing goal, task action, acceptance criteria, concrete modified files, or known requirement references.",
+        "Any required phase outcome left unassigned across submitted and retained plans. A deferral explains missing work but does not satisfy final phase coverage.",
+        "Unknown references, ambiguous identifiers, dependency cycles, or conflicting file ownership in the same wave.",
+        "Evidence citations must use knownEvidenceArtifacts; repository sources belong in task.readFirst. The prepared schema lists allowed requirement and citation values.",
+        "Unsafe paths or control characters, changed evidence/targets, and unapproved overwrite of existing plans."
+      ],
+      advisory: ["Missing evidence citations, task/file counts, wording preferences and keyword-based judgments are guidance; semantic adequacy belongs to review."],
+      normalize: ["Prose and code may span lines. MCP normalizes CRLF and outer whitespace and renders canonical Markdown safely.", ...planningDerivedFields]
+    };
   }
 });
 
@@ -57349,30 +57448,39 @@ async function planLocation(args) {
   return { ...located, sessionPath: `${located.resolved.phaseDir}/${located.resolved.phasePrefix}-PLAN-SESSION.json` };
 }
 async function readPlanSession(loc) {
+  let raw;
   try {
-    const session = schema.parse(safeJsonParseObject(await fs20.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 }));
-    if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Planning session identity mismatch.");
-    if (session.candidateHash !== (session.candidate === void 0 ? null : researchDigest(stableResearchValue(session.candidate)))) throw new Error("Planning candidate integrity mismatch.");
-    const validPlanPath = (value) => value.startsWith(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`) && /^\d+-PLAN\.md$/.test(value.slice(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`.length));
-    if (session.targets.some((item) => !validPlanPath(item.path))) throw new Error("Invalid planning target path.");
-    if (session.journal) {
-      const j = session.journal;
-      const request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : void 0;
-      if (!request || request.hash !== j.requestHash || j.revision !== session.revision || j.candidateHash !== session.candidateHash || j.files.some((file2) => !validPlanPath(file2.path) || researchDigest(file2.content) !== file2.hash || (file2.backup === null ? null : researchDigest(file2.backup)) !== file2.baselineHash) || j.removed.some((file2) => !validPlanPath(file2.path) || researchDigest(file2.backup) !== file2.baselineHash)) throw new Error("Planning publication journal integrity mismatch.");
-    }
-    return session;
+    raw = safeJsonParseObject(await fs20.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 });
   } catch (error2) {
     if (error2.code === "ENOENT") return null;
     throw error2;
   }
+  const migrate = raw.version === 1;
+  const session = schema.parse(migrate ? { ...raw, version: 2, requests: {}, journal: void 0, legacyPublication: void 0 } : raw);
+  if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Planning session identity mismatch.");
+  const validPlanPath = (value) => value.startsWith(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`) && /^\d+-PLAN\.md$/.test(value.slice(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`.length));
+  if (session.targets.some((item) => !validPlanPath(item.path))) throw new Error("Invalid planning target path.");
+  if (session.journal) {
+    const j = session.journal, request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : void 0;
+    if (!request || request.hash !== j.requestHash || request.modelHash !== j.modelHash || j.revision !== session.revision || j.files.some((file2) => !validPlanPath(file2.path)) || j.removed.some((file2) => !validPlanPath(file2.path)) || new Set(j.files.map((file2) => file2.path)).size !== j.files.length) throw new Error("Planning publication journal integrity mismatch.");
+  }
+  if (migrate) {
+    const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    if (marker.status === "pending" || marker.status === "invalid") session.legacyPublication = { markerToken: marker.token };
+    session.prepared = false;
+    session.needsIntent = true;
+    session.revision++;
+    await savePlanSession(loc, session);
+  }
+  return session;
 }
 async function savePlanSession(loc, session, topologyLockHeld = false) {
-  schema.parse(session);
-  const text2 = JSON.stringify(session, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
-  if (Buffer.byteLength(text2) > 32 * 1024 * 1024) throw new Error("Planning session exceeds 32 MiB; archive retained history through runtime maintenance.");
+  const metadata = schema.parse(session);
+  const text2 = JSON.stringify(metadata, null, 2).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`) + "\n";
+  if (Buffer.byteLength(text2) > 4 * 1024 * 1024) throw new Error("Planning publication metadata exceeds 4 MiB.");
   const write = async () => {
     const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
-    if (current.sessionPath !== loc.sessionPath || current.resolved.phaseNumber !== session.phase) throw new Error("Phase storage identity changed; recover the previous planning session before saving.");
+    if (current.sessionPath !== loc.sessionPath || current.resolved.phaseNumber !== session.phase) throw new Error("Phase storage identity changed; refresh planning preparation.");
     await writeTextFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), text2);
   };
   return topologyLockHeld ? write() : withBlueprintRepoLock(loc.projectRoot, PHASE_TOPOLOGY_LOCK_NAME, write);
@@ -57382,9 +57490,9 @@ async function withPlanSession(args, task) {
   return withBlueprintRepoLock(root, "plan-session", async () => task(await planLocation({ ...args, cwd: root })));
 }
 function initialPlanSession(loc) {
-  return { version: 1, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, needsIntent: false, mode: "add", targetPlanIds: [], readSet: [], evidencePaths: [], targets: [], existingPlans: [], knownRequirements: [], knownEvidenceArtifacts: [], checkerRequired: false, candidateHash: null, history: [], requests: {} };
+  return { version: 2, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, needsIntent: false, mode: "add", targetPlanIds: [], readSet: [], evidencePaths: [], targets: [], existingPlans: [], knownRequirements: [], knownEvidenceArtifacts: [], checkerRequired: false, requests: {} };
 }
-var planNumericPhase, planRequestId, planLookup, checkedPlanPayload, hash3, receipt, targetSchema, journalSchema2, schema;
+var planNumericPhase, planRequestId, planLookup, checkedPlanPayload, hash3, targetSchema, topologySchema2, stagesSchema, publishedPlanSchema, receiptSchema2, journalSchema2, schema;
 var init_plan_session = __esm({
   "src/mcp/tools/plan-session.ts"() {
     "use strict";
@@ -57394,31 +57502,50 @@ var init_plan_session = __esm({
     init_phase_resolution();
     init_phase_topology_lock();
     init_research_session();
-    init_research_evidence();
+    init_plan_publication();
     init_plan_publication();
     planNumericPhase = researchNumericPhase;
     planRequestId = researchRequestId;
     planLookup = { cwd: string2().optional(), phase: planNumericPhase };
     checkedPlanPayload = checkedResearchPayload;
     hash3 = string2().regex(/^[a-f0-9]{64}$/);
-    receipt = record(string2(), unknown());
     targetSchema = object2({ path: string2(), hash: hash3.nullable() });
+    topologySchema2 = object2({
+      phaseNumber: string2(),
+      phasePrefix: string2(),
+      phaseName: string2().nullable(),
+      phaseDir: string2(),
+      roadmapEntry: object2({ phaseNumber: string2(), phasePrefix: string2(), phaseName: string2(), completed: boolean2(), summary: string2().nullable(), goal: string2().nullable(), successCriteria: string2().nullable(), requirements: array(string2()) }).nullable()
+    });
+    stagesSchema = partialRecord(_enum(["files", "commit", "state", "routing"]), _enum(["intent", "complete"]));
+    publishedPlanSchema = object2({ planId: string2(), wave: number2().int().positive(), taskCount: number2().int().positive(), path: string2() });
+    receiptSchema2 = object2({
+      status: literal("published"),
+      saved: literal(true),
+      ready: literal(true),
+      revision: number2().int().nonnegative(),
+      sessionPath: string2(),
+      paths: array(string2()),
+      plans: array(publishedPlanSchema),
+      removedPaths: array(string2()),
+      stages: stagesSchema,
+      nextAction: string2()
+    });
     journalSchema2 = object2({
       requestId: planRequestId,
       requestHash: hash3,
       revision: number2().int().nonnegative(),
-      candidateHash: hash3,
-      baselineMarker: string2().nullable(),
-      review: object2({ revision: number2().int(), candidateHash: hash3, verdict: _enum(["accept", "revise"]), summary: string2() }).optional(),
-      files: array(object2({ planId: string2(), title: string2(), wave: number2().int().positive(), taskCount: number2().int().positive(), path: string2(), hash: hash3, content: string2(), baselineHash: hash3.nullable(), backup: string2().nullable() })),
-      removed: array(object2({ path: string2(), baselineHash: hash3, backup: string2() })),
-      stages: partialRecord(_enum(["files", "commit", "state", "routing"]), _enum(["intent", "complete"])),
-      receipt: receipt.optional()
+      modelHash: hash3,
+      baselineMarkerToken: string2(),
+      files: array(publishedPlanSchema.extend({ hash: hash3, baselineHash: hash3.nullable() })),
+      removed: array(object2({ path: string2(), baselineHash: hash3 })),
+      stages: stagesSchema,
+      receipt: receiptSchema2.optional()
     });
     schema = object2({
-      version: literal(1),
+      version: literal(2),
       phase: string2(),
-      topology: custom((value) => Boolean(value && typeof value === "object" && "phaseDir" in value)),
+      topology: topologySchema2,
       revision: number2().int().nonnegative(),
       prepared: boolean2(),
       needsIntent: boolean2().default(false),
@@ -57431,10 +57558,8 @@ var init_plan_session = __esm({
       knownRequirements: array(string2()),
       knownEvidenceArtifacts: array(string2()),
       checkerRequired: boolean2(),
-      candidate: unknown().optional(),
-      candidateHash: hash3.nullable(),
-      history: array(object2({ revision: number2().int(), kind: string2(), candidate: unknown().optional(), readSet: array(targetSchema).optional(), targets: array(targetSchema).optional(), journal: journalSchema2.optional() })),
-      requests: record(string2(), object2({ hash: hash3, operation: _enum(["submit", "finalize"]), revision: number2().int(), receipt: receipt.optional() })),
+      requests: record(planRequestId, object2({ hash: hash3, modelHash: hash3, revision: number2().int(), receipt: receiptSchema2.optional() })),
+      legacyPublication: object2({ markerToken: string2() }).optional(),
       journal: journalSchema2.optional()
     });
   }
@@ -57526,30 +57651,16 @@ var init_plan_evidence = __esm({
 // src/mcp/tools/plan.ts
 import { promises as fs21 } from "node:fs";
 function requestHash(args) {
-  const { cwd: _cwd, ...logical } = args;
-  return researchDigest(stableResearchValue(logical));
+  return researchDigest(stableResearchValue({ phase: String(args.phase), requestId: args.requestId, expectedRevision: args.expectedRevision, overwrite: args.overwrite ?? false }));
 }
 function responseBase(loc, session) {
-  return { saved: session.candidate !== void 0, revision: session.revision, candidateHash: session.candidateHash, sessionPath: loc.sessionPath };
+  return { revision: session.revision, sessionPath: loc.sessionPath };
 }
 async function safeNextAction2(proposed) {
   const catalog = await blueprintCommandCatalog();
   const command = proposed?.match(/\/blu-([a-z][a-z-]*)\b/)?.[1];
   if (command && catalog.commands[command]?.implemented) return proposed;
   return catalog.commands.progress?.implemented ? "Run /blu-progress to review the next safe action." : null;
-}
-function pendingRequest(session, except) {
-  return Object.entries(session.requests).find(([id, request]) => id !== except && !request.receipt);
-}
-function replay(session, id, hash4) {
-  const previous = Object.hasOwn(session.requests, id) ? session.requests[id] : void 0;
-  if (previous && previous.hash !== hash4) return { status: "rejected", reason: "Request ID conflict", revision: session.revision };
-  return previous?.receipt ?? null;
-}
-async function saveReceipt(loc, session, id, value) {
-  session.requests[id].receipt = value;
-  await savePlanSession(loc, session);
-  return value;
 }
 async function readinessGates(loc, readiness, inputs) {
   const contextPath = artifactPathFor(loc.resolved, "context");
@@ -57565,10 +57676,10 @@ async function readinessGates(loc, readiness, inputs) {
   return { ready: readiness.status === "ready" && blockers.length === 0, blockers: [...new Set(blockers)], checkerRequired: readiness.effectiveConfig.workflow.plan_check };
 }
 function boundedEvidence(inputs) {
-  let remaining = 12e3;
+  let remaining = 48e3;
   const priority = (path31) => /-CONTEXT\.md$/.test(path31) ? 0 : /-RESEARCH\.md$/.test(path31) ? 1 : /-(?:UI-)?SPEC\.md$/.test(path31) ? 2 : /\/(?:PROJECT|REQUIREMENTS)\.md$/.test(path31) ? 3 : 4;
   return [...inputs].sort((left, right) => priority(left.path) - priority(right.path)).map((input) => {
-    const content = input.content === null ? null : input.content.slice(0, Math.min(3e3, remaining));
+    const content = input.content === null ? null : input.content.slice(0, Math.min(/-(?:CONTEXT|SPEC|UI-SPEC)\.md$/.test(input.path) ? 16e3 : 6e3, remaining));
     remaining -= content?.length ?? 0;
     return { ...input, content, truncated: (input.content?.length ?? 0) > (content?.length ?? 0) };
   });
@@ -57578,17 +57689,20 @@ async function blueprintPlanPrepare(raw = {}) {
   try {
     return await withPlanSession(args, async (loc) => {
       const session = await readPlanSession(loc) ?? initialPlanSession(loc);
-      let pending = pendingRequest(session);
-      if (pending && args.reconcile && session.journal && args.expectedRevision === session.revision && args.acknowledgeChangedInputs) {
-        const observed = await readPlanTargetHashes(await planLocation({ cwd: loc.projectRoot, phase: session.phase }));
-        if (stableResearchValue(Object.fromEntries(observed.map((item) => [item.path, item.hash]))) !== stableResearchValue(args.reconcile.targetHashes)) return { status: "reconciliation_required", ...responseBase(loc, session), targetHashes: Object.fromEntries(observed.map((item) => [item.path, item.hash])), reason: "Reconciliation requires the currently observed target hashes." };
-        await rollbackPublication(loc, session, args.reconcile.targetHashes);
+      let marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+      if (session.journal && !session.journal.receipt || session.legacyPublication || marker.status === "pending" || marker.status === "invalid") {
+        const targetHashes = Object.fromEntries((await readPlanTargetHashes(loc)).map((item) => [item.path, item.hash]));
+        if (!args.reconcile || args.expectedRevision !== session.revision || !args.acknowledgeChangedInputs || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(targetHashes)) return {
+          status: "reconciliation_required",
+          ...responseBase(loc, session),
+          targetHashes,
+          publication: marker,
+          nextAction: session.journal ? `Retry blueprint_plan_submit requestId ${session.journal.requestId} with the original revision/control flags and model if any plan is still missing. Alternatively, prepare with expectedRevision, acknowledgeChangedInputs=true and reconcile containing observed targetHashes to accept the current canonical files.` : "Review the observed canonical files, then prepare with expectedRevision, acknowledgeChangedInputs=true and reconcile containing targetHashes. Reconciliation preserves all observed files and removes obsolete publication metadata."
+        };
+        await reconcilePublication(loc, session, args.reconcile.targetHashes, marker.token);
         loc = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
-        pending = pendingRequest(session);
+        marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
       }
-      if (pending) return { status: "partial", ...responseBase(loc, session), targetHashes: Object.fromEntries((await readPlanTargetHashes(loc)).map((item) => [item.path, item.hash])), nextAction: `Retry blueprint_plan_${pending[1].operation} with requestId ${pending[0]} and identical arguments. If external evidence changed, prepare with expectedRevision, acknowledgeChangedInputs=true and reconcile containing observed targetHashes to restore the previous plans before refreshing.` };
-      const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-      if (marker.status === "pending" || marker.status === "invalid") return { status: "partial", ...responseBase(loc, session), reason: marker.reason, nextAction: "Resume the original finalize request before changing preparation." };
       const initialTargets = await readPlanTargetHashes(loc);
       const capture = await capturePlanEvidence(loc, [.../* @__PURE__ */ new Set([...session.evidencePaths, ...args.evidencePaths ?? []])]);
       const readiness = await blueprintPhasePlanReadiness({ cwd: loc.projectRoot, phase: session.phase, bodyMode: "summary" });
@@ -57599,6 +57713,7 @@ async function blueprintPlanPrepare(raw = {}) {
       if (fresh.status !== "fresh" || marker.token !== finalMarker.token || stableResearchValue(targets) !== stableResearchValue(initialTargets) || !phaseTopologyFingerprintsMatch(phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) return { status: "stale", ...responseBase(loc, session), freshness: fresh, nextAction: "Retry prepare; inputs changed during collection." };
       const gates = await readinessGates(loc, readiness, capture.inputs);
       const plans = readiness.planIndex?.plans ?? [];
+      const contextContent = capture.inputs.find((input) => input.path === artifactPathFor(loc.resolved, "context"))?.content ?? "";
       const packet = {
         phase: readiness.phaseSelection,
         gates,
@@ -57606,16 +57721,27 @@ async function blueprintPlanPrepare(raw = {}) {
         requirements: readiness.context?.requirementsGrounding,
         projectBrief: readiness.context?.projectBrief,
         evidence: boundedEvidence(capture.inputs),
+        grounding: {
+          lockedDecisions: extractMarkdownSection3(contextContent, "Implementation Decisions"),
+          phaseBoundary: extractMarkdownSection3(contextContent, "Phase Boundary"),
+          dependencies: extractMarkdownSection3(contextContent, "Dependencies"),
+          discoveryGrounding: extractMarkdownSection3(contextContent, "Discovery Grounding"),
+          projectConstraints: readiness.context?.projectBrief.constraints ?? []
+        },
         existingPlans: plans.map(({ planId: planId3, path: path31, title, wave, dependsOn, requirements, status }) => ({ planId: planId3, path: path31, title, wave, dependsOn, requirements, status })),
         targetHashes: Object.fromEntries(targets.map((item) => [item.path, item.hash])),
-        planningCandidateJsonSchema
+        schema: planningPreparedSchema(readiness.authoringContext),
+        example: planningModelExample({ knownRequirements: readiness.authoringContext.knownRequirements, knownEvidenceArtifacts: readiness.authoringContext.knownEvidenceArtifacts }),
+        validationRules: planningValidationRules,
+        derivedFields: planningDerivedFields,
+        exampleNote: "Example paths are illustrative; replace them with inspected repository files and cover every phase requirement across the complete plan set."
       };
       if (args.expectedRevision !== void 0 && args.expectedRevision !== session.revision) return { ...packet, status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
       if (plans.length && !args.mode && (!session.readSet.length || session.journal?.receipt || session.needsIntent)) {
         await savePlanSession(loc, session);
         return { ...packet, status: "choice_required", ...responseBase(loc, session), nextAction: "Choose add, revise selected plans, or replace selected plans; supply mode and targetPlanIds for revise/replace." };
       }
-      const nextMode = args.mode ?? session.mode;
+      const nextMode = args.mode ?? (plans.length ? session.mode : "add");
       const targetPlanIds = [...new Set(args.targetPlanIds ?? (nextMode === "add" ? [] : nextMode === "replace" && args.mode ? plans.map((plan) => plan.planId) : session.targetPlanIds))];
       if (nextMode === "add" && targetPlanIds.length || nextMode !== "add" && !targetPlanIds.length || targetPlanIds.some((id) => !plans.some((plan) => plan.planId === id))) return { ...packet, status: "choice_required", ...responseBase(loc, session), reason: "Add accepts no targets; revise/replace require existing selected targetPlanIds." };
       const changed = session.readSet.length ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet) : null;
@@ -57624,16 +57750,16 @@ async function blueprintPlanPrepare(raw = {}) {
       const modeChanged = session.readSet.length > 0 && (nextMode !== session.mode || stableResearchValue(targetPlanIds) !== stableResearchValue(session.targetPlanIds));
       const selectedEvidenceChanged = session.readSet.length > 0 && stableResearchValue(capture.evidencePaths) !== stableResearchValue(session.evidencePaths);
       if ((targetsChanged || topologyChanged) && (!args.reconcile || args.expectedRevision !== session.revision || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(packet.targetHashes))) return { ...packet, status: "reconciliation_required", ...responseBase(loc, session), reason: "Review changed topology and publication targets, then prepare with expectedRevision and reconcile containing the observed targetHashes." };
-      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. Saved candidates remain available." };
+      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
       const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && changed?.status === "fresh";
       if (!unchanged) {
-        session.history.push({ revision: session.revision, kind: "prepare", readSet: session.readSet, targets: session.targets, ...session.journal ? { journal: session.journal } : {} });
         delete session.journal;
+        session.requests = {};
         session.topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
         session.prepared = gates.ready;
         session.mode = nextMode;
         session.targetPlanIds = targetPlanIds;
-        if (args.mode) session.needsIntent = false;
+        if (args.mode || !plans.length) session.needsIntent = false;
         session.readSet = capture.readSet;
         session.evidencePaths = capture.evidencePaths;
         session.targets = targets;
@@ -57645,40 +57771,14 @@ async function blueprintPlanPrepare(raw = {}) {
         session.revision++;
         await savePlanSession(loc, session);
       }
-      return { ...packet, status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds, knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, nextAction: gates.ready ? "Draft the compact plan set using the saved evidence, then call blueprint_plan_submit once. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction2(readiness.nextSafeAction) };
+      return { ...packet, schema: planningPreparedSchema(session), status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds, knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, nextAction: gates.ready ? "Use schema, example and validationRules to author the model. If checkerRequired, review this model in memory, then call blueprint_plan_submit once with model and the review verdict. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction2(readiness.nextSafeAction) };
     });
   } catch (error2) {
     return { status: "blocked", reason: error2.message, nextAction: await safeNextAction2("Run /blu-progress to resolve planning preparation.") };
   }
 }
-function correctedCandidate(session, args) {
-  if (args.candidate !== void 0 && args.corrections?.length) throw new Error("Supply a candidate or field corrections, not both.");
-  if (args.candidate !== void 0) return checkedPlanPayload(args.candidate);
-  if (!args.corrections?.length) throw new Error("Supply a candidate or field corrections.");
-  let candidate = checkedPlanPayload(session.candidate);
-  if (typeof candidate === "string") candidate = safeJsonParseObject(candidate, { label: "Saved planning candidate", maxBytes: 1024 * 1024 });
-  for (const change of args.corrections) {
-    change.path.forEach((segment) => {
-      validateFieldNameSegment(segment);
-      if (["__proto__", "prototype", "constructor"].includes(segment)) throw new Error("Unsafe correction path.");
-    });
-    let target = candidate;
-    for (const segment of change.path.slice(0, -1)) {
-      if (!target || typeof target !== "object" || !Object.hasOwn(target, segment)) throw new Error("Correction parent does not exist.");
-      target = target[segment];
-    }
-    if (!target || typeof target !== "object") throw new Error("Correction target is not an object.");
-    const field = change.path.at(-1);
-    if (Array.isArray(target) && (!/^(0|[1-9]\d*)$/.test(field) || Number(field) > target.length || change.operation === "remove" && Number(field) === target.length)) throw new Error("Array correction requires an existing index, or the next index when setting.");
-    if (change.operation === "remove") {
-      if (Array.isArray(target)) target.splice(Number(field), 1);
-      else delete target[field];
-    } else target[field] = checkedPlanPayload(change.value);
-  }
-  return checkedPlanPayload(candidate);
-}
-async function assess2(loc, session) {
-  const compiled = planDependencies.compile(session.candidate, { knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, existingPlans: session.existingPlans, mode: session.mode, targetPlanIds: session.targetPlanIds });
+async function assess2(loc, session, model) {
+  const compiled = planDependencies.compile(model, { knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, existingPlans: session.existingPlans, mode: session.mode, targetPlanIds: session.targetPlanIds });
   if (!compiled.valid) return { valid: false, diagnostics: compiled.diagnostics, plans: [], planIds: compiled.planIds, planSetValidation: null };
   const validated = await planDependencies.validate({ cwd: loc.projectRoot, phase: session.phase, models: compiled.models, removePlanIds: session.mode === "replace" ? session.targetPlanIds : [], requireComplete: true });
   return { ...validated, diagnostics: [...compiled.diagnostics, ...validated.diagnostics], planIds: compiled.planIds };
@@ -57712,52 +57812,26 @@ function validationSummary(result) {
   const planSetValidation = bound(result.planSetValidation);
   return { valid: result.valid, diagnostics, diagnosticCount: result.diagnostics.length, diagnosticsTruncated: result.diagnostics.length > diagnostics.length || budget.truncated, planSetValidation };
 }
-async function blueprintPlanSubmit(raw) {
-  const args = submitInput2.parse(raw);
-  checkedPlanPayload(args);
-  return withPlanSession(args, async (loc) => {
-    const session = await readPlanSession(loc);
-    if (!session) return { status: "not_found", saved: false, nextAction: "Call blueprint_plan_prepare first." };
-    const hash4 = requestHash(args), previous = replay(session, args.requestId, hash4);
-    if (previous) return previous;
-    const pending = pendingRequest(session, args.requestId);
-    if (pending) {
-      const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-      const canCorrect = args.expectedRevision === session.revision && (args.candidate !== void 0 || Boolean(args.corrections?.length)) && (!session.journal || Boolean(session.journal.receipt)) && (marker.status === "absent" || marker.status === "committed");
-      if (!canCorrect) return { status: "partial", ...responseBase(loc, session), nextAction: `Retry blueprint_plan_${pending[1].operation} with requestId ${pending[0]} first. A current-revision correction can supersede an interrupted assessment only before publication begins.` };
-      correctedCandidate(session, args);
-      pending[1].receipt = { status: "superseded", ...responseBase(loc, session), ready: false, reason: "A current-revision candidate correction superseded this interrupted assessment. Original candidate history is retained." };
-    }
-    const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
-    if (!accepted) {
-      if (args.expectedRevision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
-      const candidate = correctedCandidate(session, args);
-      if (session.journal) {
-        session.history.push({ revision: session.revision, kind: "published", journal: session.journal });
-        delete session.journal;
-      }
-      session.candidate = candidate;
-      session.candidateHash = researchDigest(stableResearchValue(candidate));
-      session.revision++;
-      session.history.push({ revision: session.revision, kind: "submit", candidate });
-      session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "submit" };
-      await savePlanSession(loc, session);
-    } else if (accepted.operation !== "submit" || accepted.revision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Accepted request was superseded." };
-    try {
-      const freshness = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
-      const result = await assess2(loc, session);
-      const valid = session.prepared && !session.needsIntent && freshness.status === "fresh" && result.valid;
-      return await saveReceipt(loc, session, args.requestId, { status: valid ? "ready" : "needs_revision", ...responseBase(loc, session), validation: validationSummary(result), planIds: result.planIds, freshness, checkerRequired: session.checkerRequired, ...valid ? { reviewPacket: { revision: session.revision, candidateHash: session.candidateHash, plans: result.plans.map(({ planId: planId3, path: path31, model }) => ({ planId: planId3, path: path31, model })) } } : {}, nextAction: valid ? session.checkerRequired ? "Review this complete candidate set; finalize with the review verdict bound to this revision and candidateHash." : "Call blueprint_plan_finalize with this revision." : session.needsIntent ? "The draft is saved. Call blueprint_plan_prepare with an explicit add/revise/replace mode before requesting readiness or publication." : "The candidate is saved. Refresh stale preparation or correct only the fields identified by diagnostics, then submit with a new requestId." });
-    } catch (error2) {
-      return { status: "partial", ...responseBase(loc, session), reason: error2.message, nextAction: `The candidate is saved. Retry blueprint_plan_submit with requestId ${args.requestId} and identical arguments to resume assessment.` };
-    }
-  });
-}
 async function blueprintPlanRead(raw) {
   const args = lookupSchema.parse(raw);
   return withPlanSession(args, async (loc) => {
     const session = await readPlanSession(loc);
-    return { status: session ? "found" : "not_found", sessionPath: loc.sessionPath, session, freshness: session ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet) : null, publication: await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix) };
+    const before = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    const current = await planLocation(args);
+    const published = await Promise.all((await readPlanTargetHashes(current)).map(async (target) => ({
+      ...target,
+      content: before.status === "pending" || before.status === "invalid" ? null : await fs21.readFile(resolveBlueprintPath(loc.projectRoot, target.path), "utf8")
+    })));
+    const publication = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    if (before.token !== publication.token) for (const file2 of published) file2.content = null;
+    return {
+      status: session || published.length ? "found" : "not_found",
+      sessionPath: loc.sessionPath,
+      session,
+      published,
+      publication,
+      freshness: session ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet) : null
+    };
   });
 }
 function markerContent(session, journal, status) {
@@ -57770,157 +57844,141 @@ async function verifyPublished(loc, journal, session) {
   for (const file2 of journal.files) expected.set(file2.path, file2.hash);
   for (const file2 of journal.removed) expected.delete(file2.path);
   const observed = await readPlanTargetHashes(await planLocation({ cwd: loc.projectRoot, phase: session.phase }));
-  if (observed.length !== expected.size || observed.some((item) => !expected.has(item.path) || expected.get(item.path) !== item.hash)) throw new Error("The complete published plan set changed; retained plans or inventory no longer match the validated candidate set.");
+  if (observed.length !== expected.size || observed.some((item) => !expected.has(item.path) || expected.get(item.path) !== item.hash)) throw new Error("The complete published plan set changed; retained plans or inventory no longer match the validated set.");
 }
-async function rollbackPublication(loc, session, reviewedTargets) {
-  const journal = session.journal;
+async function filesSaved(loc, journal) {
+  return (await Promise.all(journal.files.map(async (file2) => await researchInputHash(loc.projectRoot, file2.path) === file2.hash))).every(Boolean);
+}
+async function reconcilePublication(loc, session, reviewedTargets, markerToken) {
   const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
   const topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
   await withFreshPhaseTopologyForMutation(loc.projectRoot, { phase: session.phase }, topology, "Planning publication reconciliation", async () => withBlueprintRepoLock(loc.projectRoot, "phase-plan-write", async () => {
     const targets = await readPlanTargetHashes(await planLocation({ cwd: loc.projectRoot, phase: session.phase }));
     if (stableResearchValue(Object.fromEntries(targets.map((item) => [item.path, item.hash]))) !== stableResearchValue(reviewedTargets)) throw new Error("Planning targets changed during reconciliation; review their new hashes before retrying.");
-    const publicationPath = planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix);
-    const observedMarker = await fs21.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8").catch((error2) => {
-      if (error2.code === "ENOENT") return null;
-      throw error2;
-    });
-    if (![journal.baselineMarker, markerContent(session, journal, "pending"), markerContent(session, journal, "committed")].includes(observedMarker)) throw new Error("Publication marker changed externally; reconciliation will not overwrite it.");
-    await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), markerContent(session, journal, "pending"));
-    for (const file2 of journal.files) {
-      const observed = await researchInputHash(loc.projectRoot, file2.path);
-      if (observed !== file2.hash) continue;
-      if (file2.backup === null) await planDependencies.remove(resolveBlueprintPath(loc.projectRoot, file2.path));
-      else await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, file2.path), file2.backup);
-    }
-    for (const file2 of journal.removed) if (await researchInputHash(loc.projectRoot, file2.path) === null) await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, file2.path), file2.backup);
-    session.history.push({ revision: session.revision, kind: "publication-reconciled", journal });
-    session.requests[journal.requestId].receipt = { status: "superseded", ...responseBase(loc, session), ready: false, reason: "Interrupted publication was explicitly reconciled; use the refreshed session revision." };
+    const observed = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    if (observed.token !== markerToken) throw new Error("Publication marker changed during reconciliation; refresh before retrying.");
+    if (observed.status !== "absent") await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), JSON.stringify({ version: 1, status: "committed", requestId: "reconciled", revision: session.revision, files: targets, removedPaths: [] }, null, 2) + "\n");
     session.topology = topology;
-    session.targets = await readPlanTargetHashes(await planLocation({ cwd: loc.projectRoot, phase: session.phase }));
-    delete session.journal;
+    session.targets = targets;
     session.prepared = false;
-    if (journal.baselineMarker === null) await planDependencies.remove(resolveBlueprintPath(loc.projectRoot, publicationPath));
-    else await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), journal.baselineMarker);
+    session.needsIntent = true;
+    session.readSet = [];
+    session.requests = {};
+    delete session.journal;
+    delete session.legacyPublication;
     await savePlanSession(loc, session, true);
   }));
 }
-async function blueprintPlanFinalize(raw) {
-  const args = finalizeInput2.parse(raw);
+async function blueprintPlanSubmit(raw) {
+  const args = submitInput2.parse(raw);
   checkedPlanPayload(args);
   return withPlanSession(args, async (loc) => {
     const session = await readPlanSession(loc);
     if (!session) return { status: "not_found", saved: false, nextAction: "Call blueprint_plan_prepare first." };
-    const hash4 = requestHash(args), previous = replay(session, args.requestId, hash4);
-    if (previous) {
-      if (previous.status === "published" && previous.revision !== session.revision) return { ...previous, status: "superseded", ready: false, nextAction: "This receipt belongs to an earlier session revision; use blueprint_plan_read for the current candidate and publication." };
-      if (previous.status === "published" && session.journal?.requestId === args.requestId) {
-        try {
-          await verifyPublished(loc, session.journal, session);
-          if ((await planBasisFreshness(loc.projectRoot, session.phase, session.readSet)).status !== "fresh") throw new Error("Planning evidence changed after publication; refresh preparation.");
-          if (await fs21.readFile(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), "utf8") !== markerContent(session, session.journal, "committed")) throw new Error("Publication marker changed after publication.");
-        } catch (error2) {
-          return { status: "stale", ...responseBase(loc, session), reason: error2.message };
-        }
-      }
-      return previous;
-    }
-    const pending = pendingRequest(session, args.requestId);
-    if (pending) return { status: "partial", ...responseBase(loc, session), nextAction: `Retry blueprint_plan_${pending[1].operation} with requestId ${pending[0]} first.` };
+    const reject = (status, details) => ({ status, saved: false, ready: false, outcome: "rejected-not-saved", ...responseBase(loc, session), ...details });
+    const hash4 = requestHash(args), suppliedHash = args.model === void 0 ? void 0 : researchDigest(stableResearchValue(args.model));
     const accepted = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
-    if (!accepted) {
-      if (args.expectedRevision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
-      session.requests[args.requestId] = { hash: hash4, revision: session.revision, operation: "finalize" };
-      await savePlanSession(loc, session);
-    } else if (accepted.operation !== "finalize" || accepted.revision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Accepted request was superseded." };
-    const fail = (status, details) => saveReceipt(loc, session, args.requestId, { status, ...responseBase(loc, session), ready: false, ...details });
+    if (accepted && (accepted.hash !== hash4 || suppliedHash && accepted.modelHash !== suppliedHash)) return reject("rejected", { reason: "Request ID conflict; retry accepted publication with the same model and control flags." });
     let journal = session.journal?.requestId === args.requestId ? session.journal : void 0;
+    if (session.journal && !session.journal.receipt && !journal) return reject("partial", { nextAction: `Retry blueprint_plan_submit requestId ${session.journal.requestId} first, or explicitly reconcile the observed canonical files through prepare.` });
+    if (!accepted && args.expectedRevision !== session.revision) return reject("stale", { reason: "Revision conflict." });
+    if (accepted?.receipt) {
+      if (!journal || journal.revision !== session.revision) return reject("stale", { reason: "This publication belongs to an earlier preparation." });
+      try {
+        await verifyPublished(loc, journal, session);
+        if ((await planBasisFreshness(loc.projectRoot, session.phase, session.readSet)).status !== "fresh") throw new Error("Planning evidence changed after publication; refresh preparation.");
+        if (await fs21.readFile(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), "utf8") !== markerContent(session, journal, "committed")) throw new Error("Publication marker changed after publication.");
+        return accepted.receipt;
+      } catch (error2) {
+        return reject("stale", { reason: error2.message });
+      }
+    }
+    const contents = /* @__PURE__ */ new Map();
     if (!journal) {
       try {
+        if (args.model === void 0) return reject("needs_revision", { reason: "Supply model using prepare.schema and prepare.example." });
         const freshness = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
         const targets = await planTargetFreshness(loc, session);
         const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
-        if (!phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) return fail("stale", { reason: "Phase topology changed; explicitly reconcile preparation." });
-        if (!session.prepared || session.needsIntent || freshness.status !== "fresh" || !targets.fresh) return fail("needs_revision", { freshness, targets, nextAction: "Refresh planning preparation with an explicit mode choice and reconcile any changed inputs or targets; the candidate is saved." });
-        const readiness = await planDependencies.readiness({ cwd: loc.projectRoot, phase: session.phase, readMode: "hashes-only" });
-        const gates = await readinessGates(loc, readiness);
-        if (!gates.ready) return fail("blocked", { gates, nextAction: await safeNextAction2(readiness.nextSafeAction) });
-        if (session.mode !== "add" && !args.overwrite) return fail("needs_revision", { reason: "Revise/replace requires explicit overwrite authorization after the user chooses the selected targets." });
-        const executed = session.targetPlanIds.filter((id) => current.artifacts.some((p) => p === `${current.resolved.phaseDir}/${current.resolved.phasePrefix}-${id}-SUMMARY.md`));
-        if (executed.length) return fail("needs_revision", { reason: "Executed target plans cannot be revised or replaced; add follow-up plans instead.", executedPlanIds: executed });
-        if (gates.checkerRequired && (!args.review || args.review.verdict !== "accept" || args.review.revision !== session.revision || args.review.candidateHash !== session.candidateHash)) return fail("needs_revision", { reason: "An accepting checker review tied to the current revision and candidateHash is required." });
-        const result = await assess2(loc, session);
-        if (!result.valid || !result.plans.length || !session.candidateHash) return fail("needs_revision", { validation: validationSummary(result), nextAction: "Correct the saved candidate fields, submit a new revision, and review the updated set." });
+        if (!phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) return reject("stale", { reason: "Phase topology changed; reconcile preparation." });
+        if (!session.prepared || session.needsIntent || freshness.status !== "fresh" || !targets.fresh) return reject("needs_revision", { freshness, targets, nextAction: "Refresh prepare with the intended add/revise/replace mode and review changed inputs before submitting the model." });
+        if (session.mode !== "add" && !args.overwrite) return reject("needs_revision", { reason: "Revise/replace requires overwrite=true after the user chooses those targets." });
+        const executed = session.targetPlanIds.filter((id) => current.artifacts.includes(`${current.resolved.phaseDir}/${current.resolved.phasePrefix}-${id}-SUMMARY.md`));
+        if (executed.length) return reject("needs_revision", { reason: "Executed target plans cannot be revised or replaced; add follow-up plans instead.", executedPlanIds: executed });
+        if (args.review?.verdict === "revise" || session.checkerRequired && args.review?.verdict !== "accept") return reject("needs_revision", { reason: "Review this model in memory and supply an accepting review verdict when plan_check is enabled." });
+        const result = await assess2(loc, session, args.model);
+        if (!result.valid || !result.plans.length) return reject("needs_revision", { validation: validationSummary(result), nextAction: "Correct the indicated fields and submit again using the same preparation revision. No draft was stored." });
         const files = [];
         for (const plan of result.plans) {
           const content = prepareTextForPersistence(plan.content, { label: "Compiled phase plan" }).content;
-          if (Buffer.byteLength(content) > 4 * 1024 * 1024) return fail("needs_revision", { reason: "Rendered plan exceeds 4 MiB; candidate remains saved." });
+          if (Buffer.byteLength(content) > 4 * 1024 * 1024) return reject("needs_revision", { reason: "Rendered plan exceeds 4 MiB; reduce repeated prose." });
           const baselineHash = session.targets.find((item) => item.path === plan.path)?.hash ?? null;
-          if (session.mode === "add" && baselineHash || session.mode === "revise" && !session.targetPlanIds.includes(plan.planId)) return fail("needs_revision", { reason: "Candidate attempts to overwrite a plan outside the selected mode and targets." });
-          const backup = baselineHash === null ? null : await fs21.readFile(resolveBlueprintPath(loc.projectRoot, plan.path), "utf8");
-          if (backup !== null && researchDigest(backup) !== baselineHash) return fail("stale", { reason: `Plan changed before staging: ${plan.path}.` });
+          if (session.mode === "add" && baselineHash || session.mode === "revise" && !session.targetPlanIds.includes(plan.planId)) return reject("needs_revision", { reason: "Model attempts to overwrite a plan outside the selected targets." });
           const model = plan.model;
-          files.push({ planId: plan.planId, title: model.title, wave: model.wave, taskCount: model.tasks.length, path: plan.path, hash: researchDigest(content), content, baselineHash, backup });
+          files.push({ planId: plan.planId, wave: model.wave, taskCount: model.tasks.length, path: plan.path, hash: researchDigest(content), baselineHash });
+          contents.set(plan.path, content);
         }
         const removed = [];
         if (session.mode === "replace") for (const id of session.targetPlanIds) {
           const path31 = `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-${id}-PLAN.md`;
           if (files.some((file2) => file2.path === path31)) continue;
           const baselineHash = session.targets.find((item) => item.path === path31)?.hash;
-          if (!baselineHash) return fail("stale", { reason: `Selected replacement target is missing: ${path31}.` });
-          const backup = await fs21.readFile(resolveBlueprintPath(loc.projectRoot, path31), "utf8");
-          if (researchDigest(backup) !== baselineHash) return fail("stale", { reason: `Replacement target changed: ${path31}.` });
-          removed.push({ path: path31, baselineHash, backup });
+          if (!baselineHash) return reject("stale", { reason: `Selected replacement target is missing: ${path31}.` });
+          removed.push({ path: path31, baselineHash });
         }
         const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-        if (marker.status === "pending" || marker.status === "invalid") return fail("partial", { reason: marker.reason });
-        const baselineMarker = await fs21.readFile(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), "utf8").catch((error2) => {
-          if (error2.code === "ENOENT") return null;
-          throw error2;
-        });
-        journal = { requestId: args.requestId, requestHash: hash4, revision: session.revision, candidateHash: session.candidateHash, baselineMarker, ...args.review ? { review: args.review } : {}, files, removed, stages: {} };
+        if (session.legacyPublication || marker.status === "pending" || marker.status === "invalid") return reject("partial", { reason: marker.reason, nextAction: "Prepare and reconcile the observed canonical files before publishing." });
+        session.revision++;
+        journal = { requestId: args.requestId, requestHash: hash4, revision: session.revision, modelHash: suppliedHash, baselineMarkerToken: marker.token, files, removed, stages: {} };
         session.journal = journal;
+        session.requests[args.requestId] = { hash: hash4, modelHash: suppliedHash, revision: session.revision };
         await savePlanSession(loc, session);
       } catch (error2) {
-        return { status: "partial", ...responseBase(loc, session), ready: false, reason: error2.message, nextAction: `Retry blueprint_plan_finalize with requestId ${args.requestId} and identical arguments; the candidate is saved.` };
+        if (!journal) return reject("needs_revision", { reason: error2.message, nextAction: "Correct the model or refresh preparation and retry. No draft was stored." });
+        return { status: "partial", saved: false, ready: false, ...responseBase(loc, session), reason: error2.message, nextAction: "Retry submit with the same requestId, original expectedRevision and model." };
       }
     }
     const publicationPath = planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix);
     const assertFresh = async () => {
       const fresh = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
-      if (fresh.status !== "fresh") throw new Error(`Planning evidence changed: ${[...fresh.stalePaths, ...fresh.unknownPaths].join(", ")}. Candidate and publication journal are retained.`);
+      if (fresh.status !== "fresh") throw new Error(`Planning evidence changed: ${[...fresh.stalePaths, ...fresh.unknownPaths].join(", ")}. Reconcile observed canonical files before continuing.`);
     };
     try {
+      await assertFresh();
+      if (!contents.size && !await filesSaved(loc, journal)) {
+        if (args.model === void 0) throw new Error("Resend the same model to finish publication; no document draft is retained.");
+        const result = await assess2(loc, session, args.model);
+        if (!result.valid) throw new Error("The supplied model no longer validates against the observed plan set; reconcile before publishing.");
+        for (const plan of result.plans) contents.set(plan.path, prepareTextForPersistence(plan.content, { label: "Compiled phase plan" }).content);
+        if (journal.files.some((file2) => !contents.has(file2.path) || researchDigest(contents.get(file2.path)) !== file2.hash)) throw new Error("The supplied model does not reproduce the accepted publication hashes.");
+      }
       await withFreshPhaseTopologyForMutation(loc.projectRoot, { phase: session.phase }, session.topology, "Plan-set publication", async () => withBlueprintRepoLock(loc.projectRoot, "phase-plan-write", async () => {
         await assertFresh();
         const checkpoint = () => savePlanSession(loc, session, true);
         const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
-        const desiredPaths = new Set(journal.files.map((file2) => file2.path));
-        const removedPaths = new Set(journal.removed.map((file2) => file2.path));
-        const originalPaths = new Set(session.targets.map((item) => item.path));
+        const desiredPaths = new Set(journal.files.map((file2) => file2.path)), removedPaths = new Set(journal.removed.map((file2) => file2.path)), originalPaths = new Set(session.targets.map((item) => item.path));
         for (const target of await readPlanTargetHashes(current)) {
           if (!originalPaths.has(target.path) && !desiredPaths.has(target.path)) throw new Error(`An unreviewed plan appeared during publication: ${target.path}.`);
           if (!desiredPaths.has(target.path) && !removedPaths.has(target.path) && session.targets.find((item) => item.path === target.path)?.hash !== target.hash) throw new Error(`Unselected plan changed: ${target.path}.`);
         }
         for (const target of session.targets) if (!desiredPaths.has(target.path) && !removedPaths.has(target.path) && await researchInputHash(loc.projectRoot, target.path) !== target.hash) throw new Error(`Unselected plan changed: ${target.path}.`);
         if (journal.stages.commit !== "complete") {
-          const observedMarker = await fs21.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8").catch((error2) => {
-            if (error2.code === "ENOENT") return null;
-            throw error2;
-          });
-          if (observedMarker !== journal.baselineMarker && observedMarker !== markerContent(session, journal, "pending") && observedMarker !== markerContent(session, journal, "committed")) throw new Error("Publication marker changed externally; refusing to overwrite it.");
+          const observedMarker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+          const pendingToken = researchDigest(markerContent(session, journal, "pending")), committedToken = researchDigest(markerContent(session, journal, "committed"));
+          if (![journal.baselineMarkerToken, pendingToken, committedToken].includes(observedMarker.token)) throw new Error("Publication marker changed externally; refusing to overwrite it.");
           if (!journal.stages.files) {
-            const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-            if (marker.status === "pending" || marker.status === "invalid") throw new Error("Another incomplete publication marker requires recovery.");
             for (const file2 of [...journal.files, ...journal.removed]) if (await researchInputHash(loc.projectRoot, file2.path) !== file2.baselineHash) throw new Error(`Plan target changed before publication: ${file2.path}.`);
             journal.stages.files = "intent";
             await checkpoint();
           }
-          if (observedMarker === journal.baselineMarker) await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), markerContent(session, journal, "pending"));
+          if (observedMarker.token === journal.baselineMarkerToken) await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), markerContent(session, journal, "pending"));
           for (const file2 of journal.files) {
             const observed = await researchInputHash(loc.projectRoot, file2.path);
             if (observed === file2.hash) continue;
             if (observed !== file2.baselineHash) throw new Error(`Plan target changed externally: ${file2.path}.`);
-            await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, file2.path), file2.content);
+            const content = contents.get(file2.path);
+            if (content === void 0 || researchDigest(content) !== file2.hash) throw new Error("Resend the accepted model to finish the missing plan files.");
+            await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, file2.path), content);
           }
           for (const file2 of journal.removed) {
             const observed = await researchInputHash(loc.projectRoot, file2.path);
@@ -57958,24 +58016,25 @@ async function blueprintPlanFinalize(raw) {
         const index = await blueprintPhasePlanIndex({ cwd: loc.projectRoot, phase: session.phase });
         if (!index.phaseFound || !index.plans.length || index.plans.some((plan) => !plan.valid)) throw new Error("The published plan index is no longer valid.");
         await verifyPublished(loc, journal, session);
-        const acceptedTargets = new Map(session.targets.map((item) => [item.path, item.hash]));
-        for (const file2 of journal.files) acceptedTargets.set(file2.path, file2.hash);
-        for (const file2 of journal.removed) acceptedTargets.delete(file2.path);
-        session.targets = [...acceptedTargets].sort(([left], [right]) => left.localeCompare(right)).map(([path31, hash5]) => ({ path: path31, hash: hash5 }));
+        const targets = new Map(session.targets.map((item) => [item.path, item.hash]));
+        for (const file2 of journal.files) targets.set(file2.path, file2.hash);
+        for (const file2 of journal.removed) targets.delete(file2.path);
+        session.targets = [...targets].sort(([left], [right]) => left.localeCompare(right)).map(([path31, hash5]) => ({ path: path31, hash: hash5 }));
         session.existingPlans = index.plans.map((plan) => ({ planId: plan.planId, wave: plan.wave ?? 1, dependsOn: plan.dependsOn, requirements: plan.requirements }));
         journal.stages.routing = "complete";
         session.needsIntent = true;
-        journal.receipt = { status: "published", ...responseBase(loc, session), ready: true, paths: journal.files.map((file2) => file2.path), plans: journal.files.map(({ planId: planId3, title, wave, taskCount, path: path31 }) => ({ planId: planId3, title, wave, taskCount, path: path31 })), removedPaths: journal.removed.map((file2) => file2.path), stages: { ...journal.stages }, warnings: state.warnings ?? [], nextAction };
+        journal.receipt = { status: "published", saved: true, ready: true, ...responseBase(loc, session), paths: journal.files.map((file2) => file2.path), plans: journal.files.map(({ planId: planId3, wave, taskCount, path: path31 }) => ({ planId: planId3, wave, taskCount, path: path31 })), removedPaths: journal.removed.map((file2) => file2.path), stages: { ...journal.stages }, nextAction };
         session.requests[args.requestId].receipt = journal.receipt;
         await savePlanSession(loc, session, true);
         return journal.receipt;
       }));
     } catch (error2) {
-      return { status: "partial", ...responseBase(loc, session), ready: false, stages: journal.stages, reason: error2.message, nextAction: `Retry blueprint_plan_finalize with requestId ${args.requestId} and identical arguments. The journal retains exact candidate, previous plans, and intended publication bytes.` };
+      const saved = await filesSaved(loc, journal).catch(() => false);
+      return { status: "partial", saved, ready: false, ...responseBase(loc, session), stages: journal.stages, reason: error2.message, nextAction: `Retry blueprint_plan_submit with requestId ${args.requestId} and the original expectedRevision/control flags${saved ? "; all canonical plan files are saved and model may be omitted" : "; resend model because no document draft is retained"}. Reconcile changed inputs or targets through prepare.` };
     }
   });
 }
-var mode, planId2, prepareInput3, correction, submitInput2, reviewInput, finalizeInput2, lookupSchema, planDependencies, planningToolDefinitions;
+var mode, planId2, prepareInput3, reviewInput, submitInput2, lookupSchema, planDependencies, planningToolDefinitions;
 var init_plan = __esm({
   "src/mcp/tools/plan.ts"() {
     "use strict";
@@ -57983,6 +58042,7 @@ var init_plan = __esm({
     init_security();
     init_artifacts();
     init_phase_locations();
+    init_phase_markdown();
     init_phase();
     init_plan_model();
     init_state();
@@ -58004,17 +58064,14 @@ var init_plan = __esm({
       acknowledgeChangedInputs: boolean2().optional(),
       reconcile: object2({ confirmed: literal(true), targetHashes: record(string2(), string2().nullable()) }).optional()
     });
-    correction = object2({ path: array(string2()).min(1).max(20), operation: _enum(["set", "remove"]).default("set"), value: unknown().optional() });
-    submitInput2 = object2({ ...planLookup, requestId: planRequestId, expectedRevision: number2().int().nonnegative(), candidate: unknown().optional(), corrections: array(correction).max(50).optional() });
-    reviewInput = object2({ revision: number2().int().nonnegative(), candidateHash: string2().regex(/^[a-f0-9]{64}$/), verdict: _enum(["accept", "revise"]), summary: string2().min(1).max(2e4) });
-    finalizeInput2 = object2({ ...planLookup, requestId: planRequestId, expectedRevision: number2().int().nonnegative(), overwrite: boolean2().optional(), review: reviewInput.optional() });
+    reviewInput = object2({ verdict: _enum(["accept", "revise"]), summary: string2().min(1).max(2e4) });
+    submitInput2 = object2({ ...planLookup, requestId: planRequestId, expectedRevision: number2().int().nonnegative(), model: unknown().optional(), overwrite: boolean2().optional(), review: reviewInput.optional() });
     lookupSchema = object2(planLookup);
-    planDependencies = { compile: compilePlanCandidate, validate: validatePhasePlanCandidateSet, readiness: blueprintPhasePlanReadiness, writeText: writeTextFile, remove: (path31) => fs21.unlink(path31), stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad };
+    planDependencies = { compile: compilePlanCandidate, validate: validatePhasePlanCandidateSet, writeText: writeTextFile, remove: (path31) => fs21.unlink(path31), stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad };
     planningToolDefinitions = [
-      { name: "blueprint_plan_prepare", description: "Prepare a compact, freshness-bound plan-set authoring packet and durable session. Existing plans require an explicit add/revise/replace choice; changed evidence requires reviewed reconciliation.", inputSchema: prepareInput3.shape, handler: (args) => blueprintPlanPrepare(args) },
-      { name: "blueprint_plan_submit", description: "Durably retain a plan candidate or exact raw JSON before validation, or apply narrow field corrections. Return diagnostics and a review packet without writing canonical plans.", inputSchema: submitInput2.shape, handler: (args) => blueprintPlanSubmit(args) },
-      { name: "blueprint_plan_read", description: "Recover saved planning candidate, revisions, receipts, evidence freshness, backups, and publication journal.", inputSchema: planLookup, handler: (args) => blueprintPlanRead(args) },
-      { name: "blueprint_plan_finalize", description: "Validate and publish the complete saved plan set with freshness and overwrite gates, revision-bound checker review, a publication read barrier, and resumable state synchronization.", inputSchema: finalizeInput2.shape, handler: (args) => blueprintPlanFinalize(args) }
+      { name: "blueprint_plan_prepare", description: "Prepare phase evidence, exact model schema/example, derivable fields and meaningful validation rules for first-attempt plan publication. Saves only preparation metadata. Existing plans require add/revise/replace intent.", inputSchema: prepareInput3.shape, handler: (args) => blueprintPlanPrepare(args) },
+      { name: "blueprint_plan_submit", description: "Normalize and validate a model in memory, then publish the complete canonical plan set. Rejected drafts are never saved. An optional configured checker reviews the supplied model before this call. Retry interrupted publication with the same model until all canonical plans are saved.", inputSchema: submitInput2.shape, handler: (args) => blueprintPlanSubmit(args) },
+      { name: "blueprint_plan_read", description: "Read canonical plans, preparation metadata, publication stages and evidence freshness. No rejected drafts, document history or backups are retained.", inputSchema: planLookup, handler: (args) => blueprintPlanRead(args) }
     ];
   }
 });
@@ -58079,15 +58136,15 @@ async function canonicalizePath(candidatePath2) {
 function normalizeTextForComparison(value) {
   return value.replace(/\r\n/g, "\n").trimEnd();
 }
-function extractMarkdownSection6(markdown, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function extractMarkdownSection6(markdown, heading2) {
+  const escapedHeading = heading2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
   );
   return match?.[1]?.trim() ?? "";
 }
-function parseBulletSection2(markdown, heading) {
-  return extractMarkdownSection6(markdown, heading).split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).filter((line2) => line2.length > 0 && line2.toLowerCase() !== "none");
+function parseBulletSection2(markdown, heading2) {
+  return extractMarkdownSection6(markdown, heading2).split("\n").map((line2) => line2.trim()).filter((line2) => line2.startsWith("- ")).map((line2) => line2.slice(2).trim()).filter((line2) => line2.length > 0 && line2.toLowerCase() !== "none");
 }
 function parseStateSnapshot(raw) {
   const getLineValue = (label) => {
@@ -64017,9 +64074,9 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
   let stateMayBePersisted = false;
   let pendingStateUpdate = null;
   for (const [planId3, progress] of Object.entries(session.execution.plans)) {
-    for (const receipt2 of progress.mutationReceipts) latestReceipts.set(receipt2.path, receipt2);
-    for (const receipt2 of progress.mutationGitStatusReceipts) {
-      latestMutationStatuses.set(receipt2.path, receipt2.status);
+    for (const receipt of progress.mutationReceipts) latestReceipts.set(receipt.path, receipt);
+    for (const receipt of progress.mutationGitStatusReceipts) {
+      latestMutationStatuses.set(receipt.path, receipt.status);
     }
     for (const mutation of progress.pendingMutations) pendingMutations.set(mutation.path, mutation);
     if (progress.persistenceStage !== "none") {
@@ -64096,13 +64153,13 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
       blockers.push(`Execute-phase baseline working-tree authority drifted: ${baseline.path}.`);
     }
   }
-  for (const [relativePath, receipt2] of latestReceipts) {
+  for (const [relativePath, receipt] of latestReceipts) {
     if (pendingMutations.has(relativePath)) continue;
     if (currentStatusByPath.get(relativePath) !== latestMutationStatuses.get(relativePath)) {
       blockers.push(`Execute-phase mutation Git status drifted: ${relativePath}.`);
     }
     const observed = await observe(relativePath, false);
-    if (observed.sha256 !== receipt2.afterHash || observed.mode !== receipt2.afterMode) {
+    if (observed.sha256 !== receipt.afterHash || observed.mode !== receipt.afterMode) {
       blockers.push(`Execute-phase mutation receipt no longer matches ${relativePath}.`);
     }
   }
@@ -64131,9 +64188,9 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
   for (const plan of session.packet.selectedPlans) {
     for (const artifact of [...plan.ownedFilePreimages, ...plan.readFirstArtifacts]) {
       if (pendingMutations.has(artifact.path)) continue;
-      const receipt2 = latestReceipts.get(artifact.path);
+      const receipt = latestReceipts.get(artifact.path);
       const observed = await observe(artifact.path, artifact.path.startsWith(`${BLUEPRINT_DIR}/`));
-      if (observed.sha256 !== (receipt2?.afterHash ?? artifact.sha256) || observed.mode !== (receipt2?.afterMode ?? artifact.mode)) {
+      if (observed.sha256 !== (receipt?.afterHash ?? artifact.sha256) || observed.mode !== (receipt?.afterMode ?? artifact.mode)) {
         blockers.push(`Execute-phase repo authority drifted outside MCP ownership: ${artifact.path}.`);
       }
     }
@@ -64254,11 +64311,11 @@ function isArtifactDigest(value) {
   const digest2 = value;
   return typeof digest2.path === "string" && (digest2.sha256 === null || typeof digest2.sha256 === "string" && /^[0-9a-f]{64}$/.test(digest2.sha256)) && (digest2.sizeBytes === null || Number.isInteger(digest2.sizeBytes) && (digest2.sizeBytes ?? -1) >= 0) && (digest2.mode === null || Number.isInteger(digest2.mode));
 }
-function isVerificationOutputValid(receipt2, channel) {
-  const text2 = receipt2[channel];
-  const bytes = receipt2[`${channel}Bytes`];
-  const hash4 = receipt2[`${channel}Hash`];
-  const truncated = receipt2[`${channel}Truncated`];
+function isVerificationOutputValid(receipt, channel) {
+  const text2 = receipt[channel];
+  const bytes = receipt[`${channel}Bytes`];
+  const hash4 = receipt[`${channel}Hash`];
+  const truncated = receipt[`${channel}Truncated`];
   if (typeof text2 !== "string" || !Number.isInteger(bytes) || bytes < Buffer.byteLength(text2) || typeof hash4 !== "string" || !/^[0-9a-f]{64}$/.test(hash4) || typeof truncated !== "boolean") {
     return false;
   }
@@ -64267,19 +64324,19 @@ function isVerificationOutputValid(receipt2, channel) {
 }
 function isValidPhaseExecutionVerificationReceipt(value, command) {
   if (!value || typeof value !== "object") return false;
-  const receipt2 = value;
-  const argv = receipt2.argv;
-  const exitCode = receipt2.exitCode;
-  const signal = receipt2.signal;
-  const timedOut = receipt2.timedOut;
-  const outputLimitExceeded = receipt2.outputLimitExceeded;
-  const passed = receipt2.passed;
+  const receipt = value;
+  const argv = receipt.argv;
+  const exitCode = receipt.exitCode;
+  const signal = receipt.signal;
+  const timedOut = receipt.timedOut;
+  const outputLimitExceeded = receipt.outputLimitExceeded;
+  const passed = receipt.passed;
   const outcomePassed = exitCode === 0 && signal === null && timedOut === false && outputLimitExceeded === false;
-  return receipt2.command === command && Array.isArray(argv) && argv.length === 2 && argv[0] === "-c" && argv[1] === command && (exitCode === null || Number.isInteger(exitCode)) && (signal === null || typeof signal === "string") && typeof timedOut === "boolean" && typeof outputLimitExceeded === "boolean" && typeof passed === "boolean" && passed === outcomePassed && isVerificationOutputValid(receipt2, "stdout") && isVerificationOutputValid(receipt2, "stderr");
+  return receipt.command === command && Array.isArray(argv) && argv.length === 2 && argv[0] === "-c" && argv[1] === command && (exitCode === null || Number.isInteger(exitCode)) && (signal === null || typeof signal === "string") && typeof timedOut === "boolean" && typeof outputLimitExceeded === "boolean" && typeof passed === "boolean" && passed === outcomePassed && isVerificationOutputValid(receipt, "stdout") && isVerificationOutputValid(receipt, "stderr");
 }
 function hasPassingBoundPhaseExecutionVerification(commands, receipts) {
   return Array.isArray(receipts) && receipts.length === commands.length && receipts.every(
-    (receipt2, index) => isValidPhaseExecutionVerificationReceipt(receipt2, commands[index]) && receipt2.passed
+    (receipt, index) => isValidPhaseExecutionVerificationReceipt(receipt, commands[index]) && receipt.passed
   );
 }
 function isPreparedStateUpdate(value, packet) {
@@ -64329,14 +64386,14 @@ function isExecutionProgress(value, packet) {
     const packetPlan = packet.selectedPlans.find((entry) => entry.planId === planId3);
     if (!packetPlan) return false;
     const mutationReceiptsValid = Array.isArray(plan.mutationReceipts) && plan.mutationReceipts.every(
-      (receipt2) => receipt2 && typeof receipt2 === "object" && packetPlan.allowedFiles.includes(receipt2.path) && (receipt2.operation === "write" || receipt2.operation === "delete") && (receipt2.beforeHash === null || /^[0-9a-f]{64}$/.test(receipt2.beforeHash)) && (receipt2.afterHash === null || /^[0-9a-f]{64}$/.test(receipt2.afterHash)) && (receipt2.beforeMode === null || Number.isInteger(receipt2.beforeMode)) && (receipt2.afterMode === null || Number.isInteger(receipt2.afterMode)) && Number.isInteger(receipt2.bytesWritten) && receipt2.bytesWritten >= 0
+      (receipt) => receipt && typeof receipt === "object" && packetPlan.allowedFiles.includes(receipt.path) && (receipt.operation === "write" || receipt.operation === "delete") && (receipt.beforeHash === null || /^[0-9a-f]{64}$/.test(receipt.beforeHash)) && (receipt.afterHash === null || /^[0-9a-f]{64}$/.test(receipt.afterHash)) && (receipt.beforeMode === null || Number.isInteger(receipt.beforeMode)) && (receipt.afterMode === null || Number.isInteger(receipt.afterMode)) && Number.isInteger(receipt.bytesWritten) && receipt.bytesWritten >= 0
     );
     const mutationGitStatusReceiptsValid = Array.isArray(plan.mutationGitStatusReceipts) && plan.mutationGitStatusReceipts.length === plan.mutationReceipts?.length && plan.mutationGitStatusReceipts.every(
-      (receipt2, index) => receipt2 && typeof receipt2 === "object" && receipt2.path === plan.mutationReceipts?.[index]?.path && packetPlan.allowedFiles.includes(receipt2.path) && (receipt2.status === null || typeof receipt2.status === "string" && receipt2.status.length === 2)
+      (receipt, index) => receipt && typeof receipt === "object" && receipt.path === plan.mutationReceipts?.[index]?.path && packetPlan.allowedFiles.includes(receipt.path) && (receipt.status === null || typeof receipt.status === "string" && receipt.status.length === 2)
     );
     const verificationReceiptsValid = Array.isArray(plan.verificationReceipts) && plan.verificationReceipts.every(
       (attempt) => Array.isArray(attempt) && attempt.length > 0 && attempt.length <= packetPlan.verificationCommands.length && attempt.every(
-        (receipt2, index) => isValidPhaseExecutionVerificationReceipt(receipt2, packetPlan.verificationCommands[index])
+        (receipt, index) => isValidPhaseExecutionVerificationReceipt(receipt, packetPlan.verificationCommands[index])
       )
     );
     const latestVerification = plan.verificationReceipts?.at(-1);
@@ -65093,11 +65150,11 @@ async function applyPinnedPhaseExecutionMutations(args) {
     }
     const receipts = observations.flatMap((result) => result.receipts ?? []);
     let divergence = null;
-    for (const receipt2 of receipts) {
-      const mutation = normalizedMutations.find((candidate) => candidate.path === receipt2.path);
+    for (const receipt of receipts) {
+      const mutation = normalizedMutations.find((candidate) => candidate.path === receipt.path);
       const expectedHash = mutation.operation === "write" ? sha2563(mutation.content ?? "") : null;
-      if (receipt2.afterHash !== expectedHash) {
-        divergence = `Mutation postimage diverged before receipt persistence for ${receipt2.path}.`;
+      if (receipt.afterHash !== expectedHash) {
+        divergence = `Mutation postimage diverged before receipt persistence for ${receipt.path}.`;
         break;
       }
     }
@@ -65146,7 +65203,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
     return {
       status: divergence ? "postimage-diverged" : cleanupPaths.length > 0 ? "committed-cleanup-required" : "committed",
       receipts: normalizedMutations.map(
-        (mutation) => receipts.find((receipt2) => receipt2.path === mutation.path)
+        (mutation) => receipts.find((receipt) => receipt.path === mutation.path)
       ),
       cleanupPaths,
       failure: cleanupFailures.length > 0 ? cleanupFailures.join("; ") : divergence,
@@ -66077,7 +66134,7 @@ function interruptedVerificationReceipt(command) {
 function latestReceiptByPath(session) {
   const receipts = /* @__PURE__ */ new Map();
   for (const plan of Object.values(session.execution.plans)) {
-    for (const receipt2 of plan.mutationReceipts) receipts.set(receipt2.path, receipt2);
+    for (const receipt of plan.mutationReceipts) receipts.set(receipt.path, receipt);
   }
   return receipts;
 }
@@ -66095,8 +66152,8 @@ async function assertSessionAuthority(projectRoot, session) {
   let stateWasPersisted = false;
   let pendingStateUpdate = null;
   for (const [planId3, progress] of Object.entries(session.execution.plans)) {
-    for (const receipt2 of progress.mutationGitStatusReceipts) {
-      mutationStatuses.set(receipt2.path, receipt2.status);
+    for (const receipt of progress.mutationGitStatusReceipts) {
+      mutationStatuses.set(receipt.path, receipt.status);
     }
     if (progress.persistenceStage !== "none") {
       persistedSummaryPaths.add(
@@ -66204,10 +66261,10 @@ async function assertSessionAuthority(projectRoot, session) {
   }
   for (const plan of session.packet.selectedPlans) {
     for (const artifact of [...plan.ownedFilePreimages, ...plan.readFirstArtifacts]) {
-      const receipt2 = receipts.get(artifact.path);
+      const receipt = receipts.get(artifact.path);
       const observed = await readRepoHash(projectRoot, artifact.path);
-      const expectedHash = receipt2 ? receipt2.afterHash : artifact.sha256;
-      const expectedMode = receipt2 ? receipt2.afterMode : artifact.mode;
+      const expectedHash = receipt ? receipt.afterHash : artifact.sha256;
+      const expectedMode = receipt ? receipt.afterMode : artifact.mode;
       if (observed.hash !== expectedHash || observed.mode !== expectedMode) {
         throw new Error(`Execute-phase repo preimage drifted outside MCP ownership: ${artifact.path}.`);
       }
@@ -66257,9 +66314,9 @@ async function recoverInterruptedMutation(projectRoot, session, progress) {
 async function captureMutationGitStatusReceipts(projectRoot, receipts) {
   const repository = await capturePhaseExecutionRepositorySnapshot(projectRoot);
   const statuses = new Map(repository.workingTree.map((entry) => [entry.path, entry.status]));
-  return receipts.map((receipt2) => ({
-    path: receipt2.path,
-    status: statuses.get(receipt2.path) ?? null
+  return receipts.map((receipt) => ({
+    path: receipt.path,
+    status: statuses.get(receipt.path) ?? null
   }));
 }
 function expectedPreimages(session, planId3) {
@@ -66267,8 +66324,8 @@ function expectedPreimages(session, planId3) {
   if (!plan) throw new Error(`Plan ${planId3} is not selected in this execute-phase session.`);
   const expected = new Map(plan.ownedFilePreimages.map((entry) => [entry.path, entry.sha256]));
   for (const packetPlan of session.packet.selectedPlans) {
-    for (const receipt2 of session.execution.plans[packetPlan.planId]?.mutationReceipts ?? []) {
-      if (expected.has(receipt2.path)) expected.set(receipt2.path, receipt2.afterHash);
+    for (const receipt of session.execution.plans[packetPlan.planId]?.mutationReceipts ?? []) {
+      if (expected.has(receipt.path)) expected.set(receipt.path, receipt.afterHash);
     }
     if (packetPlan.planId === planId3) break;
   }
@@ -66488,7 +66545,7 @@ async function blueprintPhaseExecutionVerify(args, dependencies2 = {}) {
         timeoutMs: dependencies2.timeoutMs
       });
       progress.verificationReceipts.push(receipts);
-      const passed = receipts.length === packetPlan.verificationCommands.length && receipts.every((receipt2) => receipt2.passed);
+      const passed = receipts.length === packetPlan.verificationCommands.length && receipts.every((receipt) => receipt.passed);
       await assertSessionAuthority(context.projectRoot, session);
       if (passed) {
         progress.status = "verified";
@@ -66506,7 +66563,7 @@ async function blueprintPhaseExecutionVerify(args, dependencies2 = {}) {
           }
         };
       }
-      const failure2 = receipts.find((receipt2) => !receipt2.passed);
+      const failure2 = receipts.find((receipt) => !receipt.passed);
       progress.failure = failure2 ? `Verification failed for ${failure2.command} (exit ${failure2.exitCode ?? "none"}${failure2.timedOut ? ", timed out" : ""}).` : "Verification did not produce receipts for every bound command.";
       if (progress.verificationAttempts === 1) {
         progress.status = "awaiting-repair";
@@ -66556,7 +66613,7 @@ function summaryModelForPlan(session, packetPlan, progress) {
     session.packet.existingSummaries.map((summary) => [summary.planId, summary])
   );
   const changes = progress.mutationReceipts.map(
-    (receipt2) => `${receipt2.operation === "delete" ? "Deleted" : "Updated"} ${receipt2.path} through the Blueprint MCP execution boundary (${receipt2.beforeHash ?? "missing"} -> ${receipt2.afterHash ?? "missing"}).`
+    (receipt) => `${receipt.operation === "delete" ? "Deleted" : "Updated"} ${receipt.path} through the Blueprint MCP execution boundary (${receipt.beforeHash ?? "missing"} -> ${receipt.afterHash ?? "missing"}).`
   );
   const failure2 = progress.failure ?? "Execution stopped before the selected plan reached passing verification.";
   return {
@@ -66566,13 +66623,13 @@ function summaryModelForPlan(session, packetPlan, progress) {
     outcome: completed ? [`Plan ${packetPlan.planId} completed with MCP-owned mutation and verification receipts.`] : [`Plan ${packetPlan.planId} stopped with durable execution evidence: ${failure2}`],
     changesMade: changes.length > 0 ? changes : [`No repository mutation was accepted for plan ${packetPlan.planId}.`],
     targetedVerification: packetPlan.verificationCommands.map((command) => {
-      const receipt2 = latestVerification.find((candidate) => candidate.command === command);
+      const receipt = latestVerification.find((candidate) => candidate.command === command);
       return {
         check: `${command} exits 0`,
         command,
-        result: completed && receipt2?.passed ? "pass" : "blocked",
-        evidence: receipt2 ? `Exit ${receipt2.exitCode ?? "none"}; stdout sha256 ${receipt2.stdoutHash}; stderr sha256 ${receipt2.stderrHash}.` : "No successful verification receipt was persisted.",
-        notes: receipt2?.timedOut ? "The bound command timed out and its process group was terminated." : receipt2?.passed ? "The exact packet-bound command passed." : failure2
+        result: completed && receipt?.passed ? "pass" : "blocked",
+        evidence: receipt ? `Exit ${receipt.exitCode ?? "none"}; stdout sha256 ${receipt.stdoutHash}; stderr sha256 ${receipt.stderrHash}.` : "No successful verification receipt was persisted.",
+        notes: receipt?.timedOut ? "The bound command timed out and its process group was terminated." : receipt?.passed ? "The exact packet-bound command passed." : failure2
       };
     }),
     dependencyPlans: packetPlan.dependsOn.map((planId3) => {
@@ -66603,15 +66660,15 @@ function summaryModelForPlan(session, packetPlan, progress) {
         source: packetPlan.path,
         summary: `Claimed execution authority for plan ${packetPlan.planId}.`
       },
-      ...progress.mutationReceipts.map((receipt2) => ({
+      ...progress.mutationReceipts.map((receipt) => ({
         kind: "repo-path",
-        source: receipt2.path,
-        summary: `MCP mutation receipt ${receipt2.beforeHash ?? "missing"} -> ${receipt2.afterHash ?? "missing"}.`
+        source: receipt.path,
+        summary: `MCP mutation receipt ${receipt.beforeHash ?? "missing"} -> ${receipt.afterHash ?? "missing"}.`
       })),
-      ...latestVerification.map((receipt2) => ({
+      ...latestVerification.map((receipt) => ({
         kind: "command",
-        source: receipt2.command,
-        summary: `Bound verification ${receipt2.passed ? "passed" : "failed"} with exit ${receipt2.exitCode ?? "none"}.`
+        source: receipt.command,
+        summary: `Bound verification ${receipt.passed ? "passed" : "failed"} with exit ${receipt.exitCode ?? "none"}.`
       }))
     ],
     nextSafeAction
@@ -67790,7 +67847,7 @@ function summarizeReviewModelRepairs(diagnostics) {
 function explicitReviewFilesRequested(files) {
   return (files ?? []).some((candidate) => candidate.trim().length > 0);
 }
-function renderBulletList3(items, fallback = "none") {
+function renderBulletList4(items, fallback = "none") {
   const lines3 = items.map((item) => item.trim()).filter((item) => item.length > 0);
   if (lines3.length === 0) {
     return `- ${fallback}`;
@@ -70063,8 +70120,8 @@ function emptySeverityCounts() {
     unknown: 0
   };
 }
-function inferFindingSeverity(heading, item) {
-  const source = `${heading} ${item}`.toLowerCase();
+function inferFindingSeverity(heading2, item) {
+  const source = `${heading2} ${item}`.toLowerCase();
   if (/\b(?:critical|p0)\b/.test(source)) {
     return "critical";
   }
@@ -70868,19 +70925,19 @@ function renderCodeReviewModelContent(model, located, authoringContext) {
 - Depth: ${authoringContext.reviewMode.depth}
 - Scope source: ${authoringContext.reviewMode.source}
 - File count: ${authoringContext.files.length}
-${renderBulletList3(model.reviewSummary)}
+${renderBulletList4(model.reviewSummary)}
 
 ## Scope Reviewed
 
-${renderBulletList3(authoringContext.files)}
+${renderBulletList4(authoringContext.files)}
 
 ## Evidence Reviewed
 
-${renderBulletList3(evidenceReviewed)}
+${renderBulletList4(evidenceReviewed)}
 
 ## Positive Signals
 
-${renderBulletList3(model.positiveSignals)}
+${renderBulletList4(model.positiveSignals)}
 
 ## Severity Summary
 
@@ -70937,7 +70994,7 @@ function renderPeerReviewModelContent(model, located, authoringContext) {
 
 ## Review Summary
 
-${renderBulletList3(model.reviewSummary)}
+${renderBulletList4(model.reviewSummary)}
 
 ## Reviewer Coverage
 
@@ -70945,7 +71002,7 @@ ${renderMarkdownTable2(["Reviewer", "Status", "Summary"], reviewerRows)}
 
 ## Reviewer Results
 
-${renderBulletList3(completedReviewers.map((row) => `${row.reviewer}: ${row.summary}`))}
+${renderBulletList4(completedReviewers.map((row) => `${row.reviewer}: ${row.summary}`))}
 
 ## Plan Reviews
 
@@ -70957,11 +71014,11 @@ ${renderMarkdownTable2(["Severity", "Source", "Evidence", "Recommendation", "Sta
 
 ## Consensus
 
-${renderBulletList3(model.consensus)}
+${renderBulletList4(model.consensus)}
 
 ## Disagreements
 
-${renderBulletList3(model.disagreements)}
+${renderBulletList4(model.disagreements)}
 
 ## Risk Assessment
 
@@ -70983,7 +71040,7 @@ ${renderMarkdownTable2(
 
 ## Follow-Ups
 
-${renderBulletList3(model.followUps)}
+${renderBulletList4(model.followUps)}
 
 ## Evidence Reviewed
 
@@ -71025,7 +71082,7 @@ function renderReviewFixModelContent(model, located, authoringContext) {
 
 ## Remediation Summary
 
-${renderBulletList3(model.remediationSummary)}
+${renderBulletList4(model.remediationSummary)}
 
 ## Findings Addressed
 
@@ -71077,7 +71134,7 @@ ${renderMarkdownTable2(
 
 ## Follow-Ups
 
-${renderBulletList3(model.followUps)}
+${renderBulletList4(model.followUps)}
 
 ## Evidence
 
@@ -71175,11 +71232,11 @@ function renderSecurityModelContent(model, located, authoringContext) {
 - Closed threats: ${counts.closed}
 - Accepted risks: ${counts.accepted}
 - Open threats: ${counts.open}
-${renderBulletList3(model.securitySummary)}
+${renderBulletList4(model.securitySummary)}
 
 ## Evidence Reviewed
 
-${renderBulletList3(renderSecurityEvidenceCoverage({
+${renderBulletList4(renderSecurityEvidenceCoverage({
     model,
     knownEvidenceArtifacts: authoringContext.knownEvidenceArtifacts
   }))}
@@ -71231,7 +71288,7 @@ ${renderMarkdownTable2(
 
 ## Follow-Ups
 
-${renderBulletList3(model.followUps)}
+${renderBulletList4(model.followUps)}
 
 ## Security Audit Trail
 
@@ -71288,11 +71345,11 @@ function renderUiReviewModelContent(model, located, authoringContext) {
 - Completed summaries: ${authoringContext.completedSummaries.length}
 - Pending plans: ${authoringContext.pendingPlans.length}
 - Lower-wave pending plans: ${authoringContext.lowerWavePendingPlanIds.length}
-${renderBulletList3(model.uiReviewSummary)}
+${renderBulletList4(model.uiReviewSummary)}
 
 ## Evidence Reviewed
 
-${renderBulletList3(renderUiReviewEvidenceCoverage({
+${renderBulletList4(renderUiReviewEvidenceCoverage({
     model,
     knownEvidenceArtifacts: authoringContext.knownEvidenceArtifacts
   }))}
@@ -71325,7 +71382,7 @@ ${renderMarkdownTable2(
 
 ## Follow-Ups
 
-${renderBulletList3(model.followUps)}
+${renderBulletList4(model.followUps)}
 
 ## Audit Trail
 
@@ -80846,16 +80903,16 @@ function validateConfidenceGrounding(report, errors) {
 }
 function validateRenderedImpactMarkdown(markdown, errors, warnings) {
   const sections = parseMarkdownSections(markdown);
-  for (const heading of IMPACT_REPORT_REQUIRED_HEADINGS) {
-    const section = sections.get(heading);
+  for (const heading2 of IMPACT_REPORT_REQUIRED_HEADINGS) {
+    const section = sections.get(heading2);
     if (!section) {
-      errors.push(`IMPACT.md is missing required heading: ${heading}.`);
+      errors.push(`IMPACT.md is missing required heading: ${heading2}.`);
       continue;
     }
     if (section.trim().length === 0) {
-      errors.push(`IMPACT.md section ${heading} is empty.`);
+      errors.push(`IMPACT.md section ${heading2} is empty.`);
     } else if (isGenericFiller(section)) {
-      errors.push(`IMPACT.md section ${heading} contains generic filler.`);
+      errors.push(`IMPACT.md section ${heading2} contains generic filler.`);
     }
   }
   const placeholderMatches = markdown.match(/<[^>\n]+>|\bTBD\b|\bTODO\b/giu) ?? [];
@@ -82644,7 +82701,7 @@ function renderOutcomeReport(packet, result) {
     ...result.reverted
   ];
   const processRows = result.processes.length ? result.processes.map(
-    (receipt2) => `| ${receipt2.target} | ${receipt2.result.exitCode ?? "null"} | ${receipt2.result.signal ?? "none"} | ${receipt2.result.timedOut} | ${markdownValue(receipt2.result.stdout || "none")} | ${markdownValue(receipt2.result.stderr || "none")} |`
+    (receipt) => `| ${receipt.target} | ${receipt.result.exitCode ?? "null"} | ${receipt.result.signal ?? "none"} | ${receipt.result.timedOut} | ${markdownValue(receipt.result.stdout || "none")} | ${markdownValue(receipt.result.stderr || "none")} |`
   ).join("\n") : "| none | none | none | false | none | none |";
   const reportWithOutcome = preReport.replace(
     /- \*\*Revert outcome:\*\* not-run\n- \*\*Blockers:\*\* none/,
@@ -83743,9 +83800,9 @@ function parseTreeEntry(stdout) {
   return `${match[1]}:${match[2]}:${match[3]}`;
 }
 async function treeEntry(repoRoot, commit, relativePath) {
-  const receipt2 = await git(repoRoot, ["ls-tree", "-z", commit, "--", relativePath]);
-  if (!succeeded(receipt2)) throw new Error(`Tree entry inspection failed for ${relativePath}.`);
-  return parseTreeEntry(receipt2.stdout);
+  const receipt = await git(repoRoot, ["ls-tree", "-z", commit, "--", relativePath]);
+  if (!succeeded(receipt)) throw new Error(`Tree entry inspection failed for ${relativePath}.`);
+  return parseTreeEntry(receipt.stdout);
 }
 function pruneApprovals2() {
   const now = nowProvider2();
@@ -84078,9 +84135,9 @@ async function compareFreshAfterPreReport(packet, expectedReportSha256) {
   return changed;
 }
 async function recordProcess(result, stage, argv) {
-  const receipt2 = await git(approvals2.get(result.operationId)?.packet.repoRoot ?? globalThis.process.cwd(), argv);
-  result.processes.push({ stage, argv: [...argv], result: receipt2 });
-  return receipt2;
+  const receipt = await git(approvals2.get(result.operationId)?.packet.repoRoot ?? globalThis.process.cwd(), argv);
+  result.processes.push({ stage, argv: [...argv], result: receipt });
+  return receipt;
 }
 function abnormal(result) {
   return result.timedOut || result.signal !== null || result.exitCode === null;
@@ -84090,9 +84147,9 @@ async function currentOid(repoRoot, ref = "HEAD") {
   return succeeded(result) && isCanonicalFullGitHash(result.stdout.trim()) ? result.stdout.trim() : null;
 }
 async function readOidReceipt(result, stage, ref) {
-  const receipt2 = await recordProcess(result, stage, ["rev-parse", "--verify", "--end-of-options", ref]);
-  const oid = receipt2.stdout.trim();
-  return succeeded(receipt2) && isCanonicalFullGitHash(oid) ? oid : null;
+  const receipt = await recordProcess(result, stage, ["rev-parse", "--verify", "--end-of-options", ref]);
+  const oid = receipt.stdout.trim();
+  return succeeded(receipt) && isCanonicalFullGitHash(oid) ? oid : null;
 }
 function markValidationUnknown(result, blocker) {
   result.status = "outcome-unknown";
@@ -84269,7 +84326,7 @@ async function blueprintPrBranchExecute(args) {
         break;
       }
       const mixed = stored.packet.blueprintPolicy === "exclude" && commit.classification === "mixed";
-      let replay2;
+      let replay;
       let ownedTempDir = null;
       if (mixed) {
         const parent = commit.parents[0];
@@ -84299,7 +84356,7 @@ async function blueprintPrBranchExecute(args) {
             result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "empty-after-filter", verification: "not-applicable" });
             continue;
           }
-          replay2 = await recordProcess(result, `replay:${commit.sourceCommit}`, ["apply", "--index", "--3way", "--", mixedPatchPath]);
+          replay = await recordProcess(result, `replay:${commit.sourceCommit}`, ["apply", "--index", "--3way", "--", mixedPatchPath]);
         } catch (error2) {
           result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
           result.status = "partial";
@@ -84309,11 +84366,11 @@ async function blueprintPrBranchExecute(args) {
           if (ownedTempDir) await rm2(ownedTempDir, { recursive: true, force: true }).catch(() => void 0);
         }
       } else {
-        replay2 = await recordProcess(result, `replay:${commit.sourceCommit}`, ["cherry-pick", commit.sourceCommit]);
+        replay = await recordProcess(result, `replay:${commit.sourceCommit}`, ["cherry-pick", commit.sourceCommit]);
       }
-      if (!succeeded(replay2)) {
+      if (!succeeded(replay)) {
         result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
-        result.status = abnormal(replay2) ? "outcome-unknown" : "partial";
+        result.status = abnormal(replay) ? "outcome-unknown" : "partial";
         result.blockers.push(`Replay failed at ${commit.sourceCommit}; conflicts were not resolved automatically.`);
         const cherryPickHead = path25.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
         if (!mixed && await exists(cherryPickHead)) await recordProcess(result, "abort-cherry-pick", ["cherry-pick", "--abort"]);
@@ -85609,8 +85666,8 @@ async function blueprintShipExecute(args) {
     if (pushPlan) {
       result.stage = "push";
       result.externalMutationStarted = true;
-      const receipt2 = await run("git", stored.packet.repoRoot, pushPlan.argv);
-      result.processes.push({ stage: "push", command: "git", argv: [...pushPlan.argv], result: receipt2 });
+      const receipt = await run("git", stored.packet.repoRoot, pushPlan.argv);
+      result.processes.push({ stage: "push", command: "git", argv: [...pushPlan.argv], result: receipt });
       let observed = null;
       let observationError = null;
       try {
@@ -85619,19 +85676,19 @@ async function blueprintShipExecute(args) {
         observationError = error2 instanceof Error ? error2.message : String(error2);
       }
       result.push.remoteHeadAfter = observed;
-      if (observed === stored.packet.head && succeeded2(receipt2)) result.push.status = "pushed";
+      if (observed === stored.packet.head && succeeded2(receipt)) result.push.status = "pushed";
       else if (observed === stored.packet.head) {
         result.push.status = "reused";
-        result.warnings.push(`Push process returned exit ${String(receipt2.exitCode)}, but the exact approved remote ref was observed at the approved HEAD; classified as reused-by-observation, not newly pushed.`);
-      } else if (observationError || succeeded2(receipt2)) {
+        result.warnings.push(`Push process returned exit ${String(receipt.exitCode)}, but the exact approved remote ref was observed at the approved HEAD; classified as reused-by-observation, not newly pushed.`);
+      } else if (observationError || succeeded2(receipt)) {
         result.push.status = "outcome-unknown";
         result.status = "outcome-unknown";
         result.blockers.push(observationError ? `Push completed but the exact remote ref could not be observed: ${observationError}` : `Push exited successfully, but the exact push target ref was subsequently observed at ${observed ?? "absent"} instead of the approved HEAD; outcome is unknown.`);
         result.recoveryActions.push("Inspect the exact remote ref before any PR creation or retry.");
       } else {
-        result.push.status = abnormal2(receipt2) ? "outcome-unknown" : "failed";
-        result.status = abnormal2(receipt2) ? "outcome-unknown" : "failed";
-        result.blockers.push(classifyPushFailure(receipt2));
+        result.push.status = abnormal2(receipt) ? "outcome-unknown" : "failed";
+        result.status = abnormal2(receipt) ? "outcome-unknown" : "failed";
+        result.blockers.push(classifyPushFailure(receipt));
         result.recoveryActions.push("Inspect the exact remote ref before any new preview; PR creation was not attempted.");
       }
     }
@@ -85681,25 +85738,25 @@ async function blueprintShipExecute(args) {
           result.recoveryActions.push(freshPreviewRecovery(stored.packet, result));
         } else {
           result.externalMutationStarted = true;
-          const receipt2 = await run("gh", stored.packet.repoRoot, prPlan.argv);
-          result.processes.push({ stage: "pr-create", command: "gh", argv: [...prPlan.argv], result: receipt2 });
+          const receipt = await run("gh", stored.packet.repoRoot, prPlan.argv);
+          result.processes.push({ stage: "pr-create", command: "gh", argv: [...prPlan.argv], result: receipt });
           try {
             const verified = await inspectExistingPr(stored.packet.repoRoot, stored.packet.ghRepository.selector, stored.packet.branch, stored.packet.baseBranch, stored.packet.head, stored.packet.posture);
             if (verified.disposition === "exact" && verified.url) {
-              result.pr.status = succeeded2(receipt2) ? "created" : "reused";
+              result.pr.status = succeeded2(receipt) ? "created" : "reused";
               result.pr.url = verified.url;
-              if (!succeeded2(receipt2)) result.warnings.push(`gh pr create returned exit ${String(receipt2.exitCode)}, but the exact approved PR was observed; classified as reused-by-observation.`);
-            } else if (succeeded2(receipt2)) {
+              if (!succeeded2(receipt)) result.warnings.push(`gh pr create returned exit ${String(receipt.exitCode)}, but the exact approved PR was observed; classified as reused-by-observation.`);
+            } else if (succeeded2(receipt)) {
               result.pr.status = "outcome-unknown";
               result.status = "outcome-unknown";
               result.gh = { status: "pr-view-unavailable", detail: "gh pr create exited successfully but no exact PR was observed" };
               result.blockers.push("gh exited successfully but authoritative inspection reported no exact PR.");
               result.recoveryActions.push(freshPreviewRecovery(stored.packet, result));
             } else {
-              result.pr.status = abnormal2(receipt2) ? "outcome-unknown" : "failed";
-              result.status = abnormal2(receipt2) ? "outcome-unknown" : "partial";
-              result.gh = { status: ghCreateFailureReason(receipt2), detail: classifyGhFailure(receipt2) };
-              result.blockers.push(classifyGhFailure(receipt2));
+              result.pr.status = abnormal2(receipt) ? "outcome-unknown" : "failed";
+              result.status = abnormal2(receipt) ? "outcome-unknown" : "partial";
+              result.gh = { status: ghCreateFailureReason(receipt), detail: classifyGhFailure(receipt) };
+              result.blockers.push(classifyGhFailure(receipt));
               result.recoveryActions.push(freshPreviewRecovery(stored.packet, result));
               result.recoveryActions.push("The confirmed push remains successful; do not push again.");
             }
@@ -97310,8 +97367,8 @@ function parseObject(lines3, startIndex, indent) {
 function parseFrontmatter(frontmatter) {
   return parseObject(frontmatter.split("\n"), 0, 0).value;
 }
-function extractMarkdownSection(markdown, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function extractMarkdownSection(markdown, heading2) {
+  const escapedHeading = heading2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
   );
@@ -101623,24 +101680,24 @@ async function blueprintGodReviewLoadFindings(rawArgs) {
     };
   }
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const reference = await resolveGodReviewReportReference(args, projectRoot);
-  if (!reference.valid) {
+  const reference2 = await resolveGodReviewReportReference(args, projectRoot);
+  if (!reference2.valid) {
     return invalidLoadFindingsResult({
-      reason: reference.reason,
-      reportPath: reference.reportPath,
-      sessionPath: reference.sessionPath,
-      warnings: reference.warnings
+      reason: reference2.reason,
+      reportPath: reference2.reportPath,
+      sessionPath: reference2.sessionPath,
+      warnings: reference2.warnings
     });
   }
-  const reportAbsolutePath = resolveBlueprintPath(projectRoot, reference.reportPath);
+  const reportAbsolutePath = resolveBlueprintPath(projectRoot, reference2.reportPath);
   const report = await readTextIfPresent(reportAbsolutePath);
   if (report === null) {
     return {
       status: "not_found",
       activated: true,
-      reason: `${reference.reportPath} does not exist.`,
-      reportPath: reference.reportPath,
-      sessionPath: reference.sessionPath,
+      reason: `${reference2.reportPath} does not exist.`,
+      reportPath: reference2.reportPath,
+      sessionPath: reference2.sessionPath,
       findings: [],
       remediations: [],
       selection: null,
@@ -101649,13 +101706,13 @@ async function blueprintGodReviewLoadFindings(rawArgs) {
   }
   const fingerprint = await computeCurrentFingerprintForSession({
     projectRoot,
-    session: reference.session
+    session: reference2.session
   });
-  if (fingerprint.staleReasons.length > 0 && (args.activeCommand === "/blu-code-review" || reference.session.scopeKind === "phase")) {
+  if (fingerprint.staleReasons.length > 0 && (args.activeCommand === "/blu-code-review" || reference2.session.scopeKind === "phase")) {
     return invalidLoadFindingsResult({
       reason: "God-review scope fingerprint changed. Start a new hidden review before loading saved findings.",
-      reportPath: reference.reportPath,
-      sessionPath: reference.sessionPath,
+      reportPath: reference2.reportPath,
+      sessionPath: reference2.sessionPath,
       warnings: [...fingerprint.warnings, ...fingerprint.staleReasons]
     });
   }
@@ -101664,8 +101721,8 @@ async function blueprintGodReviewLoadFindings(rawArgs) {
   if (duplicateIds.length > 0) {
     return invalidLoadFindingsResult({
       reason: `Duplicate god-review finding IDs are not allowed: ${duplicateIds.join(", ")}.`,
-      reportPath: reference.reportPath,
-      sessionPath: reference.sessionPath,
+      reportPath: reference2.reportPath,
+      sessionPath: reference2.sessionPath,
       warnings: parsedReport.warnings
     });
   }
@@ -101673,15 +101730,15 @@ async function blueprintGodReviewLoadFindings(rawArgs) {
   const selection = await resolveGodReviewFixSelection({
     projectRoot,
     loadArgs: args,
-    sessionPath: reference.sessionPath,
+    sessionPath: reference2.sessionPath,
     findings
   });
   return {
     status: "found",
     activated: true,
     reason: null,
-    reportPath: reference.reportPath,
-    sessionPath: reference.sessionPath,
+    reportPath: reference2.reportPath,
+    sessionPath: reference2.sessionPath,
     findings,
     remediations: parsedReport.remediations,
     selection,
@@ -103048,7 +103105,7 @@ var MAX_OBJECT_KEYS = 25;
 var MAX_STRING_LENGTH = 800;
 var MAX_STACK_LENGTH = 4e3;
 function metadataOnlyInvocation(toolName, args) {
-  return toolName.startsWith("blueprint_discuss_") || toolName.startsWith("blueprint_research_") || toolName === "blueprint_phase_artifact_write" && (args.artifact === "context" || args.artifact === "discussion-log" || args.artifact === "research" || args.model !== void 0 || args.candidate !== void 0);
+  return toolName.startsWith("blueprint_discuss_") || toolName.startsWith("blueprint_research_") || ["blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read", "blueprint_phase_plan_write"].includes(toolName) || toolName === "blueprint_phase_artifact_write" && (args.artifact === "context" || args.artifact === "discussion-log" || args.artifact === "research" || args.model !== void 0 || args.candidate !== void 0);
 }
 function failureMetadata(value, depth = 0) {
   const metadata = {};
@@ -103221,7 +103278,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_research_submit",
   "blueprint_plan_prepare",
   "blueprint_plan_submit",
-  "blueprint_plan_finalize",
+  "blueprint_plan_read",
   "blueprint_config_set",
   "blueprint_config_set_profile",
   "blueprint_state_update",

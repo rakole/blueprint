@@ -7,7 +7,7 @@ import { validPhaseContextModel } from "./helpers/context-model.js";
 import { blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintPhaseArtifactWrite } from "../src/mcp/tools/phase-artifacts.js";
 import { blueprintPhasePlanIndex, blueprintPhasePlanRead, blueprintPhasePlanValidate } from "../src/mcp/tools/phase.js";
-import { blueprintPlanPrepare, blueprintPlanSubmit, blueprintPlanRead, blueprintPlanFinalize, planDependencies } from "../src/mcp/tools/plan.js";
+import { blueprintPlanPrepare, blueprintPlanSubmit, blueprintPlanRead, planDependencies } from "../src/mcp/tools/plan.js";
 import { type PlanningCandidate } from "../src/mcp/tools/plan-model.js";
 import { researchDigest } from "../src/mcp/tools/research-evidence.js";
 import { blueprintResearchPrepare, blueprintResearchSubmit } from "../src/mcp/tools/research.js";
@@ -50,16 +50,10 @@ async function prepare(cwd: string) {
   return result;
 }
 async function submit(cwd: string, prepared: unknown, draft = candidate(), requestId = "draft") {
-  const result = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId, candidate: draft });
-  assert.equal(result.status, "ready", JSON.stringify(result));
-  return result;
-}
-async function publish(cwd: string, submitted: unknown, requestId = "publish") {
-  const result = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(submitted), requestId });
+  const result = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId, model: draft });
   assert.equal(result.status, "published", JSON.stringify(result));
   return result;
 }
-
 async function publishResearchBasis(cwd: string, sourcePath: string, source: string) {
   const research = await blueprintResearchPrepare({ ...lookup(cwd), evidencePaths: [sourcePath] });
   assert.equal(research.status, "prepared", JSON.stringify(research));
@@ -72,431 +66,310 @@ async function publishResearchBasis(cwd: string, sourcePath: string, source: str
   assert.equal(publishedResearch.status, "published", JSON.stringify(publishedResearch));
 }
 
-test("one-shot candidate publishes the complete plan set and replayable state receipt", async t => {
-  const cwd = await fixture(t);
-  const prepared = await prepare(cwd);
-  assert.ok("planningCandidateJsonSchema" in prepared);
-  const packetBytes = Buffer.byteLength(JSON.stringify(prepared));
-  t.diagnostic(`Compact preparation packet: ${packetBytes} bytes, one authoring schema.`);
-  assert.ok(packetBytes < 24000, `Small-fixture preparation packet is ${packetBytes} bytes.`);
-  assert.equal("contract" in prepared, false);
-  assert.equal("authoringContext" in prepared, false);
+const sessionPath = `${phaseDir}/01-PLAN-SESSION.json`;
+const markerPath = `${phaseDir}/01-PLAN-PUBLICATION.json`;
+async function sessionBytes(cwd: string) { return readFile(path.join(cwd, sessionPath), "utf8"); }
+async function targets(cwd: string) { return Object.fromEntries((await blueprintPlanRead(lookup(cwd))).published.map(file => [file.path, file.hash])); }
+
+test("one model submission publishes the complete canonical plan set and one replayable receipt", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd);
+  assert.ok("schema" in prepared && "example" in prepared && "validationRules" in prepared && "derivedFields" in prepared);
+  assert.ok(JSON.stringify(prepared.example).includes("R-1"));
   assert.equal(revision(await prepare(cwd)), revision(prepared));
-  const saved = await submit(cwd, prepared, candidate(["core", "api"]));
-  assert.ok("reviewPacket" in saved);
-  assert.ok(!(saved.reviewPacket as { plans: Record<string, unknown>[] }).plans.some(plan => "content" in plan), "Review receives one model representation, without duplicate Markdown.");
-  assert.equal((await blueprintPhasePlanIndex(lookup(cwd))).plans.length, 0);
-  const args = { ...lookup(cwd), expectedRevision: revision(saved), requestId: "publish" };
-  const result = await blueprintPlanFinalize(args);
+  const original = planDependencies.validate;
+  let validations = 0;
+  t.after(() => { planDependencies.validate = original; });
+  planDependencies.validate = async args => { validations++; return original(args); };
+  const model = candidate(["core", "api"]);
+  delete model.plans[0].mustHaves;
+  model.plans[0].tasks[0].acceptanceCriteria = ["```\nnpm test\n```"];
+  const schema = prepared.schema as { properties: { plans: { items: { properties: {
+    evidence: { items: { properties: { artifact: { enum: string[] } } } };
+  } } } } };
+  assert.deepEqual(schema.properties.plans.items.properties.evidence.items.properties.artifact.enum, prepared.knownEvidenceArtifacts);
+  const args = { ...lookup(cwd), expectedRevision: revision(prepared), requestId: "publish", model };
+  const result = await blueprintPlanSubmit(args);
   assert.equal(result.status, "published", JSON.stringify(result));
-  assert.ok("plans" in result && (result.plans as Array<{ taskCount: number }>).every(plan => plan.taskCount === 1));
-  assert.deepEqual(await blueprintPlanFinalize(args), result);
+  assert.equal(validations, 1, "The successful first submission validates its complete set once.");
+  assert.deepEqual(await blueprintPlanSubmit(args), result);
+  assert.equal(validations, 1, "Receipt replay does not regenerate or revalidate the model.");
   const plans = await blueprintPhasePlanIndex(lookup(cwd));
   assert.deepEqual(plans.plans.map(plan => [plan.planId, plan.wave]), [["01", 1], ["02", 2]]);
   assert.equal((await blueprintPhasePlanValidate(lookup(cwd))).status, "valid");
   const restored = await blueprintPlanRead(lookup(cwd));
-  assert.deepEqual(restored.session!.candidate, candidate(["core", "api"]));
   assert.equal(restored.publication.status, "committed");
+  assert.equal(restored.published.length, 2);
+  assert.match(restored.published[0].content!, /Implement core/);
+  assert.equal(restored.session!.version, 2);
+  assert.equal("candidate" in restored.session!, false);
+  assert.equal("history" in restored.session!, false);
+  const metadata = await sessionBytes(cwd);
+  for (const phrase of ["Expose core behavior through the existing service.", "Add the core behavior", '"content":', '"backup":', '"review":']) assert.ok(!metadata.includes(phrase), phrase);
 });
 
-test("invalid objects and exact malformed JSON survive validation and narrow corrections", async t => {
-  const cwd = await fixture(t), prepared = await prepare(cwd);
-  const malformed = ' { "plans": [\n  {"title":"Do not lose this one-shot draft"}\n';
-  const first = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "raw", candidate: malformed });
-  assert.equal(first.status, "needs_revision");
-  assert.equal((await blueprintPlanRead(lookup(cwd))).session!.candidate, malformed);
-  const draft = candidate(); draft.plans[0].title = "";
-  const second = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(first), requestId: "incomplete", candidate: draft });
-  assert.equal(second.status, "needs_revision");
-  const fixed = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(second), requestId: "repair", corrections: [{ path: ["plans", "0", "title"], value: "Implement core" }] });
-  assert.equal(fixed.status, "ready", JSON.stringify(fixed));
-  const session = (await blueprintPlanRead(lookup(cwd))).session!;
-  assert.deepEqual(session.candidate, candidate());
-  assert.equal(session.history.find(item => item.revision === revision(first))?.candidate, malformed);
-  assert.equal((session.history.find(item => item.revision === revision(second))?.candidate as PlanningCandidate).plans[0].title, "");
-  assert.equal((await blueprintPhasePlanIndex(lookup(cwd))).plans.length, 0);
+test("invalid objects and malformed JSON are rejected without changing session or storing any draft", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd), original = await sessionBytes(cwd);
+  const malformed = ' { "plans": [{"title":"private rejected prose"}\n';
+  const invalid = candidate(); invalid.plans[0].tasks[0].filesModified = ["../unsafe.ts"];
+  for (const model of [malformed, invalid, { plans: [] }]) {
+    const result = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "invalid", model });
+    assert.equal(result.status, "needs_revision", JSON.stringify(result));
+    assert.equal(result.saved, false); assert.equal(revision(result), revision(prepared));
+    assert.equal(await sessionBytes(cwd), original);
+    assert.equal((await blueprintPhasePlanIndex(lookup(cwd))).plans.length, 0);
+  }
+  // A rejected request ID was never reserved; correcting it needs no new revision.
+  await submit(cwd, prepared, candidate(), "invalid");
 });
 
-test("assessment exceptions retain the draft and retry without a second revision", async t => {
-  const cwd = await fixture(t), prepared = await prepare(cwd);
+test("assessment exceptions retain no prose or pending request and a retry can publish", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd), before = await sessionBytes(cwd);
   const original = planDependencies.compile;
   t.after(() => { planDependencies.compile = original; });
-  planDependencies.compile = () => { throw new Error("injected assessor failure"); };
-  const args = { ...lookup(cwd), expectedRevision: revision(prepared), requestId: "retry", candidate: candidate() };
-  const interrupted = await blueprintPlanSubmit(args);
-  assert.equal(interrupted.status, "partial");
-  assert.deepEqual((await blueprintPlanRead(lookup(cwd))).session!.candidate, candidate());
+  planDependencies.compile = () => { throw new Error("private injected assessor failure"); };
+  const args = { ...lookup(cwd), expectedRevision: revision(prepared), requestId: "retry", model: candidate() };
+  assert.equal((await blueprintPlanSubmit(args)).status, "needs_revision");
+  assert.equal(await sessionBytes(cwd), before);
   planDependencies.compile = original;
-  const result = await blueprintPlanSubmit(args);
-  assert.equal(result.status, "ready", JSON.stringify(result));
-  assert.equal(revision(result), revision(interrupted));
-  assert.deepEqual(await blueprintPlanSubmit(args), result);
-  const conflict = await blueprintPlanSubmit({ ...args, candidate: { plans: [] } });
-  assert.equal(conflict.status, "rejected");
-  const stale = await blueprintPlanSubmit({ ...args, requestId: "stale" });
-  assert.equal(stale.status, "stale");
+  assert.equal((await blueprintPlanSubmit(args)).status, "published");
+  assert.equal((await blueprintPlanSubmit({ ...args, model: { plans: [] } })).status, "rejected");
+  assert.equal((await blueprintPlanSubmit({ ...args, requestId: "stale" })).status, "stale");
 });
 
-test("missing context and enabled research gates block drafting but retain received candidates", async t => {
+test("missing context and enabled research gates reject models without retaining them", async t => {
   for (const options of [{ context: false }, { research: true }]) {
-    const cwd = await fixture(t, options);
-    const prepared = await blueprintPlanPrepare(lookup(cwd));
+    const cwd = await fixture(t, options), prepared = await blueprintPlanPrepare(lookup(cwd));
     assert.equal(prepared.status, "blocked");
-    const saved = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "blocked-draft", candidate: candidate() });
-    assert.equal(saved.status, "needs_revision");
-    assert.deepEqual((await blueprintPlanRead(lookup(cwd))).session!.candidate, candidate());
+    const before = await sessionBytes(cwd);
+    const result = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "blocked-model", model: candidate() });
+    assert.equal(result.status, "needs_revision"); assert.equal(result.saved, false);
+    assert.equal(await sessionBytes(cwd), before);
   }
 });
 
-test("project, requirements, optional evidence and repository changes require reviewed refresh", async t => {
-  const cwd = await fixture(t), prepared = await prepare(cwd), saved = await submit(cwd, prepared);
-  for (const relative of [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", "src/core.ts"]) {
-    await writeFile(path.join(cwd, relative), (await readFile(path.join(cwd, relative), "utf8")) + "\nChanged evidence.\n");
-  }
-  const stale = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "stale-final" });
-  assert.equal(stale.status, "needs_revision");
-  const refresh = await blueprintPlanPrepare(lookup(cwd));
-  assert.equal(refresh.status, "stale");
-  const reconciled = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: revision(saved), acknowledgeChangedInputs: true });
-  assert.equal(reconciled.status, "prepared", JSON.stringify(reconciled));
-  assert.deepEqual((await blueprintPlanRead(lookup(cwd))).session!.candidate, candidate());
+test("changed project, requirements and repository evidence require a reviewed refresh", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd);
+  for (const relative of [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", "src/core.ts"]) await writeFile(path.join(cwd, relative), (await readFile(path.join(cwd, relative), "utf8")) + "\nChanged evidence.\n");
+  const before = await sessionBytes(cwd);
+  assert.equal((await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "stale", model: candidate() })).status, "needs_revision");
+  assert.equal(await sessionBytes(cwd), before);
+  assert.equal((await blueprintPlanPrepare(lookup(cwd))).status, "stale");
+  const refreshed = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: revision(prepared), acknowledgeChangedInputs: true });
+  assert.equal(refreshed.status, "prepared", JSON.stringify(refreshed));
+  await submit(cwd, refreshed);
 });
 
-test("checker acceptance is bound to the exact candidate revision and hash", async t => {
-  const cwd = await fixture(t, { checker: true }), saved = await submit(cwd, await prepare(cwd));
-  const missing = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "no-review" });
-  assert.equal(missing.status, "needs_revision");
-  const hash = (await blueprintPlanRead(lookup(cwd))).session!.candidateHash!;
-  const stale = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "stale-review", review: { revision: revision(saved) - 1, candidateHash: hash, verdict: "accept", summary: "Reviewed complete plan set." } });
-  assert.equal(stale.status, "needs_revision");
-  const result = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "reviewed", review: { revision: revision(saved), candidateHash: hash, verdict: "accept", summary: "Reviewed dependencies, requirements, scope and acceptance checks." } });
-  assert.equal(result.status, "published", JSON.stringify(result));
+test("optional checker reviews the supplied model without caller-computed hashes or review storage", async t => {
+  const cwd = await fixture(t, { checker: true }), prepared = await prepare(cwd), before = await sessionBytes(cwd);
+  const args = { ...lookup(cwd), expectedRevision: revision(prepared), requestId: "review", model: candidate() };
+  assert.equal((await blueprintPlanSubmit(args)).status, "needs_revision");
+  assert.equal((await blueprintPlanSubmit({ ...args, review: { verdict: "revise", summary: "Private reviewer details." } })).status, "needs_revision");
+  assert.equal(await sessionBytes(cwd), before);
+  const accepted = await blueprintPlanSubmit({ ...args, review: { verdict: "accept", summary: "Private reviewer details." } });
+  assert.equal(accepted.status, "published", JSON.stringify(accepted));
+  assert.ok(!(await sessionBytes(cwd)).includes("Private reviewer"));
+  assert.equal((await blueprintPlanSubmit({ ...args, model: candidate(["different"]) })).status, "rejected");
 });
 
-test("interrupted multi-plan publication blocks readers and identical retry finishes exact bytes", async t => {
-  const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
-  const original = planDependencies.writeText;
+test("interrupted multi-plan publication blocks readers; retry resends the unstored model", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd), original = planDependencies.writeText;
   t.after(() => { planDependencies.writeText = original; });
   let failed = false;
-  planDependencies.writeText = async (...args) => { if (!failed && args[0].endsWith("01-02-PLAN.md")) { failed = true; throw new Error("injected second plan failure"); } return original(...args); };
-  const args = { ...lookup(cwd), expectedRevision: revision(saved), requestId: "interrupted" };
-  const partial = await blueprintPlanFinalize(args);
-  assert.equal(partial.status, "partial", JSON.stringify(partial));
+  planDependencies.writeText = async (...args) => { if (!failed && args[0].endsWith("01-02-PLAN.md")) { failed = true; throw new Error("private second plan failure"); } return original(...args); };
+  const args = { ...lookup(cwd), expectedRevision: revision(prepared), requestId: "interrupted", model: candidate(["core", "api"]) };
+  const partial = await blueprintPlanSubmit(args);
+  assert.equal(partial.status, "partial", JSON.stringify(partial)); assert.equal(partial.saved, false);
   assert.equal((await blueprintPlanRead(lookup(cwd))).publication.status, "pending");
   assert.equal((await blueprintPhasePlanRead({ ...lookup(cwd), planId: "01" })).validation?.valid, false);
   assert.equal((await blueprintPhasePlanValidate(lookup(cwd))).status, "invalid");
+  const metadata = await sessionBytes(cwd);
+  assert.ok(!metadata.includes("Expose api behavior")); assert.ok(!metadata.includes("private second plan failure"));
+  const { model: _model, ...retry } = args;
+  const missing = await blueprintPlanSubmit(retry);
+  assert.equal(missing.status, "partial"); assert.match(String("reason" in missing && missing.reason), /Resend/);
   planDependencies.writeText = original;
-  const result = await blueprintPlanFinalize(args);
-  assert.equal(result.status, "published", JSON.stringify(result));
+  assert.equal((await blueprintPlanSubmit(args)).status, "published");
   assert.equal((await blueprintPhasePlanIndex(lookup(cwd))).plans.length, 2);
 });
 
-test("failed state synchronization resumes after committed files without rewriting plans", async t => {
-  const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd));
-  const original = planDependencies.stateUpdate;
+test("state synchronization retry can omit model after canonical files are saved", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd), original = planDependencies.stateUpdate;
   t.after(() => { planDependencies.stateUpdate = original; });
-  planDependencies.stateUpdate = async () => { throw new Error("injected state failure"); };
-  const args = { ...lookup(cwd), expectedRevision: revision(saved), requestId: "state-retry" };
-  assert.equal((await blueprintPlanFinalize(args)).status, "partial");
+  planDependencies.stateUpdate = async () => { throw new Error("private state failure"); };
+  const args = { ...lookup(cwd), expectedRevision: revision(prepared), requestId: "state-retry", model: candidate() };
+  const partial = await blueprintPlanSubmit(args);
+  assert.equal(partial.status, "partial"); assert.equal(partial.saved, true);
   const bytes = await readFile(path.join(cwd, firstPath), "utf8");
   planDependencies.stateUpdate = original;
-  assert.equal((await blueprintPlanFinalize(args)).status, "published");
+  const { model: _model, ...retry } = args;
+  assert.equal((await blueprintPlanSubmit(retry)).status, "published");
   assert.equal(await readFile(path.join(cwd, firstPath), "utf8"), bytes);
 });
 
-test("selected revise preserves other plans and requires overwrite authorization", async t => {
+test("selected revise preserves other plans and requires explicit overwrite", async t => {
   const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
-  await publish(cwd, saved);
   const second = await readFile(path.join(cwd, secondPath), "utf8");
-  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "revise", targetPlanIds: ["01"], expectedRevision: revision(saved), acknowledgeChangedInputs: true });
+  assert.equal((await blueprintPlanPrepare(lookup(cwd))).status, "choice_required");
+  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "revise", targetPlanIds: ["01"], expectedRevision: revision(saved) });
   assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
-  const replacement = candidate(); replacement.plans[0].title = "Improve core implementation";
-  const revised = await submit(cwd, prepared, replacement, "revised");
-  const rejected = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(revised), requestId: "no-overwrite" });
-  assert.equal(rejected.status, "needs_revision");
-  const result = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(revised), requestId: "overwrite", overwrite: true });
-  assert.equal(result.status, "published", JSON.stringify(result));
+  const model = candidate(); model.plans[0].title = "Improve core implementation";
+  const args = { ...lookup(cwd), expectedRevision: revision(prepared), requestId: "revise", model };
+  assert.equal((await blueprintPlanSubmit(args)).status, "needs_revision");
+  assert.equal((await blueprintPlanSubmit({ ...args, overwrite: true })).status, "published");
   assert.equal(await readFile(path.join(cwd, secondPath), "utf8"), second);
   assert.match(await readFile(path.join(cwd, firstPath), "utf8"), /Improve core implementation/);
 });
 
-test("executed targets and changed target hashes cannot be overwritten", async t => {
+test("replace deletes selected surplus plans while add allocates the next slot", async t => {
+  const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
+  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "replace", expectedRevision: revision(saved) });
+  assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
+  const replaced = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "replace", overwrite: true, model: candidate() });
+  assert.equal(replaced.status, "published", JSON.stringify(replaced));
+  assert.deepEqual((await blueprintPhasePlanIndex(lookup(cwd))).plans.map(p => p.planId), ["01"]);
+  const added = await blueprintPlanPrepare({ ...lookup(cwd), mode: "add", expectedRevision: revision(replaced) });
+  const model = candidate(["api"]); model.plans[0].dependsOn = ["01"];
+  assert.equal((await submit(cwd, added, model, "add")).status, "published");
+  assert.deepEqual((await blueprintPhasePlanIndex(lookup(cwd))).plans.map(p => p.planId), ["01", "02"]);
+});
+
+test("executed plans and changed targets cannot be overwritten", async t => {
   const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd));
-  await publish(cwd, saved);
   await writeFile(path.join(cwd, `${phaseDir}/01-01-SUMMARY.md`), "# Summary\n\nCompleted core behavior.\n");
   const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "replace", targetPlanIds: ["01"], expectedRevision: revision(saved), acknowledgeChangedInputs: true });
   assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
-  const revised = await submit(cwd, prepared, candidate(), "replacement");
-  const result = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(revised), requestId: "executed", overwrite: true });
-  assert.equal(result.status, "needs_revision");
-  assert.match(String("reason" in result && result.reason), /Executed/);
+  const result = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "executed", overwrite: true, model: candidate() });
+  assert.equal(result.status, "needs_revision"); assert.match(String("reason" in result && result.reason), /Executed/);
   await writeFile(path.join(cwd, firstPath), (await readFile(path.join(cwd, firstPath), "utf8")) + "\nExternal update.\n");
-  const changed = await blueprintPlanPrepare({ ...lookup(cwd), mode: "replace", targetPlanIds: ["01"] });
-  assert.equal(changed.status, "reconciliation_required");
+  assert.equal((await blueprintPlanPrepare({ ...lookup(cwd), mode: "replace", targetPlanIds: ["01"] })).status, "reconciliation_required");
 });
 
-test("marker write interruptions resume both before and after the commit boundary", async t => {
+test("marker write interruptions resume before and after the commit boundary", async t => {
   for (const status of ["pending", "committed"]) {
-    const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd));
-    const original = planDependencies.writeText;
+    const cwd = await fixture(t), prepared = await prepare(cwd), original = planDependencies.writeText;
+    t.after(() => { planDependencies.writeText = original; });
     let failed = false;
-    planDependencies.writeText = async (...args) => {
-      const result = await original(...args);
-      if (!failed && args[0].endsWith("PLAN-PUBLICATION.json") && args[1].includes(`"status": "${status}"`)) { failed = true; throw new Error(`crash after ${status} marker bytes`); }
-      return result;
-    };
-    const args = { ...lookup(cwd), expectedRevision: revision(saved), requestId: `marker-${status}` };
-    try { assert.equal((await blueprintPlanFinalize(args)).status, "partial"); }
-    finally { planDependencies.writeText = original; }
-    assert.equal((await blueprintPlanFinalize(args)).status, "published");
+    planDependencies.writeText = async (...args) => { if (!failed && args[0].endsWith("PLAN-PUBLICATION.json") && args[1].includes(`"status": "${status}"`)) { failed = true; throw new Error(`injected ${status} marker failure`); } return original(...args); };
+    const args = { ...lookup(cwd), expectedRevision: revision(prepared), requestId: status, model: candidate() };
+    assert.equal((await blueprintPlanSubmit(args)).status, "partial");
+    planDependencies.writeText = original;
+    assert.equal((await blueprintPlanSubmit(args)).status, "published");
   }
 });
 
-test("stale evidence during publication can explicitly roll back without losing candidate history", async t => {
-  const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
-  const original = planDependencies.writeText;
-  let changed = false;
-  planDependencies.writeText = async (...args) => {
-    const result = await original(...args);
-    if (!changed && args[0].endsWith("01-01-PLAN.md")) { changed = true; await writeFile(path.join(cwd, "src/core.ts"), "export const core = 2;\n"); }
-    return result;
-  };
-  try { assert.equal((await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "stale-publish" })).status, "partial"); }
-  finally { planDependencies.writeText = original; }
-  const pending = await blueprintPlanPrepare(lookup(cwd));
-  assert.equal(pending.status, "partial");
-  assert.ok("targetHashes" in pending);
-  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: revision(saved), acknowledgeChangedInputs: true, reconcile: { confirmed: true, targetHashes: pending.targetHashes as Record<string, string | null> } });
-  assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
-  assert.equal((await blueprintPhasePlanIndex(lookup(cwd))).plans.length, 0);
-  const restored = await blueprintPlanRead(lookup(cwd));
-  assert.deepEqual(restored.session!.candidate, candidate(["core", "api"]));
-  assert.ok(restored.session!.history.some(item => item.kind === "publication-reconciled" && item.journal));
-  assert.equal(restored.publication.status, "absent");
-  assert.equal((await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "fresh-publish" })).status, "published");
-});
-
-test("replace removes selected superseded slots and preserves unrelated files", async t => {
-  const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
-  await publish(cwd, saved);
-  const unknownPath = path.join(cwd, phaseDir, "custom-notes.md");
-  await writeFile(unknownPath, "Keep this independently authored note.\n");
-  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "replace", expectedRevision: revision(saved), acknowledgeChangedInputs: true });
-  assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
-  const revised = await submit(cwd, prepared, candidate(), "replacement");
-  const original = planDependencies.remove;
-  let failed = false;
-  planDependencies.remove = async value => { await original(value); if (!failed && value.endsWith("01-02-PLAN.md")) { failed = true; throw new Error("interrupted after removing superseded plan"); } };
-  const args = { ...lookup(cwd), expectedRevision: revision(revised), requestId: "replace-publish", overwrite: true };
-  try { assert.equal((await blueprintPlanFinalize(args)).status, "partial"); }
-  finally { planDependencies.remove = original; }
-  const published = await blueprintPlanFinalize(args);
-  assert.equal(published.status, "published", JSON.stringify(published));
-  assert.deepEqual((await blueprintPhasePlanIndex(lookup(cwd))).plans.map(plan => plan.planId), ["01"]);
-  assert.equal(await readFile(unknownPath, "utf8"), "Keep this independently authored note.\n");
-  assert.ok((await blueprintPlanRead(lookup(cwd))).session!.journal!.removed[0].backup.includes("Implement api"));
-});
-
-test("stale roadmap decisions do not prevent durable candidate salvage", async t => {
-  const cwd = await fixture(t), prepared = await prepare(cwd);
-  const roadmapPath = path.join(cwd, ".blueprint/ROADMAP.md");
-  await writeFile(roadmapPath, (await readFile(roadmapPath, "utf8")).replace("Save durable planning.", "Save durable planning with stronger recovery."));
-  const saved = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "stale-topology-draft", candidate: candidate() });
-  assert.equal(saved.status, "needs_revision");
-  assert.deepEqual((await blueprintPlanRead(lookup(cwd))).session!.candidate, candidate());
+test("reconciliation preserves observed canonical and unrelated files without backups", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd), original = planDependencies.writeText;
+  t.after(() => { planDependencies.writeText = original; });
+  planDependencies.writeText = async (...args) => { if (args[0].endsWith("01-02-PLAN.md")) throw new Error("second file interruption"); return original(...args); };
+  const interrupted = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "interrupt", model: candidate(["core", "api"]) });
+  assert.equal(interrupted.status, "partial");
+  planDependencies.writeText = original;
+  const originalFirst = await readFile(path.join(cwd, firstPath), "utf8");
+  const external = originalFirst + "\nExternally reviewed note.\n";
+  await writeFile(path.join(cwd, firstPath), external);
+  const unrelated = path.join(cwd, phaseDir, "user-notes.md"); await writeFile(unrelated, "Keep these user notes.\n");
+  const observed = await targets(cwd);
   assert.equal((await blueprintPlanPrepare(lookup(cwd))).status, "reconciliation_required");
+  const bad = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: revision(interrupted), acknowledgeChangedInputs: true, reconcile: { confirmed: true, targetHashes: {} }, mode: "add" });
+  assert.equal(bad.status, "reconciliation_required");
+  const next = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: revision(interrupted), acknowledgeChangedInputs: true, reconcile: { confirmed: true, targetHashes: observed }, mode: "add" });
+  assert.equal(next.status, "prepared", JSON.stringify(next));
+  assert.equal(await readFile(path.join(cwd, firstPath), "utf8"), external);
+  assert.equal(await readFile(unrelated, "utf8"), "Keep these user notes.\n");
+  assert.equal((await blueprintPlanRead(lookup(cwd))).publication.status, "committed");
+  assert.equal((await blueprintPlanRead(lookup(cwd))).session!.journal, undefined);
 });
 
-test("rollback marker failures retain an idempotent recovery journal", async t => {
-  for (const failure of ["before", "after"]) {
-    const cwd = await fixture(t), first = await submit(cwd, await prepare(cwd));
-    await publish(cwd, first);
-    const oldContent = await readFile(path.join(cwd, firstPath), "utf8");
-    const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "revise", targetPlanIds: ["01"], expectedRevision: revision(first), acknowledgeChangedInputs: true });
-    const draft = candidate(); draft.plans[0].title = "Improve recovery behavior";
-    const saved = await submit(cwd, prepared, draft, "rollback-draft");
-    const originalState = planDependencies.stateUpdate;
-    planDependencies.stateUpdate = async () => { throw new Error("state unavailable"); };
-    try { assert.equal((await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "rollback-publication", overwrite: true })).status, "partial"); }
-    finally { planDependencies.stateUpdate = originalState; }
-    const pending = await blueprintPlanPrepare(lookup(cwd));
-    assert.ok("targetHashes" in pending);
-    const args = { ...lookup(cwd), expectedRevision: revision(saved), acknowledgeChangedInputs: true, reconcile: { confirmed: true as const, targetHashes: pending.targetHashes as Record<string, string | null> } };
-    const originalWrite = planDependencies.writeText;
-    let failed = false;
-    planDependencies.writeText = async (...input) => {
-      const shouldFail = !failed && input[0].endsWith("PLAN-PUBLICATION.json") && input[1].includes('"status": "committed"');
-      if (shouldFail && failure === "before") { failed = true; throw new Error("rollback marker failure before write"); }
-      const result = await originalWrite(...input);
-      if (shouldFail) { failed = true; throw new Error("rollback marker failure after write"); }
-      return result;
-    };
-    try { assert.equal((await blueprintPlanPrepare(args)).status, "blocked"); }
-    finally { planDependencies.writeText = originalWrite; }
-    assert.ok((await blueprintPlanRead(lookup(cwd))).session!.journal, "Incomplete rollback keeps its recovery journal.");
-    const observed = await blueprintPlanPrepare(lookup(cwd));
-    assert.ok("targetHashes" in observed);
-    const recovered = await blueprintPlanPrepare({ ...args, reconcile: { confirmed: true, targetHashes: observed.targetHashes as Record<string, string | null> } });
-    assert.equal(recovered.status, "prepared", JSON.stringify(recovered));
-    assert.equal(await readFile(path.join(cwd, firstPath), "utf8"), oldContent);
-    assert.deepEqual((await blueprintPlanRead(lookup(cwd))).session!.candidate, draft);
-  }
+test("reconciliation failure keeps metadata available for a safe retry", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd), original = planDependencies.writeText;
+  t.after(() => { planDependencies.writeText = original; });
+  planDependencies.writeText = async (...args) => { if (args[0].endsWith("01-02-PLAN.md")) throw new Error("stop"); return original(...args); };
+  const partial = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "partial", model: candidate(["core", "api"]) });
+  const observed = await targets(cwd);
+  const args = { ...lookup(cwd), expectedRevision: revision(partial), acknowledgeChangedInputs: true, reconcile: { confirmed: true as const, targetHashes: observed }, mode: "add" as const };
+  planDependencies.writeText = async (...input) => { if (input[0].endsWith("PLAN-PUBLICATION.json")) throw new Error("marker recovery interruption"); return original(...input); };
+  assert.equal((await blueprintPlanPrepare(args)).status, "blocked");
+  assert.ok((await blueprintPlanRead(lookup(cwd))).session!.journal);
+  planDependencies.writeText = original;
+  assert.equal((await blueprintPlanPrepare(args)).status, "prepared");
 });
 
-test("preparation bounds the combined evidence excerpts and retains previously tracked sources", async t => {
-  const cwd = await fixture(t);
-  for (let index = 0; index < 6; index++) await writeFile(path.join(cwd, `src/large-${index}.ts`), "// meaningful evidence\n".repeat(1000));
-  const paths = Array.from({ length: 6 }, (_, index) => `src/large-${index}.ts`);
-  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), evidencePaths: paths });
-  assert.equal(prepared.status, "prepared");
-  assert.ok("evidence" in prepared);
-  const evidence = prepared.evidence as Array<{ content: string | null; truncated: boolean }>;
-  assert.ok(evidence.reduce((sum, item) => sum + (item.content?.length ?? 0), 0) <= 12000);
-  assert.ok(evidence.every(item => (item.content?.length ?? 0) <= 3000));
-  assert.ok(evidence.some(item => item.truncated));
-  const again = await blueprintPlanPrepare({ ...lookup(cwd), evidencePaths: [] });
-  assert.equal(again.status, "prepared");
-  assert.equal(revision(again), revision(prepared));
-  assert.deepEqual((await blueprintPlanRead(lookup(cwd))).session!.evidencePaths, paths);
+test("legacy session migration deletes draft history and reconciles a pending read barrier", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd);
+  const session = JSON.parse(await sessionBytes(cwd));
+  session.version = 1; session.candidate = { secret: "legacy private rejected draft" }; session.candidateHash = researchDigest(JSON.stringify(session.candidate));
+  session.history = [{ revision: 0, kind: "submit", candidate: "legacy private history" }];
+  session.journal = { content: "legacy rendered body", backup: "legacy old backup", review: { summary: "legacy reviewer prose" } };
+  await writeFile(path.join(cwd, sessionPath), JSON.stringify(session));
+  await writeFile(path.join(cwd, markerPath), JSON.stringify({ version: 1, status: "pending", requestId: "legacy", revision: revision(prepared), files: [], removedPaths: [] }));
+  const read = await blueprintPlanRead(lookup(cwd));
+  assert.equal(read.session!.version, 2); assert.ok(read.session!.legacyPublication);
+  const migrated = await sessionBytes(cwd);
+  for (const phrase of ["private rejected draft", "private history", "rendered body", "old backup", "reviewer prose"]) assert.ok(!migrated.includes(phrase));
+  const next = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: read.session!.revision, mode: "add", acknowledgeChangedInputs: true, reconcile: { confirmed: true, targetHashes: {} } });
+  assert.equal(next.status, "prepared", JSON.stringify(next));
+  assert.equal((await blueprintPlanRead(lookup(cwd))).publication.status, "committed");
+  await submit(cwd, next);
 });
 
-test("retained plan edits during state synchronization prevent a ready receipt and stay outside the baseline", async t => {
-  const cwd = await fixture(t), first = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
-  await publish(cwd, first);
-  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "revise", targetPlanIds: ["01"], expectedRevision: revision(first), acknowledgeChangedInputs: true });
-  const saved = await submit(cwd, prepared, candidate(), "retained-draft");
+test("completed publication requires new intent and cannot silently reuse its previous add mode", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd), saved = await submit(cwd, prepared);
+  assert.equal((await blueprintPlanPrepare(lookup(cwd))).status, "choice_required");
+  const before = await sessionBytes(cwd);
+  assert.equal((await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "implicit", model: candidate(["api"]) })).status, "needs_revision");
+  assert.equal(await sessionBytes(cwd), before);
+  const next = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: revision(saved), mode: "add" });
+  assert.equal(next.status, "prepared", JSON.stringify(next)); assert.ok(revision(next) > revision(saved));
+});
+
+test("retained plan mutation during state sync cannot be silently accepted", async t => {
+  const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
+  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: revision(saved), mode: "revise", targetPlanIds: ["01"] });
   const original = planDependencies.stateUpdate;
+  t.after(() => { planDependencies.stateUpdate = original; });
   planDependencies.stateUpdate = async args => {
     const result = await original(args);
-    await writeFile(path.join(cwd, secondPath), (await readFile(path.join(cwd, secondPath), "utf8")) + "\nExternal retained plan edit.\n");
+    await writeFile(path.join(cwd, secondPath), (await readFile(path.join(cwd, secondPath), "utf8")) + "\nUnrelated concurrent edit.\n");
     return result;
   };
-  const expectedHash = (await blueprintPlanRead(lookup(cwd))).session!.targets.find(item => item.path === secondPath)!.hash;
-  let result: unknown;
-  try { result = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "retained-race", overwrite: true }); }
-  finally { planDependencies.stateUpdate = original; }
-  assert.equal((result as { status: string }).status, "partial", JSON.stringify(result));
-  assert.match((result as { reason: string }).reason, /complete published plan set changed/);
-  assert.equal((await blueprintPlanRead(lookup(cwd))).session!.targets.find(item => item.path === secondPath)!.hash, expectedHash);
+  const result = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "race", overwrite: true, model: candidate() });
+  assert.equal(result.status, "partial", JSON.stringify(result));
+  assert.match(String("reason" in result && result.reason), /complete published plan set changed/);
 });
 
-test("planning binds transitive research source fingerprints through publication", async t => {
-  const cwd = await fixture(t, { research: true });
-  const sourcePath = "src/research-only.ts";
-  const source = "export const researchFinding = 1;\n";
+test("transitive research source changes are rejected even when not explicitly selected", async t => {
+  const cwd = await fixture(t, { research: true }), sourcePath = "src/research-only.ts", source = "export const researchFinding = true;\n";
   await writeFile(path.join(cwd, sourcePath), source);
   await publishResearchBasis(cwd, sourcePath, source);
-  const prepared = await blueprintPlanPrepare(lookup(cwd));
-  assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
-  const saved = await submit(cwd, prepared);
-  assert.equal((await blueprintPlanRead(lookup(cwd))).session!.readSet.find(item => item.path === sourcePath)?.hash, researchDigest(source));
-  const original = planDependencies.writeText;
-  let changed = false;
+  const prepared = await prepare(cwd), original = planDependencies.writeText;
+  t.after(() => { planDependencies.writeText = original; });
   planDependencies.writeText = async (...args) => {
     const result = await original(...args);
-    if (!changed && args[0].endsWith("01-01-PLAN.md")) { changed = true; await writeFile(path.join(cwd, sourcePath), "export const researchFinding = 2;\n"); }
+    if (args[0].endsWith("01-01-PLAN.md")) await writeFile(path.join(cwd, sourcePath), source + "// Changed after planning readiness.\n");
     return result;
   };
-  let result: unknown;
-  try { result = await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "transitive-evidence" }); }
-  finally { planDependencies.writeText = original; }
-  assert.equal((result as { status: string }).status, "partial", JSON.stringify(result));
-  assert.match((result as { reason: string }).reason, /research-only\.ts/);
+  const result = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "source-race", model: candidate() });
+  assert.equal(result.status, "partial", JSON.stringify(result));
+  assert.match(String("reason" in result && result.reason), /research-only/);
   assert.equal((await blueprintPlanRead(lookup(cwd))).publication.status, "pending");
 });
 
-test("large invalid candidates produce bounded diagnostics and remain directly correctable", async t => {
-  const cwd = await fixture(t), prepared = await prepare(cwd);
-  const invalid = { plans: Array.from({ length: 40000 }, () => ({})) };
-  const saved = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "large-invalid", candidate: invalid });
-  assert.equal(saved.status, "needs_revision", JSON.stringify(saved).slice(0, 1000));
-  assert.ok("validation" in saved);
-  const validation = saved.validation as { diagnostics: unknown[]; diagnosticCount: number; diagnosticsTruncated: boolean };
-  assert.ok(validation.diagnostics.length <= 100);
-  assert.ok(validation.diagnosticCount > validation.diagnostics.length);
-  assert.equal(validation.diagnosticsTruncated, true);
-  assert.ok(Buffer.byteLength(JSON.stringify(saved)) < 100000);
-  const fixed = await submit(cwd, saved, candidate(), "large-fixed");
-  assert.equal(fixed.status, "ready");
-  assert.deepEqual((await blueprintPlanRead(lookup(cwd))).session!.history.find(item => item.revision === revision(saved))?.candidate, invalid);
+test("large malformed input produces bounded diagnostics and never grows metadata", async t => {
+  const cwd = await fixture(t), prepared = await prepare(cwd), before = await sessionBytes(cwd);
+  const result = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "large", model: { plans: Array.from({ length: 5000 }, () => ({})) } });
+  assert.equal(result.status, "needs_revision");
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) < 100000);
+  assert.equal(await sessionBytes(cwd), before);
 });
 
-test("current-revision corrections supersede failed assessments but never pending publication", async t => {
-  const cwd = await fixture(t), prepared = await prepare(cwd);
-  const original = planDependencies.compile;
-  planDependencies.compile = () => { throw new Error("permanent assessment error for original shape"); };
-  let failed: unknown;
-  try { failed = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(prepared), requestId: "failed-assessment", candidate: candidate() }); }
-  finally { planDependencies.compile = original; }
-  const corrected = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(failed), requestId: "superseding-correction", corrections: [{ path: ["plans", "0", "title"], value: "Improved core plan" }] });
-  assert.equal(corrected.status, "ready", JSON.stringify(corrected));
-  assert.equal((await blueprintPlanRead(lookup(cwd))).session!.requests["failed-assessment"].receipt?.status, "superseded");
-  const originalWrite = planDependencies.writeText;
-  planDependencies.writeText = async (...args) => { if (args[0].endsWith("01-01-PLAN.md")) throw new Error("publication interrupted"); return originalWrite(...args); };
-  try { assert.equal((await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(corrected), requestId: "pending-publication" })).status, "partial"); }
-  finally { planDependencies.writeText = originalWrite; }
-  const refused = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(corrected), requestId: "unsafe-supersession", candidate: candidate() });
-  assert.equal(refused.status, "partial");
-  assert.equal((await blueprintPlanRead(lookup(cwd))).session!.journal?.requestId, "pending-publication");
-});
-
-test("completed planning sessions require a fresh mode choice and authoring revision", async t => {
-  const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd));
-  await publish(cwd, saved);
-  const choice = await blueprintPlanPrepare(lookup(cwd));
-  assert.equal(choice.status, "choice_required");
-  assert.equal(revision(choice), revision(saved));
-  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "add" });
-  assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
-  assert.ok(revision(prepared) > revision(saved));
-  const session = (await blueprintPlanRead(lookup(cwd))).session!;
-  assert.equal(session.journal, undefined);
-  assert.ok(session.history.some(item => item.journal?.receipt?.status === "published"));
-  assert.ok(session.knownEvidenceArtifacts.includes(firstPath));
-  assert.equal(revision(await blueprintPlanPrepare(lookup(cwd))), revision(prepared), "Unfinished preparation reuses its chosen intent.");
-});
-
-test("preexisting stale research blocks with a research repair route and a current planning snapshot", async t => {
-  const cwd = await fixture(t, { research: true });
-  const sourcePath = "src/research-only.ts", oldSource = "export const researchFinding = 1;\n", currentSource = "export const researchFinding = 2;\n";
-  await writeFile(path.join(cwd, sourcePath), oldSource);
-  await publishResearchBasis(cwd, sourcePath, oldSource);
-  await writeFile(path.join(cwd, sourcePath), currentSource);
-  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), evidencePaths: [sourcePath] });
-  assert.equal(prepared.status, "blocked", JSON.stringify(prepared));
-  assert.ok("nextAction" in prepared);
-  assert.match(String(prepared.nextAction), /\/blu-research-phase/);
-  assert.ok("evidence" in prepared);
-  const evidence = prepared.evidence.find(item => item.path === sourcePath)!;
-  assert.equal(evidence.content, currentSource);
-  assert.equal(evidence.hash, researchDigest(currentSource));
-  const restored = await blueprintPlanRead(lookup(cwd));
-  assert.equal(restored.session!.readSet.find(item => item.path === sourcePath)?.hash, researchDigest(currentSource));
-  assert.equal(restored.freshness?.status, "fresh");
-  const again = await blueprintPlanPrepare(lookup(cwd));
-  assert.equal(again.status, "blocked", "Unchanged stale research is a repair blocker, not an endless collection retry.");
-});
-
-test("direct drafts after publication retain a durable requirement for a new explicit intent", async t => {
-  const cwd = await fixture(t), saved = await submit(cwd, await prepare(cwd));
-  const published = await publish(cwd, saved);
-  assert.deepEqual(await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "publish" }), published);
-  assert.equal((await blueprintPlanRead(lookup(cwd))).session!.needsIntent, true);
-  const draft = candidate(["api"]);
-  const direct = await blueprintPlanSubmit({ ...lookup(cwd), expectedRevision: revision(saved), requestId: "direct-draft", candidate: draft });
-  assert.equal(direct.status, "needs_revision");
-  assert.match(String("nextAction" in direct && direct.nextAction), /explicit add\/revise\/replace mode/);
-  const restored = await blueprintPlanRead(lookup(cwd));
-  assert.deepEqual(restored.session!.candidate, draft);
-  assert.equal(restored.session!.journal, undefined);
-  assert.equal(restored.session!.needsIntent, true);
-  assert.equal((await blueprintPlanPrepare(lookup(cwd))).status, "choice_required");
-  assert.equal((await blueprintPlanFinalize({ ...lookup(cwd), expectedRevision: revision(direct), requestId: "direct-finalize" })).status, "needs_revision");
-  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), mode: "add" });
-  assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
-  assert.ok(revision(prepared) > revision(direct));
-  assert.equal((await blueprintPlanRead(lookup(cwd))).session!.needsIntent, false);
-  const ready = await submit(cwd, prepared, draft, "chosen-draft");
-  await publish(cwd, ready, "chosen-publish");
-  assert.equal((await blueprintPhasePlanIndex(lookup(cwd))).plans.length, 2);
+test("prepare exposes late saved constraints outside truncated evidence excerpts", async t => {
+  const cwd = await fixture(t);
+  const lateConstraint = "Never send customer records to the public network.";
+  const contextPath = path.join(cwd, `${phaseDir}/01-CONTEXT.md`);
+  const content = await readFile(contextPath, "utf8");
+  await writeFile(contextPath, content.replace("## Dependencies", `${"Useful implementation background. ".repeat(800)}\n\n## Dependencies`).replace("Preserve customer data across all retries.", lateConstraint));
+  const prepared = await prepare(cwd);
+  assert.ok("grounding" in prepared && JSON.stringify(prepared.grounding).includes(lateConstraint));
+  assert.ok("evidence" in prepared && prepared.evidence.some(item => item.path.endsWith("CONTEXT.md") && item.truncated));
+  assert.ok(!(await sessionBytes(cwd)).includes(lateConstraint), "Grounding is returned to the author but not duplicated in metadata.");
 });

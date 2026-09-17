@@ -1502,7 +1502,7 @@ test("plan-phase is implemented once manifest, skill, and plan MCP tools exist",
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["plan-phase"];
   const expectedRequiredTools = [
-    "blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read", "blueprint_plan_finalize"
+    "blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read"
   ];
 
   assert.equal(entry.declaredStatus, "implemented");

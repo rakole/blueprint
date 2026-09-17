@@ -28,7 +28,7 @@
   ],
   "properties": {
     "title": {
-      "$ref": "#/$defs/nonEmptyString",
+      "$ref": "#/$defs/singleLineString",
       "description": "Human-readable plan title without the phase number or plan id; MCP renders the canonical filename and heading."
     },
     "wave": {
@@ -66,7 +66,7 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": {
-        "$ref": "#/$defs/nonEmptyString"
+        "$ref": "#/$defs/singleLineString"
       }
     },
     "filesModified": {
@@ -171,8 +171,8 @@
     "nonEmptyString": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^[^\\r\\n]+$",
-      "description": "Non-empty single-line string. CR/LF is rejected because model strings are rendered into YAML frontmatter, Markdown lists, or Markdown tables."
+      "pattern": "^(?=[\\s\\S]*\\S)[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]+$",
+      "description": "Nonblank text. Tabs and line endings are supported; MCP safely quotes frontmatter, indents list continuation lines, and escapes table cells."
     },
     "repoRelativePath": {
       "type": "string",
@@ -202,7 +202,7 @@
           "$ref": "#/$defs/taskId"
         },
         "title": {
-          "$ref": "#/$defs/nonEmptyString"
+          "$ref": "#/$defs/singleLineString"
         },
         "readFirst": {
           "type": "array",
@@ -231,7 +231,7 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": {
-            "$ref": "#/$defs/nonEmptyString"
+            "$ref": "#/$defs/singleLineString"
           }
         },
         "filesModified": {
@@ -327,7 +327,7 @@
       ],
       "properties": {
         "requirement": {
-          "$ref": "#/$defs/nonEmptyString"
+          "$ref": "#/$defs/singleLineString"
         },
         "status": {
           "$ref": "#/$defs/requirementCoverageStatus"
@@ -435,6 +435,12 @@
           "$ref": "#/$defs/nonEmptyString"
         }
       }
+    },
+    "singleLineString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f]+$",
+      "description": "Nonblank single-line identifier or heading."
     }
   }
 }

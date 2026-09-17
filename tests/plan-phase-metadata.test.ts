@@ -7,11 +7,11 @@ import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metad
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import { TOOL_DEFINITIONS } from "../src/mcp/tool-definitions.js";
 
-const tools = ["blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read", "blueprint_plan_finalize"] as const;
+const tools = ["blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read"] as const;
 const runtimePath = "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md";
 const read = (file: string) => readFile(path.join(process.cwd(), file), "utf8");
 
-test("plan-phase catalog and live runtime expose the complete durable lifecycle", async () => {
+test("plan-phase catalog and live runtime expose the direct publication lifecycle", async () => {
   const metadata = getRuntimeOwnedCommandMetadata("plan-phase");
   const contract = await buildBlueprintCommandRuntimeContractResource("plan-phase");
   assert.ok(metadata);
@@ -28,8 +28,9 @@ test("plan-phase catalog and live runtime expose the complete durable lifecycle"
   assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
   for (const name of tools) assert.ok(TOOL_DEFINITIONS.some(tool => tool.name === name), name);
   assert.equal(contract.skillInputs.effective.some(input => input.startsWith("docs/")), false);
-  assert.match(metadata.spec.writes.join("\n"), /candidate[\s\S]*blueprint_plan_finalize[\s\S]*STATE\.md/);
-  assert.match(metadata.runtimeReference.contractNotes, /before validation/);
+  assert.match(metadata.spec.writes.join("\n"), /metadata[\s\S]*blueprint_plan_submit[\s\S]*STATE\.md/);
+  assert.equal(TOOL_DEFINITIONS.some(tool => tool.name === "blueprint_plan_finalize"), false);
+  assert.match(metadata.runtimeReference.contractNotes, /Rejected documents[\s\S]*never retained/);
   assert.match(metadata.runtimeReference.contractNotes, /state-aware routing to implemented follow-ups/);
 });
 
@@ -54,7 +55,7 @@ test("thin command and skill keep persistence, readiness and completion ownershi
   assert.match(skill, /inline\s+review when that agent is unavailable/);
 });
 
-test("planner and checker remain bounded read-only workers with revision-bound output", async () => {
+test("planner and checker remain bounded read-only workers with reviewed model output", async () => {
   for (const file of ["agents/blueprint-planner.md", "agents/blueprint-checker.md"]) {
     const source = await read(file);
     const frontmatter = /^---\n([\s\S]*?)\n---/.exec(source)?.[1];
@@ -68,7 +69,7 @@ test("planner and checker remain bounded read-only workers with revision-bound o
     assert.doesNotMatch(source, /blueprint_phase_plan_write/);
   }
   const checker = await read("agents/blueprint-checker.md");
-  assert.match(checker, /candidateHash/);
+  assert.match(checker, /actual reviewed model/);
   assert.match(checker, /ACCEPT/);
   assert.match(checker, /resolved[\s\S]*recurring[\s\S]*new[\s\S]*regressed/);
   assert.match(checker, /UI-Spec Six-Dimension Gate/);
