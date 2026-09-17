@@ -6,6 +6,7 @@ export declare const BLUEPRINT_CONFIG_PATH = ".blueprint/config.json";
 export declare const BLUEPRINT_PHASES_PATH = ".blueprint/phases";
 export declare const BLUEPRINT_REPORTS_PATH = ".blueprint/reports";
 export declare const BLUEPRINT_CODEBASE_PATH = ".blueprint/codebase";
+export declare const CODEBASE_PUBLICATION_PATH = ".blueprint/codebase/.publication.json";
 export declare const BLUEPRINT_BACKLOG_PATH = ".blueprint/backlog";
 export declare const BLUEPRINT_TODOS_PATH = ".blueprint/todos";
 export declare const BLUEPRINT_NOTES_PATH = ".blueprint/notes";
@@ -707,6 +708,7 @@ export declare function ensureRepoRoot(cwd?: string): Promise<string>;
 export declare function toRepoRelativePath(projectRoot: string, absolutePath: string): string;
 export declare function resolveRepoRelativePath(projectRoot: string, relativePath: string): string;
 export declare function resolveBlueprintPath(projectRoot: string, relativePath: string): string;
+export declare function assertCodebasePublicationComplete(projectRoot: string, relativePath: string): Promise<void>;
 export declare function ensureParentDirectory(targetPath: string): Promise<void>;
 export declare function blueprintRepoLockNameSegment(value: string): string;
 export declare const blueprintArtifactsTestHooks: {

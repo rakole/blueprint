@@ -114,14 +114,12 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   const uiDesigner = await readAgent("blueprint-ui-designer");
   const checker = await readAgent("blueprint-checker");
 
-  assert.match(mapper, /## Focus Modes/);
-  assert.match(
-    mapper,
-    /STACK\.md`, `ARCHITECTURE\.md`,\s+`STRUCTURE\.md`, `CONVENTIONS\.md`, `TESTING\.md`, `INTEGRATIONS\.md`, and\s+`CONCERNS\.md`/
-  );
-  assert.match(mapper, /Reuse existing codebase docs by default/i);
-  assert.match(mapper, /For every artifact, include concise evidence paths/i);
-  assert.match(mapper, /Do not revive omitted commands such as `scan` or `intel`/);
+  assert.match(mapper, /## Task Packet/);
+  assert.match(mapper, /Cover only assigned keys/);
+  assert.match(mapper, /selected `evidencePaths`/);
+  assert.match(mapper, /Always read-only: never persist artifacts/);
+  assert.match(mapper, /parent owns user decisions, prepare\/submit, validation, publication/);
+  assert.match(mapper, /prepare an expanded snapshot before it is read/);
 
   for (const pattern of [
     /## Read And Investigate/,

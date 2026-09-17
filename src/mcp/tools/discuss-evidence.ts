@@ -8,6 +8,7 @@ import { blueprintPhaseArtifactScaffold } from "./phase-artifacts.js";
 import { loadBlueprintState } from "./state.js";
 import {
   validatePhaseArtifactContent,
+  assertCodebasePublicationComplete,
   isScaffoldGeneratedArtifact,
 } from "./artifacts.js";
 
@@ -24,6 +25,7 @@ export const stableEvidence = (value: unknown): string =>
       : item,
   );
 export async function readDiscussEvidence(root: string, relative: string) {
+  await assertCodebasePublicationComplete(root, relative);
   try {
     const bytes = await fs.readFile(
       resolveRepoRelativeInputPathSync(root, relative),

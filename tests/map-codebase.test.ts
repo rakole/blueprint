@@ -600,83 +600,52 @@ test("map-codebase scaffold rejects guessed artifact formats with corrective gui
   );
 });
 
-test("map-codebase command file uses runtime FQNs and explicit repo-relative artifact paths", async () => {
-  const [commandFile, skillFile, agentFile] = await Promise.all([
+test("map-codebase guidance uses the compact parent-owned prepare and submit flow", async () => {
+  const [commandFile, skillFile, agentFile, reference] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-map-codebase.toml"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-map/SKILL.md"), "utf8"),
-    readFile(path.join(repoRoot, "agents/blueprint-mapper.md"), "utf8")
+    readFile(path.join(repoRoot, "agents/blueprint-mapper.md"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-map/references/map-runtime-contract.md"), "utf8")
   ]);
-  const requiredTools = [
-    "mcp_blueprint_blueprint_project_status",
-    "mcp_blueprint_blueprint_artifact_contract_read",
-    "mcp_blueprint_blueprint_artifact_scaffold",
-    "mcp_blueprint_blueprint_artifact_list",
-    "mcp_blueprint_blueprint_artifact_summary_digest",
-    "mcp_blueprint_blueprint_codebase_artifact_write",
-    "mcp_blueprint_blueprint_artifact_validate"
-  ];
-  const registeredToolNames = [
-    "blueprint_project_status",
-    "blueprint_artifact_contract_read",
-    "blueprint_artifact_scaffold",
-    "blueprint_artifact_list",
-    "blueprint_artifact_summary_digest",
-    "blueprint_codebase_artifact_write",
-    "blueprint_artifact_validate"
-  ];
 
-  for (const toolName of registeredToolNames) {
+  for (const toolName of ["blueprint_map_prepare", "blueprint_map_submit"]) {
     assert.ok(
       blueprintToolNames.includes(toolName),
       `${toolName} should be registered in the MCP server`
     );
+    assert.match(commandFile, new RegExp(`mcp_blueprint_${toolName}`));
+    assert.match(skillFile, new RegExp(`mcp_blueprint_${toolName}`));
   }
 
-  for (const toolName of requiredTools) {
-    assert.match(commandFile, new RegExp(toolName));
+  // Do not restore primitive calls or a second contract for runtime-derived Markdown.
+  for (const text of [commandFile, skillFile, reference]) {
+    assert.doesNotMatch(text, /mcp_blueprint_blueprint_(?:project_status|config_get|artifact_contract_read|artifact_scaffold|artifact_list|artifact_summary_digest|codebase_artifact_write|artifact_validate)/);
+    assert.doesNotMatch(text, /contract\.authoringTemplate|exactly\s+one artifact at a time/);
   }
-
-  assert.match(commandFile, /STACK\.md/);
-  assert.match(commandFile, /ARCHITECTURE\.md/);
-  assert.match(commandFile, /STRUCTURE\.md/);
-  assert.match(commandFile, /CONCERNS\.md/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`\./);
   assert.match(commandFile, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/);
-  assert.match(commandFile, /ask_user/i);
-  assert.match(commandFile, /blueprint_artifact_contract_read/i);
-  assert.match(commandFile, /blueprint_codebase_artifact_write/i);
-  assert.match(commandFile, /blueprint_artifact_validate/i);
-  assert.match(commandFile, /"artifacts": \["\.blueprint\/codebase\/STACK\.md"/);
-  assert.match(commandFile, /Never pass bare names like `"STACK"`/);
-  assert.match(commandFile, /never pass absolute filesystem paths/i);
-  assert.match(commandFile, /heavily edited/i);
-  assert.match(commandFile, /Existing codebase docs should be reused by default\./i);
-  assert.match(commandFile, /replace/);
   assert.match(commandFile, /skills\/blueprint-map\/references\/map-runtime-contract\.md/);
-  assert.match(commandFile, /contract\.authoringTemplate/);
-  assert.match(commandFile, /evidence-density/i);
-  assert.match(commandFile, /suitable code-analysis subagent or task mechanism/i);
-  assert.match(commandFile, /browser, web, generic page-inspection, or search-only agents/i);
-  assert.match(commandFile, /one-document-at-a-time main-agent fallback/i);
-  assert.match(
-    commandFile,
-    /`STACK\.md`, `STRUCTURE\.md`, `ARCHITECTURE\.md`, `CONVENTIONS\.md`, `TESTING\.md`, `INTEGRATIONS\.md`, `CONCERNS\.md`/
-  );
-  assert.match(commandFile, /compact carry-forward note: file path, write status, key evidence roots, and any unresolved warnings/i);
-  assert.match(commandFile, /status: "invalid"/);
-  assert.match(commandFile, /repair that same draft using the returned `issues` and the canonical `contract\.authoringTemplate`/);
-  assert.match(skillFile, /references\/map-runtime-contract\.md/);
-  assert.match(skillFile, /contract\.authoringTemplate/);
-  assert.match(skillFile, /one artifact at a time/i);
-  assert.match(skillFile, /compact\s+carry-forward note/i);
-  assert.match(skillFile, /status: "invalid"/);
-  assert.match(agentFile, /map-runtime-contract\.md/);
-  assert.match(agentFile, /concise evidence paths and concrete repo signals/i);
-  assert.match(agentFile, /Do not use browser, web, generic page-inspection, or search-only agents/i);
+  assert.match(commandFile, /call prepare before reading those files or generating/);
+  assert.match(commandFile, /opaque `snapshot` unchanged/);
+  assert.match(commandFile, /without a reuse-versus-refresh question/);
+  assert.match(commandFile, /explicit user request to refresh or replace already authorizes `overwrite: true`/);
+  assert.match(commandFile, /do not ask again/);
+  assert.match(commandFile, /workflow\.subagents=true/);
+  assert.match(commandFile, /parent owns submit/i);
+  assert.match(skillFile, /Newly discovered evidence triggered\s+prepare again before authoring/);
+  assert.match(skillFile, /single parent authoring pass by default/);
+  assert.match(skillFile, /agents never persist the bundle/);
+  assert.match(skillFile, /Partial publication\s+was reported honestly/);
+
+  assert.match(agentFile, /Always read-only/);
+  assert.match(agentFile, /Cover only assigned keys/);
+  assert.match(agentFile, /prepare an expanded snapshot before it is read/);
+  assert.match(agentFile, /Do not use browser, web, generic page-inspection, or search-only agents/);
+  assert.doesNotMatch(agentFile, /parent delegates persistence|parent explicitly delegates artifact writes/);
 });
 
-test("map-codebase runtime metadata mirrors key command contract details", async () => {
+test("map-codebase runtime metadata mirrors the direct publication contract", async () => {
   const contract = await buildBlueprintCommandRuntimeContractResource("map-codebase");
 
   assert.equal(MAP_CODEBASE_RUNTIME_METADATA.sourceId, "src/mcp/command-runtime-metadata.ts#map-codebase");
@@ -694,64 +663,47 @@ test("map-codebase runtime metadata mirrors key command contract details", async
     ".blueprint/codebase/CONCERNS.md"
   ]);
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
-    "blueprint_project_status",
-    "blueprint_config_get",
-    "blueprint_artifact_contract_read",
-    "blueprint_artifact_scaffold",
-    "blueprint_artifact_list",
-    "blueprint_artifact_summary_digest",
-    "blueprint_codebase_artifact_write",
-    "blueprint_artifact_validate"
+    "blueprint_map_prepare",
+    "blueprint_map_submit"
   ]);
   assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-mapper"]);
   assert.deepEqual(contract.runtimeReference?.evidenceState, [
     "locked",
     "runtime-owned",
-    "needs-behavior-audit"
+    "behavior-audited"
   ]);
-  assert.match(contract.runtimeReference?.contractNotes ?? "", /local map runtime contract/i);
-  assert.match(contract.runtimeReference?.contractNotes ?? "", /focus areas as targeted deepening/i);
-  assert.match(contract.runtimeReference?.contractNotes ?? "", /contract\.authoringTemplate/i);
-  assert.match(contract.runtimeReference?.contractNotes ?? "", /inputsUsed as authoritative/i);
+  const notes = contract.runtimeReference?.contractNotes ?? "";
+  assert.match(notes, /local map runtime contract/i);
+  assert.match(notes, /prepare before reading and authoring/i);
+  assert.match(notes, /explicit refresh request authorizes overwrite without a second confirmation/i);
+  assert.match(notes, /validates the complete bundle before writes/i);
+  assert.match(notes, /Rejected content is never saved/i);
+  assert.match(notes, /metadata-only recovery/i);
+  assert.match(notes, /successful mapped-only to \/blu-new-project/);
 });
 
-test("map-codebase runtime reference defines rich canonical templates and fallback behavior", async () => {
+test("map-codebase reference keeps evidence and useful content without mandatory filler", async () => {
   const reference = await readFile(
     path.join(repoRoot, "skills/blueprint-map/references/map-runtime-contract.md"),
     "utf8"
   );
-  const artifactNames = [
-    "STACK.md",
-    "STRUCTURE.md",
-    "ARCHITECTURE.md",
-    "CONVENTIONS.md",
-    "TESTING.md",
-    "INTEGRATIONS.md",
-    "CONCERNS.md"
-  ];
-
-  assert.match(reference, /contract\.authoringTemplate/);
-  assert.match(reference, /richness and evidence authority/i);
-  assert.match(reference, /capability-gated/i);
-  assert.match(reference, /Browser, web,\s+generic page-inspection, or search-only agents are not acceptable substitutes/i);
-  assert.match(reference, /When code-analysis subagents are unavailable, the main agent must author exactly\s+one artifact at a time/i);
-  assert.match(
-    reference,
-    /1\. `STACK\.md`[\s\S]*2\. `STRUCTURE\.md`[\s\S]*3\. `ARCHITECTURE\.md`[\s\S]*4\. `CONVENTIONS\.md`[\s\S]*5\. `TESTING\.md`[\s\S]*6\. `INTEGRATIONS\.md`[\s\S]*7\. `CONCERNS\.md`/
-  );
-  assert.match(reference, /compact carry-forward note: artifact path, write status, key\s+evidence roots, and unresolved warnings/i);
-  assert.match(reference, /status: "invalid"/);
-  assert.match(reference, /repair the same draft from returned\s+`issues`/i);
-
-  for (const artifactName of artifactNames) {
-    assert.match(reference, new RegExp(`### \`${artifactName.replace(".", "\\.")}\``));
-    assert.match(
-      reference,
-      new RegExp(`### \`${artifactName.replace(".", "\\.")}\`[\\s\\S]*?(concrete repo paths|Cite paths|Cite files|file paths)`, "i"),
-      `${artifactName} should require concrete repo path evidence`
-    );
+  for (const artifact of CODEBASE_ARTIFACTS) {
+    const name = path.basename(artifact);
+    assert.ok(reference.includes(name), `${name} should have content guidance`);
   }
-
+  assert.match(reference, /Choose actual files, not\s+folders/);
+  assert.match(reference, /Adapt to\s+the repository rather than assuming particular languages or directory names/);
+  assert.match(reference, /Read the exact\s+selected inputs after prepare/);
+  assert.match(reference, /prepare again with the\s+expanded selection/);
+  assert.match(reference, /requiredDocuments/);
+  assert.match(reference, /`evidencePaths`/);
+  assert.match(reference, /Omit irrelevant\s+sections instead of adding filler/);
+  assert.match(reference, /capability-gated delegation only when effective `workflow\.subagents=true`/);
+  assert.match(reference, /A single parent pass is the\s+fallback/);
+  assert.match(reference, /Retry the same snapshot and\s+identical documents/);
+  assert.match(reference, /never document bodies/);
+  assert.match(reference, /there are no failed-draft archives/);
+  assert.match(reference, /do not force a regeneration\s+when publication succeeded/);
   assert.doesNotMatch(reference, /\.planning\//);
   assert.doesNotMatch(reference, /SCAN\.md|INTEL\.md/);
 });

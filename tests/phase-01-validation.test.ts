@@ -444,6 +444,7 @@ test("state_update rejects bootstrap-ineligible repos without creating locks or 
   await writeFile(path.join(mappedOnlyRepo, "src/index.ts"), "export const value = 1;\n", "utf8");
   await writeMappedCodebaseBundle(mappedOnlyRepo);
   assert.equal((await blueprintProjectStatus({ cwd: mappedOnlyRepo })).status, "mapped-only");
+  const priorLocks = await readdir(path.join(mappedOnlyRepo, ".blueprint/locks"));
 
   await assert.rejects(
     blueprintStateUpdate({
@@ -454,7 +455,7 @@ test("state_update rejects bootstrap-ineligible repos without creating locks or 
     }),
     /Cannot update Blueprint state before core \.blueprint\/ project artifacts exist.*\/blu-new-project/
   );
-  assert.equal(await pathExists(path.join(mappedOnlyRepo, ".blueprint/locks")), false);
+  assert.deepEqual(await readdir(path.join(mappedOnlyRepo, ".blueprint/locks")), priorLocks);
   assert.equal(await pathExists(path.join(mappedOnlyRepo, ".blueprint/STATE.md")), false);
 });
 

@@ -250,7 +250,7 @@ The runnable command groups below are generated from the same registry as `gener
 - `/blu`: root router for safe command selection and next-step guidance
 - `/blu-health`: `health` checks Blueprint project health and can run explicit repair-mode normalization through MCP-owned tools.
 - `/blu-help`: `help` shows safe Blueprint router guidance from project readiness and the implemented command catalog.
-- `/blu-map-codebase`: `map-codebase` analyzes a brownfield codebase with mapper-style passes and produces the stable seven-document Blueprint codebase bundle.
+- `/blu-map-codebase`: `map-codebase` prepares selected repository evidence, authors structured content, and directly publishes the stable seven-document Blueprint codebase bundle.
 - `/blu-new-project`: new-project initializes a Blueprint project with deep context gathering and PROJECT.md.
 - `/blu-progress`: `progress` summarizes Blueprint repo status, blockers, warnings, and next safe implemented guidance from MCP-owned state.
 - `/blu-set-profile`: `set-profile` changes the current project model_profile through the governance MCP config substrate.

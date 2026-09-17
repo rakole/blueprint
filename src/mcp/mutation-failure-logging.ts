@@ -42,6 +42,8 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_plan_run_patch_record",
   "blueprint_artifact_scaffold",
   "blueprint_codebase_artifact_write",
+  "blueprint_map_prepare",
+  "blueprint_map_submit",
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_pr_branch_execute",

@@ -232,7 +232,7 @@ test("implemented Blueprint skills resolve to discoverable Gemini bundles with m
 test("implemented Blueprint skills include runtime tool and slash-command guardrails", async () => {
   for (const skillName of await implementedSkillNames()) {
     const raw = await readRelativePath(blueprintDiscoverableSkillPath(skillName));
-    const exampleTool = skillName === "blueprint-phase-planning" ? "blueprint_plan_submit" : "blueprint_project_status";
+    const exampleTool = skillName === "blueprint-phase-planning" ? "blueprint_plan_submit" : skillName === "blueprint-map" ? "blueprint_map_prepare" : "blueprint_project_status";
 
     assert.match(
       raw,

@@ -23,10 +23,10 @@ declare const journalSchema: z.ZodObject<{
     reuse: z.ZodBoolean;
     planningReady: z.ZodBoolean;
     stages: z.ZodRecord<z.ZodEnum<{
+        artifact: "artifact";
         provenance: "provenance";
         cleanup: "cleanup";
         state: "state";
-        artifact: "artifact";
         routing: "routing";
     }> & z.core.$partial, z.ZodEnum<{
         complete: "complete";
@@ -127,10 +127,10 @@ declare const sessionSchema: z.ZodObject<{
         reuse: z.ZodBoolean;
         planningReady: z.ZodBoolean;
         stages: z.ZodRecord<z.ZodEnum<{
+            artifact: "artifact";
             provenance: "provenance";
             cleanup: "cleanup";
             state: "state";
-            artifact: "artifact";
             routing: "routing";
         }> & z.core.$partial, z.ZodEnum<{
             complete: "complete";
