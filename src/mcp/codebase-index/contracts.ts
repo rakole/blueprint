@@ -127,7 +127,7 @@ export const portableCoverageStatusSchema = z.enum(PORTABLE_MAP_COVERAGE_STATUSE
 export type PortableCoverageStatus = z.infer<typeof portableCoverageStatusSchema>;
 
 export const PORTABLE_MAP_LIMITATION_REASONS = [
-  "none", "unsupported-language", "too-large", "binary", "parse-error", "excluded", "unreadable"
+  "none", "unsupported-language", "too-large", "binary", "parse-error", "excluded", "unreadable", "not-extracted"
 ] as const;
 export const portableLimitationReasonSchema = z.enum(PORTABLE_MAP_LIMITATION_REASONS);
 
@@ -153,8 +153,8 @@ export const portableFileRecordSchema = z.strictObject({
         : record.parseStatus === "unsupported"
           ? (record.coverageStatus === "file" || record.coverageStatus === "none") && reason === "unsupported-language"
           : record.coverageStatus === "file"
-            ? ["too-large", "binary"].includes(reason)
-            : ["excluded", "unreadable", "binary", "too-large"].includes(reason);
+            ? ["too-large", "binary", "not-extracted"].includes(reason)
+            : ["excluded", "unreadable", "binary", "too-large", "not-extracted"].includes(reason);
   if (!valid) {
     ctx.addIssue({ code: "custom", path: ["coverageStatus"], message: "Parse status, coverage status, and limitation reason are inconsistent." });
   }

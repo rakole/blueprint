@@ -128,6 +128,7 @@ test("paths reject every rendered control byte and file records enforce coverage
   assert.equal(portableFileRecordSchema.safeParse(fileRecord({ parseStatus: "partial", coverageStatus: "file", limitationReason: "parse-error" })).success, true);
   assert.equal(portableFileRecordSchema.safeParse(fileRecord({ parseStatus: "unsupported", coverageStatus: "none", limitationReason: "unsupported-language" })).success, true);
   assert.equal(portableFileRecordSchema.safeParse(fileRecord({ parseStatus: "skipped", coverageStatus: "file", limitationReason: "too-large" })).success, true);
+  assert.equal(portableFileRecordSchema.safeParse(fileRecord({ parseStatus: "skipped", coverageStatus: "file", limitationReason: "not-extracted" })).success, true);
   assert.equal(portableFileRecordSchema.safeParse(fileRecord({ parseStatus: "failed", coverageStatus: "full" })).success, false);
   assert.equal(portableFileRecordSchema.safeParse(fileRecord({ extra: "ignored" })).success, false);
 });
