@@ -24,6 +24,7 @@ import {
 } from "../scripts/portable-map-pilot.mjs";
 
 const heldOutPath = path.join(fixtureRoot, "evaluation", "held-out-queries.json");
+const developmentPath = path.join(fixtureRoot, "evaluation", "development-probes.json");
 
 async function exists(filePath: string): Promise<boolean> {
   try {
@@ -63,6 +64,9 @@ test("materializes only the repository and portable transfer unit", async (t) =>
   assert.equal(await exists(path.join(root, "tests", "fixtures")), false);
   assert.deepEqual(await readdir(path.join(root, ".blueprint")), ["codebase"]);
   assert.equal(await exists(path.join(root, ".blueprint", "codebase", "INDEX.md")), true);
+  for (const compatibilityView of ["ARCHITECTURE.md", "CONCERNS.md", "CONVENTIONS.md", "INTEGRATIONS.md", "STACK.md", "STRUCTURE.md", "TESTING.md"]) {
+    assert.equal(await exists(path.join(root, ".blueprint", "codebase", compatibilityView)), false);
+  }
   const generation = await lstat(path.join(root, ".blueprint", "codebase", "generations", "gen-001"));
   assert.equal(generation.isDirectory(), true);
   assert.equal(generation.isSymbolicLink(), false);
@@ -144,10 +148,15 @@ test("lexical baseline and map navigation record deterministic fixture checks", 
   assert.equal(symbol.knownTarget, false);
   assert.equal(symbol.portableMap.firstUsefulSourceRead?.path, "src/checkout/cart.ts");
   assert.equal(symbol.portableMap.usefulSourceEvidence[0].range?.join("-"), "9-18");
-  assert.ok(symbol.portableMap.actions.some((action) => action.kind === "record-read"));
+  assert.equal(symbol.portableMap.actions.filter((action) => action.kind === "search-shard-read").length, 1);
+  assert.equal(symbol.portableMap.actions.filter((action) => action.kind === "record-read").length, 0);
+  assert.deepEqual(
+    symbol.portableMap.actions.filter((action) => action.kind === "useful-source-read").map((action) => action.path),
+    ["src/checkout/cart.ts"]
+  );
   assert.equal(symbol.lexical.firstUsefulSourceRead?.path, "src/checkout/cart.ts");
   assert.ok(symbol.lexical.searchBytesRead > 0);
-  assert.equal(symbol.lexical.sourceBytesRead, 556 + 219);
+  assert.equal(symbol.portableMap.sourceBytesRead, 556);
 
   const alias = byId.get("basket-alias")!;
   assert.equal(alias.portableMap.firstUsefulSourceRead?.path, "src/checkout/cart.ts");
@@ -169,13 +178,16 @@ test("lexical baseline and map navigation record deterministic fixture checks", 
   assert.ok(ambiguous.lexical.searchBytesRead > 0);
   assert.equal(ambiguous.lexical.sourceBytesRead, 556 + 219 + 98);
   assert.equal(ambiguous.portableMap.firstUsefulSourceRead?.path, "src/checkout/receipt.js");
-  assert.ok(ambiguous.portableMap.actions.some((action) => action.path === "src/checkout/cart.ts" && action.kind === "useful-source-read"));
-  assert.ok(ambiguous.portableMap.actions.some((action) => action.path === "src/checkout/receipt.js" && action.kind === "useful-source-read"));
+  assert.deepEqual(
+    ambiguous.portableMap.actions.filter((action) => action.kind === "useful-source-read").map((action) => action.path),
+    ["src/checkout/cart.ts", "src/checkout/receipt.js"]
+  );
   assert.ok(ambiguous.portableMap.searchBytesRead > 0);
-  assert.ok(ambiguous.portableMap.sourceBytesRead > 98);
+  assert.equal(ambiguous.portableMap.sourceBytesRead, 556 + 98);
   const changedGold = {
     ...JSON.parse(JSON.stringify(JSON.parse(await readFile(heldOutPath, "utf8")).queries.find((candidate: {id: string}) => candidate.id === "ambiguous-checkout-receipt"))),
-    gold: {paths: ["src/checkout/cart.ts"], range: [9, 18]}
+    gold: {paths: ["src/checkout/cart.ts"], range: [9, 18]},
+    evidence: {required: [{path: "src/checkout/cart.ts", role: "direct source"}]}
   };
   const changedBaseline = await runLexicalBaseline(root, changedGold);
   const changedMap = await navigatePortableMap(root, changedGold);
@@ -190,9 +202,17 @@ test("lexical baseline and map navigation record deterministic fixture checks", 
     "capability-route-read",
     "capability-read",
     "record-read",
+    "useful-source-read",
+    "useful-source-read",
     "useful-source-read"
   ]);
   assert.equal(capability.portableMap.firstUsefulSourceRead?.path, "src/checkout/cart.ts");
+  assert.equal(capability.portableMap.sufficientEvidence, true);
+  assert.deepEqual(capability.portableMap.requiredEvidence.map((item) => item.path), [
+    "src/checkout/cart.ts",
+    "src/checkout/receipt.js"
+  ]);
+  assert.equal(capability.portableMap.supportingEvidence[0].role, "direct test");
 
   const unsupported = byId.get("unsupported-sql-path")!;
   assert.equal(unsupported.portableMap.firstUsefulSourceRead?.path, "db/migrations/001_orders.sql");
@@ -228,6 +248,61 @@ test("freshness drift selects the documented stale-map fallback", async (t) => {
   assert.equal(navigation.freshness.status, "stale");
   assert.ok(navigation.actions.some((action) => action.kind === "fallback-guidance"));
   assert.match(navigation.fallbackGuidance ?? "", /ordinary bounded source discovery/);
+});
+
+test("development probes select one route and require complete cross-language evidence", async (t) => {
+  const root = await makeMaterialized(t);
+  const probes = JSON.parse(await readFile(developmentPath, "utf8")).queries;
+  const report = await runPilotReport(root, probes);
+  const byId = new Map(report.results.map((result) => [result.queryId, result]));
+  const cart = byId.get("probe-cart-symbol")!.portableMap;
+  assert.deepEqual(cart.actions.map((action) => action.kind), [
+    "index-read", "map-route-read", "search-shard-read", "useful-source-read"
+  ]);
+  assert.equal(cart.actions.filter((action) => action.kind === "record-read").length, 0);
+  assert.equal(cart.sufficientEvidence, true);
+
+  const shipping = byId.get("probe-shipping-capability")!.portableMap;
+  assert.equal(shipping.sufficientEvidence, true);
+  assert.deepEqual(shipping.requiredEvidence.map((item) => item.path), [
+    "python/rates.py",
+    "java/com/acme/fulfillment/ShipmentPlanner.java"
+  ]);
+  assert.deepEqual(
+    shipping.actions.filter((action) => action.kind === "useful-source-read").map((action) => action.path),
+    ["python/rates.py", "java/com/acme/fulfillment/ShipmentPlanner.java"]
+  );
+  assert.equal(shipping.actions.filter((action) => action.kind === "record-read").length, 1);
+
+  const known = byId.get("probe-known-receipt")!.portableMap;
+  assert.deepEqual(known.actions.map((action) => action.kind), ["known-target-source-read"]);
+  assert.equal(known.actions.some((action) => action.path.includes("compatibility")), false);
+});
+
+test("declared alternatives are complete before context is sufficient", async (t) => {
+  const root = await makeMaterialized(t);
+  const navigation = await navigatePortableMap(root, {
+    id: "incomplete-alternative",
+    kind: "search",
+    searchTerm: "CartCoordinator.checkout",
+    searchShard: "symbols",
+    knownTarget: false,
+    gold: {paths: []},
+    evidence: {
+      required: [],
+      alternatives: [[
+        {path: "src/checkout/cart.ts", role: "production relationship"},
+        {path: "src/checkout/receipt.js", role: "production relationship"}
+      ]]
+    }
+  });
+  assert.deepEqual(
+    navigation.actions.filter((action) => action.kind === "useful-source-read").map((action) => action.path),
+    ["src/checkout/cart.ts"]
+  );
+  assert.equal(navigation.sufficientEvidence, false);
+  assert.equal(navigation.fallbackUsed, true);
+  assert.equal(navigation.fallbackReason, "insufficient-evidence");
 });
 
 test("deleted and unreadable sources produce bounded freshness statuses", async (t) => {
@@ -339,4 +414,5 @@ test("baseline results expose ordered actions, useful evidence, bytes, and task 
   assert.equal(discovery.actions[0].kind, "source-inventory");
   assert.ok(discovery.searchedFiles.length >= 5);
   assert.equal(discovery.firstUsefulSourceRead?.path, "src/checkout/cart.ts");
+  assert.equal(discovery.sufficientEvidence, true);
 });

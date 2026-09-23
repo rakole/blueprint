@@ -15,14 +15,19 @@ remain authoritative.
 
 1. Reuse this index after it has been supplied; load it after context loss.
 2. Read a known live file directly when the task already names its target.
-3. For a concept, choose the smallest capability route. For a path, symbol,
-   error, or alias, search the explicit `generations/gen-001/search/` directory.
-4. Read only the selected capability or record page, then follow its source
-   coordinates into the current tree and relevant tests.
-5. Treat this map as generated evidence. It cannot prove absence or impact.
-6. After two unproductive map actions, use ordinary bounded source discovery.
-7. Missing, stale, unsupported, or malformed maps fall back to normal source
-   discovery. Consumers never edit the map.
+3. Choose one smallest route: a capability page for a domain flow, the file
+   shard for a path or broad domain term, the symbol shard for an exact symbol,
+   and the alias shard for an alias or vocabulary phrase.
+4. A selected search hit contains its current source coordinate. Open that
+   source directly; read one record only when the question needs declared
+   relationships, constraints, or tests.
+5. Capability pages list required live coordinates before optional supporting
+   evidence. Read every required coordinate before calling the context enough.
+6. The seven root compatibility views are descriptive documents, not
+   navigation inputs. The map cannot prove absence or impact.
+7. After two unproductive map actions, or for a missing, stale, unsupported,
+   or malformed result, use ordinary bounded source discovery. Consumers never
+   edit the map.
 
 The entrypoint and each search hit are bounded byte records. Search lines are
 literal references with source coordinates and relative record links; they do

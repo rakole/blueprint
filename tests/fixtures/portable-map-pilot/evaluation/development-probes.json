@@ -7,7 +7,8 @@
       "kind": "search",
       "knownTarget": false,
       "searchTerm": "calculateCartTotal",
-      "gold": {"paths": ["src/checkout/cart.ts"], "symbol": "calculateCartTotal", "range": [9, 18]}
+      "gold": {"paths": ["src/checkout/cart.ts"], "symbol": "calculateCartTotal", "range": [9, 18]},
+      "evidence": {"required": [{"path": "src/checkout/cart.ts", "role": "direct source"}]}
     },
     {
       "id": "probe-shipping-capability",
@@ -15,7 +16,11 @@
       "capability": "shipping",
       "knownTarget": false,
       "searchTerm": "delivery",
-      "gold": {"paths": ["python/rates.py", "java/com/acme/fulfillment/ShipmentPlanner.java"]}
+      "gold": {"paths": ["python/rates.py", "java/com/acme/fulfillment/ShipmentPlanner.java"]},
+      "evidence": {"required": [
+        {"path": "python/rates.py", "role": "production relationship"},
+        {"path": "java/com/acme/fulfillment/ShipmentPlanner.java", "role": "production relationship"}
+      ]}
     },
     {
       "id": "probe-known-receipt",
@@ -23,7 +28,8 @@
       "knownTarget": true,
       "targetPath": "src/checkout/receipt.js",
       "searchTerm": "formatReceipt",
-      "gold": {"paths": ["src/checkout/receipt.js"], "symbol": "formatReceipt", "range": [1, 3]}
+      "gold": {"paths": ["src/checkout/receipt.js"], "symbol": "formatReceipt", "range": [1, 3]},
+      "evidence": {"required": [{"path": "src/checkout/receipt.js", "role": "direct source"}]}
     }
   ]
 }

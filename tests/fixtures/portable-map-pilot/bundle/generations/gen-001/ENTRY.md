@@ -14,8 +14,10 @@ capabilities and records linked below.
 
 ## Reading rules
 
-Use direct source reads for known targets. Otherwise search a literal term in
-the listed search shards, read the linked record or capability, and verify its
-coordinates against current source. A stale, negative, unsupported, or missing
-result requires ordinary bounded source discovery; the map cannot establish
-absence.
+Use direct source reads for known targets. Otherwise choose one literal search
+shard or capability route, open the selected source coordinates, and read a
+record only when the question needs its relationships, constraints, or tests.
+Capability pages identify required and supporting live evidence; all required
+evidence must be present before the context is sufficient. A stale, negative,
+unsupported, or missing result requires ordinary bounded source discovery; the
+map cannot establish absence.

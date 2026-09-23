@@ -14,6 +14,16 @@ the alias `dispatch plan`.
   describe the Java service and its parcel/freight boundary.
 - The SQL file is [inventory-only](../records/unsupported.md#file-db-migrations-001-orders-sql).
 
+## Required live evidence
+
+- [Python rate source](../records/shipping.md#file-python-rates-py)
+- [Java planner source](../records/shipping.md#file-java-com-acme-fulfillment-shipmentplanner-java)
+
+## Supporting evidence
+
+- No direct shipping test is present in the selected inventory. This is
+  **no test evidence in the selected inventory**, not a coverage claim.
+
 ## Constraints
 
 - Unknown zones use the standard local rate.

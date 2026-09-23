@@ -76,9 +76,9 @@ async function resolveContainedFile(root, relativePath) {
   return absolutePath;
 }
 
-async function readContainedFile(root, relativePath, displayPath, actions, kind) {
+async function readContainedFile(root, relativePath, displayPath, actions, kind, metadata = {}) {
   const absolutePath = await resolveContainedFile(root, relativePath);
-  const contents = await readTracked(absolutePath, displayPath, actions, kind);
+  const contents = await readTracked(absolutePath, displayPath, actions, kind, metadata);
   return {absolutePath, contents};
 }
 
@@ -123,7 +123,10 @@ export async function materializeFixture(destination = undefined) {
   const root = destination ?? await fsTempDirectory();
   await ensureEmptyDirectory(root);
   await copyTree(repositoryFixture, root);
-  await copyTree(bundleFixture, path.join(root, ".blueprint", "codebase"));
+  const transferRoot = path.join(root, ".blueprint", "codebase");
+  await mkdir(transferRoot, {recursive: true});
+  await cp(path.join(bundleFixture, "INDEX.md"), path.join(transferRoot, "INDEX.md"));
+  await copyTree(path.join(bundleFixture, "generations"), path.join(transferRoot, "generations"));
   return root;
 }
 
@@ -150,9 +153,9 @@ export async function discoverSourceFiles(repositoryRoot) {
   return files.filter((filePath) => sourceExtensions.has(path.extname(filePath).toLowerCase()));
 }
 
-async function readTracked(absolutePath, displayPath, actions, kind) {
+async function readTracked(absolutePath, displayPath, actions, kind, metadata = {}) {
   const contents = await readFile(absolutePath);
-  actions.push({kind, path: posix(displayPath), bytes: contents.byteLength});
+  actions.push({kind, path: posix(displayPath), bytes: contents.byteLength, ...metadata});
   return contents.toString("utf8");
 }
 
@@ -191,16 +194,77 @@ function recordLinkFromSearchLine(line) {
   return match?.[1] ?? null;
 }
 
+function sourceTargetFromSearchLine(line) {
+  const match = line.match(/(?:^| \| )source: ([^ |]+)/);
+  return match?.[1] ?? null;
+}
+
+function lineRangeFromValue(value) {
+  const match = String(value ?? "").match(/^(\d+)(?:-(\d+))?$/);
+  return match ? [Number(match[1]), Number(match[2] ?? match[1])] : null;
+}
+
 function firstUsefulEvidence(evidence) {
   return evidence[0] ?? null;
 }
 
+function evidenceItems(query) {
+  const declared = query.evidence ?? {};
+  const normalize = (items, defaultRole) => (items ?? []).map(item => {
+    if (typeof item === "string") return {path: item, role: defaultRole};
+    return {path: item.path, range: item.range ?? null, role: item.role ?? defaultRole};
+  });
+  const required = normalize(declared.required, "required source");
+  const supporting = normalize(declared.supporting, "supporting source");
+  const alternatives = (declared.alternatives ?? []).map(alternative =>
+    normalize(alternative, "alternative source")
+  );
+  if (required.length === 0 && supporting.length === 0 && alternatives.length === 0) {
+    return {
+      required: normalize(query.gold?.paths ?? [], "required source"),
+      supporting: [],
+      alternatives: []
+    };
+  }
+  return {required, supporting, alternatives};
+}
+
 function scoreRecordedSourceReads(actions, query) {
-  const goldPaths = new Set(query.gold?.paths ?? []);
-  const evidence = actions
-    .filter(action => sourceReadKinds.has(action.kind) && goldPaths.has(action.path))
-    .map(action => ({path: action.path, range: query.gold?.range ?? null}));
-  return {evidence, firstUsefulSourceRead: firstUsefulEvidence(evidence)};
+  const expected = evidenceItems(query);
+  const readable = actions.filter(action => sourceReadKinds.has(action.kind));
+  const allExpected = [...expected.required, ...expected.supporting, ...expected.alternatives.flat()];
+  const evidence = [];
+  const matchedKeys = new Set();
+  for (const action of readable) {
+    const match = allExpected.find(item => item.path === action.path);
+    if (!match) continue;
+    const key = `${match.path}|${match.role}`;
+    if (matchedKeys.has(key)) continue;
+    matchedKeys.add(key);
+    evidence.push({
+      path: action.path,
+      range: action.range ?? match.range ?? query.gold?.range ?? null,
+      role: action.role ?? match.role
+    });
+  }
+  const hasPath = (item) => evidence.some(found => found.path === item.path);
+  const requiredEvidence = expected.required.filter(hasPath);
+  const supportingEvidence = expected.supporting.filter(hasPath);
+  const alternativeEvidence = expected.alternatives.find(alternative => alternative.every(hasPath)) ?? [];
+  const sufficient = expected.required.length > 0
+    ? requiredEvidence.length === expected.required.length || alternativeEvidence.length > 0
+    : expected.alternatives.length > 0
+      ? alternativeEvidence.length > 0
+      : evidence.length > 0;
+  return {
+    evidence,
+    firstUsefulSourceRead: firstUsefulEvidence(evidence),
+    requiredEvidence,
+    supportingEvidence,
+    alternativeEvidence,
+    sufficientEvidence: sufficient,
+    sufficientContext: sufficient
+  };
 }
 
 function lower(value) {
@@ -240,7 +304,7 @@ export async function runLexicalBaseline(repositoryRoot, query) {
       await readContainedFile(repositoryRoot, candidate.path, candidate.path, actions, "useful-source-read");
     }
   }
-  const {evidence, firstUsefulSourceRead} = scoreRecordedSourceReads(actions, query);
+  const scored = scoreRecordedSourceReads(actions, query);
   const totals = actionByteTotals(actions);
   return {
     label: "fixture-checks-only",
@@ -248,70 +312,121 @@ export async function runLexicalBaseline(repositoryRoot, query) {
     queryId: query.id,
     knownTarget: Boolean(query.knownTarget),
     actions,
-    usefulSourceEvidence: evidence,
-    firstUsefulSourceRead,
+    usefulSourceEvidence: scored.evidence,
+    firstUsefulSourceRead: scored.firstUsefulSourceRead,
+    requiredEvidence: scored.requiredEvidence,
+    supportingEvidence: scored.supportingEvidence,
+    alternativeEvidence: scored.alternativeEvidence,
+    sufficientEvidence: scored.sufficientEvidence,
+    sufficientContext: scored.sufficientContext,
     ...totals,
     searchedFiles: sourceFiles,
-    fallbackUsed: evidence.length === 0,
-    fallbackGuidance: evidence.length === 0
+    fallbackUsed: !scored.sufficientEvidence,
+    fallbackGuidance: !scored.sufficientEvidence
       ? "Use ordinary bounded source discovery; a static map cannot prove absence."
       : null
   };
 }
 
-async function readMapFile(repositoryRoot, relativeMapPath, actions, kind) {
+async function readMapFile(repositoryRoot, relativeMapPath, actions, kind, cache = undefined) {
+  if (cache?.has(relativeMapPath)) return cache.get(relativeMapPath);
   const mapRoot = path.join(repositoryRoot, ".blueprint", "codebase");
   try {
-    return await readContainedFile(mapRoot, relativeMapPath, `.blueprint/codebase/${relativeMapPath}`, actions, kind);
+    const result = await readContainedFile(mapRoot, relativeMapPath, `.blueprint/codebase/${relativeMapPath}`, actions, kind);
+    cache?.set(relativeMapPath, result);
+    return result;
   } catch (error) {
     if (error instanceof PortableMapNavigationError) throw error;
     throw new PortableMapNavigationError("malformed-map");
   }
 }
 
-async function readSourceFile(repositoryRoot, relativeSourcePath, actions, kind) {
+async function readSourceFile(repositoryRoot, relativeSourcePath, actions, kind, cache = undefined, role = undefined, range = undefined) {
   if (relativeSourcePath === ".blueprint" || relativeSourcePath.startsWith(".blueprint/")) {
     throw new PortableMapNavigationError();
   }
+  if (cache?.has(relativeSourcePath)) return cache.get(relativeSourcePath);
   try {
-    return await readContainedFile(repositoryRoot, relativeSourcePath, relativeSourcePath, actions, kind);
+    const result = await readContainedFile(
+      repositoryRoot,
+      relativeSourcePath,
+      relativeSourcePath,
+      actions,
+      kind,
+      {role, range}
+    );
+    cache?.set(relativeSourcePath, result);
+    return result;
   } catch (error) {
     if (error instanceof PortableMapNavigationError) throw error;
     throw new PortableMapNavigationError("unreadable-source");
   }
 }
 
-async function searchMap(repositoryRoot, term, actions) {
-  const route = await readMapFile(repositoryRoot, "generations/gen-001/routes/search.md", actions, "map-route-read");
+function selectSearchShard(query) {
+  if (["files", "symbols", "aliases"].includes(query.searchShard)) return query.searchShard;
+  const term = String(query.searchTerm ?? "").trim();
+  if (term.includes("/") || sourceExtensions.has(path.extname(term).toLowerCase())) return "files";
+  if (/\s/.test(term)) return "aliases";
+  if (/^[a-z][a-z0-9_-]*$/.test(term)) return "files";
+  return "symbols";
+}
+
+function sourceLinkFromSearchLine(line, shardAbsolutePath, repositoryRoot) {
+  const target = sourceTargetFromSearchLine(line);
+  if (!target) return null;
+  const fields = line.split(" | ");
+  const sourcePath = target.match(/^\d+(?:-\d+)?$/) ? fields[1] : null;
+  const sourceTarget = sourcePath
+    ? `../../../../../${sourcePath}#L${target.replace("-", "-L")}`
+    : target;
+  const source = sourceLinkFromMarkdown(`[source](${sourceTarget})`, shardAbsolutePath, repositoryRoot);
+  return source.then(result => {
+    if (!result) return null;
+    if (!result.range && sourcePath) result.range = lineRangeFromValue(target);
+    return result;
+  });
+}
+
+async function searchMap(repositoryRoot, query, actions, cache) {
+  const route = await readMapFile(repositoryRoot, "generations/gen-001/routes/search.md", actions, "map-route-read", cache);
   const shardPaths = [...route.contents.matchAll(/\]\((\.\.\/search\/[^)]+\.md)\)/g)]
     .map((match) => match[1].replace("../search/", "search/"));
+  const selectedShard = selectSearchShard(query);
+  const shardPath = shardPaths.find(candidate => candidate === `search/${selectedShard}.md`);
+  if (!shardPath) throw new PortableMapNavigationError();
   const candidates = [];
   let ordinal = 0;
-  for (const shardPath of shardPaths) {
-    const shard = await readMapFile(repositoryRoot, `generations/gen-001/${shardPath}`, actions, "search-shard-read");
-    for (const line of shard.contents.split(/\r?\n/)) {
-      if (!line || !lower(line).includes(lower(term))) continue;
-      const normalizedTerm = lower(term);
-      const exactField = line.split(" | ").some(field => lower(field.trim()) === normalizedTerm);
-      candidates.push({
-        shard: `generations/gen-001/${shardPath}`,
-        line,
-        recordTarget: recordLinkFromSearchLine(line),
-        score: exactField ? 2 : 1,
-        ordinal: ordinal++
-      });
-    }
+  const shard = await readMapFile(repositoryRoot, `generations/gen-001/${shardPath}`, actions, "search-shard-read", cache);
+  const seen = new Set();
+  for (const line of shard.contents.split(/\r?\n/)) {
+    if (!line || !lower(line).includes(lower(query.searchTerm ?? ""))) continue;
+    const normalizedTerm = lower(query.searchTerm ?? "");
+    const exactField = line.split(" | ").some(field => lower(field.trim()) === normalizedTerm);
+    const source = await sourceLinkFromSearchLine(line, shard.absolutePath, repositoryRoot);
+    if (!source) throw new PortableMapNavigationError();
+    const canonical = `${source.path}#${source.range?.join("-") ?? ""}`;
+    if (seen.has(canonical)) continue;
+    seen.add(canonical);
+    candidates.push({
+      shard: `generations/gen-001/${shardPath}`,
+      line,
+      source,
+      recordTarget: recordLinkFromSearchLine(line),
+      score: exactField ? 2 : 1,
+      ordinal: ordinal++
+    });
   }
   return candidates.sort((left, right) => right.score - left.score || left.ordinal - right.ordinal);
 }
 
-async function followRecord(repositoryRoot, recordTarget, actions) {
+async function followRecord(repositoryRoot, recordTarget, actions, mapCache, sourceCache, role = "production relationship") {
   if (!recordTarget) return {source: null, record: null};
   const cleanedTarget = cleanLinkTarget(recordTarget);
   if (!cleanedTarget.startsWith("../records/")) throw new PortableMapNavigationError();
   const normalizedTarget = cleanedTarget.replace(/^\.\.\/records\//, "records/");
   const recordPath = `generations/gen-001/${normalizedTarget}`;
-  const record = await readMapFile(repositoryRoot, recordPath, actions, "record-read");
+  const record = await readMapFile(repositoryRoot, recordPath, actions, "record-read", mapCache);
   const fragment = recordTarget.split("#", 2)[1];
   let recordSection = record.contents;
   if (fragment) {
@@ -325,11 +440,63 @@ async function followRecord(repositoryRoot, recordTarget, actions) {
   const source = await sourceLinkFromMarkdown(recordSection, record.absolutePath, repositoryRoot);
   if (!source) return {source: null, record: recordPath};
   try {
-    await readTracked(source.absolutePath, source.path, actions, "useful-source-read");
-  } catch {
+    await readSourceFile(repositoryRoot, source.path, actions, "useful-source-read", sourceCache, role, source.range);
+  } catch (error) {
+    if (error instanceof PortableMapNavigationError) throw error;
     throw new PortableMapNavigationError("unreadable-source");
   }
   return {source, record: recordPath};
+}
+
+function markdownSection(markdown, heading) {
+  const start = markdown.indexOf(`## ${heading}`);
+  if (start < 0) return "";
+  const after = markdown.slice(start + heading.length + 3);
+  const next = after.search(/\n## /);
+  return after.slice(0, next >= 0 ? next : undefined);
+}
+
+async function followCapabilityEvidence(repositoryRoot, capability, actions, mapCache, sourceCache) {
+  const required = markdownSection(capability.contents, "Required live evidence");
+  const supporting = markdownSection(capability.contents, "Supporting evidence");
+  const recordTargets = (markdown) => markdownLinks(markdown)
+    .filter(target => target.startsWith("../records/") && target.includes("#"));
+  for (const target of recordTargets(required)) {
+    await followRecord(repositoryRoot, target, actions, mapCache, sourceCache, "production relationship");
+  }
+  for (const target of recordTargets(supporting)) {
+    await followRecord(repositoryRoot, target, actions, mapCache, sourceCache, "supporting source");
+  }
+  const roleForEvidenceLine = (line, fallbackRole) => {
+    const normalized = lower(line);
+    if (normalized.includes("direct test")) return "direct test";
+    if (normalized.includes("candidate related test")) return "candidate related test";
+    if (normalized.includes("production relationship")) return "production relationship";
+    return fallbackRole;
+  };
+  const directSources = async (markdown, fallbackRole) => {
+    for (const target of markdownLinks(markdown)) {
+      if (!sourceExtensions.has(path.extname(cleanLinkTarget(target)).toLowerCase())) continue;
+      const line = markdown.split(/\r?\n/).find(candidate => candidate.includes(target)) ?? "";
+      const source = await sourceLinkFromMarkdown(
+        `[source](${target})`,
+        capability.absolutePath,
+        repositoryRoot
+      );
+      if (!source) throw new PortableMapNavigationError();
+      await readSourceFile(
+        repositoryRoot,
+        source.path,
+        actions,
+        "useful-source-read",
+        sourceCache,
+        roleForEvidenceLine(line, fallbackRole),
+        source.range
+      );
+    }
+  };
+  await directSources(required, "production relationship");
+  await directSources(supporting, "supporting source");
 }
 
 async function checkFreshnessInternal(repositoryRoot, actions = undefined) {
@@ -381,6 +548,11 @@ function navigationFallback(query, actions, freshness, reason) {
     actions,
     usefulSourceEvidence: [],
     firstUsefulSourceRead: null,
+    requiredEvidence: [],
+    supportingEvidence: [],
+    alternativeEvidence: [],
+    sufficientEvidence: false,
+    sufficientContext: false,
     ...totals,
     fallbackUsed: true,
     fallbackReason: reason,
@@ -393,6 +565,8 @@ function navigationFallback(query, actions, freshness, reason) {
 export async function navigatePortableMap(repositoryRoot, query) {
   const actions = [];
   let freshness = null;
+  const mapCache = new Map();
+  const sourceCache = new Map();
   try {
     if (query.verifyFreshness) {
       freshness = await checkFreshnessInternal(repositoryRoot, actions);
@@ -406,16 +580,21 @@ export async function navigatePortableMap(repositoryRoot, query) {
     // INDEX is reserved for map-derived discovery or an explicit freshness
     // check above.
     if (query.knownTarget && query.targetPath) {
-      await readSourceFile(repositoryRoot, query.targetPath, actions, "known-target-source-read");
-      const {evidence, firstUsefulSourceRead} = scoreRecordedSourceReads(actions, query);
+      await readSourceFile(repositoryRoot, query.targetPath, actions, "known-target-source-read", sourceCache, "known target");
+      const scored = scoreRecordedSourceReads(actions, query);
       return {
         label: "fixture-checks-only",
         mode: "portable-map",
         queryId: query.id,
         knownTarget: true,
         actions,
-        usefulSourceEvidence: evidence,
-        firstUsefulSourceRead,
+        usefulSourceEvidence: scored.evidence,
+        firstUsefulSourceRead: scored.firstUsefulSourceRead,
+        requiredEvidence: scored.requiredEvidence,
+        supportingEvidence: scored.supportingEvidence,
+        alternativeEvidence: scored.alternativeEvidence,
+        sufficientEvidence: scored.sufficientEvidence,
+        sufficientContext: scored.sufficientContext,
         ...actionByteTotals(actions),
         fallbackUsed: false,
         fallbackGuidance: null,
@@ -423,26 +602,37 @@ export async function navigatePortableMap(repositoryRoot, query) {
       };
     }
 
-    await readMapFile(repositoryRoot, "INDEX.md", actions, "index-read");
+    await readMapFile(repositoryRoot, "INDEX.md", actions, "index-read", mapCache);
     if (query.kind === "capability") {
-      const route = await readMapFile(repositoryRoot, "generations/gen-001/routes/capabilities.md", actions, "capability-route-read");
+      const route = await readMapFile(repositoryRoot, "generations/gen-001/routes/capabilities.md", actions, "capability-route-read", mapCache);
       const target = [...route.contents.matchAll(/\]\((\.\.\/capabilities\/[^)]+\.md)\)/g)]
         .find((match) => match[1].endsWith(`${query.capability}.md`))?.[1];
       if (target) {
-        const capability = await readMapFile(repositoryRoot, `generations/gen-001/${target.replace("../capabilities/", "capabilities/")}`, actions, "capability-read");
-        const recordTarget = capability.contents.match(/\]\((\.\.\/records\/[^)#]+\.md#[^)]+)\)/)?.[1];
-        if (!recordTarget) throw new PortableMapNavigationError();
-        await followRecord(repositoryRoot, recordTarget, actions);
+        const capability = await readMapFile(repositoryRoot, `generations/gen-001/${target.replace("../capabilities/", "capabilities/")}`, actions, "capability-read", mapCache);
+        await followCapabilityEvidence(repositoryRoot, capability, actions, mapCache, sourceCache);
+      } else {
+        throw new PortableMapNavigationError("no-matching-evidence");
       }
     } else {
-      const hits = await searchMap(repositoryRoot, query.searchTerm, actions);
+      const hits = await searchMap(repositoryRoot, query, actions, mapCache);
       for (const hit of hits) {
-        if (!hit.recordTarget) throw new PortableMapNavigationError();
-        await followRecord(repositoryRoot, hit.recordTarget, actions);
+        await readSourceFile(
+          repositoryRoot,
+          hit.source.path,
+          actions,
+          "useful-source-read",
+          sourceCache,
+          "direct source",
+          hit.source.range
+        );
+        if (query.needsRecord) {
+          if (!hit.recordTarget) throw new PortableMapNavigationError();
+          await followRecord(repositoryRoot, hit.recordTarget, actions, mapCache, sourceCache, "production relationship");
+        }
       }
     }
 
-    const {evidence, firstUsefulSourceRead} = scoreRecordedSourceReads(actions, query);
+    const scored = scoreRecordedSourceReads(actions, query);
     const totals = actionByteTotals(actions);
     return {
       label: "fixture-checks-only",
@@ -450,12 +640,17 @@ export async function navigatePortableMap(repositoryRoot, query) {
       queryId: query.id,
       knownTarget: false,
       actions,
-      usefulSourceEvidence: evidence,
-      firstUsefulSourceRead,
+      usefulSourceEvidence: scored.evidence,
+      firstUsefulSourceRead: scored.firstUsefulSourceRead,
+      requiredEvidence: scored.requiredEvidence,
+      supportingEvidence: scored.supportingEvidence,
+      alternativeEvidence: scored.alternativeEvidence,
+      sufficientEvidence: scored.sufficientEvidence,
+      sufficientContext: scored.sufficientContext,
       ...totals,
-      fallbackUsed: evidence.length === 0,
-      fallbackReason: evidence.length === 0 ? "no-matching-evidence" : null,
-      fallbackGuidance: evidence.length === 0
+      fallbackUsed: !scored.sufficientEvidence,
+      fallbackReason: !scored.sufficientEvidence ? (scored.evidence.length === 0 ? "no-matching-evidence" : "insufficient-evidence") : null,
+      fallbackGuidance: !scored.sufficientEvidence
         ? "Use ordinary bounded source discovery; a static map cannot prove absence."
         : null,
       freshness

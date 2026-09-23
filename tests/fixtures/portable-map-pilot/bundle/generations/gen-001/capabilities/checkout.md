@@ -15,6 +15,20 @@ and the alias `basket total`.
 - [The checkout test](../../../../../tests/checkout/cart.test.ts) exercises the
   total boundary.
 
+## Required live evidence
+
+- [Cart source](../records/checkout.md#file-src-checkout-cart-ts)
+- [Receipt source](../records/checkout.md#file-src-checkout-receipt-js)
+
+## Supporting evidence
+
+- **Direct test:** [cart.test.ts](../../../../../tests/checkout/cart.test.ts#L1-L7)
+  directly calls `calculateCartTotal`.
+- **Production relationship:** `CartCoordinator.checkout` passes the total to
+  `formatReceipt`.
+- **No test evidence in the selected inventory:** the selected inventory has
+  no direct `formatReceipt` test.
+
 ## Constraints
 
 - Prices are integer cents and quantities are multiplied before tax.

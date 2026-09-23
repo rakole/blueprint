@@ -7,7 +7,7 @@
 - Symbols:
   - `calculateCartTotal` (lines 9-18), aliases: `cart total`, `basket total`.
   - `CartCoordinator.checkout` (lines 20-23), entrypoint: receipt flow.
-- Relationship: imports `formatReceipt` from `receipt.js`.
+- **Production relationship:** imports `formatReceipt` from `receipt.js`.
 
 ### `calculateCartTotal` {#symbol-calculateCartTotal}
 
@@ -19,4 +19,8 @@ Read the source range above before relying on this generated description.
 - Language: JavaScript; role: receipt presentation.
 - Source: [receipt.js](../../../../../src/checkout/receipt.js#L1-L3)
 - Symbol: `formatReceipt` (lines 1-3).
-- Related test: [cart.test.ts](../../../../../tests/checkout/cart.test.ts#L1-L7)
+- Candidate related test: [cart.test.ts](../../../../../tests/checkout/cart.test.ts#L1-L7)
+  directly exercises `calculateCartTotal`; it does not construct
+  `CartCoordinator` or call `formatReceipt`.
+- **No test evidence in the selected inventory:** no direct `formatReceipt`
+  test is established.
