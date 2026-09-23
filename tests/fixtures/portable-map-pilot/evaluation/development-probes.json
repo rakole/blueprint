@@ -1,0 +1,29 @@
+{
+  "kind": "development-probes",
+  "baseline": "parcel-desk-fixture-base",
+  "queries": [
+    {
+      "id": "probe-cart-symbol",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "calculateCartTotal",
+      "gold": {"paths": ["src/checkout/cart.ts"], "symbol": "calculateCartTotal", "range": [9, 18]}
+    },
+    {
+      "id": "probe-shipping-capability",
+      "kind": "capability",
+      "capability": "shipping",
+      "knownTarget": false,
+      "searchTerm": "delivery",
+      "gold": {"paths": ["python/rates.py", "java/com/acme/fulfillment/ShipmentPlanner.java"]}
+    },
+    {
+      "id": "probe-known-receipt",
+      "kind": "search",
+      "knownTarget": true,
+      "targetPath": "src/checkout/receipt.js",
+      "searchTerm": "formatReceipt",
+      "gold": {"paths": ["src/checkout/receipt.js"], "symbol": "formatReceipt", "range": [1, 3]}
+    }
+  ]
+}

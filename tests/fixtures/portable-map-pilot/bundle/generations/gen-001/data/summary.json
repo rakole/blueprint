@@ -1,0 +1,7 @@
+{
+  "generationId": "gen-001",
+  "recordOrder": ["checkout", "shipping", "unsupported"],
+  "searchOrder": ["files", "symbols", "aliases"],
+  "evidencePolicy": "source-coordinates-and-relative-links",
+  "contentBoundary": "no-source-bodies-or-task-prompts"
+}

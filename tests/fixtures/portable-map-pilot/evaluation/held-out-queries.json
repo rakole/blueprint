@@ -1,0 +1,79 @@
+{
+  "kind": "held-out-navigation-queries",
+  "baseline": "parcel-desk-fixture-base",
+  "queries": [
+    {
+      "id": "known-cart-path",
+      "kind": "search",
+      "knownTarget": true,
+      "targetPath": "src/checkout/cart.ts",
+      "searchTerm": "src/checkout/cart.ts",
+      "gold": {"paths": ["src/checkout/cart.ts"], "symbol": "calculateCartTotal", "range": [9, 18]}
+    },
+    {
+      "id": "cart-total-symbol",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "calculateCartTotal",
+      "gold": {"paths": ["src/checkout/cart.ts"], "symbol": "calculateCartTotal", "range": [9, 18]}
+    },
+    {
+      "id": "basket-alias",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "basket total",
+      "gold": {"paths": ["src/checkout/cart.ts"], "symbol": "calculateCartTotal", "range": [9, 18]}
+    },
+    {
+      "id": "python-rate-symbol",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "RateTable.quote_shipping",
+      "gold": {"paths": ["python/rates.py"], "symbol": "RateTable.quote_shipping", "range": [8, 10]}
+    },
+    {
+      "id": "java-plan-alias",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "dispatch plan",
+      "gold": {"paths": ["java/com/acme/fulfillment/ShipmentPlanner.java"], "symbol": "ShipmentPlanner.planShipment", "range": [4, 7]}
+    },
+    {
+      "id": "ambiguous-checkout-receipt",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "checkout",
+      "gold": {"paths": ["src/checkout/receipt.js"], "symbol": "formatReceipt", "range": [1, 3]}
+    },
+    {
+      "id": "checkout-capability",
+      "kind": "capability",
+      "capability": "checkout",
+      "knownTarget": false,
+      "searchTerm": "checkout",
+      "gold": {"paths": ["src/checkout/cart.ts", "src/checkout/receipt.js"], "symbol": "calculateCartTotal", "range": [9, 18]}
+    },
+    {
+      "id": "unsupported-sql-path",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "db/migrations/001_orders.sql",
+      "gold": {"paths": ["db/migrations/001_orders.sql"], "range": [1, 5]}
+    },
+    {
+      "id": "stale-old-checkout",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "old checkout",
+      "verifyFreshness": true,
+      "gold": {"paths": [], "range": null}
+    },
+    {
+      "id": "unknown-coupon-feature",
+      "kind": "search",
+      "knownTarget": false,
+      "searchTerm": "coupon blacklist",
+      "gold": {"paths": [], "range": null}
+    }
+  ]
+}

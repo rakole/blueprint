@@ -1,0 +1,6 @@
+symbol | src/checkout/cart.ts | calculateCartTotal | aliases: cart total; basket total | source: 9-18 | record: ../records/checkout.md#symbol-calculateCartTotal | capability: ../capabilities/checkout.md
+symbol | src/checkout/cart.ts | CartCoordinator.checkout | aliases: checkout receipt | source: 20-23 | record: ../records/checkout.md#file-src-checkout-cart-ts | capability: ../capabilities/checkout.md
+symbol | src/checkout/receipt.js | formatReceipt | aliases: receipt formatter | source: 1-3 | record: ../records/checkout.md#file-src-checkout-receipt-js | capability: ../capabilities/checkout.md
+symbol | python/rates.py | RateTable.quote_shipping | aliases: shipping quote; delivery rate | source: 8-10 | record: ../records/shipping.md#file-python-rates-py | capability: ../capabilities/shipping.md
+symbol | java/com/acme/fulfillment/ShipmentPlanner.java | ShipmentPlanner.planShipment | aliases: shipment plan; dispatch plan | source: 4-7 | record: ../records/shipping.md#file-java-com-acme-fulfillment-shipmentplanner-java | capability: ../capabilities/shipping.md
+symbol | java/com/acme/fulfillment/ShipmentPlanner.java | ShipmentPlanner.ShipmentPlan | aliases: shipment result | source: 9-11 | record: ../records/shipping.md#file-java-com-acme-fulfillment-shipmentplanner-java | capability: ../capabilities/shipping.md

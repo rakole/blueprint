@@ -1,0 +1,15 @@
+{
+  "generationId": "gen-001",
+  "shardId": "files-001",
+  "files": [
+    {"id": "file-cart", "path": "src/checkout/cart.ts", "language": "typescript", "role": "source", "byteSize": 556, "contentHash": "839822ad668b92f19c6127fba5a0165f28e7c4305a3f104acd680c520b67eaab", "parseStatus": "parsed", "coverageStatus": "full"},
+    {"id": "file-receipt", "path": "src/checkout/receipt.js", "language": "javascript", "role": "source", "byteSize": 98, "contentHash": "098f65a4a582c7b643cc9ba03161b1341e2e2f9640a501fe69375fc566fb0bc9", "parseStatus": "parsed", "coverageStatus": "full"},
+    {"id": "file-rates", "path": "python/rates.py", "language": "python", "role": "source", "byteSize": 342, "contentHash": "68ff4001406033cb3200c3c5620d5eea25a53ce5bf8fa975670ea8fc61ed14ef", "parseStatus": "parsed", "coverageStatus": "full"},
+    {"id": "file-planner", "path": "java/com/acme/fulfillment/ShipmentPlanner.java", "language": "java", "role": "source", "byteSize": 388, "contentHash": "053bdc630564d4638cc24e19619206f9ac96c0cd1b8777c2b19a9874b7cc35db", "parseStatus": "parsed", "coverageStatus": "full"},
+    {"id": "file-orders", "path": "db/migrations/001_orders.sql", "language": "unknown", "role": "source", "byteSize": 130, "contentHash": "ba6ec5f1e3ee58577000c90dfc93755aeab94a511f1048d9d1723800c6eb6efe", "parseStatus": "unsupported", "coverageStatus": "file", "limitationReason": "unsupported-language"},
+    {"id": "file-cart-test", "path": "tests/checkout/cart.test.ts", "language": "typescript", "role": "test", "byteSize": 219, "contentHash": "70aba27be4ad2a64e12f9fd2faf0ec0520d2875854702eec64a3c8796bc53b4b", "parseStatus": "parsed", "coverageStatus": "full"}
+  ],
+  "symbols": [],
+  "imports": [],
+  "relationships": []
+}

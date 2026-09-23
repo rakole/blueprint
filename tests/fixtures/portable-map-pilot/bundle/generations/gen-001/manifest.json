@@ -1,0 +1,34 @@
+{
+  "formatVersion": 1,
+  "protocolVersion": 1,
+  "generationId": "gen-001",
+  "generatedAt": "2026-09-23T00:00:00.000Z",
+  "gitCommit": null,
+  "inventoryFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "structuralCoverage": {
+    "filesInventoried": 6,
+    "filesWithFullCoverage": 5,
+    "filesWithFileCoverage": 1,
+    "symbolsExtracted": 0,
+    "importsExtracted": 0,
+    "relationshipsExtracted": 0
+  },
+  "semanticCoverage": {"capabilitiesAccepted": 2, "claimsAccepted": 0, "aliasesAccepted": 0, "evidenceDependencies": 0},
+  "parserAssets": [],
+  "inventoryShards": [{"shardId": "files-001", "path": "generations/gen-001/data/files.json", "recordKind": "files", "recordCount": 6, "byteSize": 1730, "checksum": "f361654b3415775d382271f8ca7c862a867a05b4b2131e7e0b191c0cf28d6763"}],
+  "checksums": {
+    "entry": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pages": [],
+    "compatibility": {
+      "architecture": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "concerns": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "conventions": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "integrations": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "stack": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "structure": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "testing": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "evidenceDependencies": [],
+  "predecessorGenerationId": null
+}

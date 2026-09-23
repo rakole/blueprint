@@ -1,0 +1,5 @@
+alias | cart total | canonical: calculateCartTotal | source: ../../../../../src/checkout/cart.ts#L9-L18 | record: ../records/checkout.md#symbol-calculateCartTotal | capability: ../capabilities/checkout.md
+alias | basket total | canonical: calculateCartTotal | source: ../../../../../src/checkout/cart.ts#L9-L18 | record: ../records/checkout.md#symbol-calculateCartTotal | capability: ../capabilities/checkout.md
+alias | shipping quote | canonical: RateTable.quote_shipping | source: ../../../../../python/rates.py#L8-L10 | record: ../records/shipping.md#file-python-rates-py | capability: ../capabilities/shipping.md
+alias | delivery rate | canonical: RateTable.quote_shipping | source: ../../../../../python/rates.py#L8-L10 | record: ../records/shipping.md#file-python-rates-py | capability: ../capabilities/shipping.md
+alias | dispatch plan | canonical: ShipmentPlanner.planShipment | source: ../../../../../java/com/acme/fulfillment/ShipmentPlanner.java#L4-L7 | record: ../records/shipping.md#file-java-com-acme-fulfillment-shipmentplanner-java | capability: ../capabilities/shipping.md
