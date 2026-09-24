@@ -161,6 +161,22 @@ export type PortableExtractionFailure = {
 
 export type PortableExtractionResult = PortableExtractionSuccess | PortableExtractionFailure;
 
+/**
+ * Freshness evidence for an already accepted extraction.  This intentionally
+ * inventories and rechecks the literal root and parser assets without parsing
+ * every source file again; callers still compare the resulting inventory and
+ * provenance hashes with the accepted operation before using its records.
+ */
+export type PortableSourceFreshness = {
+  readonly ok: true;
+  readonly root: ExtractionRootIdentity;
+  readonly inventoryFingerprint: string;
+  readonly provenance: ExtractionParserProvenance;
+} | {
+  readonly ok: false;
+  readonly diagnostics: readonly ExtractionDiagnostic[];
+};
+
 export type PortableExtractionOptions = {
   readonly repositoryRoot: string;
   readonly generationId: string;
@@ -396,6 +412,34 @@ function makeProvenance(manifest: Awaited<ReturnType<typeof getParserAssetManife
   };
 }
 
+export async function capturePortableSourceFreshness(repositoryRoot: string, useGit?: boolean): Promise<PortableSourceFreshness> {
+  const beforeRoot = await captureRoot(repositoryRoot);
+  if (!beforeRoot) return {ok: false, diagnostics: [diagnostic("root-unavailable")]};
+  let inventory: SourceInventory;
+  try {
+    inventory = await buildSourceInventory(repositoryRoot, {useGit});
+  } catch {
+    return {ok: false, diagnostics: [diagnostic("inventory-failed")]};
+  }
+  const afterInventoryRoot = await captureRoot(repositoryRoot);
+  if (!afterInventoryRoot || !sameRoot(beforeRoot, afterInventoryRoot)) {
+    return {ok: false, diagnostics: [diagnostic("root-changed")]};
+  }
+  if (hasUnstableExclusion(inventory)) return {ok: false, diagnostics: [diagnostic("unstable-inventory")]};
+  if (hasUnsafePathBoundary(inventory)) return {ok: false, diagnostics: [diagnostic("unsafe-path")]};
+  let provenance: ExtractionParserProvenance;
+  try {
+    provenance = makeProvenance(await getParserAssetManifest());
+  } catch {
+    return {ok: false, diagnostics: [diagnostic("parser-provenance")]};
+  }
+  const afterProvenanceRoot = await captureRoot(repositoryRoot);
+  if (!afterProvenanceRoot || !sameRoot(beforeRoot, afterProvenanceRoot)) {
+    return {ok: false, diagnostics: [diagnostic("root-changed")]};
+  }
+  return {ok: true, root: beforeRoot, inventoryFingerprint: inventory.inventoryFingerprint, provenance};
+}
+
 /**
  * Inventory and extract all eligible repository files without writing state.
  * Source bytes are passed only through the private parser reader callback and
@@ -511,6 +555,15 @@ export type ModelPacketSelection = {
   readonly importIds?: readonly string[];
   readonly relationshipIds?: readonly string[];
   readonly capabilities?: readonly PortableModelPacketCapability[];
+  /** Maximum serialized packet bytes, including the operation continuation. */
+  readonly maxSerializedBytes?: number;
+  /**
+   * The operation-facing cursor is longer than the small standalone packet
+   * cursor used by the extraction API.  Let callers reserve the exact public
+   * continuation before greedy splitting so a packet can never grow after it
+   * crosses the model boundary.
+   */
+  readonly continuationFor?: (packetIndex: number, hasMore: boolean) => {readonly cursor: string; readonly hasMore: boolean} | undefined;
 };
 
 export type PortableModelPacket = {
@@ -617,6 +670,10 @@ export function packetizePortableModelEvidence(
   operationId: string,
   selection: ModelPacketSelection = {}
 ): ModelPacketResult {
+  const maxSerializedBytes = selection.maxSerializedBytes ?? PORTABLE_MAP_MAX_MODEL_PACKET_BYTES;
+  if (!Number.isSafeInteger(maxSerializedBytes) || maxSerializedBytes < 1 || maxSerializedBytes > PORTABLE_MAP_MAX_MODEL_PACKET_BYTES) {
+    return {ok: false, diagnostics: [diagnostic("packet-selection")]};
+  }
   const records = flattenShards(extraction);
   const chosen: PacketRecords = {
     files: choose(records.files, selection.fileIds) ?? [],
@@ -635,6 +692,8 @@ export function packetizePortableModelEvidence(
     return {ok: false, diagnostics: [diagnostic("packet-selection")]};
   }
   const capabilities = [...(selection.capabilities ?? [])];
+  const continuationFor = selection.continuationFor ?? ((packetIndex: number, hasMore: boolean) =>
+    hasMore ? {cursor: `packet-${String(packetIndex + 2)}`, hasMore: true} : undefined);
   const base = (): Omit<PortableModelPacket, "continuation"> => ({
     packetVersion: 1,
     operationId,
@@ -661,7 +720,7 @@ export function packetizePortableModelEvidence(
     const empty = {...current, ...(capabilities.length > 0 ? {} : {})};
     if (packetHasUnsafeContent(empty)) return {ok: false, diagnostics: [diagnostic("unsafe-content")]};
     const bytes = serializedUtf8ByteLength(empty);
-    if (bytes > PORTABLE_MAP_MAX_MODEL_PACKET_BYTES) return {ok: false, diagnostics: [diagnostic("packet-too-large")]};
+    if (bytes > maxSerializedBytes) return {ok: false, diagnostics: [diagnostic("packet-too-large")]};
     if (!packetContractIsValid(empty)) return {ok: false, diagnostics: [diagnostic("packet-selection")]};
     return {ok: true, packets: [empty], serializedBytes: [bytes], complete: true};
   }
@@ -678,11 +737,12 @@ export function packetizePortableModelEvidence(
     const unit = units[index]!;
     const candidate = assign(current, unit);
     const hasMore = index + 1 < units.length;
-    const candidateWithContinuation: PortableModelPacket = hasMore
-      ? {...candidate, continuation: {cursor: `packet-${String(packets.length + 2)}`, hasMore: true}}
+    const candidateContinuation = continuationFor(packets.length, hasMore);
+    const candidateWithContinuation: PortableModelPacket = candidateContinuation
+      ? {...candidate, continuation: candidateContinuation}
       : candidate;
     const bytes = serializedUtf8ByteLength(candidateWithContinuation);
-    if (bytes <= PORTABLE_MAP_MAX_MODEL_PACKET_BYTES && packetContractIsValid(candidateWithContinuation)) {
+    if (bytes <= maxSerializedBytes && packetContractIsValid(candidateWithContinuation)) {
       current = candidate;
       continue;
     }
@@ -691,10 +751,12 @@ export function packetizePortableModelEvidence(
     if (!currentHasRecords) {
       return {ok: false, diagnostics: [diagnostic("packet-too-large")]};
     }
-    const finalized: PortableModelPacket = {...current, continuation: {cursor: `packet-${String(packets.length + 2)}`, hasMore: true}};
+    const finalizedContinuation = continuationFor(packets.length, true);
+    if (!finalizedContinuation) return {ok: false, diagnostics: [diagnostic("packet-selection")]};
+    const finalized: PortableModelPacket = {...current, continuation: finalizedContinuation};
     if (packetHasUnsafeContent(finalized)) return {ok: false, diagnostics: [diagnostic("unsafe-content")]};
     const finalizedBytes = serializedUtf8ByteLength(finalized);
-    if (finalizedBytes > PORTABLE_MAP_MAX_MODEL_PACKET_BYTES) return {ok: false, diagnostics: [diagnostic("packet-too-large")]};
+    if (finalizedBytes > maxSerializedBytes) return {ok: false, diagnostics: [diagnostic("packet-too-large")]};
     if (!packetContractIsValid(finalized)) return {ok: false, diagnostics: [diagnostic("packet-selection")]};
     packets.push(finalized);
     serializedBytes.push(finalizedBytes);
@@ -703,7 +765,7 @@ export function packetizePortableModelEvidence(
   const finalPacket: PortableModelPacket = current;
   if (packetHasUnsafeContent(finalPacket)) return {ok: false, diagnostics: [diagnostic("unsafe-content")]};
   const finalBytes = serializedUtf8ByteLength(finalPacket);
-  if (finalBytes > PORTABLE_MAP_MAX_MODEL_PACKET_BYTES) return {ok: false, diagnostics: [diagnostic("packet-too-large")]};
+  if (finalBytes > maxSerializedBytes) return {ok: false, diagnostics: [diagnostic("packet-too-large")]};
   if (!packetContractIsValid(finalPacket)) return {ok: false, diagnostics: [diagnostic("packet-selection")]};
   packets.push(finalPacket);
   serializedBytes.push(finalBytes);

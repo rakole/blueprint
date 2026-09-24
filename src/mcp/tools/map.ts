@@ -10,11 +10,16 @@ import {
   CODEBASE_DOCUMENT_IDS, codebaseMapModelSchema, compileCodebaseMap,
   validateCodebaseContent, type CodebaseDocumentId
 } from "../codebase-authoring.js";
+import {
+  portableLegacyPublicationPendingSchema,
+  portableLegacyPublicationSnapshotSchema,
+  type PortableLegacyPublicationSnapshot
+} from "../codebase-index/contracts.js";
 import { prepareTextForPersistence } from "../../shared/security.js";
 import { scrubLegacyCodebaseFailureLog } from "../write-failure-log.js";
 import {
   CODEBASE_PUBLICATION_PATH, ensureRepoRoot, inspectBlueprintArtifacts,
-  inspectBootstrapArtifacts, resolveBlueprintPath, resolveRepoRelativePath,
+  inspectBootstrapArtifacts, inspectCodebaseWriteGuard, resolveBlueprintPath, resolveRepoRelativePath,
   withBlueprintRepoLock, writeJsonFile, writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
@@ -22,18 +27,9 @@ import { blueprintCommandCatalog } from "./project.js";
 
 const execFileAsync = promisify(execFile);
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
-const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
-const targetSchema = z.object(Object.fromEntries(CODEBASE_DOCUMENT_IDS.map(id => [id, digestSchema.nullable()])) as Record<CodebaseDocumentId, z.ZodNullable<typeof digestSchema>>).strict();
-const snapshotSchema = z.object({
-  version: z.literal(1), root: digestSchema, inventory: digestSchema,
-  inputs: z.record(z.string(), digestSchema), core: digestSchema, targets: targetSchema,
-  previousPublication: digestSchema.nullable()
-}).strict();
-type Snapshot = z.infer<typeof snapshotSchema>;
-const pendingSchema = z.object({
-  version: z.literal(1), operationId: digestSchema, snapshot: snapshotSchema,
-  hashes: targetSchema, stage: z.literal("publishing")
-}).strict();
+const snapshotSchema = portableLegacyPublicationSnapshotSchema;
+type Snapshot = PortableLegacyPublicationSnapshot;
+const pendingSchema = portableLegacyPublicationPendingSchema;
 const prepareSchema = z.object({cwd: z.string().optional(), inputs: z.array(z.string()).default([]), focus: z.string().optional(), restart: z.boolean().default(false)}).strict();
 const submitSchema = z.object({cwd: z.string().optional(), snapshot: snapshotSchema,
   documents: codebaseMapModelSchema.default({}), overwrite: z.boolean().default(false)}).strict();
@@ -88,7 +84,7 @@ async function eligibility(root: string) {
   const inspection = await inspectBlueprintArtifacts(root);
   if (inspection.readiness === "partial") return {allowed: false, readiness: inspection.readiness, next: "health"};
   if (inspection.readiness === "uninitialized" || inspection.readiness === "mapping-incomplete") {
-    const bootstrap = await inspectBootstrapArtifacts(root);
+    const bootstrap = await inspectBootstrapArtifacts(root, inspection);
     if (bootstrap.brownfield.repoShape !== "brownfield") return {allowed: false, readiness: inspection.readiness, next: "new-project"};
   }
   return {allowed: true, readiness: inspection.readiness, next: inspection.readiness === "initialized" ? "progress" : "new-project"};
@@ -112,6 +108,15 @@ export async function blueprintMapPrepare(raw: {cwd?: string; inputs?: string[];
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
     const gate = await eligibility(root);
     if (!gate.allowed) return {status: "blocked", readiness: gate.readiness, nextAction: await route(gate.next)};
+    const guard = await inspectCodebaseWriteGuard(root);
+    if (!guard.allowed) {
+      return {
+        status: "blocked",
+        readiness: gate.readiness,
+        issues: [guard.reason ?? "Portable codebase publication state blocks legacy mapping mutations."],
+        nextAction: null
+      };
+    }
     const pending = await readPending(root);
     if (pending && !args.restart) return {status: "partial", snapshot: pending.snapshot, expectedHashes: pending.hashes,
       issues: ["An accepted bundle publication is incomplete. Resubmit its original snapshot and documents. If these are unavailable or inputs changed, prepare with restart:true, then author all seven documents from fresh evidence and submit with overwrite:true. Rejected content was not stored."], nextAction: null};
@@ -157,6 +162,15 @@ export async function blueprintMapSubmit(raw: {cwd?: string; snapshot: Snapshot;
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
     const gate = await eligibility(root);
     if (!gate.allowed) return {status: "blocked", saved: false, nextAction: await route(gate.next), issues: ["Project prerequisites changed."]};
+    const guard = await inspectCodebaseWriteGuard(root);
+    if (!guard.allowed) {
+      return {
+        status: "blocked",
+        saved: false,
+        issues: [guard.reason ?? "Portable codebase publication state blocks legacy mapping mutations."],
+        warnings: []
+      };
+    }
     const snapshot = {...args.snapshot, inputs: Object.fromEntries(Object.entries(args.snapshot.inputs).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0))};
     const pending = await readPending(root);
     const [current, files, inputs, core] = await Promise.all([

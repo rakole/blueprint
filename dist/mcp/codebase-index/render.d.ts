@@ -81,9 +81,9 @@ export type PortableRenderResult = PortableRenderSuccess | {
 /** Versioned structured semantic shards consumed by a future resolver. */
 export declare const PORTABLE_SEMANTIC_DATA_VERSION: 1;
 export declare const portableSemanticRecordKindSchema: z.ZodEnum<{
-    claim: "claim";
     alias: "alias";
     capability: "capability";
+    claim: "claim";
 }>;
 export type PortableSemanticRecordKind = z.infer<typeof portableSemanticRecordKindSchema>;
 export declare const portableSemanticContinuationSchema: z.ZodObject<{
@@ -93,9 +93,9 @@ export declare const portableSemanticContinuationSchema: z.ZodObject<{
 export type PortableSemanticContinuation = z.infer<typeof portableSemanticContinuationSchema>;
 export declare const portableSemanticFragmentSchema: z.ZodObject<{
     kind: z.ZodEnum<{
-        claim: "claim";
         alias: "alias";
         capability: "capability";
+        claim: "claim";
     }>;
     recordId: z.ZodString;
     evidenceStart: z.ZodNumber;
@@ -205,9 +205,9 @@ export declare const portableSemanticShardSchema: z.ZodObject<{
     shardId: z.ZodString;
     records: z.ZodArray<z.ZodObject<{
         kind: z.ZodEnum<{
-            claim: "claim";
             alias: "alias";
             capability: "capability";
+            claim: "claim";
         }>;
         recordId: z.ZodString;
         evidenceStart: z.ZodNumber;
@@ -314,9 +314,9 @@ export declare const portableSemanticShardSchema: z.ZodObject<{
 export type PortableSemanticShard = z.infer<typeof portableSemanticShardSchema>;
 export declare const portableSemanticIndexEntrySchema: z.ZodObject<{
     kind: z.ZodEnum<{
-        claim: "claim";
         alias: "alias";
         capability: "capability";
+        claim: "claim";
     }>;
     recordId: z.ZodString;
     firstPath: z.ZodNullable<z.ZodString>;
@@ -331,9 +331,9 @@ export declare const portableSemanticIndexSchema: z.ZodObject<{
     shardId: z.ZodString;
     entries: z.ZodArray<z.ZodObject<{
         kind: z.ZodEnum<{
-            claim: "claim";
             alias: "alias";
             capability: "capability";
+            claim: "claim";
         }>;
         recordId: z.ZodString;
         firstPath: z.ZodNullable<z.ZodString>;

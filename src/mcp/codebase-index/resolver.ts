@@ -929,6 +929,38 @@ export async function resolveCodebaseNavigation(root: string, options: ResolveCo
   };
 }
 
+/**
+ * Prove that a literal path is a sealed member of the selected generation.
+ * Directory identity alone is insufficient: an extra child can otherwise be
+ * mistaken for generated evidence after a valid generation is committed.
+ */
+export async function resolveCodebaseSealedMember(root: string, relativePath: string): Promise<boolean> {
+  const prefix = `${CODEBASE_ROOT}/generations/`;
+  if (!relativePath.startsWith(prefix)) return false;
+  const suffix = relativePath.slice(prefix.length);
+  const separator = suffix.indexOf("/");
+  if (separator <= 0) return false;
+  const generationId = suffix.slice(0, separator);
+  const member = suffix.slice(separator + 1);
+  if (!safeGenerationId(generationId) || !member || !safeRelativePath(relativePath)) return false;
+  const internal = await readNavigationInternal(root);
+  if (!internal.active || internal.portableState !== "valid") return false;
+  let generation = internal.active;
+  if (generationId !== generation.generationId) {
+    const retained = await verifyRetainedLineage(root, generation, generationId, {});
+    if (!retained.ok) return false;
+    generation = retained.value;
+  }
+  const generationRelative = `generations/${generationId}/${member}`;
+  let expected: string | null = null;
+  if (member === "ENTRY.md") expected = generation.entry.hash;
+  else if (member === "manifest.json") expected = generation.manifestHash;
+  else expected = expectedChecksum(generation.manifest, generationRelative);
+  if (!expected) return false;
+  const bytes = await readLiteralBytes(root, `${CODEBASE_ROOT}/${generationRelative}`, DEFAULT_LIMITS.pageBytes * 256);
+  return bytes.ok && sha256(bytes.bytes) === expected;
+}
+
 /** Navigation/search pages are discovery-only and must say so explicitly. */
 export type PortableSelection =
   | {readonly kind: "page"; readonly path: string; readonly mode: "discovery"}

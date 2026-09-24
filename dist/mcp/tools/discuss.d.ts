@@ -21,8 +21,8 @@ declare const recordSchema: z.ZodObject<{
     status: z.ZodOptional<z.ZodEnum<{
         deferred: "deferred";
         resolved: "resolved";
-        accepted: "accepted";
         open: "open";
+        accepted: "accepted";
     }>>;
 }, z.core.$strip>;
 export type DiscussRecord = z.infer<typeof recordSchema>;
@@ -99,8 +99,8 @@ declare const recordInput: z.ZodObject<{
         status: z.ZodOptional<z.ZodEnum<{
             deferred: "deferred";
             resolved: "resolved";
-            accepted: "accepted";
             open: "open";
+            accepted: "accepted";
         }>>;
     }, z.core.$strip>>>;
     cwd: z.ZodOptional<z.ZodString>;
@@ -701,7 +701,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         examples: ({
             phaseBoundary: {
@@ -744,7 +744,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         publication: {
             requestId: string;
@@ -971,7 +971,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         examples: ({
             phaseBoundary: {
@@ -1014,7 +1014,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         publication: {
             requestId: string;
@@ -1241,7 +1241,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         examples: ({
             phaseBoundary: {
@@ -1284,7 +1284,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         publication: {
             requestId: string;
@@ -1516,7 +1516,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         examples: ({
             phaseBoundary: {
@@ -1559,7 +1559,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         publication: {
             requestId: string;
@@ -1786,7 +1786,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         examples: ({
             phaseBoundary: {
@@ -1829,7 +1829,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         publication: {
             requestId: string;
@@ -2056,7 +2056,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         examples: ({
             phaseBoundary: {
@@ -2099,7 +2099,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         publication: {
             requestId: string;
@@ -2326,7 +2326,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         examples: ({
             phaseBoundary: {
@@ -2369,7 +2369,7 @@ export declare function blueprintDiscussPrepare(raw: z.input<typeof prepareInput
             rejectedOptions?: string[] | undefined;
             blocking?: boolean | undefined;
             downstreamOwner?: string | undefined;
-            status?: "deferred" | "resolved" | "accepted" | "open" | undefined;
+            status?: "deferred" | "resolved" | "open" | "accepted" | undefined;
         }[];
         publication: {
             requestId: string;

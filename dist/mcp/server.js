@@ -282,10 +282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema2) {
   return mergeDefs(schema2._zod.def);
 }
-function getElementAtPath(obj, path32) {
-  if (!path32)
+function getElementAtPath(obj, path33) {
+  if (!path33)
     return obj;
-  return path32.reduce((acc, key2) => acc?.[key2], obj);
+  return path33.reduce((acc, key2) => acc?.[key2], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path32, issues) {
+function prefixIssues(path33, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path32);
+    iss.path.unshift(path33);
     return iss;
   });
 }
@@ -7476,13 +7476,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path32 = ref.slice(1).split("/").filter(Boolean);
-  if (path32.length === 0) {
+  const path33 = ref.slice(1).split("/").filter(Boolean);
+  if (path33.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path32[0] === defsKey) {
-    const key2 = path32[1];
+  if (path33[0] === defsKey) {
+    const key2 = path33[1];
     if (!key2 || !ctx.defs[key2]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -8364,11 +8364,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants);
+          this.rhs = optimizeExpr(this.rhs, names, constants2);
         return this;
       }
       get names() {
@@ -8385,10 +8385,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants);
+        this.rhs = optimizeExpr(this.rhs, names, constants2);
         return this;
       }
       get names() {
@@ -8449,8 +8449,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants) {
-        this.code = optimizeExpr(this.code, names, constants);
+      optimizeNames(names, constants2) {
+        this.code = optimizeExpr(this.code, names, constants2);
         return this;
       }
       get names() {
@@ -8479,12 +8479,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
           const n = nodes[i];
-          if (n.optimizeNames(names, constants))
+          if (n.optimizeNames(names, constants2))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i, 1);
@@ -8537,12 +8537,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         var _a2;
-        this.else = (_a2 = this.else) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants);
-        if (!(super.optimizeNames(names, constants) || this.else))
+        this.else = (_a2 = this.else) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants2);
+        if (!(super.optimizeNames(names, constants2) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants);
+        this.condition = optimizeExpr(this.condition, names, constants2);
         return this;
       }
       get names() {
@@ -8565,10 +8565,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants2) {
+        if (!super.optimizeNames(names, constants2))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants);
+        this.iteration = optimizeExpr(this.iteration, names, constants2);
         return this;
       }
       get names() {
@@ -8604,10 +8604,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants2) {
+        if (!super.optimizeNames(names, constants2))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants);
+        this.iterable = optimizeExpr(this.iterable, names, constants2);
         return this;
       }
       get names() {
@@ -8649,11 +8649,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         var _a2, _b;
-        super.optimizeNames(names, constants);
-        (_a2 = this.catch) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
+        super.optimizeNames(names, constants2);
+        (_a2 = this.catch) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants2);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants2);
         return this;
       }
       get names() {
@@ -8954,7 +8954,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants) {
+    function optimizeExpr(expr, names, constants2) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -8969,14 +8969,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants[n.str];
+        const c = constants2[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e) {
-        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants[c.str] !== void 0);
+        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants2[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -11183,8 +11183,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path32) {
-      let input = path32;
+    function removeDotSegments(path33) {
+      let input = path33;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -11436,8 +11436,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path32, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path32 && path32 !== "/" ? path32 : void 0;
+        const [path33, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path33 && path33 !== "/" ? path33 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -23462,6 +23462,640 @@ var init_codebase_authoring = __esm({
   }
 });
 
+// src/mcp/codebase-index/contracts.ts
+import { createHash } from "node:crypto";
+function utf8ByteLength(value) {
+  return Buffer.byteLength(value, "utf8");
+}
+function utf8Sha256(value) {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+function serializedUtf8ByteLength(value) {
+  return utf8ByteLength(JSON.stringify(value) ?? "");
+}
+function enforceResolutionSemantics(record2, ctx) {
+  if (record2.resolutionStatus === "resolved") {
+    if (!record2.targetFileId && !record2.targetSymbolId) {
+      ctx.addIssue({ code: "custom", path: ["targetFileId"], message: "Resolved relationships require a target record." });
+    }
+    if (record2.unresolvedReason) {
+      ctx.addIssue({ code: "custom", path: ["unresolvedReason"], message: "Resolved relationships cannot carry unresolved semantics." });
+    }
+  } else {
+    if (record2.targetFileId || record2.targetSymbolId) {
+      ctx.addIssue({ code: "custom", path: ["targetFileId"], message: "Unresolved relationships cannot claim a resolved target." });
+    }
+    if (!record2.unresolvedReason) {
+      ctx.addIssue({ code: "custom", path: ["unresolvedReason"], message: "Unresolved relationships require an explicit reason." });
+    }
+  }
+}
+function enforcePreviousGenerationSemantics(value, ctx) {
+  if (value.previousGenerationId !== null && value.previousGenerationId === value.generationId) {
+    ctx.addIssue({ code: "custom", path: ["previousGenerationId"], message: "A generation cannot name itself as its predecessor." });
+  }
+  if (value.previousGenerationId !== null && value.previousIndexHash === null) {
+    ctx.addIssue({ code: "custom", path: ["previousIndexHash"], message: "A predecessor generation requires its previous INDEX hash." });
+  }
+}
+var PORTABLE_MAP_FORMAT_VERSION, PORTABLE_MAP_PROTOCOL_VERSION, PORTABLE_MAP_PUBLICATION_MARKER_VERSION, PORTABLE_MAP_OPERATION_METADATA_VERSION, PORTABLE_MAP_BYTE_LIMITS, PORTABLE_MAP_MAX_MODEL_PACKET_BYTES, PORTABLE_MAP_MAX_INDEX_BYTES, PORTABLE_MAP_MAX_ENTRY_BYTES, PORTABLE_MAP_MAX_ROUTE_PAGE_BYTES, PORTABLE_MAP_MAX_CAPABILITY_PAGE_BYTES, PORTABLE_MAP_MAX_RECORD_PAGE_BYTES, PORTABLE_MAP_MAX_SEARCH_SHARD_BYTES, PORTABLE_MAP_MAX_SEARCH_HIT_BYTES, PORTABLE_MAP_MAX_STRUCTURAL_DETAIL_SEGMENT_BYTES, sha256Schema, gitCommitSchema, portableSha256Schema, portableGitCommitSchema, generationLocalIdSchema, repositoryRelativePathSchema, boundedText, boundedOptionalText, safeNonNegativeIntegerSchema, safePositiveIntegerSchema, boundedUtf8Text, lineSchema, columnSchema, byteOffsetSchema, portableSourceCoordinateSchema, PORTABLE_MAP_LANGUAGES, portableLanguageSchema, PORTABLE_MAP_FILE_ROLES, portableFileRoleSchema, PORTABLE_MAP_PARSE_STATUSES, portableParseStatusSchema, PORTABLE_MAP_COVERAGE_STATUSES, portableCoverageStatusSchema, PORTABLE_MAP_LIMITATION_REASONS, portableLimitationReasonSchema, portableFileRecordSchema, PORTABLE_MAP_SYMBOL_KINDS, portableSymbolKindSchema, PORTABLE_MAP_STRUCTURAL_DETAIL_FIELDS, portableStructuralDetailFieldSchema, portableStructuralDetailReferenceSchema, portableStructuralDetailRecordSchema, portableSymbolRecordSchema, PORTABLE_MAP_UNRESOLVED_REASONS, portableUnresolvedReasonSchema, PORTABLE_MAP_RESOLUTION_STATUSES, portableResolutionStatusSchema, relationshipResolutionShape, portableImportRelationshipSchema, portableRelationshipRecordSchema, PORTABLE_MAP_RECORD_KINDS, portableRecordKindSchema, portableInventoryContinuationSchema, portableStructuralInventorySchema, portableEvidenceDependencySchema, authoredShortText, portableClaimSchema, portableCapabilitySchema, portableAliasSchema, portableAcceptedSemanticModelSchema, completeCodebaseMapShape, portableCompleteCodebaseMapModelSchema, portableMapSubmissionSchema, portableInventoryShardManifestSchema, coverageCountSchema, portableStructuralCoverageSchema, portableSemanticCoverageSchema, pageChecksumSchema, compatibilityViewHashesShape, portableCompatibilityViewHashesSchema, portableSealedGenerationReferenceSchema, compatibilityBackupShape, compatibilityFilename, portableV1BackupReferenceSchema, portablePredecessorPublicationProofSchema, portableGenerationChecksumsSchema, timestampSchema, portableGenerationManifestSchema, portableSourceBasisSchema, portableTargetHashesShape, portableTargetHashesSchema, portableLegacyPublicationSnapshotSchema, portableLegacyPublicationPendingSchema, portablePublishedTargetHashesSchema, PORTABLE_MAP_OPERATION_STAGES, portableOperationStageSchema, PORTABLE_MAP_PUBLICATION_STAGES, portablePublicationStageSchema, portableOperationMetadataSchema, portablePublicationMarkerSchema, selectedCapabilitySchema, portableModelPacketSchema;
+var init_contracts = __esm({
+  "src/mcp/codebase-index/contracts.ts"() {
+    "use strict";
+    init_v4();
+    init_codebase_authoring();
+    PORTABLE_MAP_FORMAT_VERSION = 1;
+    PORTABLE_MAP_PROTOCOL_VERSION = 1;
+    PORTABLE_MAP_PUBLICATION_MARKER_VERSION = 2;
+    PORTABLE_MAP_OPERATION_METADATA_VERSION = 2;
+    PORTABLE_MAP_BYTE_LIMITS = {
+      index: 4 * 1024,
+      entry: 4 * 1024,
+      intermediateRoute: 8 * 1024,
+      capabilityPage: 12 * 1024,
+      recordPage: 12 * 1024,
+      searchShard: 32 * 1024,
+      searchHit: 2 * 1024,
+      structuralDetailSegment: 4 * 1024,
+      modelPacket: 48 * 1024
+    };
+    PORTABLE_MAP_MAX_MODEL_PACKET_BYTES = PORTABLE_MAP_BYTE_LIMITS.modelPacket;
+    PORTABLE_MAP_MAX_INDEX_BYTES = PORTABLE_MAP_BYTE_LIMITS.index;
+    PORTABLE_MAP_MAX_ENTRY_BYTES = PORTABLE_MAP_BYTE_LIMITS.entry;
+    PORTABLE_MAP_MAX_ROUTE_PAGE_BYTES = PORTABLE_MAP_BYTE_LIMITS.intermediateRoute;
+    PORTABLE_MAP_MAX_CAPABILITY_PAGE_BYTES = PORTABLE_MAP_BYTE_LIMITS.capabilityPage;
+    PORTABLE_MAP_MAX_RECORD_PAGE_BYTES = PORTABLE_MAP_BYTE_LIMITS.recordPage;
+    PORTABLE_MAP_MAX_SEARCH_SHARD_BYTES = PORTABLE_MAP_BYTE_LIMITS.searchShard;
+    PORTABLE_MAP_MAX_SEARCH_HIT_BYTES = PORTABLE_MAP_BYTE_LIMITS.searchHit;
+    PORTABLE_MAP_MAX_STRUCTURAL_DETAIL_SEGMENT_BYTES = PORTABLE_MAP_BYTE_LIMITS.structuralDetailSegment;
+    sha256Schema = string2().regex(/^[a-f0-9]{64}$/, "Expected a lowercase SHA-256 digest.");
+    gitCommitSchema = string2().regex(/^[a-f0-9]{7,64}$/, "Expected a hexadecimal Git commit id.");
+    portableSha256Schema = sha256Schema;
+    portableGitCommitSchema = gitCommitSchema;
+    generationLocalIdSchema = string2().min(1).max(128).regex(/^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/, "Expected a safe generation-local identifier.");
+    repositoryRelativePathSchema = string2().min(1).max(4096).refine((value) => !/[\u0000-\u001f\u007f]/.test(value), "Paths cannot contain control characters.").refine((value) => !value.startsWith("/") && !/^[A-Za-z]:[\\/]/.test(value), "Paths must be repository-relative.").refine((value) => !value.includes("\\"), "Paths must use forward slashes.").refine((value) => !value.split("/").some((segment) => segment === "" || segment === "." || segment === ".."), "Paths cannot contain empty or dot segments.");
+    boundedText = (maximum) => string2().min(1).max(maximum).refine((value) => !/[\0]/.test(value), "Text cannot contain NUL bytes.");
+    boundedOptionalText = (maximum) => string2().max(maximum).refine((value) => !/[\0]/.test(value), "Text cannot contain NUL bytes.");
+    safeNonNegativeIntegerSchema = number2().int().nonnegative().refine(Number.isSafeInteger, "Expected a safe integer.");
+    safePositiveIntegerSchema = safeNonNegativeIntegerSchema.positive();
+    boundedUtf8Text = (maximumBytes) => string2().min(1).refine((value) => !/[\0]/.test(value), "Text cannot contain NUL bytes.").refine((value) => utf8ByteLength(value) <= maximumBytes, "Text exceeds the UTF-8 byte bound.");
+    lineSchema = safePositiveIntegerSchema;
+    columnSchema = safeNonNegativeIntegerSchema;
+    byteOffsetSchema = safeNonNegativeIntegerSchema;
+    portableSourceCoordinateSchema = strictObject({
+      start: strictObject({ line: lineSchema, column: columnSchema, byte: byteOffsetSchema }),
+      end: strictObject({ line: lineSchema, column: columnSchema, byte: byteOffsetSchema })
+    }).superRefine((coordinate, ctx) => {
+      const startsAfterEnds = coordinate.start.byte > coordinate.end.byte || coordinate.start.line > coordinate.end.line || coordinate.start.line === coordinate.end.line && coordinate.start.column > coordinate.end.column;
+      if (startsAfterEnds) {
+        ctx.addIssue({ code: "custom", path: ["end"], message: "Coordinate end must not precede its start." });
+      }
+    });
+    PORTABLE_MAP_LANGUAGES = [
+      "javascript",
+      "jsx",
+      "typescript",
+      "tsx",
+      "python",
+      "java",
+      "unknown"
+    ];
+    portableLanguageSchema = _enum(PORTABLE_MAP_LANGUAGES);
+    PORTABLE_MAP_FILE_ROLES = [
+      "source",
+      "test",
+      "configuration",
+      "documentation",
+      "generated",
+      "unknown"
+    ];
+    portableFileRoleSchema = _enum(PORTABLE_MAP_FILE_ROLES);
+    PORTABLE_MAP_PARSE_STATUSES = [
+      "parsed",
+      "partial",
+      "failed",
+      "unsupported",
+      "skipped"
+    ];
+    portableParseStatusSchema = _enum(PORTABLE_MAP_PARSE_STATUSES);
+    PORTABLE_MAP_COVERAGE_STATUSES = ["full", "file", "none"];
+    portableCoverageStatusSchema = _enum(PORTABLE_MAP_COVERAGE_STATUSES);
+    PORTABLE_MAP_LIMITATION_REASONS = [
+      "none",
+      "unsupported-language",
+      "too-large",
+      "binary",
+      "parse-error",
+      "excluded",
+      "unreadable",
+      "not-extracted",
+      "unsafe-content",
+      "unsupported-construct"
+    ];
+    portableLimitationReasonSchema = _enum(PORTABLE_MAP_LIMITATION_REASONS);
+    portableFileRecordSchema = strictObject({
+      id: generationLocalIdSchema,
+      path: repositoryRelativePathSchema,
+      language: portableLanguageSchema,
+      role: portableFileRoleSchema,
+      byteSize: safeNonNegativeIntegerSchema,
+      contentHash: sha256Schema,
+      parseStatus: portableParseStatusSchema,
+      coverageStatus: portableCoverageStatusSchema,
+      limitationReason: portableLimitationReasonSchema.optional(),
+      coordinate: portableSourceCoordinateSchema.optional()
+    }).superRefine((record2, ctx) => {
+      const reason = record2.limitationReason ?? "none";
+      const valid = record2.parseStatus === "parsed" ? record2.coverageStatus === "full" && reason === "none" : record2.parseStatus === "partial" ? record2.coverageStatus === "file" && ["parse-error", "not-extracted", "unsafe-content", "unsupported-construct"].includes(reason) : record2.parseStatus === "failed" ? (record2.coverageStatus === "file" || record2.coverageStatus === "none") && reason === "parse-error" : record2.parseStatus === "unsupported" ? (record2.coverageStatus === "file" || record2.coverageStatus === "none") && reason === "unsupported-language" : record2.coverageStatus === "file" ? ["too-large", "binary", "not-extracted"].includes(reason) : ["excluded", "unreadable", "binary", "too-large", "not-extracted"].includes(reason);
+      if (!valid) {
+        ctx.addIssue({ code: "custom", path: ["coverageStatus"], message: "Parse status, coverage status, and limitation reason are inconsistent." });
+      }
+    });
+    PORTABLE_MAP_SYMBOL_KINDS = [
+      "module",
+      "class",
+      "interface",
+      "type",
+      "enum",
+      "function",
+      "method",
+      "constructor",
+      "variable",
+      "constant",
+      "property",
+      "field",
+      "unknown"
+    ];
+    portableSymbolKindSchema = _enum(PORTABLE_MAP_SYMBOL_KINDS);
+    PORTABLE_MAP_STRUCTURAL_DETAIL_FIELDS = ["qualifiedName", "signature"];
+    portableStructuralDetailFieldSchema = _enum(PORTABLE_MAP_STRUCTURAL_DETAIL_FIELDS);
+    portableStructuralDetailReferenceSchema = strictObject({
+      field: portableStructuralDetailFieldSchema,
+      firstSegmentId: generationLocalIdSchema,
+      segmentCount: safePositiveIntegerSchema,
+      byteSize: safeNonNegativeIntegerSchema,
+      contentHash: sha256Schema
+    });
+    portableStructuralDetailRecordSchema = strictObject({
+      id: generationLocalIdSchema,
+      sourceRecordId: generationLocalIdSchema,
+      field: portableStructuralDetailFieldSchema,
+      segmentIndex: safeNonNegativeIntegerSchema,
+      segmentCount: safePositiveIntegerSchema,
+      text: boundedUtf8Text(PORTABLE_MAP_MAX_STRUCTURAL_DETAIL_SEGMENT_BYTES),
+      byteSize: safeNonNegativeIntegerSchema,
+      contentHash: sha256Schema,
+      previousSegmentId: generationLocalIdSchema.nullable(),
+      nextSegmentId: generationLocalIdSchema.nullable()
+    }).superRefine((record2, ctx) => {
+      if (record2.segmentIndex >= record2.segmentCount) {
+        ctx.addIssue({ code: "custom", path: ["segmentIndex"], message: "Detail segment index must be below segment count." });
+      }
+      if (record2.byteSize !== utf8ByteLength(record2.text)) {
+        ctx.addIssue({ code: "custom", path: ["byteSize"], message: "Detail byte size must match UTF-8 text bytes." });
+      }
+      if (record2.contentHash !== utf8Sha256(record2.text)) {
+        ctx.addIssue({ code: "custom", path: ["contentHash"], message: "Detail content hash must match UTF-8 text bytes." });
+      }
+      if (record2.segmentIndex === 0 && record2.previousSegmentId !== null) {
+        ctx.addIssue({ code: "custom", path: ["previousSegmentId"], message: "The first detail segment cannot have a predecessor." });
+      }
+      if (record2.segmentIndex > 0 && record2.previousSegmentId === null) {
+        ctx.addIssue({ code: "custom", path: ["previousSegmentId"], message: "A non-first detail segment requires a predecessor." });
+      }
+      if (record2.segmentIndex === record2.segmentCount - 1 && record2.nextSegmentId !== null) {
+        ctx.addIssue({ code: "custom", path: ["nextSegmentId"], message: "The final detail segment cannot have a successor." });
+      }
+      if (record2.segmentIndex < record2.segmentCount - 1 && record2.nextSegmentId === null) {
+        ctx.addIssue({ code: "custom", path: ["nextSegmentId"], message: "A non-final detail segment requires a successor." });
+      }
+    });
+    portableSymbolRecordSchema = strictObject({
+      id: generationLocalIdSchema,
+      fileId: generationLocalIdSchema,
+      path: repositoryRelativePathSchema,
+      qualifiedName: boundedText(1024).optional(),
+      kind: portableSymbolKindSchema,
+      signature: boundedOptionalText(4096).refine(
+        (value) => utf8ByteLength(value) <= PORTABLE_MAP_MAX_STRUCTURAL_DETAIL_SEGMENT_BYTES,
+        "Inline signatures must fit the UTF-8 detail-segment byte bound."
+      ).optional(),
+      coordinate: portableSourceCoordinateSchema,
+      contentHash: sha256Schema,
+      lexicalParentId: generationLocalIdSchema.nullable(),
+      exported: boolean2(),
+      detailReferences: array(portableStructuralDetailReferenceSchema).max(2).optional()
+    }).superRefine((record2, ctx) => {
+      const references = record2.detailReferences ?? [];
+      const referencedFields = references.map((reference2) => reference2.field);
+      if (new Set(referencedFields).size !== referencedFields.length) {
+        ctx.addIssue({ code: "custom", path: ["detailReferences"], message: "Structural detail references must be unique." });
+      }
+      if (!record2.qualifiedName && !references.some((reference2) => reference2.field === "qualifiedName")) {
+        ctx.addIssue({ code: "custom", path: ["qualifiedName"], message: "A symbol requires an inline qualified name or a detail reference." });
+      }
+      if (record2.qualifiedName && references.some((reference2) => reference2.field === "qualifiedName")) {
+        ctx.addIssue({ code: "custom", path: ["detailReferences"], message: "An inline qualified name cannot also have a detail reference." });
+      }
+      if (record2.signature !== void 0 && references.some((reference2) => reference2.field === "signature")) {
+        ctx.addIssue({ code: "custom", path: ["detailReferences"], message: "An inline signature cannot also have a detail reference." });
+      }
+    });
+    PORTABLE_MAP_UNRESOLVED_REASONS = [
+      "dynamic-import",
+      "reflection",
+      "dependency-injection",
+      "dynamic-dispatch",
+      "ambiguous-module",
+      "unsupported-resolution",
+      "missing-target",
+      "parse-error",
+      "external-dependency",
+      "unknown"
+    ];
+    portableUnresolvedReasonSchema = _enum(PORTABLE_MAP_UNRESOLVED_REASONS);
+    PORTABLE_MAP_RESOLUTION_STATUSES = ["resolved", "unresolved", "ambiguous", "unsupported"];
+    portableResolutionStatusSchema = _enum(PORTABLE_MAP_RESOLUTION_STATUSES);
+    relationshipResolutionShape = {
+      resolutionStatus: portableResolutionStatusSchema,
+      targetFileId: generationLocalIdSchema.nullable(),
+      targetSymbolId: generationLocalIdSchema.nullable(),
+      unresolvedReason: portableUnresolvedReasonSchema.optional()
+    };
+    portableImportRelationshipSchema = strictObject({
+      id: generationLocalIdSchema,
+      kind: _enum(["import", "export", "reexport"]),
+      sourceFileId: generationLocalIdSchema,
+      sourcePath: repositoryRelativePathSchema,
+      specifier: boundedText(512),
+      coordinate: portableSourceCoordinateSchema,
+      contentHash: sha256Schema,
+      ...relationshipResolutionShape,
+      origin: literal("syntax"),
+      certainty: _enum(["observed", "supported-inference", "unknown"])
+    }).superRefine(enforceResolutionSemantics);
+    portableRelationshipRecordSchema = strictObject({
+      id: generationLocalIdSchema,
+      kind: _enum(["contains", "references", "implements", "extends", "uses"]),
+      sourceFileId: generationLocalIdSchema,
+      sourceSymbolId: generationLocalIdSchema.nullable(),
+      sourcePath: repositoryRelativePathSchema,
+      coordinate: portableSourceCoordinateSchema,
+      contentHash: sha256Schema,
+      ...relationshipResolutionShape,
+      origin: _enum(["syntax", "inferred", "authored"]),
+      certainty: _enum(["observed", "supported-inference", "unknown"])
+    }).superRefine(enforceResolutionSemantics);
+    PORTABLE_MAP_RECORD_KINDS = ["files", "symbols", "imports", "relationships", "details"];
+    portableRecordKindSchema = _enum(PORTABLE_MAP_RECORD_KINDS);
+    portableInventoryContinuationSchema = strictObject({
+      cursor: generationLocalIdSchema.nullable(),
+      hasMore: boolean2()
+    }).superRefine((value, ctx) => {
+      if (value.hasMore !== Boolean(value.cursor)) {
+        ctx.addIssue({ code: "custom", path: ["cursor"], message: "Continuation cursor must match hasMore." });
+      }
+    });
+    portableStructuralInventorySchema = strictObject({
+      generationId: generationLocalIdSchema,
+      shardId: generationLocalIdSchema,
+      files: array(portableFileRecordSchema).max(4096),
+      symbols: array(portableSymbolRecordSchema).max(4096),
+      imports: array(portableImportRelationshipSchema).max(4096),
+      relationships: array(portableRelationshipRecordSchema).max(4096),
+      details: array(portableStructuralDetailRecordSchema).max(4096).optional(),
+      continuation: portableInventoryContinuationSchema.optional()
+    }).superRefine((inventory2, ctx) => {
+      const ids = [
+        ...inventory2.files.map((record2) => record2.id),
+        ...inventory2.symbols.map((record2) => record2.id),
+        ...inventory2.imports.map((record2) => record2.id),
+        ...inventory2.relationships.map((record2) => record2.id),
+        ...(inventory2.details ?? []).map((record2) => record2.id)
+      ];
+      if (new Set(ids).size !== ids.length) {
+        ctx.addIssue({ code: "custom", path: [], message: "Structural record identifiers must be unique within a shard." });
+      }
+    });
+    portableEvidenceDependencySchema = strictObject({
+      kind: _enum(["file", "symbol", "relationship", "compatibility-document"]),
+      path: repositoryRelativePathSchema,
+      recordId: generationLocalIdSchema,
+      contentHash: sha256Schema,
+      coordinate: portableSourceCoordinateSchema.optional()
+    });
+    authoredShortText = boundedText(4096);
+    portableClaimSchema = strictObject({
+      id: generationLocalIdSchema,
+      basis: _enum(["observed", "supported-inference", "unknown"]),
+      statement: authoredShortText,
+      evidence: array(portableEvidenceDependencySchema).min(1).max(32)
+    });
+    portableCapabilitySchema = strictObject({
+      id: generationLocalIdSchema,
+      name: boundedText(256),
+      summary: authoredShortText,
+      claimIds: array(generationLocalIdSchema).min(1).max(128),
+      evidence: array(portableEvidenceDependencySchema).min(1).max(32)
+    }).superRefine((capability, ctx) => {
+      if (new Set(capability.claimIds).size !== capability.claimIds.length) {
+        ctx.addIssue({ code: "custom", path: ["claimIds"], message: "Capability claim identifiers must be unique." });
+      }
+    });
+    portableAliasSchema = strictObject({
+      id: generationLocalIdSchema,
+      alias: boundedText(256),
+      targetKind: _enum(["capability", "symbol"]),
+      targetId: generationLocalIdSchema,
+      evidence: array(portableEvidenceDependencySchema).min(1).max(32)
+    });
+    portableAcceptedSemanticModelSchema = strictObject({
+      capabilities: array(portableCapabilitySchema).max(256),
+      claims: array(portableClaimSchema).max(2048),
+      aliases: array(portableAliasSchema).max(1024)
+    }).superRefine((model, ctx) => {
+      const claimIds = new Set(model.claims.map((claim) => claim.id));
+      const capabilityIds = new Set(model.capabilities.map((capability) => capability.id));
+      const duplicateIds = [
+        ...model.capabilities.map((capability) => ["capability", capability.id]),
+        ...model.claims.map((claim) => ["claim", claim.id]),
+        ...model.aliases.map((alias) => ["alias", alias.id])
+      ];
+      if (new Set(duplicateIds.map(([, id]) => id)).size !== duplicateIds.length) {
+        ctx.addIssue({ code: "custom", path: [], message: "Semantic record identifiers must be unique." });
+      }
+      for (const [index, capability] of model.capabilities.entries()) {
+        for (const [claimIndex, claimId] of capability.claimIds.entries()) {
+          if (!claimIds.has(claimId)) {
+            ctx.addIssue({ code: "custom", path: ["capabilities", index, "claimIds", claimIndex], message: "Capability references an unknown claim." });
+          }
+        }
+      }
+      for (const [index, alias] of model.aliases.entries()) {
+        if (alias.targetKind === "capability" && !capabilityIds.has(alias.targetId)) {
+          ctx.addIssue({ code: "custom", path: ["aliases", index, "targetId"], message: "Capability alias references an unknown capability." });
+        }
+      }
+    });
+    completeCodebaseMapShape = Object.fromEntries(
+      CODEBASE_DOCUMENT_IDS.map((id) => [id, codebaseDocumentModelSchema])
+    );
+    portableCompleteCodebaseMapModelSchema = strictObject(completeCodebaseMapShape);
+    portableMapSubmissionSchema = strictObject({
+      formatVersion: literal(PORTABLE_MAP_FORMAT_VERSION),
+      generationId: generationLocalIdSchema,
+      documents: portableCompleteCodebaseMapModelSchema,
+      semantic: portableAcceptedSemanticModelSchema
+    });
+    portableInventoryShardManifestSchema = strictObject({
+      shardId: generationLocalIdSchema,
+      path: repositoryRelativePathSchema,
+      recordKind: portableRecordKindSchema,
+      recordCount: safeNonNegativeIntegerSchema,
+      byteSize: safeNonNegativeIntegerSchema,
+      checksum: sha256Schema
+    });
+    coverageCountSchema = safeNonNegativeIntegerSchema;
+    portableStructuralCoverageSchema = strictObject({
+      filesInventoried: coverageCountSchema,
+      filesWithFullCoverage: coverageCountSchema,
+      filesWithFileCoverage: coverageCountSchema,
+      symbolsExtracted: coverageCountSchema,
+      importsExtracted: coverageCountSchema,
+      relationshipsExtracted: coverageCountSchema
+    }).superRefine((coverage, ctx) => {
+      if (coverage.filesWithFullCoverage + coverage.filesWithFileCoverage > coverage.filesInventoried) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["filesWithFileCoverage"],
+          message: "Full and file coverage cannot exceed inventoried files."
+        });
+      }
+    });
+    portableSemanticCoverageSchema = strictObject({
+      capabilitiesAccepted: coverageCountSchema,
+      claimsAccepted: coverageCountSchema,
+      aliasesAccepted: coverageCountSchema,
+      evidenceDependencies: coverageCountSchema
+    });
+    pageChecksumSchema = strictObject({ path: repositoryRelativePathSchema, checksum: sha256Schema });
+    compatibilityViewHashesShape = Object.fromEntries(
+      CODEBASE_DOCUMENT_IDS.map((id) => [id, sha256Schema])
+    );
+    portableCompatibilityViewHashesSchema = strictObject(compatibilityViewHashesShape);
+    portableSealedGenerationReferenceSchema = strictObject({
+      generationId: generationLocalIdSchema,
+      manifest: pageChecksumSchema,
+      entry: pageChecksumSchema
+    }).superRefine((reference2, ctx) => {
+      if (reference2.manifest.path === reference2.entry.path) {
+        ctx.addIssue({ code: "custom", path: ["entry", "path"], message: "Manifest and entry locators must be distinct." });
+      }
+      if (reference2.manifest.path !== `generations/${reference2.generationId}/manifest.json`) {
+        ctx.addIssue({ code: "custom", path: ["manifest", "path"], message: "Sealed manifest must use the canonical generation locator." });
+      }
+      if (reference2.entry.path !== `generations/${reference2.generationId}/ENTRY.md`) {
+        ctx.addIssue({ code: "custom", path: ["entry", "path"], message: "Sealed ENTRY must use the canonical generation locator." });
+      }
+    });
+    compatibilityBackupShape = Object.fromEntries(
+      CODEBASE_DOCUMENT_IDS.map((id) => [id, pageChecksumSchema])
+    );
+    compatibilityFilename = (id) => `${id.toUpperCase()}.md`;
+    portableV1BackupReferenceSchema = strictObject({
+      version: literal(1),
+      rootPath: repositoryRelativePathSchema,
+      generationId: generationLocalIdSchema.nullable(),
+      compatibility: strictObject(compatibilityBackupShape)
+    }).superRefine((backup, ctx) => {
+      for (const id of CODEBASE_DOCUMENT_IDS) {
+        const expectedPath = `${backup.rootPath}/${compatibilityFilename(id)}`;
+        if (backup.compatibility[id].path !== expectedPath) {
+          ctx.addIssue({ code: "custom", path: ["compatibility", id, "path"], message: "Backup locator must be a declared compatibility child of rootPath." });
+        }
+      }
+    });
+    portablePredecessorPublicationProofSchema = strictObject({
+      generationId: generationLocalIdSchema,
+      manifest: pageChecksumSchema,
+      entry: pageChecksumSchema,
+      committedIndexHash: sha256Schema
+    }).superRefine((proof, ctx) => {
+      if (proof.manifest.path === proof.entry.path) {
+        ctx.addIssue({ code: "custom", path: ["entry", "path"], message: "Manifest and entry locators must be distinct." });
+      }
+      if (proof.manifest.path !== `generations/${proof.generationId}/manifest.json`) {
+        ctx.addIssue({ code: "custom", path: ["manifest", "path"], message: "Predecessor manifest must use the canonical generation locator." });
+      }
+      if (proof.entry.path !== `generations/${proof.generationId}/ENTRY.md`) {
+        ctx.addIssue({ code: "custom", path: ["entry", "path"], message: "Predecessor ENTRY must use the canonical generation locator." });
+      }
+    });
+    portableGenerationChecksumsSchema = strictObject({
+      entry: sha256Schema,
+      pages: array(pageChecksumSchema).max(1e5),
+      compatibility: portableCompatibilityViewHashesSchema
+    });
+    timestampSchema = string2().datetime({ offset: true });
+    portableGenerationManifestSchema = strictObject({
+      formatVersion: literal(PORTABLE_MAP_FORMAT_VERSION),
+      protocolVersion: literal(PORTABLE_MAP_PROTOCOL_VERSION),
+      generationId: generationLocalIdSchema,
+      generatedAt: timestampSchema,
+      gitCommit: gitCommitSchema.nullable(),
+      inventoryFingerprint: sha256Schema,
+      structuralCoverage: portableStructuralCoverageSchema,
+      semanticCoverage: portableSemanticCoverageSchema,
+      parserAssets: array(strictObject({
+        name: boundedText(256),
+        version: boundedText(128),
+        checksum: sha256Schema
+      })).max(128),
+      inventoryShards: array(portableInventoryShardManifestSchema).min(1).max(1e5),
+      checksums: portableGenerationChecksumsSchema,
+      evidenceDependencies: array(portableEvidenceDependencySchema).max(1e5),
+      predecessorGenerationId: generationLocalIdSchema.nullable(),
+      predecessorPublicationProof: portablePredecessorPublicationProofSchema.optional()
+    }).superRefine((manifest, ctx) => {
+      const shardIds = manifest.inventoryShards.map((shard) => shard.shardId);
+      if (new Set(shardIds).size !== shardIds.length) {
+        ctx.addIssue({ code: "custom", path: ["inventoryShards"], message: "Inventory shard identifiers must be unique." });
+      }
+      const pagePaths = manifest.checksums.pages.map((page) => page.path);
+      if (new Set(pagePaths).size !== pagePaths.length) {
+        ctx.addIssue({ code: "custom", path: ["checksums", "pages"], message: "Page checksum paths must be unique." });
+      }
+      if (manifest.predecessorGenerationId === null && manifest.predecessorPublicationProof) {
+        ctx.addIssue({ code: "custom", path: ["predecessorPublicationProof"], message: "A first generation cannot carry a predecessor proof." });
+      }
+      if (manifest.predecessorGenerationId !== null) {
+        if (!manifest.predecessorPublicationProof) {
+          ctx.addIssue({ code: "custom", path: ["predecessorPublicationProof"], message: "A retained generation requires a predecessor publication proof." });
+        } else if (manifest.predecessorPublicationProof.generationId !== manifest.predecessorGenerationId) {
+          ctx.addIssue({ code: "custom", path: ["predecessorPublicationProof", "generationId"], message: "Predecessor proof identity must match predecessorGenerationId." });
+        }
+      }
+      if (manifest.predecessorPublicationProof?.generationId === manifest.generationId) {
+        ctx.addIssue({ code: "custom", path: ["predecessorPublicationProof", "generationId"], message: "A generation cannot prove itself as its predecessor." });
+      }
+    });
+    portableSourceBasisSchema = strictObject({
+      rootHash: sha256Schema,
+      inventoryHash: sha256Schema,
+      evidenceHash: sha256Schema
+    });
+    portableTargetHashesShape = Object.fromEntries(
+      CODEBASE_DOCUMENT_IDS.map((id) => [id, sha256Schema.nullable()])
+    );
+    portableTargetHashesSchema = strictObject(portableTargetHashesShape);
+    portableLegacyPublicationSnapshotSchema = strictObject({
+      version: literal(1),
+      root: sha256Schema,
+      inventory: sha256Schema,
+      inputs: record(string2(), sha256Schema),
+      core: sha256Schema,
+      targets: portableTargetHashesSchema,
+      previousPublication: sha256Schema.nullable()
+    });
+    portableLegacyPublicationPendingSchema = strictObject({
+      version: literal(1),
+      operationId: sha256Schema,
+      snapshot: portableLegacyPublicationSnapshotSchema,
+      hashes: portableTargetHashesSchema,
+      stage: literal("publishing")
+    });
+    portablePublishedTargetHashesSchema = portableCompatibilityViewHashesSchema;
+    PORTABLE_MAP_OPERATION_STAGES = ["prepared"];
+    portableOperationStageSchema = _enum(PORTABLE_MAP_OPERATION_STAGES);
+    PORTABLE_MAP_PUBLICATION_STAGES = [
+      "publishing",
+      "index-committed",
+      "cleanup"
+    ];
+    portablePublicationStageSchema = _enum(PORTABLE_MAP_PUBLICATION_STAGES);
+    portableOperationMetadataSchema = strictObject({
+      version: literal(PORTABLE_MAP_OPERATION_METADATA_VERSION),
+      operationId: generationLocalIdSchema,
+      stage: portableOperationStageSchema,
+      generationId: generationLocalIdSchema,
+      transactionId: generationLocalIdSchema.optional(),
+      previousGenerationId: generationLocalIdSchema.nullable(),
+      previousIndexHash: sha256Schema.nullable(),
+      rootFingerprint: sha256Schema.optional(),
+      observedMarkerHash: sha256Schema.nullable().optional(),
+      packetBudgetBytes: safePositiveIntegerSchema.optional(),
+      repair: union([literal(false), strictObject({
+        authorized: literal(true),
+        previousIndexHash: sha256Schema.nullable(),
+        targetHashes: portableTargetHashesSchema,
+        observedMarkerHash: sha256Schema.nullable()
+      })]).optional(),
+      sourceBasis: portableSourceBasisSchema,
+      targetHashes: portableTargetHashesSchema,
+      createdAt: timestampSchema
+    }).superRefine(enforcePreviousGenerationSemantics);
+    portablePublicationMarkerSchema = strictObject({
+      version: literal(PORTABLE_MAP_PUBLICATION_MARKER_VERSION),
+      operationId: generationLocalIdSchema,
+      transactionId: generationLocalIdSchema,
+      stage: portablePublicationStageSchema,
+      generationId: generationLocalIdSchema,
+      previousGenerationId: generationLocalIdSchema.nullable(),
+      previousIndexHash: sha256Schema.nullable(),
+      nextIndexHash: sha256Schema,
+      sourceBasis: portableSourceBasisSchema,
+      previousTargetHashes: portableTargetHashesSchema,
+      nextTargetHashes: portablePublishedTargetHashesSchema,
+      sealedGeneration: portableSealedGenerationReferenceSchema,
+      v1BackupReference: portableV1BackupReferenceSchema.nullable(),
+      createdAt: timestampSchema
+    }).superRefine((marker, ctx) => {
+      enforcePreviousGenerationSemantics(marker, ctx);
+      if (marker.sealedGeneration.generationId !== marker.generationId) {
+        ctx.addIssue({ code: "custom", path: ["sealedGeneration", "generationId"], message: "Sealed generation identity must match the publication marker." });
+      }
+      if (marker.v1BackupReference) {
+        for (const id of CODEBASE_DOCUMENT_IDS) {
+          const previousHash = marker.previousTargetHashes[id];
+          const backupHash = marker.v1BackupReference.compatibility[id].checksum;
+          if (previousHash === null || previousHash !== backupHash) {
+            ctx.addIssue({ code: "custom", path: ["previousTargetHashes", id], message: "V1 backup checksums must match every non-null previous target hash." });
+          }
+        }
+        if (marker.v1BackupReference.generationId !== null && marker.v1BackupReference.generationId !== marker.previousGenerationId) {
+          ctx.addIssue({ code: "custom", path: ["v1BackupReference", "generationId"], message: "V1 backup generation identity must match the previous generation when specified." });
+        }
+      }
+    });
+    selectedCapabilitySchema = strictObject({
+      id: generationLocalIdSchema,
+      name: boundedText(256),
+      summary: authoredShortText
+    });
+    portableModelPacketSchema = strictObject({
+      packetVersion: literal(1),
+      operationId: generationLocalIdSchema,
+      generationId: generationLocalIdSchema,
+      selectedFiles: array(portableFileRecordSchema).max(128),
+      selectedSymbols: array(portableSymbolRecordSchema).max(256),
+      selectedDetails: array(portableStructuralDetailRecordSchema).max(256).optional(),
+      selectedImports: array(portableImportRelationshipSchema).max(256),
+      selectedRelationships: array(portableRelationshipRecordSchema).max(256),
+      selectedCapabilities: array(selectedCapabilitySchema).max(64),
+      continuation: portableInventoryContinuationSchema.optional()
+    }).superRefine((packet, ctx) => {
+      const bytes = serializedUtf8ByteLength(packet);
+      if (bytes > PORTABLE_MAP_MAX_MODEL_PACKET_BYTES) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["$bytes"],
+          message: `Serialized model packet exceeds ${PORTABLE_MAP_MAX_MODEL_PACKET_BYTES} UTF-8 bytes.`
+        });
+      }
+    });
+  }
+});
+
 // src/shared/security.ts
 import { existsSync, realpathSync } from "node:fs";
 import path2 from "node:path";
@@ -26315,10 +26949,873 @@ var init_phase_roadmap_parser = __esm({
   }
 });
 
-// src/mcp/tools/plan-publication.ts
-import { createHash } from "node:crypto";
-import { promises as fs2 } from "node:fs";
+// src/mcp/codebase-index/path-policy.ts
+var init_path_policy = __esm({
+  "src/mcp/codebase-index/path-policy.ts"() {
+    "use strict";
+  }
+});
+
+// src/mcp/codebase-index/content-boundary.ts
+var DEFAULT_SAFE_SOURCE_READ_BYTES, SAFE_SOURCE_CHUNK_BYTES;
+var init_content_boundary = __esm({
+  "src/mcp/codebase-index/content-boundary.ts"() {
+    "use strict";
+    init_security();
+    init_path_policy();
+    DEFAULT_SAFE_SOURCE_READ_BYTES = 1 * 1024 * 1024;
+    SAFE_SOURCE_CHUNK_BYTES = 64 * 1024;
+  }
+});
+
+// src/mcp/codebase-index/render.ts
+function parsePortableRootDescriptor(input) {
+  if (byteLength(input) > PORTABLE_MAP_BYTE_LIMITS.index) return null;
+  const lines3 = input.split("\n").map((line2) => line2.endsWith("\r") ? line2.slice(0, -1) : line2);
+  const markerLike = lines3.filter((line2) => line2.includes("blueprint:portable-root-descriptor"));
+  if (markerLike.length !== 1) return null;
+  const marker = markerLike[0];
+  if (marker !== marker.trim() || !marker.startsWith(ROOT_DESCRIPTOR_PREFIX) || !marker.endsWith(" -->")) return null;
+  try {
+    const parsed = rootDescriptorSchema.safeParse(JSON.parse(marker.slice(ROOT_DESCRIPTOR_PREFIX.length, -4)));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+function parsePortableSemanticShard(input) {
+  if (byteLength(input) > PORTABLE_MAP_BYTE_LIMITS.recordPage) return null;
+  try {
+    const parsed = portableSemanticShardSchema.safeParse(JSON.parse(input));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+function parsePortableSemanticIndex(input) {
+  if (byteLength(input) > PORTABLE_MAP_BYTE_LIMITS.recordPage) return null;
+  try {
+    const parsed = portableSemanticIndexSchema.safeParse(JSON.parse(input));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+var metadataSchema, PORTABLE_ROOT_DESCRIPTOR_VERSION, ROOT_DESCRIPTOR_PREFIX, rootDescriptorSchema, PORTABLE_SEMANTIC_DATA_VERSION, portableSemanticRecordKindSchema, portableSemanticContinuationSchema, portableSemanticRecordSchema, portableSemanticFragmentSchema, portableSemanticShardSchema, portableSemanticIndexEntrySchema, portableSemanticIndexSchema, SEARCH_HIT_SAFE_BYTES, byteLength;
+var init_render = __esm({
+  "src/mcp/codebase-index/render.ts"() {
+    "use strict";
+    init_v4();
+    init_codebase_authoring();
+    init_contracts();
+    init_content_boundary();
+    metadataSchema = strictObject({
+      generationId: string2().min(1).max(128),
+      generatedAt: string2().datetime({ offset: true }),
+      gitCommit: portableGitCommitSchema.nullable(),
+      inventoryFingerprint: portableSha256Schema,
+      parserAssets: array(strictObject({
+        name: string2().min(1).max(256),
+        version: string2().min(1).max(128),
+        checksum: portableSha256Schema
+      })).max(128),
+      predecessorGenerationId: string2().min(1).max(128).nullable().optional(),
+      predecessorPublicationProof: portablePredecessorPublicationProofSchema.optional()
+    });
+    PORTABLE_ROOT_DESCRIPTOR_VERSION = 1;
+    ROOT_DESCRIPTOR_PREFIX = "<!-- blueprint:portable-root-descriptor ";
+    rootDescriptorSchema = strictObject({
+      version: literal(PORTABLE_ROOT_DESCRIPTOR_VERSION),
+      generationId: generationLocalIdSchema,
+      manifest: strictObject({ path: repositoryRelativePathSchema, sha256: portableSha256Schema }),
+      entry: strictObject({ path: repositoryRelativePathSchema, sha256: portableSha256Schema })
+    }).superRefine((value, ctx) => {
+      if (value.manifest.path !== `generations/${value.generationId}/manifest.json`) ctx.addIssue({ code: "custom", path: ["manifest", "path"], message: "Manifest locator must use the generation path." });
+      if (value.entry.path !== `generations/${value.generationId}/ENTRY.md`) ctx.addIssue({ code: "custom", path: ["entry", "path"], message: "ENTRY locator must use the generation path." });
+    });
+    PORTABLE_SEMANTIC_DATA_VERSION = 1;
+    portableSemanticRecordKindSchema = _enum(["capability", "claim", "alias"]);
+    portableSemanticContinuationSchema = strictObject({
+      previous: repositoryRelativePathSchema.nullable(),
+      next: repositoryRelativePathSchema.nullable()
+    });
+    portableSemanticRecordSchema = union([portableCapabilitySchema, portableClaimSchema, portableAliasSchema]);
+    portableSemanticFragmentSchema = strictObject({
+      kind: portableSemanticRecordKindSchema,
+      recordId: generationLocalIdSchema,
+      evidenceStart: number2().int().nonnegative(),
+      evidenceCount: number2().int().positive(),
+      partIndex: number2().int().nonnegative(),
+      partCount: number2().int().positive(),
+      record: portableSemanticRecordSchema,
+      continuation: portableSemanticContinuationSchema
+    }).superRefine((value, ctx) => {
+      if (value.record.id !== value.recordId) ctx.addIssue({ code: "custom", path: ["recordId"], message: "Semantic fragment identity must match its canonical record." });
+      if (value.record.evidence.length !== value.evidenceCount) ctx.addIssue({ code: "custom", path: ["evidenceCount"], message: "Semantic fragment evidence count must match its complete evidence slice." });
+      const expectedKind = "name" in value.record ? "capability" : "statement" in value.record ? "claim" : "alias";
+      if (value.kind !== expectedKind) ctx.addIssue({ code: "custom", path: ["kind"], message: "Semantic fragment kind must match its canonical record." });
+      if (value.partIndex >= value.partCount) ctx.addIssue({ code: "custom", path: ["partIndex"], message: "Semantic fragment part index must be below its part count." });
+    });
+    portableSemanticShardSchema = strictObject({
+      version: literal(PORTABLE_SEMANTIC_DATA_VERSION),
+      generationId: generationLocalIdSchema,
+      shardId: generationLocalIdSchema,
+      records: array(portableSemanticFragmentSchema).max(2048)
+    });
+    portableSemanticIndexEntrySchema = strictObject({
+      kind: portableSemanticRecordKindSchema,
+      recordId: generationLocalIdSchema,
+      firstPath: repositoryRelativePathSchema.nullable(),
+      partCount: number2().int().nonnegative(),
+      evidenceCount: number2().int().nonnegative(),
+      contentHash: portableSha256Schema
+    });
+    portableSemanticIndexSchema = strictObject({
+      version: literal(PORTABLE_SEMANTIC_DATA_VERSION),
+      generationId: generationLocalIdSchema,
+      shardId: generationLocalIdSchema,
+      entries: array(portableSemanticIndexEntrySchema).max(2048),
+      continuation: portableSemanticContinuationSchema
+    });
+    SEARCH_HIT_SAFE_BYTES = PORTABLE_MAP_BYTE_LIMITS.searchHit - 512;
+    byteLength = (value) => Buffer.byteLength(value, "utf8");
+  }
+});
+
+// src/mcp/codebase-index/resolver.ts
+import { constants } from "node:fs";
+import { createHash as createHash2 } from "node:crypto";
+import { lstat, open, realpath } from "node:fs/promises";
 import path6 from "node:path";
+function limitsOf(input) {
+  const result = { ...DEFAULT_LIMITS, ...input ?? {} };
+  for (const value of Object.values(result)) {
+    if (!Number.isSafeInteger(value) || value <= 0) return { ...DEFAULT_LIMITS };
+  }
+  return result;
+}
+function diagnostic(code, scope) {
+  return { code, scope, message: DIAGNOSTIC_MESSAGES[code] };
+}
+function addDiagnostic(list, item) {
+  if (list.length < MAX_DIAGNOSTICS) list.push(item);
+}
+function sha256(bytes) {
+  return createHash2("sha256").update(bytes).digest("hex");
+}
+function byteLength2(bytes) {
+  return bytes.byteLength;
+}
+function decodeUtf8(bytes) {
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
+function safeRelativePath(value) {
+  return repositoryRelativePathSchema.safeParse(value).success;
+}
+function safeGenerationId(value) {
+  return string2().min(1).max(128).regex(/^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/).safeParse(value).success;
+}
+function sameStat(left, right) {
+  return left.size === right.size && left.dev === right.dev && left.ino === right.ino && left.mtimeMs === right.mtimeMs && left.ctimeMs === right.ctimeMs;
+}
+async function literalFile(root, relativePath) {
+  if (!safeRelativePath(relativePath)) return null;
+  const absoluteRoot = path6.resolve(root);
+  const absolutePath = path6.resolve(absoluteRoot, relativePath);
+  const rel = path6.relative(absoluteRoot, absolutePath);
+  if (rel.startsWith("..") || path6.isAbsolute(rel)) return null;
+  let rootReal;
+  try {
+    rootReal = await realpath(absoluteRoot);
+  } catch {
+    return null;
+  }
+  let current = absoluteRoot;
+  const pieces = relativePath.split("/");
+  for (let index = 0; index <= pieces.length; index += 1) {
+    const stat2 = await lstat(current).catch(() => null);
+    if (!stat2) return null;
+    if (index > 0 && stat2.isSymbolicLink()) return null;
+    if (index < pieces.length && !stat2.isDirectory()) return null;
+    if (index < pieces.length) current = path6.join(current, pieces[index]);
+  }
+  const stat = await lstat(absolutePath).catch(() => null);
+  if (!stat || stat.isSymbolicLink() || !stat.isFile()) return null;
+  const resolved = await realpath(absolutePath).catch(() => null);
+  if (!resolved) return null;
+  const resolvedRel = path6.relative(rootReal, resolved);
+  if (resolvedRel.startsWith("..") || path6.isAbsolute(resolvedRel)) return null;
+  return {
+    absolutePath,
+    size: Number(stat.size),
+    dev: stat.dev,
+    ino: stat.ino,
+    mtimeMs: stat.mtimeMs,
+    ctimeMs: stat.ctimeMs
+  };
+}
+async function readLiteralBytes(root, relativePath, maxBytes) {
+  if (!safeRelativePath(relativePath)) return { ok: false, reason: "unsafe-path" };
+  const file2 = await literalFile(root, relativePath);
+  if (!file2) return { ok: false, reason: "missing" };
+  if (file2.size > maxBytes) return { ok: false, reason: "too-large" };
+  let handle;
+  try {
+    handle = await open(file2.absolutePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  } catch {
+    return { ok: false, reason: "unreadable" };
+  }
+  try {
+    const opened = await handle.stat();
+    if (!opened.isFile() || !sameStat(file2, {
+      size: Number(opened.size),
+      dev: opened.dev,
+      ino: opened.ino,
+      mtimeMs: opened.mtimeMs,
+      ctimeMs: opened.ctimeMs
+    })) return { ok: false, reason: "changed" };
+    const bytes = Buffer.alloc(file2.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const read = await handle.read(bytes, offset, bytes.length - offset, offset);
+      if (read.bytesRead === 0) return { ok: false, reason: "changed" };
+      offset += read.bytesRead;
+    }
+    const after = await handle.stat();
+    if (!after.isFile() || !sameStat(file2, {
+      size: Number(after.size),
+      dev: after.dev,
+      ino: after.ino,
+      mtimeMs: after.mtimeMs,
+      ctimeMs: after.ctimeMs
+    })) return { ok: false, reason: "changed" };
+    return { ok: true, bytes: new Uint8Array(bytes) };
+  } catch {
+    return { ok: false, reason: "unreadable" };
+  } finally {
+    await handle.close().catch(() => void 0);
+  }
+}
+function parsedJson(bytes, parse3) {
+  const text2 = decodeUtf8(bytes);
+  if (text2 === null) return null;
+  try {
+    return parse3(JSON.parse(text2));
+  } catch {
+    return null;
+  }
+}
+function parseSafe(schema2, value) {
+  const result = schema2.safeParse(value);
+  return result.success ? result.data : null;
+}
+function mapKey(kind, id) {
+  return `${kind}\0${id}`;
+}
+function recordTypeFor(kind) {
+  switch (kind) {
+    case "files":
+      return portableFileRecordSchema;
+    case "symbols":
+      return portableSymbolRecordSchema;
+    case "imports":
+      return portableImportRelationshipSchema;
+    case "relationships":
+      return portableRelationshipRecordSchema;
+    case "details":
+      return portableStructuralDetailRecordSchema;
+  }
+}
+function isRecordKind(value) {
+  return value === "files" || value === "symbols" || value === "imports" || value === "relationships" || value === "details";
+}
+function fixedReadDiagnostic(scope, result) {
+  if (result.ok) return diagnostic("invalid", scope);
+  if (result.reason === "unsafe-path") return diagnostic("unsafe-path", scope);
+  if (result.reason === "too-large") return diagnostic("resource-limit", scope);
+  if (result.reason === "missing") return diagnostic("missing", scope);
+  return diagnostic(result.reason === "changed" ? "stale" : "invalid", scope);
+}
+async function readPage(root, relativePath, maxBytes, diagnostics, scope = "page") {
+  const result = await readLiteralBytes(root, relativePath, maxBytes);
+  if (!result.ok) {
+    addDiagnostic(diagnostics, fixedReadDiagnostic(scope, result));
+    return null;
+  }
+  const body = decodeUtf8(result.bytes);
+  if (body === null) {
+    addDiagnostic(diagnostics, diagnostic("invalid", scope));
+    return null;
+  }
+  return { path: relativePath, bytes: result.bytes, body, hash: sha256(result.bytes) };
+}
+function pathInGeneration(relativePath, generationId) {
+  return relativePath.startsWith(`generations/${generationId}/`) && safeRelativePath(relativePath);
+}
+function expectedChecksum(manifest, relativePath) {
+  return manifest.checksums.pages.find((item) => item.path === relativePath)?.checksum ?? null;
+}
+function validateRecordReferences(structural, files, symbols, imports, relationships, details, diagnostics) {
+  let valid = true;
+  const fail = () => {
+    valid = false;
+  };
+  for (const symbol2 of symbols.values()) {
+    const file2 = files.get(symbol2.fileId);
+    if (!file2 || file2.path !== symbol2.path || symbol2.lexicalParentId !== null && !symbols.has(symbol2.lexicalParentId)) fail();
+  }
+  for (const item of imports.values()) {
+    const file2 = files.get(item.sourceFileId);
+    if (!file2 || file2.path !== item.sourcePath || item.targetFileId !== null && !files.has(item.targetFileId) || item.targetSymbolId !== null && !symbols.has(item.targetSymbolId)) fail();
+  }
+  for (const item of relationships.values()) {
+    const file2 = files.get(item.sourceFileId);
+    if (!file2 || file2.path !== item.sourcePath || item.sourceSymbolId !== null && !symbols.has(item.sourceSymbolId) || item.targetFileId !== null && !files.has(item.targetFileId) || item.targetSymbolId !== null && !symbols.has(item.targetSymbolId)) fail();
+  }
+  const detailsBySource = /* @__PURE__ */ new Map();
+  for (const detail of details.values()) {
+    if (!structural.has(detail.sourceRecordId)) fail();
+    const key2 = mapKey(detail.sourceRecordId, detail.field);
+    const group = detailsBySource.get(key2) ?? [];
+    group.push(detail);
+    detailsBySource.set(key2, group);
+  }
+  for (const [key2, group] of detailsBySource) {
+    group.sort((a, b) => a.segmentIndex - b.segmentIndex);
+    const expectedCount = group[0]?.segmentCount ?? 0;
+    if (group.length !== expectedCount || group.some((item, index) => item.segmentCount !== expectedCount || item.segmentIndex !== index)) fail();
+    for (let index = 0; index < group.length; index += 1) {
+      const item = group[index];
+      if ((index === 0 ? item.previousSegmentId : item.previousSegmentId !== group[index - 1].id ? item.previousSegmentId : null) !== null || (index === group.length - 1 ? item.nextSegmentId : item.nextSegmentId !== group[index + 1].id ? item.nextSegmentId : null) !== null) fail();
+    }
+    const source = structural.get(key2.split("\0", 1)[0]);
+    if (source && "detailReferences" in source.record) {
+      const reference2 = source.record.detailReferences?.find((item) => item.field === key2.split("\0")[1]);
+      const joined = group.map((item) => item.text).join("");
+      if (reference2 && (reference2.segmentCount !== group.length || reference2.firstSegmentId !== group[0]?.id || reference2.byteSize !== Buffer.byteLength(joined, "utf8") || reference2.contentHash !== sha256(new TextEncoder().encode(joined)))) fail();
+    }
+  }
+  if (!valid) addDiagnostic(diagnostics, diagnostic("invalid", "records"));
+  return valid;
+}
+function evidenceRecord(item, structural, files, symbols, imports, relationships) {
+  let found;
+  if (item.kind === "file" || item.kind === "symbol") found = structural.get(item.recordId)?.record;
+  else found = imports.get(item.recordId) ?? relationships.get(item.recordId);
+  const file2 = item.kind === "file" ? files.get(item.recordId) : item.kind === "symbol" ? files.get(found?.fileId ?? "") : files.get(found?.sourceFileId ?? "");
+  return { record: found, file: file2, rangeHash: found && item.kind !== "file" ? found.contentHash : void 0 };
+}
+function verifySemanticEvidence(record2, structural, files, symbols, imports, relationships, diagnostics) {
+  let valid = true;
+  for (const item of record2.evidence) {
+    if (item.kind === "compatibility-document") {
+      if (!safeRelativePath(item.path) || item.recordId.length === 0) valid = false;
+      continue;
+    }
+    const selected = evidenceRecord(item, structural, files, symbols, imports, relationships);
+    if (!selected.record || !selected.file || selected.file.path !== item.path || selected.record.contentHash !== item.contentHash) {
+      valid = false;
+      continue;
+    }
+    if (item.coordinate && JSON.stringify(item.coordinate) !== JSON.stringify(selected.record.coordinate)) valid = false;
+  }
+  if (!valid) addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+  return valid;
+}
+function mergeSemanticParts(parts) {
+  if (parts.length === 0) return null;
+  const ordered = [...parts].sort((left, right) => left.evidenceStart - right.evidenceStart);
+  let nextStart = 0;
+  for (const part of ordered) {
+    if (part.evidenceStart !== nextStart) return null;
+    nextStart += part.evidenceCount;
+  }
+  const first = ordered[0].record;
+  return { ...first, evidence: ordered.flatMap((part) => part.record.evidence) };
+}
+async function verifyGeneration(root, generationId, inputLimits, predecessorMode) {
+  const limits = limitsOf(inputLimits);
+  const diagnostics = [];
+  if (!safeGenerationId(generationId)) return { ok: false, diagnostics: [diagnostic("unsafe-path", "generation")] };
+  const generationPrefix = `generations/${generationId}`;
+  const manifestPath = `${generationPrefix}/manifest.json`;
+  const entryPath = `${generationPrefix}/ENTRY.md`;
+  const manifestBytes = await readLiteralBytes(root, `${CODEBASE_ROOT}/${manifestPath}`, limits.manifestBytes);
+  if (!manifestBytes.ok) return { ok: false, diagnostics: [fixedReadDiagnostic("manifest", manifestBytes)] };
+  const manifest = parsedJson(manifestBytes.bytes, (value) => parseSafe(portableGenerationManifestSchema, value));
+  if (!manifest || manifest.generationId !== generationId) return { ok: false, diagnostics: [diagnostic("invalid", "manifest")] };
+  if (manifest.inventoryShards.length > limits.generationFiles || manifest.checksums.pages.length > limits.generationFiles) {
+    return { ok: false, diagnostics: [diagnostic("resource-limit", "generation")] };
+  }
+  const entryRead = await readPage(root, `${CODEBASE_ROOT}/${entryPath}`, limits.entryBytes, diagnostics, "entry");
+  const entry = entryRead ? { ...entryRead, path: entryPath } : null;
+  if (!entry || sha256(entry.bytes) !== manifest.checksums.entry) {
+    if (entry) addDiagnostic(diagnostics, diagnostic("checksum-mismatch", "entry"));
+    return { ok: false, diagnostics };
+  }
+  const pages = /* @__PURE__ */ new Map();
+  let totalBytes = byteLength2(entry.bytes) + byteLength2(manifestBytes.bytes);
+  for (const checksum of manifest.checksums.pages) {
+    if (!pathInGeneration(checksum.path, generationId) || checksum.path.endsWith("/manifest.json") || checksum.path.endsWith("/ENTRY.md")) {
+      addDiagnostic(diagnostics, diagnostic("unsafe-path", "page"));
+      continue;
+    }
+    if (pages.has(checksum.path)) {
+      addDiagnostic(diagnostics, diagnostic("duplicate-authority", "page"));
+      continue;
+    }
+    const pageRead = await readPage(root, `${CODEBASE_ROOT}/${checksum.path}`, limits.pageBytes, diagnostics);
+    if (!pageRead) continue;
+    const page = { ...pageRead, path: checksum.path };
+    totalBytes += byteLength2(page.bytes);
+    if (totalBytes > limits.generationBytes) {
+      addDiagnostic(diagnostics, diagnostic("resource-limit", "generation"));
+      break;
+    }
+    if (page.hash !== checksum.checksum) addDiagnostic(diagnostics, diagnostic("checksum-mismatch", "page"));
+    pages.set(checksum.path, page);
+  }
+  if (diagnostics.length > 0) return { ok: false, diagnostics };
+  const structural = /* @__PURE__ */ new Map();
+  const files = /* @__PURE__ */ new Map();
+  const symbols = /* @__PURE__ */ new Map();
+  const imports = /* @__PURE__ */ new Map();
+  const relationships = /* @__PURE__ */ new Map();
+  const details = /* @__PURE__ */ new Map();
+  const semanticPages = /* @__PURE__ */ new Map();
+  const semanticParts = /* @__PURE__ */ new Map();
+  const indexEntries = /* @__PURE__ */ new Map();
+  const recognizedSemanticPaths = /* @__PURE__ */ new Set();
+  const inventoryPaths = new Set(manifest.inventoryShards.map((item) => item.path));
+  let recordCount = 0;
+  let fragmentCount = 0;
+  for (const shardManifest of manifest.inventoryShards) {
+    if (!pathInGeneration(shardManifest.path, generationId)) {
+      addDiagnostic(diagnostics, diagnostic("unsafe-path", "records"));
+      continue;
+    }
+    const page = pages.get(shardManifest.path);
+    if (!page || page.hash !== shardManifest.checksum) {
+      addDiagnostic(diagnostics, page ? diagnostic("checksum-mismatch", "page") : diagnostic("invalid", "records"));
+      continue;
+    }
+    const parsed = parsedJson(page.bytes, (value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+      const candidate = value;
+      if (candidate.generationId !== generationId || candidate.shardId !== shardManifest.shardId || candidate.recordKind !== shardManifest.recordKind || !Array.isArray(candidate.records)) return null;
+      return candidate;
+    });
+    if (!parsed || !isRecordKind(parsed.recordKind) || !Array.isArray(parsed.records) || parsed.records.length !== shardManifest.recordCount || byteLength2(page.bytes) !== shardManifest.byteSize) {
+      addDiagnostic(diagnostics, diagnostic("invalid", "records"));
+      continue;
+    }
+    const schema2 = recordTypeFor(parsed.recordKind);
+    const records = parsed.records;
+    for (const item of records) {
+      const checked = parseSafe(schema2, item);
+      if (!checked) {
+        addDiagnostic(diagnostics, diagnostic("invalid", "records"));
+        continue;
+      }
+      recordCount += 1;
+      if (recordCount > limits.records) {
+        addDiagnostic(diagnostics, diagnostic("resource-limit", "records"));
+        break;
+      }
+      const id = checked.id;
+      if (structural.has(id)) {
+        addDiagnostic(diagnostics, diagnostic("duplicate-authority", "records"));
+        continue;
+      }
+      const entry2 = { kind: parsed.recordKind, record: checked, page };
+      structural.set(id, entry2);
+      if (parsed.recordKind === "files") files.set(id, checked);
+      else if (parsed.recordKind === "symbols") symbols.set(id, checked);
+      else if (parsed.recordKind === "imports") imports.set(id, checked);
+      else if (parsed.recordKind === "relationships") relationships.set(id, checked);
+      else details.set(id, checked);
+    }
+  }
+  for (const page of pages.values()) {
+    if (!page.path.includes("/data/")) continue;
+    const semanticShard = parsePortableSemanticShard(page.body);
+    if (semanticShard && semanticShard.generationId !== generationId) {
+      addDiagnostic(diagnostics, diagnostic("duplicate-authority", "semantic"));
+    } else if (semanticShard) {
+      recognizedSemanticPaths.add(page.path);
+      if (semanticPages.has(page.path)) addDiagnostic(diagnostics, diagnostic("duplicate-authority", "semantic"));
+      semanticPages.set(page.path, { shard: semanticShard, page });
+      for (const fragment of semanticShard.records) {
+        fragmentCount += 1;
+        if (fragmentCount > limits.semanticFragments) {
+          addDiagnostic(diagnostics, diagnostic("resource-limit", "semantic"));
+          break;
+        }
+        const key2 = `${fragment.kind}\0${fragment.recordId}`;
+        const list = semanticParts.get(key2) ?? [];
+        list.push({ fragment, page });
+        semanticParts.set(key2, list);
+      }
+      continue;
+    }
+    const semanticIndex = parsePortableSemanticIndex(page.body);
+    if (semanticIndex && semanticIndex.generationId !== generationId) {
+      addDiagnostic(diagnostics, diagnostic("duplicate-authority", "semantic"));
+    } else if (semanticIndex) {
+      recognizedSemanticPaths.add(page.path);
+      for (const entry2 of semanticIndex.entries) {
+        const key2 = `${entry2.kind}\0${entry2.recordId}`;
+        if (indexEntries.has(key2)) addDiagnostic(diagnostics, diagnostic("duplicate-authority", "semantic"));
+        indexEntries.set(key2, entry2);
+      }
+    }
+  }
+  for (const page of pages.values()) {
+    if (page.path.includes("/data/") && !inventoryPaths.has(page.path) && !recognizedSemanticPaths.has(page.path)) {
+      addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+    }
+  }
+  if (diagnostics.length > 0) return { ok: false, diagnostics };
+  if (!validateRecordReferences(structural, files, symbols, imports, relationships, details, diagnostics)) return { ok: false, diagnostics };
+  const semantic = /* @__PURE__ */ new Map();
+  for (const [key2, entries] of semanticParts) {
+    const parts = entries.map((item) => item.fragment);
+    const partCount = parts[0]?.partCount ?? 0;
+    const indexes = /* @__PURE__ */ new Set();
+    if (!parts.every((item) => item.partCount === partCount && !indexes.has(item.partIndex) && indexes.add(item.partIndex))) {
+      addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+      continue;
+    }
+    const record2 = mergeSemanticParts(parts);
+    if (!record2 || !verifySemanticEvidence(record2, structural, files, symbols, imports, relationships, diagnostics)) continue;
+    const index = indexEntries.get(key2);
+    if (!index || index.partCount !== partCount || index.evidenceCount !== record2.evidence.length || index.firstPath !== entries.find((item) => item.fragment.partIndex === 0)?.page.path || index.contentHash !== sha256(new TextEncoder().encode(JSON.stringify(record2)))) {
+      addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+      continue;
+    }
+    semantic.set(key2, { record: record2, parts, pages: [...new Map(entries.map((item) => [item.page.path, item.page])).values()] });
+  }
+  for (const key2 of semantic.keys()) {
+    const id = key2.slice(key2.indexOf("\0") + 1);
+    if (structural.has(id)) addDiagnostic(diagnostics, diagnostic("duplicate-authority", "semantic"));
+  }
+  for (const item of semantic.values()) {
+    if ("claimIds" in item.record) {
+      for (const claimId of item.record.claimIds) if (!semantic.has(`claim\0${claimId}`)) addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+    }
+    if ("targetKind" in item.record) {
+      const targetExists = item.record.targetKind === "capability" ? semantic.has(`capability\0${item.record.targetId}`) : symbols.has(item.record.targetId);
+      if (!targetExists) addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+    }
+  }
+  if (semantic.size !== indexEntries.size || semantic.size !== semanticParts.size) addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+  const fragmentByPath = /* @__PURE__ */ new Map();
+  for (const item of semanticPages.values()) fragmentByPath.set(item.page.path, item.shard.records);
+  for (const item of semanticPages.values()) for (const fragment of item.shard.records) {
+    const key2 = `${fragment.kind}\0${fragment.recordId}`;
+    const target = (pathValue, delta) => {
+      if (pathValue === null) return true;
+      if (!pathInGeneration(pathValue, generationId)) return false;
+      const candidates = fragmentByPath.get(pathValue) ?? [];
+      return candidates.some((other) => other.kind === fragment.kind && other.recordId === fragment.recordId && other.partIndex === fragment.partIndex + delta);
+    };
+    if (!target(fragment.continuation.previous, -1) || !target(fragment.continuation.next, 1) || !semantic.has(key2)) addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+  }
+  const indexPages = [...pages.values()].filter((page) => page.path.includes("/data/semantic-index-"));
+  if (indexPages.length > 0) {
+    const indexByPath = /* @__PURE__ */ new Map();
+    for (const page of indexPages) indexByPath.set(page.path, parsePortableSemanticIndex(page.body));
+    const first = indexPages.find((page) => indexByPath.get(page.path)?.continuation.previous === null);
+    if (!first) addDiagnostic(diagnostics, diagnostic("cycle", "semantic"));
+    else {
+      const seen = /* @__PURE__ */ new Set();
+      let current = first.path;
+      while (current) {
+        if (seen.has(current)) {
+          addDiagnostic(diagnostics, diagnostic("cycle", "semantic"));
+          break;
+        }
+        seen.add(current);
+        const page = indexByPath.get(current);
+        if (!page) {
+          addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+          break;
+        }
+        const next = page.continuation.next;
+        if (next !== null && (!pathInGeneration(next, generationId) || !indexByPath.has(next))) {
+          addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+          break;
+        }
+        if (next && indexByPath.get(next)?.continuation.previous !== current) addDiagnostic(diagnostics, diagnostic("invalid", "semantic"));
+        current = next;
+      }
+      if (seen.size !== indexPages.length) addDiagnostic(diagnostics, diagnostic("duplicate-authority", "semantic"));
+    }
+  }
+  if (diagnostics.length > 0) return { ok: false, diagnostics };
+  if (manifest.structuralCoverage.filesInventoried !== files.size || manifest.structuralCoverage.filesWithFullCoverage !== [...files.values()].filter((item) => item.coverageStatus === "full").length || manifest.structuralCoverage.filesWithFileCoverage !== [...files.values()].filter((item) => item.coverageStatus === "file").length || manifest.structuralCoverage.symbolsExtracted !== symbols.size || manifest.structuralCoverage.importsExtracted !== imports.size || manifest.structuralCoverage.relationshipsExtracted !== relationships.size || manifest.semanticCoverage.capabilitiesAccepted !== [...semantic.values()].filter((item) => "name" in item.record).length || manifest.semanticCoverage.claimsAccepted !== [...semantic.values()].filter((item) => "statement" in item.record).length || manifest.semanticCoverage.aliasesAccepted !== [...semantic.values()].filter((item) => "alias" in item.record).length || manifest.semanticCoverage.evidenceDependencies !== manifest.evidenceDependencies.length) {
+    addDiagnostic(diagnostics, diagnostic("invalid", "manifest"));
+  }
+  if (diagnostics.length > 0) return { ok: false, diagnostics };
+  void predecessorMode;
+  return { ok: true, value: { generationId, manifest, manifestHash: sha256(manifestBytes.bytes), entry, pages, structural, files, symbols, imports, relationships, details, semantic, semanticPages, semanticIndex: indexEntries } };
+}
+async function readMarker(root, limits, diagnostics) {
+  const result = await readLiteralBytes(root, PUBLICATION_MARKER_PATH, limits.manifestBytes);
+  if (!result.ok) {
+    if (result.reason === "missing") return { kind: "none" };
+    addDiagnostic(diagnostics, diagnostic(result.reason === "unsafe-path" ? "unsafe-path" : "invalid", "marker"));
+    return { kind: "unknown" };
+  }
+  const marker = parsedJson(result.bytes, (value) => {
+    return parseSafe(portablePublicationMarkerSchema, value);
+  });
+  if (!marker) {
+    addDiagnostic(diagnostics, diagnostic("unsupported", "marker"));
+    return { kind: "unknown" };
+  }
+  return { kind: "valid", marker };
+}
+async function readNavigationInternal(root, options = {}) {
+  const limits = limitsOf(options.limits);
+  const diagnostics = [];
+  const index = await readLiteralBytes(root, INDEX_PATH, limits.indexBytes);
+  if (!index.ok) {
+    if (index.reason === "missing") return { indexBody: "", indexHash: "", descriptor: null, marker: { kind: "none" }, active: null, portableState: "absent", diagnostics: [diagnostic("missing", "index")] };
+    return { indexBody: "", indexHash: "", descriptor: null, marker: { kind: "none" }, active: null, portableState: index.reason === "unsafe-path" ? "unsupported" : "invalid", diagnostics: [fixedReadDiagnostic("index", index)] };
+  }
+  const indexBody = decodeUtf8(index.bytes);
+  if (indexBody === null) return { indexBody: "", indexHash: sha256(index.bytes), descriptor: null, marker: { kind: "none" }, active: null, portableState: "invalid", diagnostics: [diagnostic("invalid", "index")] };
+  const descriptor = parsePortableRootDescriptor(indexBody);
+  if (!descriptor) return { indexBody, indexHash: sha256(index.bytes), descriptor: null, marker: { kind: "none" }, active: null, portableState: "invalid", diagnostics: [diagnostic("invalid", "index")] };
+  if (!safeGenerationId(descriptor.generationId) || !pathInGeneration(descriptor.manifest.path, descriptor.generationId) || !pathInGeneration(descriptor.entry.path, descriptor.generationId)) {
+    return { indexBody, indexHash: sha256(index.bytes), descriptor, marker: { kind: "none" }, active: null, portableState: "invalid", diagnostics: [diagnostic("unsafe-path", "index")] };
+  }
+  const marker = await readMarker(root, limits, diagnostics);
+  const verified = await verifyGeneration(root, descriptor.generationId, options.limits, false);
+  if (!verified.ok) {
+    return { indexBody, indexHash: sha256(index.bytes), descriptor, marker, active: null, portableState: marker.kind === "unknown" ? "unsupported" : "invalid", diagnostics: [...diagnostics, ...verified.diagnostics] };
+  }
+  if (verified.value.manifestHash !== descriptor.manifest.sha256 || verified.value.entry.hash !== descriptor.entry.sha256) {
+    addDiagnostic(diagnostics, diagnostic("checksum-mismatch", "index"));
+    return { indexBody, indexHash: sha256(index.bytes), descriptor, marker, active: null, portableState: "invalid", diagnostics };
+  }
+  if (marker.kind === "valid") {
+    const current = marker.marker;
+    const generationIsPrevious = current.previousGenerationId === descriptor.generationId;
+    const generationIsNext = current.generationId === descriptor.generationId;
+    if (!generationIsPrevious && !generationIsNext) {
+      addDiagnostic(diagnostics, diagnostic("duplicate-authority", "marker"));
+      return { indexBody, indexHash: sha256(index.bytes), descriptor, marker, active: null, portableState: "unsupported", diagnostics };
+    }
+  } else if (marker.kind === "unknown") {
+    return { indexBody, indexHash: sha256(index.bytes), descriptor, marker, active: verified.value, portableState: "unsupported", diagnostics };
+  }
+  const compatibility = await verifyCompatibility(root, verified.value, limits, diagnostics);
+  void compatibility;
+  return { indexBody, indexHash: sha256(index.bytes), descriptor, marker, active: verified.value, portableState: "valid", diagnostics };
+}
+async function verifyCompatibility(root, generation, limits, diagnostics) {
+  let present = 0;
+  let matching = 0;
+  for (const id of CODEBASE_DOCUMENT_IDS) {
+    const relativePath = `${CODEBASE_ROOT}/${id.toUpperCase()}.md`;
+    const result = await readLiteralBytes(root, relativePath, limits.compatibilityBytes);
+    if (!result.ok) {
+      if (result.reason === "missing") continue;
+      addDiagnostic(diagnostics, fixedReadDiagnostic("compatibility", result));
+      continue;
+    }
+    present += 1;
+    if (sha256(result.bytes) === generation.manifest.checksums.compatibility[id]) matching += 1;
+    else addDiagnostic(diagnostics, diagnostic("checksum-mismatch", "compatibility"));
+  }
+  if (present === 0) return "absent";
+  return matching === CODEBASE_DOCUMENT_IDS.length ? "matching" : "mismatch";
+}
+async function verifyRetainedLineage(root, active, requestedGenerationId, options) {
+  if (requestedGenerationId === active.generationId) return { ok: true, value: active };
+  const limits = limitsOf(options.limits);
+  const diagnostics = [];
+  const seen = /* @__PURE__ */ new Set([active.generationId]);
+  let current = active;
+  for (let depth = 0; depth < limits.predecessorDepth; depth += 1) {
+    const predecessorId = current.manifest.predecessorGenerationId;
+    const proof = current.manifest.predecessorPublicationProof;
+    if (!predecessorId || !proof || proof.generationId !== predecessorId) {
+      addDiagnostic(diagnostics, diagnostic("not-found", "predecessor"));
+      return { ok: false, diagnostics };
+    }
+    if (seen.has(predecessorId)) {
+      addDiagnostic(diagnostics, diagnostic("cycle", "predecessor"));
+      return { ok: false, diagnostics };
+    }
+    seen.add(predecessorId);
+    const next = await verifyGeneration(root, predecessorId, options.limits, true);
+    if (!next.ok) return next;
+    if (next.value.manifestHash !== proof.manifest.checksum || next.value.entry.hash !== proof.entry.checksum) {
+      addDiagnostic(diagnostics, diagnostic("checksum-mismatch", "predecessor"));
+      return { ok: false, diagnostics };
+    }
+    if (predecessorId === requestedGenerationId) return next;
+    current = next.value;
+  }
+  return { ok: false, diagnostics: [diagnostic("resource-limit", "predecessor")] };
+}
+function fallbackReasonFor(state) {
+  return state === "absent" ? "absent" : state === "unsupported" ? "unsupported" : "invalid";
+}
+function fallbackGuidance() {
+  return "Use ordinary bounded live-source discovery; the portable bundle is not an evidence authority.";
+}
+function markerGuard(marker, active) {
+  if (marker.kind === "unknown") return "unknown";
+  if (marker.kind === "valid" || !active) return marker.kind === "valid" ? "blocked" : "open";
+  return "open";
+}
+async function resolveCodebaseNavigation(root, options = {}) {
+  const internal = await readNavigationInternal(root, options);
+  const requested = options.requestedGenerationId;
+  let active = internal.active;
+  let diagnostics = [...internal.diagnostics];
+  if (active && requested && requested !== active.generationId) {
+    const retained = await verifyRetainedLineage(root, active, requested, options);
+    if (!retained.ok) {
+      diagnostics.push(...retained.diagnostics);
+      return {
+        status: "fallback",
+        portable: { status: "unsupported", generationId: requested },
+        entry: null,
+        immutable: null,
+        pin: null,
+        coverage: null,
+        compatibility: { status: "unknown", guard: markerGuard(internal.marker, false) },
+        fallback: { used: true, reason: retained.diagnostics.some((item) => item.code === "not-found") ? "not-found" : "unsupported", guidance: fallbackGuidance() },
+        fallbackUsed: true,
+        fallbackReason: retained.diagnostics.some((item) => item.code === "not-found") ? "not-found" : "unsupported",
+        fallbackGuidance: fallbackGuidance(),
+        diagnostics
+      };
+    }
+    active = retained.value;
+  }
+  if (!active || internal.portableState !== "valid") {
+    const state = internal.portableState === "valid" ? "invalid" : internal.portableState;
+    const reason = fallbackReasonFor(state);
+    return {
+      status: "fallback",
+      portable: { status: state, generationId: internal.descriptor?.generationId ?? null },
+      entry: null,
+      immutable: null,
+      pin: null,
+      coverage: null,
+      compatibility: { status: "unknown", guard: markerGuard(internal.marker, false) },
+      fallback: { used: true, reason, guidance: fallbackGuidance() },
+      fallbackUsed: true,
+      fallbackReason: reason,
+      fallbackGuidance: fallbackGuidance(),
+      diagnostics
+    };
+  }
+  const limits = limitsOf(options.limits);
+  const compatibilityDiagnostics = [];
+  const compatibilityStatus = await verifyCompatibility(root, active, limits, compatibilityDiagnostics);
+  diagnostics = [...diagnostics, ...compatibilityDiagnostics];
+  const activeEntryPath = `generations/${active.generationId}/ENTRY.md`;
+  const activeManifestPath = `generations/${active.generationId}/manifest.json`;
+  const pin = {
+    generationId: active.generationId,
+    entry: { path: activeEntryPath, sha256: active.entry.hash },
+    manifest: { path: activeManifestPath, sha256: active.manifestHash }
+  };
+  return {
+    status: "ok",
+    portable: { status: "valid", generationId: active.generationId },
+    entry: { path: activeEntryPath, body: active.entry.body, sha256: active.entry.hash },
+    immutable: pin,
+    pin,
+    coverage: { structural: active.manifest.structuralCoverage, semantic: active.manifest.semanticCoverage },
+    compatibility: { status: compatibilityStatus, guard: markerGuard(internal.marker, true) },
+    fallback: { used: false, reason: "none", guidance: "Read selected map pages and verify current source before relying on a generated claim." },
+    fallbackUsed: false,
+    fallbackReason: "none",
+    fallbackGuidance: "Read selected map pages and verify current source before relying on a generated claim.",
+    diagnostics
+  };
+}
+async function resolveCodebaseSealedMember(root, relativePath) {
+  const prefix = `${CODEBASE_ROOT}/generations/`;
+  if (!relativePath.startsWith(prefix)) return false;
+  const suffix = relativePath.slice(prefix.length);
+  const separator = suffix.indexOf("/");
+  if (separator <= 0) return false;
+  const generationId = suffix.slice(0, separator);
+  const member = suffix.slice(separator + 1);
+  if (!safeGenerationId(generationId) || !member || !safeRelativePath(relativePath)) return false;
+  const internal = await readNavigationInternal(root);
+  if (!internal.active || internal.portableState !== "valid") return false;
+  let generation = internal.active;
+  if (generationId !== generation.generationId) {
+    const retained = await verifyRetainedLineage(root, generation, generationId, {});
+    if (!retained.ok) return false;
+    generation = retained.value;
+  }
+  const generationRelative = `generations/${generationId}/${member}`;
+  let expected = null;
+  if (member === "ENTRY.md") expected = generation.entry.hash;
+  else if (member === "manifest.json") expected = generation.manifestHash;
+  else expected = expectedChecksum(generation.manifest, generationRelative);
+  if (!expected) return false;
+  const bytes = await readLiteralBytes(root, `${CODEBASE_ROOT}/${generationRelative}`, DEFAULT_LIMITS.pageBytes * 256);
+  return bytes.ok && sha256(bytes.bytes) === expected;
+}
+var CODEBASE_ROOT, INDEX_PATH, PUBLICATION_MARKER_PATH, MAX_DIAGNOSTICS, DEFAULT_LIMITS, DIAGNOSTIC_MESSAGES;
+var init_resolver = __esm({
+  "src/mcp/codebase-index/resolver.ts"() {
+    "use strict";
+    init_v4();
+    init_codebase_authoring();
+    init_contracts();
+    init_render();
+    CODEBASE_ROOT = ".blueprint/codebase";
+    INDEX_PATH = `${CODEBASE_ROOT}/INDEX.md`;
+    PUBLICATION_MARKER_PATH = `${CODEBASE_ROOT}/.publication.json`;
+    MAX_DIAGNOSTICS = 32;
+    DEFAULT_LIMITS = {
+      indexBytes: 4 * 1024,
+      entryBytes: 4 * 1024,
+      manifestBytes: 8 * 1024 * 1024,
+      pageBytes: 32 * 1024,
+      compatibilityBytes: 2 * 1024 * 1024,
+      generationFiles: 1e5,
+      generationBytes: 128 * 1024 * 1024,
+      records: 1e5,
+      semanticFragments: 1e5,
+      predecessorDepth: 32
+    };
+    DIAGNOSTIC_MESSAGES = {
+      missing: "The portable map is unavailable.",
+      invalid: "The portable map failed its fixed contract.",
+      unsupported: "The portable map uses an unsupported format or state.",
+      "unsafe-path": "The portable map contains an unsafe path.",
+      "checksum-mismatch": "The portable map contains bytes that do not match its sealed checksum.",
+      cycle: "The portable map contains a cyclic publication or continuation link.",
+      "duplicate-authority": "The portable map contains conflicting authorities.",
+      "resource-limit": "The portable map exceeds a fixed resolver resource limit.",
+      stale: "The portable map publication basis is stale or guarded.",
+      "not-found": "The requested retained generation or evidence was not found."
+    };
+  }
+});
+
+// src/mcp/tools/plan-publication.ts
+import { createHash as createHash3 } from "node:crypto";
+import { promises as fs2 } from "node:fs";
+import path7 from "node:path";
 async function readPlanPublicationStatus(projectRoot, phaseDir2, phasePrefix2) {
   const invalid = (reason, token = "invalid") => ({
     status: "invalid",
@@ -26328,29 +27825,29 @@ async function readPlanPublicationStatus(projectRoot, phaseDir2, phasePrefix2) {
   if (!/^\.blueprint\/phases\/[^/]+$/.test(phaseDir2) || phaseDir2.split("/").some((part) => part === "." || part === "..") || !/^\d+(?:\.\d+)*$/.test(phasePrefix2)) {
     return invalid("Invalid plan publication scope.");
   }
-  const marker = path6.join(projectRoot, phaseDir2, `${phasePrefix2}-PLAN-PUBLICATION.json`);
+  const marker = path7.join(projectRoot, phaseDir2, `${phasePrefix2}-PLAN-PUBLICATION.json`);
   try {
     const stat = await fs2.lstat(marker);
     if (!stat.isFile() || stat.size > 1024 * 1024) {
       return invalid("Plan publication marker must be a bounded regular file.");
     }
     const [realParent, realRoot] = await Promise.all([
-      fs2.realpath(path6.dirname(marker)),
+      fs2.realpath(path7.dirname(marker)),
       fs2.realpath(projectRoot)
     ]);
-    const relative = path6.relative(realRoot, realParent);
-    if (relative.startsWith(`..${path6.sep}`) || relative === ".." || path6.isAbsolute(relative)) {
+    const relative = path7.relative(realRoot, realParent);
+    if (relative.startsWith(`..${path7.sep}`) || relative === ".." || path7.isAbsolute(relative)) {
       return invalid("Plan publication marker escapes the repository.");
     }
     const raw = await fs2.readFile(marker, "utf8");
-    const token = createHash("sha256").update(raw).digest("hex");
+    const token = createHash3("sha256").update(raw).digest("hex");
     let data;
     try {
       data = JSON.parse(raw);
     } catch {
       return invalid("Plan publication marker is malformed; resume planning before execution.", token);
     }
-    const canonicalPlan = (value) => typeof value === "string" && path6.posix.dirname(value) === phaseDir2 && new RegExp(`^${phasePrefix2.replace(/\./g, "\\.")}-\\d+-PLAN\\.md$`).test(path6.posix.basename(value));
+    const canonicalPlan = (value) => typeof value === "string" && path7.posix.dirname(value) === phaseDir2 && new RegExp(`^${phasePrefix2.replace(/\./g, "\\.")}-\\d+-PLAN\\.md$`).test(path7.posix.basename(value));
     if (!data || typeof data !== "object" || data.version !== 1 || typeof data.status !== "string" || !["pending", "committed"].includes(data.status) || typeof data.requestId !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(data.requestId) || !Number.isSafeInteger(data.revision) || Number(data.revision) < 0 || !Array.isArray(data.files) || !data.files.every((file2) => file2 && typeof file2 === "object" && canonicalPlan(file2.path) && typeof file2.hash === "string" && /^[a-f0-9]{64}$/.test(file2.hash)) || !Array.isArray(data.removedPaths) || !data.removedPaths.every(canonicalPlan)) {
       return invalid("Plan publication marker is invalid; resume planning before execution.", token);
     }
@@ -26373,11 +27870,11 @@ var init_plan_publication = __esm({
 });
 
 // src/mcp/tools/research-evidence.ts
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash4 } from "node:crypto";
 import { promises as fs3 } from "node:fs";
-import path7 from "node:path";
+import path8 from "node:path";
 function canonicalResearchEvidencePath(root, relative) {
-  return path7.relative(root, resolveRepoRelativeInputPathSync(root, relative)).split(path7.sep).join("/");
+  return path8.relative(root, resolveRepoRelativeInputPathSync(root, relative)).split(path8.sep).join("/");
 }
 async function readResearchEvidence(root, relative, maxBytes = 256 * 1024) {
   await assertCodebasePublicationComplete(root, relative);
@@ -26454,14 +27951,14 @@ var init_research_evidence = __esm({
     init_artifacts();
     init_security();
     init_config();
-    researchDigest = (value) => createHash2("sha256").update(value).digest("hex");
+    researchDigest = (value) => createHash4("sha256").update(value).digest("hex");
     stableResearchValue = (value) => JSON.stringify(value, (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.keys(item).sort().map((key2) => [key2, item[key2]])) : item);
   }
 });
 
 // src/mcp/tools/quality-gates.ts
 import fs4 from "node:fs/promises";
-import path8 from "node:path";
+import path9 from "node:path";
 function normalizePhasePrefix(args) {
   return args.phasePrefix?.trim() || formatBlueprintPhasePrefix(args.phaseNumber);
 }
@@ -26597,7 +28094,7 @@ async function resolveExistingRepoFiles(args) {
       warnings.push(`Skipped wildcard quality-gate path from ${args.source}: ${candidate}`);
       continue;
     }
-    if (path8.isAbsolute(candidate)) {
+    if (path9.isAbsolute(candidate)) {
       warnings.push(`Skipped absolute quality-gate path from ${args.source}: ${candidate}`);
       continue;
     }
@@ -27050,7 +28547,7 @@ function savedReviewFollowUpCommandName(args) {
   return commandName;
 }
 function isReviewableConfigPath(relativePath) {
-  const basename = path8.posix.basename(relativePath);
+  const basename = path9.posix.basename(relativePath);
   if (REVIEWABLE_FILENAMES.has(basename)) {
     return true;
   }
@@ -27061,7 +28558,7 @@ function isReviewableRepoFile(relativePath) {
   if (normalized.length === 0 || normalized.startsWith(`${BLUEPRINT_DIR}/`) || normalized.startsWith("dist/")) {
     return false;
   }
-  const extension = path8.posix.extname(normalized);
+  const extension = path9.posix.extname(normalized);
   if (extension === ".md") {
     return false;
   }
@@ -27753,7 +29250,7 @@ var init_quality_gates = __esm({
 
 // src/mcp/tools/phase-locations.ts
 import { promises as fs5 } from "node:fs";
-import path9 from "node:path";
+import path10 from "node:path";
 async function pathExists(targetPath) {
   try {
     await fs5.access(targetPath);
@@ -27796,7 +29293,7 @@ async function listPhaseArtifacts2(rootPath, projectRoot) {
   const entries = await fs5.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path9.join(rootPath, entry.name);
+    const absolutePath = path10.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listPhaseArtifacts2(absolutePath, projectRoot));
       continue;
@@ -27832,7 +29329,7 @@ async function findPhaseDirectory(projectRoot, phaseNumber) {
     };
   }
   return {
-    phaseDir: toRepoRelativePath(projectRoot, path9.join(phasesRoot, matches[0])),
+    phaseDir: toRepoRelativePath(projectRoot, path10.join(phasesRoot, matches[0])),
     reason: null
   };
 }
@@ -31045,7 +32542,7 @@ var init_state = __esm({
 });
 
 // src/mcp/tools/phase-checkpoint-freshness.ts
-import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash5 } from "node:crypto";
 import { promises as fs7 } from "node:fs";
 async function evaluateCheckpointFreshness(projectRoot, checkpoint) {
   const result = {
@@ -31087,7 +32584,7 @@ async function evaluateCheckpointFreshness(projectRoot, checkpoint) {
         result.unknownPaths.push(inputPath);
         continue;
       }
-      const unchanged = expectedHash ? createHash3("sha256").update(await fs7.readFile(absolutePath)).digest("hex") === expectedHash : stat.mtime.getTime() === expectedTime;
+      const unchanged = expectedHash ? createHash5("sha256").update(await fs7.readFile(absolutePath)).digest("hex") === expectedHash : stat.mtime.getTime() === expectedTime;
       if (!unchanged) result.stalePaths.push(inputPath);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -31784,7 +33281,7 @@ var init_phase_roadmap_mutations = __esm({
 });
 
 // src/mcp/tools/phase-resolution.ts
-import path10 from "node:path";
+import path11 from "node:path";
 function buildLocateRecovery(reason) {
   if (!reason) {
     return [];
@@ -31813,7 +33310,7 @@ function buildLocateRecovery(reason) {
   ];
 }
 function fallbackPhaseName(phaseDir2) {
-  return slugToTitle(path10.basename(phaseDir2).replace(/^\d+(?:\.\d+)?-/, ""));
+  return slugToTitle(path11.basename(phaseDir2).replace(/^\d+(?:\.\d+)?-/, ""));
 }
 function toResolvedPhaseLocation(located) {
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
@@ -32548,7 +34045,7 @@ function validatePhaseContextModelInput(model, defaults) {
       model: null,
       validation: {
         valid: false,
-        issues: diagnostics.map((diagnostic) => diagnostic.message),
+        issues: diagnostics.map((diagnostic2) => diagnostic2.message),
         warnings: [],
         diagnostics
       }
@@ -32565,7 +34062,7 @@ function validatePhaseContextModelInput(model, defaults) {
       model: null,
       validation: {
         valid: false,
-        issues: diagnostics.map((diagnostic) => diagnostic.message),
+        issues: diagnostics.map((diagnostic2) => diagnostic2.message),
         warnings: [],
         diagnostics
       }
@@ -32616,7 +34113,7 @@ var init_phase_context_model = __esm({
 });
 
 // src/mcp/tools/phase-artifacts.ts
-import { createHash as createHash4 } from "node:crypto";
+import { createHash as createHash6 } from "node:crypto";
 import { promises as fs9 } from "node:fs";
 function isScaffoldGeneratedPhaseArtifact(content) {
   return isScaffoldGeneratedArtifact(content);
@@ -32753,9 +34250,9 @@ async function blueprintPhaseArtifactScaffold(args) {
   );
 }
 function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
-  const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "warning");
+  const errorDiagnostics = diagnostics.filter((diagnostic2) => diagnostic2.severity !== "warning");
   if (errorDiagnostics.length > 0) {
-    return [...new Set(errorDiagnostics.map((diagnostic) => diagnostic.repair))];
+    return [...new Set(errorDiagnostics.map((diagnostic2) => diagnostic2.repair))];
   }
   if (artifact === "research") {
     return [
@@ -32777,11 +34274,11 @@ function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
   ];
 }
 function phaseArtifactRetryPlan(artifact, diagnostics) {
-  const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "warning");
+  const errorDiagnostics = diagnostics.filter((diagnostic2) => diagnostic2.severity !== "warning");
   const suggestedRepairs = phaseArtifactSuggestedRepairs(artifact, errorDiagnostics);
   const command = artifact === "context" || artifact === "discussion-log" ? "/blu-discuss-phase" : artifact === "research" ? "/blu-research-phase" : artifact === "spec" ? "/blu-spec-phase" : "/blu-ui-phase";
   return {
-    retryable: errorDiagnostics.length === 0 || errorDiagnostics.every((diagnostic) => diagnostic.retryable),
+    retryable: errorDiagnostics.length === 0 || errorDiagnostics.every((diagnostic2) => diagnostic2.retryable),
     nextTool: "blueprint_phase_artifact_write",
     steps: [
       `Read blueprint_artifact_contract_read for phase.${artifact === "discussion-log" ? "discussion-log" : artifact}.`,
@@ -32944,7 +34441,7 @@ async function blueprintPhaseArtifactWrite(args) {
       return withBlueprintRepoLock(projectRoot, "phase-artifact-write", async () => {
         const exists3 = await pathExists(absolutePath);
         if (args.expectedContentHash !== void 0) {
-          const actualHash = exists3 ? createHash4("sha256").update(await fs9.readFile(absolutePath)).digest("hex") : null;
+          const actualHash = exists3 ? createHash6("sha256").update(await fs9.readFile(absolutePath)).digest("hex") : null;
           if (actualHash !== args.expectedContentHash) throw new Error(`Stale artifact baseline: ${artifactPath3}. Refresh and explicitly reconcile before publishing.`);
         }
         const warnings = [];
@@ -33160,7 +34657,7 @@ var init_phase_artifacts = __esm({
 });
 
 // src/mcp/tools/phase-plan-identifiers.ts
-import path11 from "node:path";
+import path12 from "node:path";
 function normalizePlanId(value) {
   const normalizedInput = normalizeBlueprintInput(value).trim();
   if (/^0+$/.test(normalizedInput)) {
@@ -33175,10 +34672,10 @@ function parsePlanArtifactPath(pathValue, phasePrefix2) {
   return match ? normalizePlanId(match[1]) : null;
 }
 function parseCanonicalPlanArtifactPath(pathValue, located) {
-  if (path11.posix.dirname(pathValue) !== located.phaseDir) {
+  if (path12.posix.dirname(pathValue) !== located.phaseDir) {
     return null;
   }
-  const match = path11.posix.basename(pathValue).match(
+  const match = path12.posix.basename(pathValue).match(
     new RegExp(`^${escapeForRegex2(located.phasePrefix)}-(\\d+)-PLAN\\.md$`)
   );
   return match ? normalizePlanId(match[1]) : null;
@@ -33883,7 +35380,7 @@ async function buildPhaseResearchStatusFromContext(projectRoot, context) {
   }
   const suggestedRepairs = [];
   const bootstrapStarterContext = contextStatus.diagnostics.some(
-    (diagnostic) => diagnostic.code === "context.bootstrap_starter"
+    (diagnostic2) => diagnostic2.code === "context.bootstrap_starter"
   );
   if (contextStatus.issues.length > 0) {
     suggestedRepairs.push(
@@ -34152,11 +35649,11 @@ var init_phase_schema_paths = __esm({
 });
 
 // src/mcp/tools/phase-execution-surfaces.ts
-import path12 from "node:path";
+import path13 from "node:path";
 function normalizeExecutionSurfacePath(value) {
   const normalized = value.replaceAll("\\", "/").trim();
   const withoutDotPrefix = normalized.replace(/^\.\//, "");
-  const collapsed = path12.posix.normalize(withoutDotPrefix);
+  const collapsed = path13.posix.normalize(withoutDotPrefix);
   if (collapsed === ".") {
     return withoutDotPrefix.replace(/\/+$/u, "");
   }
@@ -34506,15 +36003,15 @@ function emptyPhaseSummaryDiagnosticCounts() {
 }
 function countPhaseSummaryDiagnostics(diagnostics) {
   const counts = emptyPhaseSummaryDiagnosticCounts();
-  for (const diagnostic of diagnostics) {
+  for (const diagnostic2 of diagnostics) {
     counts.total += 1;
-    counts.bySource[diagnostic.source] += 1;
-    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+    counts.bySource[diagnostic2.source] += 1;
+    counts.byCode[diagnostic2.code] = (counts.byCode[diagnostic2.code] ?? 0) + 1;
   }
   return counts;
 }
-function formatPhaseSummaryDiagnostic(diagnostic) {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+function formatPhaseSummaryDiagnostic(diagnostic2) {
+  return `${diagnostic2.source}:${diagnostic2.path}:${diagnostic2.code}: ${diagnostic2.message} Suggestion: ${diagnostic2.suggestion}`;
 }
 var init_phase_summary_diagnostics = __esm({
   "src/mcp/tools/phase-summary-diagnostics.ts"() {
@@ -35183,15 +36680,15 @@ function emptyPhaseValidationDiagnosticCounts() {
 }
 function countPhaseValidationDiagnostics(diagnostics) {
   const counts = emptyPhaseValidationDiagnosticCounts();
-  for (const diagnostic of diagnostics) {
+  for (const diagnostic2 of diagnostics) {
     counts.total += 1;
-    counts.bySource[diagnostic.source] += 1;
-    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+    counts.bySource[diagnostic2.source] += 1;
+    counts.byCode[diagnostic2.code] = (counts.byCode[diagnostic2.code] ?? 0) + 1;
   }
   return counts;
 }
-function formatPhaseValidationDiagnostic(diagnostic) {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+function formatPhaseValidationDiagnostic(diagnostic2) {
+  return `${diagnostic2.source}:${diagnostic2.path}:${diagnostic2.code}: ${diagnostic2.message} Suggestion: ${diagnostic2.suggestion}`;
 }
 function phaseValidationRouteDiagnostic(error2, pathValue, taskSchema, model) {
   const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
@@ -36403,7 +37900,7 @@ async function blueprintPhaseValidationValidateModel(args, deps) {
     taskSchema: context.taskSchema,
     diagnostics,
     diagnosticCounts: countPhaseValidationDiagnostics(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : normalizedModel,
+    normalizedModel: diagnostics.some((diagnostic2) => diagnostic2.source === "schema") ? null : normalizedModel,
     renderPreview,
     warnings: args.artifact === "verification" ? [] : context.warnings
   };
@@ -36879,24 +38376,24 @@ function emptyPhasePlanDiagnosticCounts() {
 }
 function countPhasePlanDiagnostics(diagnostics) {
   const counts = emptyPhasePlanDiagnosticCounts();
-  for (const diagnostic of diagnostics) {
+  for (const diagnostic2 of diagnostics) {
     counts.total += 1;
-    counts.bySource[diagnostic.source] += 1;
-    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+    counts.bySource[diagnostic2.source] += 1;
+    counts.byCode[diagnostic2.code] = (counts.byCode[diagnostic2.code] ?? 0) + 1;
   }
   return counts;
 }
-function isBlockingPhasePlanDiagnostic(diagnostic) {
-  return diagnostic.severity !== "warning";
+function isBlockingPhasePlanDiagnostic(diagnostic2) {
+  return diagnostic2.severity !== "warning";
 }
 function partitionPhasePlanDiagnostics(diagnostics) {
   const blocking = [];
   const warnings = [];
-  for (const diagnostic of diagnostics) {
-    if (isBlockingPhasePlanDiagnostic(diagnostic)) {
-      blocking.push(diagnostic);
+  for (const diagnostic2 of diagnostics) {
+    if (isBlockingPhasePlanDiagnostic(diagnostic2)) {
+      blocking.push(diagnostic2);
     } else {
-      warnings.push(diagnostic);
+      warnings.push(diagnostic2);
     }
   }
   return { blocking, warnings };
@@ -36904,10 +38401,10 @@ function partitionPhasePlanDiagnostics(diagnostics) {
 function summarizePhasePlanRepairs(diagnostics) {
   const blocking = diagnostics.filter(isBlockingPhasePlanDiagnostic);
   const firstPassActions = uniquePreservingOrder(
-    blocking.map((diagnostic) => diagnostic.repairAction ?? "replace")
+    blocking.map((diagnostic2) => diagnostic2.repairAction ?? "replace")
   );
   const reReadAuthoringContext = blocking.some(
-    (diagnostic) => diagnostic.repairAction === "re-read-context" || diagnostic.code === "schema.exactCoverage" || diagnostic.source === "scope"
+    (diagnostic2) => diagnostic2.repairAction === "re-read-context" || diagnostic2.code === "schema.exactCoverage" || diagnostic2.source === "scope"
   );
   const retryInstruction = blocking.length === 0 ? "No repair is required; the model is ready to render." : reReadAuthoringContext ? "Re-read blueprint_phase_plan_authoring_context, repair the blocking diagnostics, then retry validation once. Warnings do not require a retry." : "Repair the blocking diagnostics before retrying validation once. Warnings do not require a retry.";
   return {
@@ -36917,10 +38414,10 @@ function summarizePhasePlanRepairs(diagnostics) {
     retryInstruction
   };
 }
-function formatPhasePlanDiagnostic(diagnostic) {
-  const pathHint = diagnostic.jsonPointer ? `${diagnostic.path} (${diagnostic.jsonPointer})` : diagnostic.path;
-  const actionHint = diagnostic.repairAction ? ` Action: ${diagnostic.repairAction}.` : "";
-  return `${diagnostic.source}:${pathHint}:${diagnostic.code}: ${diagnostic.message}${actionHint} Suggestion: ${diagnostic.suggestion}`;
+function formatPhasePlanDiagnostic(diagnostic2) {
+  const pathHint = diagnostic2.jsonPointer ? `${diagnostic2.path} (${diagnostic2.jsonPointer})` : diagnostic2.path;
+  const actionHint = diagnostic2.repairAction ? ` Action: ${diagnostic2.repairAction}.` : "";
+  return `${diagnostic2.source}:${pathHint}:${diagnostic2.code}: ${diagnostic2.message}${actionHint} Suggestion: ${diagnostic2.suggestion}`;
 }
 function phasePlanSchemaRepairAction(error2) {
   if (error2.keyword === "required" || error2.keyword === "contains" || error2.keyword === "minItems") {
@@ -37626,9 +39123,9 @@ __export(phase_exports, {
   resolvePhaseTopologySnapshot: () => resolvePhaseTopologySnapshot,
   validatePhasePlanCandidateSet: () => validatePhasePlanCandidateSet
 });
-import { createHash as createHash5 } from "node:crypto";
+import { createHash as createHash7 } from "node:crypto";
 import { promises as fs14 } from "node:fs";
-import path13 from "node:path";
+import path14 from "node:path";
 function normalizedPhaseText(value) {
   return normalizePhaseDescription(value ?? "").toLowerCase();
 }
@@ -38506,7 +40003,7 @@ function invalidPhasePlanningReadiness(blocker) {
   };
 }
 function buildPhasePlanAuthoringReadinessReason(planningReadiness) {
-  const detail = planningReadiness.blockers.length > 0 ? planningReadiness.blockers.join(" ") : (planningReadiness.diagnostics ?? []).map((diagnostic) => diagnostic.message).join(" ");
+  const detail = planningReadiness.blockers.length > 0 ? planningReadiness.blockers.join(" ") : (planningReadiness.diagnostics ?? []).map((diagnostic2) => diagnostic2.message).join(" ");
   const detailWithPunctuation = detail.length === 0 ? "Phase planning is not ready for /blu-plan-phase." : /[.!?]$/.test(detail) ? detail : `${detail}.`;
   const action = planningReadiness.nextSafeAction.trim();
   if (action.length === 0) {
@@ -38515,7 +40012,7 @@ function buildPhasePlanAuthoringReadinessReason(planningReadiness) {
   return `${detailWithPunctuation} Next safe action: ${action}${/[.!?]$/.test(action) ? "" : "."}`;
 }
 function hashString(value) {
-  return createHash5("sha256").update(value).digest("hex");
+  return createHash7("sha256").update(value).digest("hex");
 }
 function buildReadinessHashEntry(args) {
   const serialized = typeof args.value === "string" ? args.value : JSON.stringify(args.value) ?? "undefined";
@@ -38733,13 +40230,13 @@ function isCanonicalPhasePlanArtifactPath2(artifactPath2, resolved) {
   return parseCanonicalPlanArtifactPath(artifactPath2, resolved) !== null;
 }
 function isCanonicalPhaseSummaryArtifactPath(artifactPath2, resolved) {
-  return path13.posix.dirname(artifactPath2) === resolved.phaseDir && parseSummaryArtifactPath(artifactPath2, resolved.phasePrefix) !== null;
+  return path14.posix.dirname(artifactPath2) === resolved.phaseDir && parseSummaryArtifactPath(artifactPath2, resolved.phasePrefix) !== null;
 }
 function isCanonicalPhaseSpecArtifactPath(artifactPath2, resolved) {
   return artifactPath2 === artifactPathFor(resolved, "spec");
 }
 function isNoncanonicalPhaseSpecLookalikePath(artifactPath2, resolved) {
-  const basename = path13.posix.basename(artifactPath2);
+  const basename = path14.posix.basename(artifactPath2);
   const canonicalSpecFileName = `${resolved.phasePrefix}-SPEC.md`;
   const uiSpecFileName = `${resolved.phasePrefix}-UI-SPEC.md`;
   if (isCanonicalPhaseSpecArtifactPath(artifactPath2, resolved)) {
@@ -38818,7 +40315,7 @@ async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, tar
     if (isNoncanonicalPhaseSpecLookalikePath(artifact, resolved)) {
       return false;
     }
-    if (path13.posix.basename(artifact) === canonicalSpecFileName) {
+    if (path14.posix.basename(artifact) === canonicalSpecFileName) {
       return canonicalSpecPath !== null && isCanonicalPhaseSpecArtifactPath(artifact, resolved);
     }
     return true;
@@ -39521,7 +41018,7 @@ async function validatePhasePlanModelWithContext(args) {
     diagnostics,
     diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
     normalizedModel: diagnostics.some(
-      (diagnostic) => diagnostic.source === "schema" && isBlockingPhasePlanDiagnostic(diagnostic)
+      (diagnostic2) => diagnostic2.source === "schema" && isBlockingPhasePlanDiagnostic(diagnostic2)
     ) ? null : normalizedModel,
     renderPreview,
     warnings: []
@@ -39998,26 +41495,26 @@ async function assertPhaseTopologyDestinationAvailable(destinationPath, repoRela
 async function collectPhaseArtifactRenamePlans(options) {
   const sourceRelativePath = options.sourceRelativePath ?? "";
   const executionRelativePath = options.executionRelativePath ?? "";
-  const scanDirectoryPath = sourceRelativePath ? path13.join(options.sourceRootPath, sourceRelativePath) : options.sourceRootPath;
+  const scanDirectoryPath = sourceRelativePath ? path14.join(options.sourceRootPath, sourceRelativePath) : options.sourceRootPath;
   const entries = await fs14.readdir(scanDirectoryPath, { withFileTypes: true });
   const plans = [];
   for (const entry of entries) {
-    const originalRelativePath = sourceRelativePath ? path13.join(sourceRelativePath, entry.name) : entry.name;
-    const executionFromRelativePath = executionRelativePath ? path13.join(executionRelativePath, entry.name) : entry.name;
+    const originalRelativePath = sourceRelativePath ? path14.join(sourceRelativePath, entry.name) : entry.name;
+    const executionFromRelativePath = executionRelativePath ? path14.join(executionRelativePath, entry.name) : entry.name;
     const renamedEntry = renameLeadingPhaseToken(
       entry.name,
       options.oldPhaseNumber,
       options.newPhasePrefix
     );
-    const executionToRelativePath = executionRelativePath ? path13.join(executionRelativePath, renamedEntry ?? entry.name) : renamedEntry ?? entry.name;
+    const executionToRelativePath = executionRelativePath ? path14.join(executionRelativePath, renamedEntry ?? entry.name) : renamedEntry ?? entry.name;
     if (renamedEntry) {
-      const fromPath = path13.join(options.destinationRootPath, executionFromRelativePath);
-      const toPath = path13.join(options.destinationRootPath, executionToRelativePath);
+      const fromPath = path14.join(options.destinationRootPath, executionFromRelativePath);
+      const toPath = path14.join(options.destinationRootPath, executionToRelativePath);
       plans.push({
         fromPath,
         toPath,
-        originalPath: path13.join(options.sourceRootPath, originalRelativePath),
-        originalDestinationPath: path13.join(options.sourceRootPath, executionToRelativePath),
+        originalPath: path14.join(options.sourceRootPath, originalRelativePath),
+        originalDestinationPath: path14.join(options.sourceRootPath, executionToRelativePath),
         from: toRepoRelativePath(options.projectRoot, fromPath),
         to: toRepoRelativePath(options.projectRoot, toPath)
       });
@@ -40037,14 +41534,14 @@ async function collectPhaseArtifactRenamePlans(options) {
 async function preflightPhaseArtifactRenamePlans(plans) {
   const destinationPaths = /* @__PURE__ */ new Set();
   for (const plan of plans) {
-    const normalizedDestinationPath = path13.resolve(plan.toPath);
+    const normalizedDestinationPath = path14.resolve(plan.toPath);
     if (destinationPaths.has(normalizedDestinationPath)) {
       throw new Error(
         `Phase artifact rename plan has a duplicate destination before mutation: ${plan.to}.`
       );
     }
     destinationPaths.add(normalizedDestinationPath);
-    if (path13.resolve(plan.originalDestinationPath) !== path13.resolve(plan.originalPath) && await pathExists(plan.originalDestinationPath)) {
+    if (path14.resolve(plan.originalDestinationPath) !== path14.resolve(plan.originalPath) && await pathExists(plan.originalDestinationPath)) {
       throw new Error(
         `Phase artifact destination already exists before mutation: ${plan.to}. Resolve the collision before mutating the roadmap.`
       );
@@ -40068,9 +41565,9 @@ async function rollbackPhaseTopologyMoves(journal) {
       continue;
     }
     const failureCountBeforeMkdir = failures.length;
-    await fs14.mkdir(path13.dirname(entry.fromPath), { recursive: true }).catch((error2) => {
+    await fs14.mkdir(path14.dirname(entry.fromPath), { recursive: true }).catch((error2) => {
       failures.push(
-        `Could not recreate rollback parent ${path13.dirname(entry.fromPath)}: ${error2 instanceof Error ? error2.message : String(error2)}`
+        `Could not recreate rollback parent ${path14.dirname(entry.fromPath)}: ${error2 instanceof Error ? error2.message : String(error2)}`
       );
     });
     if (failures.length > failureCountBeforeMkdir) {
@@ -40288,7 +41785,7 @@ async function blueprintRoadmapRemovePhase(args) {
       }
       const previousPhaseDir = locatedPhaseDirectory.phaseDir;
       const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
-      const previousDirectoryName = path13.basename(previousPhaseDirPath);
+      const previousDirectoryName = path14.basename(previousPhaseDirPath);
       const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
       const renamedDirectoryName = renameLeadingPhaseToken(
         previousDirectoryName,
@@ -40300,10 +41797,10 @@ async function blueprintRoadmapRemovePhase(args) {
           `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
         );
       }
-      const newPhaseDirPath = path13.join(path13.dirname(previousPhaseDirPath), renamedDirectoryName);
+      const newPhaseDirPath = path14.join(path14.dirname(previousPhaseDirPath), renamedDirectoryName);
       const newPhaseDir = toRepoRelativePath(projectRoot, newPhaseDirPath);
       await assertExistingPhaseTopologyDirectory(previousPhaseDirPath, previousPhaseDir);
-      if (path13.resolve(newPhaseDirPath) !== path13.resolve(targetPhaseDirPath)) {
+      if (path14.resolve(newPhaseDirPath) !== path14.resolve(targetPhaseDirPath)) {
         await assertPhaseTopologyDestinationAvailable(newPhaseDirPath, newPhaseDir);
       }
       const artifactRenamePlans = await collectPhaseArtifactRenamePlans({
@@ -40331,9 +41828,9 @@ async function blueprintRoadmapRemovePhase(args) {
       targetPhaseNumber
     );
     const transactionRootRelativePath = toRepoRelativePath(projectRoot, transactionRootPath);
-    const tombstonePhaseDirPath = path13.join(
+    const tombstonePhaseDirPath = path14.join(
       transactionRootPath,
-      path13.basename(targetPhaseDirPath)
+      path14.basename(targetPhaseDirPath)
     );
     const journal = [];
     let committed = false;
@@ -40426,7 +41923,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
     if (reservedDirectory.phaseDir) {
       const reservedPhaseDirPath = resolveBlueprintPath(projectRoot, reservedDirectory.phaseDir);
       const renamedDirectoryName = renameLeadingPhaseToken(
-        path13.basename(reservedPhaseDirPath),
+        path14.basename(reservedPhaseDirPath),
         item.reservedPhase,
         phasePrefix2
       );
@@ -40435,8 +41932,8 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
           `Reserved phase directory ${reservedDirectory.phaseDir} does not start with ${item.reservedPhase}.`
         );
       }
-      const promotedPhaseDirPath = path13.join(
-        path13.dirname(reservedPhaseDirPath),
+      const promotedPhaseDirPath = path14.join(
+        path14.dirname(reservedPhaseDirPath),
         renamedDirectoryName
       );
       if (promotedPhaseDirPath !== reservedPhaseDirPath && await pathExists(promotedPhaseDirPath)) {
@@ -40674,7 +42171,7 @@ async function buildPhasePlanIndexFromResolved(input) {
   for (const planPath of planPaths) {
     const planId3 = parseCanonicalPlanArtifactPath(planPath, resolved);
     if (!planId3) {
-      if (path13.posix.dirname(planPath) === resolved.phaseDir) {
+      if (path14.posix.dirname(planPath) === resolved.phaseDir) {
         warnings.push(`Ignoring non-canonical plan artifact name: ${planPath}`);
       }
       continue;
@@ -40899,7 +42396,7 @@ async function validatePhasePlanCandidateSet(args) {
       const planId3 = parseCanonicalPlanArtifactPath(artifact, resolved);
       return planId3 === null || !excludedIds.has(planId3);
     });
-    const retainedPaths = evidenceArtifacts.filter((artifact) => path13.posix.dirname(artifact) === resolved.phaseDir && artifact.endsWith("-PLAN.md"));
+    const retainedPaths = evidenceArtifacts.filter((artifact) => path14.posix.dirname(artifact) === resolved.phaseDir && artifact.endsWith("-PLAN.md"));
     const retainedContents = new Map(await Promise.all(retainedPaths.map(async (artifact) => [artifact, await fs14.readFile(resolveBlueprintPath(projectRoot, artifact), "utf8")])));
     const existingIndex = await buildPhasePlanIndexFromResolved({
       projectRoot,
@@ -40931,9 +42428,9 @@ async function validatePhasePlanCandidateSet(args) {
         })
       };
       const validation = await validatePhasePlanModelWithContext({ model: candidate.model, context, savedSpecContent });
-      diagnostics.push(...validation.diagnostics.map((diagnostic) => ({
-        ...diagnostic,
-        context: { ...diagnostic.context, planId: candidate.planId, path: pathValue }
+      diagnostics.push(...validation.diagnostics.map((diagnostic2) => ({
+        ...diagnostic2,
+        context: { ...diagnostic2.context, planId: candidate.planId, path: pathValue }
       })));
       if (validation.valid && validation.renderPreview && validation.normalizedModel) {
         const prepared = prepareTextForPersistence(validation.renderPreview, { label: pathValue });
@@ -42451,7 +43948,7 @@ async function blueprintPhaseExecutionTargets(args = {}) {
     projectRoot
   );
   const planPaths = executionArtifacts.filter(
-    (artifactPath2) => path13.posix.dirname(artifactPath2) === resolved.phaseDir && artifactPath2.endsWith("-PLAN.md")
+    (artifactPath2) => path14.posix.dirname(artifactPath2) === resolved.phaseDir && artifactPath2.endsWith("-PLAN.md")
   );
   const planContents = new Map(
     await Promise.all(
@@ -43407,6 +44904,7 @@ __export(artifacts_exports, {
   SUPPORTED_BOOTSTRAP_ARTIFACTS: () => SUPPORTED_BOOTSTRAP_ARTIFACTS,
   SUPPORTED_SCAFFOLD_ARTIFACTS: () => SUPPORTED_SCAFFOLD_ARTIFACTS,
   artifactToolDefinitions: () => artifactToolDefinitions,
+  assertBlueprintRepoLockParentSafe: () => assertBlueprintRepoLockParentSafe,
   assertCodebasePublicationComplete: () => assertCodebasePublicationComplete,
   blueprintArtifactContractRead: () => blueprintArtifactContractRead,
   blueprintArtifactList: () => blueprintArtifactList,
@@ -43435,6 +44933,7 @@ __export(artifacts_exports, {
   getProjectRoot: () => getProjectRoot,
   inspectBlueprintArtifacts: () => inspectBlueprintArtifacts,
   inspectBootstrapArtifacts: () => inspectBootstrapArtifacts,
+  inspectCodebaseWriteGuard: () => inspectCodebaseWriteGuard,
   isBootstrapStarterContext: () => isBootstrapStarterContext,
   isExplicitUiSkipRationale: () => isExplicitUiSkipRationale,
   isScaffoldGeneratedArtifact: () => isScaffoldGeneratedArtifact,
@@ -43465,9 +44964,9 @@ __export(artifacts_exports, {
   writeTextFile: () => writeTextFile
 });
 import { execFile } from "node:child_process";
-import { createHash as createHash6 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 import { promises as fs15 } from "node:fs";
-import path14 from "node:path";
+import path15 from "node:path";
 import { promisify } from "node:util";
 function normalizeBlueprintArtifactPathForClassification(relativePath) {
   return relativePath.replace(/\\/g, "/").replace(/\/+$/g, "");
@@ -43485,7 +44984,10 @@ function isOperationalOnlyBlueprintArtifact(relativePath) {
   if (blueprintLocalPath === "locks" || blueprintLocalPath.startsWith("locks/")) {
     return true;
   }
-  const artifactName = path14.posix.basename(artifact);
+  if (blueprintLocalPath === "codebase-operations" || blueprintLocalPath.startsWith("codebase-operations/")) {
+    return true;
+  }
+  const artifactName = path15.posix.basename(artifact);
   return /^\.?.+\.\d+\.\d+\.[a-z0-9]+\.tmp$/i.test(artifactName) || /^.+\.tmp-\d+-\d+$/i.test(artifactName);
 }
 function isScaffoldGeneratedArtifact(content) {
@@ -43508,13 +45010,13 @@ function isDocumentationLikeFile(entryName) {
   if (normalized === "license" || normalized.startsWith("license.")) {
     return true;
   }
-  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path14.extname(normalized));
+  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path15.extname(normalized));
 }
 function isImplementationLikeFile(entryName) {
   if (isBootstrapStarterFile(entryName) || isDocumentationLikeFile(entryName)) {
     return false;
   }
-  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path14.extname(entryName).toLowerCase());
+  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path15.extname(entryName).toLowerCase());
 }
 async function directoryHasImplementationEvidence(directoryPath) {
   const entries = await fs15.readdir(directoryPath, { withFileTypes: true });
@@ -43523,7 +45025,7 @@ async function directoryHasImplementationEvidence(directoryPath) {
       if (entry.name.startsWith(".") || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
         continue;
       }
-      if (await directoryHasImplementationEvidence(path14.join(directoryPath, entry.name))) {
+      if (await directoryHasImplementationEvidence(path15.join(directoryPath, entry.name))) {
         return true;
       }
       continue;
@@ -43558,7 +45060,7 @@ async function assessRootBootstrapShape(projectRoot) {
       if (!entry.isDirectory() || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
         continue;
       }
-      if (await directoryHasImplementationEvidence(path14.join(projectRoot, entry.name))) {
+      if (await directoryHasImplementationEvidence(path15.join(projectRoot, entry.name))) {
         hasImplementationEvidence = true;
         break;
       }
@@ -44337,7 +45839,7 @@ async function assertReportCompareAndSwap(absolutePath, expectedExistingContentS
   if (!exists3) {
     throw new Error("Report compare-and-swap failed because the approved report disappeared.");
   }
-  const actualSha256 = createHash6("sha256").update(await fs15.readFile(absolutePath)).digest("hex");
+  const actualSha256 = createHash8("sha256").update(await fs15.readFile(absolutePath)).digest("hex");
   if (actualSha256 !== expectedExistingContentSha256) {
     throw new Error("Report compare-and-swap failed because report content changed after approval.");
   }
@@ -44467,14 +45969,117 @@ async function pathExists2(targetPath) {
     return false;
   }
 }
+async function classifyCodebasePath(targetPath) {
+  try {
+    const stat = await fs15.lstat(targetPath);
+    if (stat.isSymbolicLink() || !stat.isFile()) {
+      return "unsafe";
+    }
+    return "regular";
+  } catch (error2) {
+    return error2.code === "ENOENT" ? "absent" : "unsafe";
+  }
+}
+async function classifyCodebaseMarker(projectRoot) {
+  const markerPath = resolveBlueprintPath(projectRoot, CODEBASE_PUBLICATION_PATH);
+  let stat;
+  try {
+    stat = await fs15.lstat(markerPath);
+  } catch (error2) {
+    return error2.code === "ENOENT" ? "absent" : "unknown";
+  }
+  if (stat.isSymbolicLink() || !stat.isFile() || Number(stat.size) > PORTABLE_MARKER_MAX_BYTES) {
+    return "unknown";
+  }
+  let raw;
+  try {
+    raw = await fs15.readFile(markerPath, "utf8");
+  } catch {
+    return "unknown";
+  }
+  let parsed;
+  try {
+    parsed = safeJsonParseObject(raw, {
+      label: "Codebase publication marker",
+      maxBytes: PORTABLE_MARKER_MAX_BYTES
+    });
+  } catch {
+    return "unknown";
+  }
+  if (portablePublicationMarkerSchema.safeParse(parsed).success) {
+    return "v2";
+  }
+  if (portableLegacyPublicationPendingSchema.safeParse(parsed).success) {
+    return "v1";
+  }
+  return "unknown";
+}
+async function inspectPortableCodebase(projectRoot) {
+  const indexPresence = await classifyCodebasePath(
+    resolveBlueprintPath(projectRoot, PORTABLE_CODEBASE_INDEX_PATH)
+  );
+  const markerKind = await classifyCodebaseMarker(projectRoot);
+  const navigation = await resolveCodebaseNavigation(projectRoot);
+  const indexPresent = indexPresence !== "absent";
+  let status;
+  if (navigation.status === "ok") {
+    status = "valid";
+  } else if (markerKind === "v2" && !indexPresent) {
+    status = "guarded";
+  } else if (markerKind === "unknown" && !indexPresent) {
+    status = "unsupported";
+  } else if (!indexPresent) {
+    status = "absent";
+  } else {
+    status = navigation.portable.status;
+  }
+  const compatibility = navigation.status === "ok" ? navigation.compatibility.guard === "blocked" ? "guarded" : navigation.compatibility.status === "mismatch" ? "divergent" : navigation.compatibility.status : markerKind === "v2" ? "guarded" : "unknown";
+  return {
+    diagnostics: {
+      status,
+      generationId: navigation.status === "ok" ? navigation.portable.generationId : null,
+      index: indexPresence === "unsafe" ? "unsafe" : indexPresent ? "present" : "absent",
+      marker: markerKind,
+      compatibility,
+      guard: navigation.status === "ok" ? navigation.compatibility.guard : markerKind === "v2" || markerKind === "unknown" ? "blocked" : "unknown"
+    },
+    indexPresent,
+    markerKind,
+    navigation
+  };
+}
+function codebaseGuardMessage(state) {
+  if (state.markerKind === "unknown") {
+    return "A codebase publication marker is unknown or malformed; legacy codebase writes are blocked until a complete validated replacement is prepared.";
+  }
+  if (state.markerKind === "v2") {
+    return "A portable codebase publication or committed INDEX is present; mutable legacy codebase views are guarded.";
+  }
+  if (state.indexPresent) {
+    return "A portable codebase INDEX is present; mutable legacy codebase views are guarded.";
+  }
+  return "An accepted codebase bundle publication is incomplete; resume /blu-map-codebase before using mapping evidence.";
+}
+async function inspectCodebaseWriteGuard(projectRoot) {
+  const state = await inspectPortableCodebase(projectRoot);
+  const blocked = state.indexPresent || state.markerKind === "v2" || state.markerKind === "unknown";
+  const legacyPublicationPending = state.markerKind === "v1";
+  return {
+    allowed: !blocked,
+    noOpReuseAllowed: blocked || legacyPublicationPending,
+    legacyPublicationPending,
+    reason: blocked ? codebaseGuardMessage(state) : null,
+    portable: state.diagnostics
+  };
+}
 function toPosixPath(relativePath) {
-  return relativePath.split(path14.sep).join("/");
+  return relativePath.split(path15.sep).join("/");
 }
 function getProjectRoot(cwd) {
-  return path14.resolve(cwd ?? process.cwd());
+  return path15.resolve(cwd ?? process.cwd());
 }
 function getBlueprintRoot(cwd) {
-  return path14.join(getProjectRoot(cwd), BLUEPRINT_DIR);
+  return path15.join(getProjectRoot(cwd), BLUEPRINT_DIR);
 }
 async function blueprintPathExists(targetPath) {
   return pathExists2(targetPath);
@@ -44496,7 +46101,7 @@ async function resolveGitTopLevel(projectRoot) {
 }
 async function ensureRepoRoot(cwd) {
   const projectRoot = getProjectRoot(cwd);
-  const gitPath = path14.join(projectRoot, ".git");
+  const gitPath = path15.join(projectRoot, ".git");
   if (!await pathExists2(gitPath)) {
     throw new Error(
       "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
@@ -44515,7 +46120,7 @@ async function ensureRepoRoot(cwd) {
   return projectRoot;
 }
 function toRepoRelativePath(projectRoot, absolutePath) {
-  return toPosixPath(path14.relative(projectRoot, absolutePath));
+  return toPosixPath(path15.relative(projectRoot, absolutePath));
 }
 function resolveRepoRelativePath(projectRoot, relativePath) {
   try {
@@ -44531,7 +46136,7 @@ function resolveRepoRelativePath(projectRoot, relativePath) {
 }
 function resolveBlueprintPath(projectRoot, relativePath) {
   assertNoNullBytes(relativePath, "Blueprint path");
-  if (path14.isAbsolute(relativePath)) {
+  if (path15.isAbsolute(relativePath)) {
     throw new Error(`Blueprint paths must be repo-relative, not absolute: ${relativePath}`);
   }
   if (!relativePath.startsWith(`${BLUEPRINT_DIR}/`)) {
@@ -44552,20 +46157,43 @@ function resolveBlueprintPath(projectRoot, relativePath) {
 async function assertCodebasePublicationComplete(projectRoot, relativePath) {
   const canonical = toRepoRelativePath(projectRoot, resolveRepoRelativePath(projectRoot, relativePath));
   if (!canonical.startsWith(`${BLUEPRINT_CODEBASE_PATH}/`)) return;
-  if (await pathExists2(resolveBlueprintPath(projectRoot, CODEBASE_PUBLICATION_PATH))) {
-    throw new Error("Codebase bundle publication is incomplete. Resume /blu-map-codebase before using mapping evidence.");
+  const state = await inspectPortableCodebase(projectRoot);
+  const generationMatch = canonical.match(
+    /^\.blueprint\/codebase\/generations\/([^/]+)\//
+  );
+  if (generationMatch) {
+    const generation = await resolveCodebaseNavigation(projectRoot, {
+      requestedGenerationId: generationMatch[1]
+    });
+    if (generation.status === "ok" && generation.portable.generationId === generationMatch[1] && await resolveCodebaseSealedMember(projectRoot, canonical)) {
+      return;
+    }
+    throw new Error(
+      "The requested portable codebase generation is not a verified committed generation. Use ordinary bounded live-source discovery."
+    );
+  }
+  if (canonical === PORTABLE_CODEBASE_INDEX_PATH) {
+    if (state.navigation.status === "ok") return;
+    throw new Error(
+      "The portable codebase INDEX is unavailable or unverified. Use ordinary bounded live-source discovery."
+    );
+  }
+  if (state.markerKind === "v1" || state.markerKind === "v2" || state.markerKind === "unknown" || state.indexPresent) {
+    throw new Error(
+      state.markerKind === "v1" ? "Codebase bundle publication is incomplete. Resume /blu-map-codebase before using mapping evidence." : "Mutable legacy codebase views are guarded while a portable map publication is present. Use a verified immutable generation instead."
+    );
   }
 }
 async function ensureParentDirectory2(targetPath) {
-  await fs15.mkdir(path14.dirname(targetPath), { recursive: true });
+  await fs15.mkdir(path15.dirname(targetPath), { recursive: true });
 }
 function activeJsonFileSystem() {
   return jsonFileSystemForTest ?? defaultJsonFileSystem;
 }
 function tempSiblingPath(filePath) {
-  return path14.join(
-    path14.dirname(filePath),
-    `.${path14.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  return path15.join(
+    path15.dirname(filePath),
+    `.${path15.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
   );
 }
 function blueprintRepoLockNameSegment(value) {
@@ -44640,7 +46268,7 @@ async function writeTextFile(filePath, value, options = {}) {
     content: value.replace(/\r\n/g, "\n"),
     warnings: []
   } : prepareTextForPersistence(value, {
-    label: options.label ?? path14.basename(filePath)
+    label: options.label ?? path15.basename(filePath)
   });
   await ensureParentDirectory2(filePath);
   const tempPath = tempSiblingPath(filePath);
@@ -44659,21 +46287,21 @@ async function writeTextFile(filePath, value, options = {}) {
   return prepared.warnings;
 }
 function blueprintRepoLockOwnerPath(lockPath) {
-  return path14.join(lockPath, BLUEPRINT_REPO_LOCK_OWNER_FILE);
+  return path15.join(lockPath, BLUEPRINT_REPO_LOCK_OWNER_FILE);
 }
 function blueprintRepoLockLeasePath(lockPath) {
-  return path14.join(lockPath, BLUEPRINT_REPO_LOCK_LEASE_FILE);
+  return path15.join(lockPath, BLUEPRINT_REPO_LOCK_LEASE_FILE);
 }
 function blueprintRepoLockRecoveryPath(lockPath) {
   return `${lockPath}.recovery`;
 }
 function blueprintRepoLockRecoveryGuardOwnerPath(recoveryPath, token) {
-  return path14.join(recoveryPath, `${BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+  return path15.join(recoveryPath, `${BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
 }
 function blueprintRepoLockQuarantinePath(lockPath) {
-  return path14.join(
-    path14.dirname(lockPath),
-    `.${path14.basename(lockPath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.stale`
+  return path15.join(
+    path15.dirname(lockPath),
+    `.${path15.basename(lockPath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.stale`
   );
 }
 async function writeBlueprintRepoLockFile(filePath, contents) {
@@ -44728,7 +46356,7 @@ async function getBlueprintRepoLockRecoveryGuardAgeMs(recoveryPath) {
       continue;
     }
     try {
-      const stats = await fs15.stat(path14.join(recoveryPath, entry));
+      const stats = await fs15.stat(path15.join(recoveryPath, entry));
       newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
@@ -44939,6 +46567,32 @@ async function acquireBlueprintRepoLock(lockPath) {
     }
   }
 }
+async function assertBlueprintRepoLockParentSafe(projectRoot) {
+  const candidates = [
+    projectRoot,
+    path15.join(projectRoot, BLUEPRINT_DIR),
+    path15.join(projectRoot, BLUEPRINT_DIR, "locks")
+  ];
+  for (const candidate of candidates) {
+    let stat;
+    try {
+      stat = await fs15.lstat(candidate);
+    } catch (error2) {
+      if (error2.code === "ENOENT") continue;
+      throw new Error("Blueprint repository lock parent is not a safe literal directory.");
+    }
+    if (stat.isSymbolicLink() && candidate === projectRoot) {
+      const resolved = await fs15.realpath(candidate).catch(() => null);
+      if (!resolved) throw new Error("Blueprint repository lock parent is not a safe literal directory.");
+      const target = await fs15.stat(resolved).catch(() => null);
+      if (!target?.isDirectory()) throw new Error("Blueprint repository lock parent is not a safe literal directory.");
+      continue;
+    }
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error("Blueprint repository lock parent is not a safe literal directory.");
+    }
+  }
+}
 function startBlueprintRepoLockHeartbeat(lockHandle) {
   const timer = setInterval(() => {
     void refreshBlueprintRepoLockLease(lockHandle).then((refreshed) => {
@@ -44964,6 +46618,7 @@ async function releaseBlueprintRepoLock(lockHandle) {
   await fs15.rmdir(lockHandle.lockPath).catch(() => void 0);
 }
 async function withBlueprintRepoLock(projectRoot, lockName, task) {
+  await assertBlueprintRepoLockParentSafe(projectRoot);
   const lockPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/locks/${lockName}.lock`);
   const lockHandle = await acquireBlueprintRepoLock(lockPath);
   const stopHeartbeat = startBlueprintRepoLockHeartbeat(lockHandle);
@@ -45734,7 +47389,7 @@ function validateResearchArtifactContent(content) {
     }
   }
   const warningDiagnostics = researchEvidenceWarningDiagnostics(normalizedContent);
-  for (const diagnostic of warningDiagnostics) if (!warnings.includes(diagnostic.message)) warnings.push(diagnostic.message);
+  for (const diagnostic2 of warningDiagnostics) if (!warnings.includes(diagnostic2.message)) warnings.push(diagnostic2.message);
   diagnostics.push(...warningDiagnostics);
   return { valid: issues.length === 0, issues, warnings, diagnostics };
 }
@@ -45800,7 +47455,7 @@ function isRepoRelativePlanPath(value) {
   if (rawValue.length === 0) {
     return false;
   }
-  if (path14.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
+  if (path15.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
     return false;
   }
   const normalized = normalizePlanPathForValidation(rawValue);
@@ -48718,7 +50373,7 @@ function validateSummaryPlanReference(content, options = {}) {
       issues.push("Summary artifact must reference a matching plan artifact.");
     } else {
       const expectedPlanPath = options.linkedPlanPath;
-      const expectedPlanFile = path14.basename(expectedPlanPath);
+      const expectedPlanFile = path15.basename(expectedPlanPath);
       if (summaryPlanReference !== expectedPlanPath && summaryPlanReference !== expectedPlanFile) {
         warnings.push(
           `Summary artifact Plan marker ${summaryPlanReference} does not match linked plan path ${expectedPlanPath}; canonical filename linkage will be used.`
@@ -48876,7 +50531,7 @@ async function listRelativeFiles(rootPath, projectRoot) {
   const entries = await fs15.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path14.join(rootPath, entry.name);
+    const absolutePath = path15.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listRelativeFiles(absolutePath, projectRoot));
       continue;
@@ -48896,6 +50551,7 @@ async function inspectBlueprintArtifacts(projectRoot) {
   const blueprintRoot = getBlueprintRoot(projectRoot);
   const blueprintRootExists = await pathExists2(blueprintRoot);
   const codebaseRootExists = await pathExists2(resolveBlueprintPath(projectRoot, BLUEPRINT_CODEBASE_PATH));
+  const portable = await inspectPortableCodebase(projectRoot);
   const rootShape = await assessRootBootstrapShape(projectRoot);
   const blueprintFiles = blueprintRootExists ? await listRelativeFiles(blueprintRoot, projectRoot) : [];
   const workflowArtifactFiles = blueprintFiles.filter(
@@ -48946,13 +50602,27 @@ async function inspectBlueprintArtifacts(projectRoot) {
       codebaseMissing.push(artifact);
     }
   }
-  const publicationPending = await pathExists2(resolveBlueprintPath(projectRoot, CODEBASE_PUBLICATION_PATH));
-  if (publicationPending) {
+  const publicationPending = portable.markerKind === "v1";
+  if (publicationPending || portable.diagnostics.status === "guarded" || portable.diagnostics.guard === "blocked" || portable.markerKind === "unknown") {
     codebaseValid.length = 0;
     for (const artifact of codebasePresent) {
       if (!codebaseInvalid.includes(artifact)) codebaseInvalid.push(artifact);
     }
-    codebaseWarnings.push("An accepted codebase bundle publication is incomplete; resume /blu-map-codebase before consuming it.");
+    if (publicationPending) {
+      codebaseWarnings.push("An accepted codebase bundle publication is incomplete; resume /blu-map-codebase before consuming it.");
+    } else if (portable.markerKind === "unknown") {
+      codebaseWarnings.push("A codebase publication marker is unknown or malformed; mapping readiness remains conservative until a complete validated replacement is available.");
+    } else {
+      codebaseWarnings.push("A portable codebase publication is guarded; mutable compatibility views remain unavailable until the committed generation is settled.");
+    }
+  }
+  if (portable.diagnostics.status === "invalid" || portable.diagnostics.status === "unsupported") {
+    codebaseWarnings.push("A portable codebase INDEX or generation is present but cannot be used as mapping evidence; fall back to ordinary source discovery.");
+  }
+  if (portable.diagnostics.compatibility === "divergent") {
+    codebaseWarnings.push("Portable map generation is valid, but one or more root compatibility views diverged after commit.");
+  } else if (portable.diagnostics.compatibility === "absent") {
+    codebaseWarnings.push("Portable map generation is valid; root compatibility views are absent and the immutable generation remains the mapping authority.");
   }
   let readiness = "uninitialized";
   if (!blueprintRootExists || workflowArtifactFiles.length === 0 && !codebaseRootExists && rootShape.repoShape !== "brownfield") {
@@ -48960,7 +50630,9 @@ async function inspectBlueprintArtifacts(projectRoot) {
   } else if (coreMissing.length === 0) {
     readiness = "initialized";
   } else if (corePresent.length === 0 && (codebaseRootExists || rootShape.repoShape === "brownfield")) {
-    readiness = codebaseMissing.length === 0 && codebaseInvalid.length === 0 && codebasePresent.length > 0 ? "mapped-only" : "mapping-incomplete";
+    const legacyCodebaseMapped = codebaseMissing.length === 0 && codebaseInvalid.length === 0 && codebasePresent.length > 0;
+    const portableCodebaseMapped = portable.diagnostics.status === "valid";
+    readiness = portable.markerKind !== "unknown" && portable.markerKind !== "v1" && (portableCodebaseMapped || !portable.indexPresent && legacyCodebaseMapped) ? "mapped-only" : "mapping-incomplete";
   } else {
     readiness = "partial";
   }
@@ -48979,8 +50651,9 @@ async function inspectBlueprintArtifacts(projectRoot) {
       missing: codebaseMissing,
       valid: codebaseValid,
       invalid: codebaseInvalid,
-      mapped: codebaseMissing.length === 0 && codebaseInvalid.length === 0 && codebasePresent.length > 0,
-      warnings: codebaseWarnings
+      mapped: portable.markerKind !== "unknown" && portable.markerKind !== "v1" && (portable.diagnostics.status === "valid" || !portable.indexPresent && codebaseMissing.length === 0 && codebaseInvalid.length === 0 && codebasePresent.length > 0),
+      warnings: codebaseWarnings,
+      portable: portable.diagnostics
     }
   };
 }
@@ -49117,8 +50790,8 @@ function validateBootstrapRequirementTraceability(requirementsContent, roadmapCo
     warnings
   };
 }
-async function inspectBootstrapArtifacts(projectRoot) {
-  const inspection = await inspectBlueprintArtifacts(projectRoot);
+async function inspectBootstrapArtifacts(projectRoot, existingInspection) {
+  const inspection = existingInspection ?? await inspectBlueprintArtifacts(projectRoot);
   const brownfield = await assessBootstrapRepoShape(projectRoot, inspection);
   const placeholderArtifacts = [];
   const traceabilityWarnings = [];
@@ -49155,7 +50828,17 @@ async function inspectBootstrapArtifacts(projectRoot) {
       "Brownfield roadmap remains provisional until `/blu-map-codebase` captures the existing codebase."
     );
   } else if (inspection.codebase.mapped) {
-    traceabilityWarnings.push("Codebase artifact bundle is validated and ready for reuse.");
+    if (inspection.codebase.portable.compatibility === "divergent") {
+      traceabilityWarnings.push(
+        "Portable codebase generation is validated and ready for reuse; divergent root compatibility views remain guarded."
+      );
+    } else if (inspection.codebase.portable.compatibility === "absent") {
+      traceabilityWarnings.push(
+        "Portable codebase generation is validated and ready for reuse; root compatibility views are absent."
+      );
+    } else {
+      traceabilityWarnings.push("Codebase artifact bundle is validated and ready for reuse.");
+    }
   } else if (inspection.codebase.present.length > 0 && inspection.codebase.invalid.length > 0) {
     traceabilityWarnings.push(
       "Codebase artifacts are present but remain incomplete or non-canonical; reuse should stay provisional until validation passes."
@@ -49190,7 +50873,7 @@ function inferProjectName(projectRoot, requestedName) {
   if (trimmed) {
     return trimmed;
   }
-  return path14.basename(projectRoot);
+  return path15.basename(projectRoot);
 }
 function emptyCarryForwardBootstrapReceipt() {
   return {
@@ -49242,7 +50925,7 @@ async function prepareCarryForwardBootstrapReceipt(args) {
     const directoryPhaseNumber = phaseDir2.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
     return directoryPhaseNumber !== void 0 && normalizePhaseNumber3(directoryPhaseNumber) === firstPhaseNumber;
   });
-  const computedPhaseDirName = path14.basename(firstPhaseDir);
+  const computedPhaseDirName = path15.basename(firstPhaseDir);
   if (matchingPhaseDirs.length > 1) {
     throw new Error(
       `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs.map((phaseDir2) => `${BLUEPRINT_PHASES_PATH}/${phaseDir2}`).join(", ")}.`
@@ -49295,10 +50978,20 @@ async function blueprintArtifactScaffold(args = {}) {
     );
   }
   const projectRoot = await ensureRepoRoot(args.cwd);
+  const artifacts = normalizeRequestedArtifacts(args.artifacts);
+  if (artifacts.some((artifact) => isCodebaseArtifact(artifact))) {
+    return withBlueprintRepoLock(
+      projectRoot,
+      "codebase-publication",
+      () => blueprintArtifactScaffoldUnlocked(args, projectRoot, artifacts)
+    );
+  }
+  return blueprintArtifactScaffoldUnlocked(args, projectRoot, artifacts);
+}
+async function blueprintArtifactScaffoldUnlocked(args, projectRoot, artifacts) {
   const projectName = inferProjectName(projectRoot, args.projectName);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
   const overwrite = args.overwrite ?? false;
-  const artifacts = normalizeRequestedArtifacts(args.artifacts);
   const createdFiles = [];
   const reusedFiles = [];
   const warnings = [];
@@ -49313,6 +51006,23 @@ async function blueprintArtifactScaffold(args = {}) {
     bootstrapSeed: args.bootstrapSeed,
     bootstrapAssessment: bootstrapDiagnostics.brownfield
   };
+  if (artifacts.some((artifact) => isCodebaseArtifact(artifact))) {
+    const guard = await inspectCodebaseWriteGuard(projectRoot);
+    const protectedWrite = !guard.allowed || guard.legacyPublicationPending;
+    if (protectedWrite) {
+      const codebaseArtifacts = artifacts.filter(
+        (artifact) => isCodebaseArtifact(artifact)
+      );
+      const allReusable = !overwrite && (await Promise.all(codebaseArtifacts.map(
+        async (artifact) => pathExists2(resolveBlueprintPath(projectRoot, artifact))
+      ))).every(Boolean);
+      if (!allReusable) {
+        throw new Error(
+          guard.reason ?? "Mutable legacy codebase views are guarded while a portable map publication is present."
+        );
+      }
+    }
+  }
   await fs15.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
   for (const artifact of artifacts) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
@@ -50036,19 +51746,19 @@ async function blueprintArtifactValidate(args = {}) {
     issues.push(issue2);
     suggestedRepairs.add("Restore or regenerate the missing phase artifacts before execution.");
   }
-  if (inspection.codebase.present.length > 0 && (inspection.codebase.missing.length > 0 || inspection.codebase.invalid.length > 0)) {
+  if (inspection.codebase.present.length > 0 && (inspection.codebase.missing.length > 0 || inspection.codebase.invalid.length > 0) && inspection.codebase.portable.status !== "valid") {
     const missingText = inspection.codebase.missing.length > 0 ? ` missing ${inspection.codebase.missing.join(", ")}` : "";
     const invalidText = inspection.codebase.invalid.length > 0 ? ` invalid ${inspection.codebase.invalid.join(", ")}` : "";
     issues.push(`Codebase artifact bundle is incomplete or non-canonical:${missingText}${invalidText}`);
     suggestedRepairs.add("Re-run /blu-map-codebase to recreate the missing codebase artifacts.");
   }
-  if (inspection.readiness === "mapping-incomplete" && inspection.codebase.present.length === 0) {
+  if (inspection.readiness === "mapping-incomplete" && inspection.codebase.present.length === 0 && inspection.codebase.portable.status !== "valid") {
     issues.push("Codebase mapping bundle has not been written yet.");
     suggestedRepairs.add("Run /blu-map-codebase to create the seven-document codebase bundle.");
   }
   if (inspection.codebase.invalid.length > 0) {
     warnings.push(
-      `Existing codebase artifacts are present but not yet valid: ${inspection.codebase.invalid.join(", ")}`
+      inspection.codebase.portable.status === "valid" ? `Portable codebase generation is valid; root compatibility artifacts remain non-canonical: ${inspection.codebase.invalid.join(", ")}` : `Existing codebase artifacts are present but not yet valid: ${inspection.codebase.invalid.join(", ")}`
     );
   } else if (inspection.codebase.present.length > 0) {
     warnings.push(
@@ -50104,15 +51814,15 @@ async function blueprintArtifactValidate(args = {}) {
       }
       diagnostics.push(
         ...validation.diagnostics.map(
-          (diagnostic) => createArtifactValidationDiagnostic({
+          (diagnostic2) => createArtifactValidationDiagnostic({
             artifactId: resolvePhaseArtifactContractId(target.kind),
-            path: diagnostic.path,
-            section: diagnostic.heading ?? artifact,
-            code: diagnostic.code,
-            message: diagnostic.message,
-            allowedValues: diagnostic.allowedValues,
-            repair: diagnostic.repair,
-            retryable: diagnostic.retryable
+            path: diagnostic2.path,
+            section: diagnostic2.heading ?? artifact,
+            code: diagnostic2.code,
+            message: diagnostic2.message,
+            allowedValues: diagnostic2.allowedValues,
+            repair: diagnostic2.repair,
+            retryable: diagnostic2.retryable
           })
         )
       );
@@ -50542,7 +52252,7 @@ async function buildArtifactDigestSections(projectRoot, artifactPaths) {
     const summary = summarizeArtifactContent(raw);
     digest2.push({
       artifact: artifactPath2,
-      title: summary.title.length > 0 ? summary.title : path14.basename(artifactPath2, path14.extname(artifactPath2)),
+      title: summary.title.length > 0 ? summary.title : path15.basename(artifactPath2, path15.extname(artifactPath2)),
       summary: summary.summary,
       evidence: [artifactPath2]
     });
@@ -50723,11 +52433,11 @@ function artifactReportDiagnostic(args) {
     retryable: args.retryable ?? true
   };
 }
-function formatArtifactReportDiagnostic(diagnostic) {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Repair: ${diagnostic.repair}`;
+function formatArtifactReportDiagnostic(diagnostic2) {
+  return `${diagnostic2.source}:${diagnostic2.path}:${diagnostic2.code}: ${diagnostic2.message} Repair: ${diagnostic2.repair}`;
 }
 function suggestedRepairsFromDiagnostics(diagnostics) {
-  return [...new Set(diagnostics.map((diagnostic) => diagnostic.repair).filter(Boolean))];
+  return [...new Set(diagnostics.map((diagnostic2) => diagnostic2.repair).filter(Boolean))];
 }
 function reportMarkdownWriteDiagnostics(args) {
   const contractId = resolveReportContractId(args.reportName);
@@ -50768,12 +52478,12 @@ function codebaseWriteDiagnostics(args) {
 function repairSummaryFromDiagnostics(diagnostics) {
   const topDiagnostics = diagnostics.slice(0, 3);
   const fieldsToChange = [...new Set(
-    diagnostics.filter((diagnostic) => diagnostic.path.startsWith("model")).map((diagnostic) => diagnostic.path)
+    diagnostics.filter((diagnostic2) => diagnostic2.path.startsWith("model")).map((diagnostic2) => diagnostic2.path)
   )];
-  const hasScopeBlocker = diagnostics.some((diagnostic) => diagnostic.source === "scope");
-  const retryable = diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.retryable);
+  const hasScopeBlocker = diagnostics.some((diagnostic2) => diagnostic2.source === "scope");
+  const retryable = diagnostics.length > 0 && diagnostics.every((diagnostic2) => diagnostic2.retryable);
   return {
-    topBlockers: topDiagnostics.map((diagnostic) => `${diagnostic.path}: ${diagnostic.message}`),
+    topBlockers: topDiagnostics.map((diagnostic2) => `${diagnostic2.path}: ${diagnostic2.message}`),
     fieldsToChange,
     action: hasScopeBlocker ? "reread_authoring_context" : retryable ? "retry_validation" : "stop",
     retryable
@@ -50924,16 +52634,16 @@ function schemaDiagnosticFromArtifactReportAjvError(error2, reportLabel, modelOb
 function addTestsDiagnostic(args) {
   return args;
 }
-function artifactReportDiagnosticFromAddTests(diagnostic) {
+function artifactReportDiagnosticFromAddTests(diagnostic2) {
   return artifactReportDiagnostic({
-    source: diagnostic.source,
-    path: diagnostic.path,
-    code: diagnostic.code,
-    message: diagnostic.message,
-    context: diagnostic.context,
-    repair: diagnostic.suggestion,
+    source: diagnostic2.source,
+    path: diagnostic2.path,
+    code: diagnostic2.code,
+    message: diagnostic2.message,
+    context: diagnostic2.context,
+    repair: diagnostic2.suggestion,
     retryable: true,
-    suggestion: diagnostic.suggestion
+    suggestion: diagnostic2.suggestion
   });
 }
 function collectModelStringEntries2(value, pathValue = "model") {
@@ -51138,7 +52848,7 @@ function normalizeSummaryLinkedPlanPath(summaryPath2, planReference) {
     return planReference;
   }
   if (!planReference.includes("/") && /-PLAN\.md$/.test(planReference)) {
-    return `${path14.posix.dirname(summaryPath2)}/${planReference}`;
+    return `${path15.posix.dirname(summaryPath2)}/${planReference}`;
   }
   return planReference;
 }
@@ -53896,7 +55606,7 @@ async function blueprintArtifactReportValidateModel(args) {
     taskSchema: context.taskSchema,
     diagnostics,
     repairSummary: repairSummaryFromDiagnostics(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : normalizedModel,
+    normalizedModel: diagnostics.some((diagnostic2) => diagnostic2.source === "schema") ? null : normalizedModel,
     renderPreview,
     warnings: context.warnings
   };
@@ -54172,9 +55882,6 @@ async function blueprintCodebaseArtifactWrite(args) {
   const root = await ensureRepoRoot(args.cwd);
   await scrubLegacyCodebaseFailureLog(root);
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
-    if (await pathExists2(resolveBlueprintPath(root, CODEBASE_PUBLICATION_PATH))) {
-      throw new Error("Resume the pending bundle through blueprint_map_submit before individual codebase writes.");
-    }
     return writeCodebaseArtifact(args);
   });
 }
@@ -54201,6 +55908,28 @@ async function writeCodebaseArtifact(args) {
   const warnings = [];
   const exists3 = await pathExists2(absolutePath);
   const validation = validateCodebaseArtifactContent(normalizedContent, args.artifactId);
+  const guard = await inspectCodebaseWriteGuard(projectRoot);
+  if (!guard.allowed || guard.legacyPublicationPending) {
+    if (exists3) {
+      const existingContent = await fs15.readFile(absolutePath, "utf8");
+      if (existingContent === normalizedContent) {
+        return {
+          path: pathValue,
+          artifactId: args.artifactId,
+          written: false,
+          created: false,
+          overwritten: false,
+          reused: true,
+          status: "reused",
+          issues: [],
+          warnings: ["Preserved the existing codebase artifact because portable publication state guards mutable legacy views."]
+        };
+      }
+    }
+    throw new Error(
+      guard.legacyPublicationPending ? "Resume the pending bundle through blueprint_map_submit before individual codebase writes." : guard.reason ?? "Mutable legacy codebase views are guarded while a portable map publication is present."
+    );
+  }
   if (normalizedContent.trim().length === 0) {
     const diagnostics = [
       mcpWriteDiagnostic({
@@ -54293,7 +56022,7 @@ async function writeCodebaseArtifact(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, CODEBASE_PUBLICATION_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, RESEARCH_CONTRACT, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CANONICAL_HEADINGS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, blueprintArtifactsTestHooks, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, CODEBASE_PUBLICATION_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, BLUEPRINT_REPO_LOCK_OWNER_FILE, BLUEPRINT_REPO_LOCK_LEASE_FILE, BLUEPRINT_REPO_LOCK_RECOVERY_GUARD_PREFIX, BLUEPRINT_REPO_LOCK_RETRY_MS, BLUEPRINT_REPO_LOCK_STALE_MS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, RESEARCH_CONTRACT, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CANONICAL_HEADINGS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, PORTABLE_CODEBASE_INDEX_PATH, PORTABLE_MARKER_MAX_BYTES, defaultJsonFileSystem, jsonFileSystemForTest, repoLockTimingForTest, repoLockRecoveryHooksForTest, blueprintArtifactsTestHooks, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -54308,6 +56037,8 @@ var init_artifacts = __esm({
     init_path_token_heuristics();
     init_phase_roadmap_parser();
     init_phase_numbering();
+    init_resolver();
+    init_contracts();
     init_phase();
     init_phase_topology_lock();
     execFileAsync = promisify(execFile);
@@ -54713,6 +56444,8 @@ var init_artifacts = __esm({
       "milestone-complete-",
       "milestone-summary-"
     ];
+    PORTABLE_CODEBASE_INDEX_PATH = `${BLUEPRINT_CODEBASE_PATH}/INDEX.md`;
+    PORTABLE_MARKER_MAX_BYTES = 8 * 1024 * 1024;
     defaultJsonFileSystem = {
       writeFile: (filePath, contents, encoding) => fs15.writeFile(filePath, contents, encoding),
       rename: (oldPath, newPath) => fs15.rename(oldPath, newPath),
@@ -54980,7 +56713,7 @@ var init_artifacts = __esm({
 // src/mcp/write-failure-log.ts
 import { promises as fs16 } from "node:fs";
 import { randomUUID as randomUUID2 } from "node:crypto";
-import path15 from "node:path";
+import path16 from "node:path";
 function metadataOnlyInvocation(toolName, args) {
   return MAP_FAILURE_TOOLS.has(toolName) || toolName.startsWith("blueprint_discuss_") || toolName.startsWith("blueprint_research_") || ["blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read", "blueprint_phase_plan_write"].includes(toolName) || toolName === "blueprint_phase_artifact_write" && (args.artifact === "context" || args.artifact === "discussion-log" || args.artifact === "research" || args.model !== void 0 || args.candidate !== void 0);
 }
@@ -55177,7 +56910,7 @@ async function appendFailureEntry(cwd, entry) {
     const projectRoot = await ensureRepoRoot(cwd);
     const absoluteLogPath = resolveBlueprintPath(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
     await withBlueprintRepoLock(projectRoot, FAILURE_LOG_LOCK, async () => {
-      await fs16.mkdir(path15.dirname(absoluteLogPath), { recursive: true });
+      await fs16.mkdir(path16.dirname(absoluteLogPath), { recursive: true });
       try {
         if (!(await fs16.lstat(absoluteLogPath)).isFile()) throw new Error("Mutation failure log must be a regular file.");
       } catch (error2) {
@@ -55241,9 +56974,9 @@ var init_write_failure_log = __esm({
 
 // src/mcp/tools/map.ts
 import { execFile as execFile2 } from "node:child_process";
-import { createHash as createHash7 } from "node:crypto";
+import { createHash as createHash9 } from "node:crypto";
 import { promises as fs17 } from "node:fs";
-import path16 from "node:path";
+import path17 from "node:path";
 import { promisify as promisify2 } from "node:util";
 async function readOptional(file2) {
   try {
@@ -55271,7 +57004,7 @@ async function inventory(root) {
 function evidencePath(root, input) {
   if (input !== input.trim() || /[\r\n\0]/.test(input) || input.includes("\\")) throw new Error("Evidence paths must be literal repo-relative file paths.");
   const absolute = resolveRepoRelativePath(root, input);
-  const relative = path16.relative(root, absolute).split(path16.sep).join("/");
+  const relative = path17.relative(root, absolute).split(path17.sep).join("/");
   if (/^(?:\.blueprint|\.planning|\.git)(?:\/|$)/.test(relative) || /(?:^|\/)(?:\.env(?:\..*)?|.*\.(?:pem|key)|credentials(?:\.[^/]*)?)$/i.test(relative)) {
     throw new Error("Select source evidence, excluding runtime state and secret-bearing files.");
   }
@@ -55281,7 +57014,7 @@ async function inputHashes(root, inputs) {
   const entries = await Promise.all([...new Set(inputs.map((input) => evidencePath(root, input)))].sort().map(async (input) => {
     const absolute = resolveRepoRelativePath(root, input);
     if (!(await fs17.lstat(absolute)).isFile()) throw new Error("Evidence inputs must be regular files, not symlinks or directories.");
-    evidencePath(root, path16.relative(await fs17.realpath(root), await fs17.realpath(absolute)).split(path16.sep).join("/"));
+    evidencePath(root, path17.relative(await fs17.realpath(root), await fs17.realpath(absolute)).split(path17.sep).join("/"));
     return [input, hash2(await fs17.readFile(absolute))];
   }));
   return Object.fromEntries(entries);
@@ -55294,7 +57027,7 @@ async function eligibility(root) {
   const inspection = await inspectBlueprintArtifacts(root);
   if (inspection.readiness === "partial") return { allowed: false, readiness: inspection.readiness, next: "health" };
   if (inspection.readiness === "uninitialized" || inspection.readiness === "mapping-incomplete") {
-    const bootstrap = await inspectBootstrapArtifacts(root);
+    const bootstrap = await inspectBootstrapArtifacts(root, inspection);
     if (bootstrap.brownfield.repoShape !== "brownfield") return { allowed: false, readiness: inspection.readiness, next: "new-project" };
   }
   return { allowed: true, readiness: inspection.readiness, next: inspection.readiness === "initialized" ? "progress" : "new-project" };
@@ -55320,6 +57053,15 @@ async function blueprintMapPrepare(raw) {
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
     const gate = await eligibility(root);
     if (!gate.allowed) return { status: "blocked", readiness: gate.readiness, nextAction: await route(gate.next) };
+    const guard = await inspectCodebaseWriteGuard(root);
+    if (!guard.allowed) {
+      return {
+        status: "blocked",
+        readiness: gate.readiness,
+        issues: [guard.reason ?? "Portable codebase publication state blocks legacy mapping mutations."],
+        nextAction: null
+      };
+    }
     const pending = await readPending(root);
     if (pending && !args.restart) return {
       status: "partial",
@@ -55383,6 +57125,15 @@ async function blueprintMapSubmit(raw) {
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
     const gate = await eligibility(root);
     if (!gate.allowed) return { status: "blocked", saved: false, nextAction: await route(gate.next), issues: ["Project prerequisites changed."] };
+    const guard = await inspectCodebaseWriteGuard(root);
+    if (!guard.allowed) {
+      return {
+        status: "blocked",
+        saved: false,
+        issues: [guard.reason ?? "Portable codebase publication state blocks legacy mapping mutations."],
+        warnings: []
+      };
+    }
     const snapshot3 = { ...args.snapshot, inputs: Object.fromEntries(Object.entries(args.snapshot.inputs).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)) };
     const pending = await readPending(root);
     const [current, files, inputs, core] = await Promise.all([
@@ -55480,38 +57231,23 @@ async function blueprintMapSubmit(raw) {
     };
   });
 }
-var execFileAsync2, hash2, digestSchema, targetSchema, snapshotSchema, pendingSchema, prepareSchema, submitSchema, artifactId, artifactPath, mapToolDefinitions;
+var execFileAsync2, hash2, snapshotSchema, pendingSchema, prepareSchema, submitSchema, artifactId, artifactPath, mapToolDefinitions;
 var init_map = __esm({
   "src/mcp/tools/map.ts"() {
     "use strict";
     init_v4();
     init_artifact_contracts();
     init_codebase_authoring();
+    init_contracts();
     init_security();
     init_write_failure_log();
     init_artifacts();
     init_config();
     init_project();
     execFileAsync2 = promisify2(execFile2);
-    hash2 = (value) => createHash7("sha256").update(value).digest("hex");
-    digestSchema = string2().regex(/^[a-f0-9]{64}$/);
-    targetSchema = object2(Object.fromEntries(CODEBASE_DOCUMENT_IDS.map((id) => [id, digestSchema.nullable()]))).strict();
-    snapshotSchema = object2({
-      version: literal(1),
-      root: digestSchema,
-      inventory: digestSchema,
-      inputs: record(string2(), digestSchema),
-      core: digestSchema,
-      targets: targetSchema,
-      previousPublication: digestSchema.nullable()
-    }).strict();
-    pendingSchema = object2({
-      version: literal(1),
-      operationId: digestSchema,
-      snapshot: snapshotSchema,
-      hashes: targetSchema,
-      stage: literal("publishing")
-    }).strict();
+    hash2 = (value) => createHash9("sha256").update(value).digest("hex");
+    snapshotSchema = portableLegacyPublicationSnapshotSchema;
+    pendingSchema = portableLegacyPublicationPendingSchema;
     prepareSchema = object2({ cwd: string2().optional(), inputs: array(string2()).default([]), focus: string2().optional(), restart: boolean2().default(false) }).strict();
     submitSchema = object2({
       cwd: string2().optional(),
@@ -55634,7 +57370,7 @@ var init_bootstrap_authoring = __esm({
 });
 
 // src/mcp/tools/discuss-evidence.ts
-import { createHash as createHash8 } from "node:crypto";
+import { createHash as createHash10 } from "node:crypto";
 import { promises as fs18 } from "node:fs";
 async function readDiscussEvidence(root, relative) {
   await assertCodebasePublicationComplete(root, relative);
@@ -55786,8 +57522,8 @@ async function collectDiscussEvidence(args) {
       status: "blocked",
       reason: "Evidence packet exceeds 512 KiB; narrow source inputs before preparing."
     };
-  const readSet = [roadmap, spec, ...sources].map(({ path: path32, hash: hash5 }) => ({
-    path: path32,
+  const readSet = [roadmap, spec, ...sources].map(({ path: path33, hash: hash5 }) => ({
+    path: path33,
     hash: hash5
   }));
   readSet.push(...priorSnapshots.map((snapshot4, index) => ({
@@ -55876,7 +57612,7 @@ var init_discuss_evidence = __esm({
     init_phase_artifacts();
     init_state();
     init_artifacts();
-    evidenceDigest = (value) => createHash8("sha256").update(value).digest("hex");
+    evidenceDigest = (value) => createHash10("sha256").update(value).digest("hex");
     stableEvidence = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
@@ -55887,7 +57623,7 @@ var init_discuss_evidence = __esm({
 });
 
 // src/mcp/tools/discuss.ts
-import { createHash as createHash9 } from "node:crypto";
+import { createHash as createHash11 } from "node:crypto";
 import { promises as fs19 } from "node:fs";
 async function hashPath(root, relative) {
   try {
@@ -56060,7 +57796,7 @@ async function prepareDiscussInputBasis(args) {
         ...args.readSet.map((i) => i.path)
       ])
     ].filter(
-      (path32) => session.basis.readSet.find((i) => i.path === path32)?.hash !== args.readSet.find((i) => i.path === path32)?.hash
+      (path33) => session.basis.readSet.find((i) => i.path === path33)?.hash !== args.readSet.find((i) => i.path === path33)?.hash
     );
     if (session.basis.prepared && changedPaths.length && !args.acknowledgeChangedInputs)
       return {
@@ -56712,7 +58448,7 @@ var init_discuss = __esm({
       overwrite: boolean2().optional(),
       includeLog: boolean2().optional()
     });
-    digest = (value) => createHash9("sha256").update(value).digest("hex");
+    digest = (value) => createHash11("sha256").update(value).digest("hex");
     stable = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
@@ -56892,10 +58628,10 @@ function normalizeResearchModel(object3) {
 }
 function validatePhaseResearchModelInput(raw, context = {}) {
   const validation = { valid: true, planningReady: true, planningBlockers: [], issues: [], warnings: [], diagnostics: [] };
-  const issue2 = (path32, code, message, repair, warning = false) => {
+  const issue2 = (path33, code, message, repair, warning = false) => {
     (warning ? validation.warnings : validation.issues).push(message);
     validation.diagnostics.push({
-      path: path32,
+      path: path33,
       code,
       message,
       repair,
@@ -56906,9 +58642,9 @@ function validatePhaseResearchModelInput(raw, context = {}) {
     validation.valid = validation.issues.length === 0;
     validation.planningReady = validation.valid && validation.planningBlockers.length === 0;
   };
-  const planningBlocker = (path32, code, message, repair) => {
+  const planningBlocker = (path33, code, message, repair) => {
     validation.planningBlockers.push(message);
-    issue2(path32, code, message, repair, true);
+    issue2(path33, code, message, repair, true);
   };
   let object3;
   try {
@@ -57431,7 +59167,7 @@ async function blueprintResearchPrepare(raw = {}) {
         readResearchEvidence(loc.projectRoot, researchPath, 4 * 1024 * 1024),
         readResearchEvidence(loc.projectRoot, researchProvenancePath(researchPath))
       ]);
-      const readSet = inputs.map(({ path: path32, hash: hash5 }) => ({ path: path32, hash: hash5 }));
+      const readSet = inputs.map(({ path: path33, hash: hash5 }) => ({ path: path33, hash: hash5 }));
       readSet.push({ path: "@research/effective-config", hash: researchDigest(stableResearchValue({ config: config2.config, provenance: config2.provenance })) });
       const context = inputs.find((item) => item.path === contextPath);
       const spec = inputs.find((item) => item.path === specPath);
@@ -57794,8 +59530,8 @@ function candidatePath(segments) {
 }
 function compilePlanCandidate(raw, context) {
   const result = { valid: false, diagnostics: [], models: [], planIds: [] };
-  const issue2 = (path32, code, message, severity = "error") => {
-    result.diagnostics.push({ path: path32, code, message, severity });
+  const issue2 = (path33, code, message, severity = "error") => {
+    result.diagnostics.push({ path: path33, code, message, severity });
   };
   const hasErrors = () => result.diagnostics.some((entry) => entry.severity === "error");
   let input;
@@ -58241,7 +59977,7 @@ async function withPlanSession(args, task) {
 function initialPlanSession(loc) {
   return { version: 2, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, needsIntent: false, mode: "add", targetPlanIds: [], readSet: [], evidencePaths: [], targets: [], existingPlans: [], knownRequirements: [], knownEvidenceArtifacts: [], checkerRequired: false, requests: {} };
 }
-var planNumericPhase, planRequestId, planLookup, checkedPlanPayload, hash4, targetSchema2, topologySchema2, stagesSchema, publishedPlanSchema, receiptSchema2, journalSchema2, schema;
+var planNumericPhase, planRequestId, planLookup, checkedPlanPayload, hash4, targetSchema, topologySchema2, stagesSchema, publishedPlanSchema, receiptSchema2, journalSchema2, schema;
 var init_plan_session = __esm({
   "src/mcp/tools/plan-session.ts"() {
     "use strict";
@@ -58258,7 +59994,7 @@ var init_plan_session = __esm({
     planLookup = { cwd: string2().optional(), phase: planNumericPhase };
     checkedPlanPayload = checkedResearchPayload;
     hash4 = string2().regex(/^[a-f0-9]{64}$/);
-    targetSchema2 = object2({ path: string2(), hash: hash4.nullable() });
+    targetSchema = object2({ path: string2(), hash: hash4.nullable() });
     topologySchema2 = object2({
       phaseNumber: string2(),
       phasePrefix: string2(),
@@ -58300,9 +60036,9 @@ var init_plan_session = __esm({
       needsIntent: boolean2().default(false),
       mode: _enum(["add", "revise", "replace"]),
       targetPlanIds: array(string2()),
-      readSet: array(targetSchema2).max(300),
+      readSet: array(targetSchema).max(300),
       evidencePaths: array(string2()),
-      targets: array(targetSchema2),
+      targets: array(targetSchema),
       existingPlans: array(object2({ planId: string2(), wave: number2(), dependsOn: array(string2()), requirements: array(string2()) })),
       knownRequirements: array(string2()),
       knownEvidenceArtifacts: array(string2()),
@@ -58356,7 +60092,7 @@ async function capturePlanEvidence(loc, selectedPaths) {
     ...evidencePaths
   ])];
   const inputs = await Promise.all(paths.map((p) => readResearchEvidence(loc.projectRoot, p, 1024 * 1024)));
-  const readSet = inputs.map(({ path: path32, hash: hash5 }) => ({ path: path32, hash: hash5 }));
+  const readSet = inputs.map(({ path: path33, hash: hash5 }) => ({ path: path33, hash: hash5 }));
   const provenance = inputs.find((input) => input.path === researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json"));
   if (provenance?.content) {
     const parsed = safeJsonParseObject(provenance.content, { label: provenance.path, maxBytes: 1024 * 1024 });
@@ -58364,13 +60100,13 @@ async function capturePlanEvidence(loc, selectedPaths) {
     for (const item of parsed.readSet) {
       if (!item || typeof item !== "object" || typeof item.path !== "string" || !(item.hash === null || typeof item.hash === "string" && /^[a-f0-9]{64}$/.test(item.hash))) throw new Error("Research provenance contains an invalid source fingerprint.");
       if (item.path.startsWith("@") && item.path !== "@research/effective-config") throw new Error("Research provenance contains an unknown virtual input.");
-      const path32 = item.path === "@research/effective-config" ? item.path : canonicalResearchEvidencePath(loc.projectRoot, item.path);
-      const captured = readSet.find((entry) => entry.path === path32);
-      if (!captured) readSet.push({ path: path32, hash: await researchInputHash(loc.projectRoot, path32) });
+      const path33 = item.path === "@research/effective-config" ? item.path : canonicalResearchEvidencePath(loc.projectRoot, item.path);
+      const captured = readSet.find((entry) => entry.path === path33);
+      if (!captured) readSet.push({ path: path33, hash: await researchInputHash(loc.projectRoot, path33) });
     }
   } else {
-    const path32 = researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json");
-    readSet.push({ path: path32, hash: await researchInputHash(loc.projectRoot, path32) });
+    const path33 = researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-SESSION.json");
+    readSet.push({ path: path33, hash: await researchInputHash(loc.projectRoot, path33) });
   }
   readSet.push({ path: "@plan/effective-config", hash: await planInputHash(loc.projectRoot, "@plan/effective-config", loc.resolved.phaseNumber) });
   readSet.push({ path: "@plan/evidence-inventory", hash: researchDigest(stableResearchValue(evidenceInventory(loc))) });
@@ -58378,7 +60114,7 @@ async function capturePlanEvidence(loc, selectedPaths) {
 }
 async function readPlanTargetHashes(loc) {
   const prefix = `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`;
-  return Promise.all(loc.artifacts.filter((p) => p.startsWith(prefix) && /^\d+-PLAN\.md$/.test(p.slice(prefix.length))).sort().map(async (path32) => ({ path: path32, hash: await researchInputHash(loc.projectRoot, path32) })));
+  return Promise.all(loc.artifacts.filter((p) => p.startsWith(prefix) && /^\d+-PLAN\.md$/.test(p.slice(prefix.length))).sort().map(async (path33) => ({ path: path33, hash: await researchInputHash(loc.projectRoot, path33) })));
 }
 async function planTargetFreshness(loc, session) {
   const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
@@ -58426,7 +60162,7 @@ async function readinessGates(loc, readiness, inputs) {
 }
 function boundedEvidence(inputs) {
   let remaining = 48e3;
-  const priority = (path32) => /-CONTEXT\.md$/.test(path32) ? 0 : /-RESEARCH\.md$/.test(path32) ? 1 : /-(?:UI-)?SPEC\.md$/.test(path32) ? 2 : /\/(?:PROJECT|REQUIREMENTS)\.md$/.test(path32) ? 3 : 4;
+  const priority = (path33) => /-CONTEXT\.md$/.test(path33) ? 0 : /-RESEARCH\.md$/.test(path33) ? 1 : /-(?:UI-)?SPEC\.md$/.test(path33) ? 2 : /\/(?:PROJECT|REQUIREMENTS)\.md$/.test(path33) ? 3 : 4;
   return [...inputs].sort((left, right) => priority(left.path) - priority(right.path)).map((input) => {
     const content = input.content === null ? null : input.content.slice(0, Math.min(/-(?:CONTEXT|SPEC|UI-SPEC)\.md$/.test(input.path) ? 16e3 : 6e3, remaining));
     remaining -= content?.length ?? 0;
@@ -58477,7 +60213,7 @@ async function blueprintPlanPrepare(raw = {}) {
           discoveryGrounding: extractMarkdownSection3(contextContent, "Discovery Grounding"),
           projectConstraints: readiness.context?.projectBrief.constraints ?? []
         },
-        existingPlans: plans.map(({ planId: planId3, path: path32, title, wave, dependsOn, requirements, status }) => ({ planId: planId3, path: path32, title, wave, dependsOn, requirements, status })),
+        existingPlans: plans.map(({ planId: planId3, path: path33, title, wave, dependsOn, requirements, status }) => ({ planId: planId3, path: path33, title, wave, dependsOn, requirements, status })),
         targetHashes: Object.fromEntries(targets2.map((item) => [item.path, item.hash])),
         schema: planningPreparedSchema(readiness.authoringContext),
         example: planningModelExample({ knownRequirements: readiness.authoringContext.knownRequirements, knownEvidenceArtifacts: readiness.authoringContext.knownEvidenceArtifacts }),
@@ -58584,7 +60320,7 @@ async function blueprintPlanRead(raw) {
   });
 }
 function markerContent(session, journal, status) {
-  return JSON.stringify({ version: 1, status, requestId: journal.requestId, revision: session.revision, files: journal.files.map(({ path: path32, hash: hash5 }) => ({ path: path32, hash: hash5 })), removedPaths: journal.removed.map((file2) => file2.path) }, null, 2) + "\n";
+  return JSON.stringify({ version: 1, status, requestId: journal.requestId, revision: session.revision, files: journal.files.map(({ path: path33, hash: hash5 }) => ({ path: path33, hash: hash5 })), removedPaths: journal.removed.map((file2) => file2.path) }, null, 2) + "\n";
 }
 async function verifyPublished(loc, journal, session) {
   for (const file2 of journal.files) if (await researchInputHash(loc.projectRoot, file2.path) !== file2.hash) throw new Error(`Published plan changed: ${file2.path}.`);
@@ -58669,11 +60405,11 @@ async function blueprintPlanSubmit(raw) {
         }
         const removed = [];
         if (session.mode === "replace") for (const id of session.targetPlanIds) {
-          const path32 = `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-${id}-PLAN.md`;
-          if (files.some((file2) => file2.path === path32)) continue;
-          const baselineHash = session.targets.find((item) => item.path === path32)?.hash;
-          if (!baselineHash) return reject("stale", { reason: `Selected replacement target is missing: ${path32}.` });
-          removed.push({ path: path32, baselineHash });
+          const path33 = `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-${id}-PLAN.md`;
+          if (files.some((file2) => file2.path === path33)) continue;
+          const baselineHash = session.targets.find((item) => item.path === path33)?.hash;
+          if (!baselineHash) return reject("stale", { reason: `Selected replacement target is missing: ${path33}.` });
+          removed.push({ path: path33, baselineHash });
         }
         const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
         if (session.legacyPublication || marker.status === "pending" || marker.status === "invalid") return reject("partial", { reason: marker.reason, nextAction: "Prepare and reconcile the observed canonical files before publishing." });
@@ -58768,11 +60504,11 @@ async function blueprintPlanSubmit(raw) {
         const targets2 = new Map(session.targets.map((item) => [item.path, item.hash]));
         for (const file2 of journal.files) targets2.set(file2.path, file2.hash);
         for (const file2 of journal.removed) targets2.delete(file2.path);
-        session.targets = [...targets2].sort(([left], [right]) => left.localeCompare(right)).map(([path32, hash6]) => ({ path: path32, hash: hash6 }));
+        session.targets = [...targets2].sort(([left], [right]) => left.localeCompare(right)).map(([path33, hash6]) => ({ path: path33, hash: hash6 }));
         session.existingPlans = index.plans.map((plan) => ({ planId: plan.planId, wave: plan.wave ?? 1, dependsOn: plan.dependsOn, requirements: plan.requirements }));
         journal.stages.routing = "complete";
         session.needsIntent = true;
-        journal.receipt = { status: "published", saved: true, ready: true, ...responseBase(loc, session), paths: journal.files.map((file2) => file2.path), plans: journal.files.map(({ planId: planId3, wave, taskCount, path: path32 }) => ({ planId: planId3, wave, taskCount, path: path32 })), removedPaths: journal.removed.map((file2) => file2.path), stages: { ...journal.stages }, nextAction };
+        journal.receipt = { status: "published", saved: true, ready: true, ...responseBase(loc, session), paths: journal.files.map((file2) => file2.path), plans: journal.files.map(({ planId: planId3, wave, taskCount, path: path33 }) => ({ planId: planId3, wave, taskCount, path: path33 })), removedPaths: journal.removed.map((file2) => file2.path), stages: { ...journal.stages }, nextAction };
         session.requests[args.requestId].receipt = journal.receipt;
         await savePlanSession(loc, session, true);
         return journal.receipt;
@@ -58816,7 +60552,7 @@ var init_plan = __esm({
     reviewInput = object2({ verdict: _enum(["accept", "revise"]), summary: string2().min(1).max(2e4) });
     submitInput2 = object2({ ...planLookup, requestId: planRequestId, expectedRevision: number2().int().nonnegative(), model: unknown().optional(), overwrite: boolean2().optional(), review: reviewInput.optional() });
     lookupSchema = object2(planLookup);
-    planDependencies = { compile: compilePlanCandidate, validate: validatePhasePlanCandidateSet, writeText: writeTextFile, remove: (path32) => fs23.unlink(path32), stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad };
+    planDependencies = { compile: compilePlanCandidate, validate: validatePhasePlanCandidateSet, writeText: writeTextFile, remove: (path33) => fs23.unlink(path33), stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad };
     planningToolDefinitions = [
       { name: "blueprint_plan_prepare", description: "Prepare phase evidence, exact model schema/example, derivable fields and meaningful validation rules for first-attempt plan publication. Saves only preparation metadata. Existing plans require add/revise/replace intent.", inputSchema: prepareInput3.shape, handler: (args) => blueprintPlanPrepare(args) },
       { name: "blueprint_plan_submit", description: "Normalize and validate a model in memory, then publish the complete canonical plan set. Rejected drafts are never saved. An optional configured checker reviews the supplied model before this call. Retry interrupted publication with the same model until all canonical plans are saved.", inputSchema: submitInput2.shape, handler: (args) => blueprintPlanSubmit(args) },
@@ -58827,10 +60563,10 @@ var init_plan = __esm({
 
 // src/mcp/tools/workspace.ts
 import { execFile as execFile3 } from "node:child_process";
-import { createHash as createHash10 } from "node:crypto";
+import { createHash as createHash12 } from "node:crypto";
 import { promises as fs24 } from "node:fs";
 import os3 from "node:os";
-import path17 from "node:path";
+import path18 from "node:path";
 import { promisify as promisify3 } from "node:util";
 function expandHomePath3(value) {
   const trimmed = value.trim();
@@ -58838,7 +60574,7 @@ function expandHomePath3(value) {
     return os3.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path17.join(os3.homedir(), trimmed.slice(2));
+    return path18.join(os3.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -58879,7 +60615,7 @@ async function canonicalizePath(candidatePath2) {
   try {
     return await fs24.realpath(candidatePath2);
   } catch {
-    return path17.resolve(candidatePath2);
+    return path18.resolve(candidatePath2);
   }
 }
 function normalizeTextForComparison(value) {
@@ -59085,7 +60821,7 @@ async function writeFileAtomically(filePath, content) {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
   let existingMode = null;
   try {
-    await fs24.mkdir(path17.dirname(filePath), { recursive: true });
+    await fs24.mkdir(path18.dirname(filePath), { recursive: true });
     try {
       const stats = await fs24.lstat(filePath);
       if (!stats.isFile()) {
@@ -59151,14 +60887,14 @@ async function restoreFileSnapshots(snapshots) {
       await fs24.rm(snapshot3.path, { force: true }).catch(() => void 0);
       continue;
     }
-    await fs24.mkdir(path17.dirname(snapshot3.path), { recursive: true });
+    await fs24.mkdir(path18.dirname(snapshot3.path), { recursive: true });
     await fs24.writeFile(snapshot3.path, snapshot3.content ?? "", "utf8");
   }
 }
 async function snapshotRepoFiles(repoRoot, relativePaths) {
   const snapshots = [];
   for (const relativePath of [...new Set(relativePaths)]) {
-    const targetPath = path17.resolve(repoRoot, relativePath);
+    const targetPath = path18.resolve(repoRoot, relativePath);
     ensurePathWithinRootSync(repoRoot, targetPath, {
       label: "Patch replay tracked file"
     });
@@ -59188,7 +60924,7 @@ async function restoreRepoFileSnapshots(snapshots) {
       restoredFiles.push(snapshot3.relativePath);
       continue;
     }
-    await fs24.mkdir(path17.dirname(snapshot3.path), { recursive: true });
+    await fs24.mkdir(path18.dirname(snapshot3.path), { recursive: true });
     await fs24.writeFile(snapshot3.path, snapshot3.content ?? Buffer.alloc(0));
     restoredFiles.push(snapshot3.relativePath);
   }
@@ -59207,7 +60943,7 @@ function workstreamsIndexAbsolute(projectRoot) {
   return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
 }
 function workstreamStateAbsolute(projectRoot, slug) {
-  return path17.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+  return path18.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
 }
 function workstreamSummary(projectRoot, entry) {
   return {
@@ -59248,7 +60984,7 @@ function buildResumeStatePatch(snapshot3) {
   };
 }
 async function loadWorkstreamStore(projectRoot) {
-  const blueprintRoot = path17.join(projectRoot, BLUEPRINT_DIR);
+  const blueprintRoot = path18.join(projectRoot, BLUEPRINT_DIR);
   const rootPath = workstreamsRootAbsolute(projectRoot);
   const indexPath = workstreamsIndexAbsolute(projectRoot);
   if (!await pathExists3(blueprintRoot)) {
@@ -59293,7 +61029,7 @@ async function loadWorkstreamStore(projectRoot) {
       if (!entry.isDirectory()) {
         continue;
       }
-      const statePath = path17.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      const statePath = path18.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
       if (!await pathExists3(statePath)) {
         throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
       }
@@ -59425,7 +61161,7 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(projectRoot),
-    ...uniqueSlugs.map((slug) => path17.dirname(workstreamStateAbsolute(projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path18.dirname(workstreamStateAbsolute(projectRoot, slug)))
   ]);
   try {
     for (const slug of uniqueSlugs) {
@@ -59458,7 +61194,7 @@ async function persistWorkstreamStateWithPreparedStateUpdate(args) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(args.projectRoot),
-    ...uniqueSlugs.map((slug) => path17.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path18.dirname(workstreamStateAbsolute(args.projectRoot, slug)))
   ]);
   try {
     const affectedPaths = await persistWorkstreamState(
@@ -59508,7 +61244,7 @@ function maybeFailWorkspaceRegistryWrite(registryPath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesRegistry = injectedFailure === "1" || path17.resolve(injectedFailure) === path17.resolve(registryPath);
+  const matchesRegistry = injectedFailure === "1" || path18.resolve(injectedFailure) === path18.resolve(registryPath);
   if (!matchesRegistry) {
     return;
   }
@@ -59521,7 +61257,7 @@ function maybeFailPatchRegistryWrite(registryPath) {
     return;
   }
   const indexPath = patchIndexPath(registryPath);
-  const matchesRegistry = injectedFailure === "1" || path17.resolve(injectedFailure) === path17.resolve(registryPath) || path17.resolve(injectedFailure) === path17.resolve(indexPath);
+  const matchesRegistry = injectedFailure === "1" || path18.resolve(injectedFailure) === path18.resolve(registryPath) || path18.resolve(injectedFailure) === path18.resolve(indexPath);
   if (!matchesRegistry) {
     return;
   }
@@ -59554,12 +61290,12 @@ async function maybeDelayWorkspaceRemoveForTest() {
 }
 async function maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath) {
   const injectedTarget = process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
-  if (!injectedTarget || path17.resolve(injectedTarget) !== path17.resolve(workspacePath)) {
+  if (!injectedTarget || path18.resolve(injectedTarget) !== path18.resolve(workspacePath)) {
     return;
   }
   delete process.env.BLUEPRINT_TEST_WORKSPACE_CREATE_TARGET_RACE_ONCE;
   await fs24.mkdir(workspacePath, { recursive: true });
-  await fs24.writeFile(path17.join(workspacePath, "foreign-content.txt"), "preserve\n", "utf8");
+  await fs24.writeFile(path18.join(workspacePath, "foreign-content.txt"), "preserve\n", "utf8");
 }
 async function maybeDelayPatchRecordBeforeIndexForTest() {
   const delayMs = parsePositiveIntegerEnv2("BLUEPRINT_TEST_PATCH_RECORD_BEFORE_INDEX_DELAY_MS");
@@ -59575,7 +61311,7 @@ async function maybeDelayPatchRecordAfterPatchWriteForTest() {
   }
   const markerPath = process.env.BLUEPRINT_TEST_PATCH_RECORD_AFTER_PATCH_WRITE_MARKER;
   if (markerPath) {
-    await fs24.mkdir(path17.dirname(markerPath), { recursive: true });
+    await fs24.mkdir(path18.dirname(markerPath), { recursive: true });
     await fs24.writeFile(markerPath, "patch-written\n", "utf8");
   }
   await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -59753,10 +61489,10 @@ function normalizeWorkspaceRepoMember(value, fallbackStrategy) {
   };
 }
 async function writeWorkspaceRegistryDocument(registryPath, document) {
-  const directory = path17.dirname(registryPath);
-  const tempPath = path17.join(
+  const directory = path18.dirname(registryPath);
+  const tempPath = path18.join(
     directory,
-    `${path17.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
+    `${path18.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
   let existingMode = null;
   await fs24.mkdir(directory, { recursive: true });
@@ -59786,9 +61522,9 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     await fs24.rename(tempPath, registryPath);
     return;
   }
-  const backupPath = path17.join(
+  const backupPath = path18.join(
     directory,
-    `${path17.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
+    `${path18.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
   );
   let restoredOriginal = false;
   try {
@@ -59813,16 +61549,16 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
   await fs24.rm(backupPath, { force: true }).catch(() => void 0);
 }
 function workspaceRegistryLockOwnerPath(lockPath) {
-  return path17.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
+  return path18.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
 }
 function workspaceRegistryLockLeasePath(lockPath) {
-  return path17.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+  return path18.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
 }
 function workspaceRegistryLockRecoveryPath(lockPath) {
   return `${lockPath}.recovery`;
 }
 function workspaceRegistryLockRecoveryGuardOwnerPath(recoveryPath, token) {
-  return path17.join(recoveryPath, `${WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
+  return path18.join(recoveryPath, `${WORKSPACE_REGISTRY_LOCK_RECOVERY_GUARD_PREFIX}${token}`);
 }
 function workspaceRegistryLockQuarantinePath(targetPath) {
   return `${targetPath}.reclaimed-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -59879,7 +61615,7 @@ async function getWorkspaceRegistryLockRecoveryGuardAgeMs(recoveryPath) {
       continue;
     }
     try {
-      const stats = await fs24.stat(path17.join(recoveryPath, entry));
+      const stats = await fs24.stat(path18.join(recoveryPath, entry));
       newestOwnerMtimeMs = Math.max(newestOwnerMtimeMs ?? stats.mtimeMs, stats.mtimeMs);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
@@ -60054,7 +61790,7 @@ async function createWorkspaceRegistryLockHandle(lockPath) {
   return lockHandle;
 }
 async function acquireWorkspaceRegistryLock(lockPath) {
-  await fs24.mkdir(path17.dirname(lockPath), { recursive: true });
+  await fs24.mkdir(path18.dirname(lockPath), { recursive: true });
   for (; ; ) {
     try {
       await fs24.mkdir(lockPath);
@@ -60167,23 +61903,23 @@ function normalizeRecordedPatchId(value, indexPath) {
   }
 }
 function patchIndexPath(registryPath) {
-  return path17.join(registryPath, "index.json");
+  return path18.join(registryPath, "index.json");
 }
 function patchManifestPath(registryPath, patchId) {
-  return path17.join(registryPath, `${patchId}.json`);
+  return path18.join(registryPath, `${patchId}.json`);
 }
 function patchContentPath(registryPath, patchId) {
-  return path17.join(registryPath, `${patchId}.patch`);
+  return path18.join(registryPath, `${patchId}.patch`);
 }
 function patchAuditPath(registryPath, patchId) {
-  return path17.join(registryPath, `${patchId}.audit.ndjson`);
+  return path18.join(registryPath, `${patchId}.audit.ndjson`);
 }
-function sha256(value) {
-  return createHash10("sha256").update(value).digest("hex");
+function sha2562(value) {
+  return createHash12("sha256").update(value).digest("hex");
 }
 async function fileContentHash(filePath) {
   try {
-    return sha256(await fs24.readFile(filePath));
+    return sha2562(await fs24.readFile(filePath));
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -60212,11 +61948,11 @@ function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
   for (const trackedFile of trackedFiles) {
     assertNoNullBytes(trackedFile, "Patch tracked file");
-    const candidatePath2 = path17.isAbsolute(trackedFile) ? path17.resolve(trackedFile) : path17.resolve(repoRoot, trackedFile);
+    const candidatePath2 = path18.isAbsolute(trackedFile) ? path18.resolve(trackedFile) : path18.resolve(repoRoot, trackedFile);
     ensurePathWithinRootSync(repoRoot, candidatePath2, {
       label: "Patch tracked file"
     });
-    const relativePath = path17.relative(repoRoot, candidatePath2).replaceAll(path17.sep, "/");
+    const relativePath = path18.relative(repoRoot, candidatePath2).replaceAll(path18.sep, "/");
     if (!relativePath || relativePath === ".") {
       throw new Error("Patch tracked file must resolve to a file path inside the repo.");
     }
@@ -60356,7 +62092,7 @@ async function loadPatchContent(registryPath, patchId, manifest) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
   const patch = await fs24.readFile(contentPath, "utf8");
-  if (sha256(patch) !== manifest.patchHash) {
+  if (sha2562(patch) !== manifest.patchHash) {
     throw new Error(
       `Patch registry is malformed for ${patchId}; recorded patch content does not match its manifest.`
     );
@@ -60418,9 +62154,9 @@ function assertNotInstalledExtensionTarget(repoRoot) {
   if (!extensionPath) {
     return;
   }
-  const resolvedRepoRoot = path17.resolve(repoRoot);
-  const resolvedExtensionPath = path17.resolve(extensionPath);
-  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path17.sep}`)) {
+  const resolvedRepoRoot = path18.resolve(repoRoot);
+  const resolvedExtensionPath = path18.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path18.sep}`)) {
     throw new Error(
       `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
     );
@@ -60440,7 +62176,7 @@ async function buildPatchCompatibilityStatus(manifest, repoRoot) {
   }
   const runtimeHost = resolveBlueprintRuntimeHost();
   const reasons = [];
-  const repoName = path17.basename(repoRoot);
+  const repoName = path18.basename(repoRoot);
   if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
     reasons.push(
       `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
@@ -60501,14 +62237,14 @@ async function resolveDefaultWorkspaceRoot(cwd) {
       throw error2;
     }
   }
-  return path17.join(os3.homedir(), "blueprint-workspaces");
+  return path18.join(os3.homedir(), "blueprint-workspaces");
 }
 async function resolveWorkspacePath(args) {
   if (args.path) {
-    return path17.resolve(expandHomePath3(args.path));
+    return path18.resolve(expandHomePath3(args.path));
   }
   const workspaceRoot = await resolveDefaultWorkspaceRoot(args.cwd);
-  return path17.join(workspaceRoot, normalizeWorkspaceName(args.name));
+  return path18.join(workspaceRoot, normalizeWorkspaceName(args.name));
 }
 async function validateWorkspaceBranchName(branch) {
   const trimmed = branch.trim();
@@ -60538,18 +62274,18 @@ async function resolveSourceRepos(repoInputs, cwd) {
   const seen = /* @__PURE__ */ new Set();
   for (const repoInput of repoInputs) {
     assertNoNullBytes(repoInput, "Workspace repo");
-    const candidatePath2 = path17.resolve(cwd ?? process.cwd(), expandHomePath3(repoInput));
+    const candidatePath2 = path18.resolve(cwd ?? process.cwd(), expandHomePath3(repoInput));
     const sourcePath = await resolveGitRepoRoot(candidatePath2);
     if (seen.has(sourcePath)) {
       continue;
     }
     seen.add(sourcePath);
     resolved.push({
-      name: slugifyRepoName(path17.basename(sourcePath)),
+      name: slugifyRepoName(path18.basename(sourcePath)),
       sourcePath,
       defaultBranch: await gitCurrentBranch(sourcePath),
       head: await gitHeadSha(sourcePath),
-      blueprintProject: await pathExists3(path17.join(sourcePath, ".blueprint"))
+      blueprintProject: await pathExists3(path18.join(sourcePath, ".blueprint"))
     });
   }
   if (resolved.length === 0) {
@@ -60571,10 +62307,10 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
 }
 function resolveWorkspaceTargetPath(value, cwd) {
   assertNoNullBytes(value, "Workspace path");
-  return path17.resolve(cwd ?? process.cwd(), expandHomePath3(value));
+  return path18.resolve(cwd ?? process.cwd(), expandHomePath3(value));
 }
 function buildWorkspaceManifestPath(workspacePath) {
-  return path17.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+  return path18.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
 function assertNotInstalledExtensionPath(candidatePath2, label) {
   const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
@@ -60583,7 +62319,7 @@ function assertNotInstalledExtensionPath(candidatePath2, label) {
   }
   if (isPathWithinRootSync(extensionPath, candidatePath2)) {
     throw new Error(
-      `${label} must not target the installed extension directory: ${path17.resolve(extensionPath)}`
+      `${label} must not target the installed extension directory: ${path18.resolve(extensionPath)}`
     );
   }
 }
@@ -60610,7 +62346,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
     duplicateIndex += 1;
   }
   usedTargetNames.add(candidateName);
-  const memberPath = path17.join(workspacePath, candidateName);
+  const memberPath = path18.join(workspacePath, candidateName);
   if (strategy === "worktree") {
     const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
     const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
@@ -60733,7 +62469,7 @@ function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
   }
   if (workspacePath) {
     const exactMatches = nameMatches.filter(
-      (workspace) => path17.resolve(workspace.path) === workspacePath
+      (workspace) => path18.resolve(workspace.path) === workspacePath
     );
     if (exactMatches.length > 1) {
       throw new Error(
@@ -60762,12 +62498,12 @@ async function ensurePathRemoved(targetPath, label) {
   }
 }
 function workspaceEntriesMatch(registryEntry, manifestEntry) {
-  if (registryEntry.name !== manifestEntry.name || path17.resolve(registryEntry.path) !== path17.resolve(manifestEntry.path) || path17.resolve(registryEntry.manifestPath) !== path17.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
+  if (registryEntry.name !== manifestEntry.name || path18.resolve(registryEntry.path) !== path18.resolve(manifestEntry.path) || path18.resolve(registryEntry.manifestPath) !== path18.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
     return false;
   }
   return registryEntry.repos.every((member, index) => {
     const manifestMember = manifestEntry.repos[index];
-    return manifestMember !== void 0 && member.name === manifestMember.name && path17.resolve(member.sourcePath) === path17.resolve(manifestMember.sourcePath) && path17.resolve(member.path) === path17.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
+    return manifestMember !== void 0 && member.name === manifestMember.name && path18.resolve(member.sourcePath) === path18.resolve(manifestMember.sourcePath) && path18.resolve(member.path) === path18.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
   });
 }
 async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryPath) {
@@ -60785,9 +62521,9 @@ async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryP
   }
 }
 async function verifyWorkspaceRemovalEntry(entry, registryPath) {
-  const workspacePath = path17.resolve(entry.path);
-  const manifestPath = path17.resolve(entry.manifestPath);
-  const expectedManifestPath = path17.resolve(buildWorkspaceManifestPath(workspacePath));
+  const workspacePath = path18.resolve(entry.path);
+  const manifestPath = path18.resolve(entry.manifestPath);
+  const expectedManifestPath = path18.resolve(buildWorkspaceManifestPath(workspacePath));
   assertNotInstalledExtensionPath(workspacePath, "Workspace removal target");
   if (manifestPath !== expectedManifestPath) {
     throw new Error(
@@ -60811,7 +62547,7 @@ async function verifyWorkspaceRemovalEntry(entry, registryPath) {
     );
   }
   for (const member of entry.repos) {
-    const memberPath = path17.resolve(member.path);
+    const memberPath = path18.resolve(member.path);
     ensurePathWithinRootSync(workspacePath, memberPath, {
       label: "Workspace repo member"
     });
@@ -60998,7 +62734,7 @@ async function blueprintWorkspaceCreate(args) {
   return withWorkspaceRegistryLock(registryPath, async () => {
     const registry2 = await readWorkspaceRegistryDocument(registryPath);
     if (registry2.workspaces.some(
-      (workspace) => workspace.name === normalizedName || path17.resolve(workspace.path) === path17.resolve(workspacePath)
+      (workspace) => workspace.name === normalizedName || path18.resolve(workspace.path) === path18.resolve(workspacePath)
     )) {
       throw new Error(
         `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
@@ -61009,7 +62745,7 @@ async function blueprintWorkspaceCreate(args) {
     const createdAt = (/* @__PURE__ */ new Date()).toISOString();
     let createdWorkspaceRoot = false;
     try {
-      await fs24.mkdir(path17.dirname(workspacePath), { recursive: true });
+      await fs24.mkdir(path18.dirname(workspacePath), { recursive: true });
       await ensureWorkspaceTargetDoesNotExist(workspacePath);
       await maybeCreateWorkspaceTargetDuringMkdirForTest(workspacePath);
       await fs24.mkdir(workspacePath, { recursive: false });
@@ -61126,7 +62862,7 @@ async function blueprintWorkstreamList(args = {}) {
 }
 async function blueprintWorkstreamMutate(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  if (!await pathExists3(path17.join(projectRoot, BLUEPRINT_DIR))) {
+  if (!await pathExists3(path18.join(projectRoot, BLUEPRINT_DIR))) {
     return blueprintWorkstreamMutateLocked(projectRoot, args);
   }
   return withWorkstreamTransitionLock(
@@ -61517,7 +63253,7 @@ async function blueprintPatchRecord(args, options = {}) {
     assertNoNullBytes(patch, "Patch content");
     const normalizedPatch = patch.endsWith("\n") ? patch : `${patch}
 `;
-    const patchHash = sha256(normalizedPatch);
+    const patchHash = sha2562(normalizedPatch);
     let repoRemote;
     let sourceVersion;
     let compatibility;
@@ -61530,7 +63266,7 @@ async function blueprintPatchRecord(args, options = {}) {
       sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
       compatibility = {
         host: args.compatibility?.host ?? runtimeHost.host,
-        repoRootName: args.compatibility?.repoRootName ?? path17.basename(repoRoot),
+        repoRootName: args.compatibility?.repoRootName ?? path18.basename(repoRoot),
         remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
       };
     }
@@ -61540,9 +63276,9 @@ async function blueprintPatchRecord(args, options = {}) {
       label: args.label?.trim() || null,
       createdAt: existingManifest?.createdAt ?? createdAt,
       sourceVersion,
-      repoRootName: path17.basename(repoRoot),
+      repoRootName: path18.basename(repoRoot),
       repoRemote,
-      patchFile: path17.basename(patchPath),
+      patchFile: path18.basename(patchPath),
       patchHash,
       trackedFiles,
       compatibility,
@@ -61578,7 +63314,7 @@ async function blueprintPatchRecord(args, options = {}) {
         timestamp: createdAt,
         action: args.audit?.action ?? "record",
         outcome: args.audit?.outcome ?? "recorded",
-        cwd: path17.resolve(args.cwd ?? process.cwd()),
+        cwd: path18.resolve(args.cwd ?? process.cwd()),
         repoRoot,
         targetHead: args.audit?.targetHead ?? sourceVersion,
         trackedFiles,
@@ -61666,11 +63402,11 @@ async function blueprintPatchReapply(args = {}) {
     throw new Error(`Patch replay requires a clean working tree: ${repoRoot}`);
   }
   const conflicts = [];
-  const tempDir = await fs24.mkdtemp(path17.join(os3.tmpdir(), "blueprint-patch-reapply-"));
+  const tempDir = await fs24.mkdtemp(path18.join(os3.tmpdir(), "blueprint-patch-reapply-"));
   try {
     const patchFiles = await Promise.all(
       replaySnapshot.map(async (snapshot3, index) => {
-        const patchFile = path17.join(tempDir, `${index}-${snapshot3.patchId}.patch`);
+        const patchFile = path18.join(tempDir, `${index}-${snapshot3.patchId}.patch`);
         await fs24.writeFile(patchFile, snapshot3.patch, "utf8");
         return patchFile;
       })
@@ -61921,7 +63657,7 @@ var init_workspace = __esm({
 import { execFile as execFile4 } from "node:child_process";
 import { promises as fs25 } from "node:fs";
 import os4 from "node:os";
-import path18 from "node:path";
+import path19 from "node:path";
 import { promisify as promisify4 } from "node:util";
 function normalizePlanRunPhase(value) {
   return normalizePhaseNumber(value);
@@ -61948,7 +63684,7 @@ function planRunRelativeRootPath(phase, planId3) {
 }
 function resolvePlanRunPath(projectRoot, relativePath) {
   const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
-  const planRunsRoot = path18.join(projectRoot, PLAN_RUNS_ROOT_PATH);
+  const planRunsRoot = path19.join(projectRoot, PLAN_RUNS_ROOT_PATH);
   return ensurePathWithinRootSync(planRunsRoot, absolutePath, {
     label: "PlanRun path"
   });
@@ -62046,7 +63782,7 @@ function uniqueSortedStrings2(values) {
 }
 function normalizeRepoRelativePlanRunPath(projectRoot, value, label) {
   const absolutePath = resolveRepoRelativePath(projectRoot, value);
-  return path18.relative(projectRoot, absolutePath).split(path18.sep).join("/");
+  return path19.relative(projectRoot, absolutePath).split(path19.sep).join("/");
 }
 function normalizeRepoRelativePlanRunPaths(projectRoot, values, label) {
   return uniqueSortedStrings2(
@@ -62069,7 +63805,7 @@ function normalizePersistedRepoRelativePlanRunPaths(projectRoot, values, label) 
 function normalizeBlueprintArtifactPath(projectRoot, value, label) {
   const normalized = normalizeRequiredStringValue(value, label);
   const absolutePath = resolveBlueprintPath(projectRoot, normalized);
-  return path18.relative(projectRoot, absolutePath).split(path18.sep).join("/");
+  return path19.relative(projectRoot, absolutePath).split(path19.sep).join("/");
 }
 function normalizeNullableBlueprintArtifactPath(projectRoot, value, label) {
   if (value === null) {
@@ -62089,13 +63825,13 @@ function normalizeOptionalFilesystemPath(projectRoot, value, label) {
   if (!normalized) {
     return null;
   }
-  return path18.resolve(projectRoot, normalized);
+  return path19.resolve(projectRoot, normalized);
 }
 function normalizePersistedFilesystemPath(projectRoot, value, label) {
   if (value === null) {
     return null;
   }
-  return path18.resolve(projectRoot, normalizeRequiredStringValue(value, label));
+  return path19.resolve(projectRoot, normalizeRequiredStringValue(value, label));
 }
 function expandHomePath4(value) {
   const trimmed = value.trim();
@@ -62103,7 +63839,7 @@ function expandHomePath4(value) {
     return os4.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path18.join(os4.homedir(), trimmed.slice(2));
+    return path19.join(os4.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -62401,7 +64137,7 @@ async function realpathOrResolve(targetPath) {
   try {
     return await fs25.realpath(targetPath);
   } catch {
-    return path18.resolve(targetPath);
+    return path19.resolve(targetPath);
   }
 }
 async function gitCommonDir(projectRoot) {
@@ -62415,7 +64151,7 @@ async function gitCommonDir(projectRoot) {
     };
   }
   const rawCommonDir = result.stdout.trim();
-  const commonDir = path18.isAbsolute(rawCommonDir) ? rawCommonDir : path18.resolve(projectRoot, rawCommonDir);
+  const commonDir = path19.isAbsolute(rawCommonDir) ? rawCommonDir : path19.resolve(projectRoot, rawCommonDir);
   return {
     path: await realpathOrResolve(commonDir),
     warning: null
@@ -62595,7 +64331,7 @@ function countTextLines(content) {
   return content.endsWith("\n") ? content.slice(0, -1).split("\n").length : content.split("\n").length;
 }
 async function readUntrackedFileForDiff(projectRoot, filePath) {
-  const fileBuffer = await fs25.readFile(path18.join(projectRoot, filePath));
+  const fileBuffer = await fs25.readFile(path19.join(projectRoot, filePath));
   if (fileBuffer.includes(0)) {
     return {
       kind: "binary",
@@ -62987,7 +64723,7 @@ function normalizePlanRunRecord(value, expected) {
   if (!Array.isArray(record2.verification)) {
     throw new Error(`${expected.label}.verification must be an array.`);
   }
-  const sourceRepoRoot = path18.resolve(
+  const sourceRepoRoot = path19.resolve(
     normalizeRequiredStringValue(source.repoRoot, `${expected.label}.source.repoRoot`)
   );
   if (sourceRepoRoot !== expected.projectRoot) {
@@ -63151,7 +64887,7 @@ function maybeFailPlanRunRecordWrite(filePath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesPath = injectedFailure === "1" || path18.resolve(injectedFailure) === path18.resolve(filePath);
+  const matchesPath = injectedFailure === "1" || path19.resolve(injectedFailure) === path19.resolve(filePath);
   if (!matchesPath) {
     return;
   }
@@ -63163,7 +64899,7 @@ function maybeFailPlanRunRecordRestore(filePath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesPath = injectedFailure === "1" || path18.resolve(injectedFailure) === path18.resolve(filePath);
+  const matchesPath = injectedFailure === "1" || path19.resolve(injectedFailure) === path19.resolve(filePath);
   if (!matchesPath) {
     return;
   }
@@ -63208,7 +64944,7 @@ async function maybeDelayPlanRunPatchRollbackForTest() {
     return;
   }
   if (markerPath) {
-    await fs25.mkdir(path18.dirname(markerPath), { recursive: true });
+    await fs25.mkdir(path19.dirname(markerPath), { recursive: true });
     await fs25.writeFile(markerPath, "rollback-pending\n", "utf8");
   }
   if (releasePath) {
@@ -63223,9 +64959,9 @@ async function writeAtomicJsonFile(filePath, value) {
   await ensureParentDirectory2(filePath);
   maybeFailPlanRunRecordWrite(filePath);
   const existingMode = await inspectPlanRunFileTarget(filePath);
-  const tempPath = path18.join(
-    path18.dirname(filePath),
-    `.${path18.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  const tempPath = path19.join(
+    path19.dirname(filePath),
+    `.${path19.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
   );
   try {
     await fs25.writeFile(tempPath, `${JSON.stringify(value, null, 2)}
@@ -63258,9 +64994,9 @@ async function restorePlanRunFileSnapshot(filePath, snapshot3) {
     return;
   }
   await ensureParentDirectory2(filePath);
-  const tempPath = path18.join(
-    path18.dirname(filePath),
-    `.${path18.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.rollback.tmp`
+  const tempPath = path19.join(
+    path19.dirname(filePath),
+    `.${path19.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.rollback.tmp`
   );
   try {
     await fs25.writeFile(tempPath, snapshot3.content, "utf8");
@@ -63958,7 +65694,7 @@ async function blueprintPlanRunPatchRecord(args) {
       label: `Plan run ${phase}/${planId3}`,
       sourceVersion: diffBaseHead,
       compatibility: {
-        repoRootName: path18.basename(projectRoot)
+        repoRootName: path19.basename(projectRoot)
       },
       audit: {
         action: "record",
@@ -64114,9 +65850,9 @@ async function blueprintPlanRunPrepare(args) {
   const workspaceName = normalizePlanRunWorkspaceName(
     args.workspaceName ?? `phase-${phase}-plan-${planId3}-${slug}`
   );
-  const workspacePath = path18.resolve(
+  const workspacePath = path19.resolve(
     expandHomePath4(
-      args.workspacePath ?? path18.join(configResult.config.maintenance.workspace_root, workspaceName)
+      args.workspacePath ?? path19.join(configResult.config.maintenance.workspace_root, workspaceName)
     )
   );
   const strategy = configResult.config.workflow.use_worktrees ? "worktree" : "same-tree";
@@ -64390,14 +66126,14 @@ var init_plan_run = __esm({
 
 // src/mcp/tools/phase-execution-control.ts
 import { execFile as execFile5 } from "node:child_process";
-import { createHash as createHash11, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash13, randomUUID as randomUUID3 } from "node:crypto";
 import { promises as fs26 } from "node:fs";
-import path19 from "node:path";
+import path20 from "node:path";
 function dependencies(overrides) {
   return { ...defaultDependencies, ...overrides };
 }
-function sha2562(value) {
-  return createHash11("sha256").update(value).digest("hex");
+function sha2563(value) {
+  return createHash13("sha256").update(value).digest("hex");
 }
 function canonicalize(value) {
   if (Array.isArray(value)) {
@@ -64416,7 +66152,7 @@ function canonicalize(value) {
   return value;
 }
 function fingerprintPacket(packet) {
-  return sha2562(JSON.stringify(canonicalize(packet)));
+  return sha2563(JSON.stringify(canonicalize(packet)));
 }
 function canonicalJson(value) {
   return JSON.stringify(canonicalize(value));
@@ -64432,13 +66168,13 @@ function extractBoundVerificationCommands(planContent) {
   return unique2(commands);
 }
 function isInside(root, candidate) {
-  return candidate === root || candidate.startsWith(`${root}${path19.sep}`);
+  return candidate === root || candidate.startsWith(`${root}${path20.sep}`);
 }
 function assertSafeRelativePath(relativePath, options) {
-  if (!relativePath || path19.isAbsolute(relativePath) || relativePath.includes("\0") || relativePath.includes("\\")) {
+  if (!relativePath || path20.isAbsolute(relativePath) || relativePath.includes("\0") || relativePath.includes("\\")) {
     throw new Error(`Unsafe execution path: ${JSON.stringify(relativePath)}.`);
   }
-  const normalized = path19.posix.normalize(relativePath.replace(/^\.\//, ""));
+  const normalized = path20.posix.normalize(relativePath.replace(/^\.\//, ""));
   if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized !== relativePath.replace(/^\.\//, "") || normalized === ".git" || normalized.startsWith(".git/") || !options.allowBlueprint && (normalized === BLUEPRINT_DIR || normalized.startsWith(`${BLUEPRINT_DIR}/`))) {
     throw new Error(`Unsafe execution path: ${JSON.stringify(relativePath)}.`);
   }
@@ -64465,7 +66201,7 @@ async function readRepoFile(projectRoot, canonicalRoot, relativePath) {
     content,
     digest: {
       path: safePath,
-      sha256: sha2562(bytes),
+      sha256: sha2563(bytes),
       sizeBytes: bytes.byteLength,
       mode: stats.mode & 4095
     }
@@ -64520,11 +66256,11 @@ async function digestRepoBoundaryPath(args) {
   const safePath = assertSafeRelativePath(args.relativePath, {
     allowBlueprint: args.allowBlueprint
   });
-  const absolutePath = path19.resolve(args.projectRoot, ...safePath.split("/"));
+  const absolutePath = path20.resolve(args.projectRoot, ...safePath.split("/"));
   const segments = safePath.split("/");
   let current = args.canonicalRoot;
   for (let index = 0; index < segments.length; index += 1) {
-    current = path19.join(current, segments[index] ?? "");
+    current = path20.join(current, segments[index] ?? "");
     try {
       const stats2 = await fs26.lstat(current);
       if (stats2.isSymbolicLink()) {
@@ -64538,7 +66274,7 @@ async function digestRepoBoundaryPath(args) {
       }
     } catch (error2) {
       if (error2.code === "ENOENT" && args.allowMissing) {
-        const existingParent = path19.dirname(current);
+        const existingParent = path20.dirname(current);
         const realParent = await fs26.realpath(existingParent);
         if (!isInside(args.canonicalRoot, realParent)) {
           throw new Error(`Execution boundary path escapes the repository: ${safePath}.`);
@@ -64558,7 +66294,7 @@ async function digestRepoBoundaryPath(args) {
   }
   return {
     path: safePath,
-    sha256: sha2562(bytes),
+    sha256: sha2563(bytes),
     sizeBytes: bytes.byteLength,
     mode: stats.mode & 4095
   };
@@ -64602,7 +66338,7 @@ async function gitSnapshot(projectRoot, deps) {
     canonicalRoot,
     head,
     porcelainV1Z,
-    porcelainSha256: sha2562(porcelainV1Z),
+    porcelainSha256: sha2563(porcelainV1Z),
     workingTree
   };
 }
@@ -64719,7 +66455,7 @@ async function buildPacket(projectRoot, args, deps) {
       verificationCriteria: [...plan.acceptanceCriteria],
       verificationCommands: extractBoundVerificationCommands(content),
       content,
-      contentSha256: sha2562(content),
+      contentSha256: sha2563(content),
       ownedFilePreimages,
       readFirstArtifacts
     });
@@ -64918,7 +66654,7 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
       observed: await observe(mutation.path, false)
     })));
     const allAfter = observations.every(
-      ({ mutation, observed }) => observed.sha256 === (mutation.operation === "write" ? sha2562(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
+      ({ mutation, observed }) => observed.sha256 === (mutation.operation === "write" ? sha2563(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
     );
     const allBeforeWithMode = observations.every(
       ({ mutation, observed }) => observed.sha256 === mutation.expectedHash && observed.mode === mutation.expectedMode
@@ -64986,7 +66722,7 @@ async function assertControlStorageSafe(projectRoot, relativePath) {
   const segments = safePath.split("/");
   let cursor = projectRoot;
   for (const segment of segments.slice(0, -1)) {
-    cursor = path19.join(cursor, segment);
+    cursor = path20.join(cursor, segment);
     try {
       const stats = await fs26.lstat(cursor);
       if (stats.isSymbolicLink() || !stats.isDirectory()) {
@@ -65009,8 +66745,8 @@ async function assertControlStorageSafe(projectRoot, relativePath) {
 }
 async function assertExecutionLockStorageSafe(projectRoot) {
   const canonicalRoot = await fs26.realpath(projectRoot);
-  const blueprintRoot = path19.join(canonicalRoot, BLUEPRINT_DIR);
-  const locksRoot = path19.join(blueprintRoot, "locks");
+  const blueprintRoot = path20.join(canonicalRoot, BLUEPRINT_DIR);
+  const locksRoot = path20.join(blueprintRoot, "locks");
   const blueprintStats = await fs26.lstat(blueprintRoot);
   if (blueprintStats.isSymbolicLink() || !blueprintStats.isDirectory()) {
     throw new Error("Execute-phase lock storage has an unsafe .blueprint ancestor.");
@@ -65069,7 +66805,7 @@ function isVerificationOutputValid(receipt, channel) {
     return false;
   }
   if (truncated) return bytes > Buffer.byteLength(text2);
-  return bytes === Buffer.byteLength(text2) && hash5 === sha2562(text2);
+  return bytes === Buffer.byteLength(text2) && hash5 === sha2563(text2);
 }
 function isValidPhaseExecutionVerificationReceipt(value, command) {
   if (!value || typeof value !== "object") return false;
@@ -65094,10 +66830,10 @@ function isPreparedStateUpdate(value, packet) {
   if (!isArtifactDigest(effect.preimage) || !isArtifactDigest(effect.postimage)) return false;
   const prepared = effect.prepared;
   if (!prepared) return false;
-  const expectedAbsolutePath = path19.join(packet.repository.canonicalRoot, ...BLUEPRINT_STATE_PATH.split("/"));
+  const expectedAbsolutePath = path20.join(packet.repository.canonicalRoot, ...BLUEPRINT_STATE_PATH.split("/"));
   const expectedStateContent = prepared.expectedStateContent;
   if (!(expectedStateContent === null || typeof expectedStateContent === "string")) return false;
-  if (prepared.projectRoot !== packet.repository.canonicalRoot || prepared.statePath !== BLUEPRINT_STATE_PATH || prepared.absoluteStatePath !== expectedAbsolutePath || typeof prepared.content !== "string" || typeof prepared.updated !== "boolean" || !Array.isArray(prepared.updatedFields) || !prepared.updatedFields.every((entry) => typeof entry === "string") || !Array.isArray(prepared.warnings) || !prepared.warnings.every((entry) => typeof entry === "string") || effect.preimage.path !== BLUEPRINT_STATE_PATH || effect.postimage.path !== BLUEPRINT_STATE_PATH || effect.preimage.sha256 !== (expectedStateContent === null ? null : sha2562(expectedStateContent)) || effect.preimage.sizeBytes !== (expectedStateContent === null ? null : Buffer.byteLength(expectedStateContent)) || effect.postimage.sha256 !== sha2562(prepared.content) || effect.postimage.sizeBytes !== Buffer.byteLength(prepared.content)) {
+  if (prepared.projectRoot !== packet.repository.canonicalRoot || prepared.statePath !== BLUEPRINT_STATE_PATH || prepared.absoluteStatePath !== expectedAbsolutePath || typeof prepared.content !== "string" || typeof prepared.updated !== "boolean" || !Array.isArray(prepared.updatedFields) || !prepared.updatedFields.every((entry) => typeof entry === "string") || !Array.isArray(prepared.warnings) || !prepared.warnings.every((entry) => typeof entry === "string") || effect.preimage.path !== BLUEPRINT_STATE_PATH || effect.postimage.path !== BLUEPRINT_STATE_PATH || effect.preimage.sha256 !== (expectedStateContent === null ? null : sha2563(expectedStateContent)) || effect.preimage.sizeBytes !== (expectedStateContent === null ? null : Buffer.byteLength(expectedStateContent)) || effect.postimage.sha256 !== sha2563(prepared.content) || effect.postimage.sizeBytes !== Buffer.byteLength(prepared.content)) {
     return false;
   }
   return true;
@@ -65292,9 +67028,9 @@ async function reconcileControlIndex(projectRoot, index) {
   return { index, sessions };
 }
 async function persistIndex(projectRoot, index) {
-  await assertControlStorageSafe(projectRoot, INDEX_PATH);
+  await assertControlStorageSafe(projectRoot, INDEX_PATH2);
   await writeJsonFile(
-    resolveBlueprintPath(projectRoot, INDEX_PATH),
+    resolveBlueprintPath(projectRoot, INDEX_PATH2),
     index
   );
 }
@@ -65325,7 +67061,7 @@ async function mutatePhaseExecutionSession(args) {
   return withBlueprintRepoLock(projectRoot, CONTROL_LOCK, async () => {
     const reconciled = await reconcileControlIndex(
       projectRoot,
-      asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH))
+      asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH2))
     );
     const original = reconciled.sessions.get(args.sessionId);
     if (!original) throw new Error(`Execute-phase session ${args.sessionId} does not exist.`);
@@ -65371,7 +67107,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
       return await withBlueprintRepoLock(projectRoot, CONTROL_LOCK, async () => {
         const reconciled = await reconcileControlIndex(
           projectRoot,
-          asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH))
+          asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH2))
         );
         const index = reconciled.index;
         const session = reconciled.sessions.get(args.sessionId);
@@ -65485,7 +67221,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
     }
     const reconciled = await reconcileControlIndex(
       projectRoot,
-      asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH))
+      asIndex(await readJsonIfPresent2(projectRoot, INDEX_PATH2))
     );
     const index = reconciled.index;
     const consumedSessionId = index.consumedFingerprints[built.fingerprint];
@@ -65560,7 +67296,7 @@ async function blueprintPhaseExecutionPrepare(args = {}, dependencyOverrides) {
     return failure(mode2, projectRoot, error2.message);
   }
 }
-var CONTROL_ROOT, INDEX_PATH, SESSION_ROOT, CONTROL_LOCK, EXECUTE_PHASE_CLAIM_CONFIRMATION, defaultProcessRunner, defaultDependencies;
+var CONTROL_ROOT, INDEX_PATH2, SESSION_ROOT, CONTROL_LOCK, EXECUTE_PHASE_CLAIM_CONFIRMATION, defaultProcessRunner, defaultDependencies;
 var init_phase_execution_control = __esm({
   "src/mcp/tools/phase-execution-control.ts"() {
     "use strict";
@@ -65568,7 +67304,7 @@ var init_phase_execution_control = __esm({
     init_config();
     init_phase();
     CONTROL_ROOT = `${BLUEPRINT_DIR}/executions/execute-phase`;
-    INDEX_PATH = `${CONTROL_ROOT}/index.json`;
+    INDEX_PATH2 = `${CONTROL_ROOT}/index.json`;
     SESSION_ROOT = `${CONTROL_ROOT}/sessions`;
     CONTROL_LOCK = "execute-phase-control";
     EXECUTE_PHASE_CLAIM_CONFIRMATION = "CLAIM BLUEPRINT PHASE EXECUTION";
@@ -65610,12 +67346,12 @@ var init_phase_execution_control = __esm({
 
 // src/mcp/tools/phase-execution-runtime.ts
 import { spawn } from "node:child_process";
-import { createHash as createHash12, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash14, randomUUID as randomUUID4 } from "node:crypto";
 import { promises as fs27 } from "node:fs";
-import path20 from "node:path";
+import path21 from "node:path";
 import { createInterface } from "node:readline";
-function sha2563(value) {
-  return createHash12("sha256").update(value).digest("hex");
+function sha2564(value) {
+  return createHash14("sha256").update(value).digest("hex");
 }
 function uniqueSorted2(values) {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
@@ -65628,7 +67364,7 @@ function normalizeRepoRelativePath(value, label) {
     throw new Error(`${label} must be a non-empty repo-relative path without NUL bytes.`);
   }
   const normalized = value.trim();
-  if (normalized.includes("\\") || path20.posix.isAbsolute(normalized) || normalized === "." || normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
+  if (normalized.includes("\\") || path21.posix.isAbsolute(normalized) || normalized === "." || normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
     throw new Error(`${label} must be a canonical repo-relative path.`);
   }
   const firstSegment = normalized.split("/")[0]?.toLowerCase();
@@ -65638,7 +67374,7 @@ function normalizeRepoRelativePath(value, label) {
   return normalized;
 }
 function normalizeObservedRepoPath(value) {
-  if (typeof value !== "string" || value.length === 0 || value.includes("\0") || value.includes("\\") || path20.posix.isAbsolute(value) || value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") || value === ".git" || value.startsWith(".git/")) {
+  if (typeof value !== "string" || value.length === 0 || value.includes("\0") || value.includes("\\") || path21.posix.isAbsolute(value) || value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") || value === ".git" || value.startsWith(".git/")) {
     throw new Error("git.changedPath must be a canonical repo-relative path.");
   }
   return value;
@@ -65660,7 +67396,7 @@ async function assertNoSymlinkTraversal(root, relativePath, fileSystem) {
   const segments = relativePath.split("/");
   let current = root;
   for (let index = 0; index < segments.length; index += 1) {
-    current = path20.join(current, segments[index] ?? "");
+    current = path21.join(current, segments[index] ?? "");
     try {
       const stats = await fileSystem.lstat(current);
       if (stats.isSymbolicLink()) {
@@ -65681,8 +67417,8 @@ async function assertNoSymlinkTraversal(root, relativePath, fileSystem) {
   }
 }
 async function assertMutationParentContained(root, absolutePath, relativePath, fileSystem) {
-  const realParent = await fileSystem.realpath(path20.dirname(absolutePath));
-  if (realParent !== root && !realParent.startsWith(`${root}${path20.sep}`)) {
+  const realParent = await fileSystem.realpath(path21.dirname(absolutePath));
+  if (realParent !== root && !realParent.startsWith(`${root}${path21.sep}`)) {
     throw new Error(`Mutation parent escapes the canonical repository: ${relativePath}`);
   }
 }
@@ -65704,13 +67440,13 @@ async function readExistingFile(filePath, fileSystem) {
   }
 }
 function tempSibling(filePath, kind) {
-  return path20.join(
-    path20.dirname(filePath),
-    `.${path20.basename(filePath)}.blueprint-execute-${kind}-${process.pid}-${randomUUID4()}`
+  return path21.join(
+    path21.dirname(filePath),
+    `.${path21.basename(filePath)}.blueprint-execute-${kind}-${process.pid}-${randomUUID4()}`
   );
 }
 async function applyPinnedPhaseExecutionMutations(args) {
-  const realRoot = await fs27.realpath(path20.resolve(args.projectRoot));
+  const realRoot = await fs27.realpath(path21.resolve(args.projectRoot));
   const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
   if (authorized.length === 0) throw new Error("At least one authorized file or directory is required.");
   if (args.mutations.length === 0) throw new Error("At least one file mutation is required.");
@@ -65737,21 +67473,21 @@ async function applyPinnedPhaseExecutionMutations(args) {
     } else if (mutation.content !== void 0) {
       throw new Error(`Delete mutation must not include content: ${mutation.path}`);
     }
-    const absolutePath = path20.resolve(realRoot, ...mutation.path.split("/"));
-    if (!absolutePath.startsWith(`${realRoot}${path20.sep}`)) {
+    const absolutePath = path21.resolve(realRoot, ...mutation.path.split("/"));
+    if (!absolutePath.startsWith(`${realRoot}${path21.sep}`)) {
       throw new Error(`Mutation path escapes the repository: ${mutation.path}`);
     }
     await assertNoSymlinkTraversal(realRoot, mutation.path, fs27);
-    const parentPath = path20.dirname(absolutePath);
+    const parentPath = path21.dirname(absolutePath);
     const [parentLstat, realParent, parentStats] = await Promise.all([
       fs27.lstat(parentPath),
       fs27.realpath(parentPath),
       fs27.stat(parentPath)
     ]);
-    if (parentLstat.isSymbolicLink() || !parentLstat.isDirectory() || realParent !== realRoot && !realParent.startsWith(`${realRoot}${path20.sep}`)) {
+    if (parentLstat.isSymbolicLink() || !parentLstat.isDirectory() || realParent !== realRoot && !realParent.startsWith(`${realRoot}${path21.sep}`)) {
       throw new Error(`Mutation parent is not a contained real directory: ${mutation.path}`);
     }
-    const parentRelativePath = path20.relative(realRoot, realParent).replaceAll(path20.sep, "/");
+    const parentRelativePath = path21.relative(realRoot, realParent).replaceAll(path21.sep, "/");
     const key2 = `${parentStats.dev}:${parentStats.ino}`;
     const group = groups.get(key2) ?? {
       parentPath: realParent,
@@ -65760,7 +67496,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
       ino: String(parentStats.ino),
       mutations: []
     };
-    const basename = path20.basename(absolutePath);
+    const basename = path21.basename(absolutePath);
     const nonce = `${process.pid}-${randomUUID4()}`;
     group.mutations.push({
       path: mutation.path,
@@ -65790,7 +67526,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
   }));
   const committed = [];
   const recoveryCandidates = (item) => uniqueSorted2(item.group.mutations.flatMap(
-    (mutation) => [mutation.backup, mutation.staged, mutation.quarantine].filter((value) => typeof value === "string").map((fileName) => path20.join(item.group.parentPath, fileName))
+    (mutation) => [mutation.backup, mutation.staged, mutation.quarantine].filter((value) => typeof value === "string").map((fileName) => path21.join(item.group.parentPath, fileName))
   ));
   const rollbackCommitted = async (failure2) => {
     const rollbackFailures = [];
@@ -65800,7 +67536,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
         const rollback = await item.worker.request({ action: "rollback" });
         rollbackFailures.push(...rollback.rollbackFailures ?? []);
         cleanupPaths.push(...(rollback.cleanupPaths ?? []).map(
-          (fileName) => path20.join(item.group.parentPath, fileName)
+          (fileName) => path21.join(item.group.parentPath, fileName)
         ));
       } catch (error2) {
         rollbackFailures.push(
@@ -65853,7 +67589,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
           result.failure ?? "Pinned mutation commit failed."
         );
         const currentCleanup = (result.cleanupPaths ?? []).map(
-          (fileName) => path20.join(item.group.parentPath, fileName)
+          (fileName) => path21.join(item.group.parentPath, fileName)
         );
         return {
           ...previousRollback,
@@ -65901,7 +67637,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
     let divergence = null;
     for (const receipt of receipts) {
       const mutation = normalizedMutations.find((candidate) => candidate.path === receipt.path);
-      const expectedHash = mutation.operation === "write" ? sha2563(mutation.content ?? "") : null;
+      const expectedHash = mutation.operation === "write" ? sha2564(mutation.content ?? "") : null;
       if (receipt.afterHash !== expectedHash) {
         divergence = `Mutation postimage diverged before receipt persistence for ${receipt.path}.`;
         break;
@@ -65946,7 +67682,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
       }
     }));
     const cleanupPaths = cleanups.flatMap(
-      (result, index) => (result.cleanupPaths ?? []).map((fileName) => path20.join(workers[index].group.parentPath, fileName))
+      (result, index) => (result.cleanupPaths ?? []).map((fileName) => path21.join(workers[index].group.parentPath, fileName))
     );
     const cleanupFailures = cleanups.flatMap((result) => result.failure ? [result.failure] : []);
     return {
@@ -65967,7 +67703,7 @@ async function applyPhaseExecutionMutations(args) {
     return applyPinnedPhaseExecutionMutations(args);
   }
   const fileSystem = args.fileSystem ?? fs27;
-  const realRoot = await fileSystem.realpath(path20.resolve(args.projectRoot));
+  const realRoot = await fileSystem.realpath(path21.resolve(args.projectRoot));
   const authorized = args.authorizedFiles.map(normalizeAuthorizedPath);
   if (authorized.length === 0) {
     throw new Error("At least one authorized file or directory is required.");
@@ -66002,13 +67738,13 @@ async function applyPhaseExecutionMutations(args) {
       } else if (mutation.content !== void 0) {
         throw new Error(`Delete mutation must not include content: ${mutation.path}`);
       }
-      const absolutePath = path20.resolve(realRoot, ...mutation.path.split("/"));
-      if (!absolutePath.startsWith(`${realRoot}${path20.sep}`)) {
+      const absolutePath = path21.resolve(realRoot, ...mutation.path.split("/"));
+      if (!absolutePath.startsWith(`${realRoot}${path21.sep}`)) {
         throw new Error(`Mutation path escapes the repository: ${mutation.path}`);
       }
       await assertNoSymlinkTraversal(realRoot, mutation.path, fileSystem);
       const existing = await readExistingFile(absolutePath, fileSystem);
-      const beforeHash = existing.content === null ? null : sha2563(existing.content);
+      const beforeHash = existing.content === null ? null : sha2564(existing.content);
       if (beforeHash !== mutation.expectedHash) {
         throw new Error(
           `Mutation preimage is stale for ${mutation.path}: expected ${mutation.expectedHash ?? "missing"}, observed ${beforeHash ?? "missing"}.`
@@ -66017,7 +67753,7 @@ async function applyPhaseExecutionMutations(args) {
       if (mutation.operation === "delete" && existing.content === null) {
         throw new Error(`Delete mutation target does not exist: ${mutation.path}`);
       }
-      await fileSystem.mkdir(path20.dirname(absolutePath), { recursive: true });
+      await fileSystem.mkdir(path21.dirname(absolutePath), { recursive: true });
       await assertMutationParentContained(realRoot, absolutePath, mutation.path, fileSystem);
       const stagedPath = mutation.operation === "write" ? tempSibling(absolutePath, "staged") : null;
       if (stagedPath && mutation.content !== void 0) {
@@ -66071,8 +67807,8 @@ async function applyPhaseExecutionMutations(args) {
         );
         await assertNoSymlinkTraversal(realRoot, entry.mutation.path, fileSystem);
         const observed = await readExistingFile(entry.absolutePath, fileSystem);
-        const observedHash = observed.content === null ? null : sha2563(observed.content);
-        const requestedHash = sha2563(entry.mutation.content ?? "");
+        const observedHash = observed.content === null ? null : sha2564(observed.content);
+        const requestedHash = sha2564(entry.mutation.content ?? "");
         if (observedHash !== requestedHash) {
           throw new Error(
             `Mutation postimage mismatch for ${entry.mutation.path}: expected ${requestedHash}, observed ${observedHash ?? "missing"}.`
@@ -66137,7 +67873,7 @@ async function applyPhaseExecutionMutations(args) {
           operation: entry.mutation.operation,
           beforeHash: entry.beforeHash,
           beforeMode: entry.beforeMode,
-          afterHash: observed.content === null ? null : sha2563(observed.content),
+          afterHash: observed.content === null ? null : sha2564(observed.content),
           afterMode: observed.mode,
           bytesWritten: observed.content?.byteLength ?? 0
         };
@@ -66170,8 +67906,8 @@ async function applyPhaseExecutionMutations(args) {
   const receipts = await Promise.all(prepared.map(async (entry) => {
     try {
       const observed = await readExistingFile(entry.absolutePath, fileSystem);
-      const afterHash = observed.content === null ? null : sha2563(observed.content);
-      const expectedHash = entry.mutation.operation === "write" ? sha2563(entry.mutation.content ?? "") : null;
+      const afterHash = observed.content === null ? null : sha2564(observed.content);
+      const expectedHash = entry.mutation.operation === "write" ? sha2564(entry.mutation.content ?? "") : null;
       if (afterHash !== expectedHash) {
         finalObservationFailure ??= `Mutation postimage diverged before receipt persistence for ${entry.mutation.path}.`;
       }
@@ -66212,7 +67948,7 @@ function receiptOutput(value) {
   return {
     text: truncated ? buffer.subarray(0, MAX_RECEIPT_OUTPUT_BYTES).toString("utf8") : value,
     bytes,
-    hash: sha2563(buffer),
+    hash: sha2564(buffer),
     truncated
   };
 }
@@ -66823,11 +68559,11 @@ if (!finalized) await rollback();
 });
 
 // src/mcp/tools/phase-execution-tools.ts
-import { createHash as createHash13 } from "node:crypto";
+import { createHash as createHash15 } from "node:crypto";
 import { promises as fs28 } from "node:fs";
-import path21 from "node:path";
-function sha2564(value) {
-  return createHash13("sha256").update(value).digest("hex");
+import path22 from "node:path";
+function sha2565(value) {
+  return createHash15("sha256").update(value).digest("hex");
 }
 function canonicalize2(value) {
   if (Array.isArray(value)) return value.map(canonicalize2);
@@ -66842,8 +68578,8 @@ function canonicalJson2(value) {
   return JSON.stringify(canonicalize2(value));
 }
 async function readRepoHash(projectRoot, relativePath) {
-  const absolutePath = path21.resolve(projectRoot, ...relativePath.split("/"));
-  if (!absolutePath.startsWith(`${path21.resolve(projectRoot)}${path21.sep}`)) {
+  const absolutePath = path22.resolve(projectRoot, ...relativePath.split("/"));
+  if (!absolutePath.startsWith(`${path22.resolve(projectRoot)}${path22.sep}`)) {
     throw new Error(`Execution authority path escapes the repository: ${relativePath}.`);
   }
   try {
@@ -66852,7 +68588,7 @@ async function readRepoHash(projectRoot, relativePath) {
       throw new Error(`Execution authority path is not a regular file: ${relativePath}.`);
     }
     const content = await fs28.readFile(absolutePath);
-    return { hash: sha2564(content), bytes: content.byteLength, mode: stats.mode & 4095 };
+    return { hash: sha2565(content), bytes: content.byteLength, mode: stats.mode & 4095 };
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return { hash: null, bytes: 0, mode: null };
@@ -66872,11 +68608,11 @@ function interruptedVerificationReceipt(command) {
     passed: false,
     stdout: "",
     stdoutBytes: 0,
-    stdoutHash: sha2564(""),
+    stdoutHash: sha2565(""),
     stdoutTruncated: false,
     stderr,
     stderrBytes: Buffer.byteLength(stderr),
-    stderrHash: sha2564(stderr),
+    stderrHash: sha2565(stderr),
     stderrTruncated: false
   };
 }
@@ -67030,7 +68766,7 @@ async function recoverInterruptedMutation(projectRoot, session, progress) {
     ({ mutation, observed }) => observed.hash === mutation.expectedHash && observed.mode === mutation.expectedMode
   );
   const allAfter = observations.every(
-    ({ mutation, observed }) => observed.hash === (mutation.operation === "write" ? sha2564(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
+    ({ mutation, observed }) => observed.hash === (mutation.operation === "write" ? sha2565(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
   );
   if (allBefore) {
     progress.status = progress.status === "repairing" ? "awaiting-repair" : "pending";
@@ -67509,14 +69245,14 @@ async function blueprintPhaseExecutionFinalize(args, dependencyOverrides = {}) {
         if (progress.pendingStateUpdate === null) {
           const prepared = await deps.statePrepare({ cwd: context.projectRoot, base: "synced" });
           const observed = await readRepoHash(context.projectRoot, ".blueprint/STATE.md");
-          const currentContent = observed.hash === null ? null : await fs28.readFile(path21.join(context.projectRoot, ".blueprint/STATE.md"), "utf8");
+          const currentContent = observed.hash === null ? null : await fs28.readFile(path22.join(context.projectRoot, ".blueprint/STATE.md"), "utf8");
           if (prepared.expectedStateContent !== currentContent) {
             throw new Error("Execute-phase STATE authority changed while its deterministic update was prepared.");
           }
           const canonicalPrepared = {
             ...prepared,
             projectRoot: session.packet.repository.canonicalRoot,
-            absoluteStatePath: path21.join(
+            absoluteStatePath: path22.join(
               session.packet.repository.canonicalRoot,
               ".blueprint/STATE.md"
             )
@@ -67531,7 +69267,7 @@ async function blueprintPhaseExecutionFinalize(args, dependencyOverrides = {}) {
             },
             postimage: {
               path: ".blueprint/STATE.md",
-              sha256: sha2564(prepared.content),
+              sha256: sha2565(prepared.content),
               sizeBytes: Buffer.byteLength(prepared.content),
               mode: observed.mode ?? 438 & ~process.umask()
             }
@@ -67675,7 +69411,7 @@ var init_phase_execution_tools = __esm({
 // src/mcp/tools/cleanup.ts
 import { execFile as execFile6 } from "node:child_process";
 import { promises as fs29 } from "node:fs";
-import path22 from "node:path";
+import path23 from "node:path";
 import { promisify as promisify5 } from "node:util";
 function activeCleanupArchiveFileSystem() {
   return cleanupArchiveFileSystemForTest ?? defaultCleanupArchiveFileSystem;
@@ -67796,21 +69532,21 @@ async function listPhaseDirectories(projectRoot) {
     throw new Error(`Missing ${BLUEPRINT_PHASES_PATH}.`);
   }
   const entries = await fs29.readdir(phasesRoot, { withFileTypes: true });
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => path22.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => path23.posix.join(BLUEPRINT_PHASES_PATH, entry.name)).sort();
 }
 async function listPhaseArtifactPaths(projectRoot, phaseDir2) {
   const absolutePhaseDir = resolveBlueprintPath(projectRoot, phaseDir2);
   const entries = await fs29.readdir(absolutePhaseDir, { withFileTypes: true });
-  return entries.filter((entry) => entry.isFile()).map((entry) => path22.posix.join(phaseDir2, entry.name)).sort();
+  return entries.filter((entry) => entry.isFile()).map((entry) => path23.posix.join(phaseDir2, entry.name)).sort();
 }
 function milestoneFromSummaryReportPath(reportPath) {
-  const match = path22.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
+  const match = path23.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
   return match?.[1] ?? null;
 }
 async function completedMilestoneEvidenceForPhase(projectRoot, phaseDir2, reportPaths, activeMilestone) {
   const matches = [];
   for (const reportPath of reportPaths.filter(
-    (value) => path22.posix.basename(value).startsWith("milestone-summary-")
+    (value) => path23.posix.basename(value).startsWith("milestone-summary-")
   )) {
     const evidenceMilestone = milestoneFromSummaryReportPath(reportPath);
     if (!evidenceMilestone || evidenceMilestone === activeMilestone) {
@@ -67968,7 +69704,7 @@ async function executeCleanupArchiveMutation(args) {
   const skippedPhaseDirs = [];
   const failureReasons = {};
   for (const phaseDir2 of args.selectedPhaseDirs) {
-    const destinationPhaseDir = path22.posix.join(args.archiveDestination, path22.posix.basename(phaseDir2));
+    const destinationPhaseDir = path23.posix.join(args.archiveDestination, path23.posix.basename(phaseDir2));
     try {
       await archivePhaseDirectory({
         projectRoot: args.projectRoot,
@@ -68054,7 +69790,7 @@ function cleanupArchiveStatusForOutcome(outcome) {
 async function rejectDestinationCollisions(args) {
   const collisions = [];
   for (const phaseDir2 of args.selectedPhaseDirs) {
-    const destinationPhaseDir = path22.posix.join(args.archiveDestination, path22.posix.basename(phaseDir2));
+    const destinationPhaseDir = path23.posix.join(args.archiveDestination, path23.posix.basename(phaseDir2));
     if (await pathExists4(resolveBlueprintPath(args.projectRoot, destinationPhaseDir))) {
       collisions.push(destinationPhaseDir);
     }
@@ -68459,9 +70195,9 @@ var init_cleanup = __esm({
 });
 
 // src/mcp/tools/review.ts
-import { createHash as createHash14 } from "node:crypto";
+import { createHash as createHash16 } from "node:crypto";
 import { promises as fs30 } from "node:fs";
-import path23 from "node:path";
+import path24 from "node:path";
 function createAjvValidator2() {
   return new import__3.Ajv2020({
     allErrors: true,
@@ -68530,39 +70266,39 @@ function emptyDiagnosticCounts() {
 }
 function countDiagnostics(diagnostics) {
   const counts = emptyDiagnosticCounts();
-  for (const diagnostic of diagnostics) {
+  for (const diagnostic2 of diagnostics) {
     counts.total += 1;
-    counts.bySource[diagnostic.source] += 1;
-    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+    counts.bySource[diagnostic2.source] += 1;
+    counts.byCode[diagnostic2.code] = (counts.byCode[diagnostic2.code] ?? 0) + 1;
   }
   return counts;
 }
-function reviewDiagnosticRepairText(diagnostic) {
-  return diagnostic.repair ?? diagnostic.suggestion;
+function reviewDiagnosticRepairText(diagnostic2) {
+  return diagnostic2.repair ?? diagnostic2.suggestion;
 }
-function formatReviewDiagnostic(diagnostic) {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Repair: ${reviewDiagnosticRepairText(diagnostic)}`;
+function formatReviewDiagnostic(diagnostic2) {
+  return `${diagnostic2.source}:${diagnostic2.path}:${diagnostic2.code}: ${diagnostic2.message} Repair: ${reviewDiagnosticRepairText(diagnostic2)}`;
 }
-function reviewRepairActionFromDiagnostic(diagnostic) {
-  if (diagnostic.source === "scope") {
+function reviewRepairActionFromDiagnostic(diagnostic2) {
+  if (diagnostic2.source === "scope") {
     return "reread-authoring-context";
   }
-  if (diagnostic.code === "schema.required" || diagnostic.code === "schema.minItems" || diagnostic.code === "schema.contains") {
+  if (diagnostic2.code === "schema.required" || diagnostic2.code === "schema.minItems" || diagnostic2.code === "schema.contains") {
     return "add";
   }
-  if (diagnostic.code === "schema.additionalProperties" || diagnostic.code === "schema.maxItems") {
+  if (diagnostic2.code === "schema.additionalProperties" || diagnostic2.code === "schema.maxItems") {
     return "remove";
   }
-  if (diagnostic.code === "schema.uniqueItems") {
+  if (diagnostic2.code === "schema.uniqueItems") {
     return "dedupe";
   }
-  if (diagnostic.code === "residual.runtime_owned_field") {
+  if (diagnostic2.code === "residual.runtime_owned_field") {
     return "remove-runtime-owned-fields";
   }
-  if (diagnostic.source === "markdown") {
+  if (diagnostic2.source === "markdown") {
     return "repair-rendered-markdown";
   }
-  if (diagnostic.source === "residual") {
+  if (diagnostic2.source === "residual") {
     return "align-with-authoring-context";
   }
   return "replace";
@@ -68571,20 +70307,20 @@ function summarizeReviewModelRepairs(diagnostics) {
   const topDiagnostics = diagnostics.slice(0, 5);
   const fieldsToChange = [
     ...new Set(
-      diagnostics.map((diagnostic) => diagnostic.path).filter(
+      diagnostics.map((diagnostic2) => diagnostic2.path).filter(
         (pathValue) => pathValue === "model" || pathValue.startsWith("model.") || pathValue.startsWith("model[") || pathValue === "renderPreview"
       )
     )
   ];
   const firstPassActions = [
-    ...new Set(diagnostics.map((diagnostic) => reviewRepairActionFromDiagnostic(diagnostic)))
+    ...new Set(diagnostics.map((diagnostic2) => reviewRepairActionFromDiagnostic(diagnostic2)))
   ];
-  const hasScopeBlocker = diagnostics.some((diagnostic) => diagnostic.source === "scope");
-  const retryable = diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.retryable !== false);
+  const hasScopeBlocker = diagnostics.some((diagnostic2) => diagnostic2.source === "scope");
+  const retryable = diagnostics.length > 0 && diagnostics.every((diagnostic2) => diagnostic2.retryable !== false);
   const action = diagnostics.length === 0 ? "none" : hasScopeBlocker ? "reread_authoring_context" : retryable ? "retry_validation" : "stop";
   return {
     topBlockers: topDiagnostics.map(
-      (diagnostic) => `${diagnostic.path}: ${diagnostic.message}`
+      (diagnostic2) => `${diagnostic2.path}: ${diagnostic2.message}`
     ),
     fieldsToChange,
     firstPassActions,
@@ -68621,7 +70357,7 @@ function stripVisibleReviewTargetId2(value) {
   return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
 }
 function buildLegacyReviewTargetId(prefix, sourceSection, value) {
-  const digest2 = createHash14("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
+  const digest2 = createHash16("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
   return `${prefix}-LEGACY-${digest2}`;
 }
 function sanitizeMarkdownScalar(value) {
@@ -69025,7 +70761,7 @@ async function buildPeerReviewAuthoringContext(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path23.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path24.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -69503,7 +71239,7 @@ async function buildReviewFixAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path23.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path24.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -70186,7 +71922,7 @@ async function buildSecurityAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path23.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path24.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -70547,7 +72283,7 @@ async function buildUiReviewAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path23.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path24.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -73201,27 +74937,27 @@ function addVerdictContradictionDiagnostics(args) {
     );
   }
 }
-function diagnosticPathCoveredBySchema(diagnostic, schemaDiagnostics) {
-  if (diagnostic.source !== "residual") {
+function diagnosticPathCoveredBySchema(diagnostic2, schemaDiagnostics) {
+  if (diagnostic2.source !== "residual") {
     return false;
   }
   return schemaDiagnostics.some((schemaDiagnostic) => {
-    if (schemaDiagnostic.path === diagnostic.path) {
+    if (schemaDiagnostic.path === diagnostic2.path) {
       return true;
     }
-    if (diagnostic.path === "model") {
+    if (diagnostic2.path === "model") {
       return false;
     }
-    return schemaDiagnostic.path.length > 0 && (diagnostic.path.startsWith(`${schemaDiagnostic.path}.`) || schemaDiagnostic.path.startsWith(`${diagnostic.path}.`));
+    return schemaDiagnostic.path.length > 0 && (diagnostic2.path.startsWith(`${schemaDiagnostic.path}.`) || schemaDiagnostic.path.startsWith(`${diagnostic2.path}.`));
   });
 }
 function suppressResidualSchemaOverlaps(diagnostics) {
-  const schemaDiagnostics = diagnostics.filter((diagnostic) => diagnostic.source === "schema");
+  const schemaDiagnostics = diagnostics.filter((diagnostic2) => diagnostic2.source === "schema");
   if (schemaDiagnostics.length === 0) {
     return diagnostics;
   }
   return diagnostics.filter(
-    (diagnostic) => !diagnosticPathCoveredBySchema(diagnostic, schemaDiagnostics)
+    (diagnostic2) => !diagnosticPathCoveredBySchema(diagnostic2, schemaDiagnostics)
   );
 }
 async function collectCodeReviewResidualDiagnostics(args) {
@@ -74292,7 +76028,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     if (requestedPath.length === 0) {
       continue;
     }
-    if (path23.isAbsolute(requestedPath)) {
+    if (path24.isAbsolute(requestedPath)) {
       warnings.push(
         `Invalid ${sourceLabel} path: ${requestedPath} (absolute filesystem paths are not allowed).`
       );
@@ -74634,7 +76370,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path23.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path24.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -74668,7 +76404,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path23.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path24.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -74736,7 +76472,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path23.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path24.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -74760,7 +76496,7 @@ async function blueprintReviewScope(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path23.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path24.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -75248,7 +76984,7 @@ async function blueprintReviewValidateModel(args) {
     diagnostics: finalDiagnostics,
     diagnosticCounts: countDiagnostics(finalDiagnostics),
     repairSummary: summarizeReviewModelRepairs(finalDiagnostics),
-    normalizedModel: finalDiagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : artifact === "security" ? normalizedSecurityModel : artifact === "review-fix" ? normalizedReviewFixModel : artifact === "ui-review" ? normalizedUiReviewModel : artifact === "peer-review" ? normalizedPeerReviewModel : normalizedModel,
+    normalizedModel: finalDiagnostics.some((diagnostic2) => diagnostic2.source === "schema") ? null : artifact === "security" ? normalizedSecurityModel : artifact === "review-fix" ? normalizedReviewFixModel : artifact === "ui-review" ? normalizedUiReviewModel : artifact === "peer-review" ? normalizedPeerReviewModel : normalizedModel,
     renderPreview,
     warnings: uniqueSortedStrings3([...context.warnings, ...validationWarnings])
   };
@@ -75854,7 +77590,7 @@ import { execFile as execFile7 } from "node:child_process";
 import { randomUUID as randomUUID5 } from "node:crypto";
 import { promises as fs31 } from "node:fs";
 import os5 from "node:os";
-import path24 from "node:path";
+import path25 from "node:path";
 import { promisify as promisify6 } from "node:util";
 function positiveTimingOverride2(value, fallback) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -75888,7 +77624,7 @@ function expandHomePath5(value) {
     return os5.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path24.join(os5.homedir(), trimmed.slice(2));
+    return path25.join(os5.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -75971,19 +77707,19 @@ async function resolveInstalledVersion(extensionPath, manifestFileName) {
       warnings
     };
   }
-  const normalizedExtensionPath = path24.resolve(extensionPath);
+  const normalizedExtensionPath = path25.resolve(extensionPath);
   if (!await pathExists6(normalizedExtensionPath)) {
     warnings.push(`Configured extension path does not exist: ${normalizedExtensionPath}`);
     return {
       extensionPathState: "missing",
-      extensionManifestPath: path24.join(normalizedExtensionPath, manifestFileName),
+      extensionManifestPath: path25.join(normalizedExtensionPath, manifestFileName),
       installedVersion: null,
       warnings
     };
   }
-  const extensionManifestPath = path24.join(normalizedExtensionPath, manifestFileName);
+  const extensionManifestPath = path25.join(normalizedExtensionPath, manifestFileName);
   const manifestResult = await readJsonObject(extensionManifestPath);
-  const packageJsonResult = await readJsonObject(path24.join(normalizedExtensionPath, "package.json"));
+  const packageJsonResult = await readJsonObject(path25.join(normalizedExtensionPath, "package.json"));
   const manifest = manifestResult.value;
   const packageJson = packageJsonResult.value;
   if (manifestResult.warning) {
@@ -76241,7 +77977,7 @@ function compareSemver(left, right) {
 async function resolveUpdateCheck(args = {}, env2 = process.env) {
   const cwd = normalizeOptionalString(args.cwd) ?? process.cwd();
   const runtimeHost = resolveBlueprintRuntimeHost(env2);
-  const extensionPath = runtimeHost.extensionPath ? path24.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
+  const extensionPath = runtimeHost.extensionPath ? path25.resolve(expandHomePath5(runtimeHost.extensionPath)) : null;
   const warnings = [];
   if (extensionPath) {
     assertNoNullBytes(extensionPath, "Blueprint extension path");
@@ -76467,7 +78203,7 @@ function createUpdatePlanNonce() {
   return `${process.pid}-${Date.now()}-${randomUUID5()}`;
 }
 async function withUpdatePlanLock(updatesDir, callback) {
-  const lockPath = path24.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
+  const lockPath = path25.join(updatesDir, UPDATE_PLAN_LOCK_DIR);
   const lockOptions = {
     lockPath,
     timing: updatePlanLockTiming()
@@ -76550,7 +78286,7 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
-      label: path24.basename(plan.savedPaths.checklistPath)
+      label: path25.basename(plan.savedPaths.checklistPath)
     });
     if (existingModes[0] !== null) {
       await fs31.chmod(metadataTmpPath, existingModes[0]);
@@ -76668,9 +78404,9 @@ async function blueprintUpdatePlan(args = {}, env2 = process.env) {
   const runtimeHost = resolveBlueprintRuntimeHost(env2);
   const mode2 = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
   const check2 = await resolveUpdateCheck(args, env2);
-  const updatesDir = path24.resolve(expandHomePath5(runtimeHost.updatesDir));
-  const metadataPath = path24.join(updatesDir, UPDATE_PLAN_FILE);
-  const checklistPath = path24.join(updatesDir, UPDATE_CHECKLIST_FILE);
+  const updatesDir = path25.resolve(expandHomePath5(runtimeHost.updatesDir));
+  const metadataPath = path25.join(updatesDir, UPDATE_PLAN_FILE);
+  const checklistPath = path25.join(updatesDir, UPDATE_CHECKLIST_FILE);
   const savedPaths = {
     updatesDir,
     metadataPath,
@@ -76763,13 +78499,13 @@ var init_update = __esm({
 
 // src/mcp/tools/impact.ts
 import { execFile as execFile8 } from "node:child_process";
-import { createHash as createHash15 } from "node:crypto";
+import { createHash as createHash17 } from "node:crypto";
 import { promises as fs32 } from "node:fs";
 import os6 from "node:os";
-import path25 from "node:path";
+import path26 from "node:path";
 import { promisify as promisify7 } from "node:util";
 function stableHash(value) {
-  return createHash15("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
+  return createHash17("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
 }
 function stableStringify(value) {
   if (Array.isArray(value)) {
@@ -76841,7 +78577,7 @@ function hasPathSegment(filePath, segment) {
   return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
 }
 function hasConfigName(filePath) {
-  const basename = path25.posix.basename(filePath);
+  const basename = path26.posix.basename(filePath);
   return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
 }
 function isGeneratedPath(filePath) {
@@ -76851,7 +78587,7 @@ function isTestPath(filePath) {
   return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 function isDocsPath(filePath) {
-  const extension = path25.posix.extname(filePath).toLowerCase();
+  const extension = path26.posix.extname(filePath).toLowerCase();
   return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
 }
 function areaForSurface(surface) {
@@ -76896,8 +78632,8 @@ function areaForSurface(surface) {
 }
 function classifyImpactFile(filePath) {
   const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const basename = path25.posix.basename(normalizedPath);
-  const extension = path25.posix.extname(normalizedPath).toLowerCase();
+  const basename = path26.posix.basename(normalizedPath);
+  const extension = path26.posix.extname(normalizedPath).toLowerCase();
   const rules = [];
   if (SECRET_PATH_PATTERN.test(normalizedPath)) {
     addSurfaceRule(
@@ -77583,7 +79319,7 @@ function matchesRepoPattern(filePath, pattern) {
     return false;
   }
   if (!normalizedPattern.includes("/")) {
-    return globPatternToRegExp(normalizedPattern).test(path25.posix.basename(normalizedPath));
+    return globPatternToRegExp(normalizedPattern).test(path26.posix.basename(normalizedPath));
   }
   return globPatternToRegExp(normalizedPattern).test(normalizedPath);
 }
@@ -77624,7 +79360,7 @@ function expandHomePath6(value) {
     return os6.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path25.join(os6.homedir(), trimmed.slice(2));
+    return path26.join(os6.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -77641,7 +79377,7 @@ function resolveContainedInputPath(projectRoot, inputPath, label) {
   if (trimmed.length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  const candidatePath2 = path25.isAbsolute(trimmed) ? trimmed : path25.resolve(projectRoot, trimmed);
+  const candidatePath2 = path26.isAbsolute(trimmed) ? trimmed : path26.resolve(projectRoot, trimmed);
   return ensurePathWithinRootSync(projectRoot, candidatePath2, { label });
 }
 function toRepoRelativeInputPath(projectRoot, inputPath, label) {
@@ -77706,15 +79442,15 @@ function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
 }
 function getImpactDefaultsPath() {
   const runtimeHost = resolveBlueprintRuntimeHost();
-  return path25.resolve(
+  return path26.resolve(
     expandHomePath6(
-      path25.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
+      path26.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
     )
   );
 }
 function isUnsafeRepoPattern(value) {
   const normalized = value.trim().replaceAll("\\", "/");
-  return normalized.length === 0 || normalized.includes("\0") || path25.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
+  return normalized.length === 0 || normalized.includes("\0") || path26.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
 }
 function validateConfigPathArrays(config2) {
   const errors = [];
@@ -78204,7 +79940,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
       continue;
     }
     const root = normalizedPattern.split("/")[0];
-    const absoluteRoot = path25.join(projectRoot, root);
+    const absoluteRoot = path26.join(projectRoot, root);
     if (!await pathExists7(absoluteRoot)) {
       continue;
     }
@@ -78214,7 +79950,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
         continue;
       }
       const relativePath = `${root}/${entry.name}`;
-      if (await pathExists7(path25.join(projectRoot, relativePath, "package.json"))) {
+      if (await pathExists7(path26.join(projectRoot, relativePath, "package.json"))) {
         directories.push(relativePath);
       }
     }
@@ -78222,7 +79958,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
   return uniqueSorted4(directories);
 }
 async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
-  const packagePath = path25.join(projectRoot, "package.json");
+  const packagePath = path26.join(projectRoot, "package.json");
   const parsed = await readJsonObjectIfPresent2(packagePath, "Impact package.json");
   const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
   if (!parsed) {
@@ -78259,7 +79995,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   for (const workspacePath of workspaceDirectories) {
     try {
       const workspacePackage = await readJsonObjectIfPresent2(
-        path25.join(projectRoot, workspacePath, "package.json"),
+        path26.join(projectRoot, workspacePath, "package.json"),
         `Impact workspace package ${workspacePath}/package.json`
       );
       if (!workspacePackage) {
@@ -78289,7 +80025,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   }
   for (const workspacePath of workspaceDirectories) {
     const workspacePackage = await readJsonObjectIfPresent2(
-      path25.join(projectRoot, workspacePath, "package.json"),
+      path26.join(projectRoot, workspacePath, "package.json"),
       `Impact workspace package ${workspacePath}/package.json`
     );
     if (!workspacePackage) {
@@ -78323,7 +80059,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   return { used: true, packageNameByWorkspacePath };
 }
 async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
-  const lockPath = path25.join(projectRoot, "package-lock.json");
+  const lockPath = path26.join(projectRoot, "package-lock.json");
   if (!await pathExists7(lockPath)) {
     return false;
   }
@@ -78377,7 +80113,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
   const results = /* @__PURE__ */ new Set();
   const queue = [];
   for (const root of roots) {
-    if (await pathExists7(path25.join(projectRoot, root))) {
+    if (await pathExists7(path26.join(projectRoot, root))) {
       queue.push({ relativePath: root, depth: 0 });
     }
   }
@@ -78386,7 +80122,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
     if (!current || current.depth > 8) {
       continue;
     }
-    const absolutePath = path25.join(projectRoot, current.relativePath);
+    const absolutePath = path26.join(projectRoot, current.relativePath);
     const entries = await fs32.readdir(absolutePath, { withFileTypes: true });
     for (const entry of entries) {
       if (results.size >= 600) {
@@ -78401,13 +80137,13 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
           continue;
         }
         queue.push({ relativePath, depth: current.depth + 1 });
-      } else if (SOURCE_FILE_EXTENSIONS.has(path25.posix.extname(relativePath).toLowerCase())) {
+      } else if (SOURCE_FILE_EXTENSIONS.has(path26.posix.extname(relativePath).toLowerCase())) {
         results.add(relativePath);
       }
     }
   }
   for (const file2 of changedFiles) {
-    if (SOURCE_FILE_EXTENSIONS.has(path25.posix.extname(file2).toLowerCase())) {
+    if (SOURCE_FILE_EXTENSIONS.has(path26.posix.extname(file2).toLowerCase())) {
       results.add(file2);
     }
   }
@@ -78417,7 +80153,7 @@ function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPath
   if (!specifier.startsWith(".")) {
     return null;
   }
-  const base = path25.posix.normalize(path25.posix.join(path25.posix.dirname(importerPath), specifier));
+  const base = path26.posix.normalize(path26.posix.join(path26.posix.dirname(importerPath), specifier));
   const candidates = [
     base,
     `${base}.ts`,
@@ -78463,7 +80199,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
       skippedSecretCount += 1;
       continue;
     }
-    const absolutePath = path25.join(projectRoot, file2);
+    const absolutePath = path26.join(projectRoot, file2);
     if (!await pathExists7(absolutePath)) {
       continue;
     }
@@ -79452,7 +81188,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
   const missingMcpRuntimeBundleCoverage = compiledRuntimeOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
-  if (hasRuntimeOrExtension && !await pathExists7(path25.join(projectRoot, "dist/mcp/server.js"))) {
+  if (hasRuntimeOrExtension && !await pathExists7(path26.join(projectRoot, "dist/mcp/server.js"))) {
     const evidenceRef = addEvidence(evidence, {
       kind: "build",
       source: "dist-entrypoint",
@@ -79961,7 +81697,7 @@ async function blueprintImpactConfigGet(args = {}) {
   const errors = [];
   const layersApplied = ["built-in"];
   const defaultsPath = getImpactDefaultsPath();
-  const projectConfigPath = path25.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
+  const projectConfigPath = path26.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
   let appliedDefaultsPath = null;
   let appliedProjectPath = null;
   let appliedInvocationPath = null;
@@ -80381,7 +82117,7 @@ async function blueprintImpactScopeResolve(args = {}) {
   return resolveScopeWithGit(projectRoot, seededArgs, mode2, description, warnings);
 }
 async function readPackageMetadata(projectRoot) {
-  const packageJsonPath = path25.join(projectRoot, "package.json");
+  const packageJsonPath = path26.join(projectRoot, "package.json");
   if (!await pathExists7(packageJsonPath)) {
     return {
       loaded: false,
@@ -80424,7 +82160,7 @@ async function readPackageMetadata(projectRoot) {
 async function listExistingTopLevelPaths(projectRoot, candidates) {
   const existing = [];
   for (const candidate of candidates) {
-    if (await pathExists7(path25.join(projectRoot, candidate))) {
+    if (await pathExists7(path26.join(projectRoot, candidate))) {
       existing.push(candidate);
     }
   }
@@ -81089,7 +82825,7 @@ function canonicalizeImpactReport(report) {
   };
 }
 function normalizeExpectedFilePath(value) {
-  return path25.posix.normalize(value.trim().replaceAll("\\", "/"));
+  return path26.posix.normalize(value.trim().replaceAll("\\", "/"));
 }
 function normalizeExpectedEvidencePathsById(expectedPathsById) {
   if (expectedPathsById === void 0) {
@@ -81388,17 +83124,17 @@ function validateReportRepoRelativePath(projectRoot, value, label, errors) {
     errors.push(`${label} must not contain null bytes.`);
     return;
   }
-  if (path25.isAbsolute(trimmed) || path25.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
+  if (path26.isAbsolute(trimmed) || path26.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
     errors.push(`${label} must be repo-relative, not absolute: ${value}`);
     return;
   }
-  const normalizedPath = path25.posix.normalize(slashNormalized);
+  const normalizedPath = path26.posix.normalize(slashNormalized);
   if (normalizedPath === ".." || normalizedPath.startsWith("../")) {
     errors.push(`${label} escapes the repository: ${value}`);
     return;
   }
   try {
-    ensurePathWithinRootSync(projectRoot, path25.resolve(projectRoot, normalizedPath), {
+    ensurePathWithinRootSync(projectRoot, path26.resolve(projectRoot, normalizedPath), {
       label
     });
   } catch (error2) {
@@ -81419,7 +83155,7 @@ function shouldValidateReportScopeSource(scope) {
   }
   const trimmed = scope.source.trim();
   const slashNormalized = trimmed.replaceAll("\\", "/");
-  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path25.isAbsolute(trimmed) || path25.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
+  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path26.isAbsolute(trimmed) || path26.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
 }
 function validateReportScopeSource(projectRoot, scope, errors) {
   if (!shouldValidateReportScopeSource(scope)) {
@@ -82095,13 +83831,13 @@ function renderImpactHumanText(report, verbosity) {
 `;
 }
 function ensureImpactReportRoot(projectRoot) {
-  return ensurePathWithinRootSync(projectRoot, path25.join(projectRoot, IMPACT_REPORT_ROOT), {
+  return ensurePathWithinRootSync(projectRoot, path26.join(projectRoot, IMPACT_REPORT_ROOT), {
     label: "impact report root"
   });
 }
 function ensureImpactBundleDir(projectRoot, impactId) {
   const impactRoot = ensureImpactReportRoot(projectRoot);
-  const impactDir = ensurePathWithinRootSync(impactRoot, path25.join(impactRoot, impactId), {
+  const impactDir = ensurePathWithinRootSync(impactRoot, path26.join(impactRoot, impactId), {
     label: "impact report directory"
   });
   ensurePathWithinRootSync(projectRoot, impactDir, { label: "impact report directory" });
@@ -82113,7 +83849,7 @@ async function compareImpactBundle(projectRoot, impactDir, files) {
     return { existing: false, identical: false };
   }
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path25.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path26.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
@@ -82136,7 +83872,7 @@ function uniqueImpactBundleWorkDir(impactRoot, impactId, purpose) {
   const suffix = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return ensurePathWithinRootSync(
     impactRoot,
-    path25.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
+    path26.join(impactRoot, `.${impactId}.${purpose}-${suffix}`),
     { label: `impact report ${purpose} directory` }
   );
 }
@@ -82151,7 +83887,7 @@ async function stageImpactBundleFiles(projectRoot, impactRoot, impactId, files, 
       await fs32.chmod(stagingDir, existingDirectoryMode);
     }
     for (const [fileName, content] of files) {
-      const filePath = ensurePathWithinRootSync(stagingDir, path25.join(stagingDir, fileName), {
+      const filePath = ensurePathWithinRootSync(stagingDir, path26.join(stagingDir, fileName), {
         label: "staged impact report file"
       });
       ensurePathWithinRootSync(projectRoot, filePath, { label: "staged impact report file" });
@@ -82240,7 +83976,7 @@ async function replaceImpactBundleTransactionally(projectRoot, impactId, impactD
       [...files.keys()].map(async (fileName) => {
         const existingPath = ensurePathWithinRootSync(
           impactDir,
-          path25.join(impactDir, fileName),
+          path26.join(impactDir, fileName),
           { label: "existing impact report file" }
         );
         try {
@@ -82269,7 +84005,7 @@ async function replaceImpactBundleTransactionally(projectRoot, impactId, impactD
 }
 async function readSavedImpactReport(projectRoot, impactId) {
   const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const reportPath = ensurePathWithinRootSync(impactDir, path25.join(impactDir, "impact.json"), {
+  const reportPath = ensurePathWithinRootSync(impactDir, path26.join(impactDir, "impact.json"), {
     label: "saved impact report"
   });
   if (!await pathExists7(reportPath)) {
@@ -82320,7 +84056,7 @@ async function blueprintImpactReportWrite(args = {}) {
     writeEvidenceLog: args.writeEvidenceLog
   });
   return withBlueprintRepoLock(projectRoot, `impact-report-${impactId}`, async () => {
-    const lexicalImpactDir = path25.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
+    const lexicalImpactDir = path26.join(projectRoot, IMPACT_REPORT_ROOT, impactId);
     try {
       const stats = await fs32.lstat(lexicalImpactDir);
       if (!stats.isDirectory()) {
@@ -82770,7 +84506,7 @@ var init_impact = __esm({
 
 // src/mcp/quality-shipping-safety.ts
 import { execFile as execFile9 } from "node:child_process";
-import { createHash as createHash16 } from "node:crypto";
+import { createHash as createHash18 } from "node:crypto";
 function canonicalize3(value) {
   if (Array.isArray(value)) {
     return value.map(canonicalize3);
@@ -82786,7 +84522,7 @@ function qualityShippingStableSerialize(value) {
   return JSON.stringify(canonicalize3(value));
 }
 function qualityShippingSha256(value) {
-  return createHash16("sha256").update(value).digest("hex");
+  return createHash18("sha256").update(value).digest("hex");
 }
 function qualityShippingFingerprint(value) {
   return qualityShippingSha256(qualityShippingStableSerialize(value));
@@ -82861,9 +84597,9 @@ var init_quality_shipping_safety = __esm({
 
 // src/mcp/tools/undo.ts
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { access, lstat, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { access, lstat as lstat2, mkdir, mkdtemp, readFile, realpath as realpath2, rm } from "node:fs/promises";
 import os7 from "node:os";
-import path26 from "node:path";
+import path27 from "node:path";
 function pruneApprovals(forInsertion = false) {
   const now = nowProvider();
   for (const [operationId, approval] of approvals) {
@@ -82911,14 +84647,14 @@ async function pathExists8(targetPath) {
 }
 async function gitPathExists(repoRoot, name) {
   const gitPath = await requiredGit(repoRoot, ["rev-parse", "--git-path", name]);
-  return pathExists8(path26.isAbsolute(gitPath) ? gitPath : path26.resolve(repoRoot, gitPath));
+  return pathExists8(path27.isAbsolute(gitPath) ? gitPath : path27.resolve(repoRoot, gitPath));
 }
 async function inspectRepository(cwd) {
   const repoRootRaw = await requiredGit(cwd, ["rev-parse", "--show-toplevel"]);
-  const repoRoot = await realpath(repoRootRaw);
+  const repoRoot = await realpath2(repoRootRaw);
   const gitCommonDirRaw = await requiredGit(repoRoot, ["rev-parse", "--git-common-dir"]);
-  const gitCommonDir2 = await realpath(
-    path26.isAbsolute(gitCommonDirRaw) ? gitCommonDirRaw : path26.resolve(repoRoot, gitCommonDirRaw)
+  const gitCommonDir2 = await realpath2(
+    path27.isAbsolute(gitCommonDirRaw) ? gitCommonDirRaw : path27.resolve(repoRoot, gitCommonDirRaw)
   );
   const headResult = await runGit5(repoRoot, ["rev-parse", "--verify", "HEAD"]);
   const branchResult = await runGit5(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
@@ -82979,12 +84715,12 @@ function repositoryBlockers(snapshot3) {
 }
 function normalizeEvidencePath(repoRoot, value) {
   const trimmed = value.trim().replaceAll("\\", "/");
-  if (!trimmed || path26.isAbsolute(trimmed) || trimmed.split("/").includes("..")) {
+  if (!trimmed || path27.isAbsolute(trimmed) || trimmed.split("/").includes("..")) {
     throw new Error(`Evidence path must be repo-relative and contained: ${value}`);
   }
-  const absolutePath = path26.resolve(repoRoot, trimmed);
-  const relativePath = path26.relative(repoRoot, absolutePath).replaceAll("\\", "/");
-  if (!relativePath || relativePath.startsWith("../") || path26.isAbsolute(relativePath)) {
+  const absolutePath = path27.resolve(repoRoot, trimmed);
+  const relativePath = path27.relative(repoRoot, absolutePath).replaceAll("\\", "/");
+  if (!relativePath || relativePath.startsWith("../") || path27.isAbsolute(relativePath)) {
     throw new Error(`Evidence path must resolve inside the repository: ${value}`);
   }
   if (relativePath !== trimmed) {
@@ -82996,19 +84732,19 @@ async function assertCanonicalEvidenceParents(repoRoot, relativePath) {
   const parentParts = relativePath.split("/").slice(0, -1);
   let currentPath = repoRoot;
   for (const part of parentParts) {
-    currentPath = path26.join(currentPath, part);
+    currentPath = path27.join(currentPath, part);
     let metadata;
     try {
-      metadata = await lstat(currentPath);
+      metadata = await lstat2(currentPath);
     } catch (error2) {
       if (error2.code === "ENOENT") return;
       throw error2;
     }
     if (metadata.isSymbolicLink()) {
       try {
-        const linkedPath = await realpath(currentPath);
-        const linkedRelativePath = path26.relative(repoRoot, linkedPath);
-        if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path26.sep}`) || path26.isAbsolute(linkedRelativePath)) {
+        const linkedPath = await realpath2(currentPath);
+        const linkedRelativePath = path27.relative(repoRoot, linkedPath);
+        if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path27.sep}`) || path27.isAbsolute(linkedRelativePath)) {
           throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
         }
       } catch (error2) {
@@ -83028,19 +84764,19 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
   const normalized = [...new Set(evidencePaths.map((value) => normalizeEvidencePath(repoRoot, value)))].sort();
   const receipts = [];
   for (const relativePath of normalized) {
-    const absolutePath = path26.join(repoRoot, relativePath);
+    const absolutePath = path27.join(repoRoot, relativePath);
     let contentSha256 = null;
     if (relativePath === UNDO_REPORT_PATH) {
       throw new Error(`${UNDO_REPORT_PATH} cannot be its own undo evidence input.`);
     }
     try {
       await assertCanonicalEvidenceParents(repoRoot, relativePath);
-      const metadata = await lstat(absolutePath);
+      const metadata = await lstat2(absolutePath);
       if (metadata.isSymbolicLink()) {
         try {
-          const linkedPath = await realpath(absolutePath);
-          const linkedRelativePath = path26.relative(repoRoot, linkedPath);
-          if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path26.sep}`) || path26.isAbsolute(linkedRelativePath)) {
+          const linkedPath = await realpath2(absolutePath);
+          const linkedRelativePath = path27.relative(repoRoot, linkedPath);
+          if (linkedRelativePath === ".." || linkedRelativePath.startsWith(`..${path27.sep}`) || path27.isAbsolute(linkedRelativePath)) {
             throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
           }
         } catch (error2) {
@@ -83054,9 +84790,9 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
       if (!metadata.isFile()) {
         throw new Error(`Evidence path must be a regular file: ${relativePath}`);
       }
-      const realEvidencePath = await realpath(absolutePath);
-      const realRelativePath = path26.relative(repoRoot, realEvidencePath);
-      if (realRelativePath === ".." || realRelativePath.startsWith(`..${path26.sep}`) || path26.isAbsolute(realRelativePath)) {
+      const realEvidencePath = await realpath2(absolutePath);
+      const realRelativePath = path27.relative(repoRoot, realEvidencePath);
+      if (realRelativePath === ".." || realRelativePath.startsWith(`..${path27.sep}`) || path27.isAbsolute(realRelativePath)) {
         throw new Error(`Evidence path resolves outside the repository: ${relativePath}`);
       }
       if (realEvidencePath !== absolutePath) {
@@ -83071,7 +84807,7 @@ async function evidenceReceipts(repoRoot, evidencePaths) {
   return receipts;
 }
 async function readUndoReportReceipt(repoRoot) {
-  const reportPath = path26.join(repoRoot, UNDO_REPORT_PATH);
+  const reportPath = path27.join(repoRoot, UNDO_REPORT_PATH);
   if (!await pathExists8(reportPath)) {
     return { exists: false, contentSha256: null, content: null, appliedReverts: [] };
   }
@@ -83121,11 +84857,11 @@ async function expectedRevertTree(repoRoot, headBefore, candidate) {
   const selectedParent = candidate.parents[(candidate.mainline ?? 1) - 1];
   if (!selectedParent) return null;
   const sourceObjectsRaw = await requiredGit(repoRoot, ["rev-parse", "--git-path", "objects"]);
-  const sourceObjects = await realpath(
-    path26.isAbsolute(sourceObjectsRaw) ? sourceObjectsRaw : path26.resolve(repoRoot, sourceObjectsRaw)
+  const sourceObjects = await realpath2(
+    path27.isAbsolute(sourceObjectsRaw) ? sourceObjectsRaw : path27.resolve(repoRoot, sourceObjectsRaw)
   );
-  const temporaryObjectRoot = await mkdtemp(path26.join(os7.tmpdir(), "blueprint-undo-tree-"));
-  const temporaryObjects = path26.join(temporaryObjectRoot, "objects");
+  const temporaryObjectRoot = await mkdtemp(path27.join(os7.tmpdir(), "blueprint-undo-tree-"));
+  const temporaryObjects = path27.join(temporaryObjectRoot, "objects");
   try {
     await mkdir(temporaryObjects, { recursive: true });
     const result = await processRunner(
@@ -83823,7 +85559,7 @@ async function blueprintUndoExecute(args) {
         return result;
       }
       const persistedPreReport = await readFile(
-        path26.join(stored.packet.repoRoot, stored.packet.report.path)
+        path27.join(stored.packet.repoRoot, stored.packet.report.path)
       );
       if (qualityShippingSha256(persistedPreReport) !== stored.packet.report.preMutationContentSha256) {
         result.status = "stale";
@@ -84277,8 +86013,8 @@ var init_undo = __esm({
 
 // src/mcp/tools/pr-branch.ts
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { access as access2, lstat as lstat2, mkdtemp as mkdtemp2, readFile as readFile2, realpath as realpath2, rm as rm2 } from "node:fs/promises";
-import path27 from "node:path";
+import { access as access2, lstat as lstat3, mkdtemp as mkdtemp2, readFile as readFile2, realpath as realpath3, rm as rm2 } from "node:fs/promises";
+import path28 from "node:path";
 function env() {
   return qualityShippingGitEnvironment();
 }
@@ -84326,14 +86062,14 @@ async function inProgressState(commonDir) {
     ["bisect", "BISECT_LOG"]
   ];
   const found = [];
-  for (const [name, marker] of markers) if (await exists(path27.join(commonDir, marker))) found.push(name);
+  for (const [name, marker] of markers) if (await exists(path28.join(commonDir, marker))) found.push(name);
   return found;
 }
 async function snapshot(cwd) {
   const repoRootRaw = await gitText(cwd, ["rev-parse", "--show-toplevel"], "repository discovery");
-  const repoRoot = await realpath2(repoRootRaw);
+  const repoRoot = await realpath3(repoRootRaw);
   const commonRaw = await gitText(repoRoot, ["rev-parse", "--git-common-dir"], "git common-dir discovery");
-  const gitCommonDir2 = await realpath2(path27.resolve(repoRoot, commonRaw));
+  const gitCommonDir2 = await realpath3(path28.resolve(repoRoot, commonRaw));
   const branchResult = await git(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
   const headResult = await git(repoRoot, ["rev-parse", "--verify", "HEAD"]);
   const statusResult = await git(repoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
@@ -84442,35 +86178,35 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
   const normalized = [...new Set(evidencePaths.map((value) => value.trim().replaceAll("\\", "/").replace(/^\.\//, "")))].sort();
   const receipts = [];
   for (const relative of normalized) {
-    if (!relative || relative.startsWith("-") || path27.isAbsolute(relative) || relative.split("/").includes("..")) {
+    if (!relative || relative.startsWith("-") || path28.isAbsolute(relative) || relative.split("/").includes("..")) {
       throw new Error(`Evidence path must be a safe repo-relative canonical path: ${relative}`);
     }
-    const absolute = path27.resolve(repoRoot, relative);
-    const lexicalRelative = path27.relative(repoRoot, absolute);
-    if (!lexicalRelative || lexicalRelative === ".." || lexicalRelative.startsWith(`..${path27.sep}`) || path27.isAbsolute(lexicalRelative)) {
+    const absolute = path28.resolve(repoRoot, relative);
+    const lexicalRelative = path28.relative(repoRoot, absolute);
+    if (!lexicalRelative || lexicalRelative === ".." || lexicalRelative.startsWith(`..${path28.sep}`) || path28.isAbsolute(lexicalRelative)) {
       throw new Error(`Evidence path escapes the canonical repository: ${relative}`);
     }
     if (lexicalRelative.replaceAll("\\", "/") !== relative) {
       throw new Error(`Evidence path ${relative} uses a non-canonical repository alias.`);
     }
     try {
-      const metadata = await lstat2(absolute);
+      const metadata = await lstat3(absolute);
       if (metadata.isSymbolicLink()) {
         let linkedPath;
         try {
-          linkedPath = await realpath2(absolute);
+          linkedPath = await realpath3(absolute);
         } catch {
           throw new Error(`Evidence path ${relative} is a broken or unresolvable symlink.`);
         }
-        const linkedRelative = path27.relative(repoRoot, linkedPath);
-        if (linkedRelative === ".." || linkedRelative.startsWith(`..${path27.sep}`) || path27.isAbsolute(linkedRelative)) {
+        const linkedRelative = path28.relative(repoRoot, linkedPath);
+        if (linkedRelative === ".." || linkedRelative.startsWith(`..${path28.sep}`) || path28.isAbsolute(linkedRelative)) {
           throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
         }
         throw new Error(`Evidence path ${relative} is a symlink; evidence inputs must be canonical repository files.`);
       }
-      const resolved = await realpath2(absolute);
-      const resolvedRelative = path27.relative(repoRoot, resolved);
-      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path27.sep}`) || path27.isAbsolute(resolvedRelative)) {
+      const resolved = await realpath3(absolute);
+      const resolvedRelative = path28.relative(repoRoot, resolved);
+      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path28.sep}`) || path28.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
       }
       const canonical = resolvedRelative.replaceAll("\\", "/");
@@ -84488,7 +86224,7 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
 }
 async function reportReceipt(repoRoot) {
   try {
-    return { exists: true, sha256: qualityShippingSha256(await readFile2(path27.join(repoRoot, REPORT_PATH))) };
+    return { exists: true, sha256: qualityShippingSha256(await readFile2(path28.join(repoRoot, REPORT_PATH))) };
   } catch (error2) {
     if (error2.code === "ENOENT") return { exists: false, sha256: null };
     throw error2;
@@ -84676,7 +86412,7 @@ function baseResult(packet, operationId, fingerprint) {
 async function existingBranchDisposition(repoRoot, reviewBranch, report, request) {
   if (await localBranchDisposition(repoRoot, reviewBranch) === "absent") return null;
   if (!report.exists) return "divergent";
-  const content = await readFile2(path27.join(repoRoot, REPORT_PATH), "utf8");
+  const content = await readFile2(path28.join(repoRoot, REPORT_PATH), "utf8");
   const escaped = reviewBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const createdOid = content.match(new RegExp(`^- Created branch: ${escaped} \\(([0-9a-f]{40}|[0-9a-f]{64})\\)$`, "m"))?.[1] ?? null;
   const sourceBranch = content.match(/^- Source branch: (.+)$/m)?.[1] ?? null;
@@ -85086,8 +86822,8 @@ async function blueprintPrBranchExecute(args) {
           break;
         }
         try {
-          ownedTempDir = await mkdtemp2(path27.join(stored.packet.gitCommonDir, "blueprint-pr-branch-"));
-          const mixedPatchPath = path27.join(ownedTempDir, "replay.patch");
+          ownedTempDir = await mkdtemp2(path28.join(stored.packet.gitCommonDir, "blueprint-pr-branch-"));
+          const mixedPatchPath = path28.join(ownedTempDir, "replay.patch");
           const patchResult = await recordProcess(result, `filter-diff:${commit.sourceCommit}`, ["diff", "--binary", "--full-index", `--output=${mixedPatchPath}`, parent, commit.sourceCommit, "--", ".", ":(exclude).blueprint", ":(exclude).blueprint/**"]);
           if (!succeeded(patchResult)) {
             result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
@@ -85121,7 +86857,7 @@ async function blueprintPrBranchExecute(args) {
         result.mapping.push({ sourceCommit: commit.sourceCommit, reviewCommit: null, outcome: "failed" });
         result.status = abnormal(replay) ? "outcome-unknown" : "partial";
         result.blockers.push(`Replay failed at ${commit.sourceCommit}; conflicts were not resolved automatically.`);
-        const cherryPickHead = path27.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
+        const cherryPickHead = path28.join(stored.packet.gitCommonDir, "CHERRY_PICK_HEAD");
         if (!mixed && await exists(cherryPickHead)) await recordProcess(result, "abort-cherry-pick", ["cherry-pick", "--abort"]);
         break;
       }
@@ -85433,8 +87169,8 @@ var init_pr_branch = __esm({
 
 // src/mcp/tools/ship.ts
 import { randomUUID as randomUUID8 } from "node:crypto";
-import { access as access3, lstat as lstat3, readFile as readFile3, readdir, realpath as realpath3 } from "node:fs/promises";
-import path28 from "node:path";
+import { access as access3, lstat as lstat4, readFile as readFile3, readdir, realpath as realpath4 } from "node:fs/promises";
+import path29 from "node:path";
 function pruneApprovals3(forInsertion = false) {
   const now = nowProvider3();
   for (const [id, stored] of approvals3) {
@@ -85477,13 +87213,13 @@ function rejectLiteral(value, label) {
 async function inProgressState2(commonDir) {
   const markers = [["merge", "MERGE_HEAD"], ["cherry-pick", "CHERRY_PICK_HEAD"], ["revert", "REVERT_HEAD"], ["rebase-merge", "rebase-merge"], ["rebase-apply", "rebase-apply"], ["sequencer", "sequencer"], ["bisect", "BISECT_LOG"]];
   const found = [];
-  for (const [label, marker] of markers) if (await exists2(path28.join(commonDir, marker))) found.push(label);
+  for (const [label, marker] of markers) if (await exists2(path29.join(commonDir, marker))) found.push(label);
   return found;
 }
 async function snapshot2(cwd) {
-  const root = await realpath3(await gitText2(cwd, ["rev-parse", "--show-toplevel"], "repository discovery"));
+  const root = await realpath4(await gitText2(cwd, ["rev-parse", "--show-toplevel"], "repository discovery"));
   const commonRaw = await gitText2(root, ["rev-parse", "--git-common-dir"], "git common-dir discovery");
-  const common = await realpath3(path28.resolve(root, commonRaw));
+  const common = await realpath4(path29.resolve(root, commonRaw));
   const [branch, head, status, config2] = await Promise.all([
     run("git", root, ["symbolic-ref", "--quiet", "--short", "HEAD"]),
     run("git", root, ["rev-parse", "--verify", "HEAD"]),
@@ -85537,25 +87273,25 @@ async function evidenceReceipts3(repoRoot, inputs) {
   const seen = /* @__PURE__ */ new Set();
   for (const input of inputs) {
     rejectLiteral(input.path, "Evidence path");
-    if (path28.isAbsolute(input.path) || input.path.split(/[\\/]+/).includes("..")) throw new Error("Evidence paths must be safe repo-relative paths.");
+    if (path29.isAbsolute(input.path) || input.path.split(/[\\/]+/).includes("..")) throw new Error("Evidence paths must be safe repo-relative paths.");
     const normalized = input.path.replaceAll("\\", "/").replace(/^\.\//, "");
     if (seen.has(normalized)) throw new Error("Each evidence path may be supplied only once.");
     seen.add(normalized);
     const role = canonicalEvidenceRole(normalized);
     if (!role) throw new Error(`Evidence path ${normalized} is not a canonical phase quality artifact or pr-branch-latest receipt.`);
     if (role.kind !== input.kind) throw new Error(`Evidence kind ${input.kind} does not match the canonical ${role.kind} role derived from ${normalized}.`);
-    const absolutePath = path28.resolve(repoRoot, normalized);
-    const lexicalRelative = path28.relative(repoRoot, absolutePath);
-    if (lexicalRelative === ".." || lexicalRelative.startsWith(`..${path28.sep}`) || path28.isAbsolute(lexicalRelative)) {
+    const absolutePath = path29.resolve(repoRoot, normalized);
+    const lexicalRelative = path29.relative(repoRoot, absolutePath);
+    if (lexicalRelative === ".." || lexicalRelative.startsWith(`..${path29.sep}`) || path29.isAbsolute(lexicalRelative)) {
       throw new Error(`Evidence path ${normalized} escapes the canonical repository.`);
     }
     try {
-      const metadata = await lstat3(absolutePath);
+      const metadata = await lstat4(absolutePath);
       if (metadata.isSymbolicLink()) {
         try {
-          const linkedPath = await realpath3(absolutePath);
-          const linkedRelative = path28.relative(repoRoot, linkedPath);
-          if (linkedRelative === ".." || linkedRelative.startsWith(`..${path28.sep}`) || path28.isAbsolute(linkedRelative)) {
+          const linkedPath = await realpath4(absolutePath);
+          const linkedRelative = path29.relative(repoRoot, linkedPath);
+          if (linkedRelative === ".." || linkedRelative.startsWith(`..${path29.sep}`) || path29.isAbsolute(linkedRelative)) {
             throw new Error(`Evidence path ${normalized} resolves outside the canonical repository.`);
           }
         } catch (error2) {
@@ -85564,9 +87300,9 @@ async function evidenceReceipts3(repoRoot, inputs) {
         }
         throw new Error(`Evidence path ${normalized} is a symlink; evidence inputs must be canonical repository files.`);
       }
-      const resolvedPath = await realpath3(absolutePath);
-      const resolvedRelative = path28.relative(repoRoot, resolvedPath);
-      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path28.sep}`) || path28.isAbsolute(resolvedRelative)) {
+      const resolvedPath = await realpath4(absolutePath);
+      const resolvedRelative = path29.relative(repoRoot, resolvedPath);
+      if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path29.sep}`) || path29.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${normalized} resolves outside the canonical repository.`);
       }
       const canonicalPath = resolvedRelative.replaceAll("\\", "/");
@@ -85614,17 +87350,17 @@ function parsePrBranchDigestInputs(content) {
     const split = token.lastIndexOf(":");
     if (split <= 0) return null;
     const evidencePath2 = token.slice(0, split);
-    const sha2565 = token.slice(split + 1);
-    if (!/^[0-9a-f]{64}$/.test(sha2565)) return null;
-    entries.push({ path: evidencePath2, sha256: sha2565 });
+    const sha2566 = token.slice(split + 1);
+    if (!/^[0-9a-f]{64}$/.test(sha2566)) return null;
+    entries.push({ path: evidencePath2, sha256: sha2566 });
   }
   return entries;
 }
 async function loadQualityGateInventory(repoRoot, phaseDir2) {
-  const absoluteDir = path28.resolve(repoRoot, phaseDir2);
-  const metadata = await lstat3(absoluteDir);
+  const absoluteDir = path29.resolve(repoRoot, phaseDir2);
+  const metadata = await lstat4(absoluteDir);
   if (!metadata.isDirectory() || metadata.isSymbolicLink()) throw new Error(`Canonical phase directory ${phaseDir2} must be one real directory.`);
-  const resolvedDir = await realpath3(absoluteDir);
+  const resolvedDir = await realpath4(absoluteDir);
   if (resolvedDir !== absoluteDir) throw new Error(`Canonical phase directory ${phaseDir2} resolves through a non-canonical alias.`);
   const entries = await readdir(resolvedDir, { withFileTypes: true });
   const output = [];
@@ -85632,8 +87368,8 @@ async function loadQualityGateInventory(repoRoot, phaseDir2) {
     if (!entry.isFile() || entry.isSymbolicLink()) {
       throw new Error(`Canonical phase inventory entry ${phaseDir2}/${entry.name} must be one regular non-symlink file.`);
     }
-    const absolute = path28.join(resolvedDir, entry.name);
-    const resolved = await realpath3(absolute);
+    const absolute = path29.join(resolvedDir, entry.name);
+    const resolved = await realpath4(absolute);
     if (resolved !== absolute) throw new Error(`Canonical phase inventory entry ${phaseDir2}/${entry.name} resolves through a non-canonical alias.`);
     const inventoryPath = `${phaseDir2}/${entry.name}`;
     const bytes = await readFile3(resolved);
@@ -85746,7 +87482,7 @@ async function configReceipt(repoRoot) {
 }
 async function reportReceipt2(repoRoot) {
   try {
-    const content = await readFile3(path28.join(repoRoot, REPORT_PATH2));
+    const content = await readFile3(path29.join(repoRoot, REPORT_PATH2));
     return { exists: true, sha256: qualityShippingSha256(content) };
   } catch {
     return { exists: false, sha256: null };
@@ -87068,7 +88804,7 @@ __export(project_exports, {
   projectToolDefinitions: () => projectToolDefinitions
 });
 import { promises as fs33 } from "node:fs";
-import path29 from "node:path";
+import path30 from "node:path";
 function bundledUrl(relativePath) {
   const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
   return new URL(`${rootDepth}${relativePath}`, import.meta.url);
@@ -87147,7 +88883,7 @@ async function pathExists9(targetPath) {
 }
 async function readPackageProjectName(projectRoot) {
   try {
-    const raw = await fs33.readFile(path29.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs33.readFile(path30.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -87159,7 +88895,7 @@ async function readPackageProjectName(projectRoot) {
 }
 async function readPackageDescription(projectRoot) {
   try {
-    const raw = await fs33.readFile(path29.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs33.readFile(path30.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -87174,13 +88910,13 @@ async function inferProjectName2(projectRoot, requestedName) {
   if (explicit) {
     return explicit;
   }
-  return await readPackageProjectName(projectRoot) ?? path29.basename(projectRoot);
+  return await readPackageProjectName(projectRoot) ?? path30.basename(projectRoot);
 }
 async function readRepoSummary(projectRoot) {
   const readmePaths = ["README.md", "README"];
   for (const candidate of readmePaths) {
     try {
-      const raw = await fs33.readFile(path29.join(projectRoot, candidate), "utf8");
+      const raw = await fs33.readFile(path30.join(projectRoot, candidate), "utf8");
       const summary = raw.split("\n").map((line2) => line2.trim()).find((line2) => line2.length > 0 && !line2.startsWith("#"));
       if (summary) {
         return summary;
@@ -87345,9 +89081,9 @@ function bootstrapSeedPreflightDiagnostics(seed) {
   }
   return diagnostics;
 }
-function seedDiagnostic(diagnostic) {
+function seedDiagnostic(diagnostic2) {
   return {
-    ...diagnostic,
+    ...diagnostic2,
     retryable: true
   };
 }
@@ -87398,20 +89134,20 @@ function bootstrapSeedRawPhaseRequirementDiagnostics(seed) {
 }
 function dedupeProjectInitDiagnostics(diagnostics) {
   const deduped = /* @__PURE__ */ new Map();
-  for (const diagnostic of diagnostics) {
+  for (const diagnostic2 of diagnostics) {
     const key2 = JSON.stringify({
-      path: diagnostic.path,
-      code: diagnostic.code,
-      message: diagnostic.message
+      path: diagnostic2.path,
+      code: diagnostic2.code,
+      message: diagnostic2.message
     });
     if (!deduped.has(key2)) {
-      deduped.set(key2, diagnostic);
+      deduped.set(key2, diagnostic2);
     }
   }
   return [...deduped.values()];
 }
 function buildInvalidProjectInitResult(args) {
-  const issues = args.diagnostics.map((diagnostic) => diagnostic.message);
+  const issues = args.diagnostics.map((diagnostic2) => diagnostic2.message);
   return {
     projectRoot: args.projectRoot,
     status: "invalid",
@@ -87692,7 +89428,7 @@ async function blueprintProjectInitUnlocked(args = {}) {
   const overwrite = args.overwrite ?? false;
   const bootstrapMode = args.bootstrapMode ?? "interactive";
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const initialBootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
+  const initialBootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot, inspection);
   assertBootstrapCanWrite({
     inspection,
     bootstrapAssessment: initialBootstrapDiagnostics.brownfield,
@@ -87902,7 +89638,7 @@ async function blueprintProjectInit(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   return withDirectoryLock(
     {
-      lockPath: path29.join(projectRoot, ".blueprint-project-init.lock"),
+      lockPath: path30.join(projectRoot, ".blueprint-project-init.lock"),
       timing: {
         retryMs: 25,
         staleMs: 3e4,
@@ -87915,7 +89651,7 @@ async function blueprintProjectInit(args = {}) {
 async function blueprintProjectStatus(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
+  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot, inspection);
   const bootstrap = buildBootstrapStatus(bootstrapDiagnostics);
   const initialized = inspection.readiness === "initialized";
   if (!initialized) {
@@ -88515,8 +90251,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path32, errorMaps, issueData } = params;
-  const fullPath = [...path32, ...issueData.path || []];
+  const { data, path: path33, errorMaps, issueData } = params;
+  const fullPath = [...path33, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -88631,11 +90367,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path32, key2) {
+  constructor(parent, value, path33, key2) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path32;
+    this._path = path33;
     this._key = key2;
   }
   get path() {
@@ -98194,7 +99930,7 @@ async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath
       preferredPath ?? null,
       blueprintDiscoverableSkillPath(skillName),
       blueprintLegacySkillPath(skillName)
-    ].filter((path32) => typeof path32 === "string" && path32.length > 0)
+    ].filter((path33) => typeof path33 === "string" && path33.length > 0)
   );
   for (const candidatePath2 of candidatePaths) {
     const content = await readRelativePath(candidatePath2);
@@ -98372,7 +100108,7 @@ function registerBlueprintCommandResources(server) {
 }
 
 // src/mcp/response-sanitizer.ts
-import path30 from "node:path";
+import path31 from "node:path";
 
 // src/mcp/tool-result-utils.ts
 function getString(result, key2) {
@@ -98504,7 +100240,7 @@ function trimUpdatePlanPublicFields(result) {
   const updatesDir = typeof savedPaths?.updatesDir === "string" ? savedPaths.updatesDir : null;
   const metadataPath = typeof savedPaths?.metadataPath === "string" ? savedPaths.metadataPath : null;
   const checklistPath = typeof savedPaths?.checklistPath === "string" ? savedPaths.checklistPath : null;
-  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path30.dirname(metadataPath) === updatesDir && path30.dirname(checklistPath) === updatesDir;
+  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path31.dirname(metadataPath) === updatesDir && path31.dirname(checklistPath) === updatesDir;
   if (shouldTrimUpdatesDir && savedPaths !== null) {
     const { updatesDir: _updatesDir, ...trimmedSavedPaths } = savedPaths;
     trimmedResult = {
@@ -99316,9 +101052,9 @@ init_phase_topology_lock();
 init_artifacts();
 init_review();
 import { execFile as execFile10 } from "node:child_process";
-import { createHash as createHash17, randomBytes } from "node:crypto";
+import { createHash as createHash19, randomBytes } from "node:crypto";
 import { promises as fs35 } from "node:fs";
-import path31 from "node:path";
+import path32 from "node:path";
 import { promisify as promisify8 } from "node:util";
 var execFileAsync8 = promisify8(execFile10);
 var GOD_REVIEW_FLAG = "--feels-like-god";
@@ -99649,7 +101385,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Path must not be empty." };
   }
-  if (path31.isAbsolute(requestedPath)) {
+  if (path32.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -99662,7 +101398,7 @@ function normalizeGodReviewRepoRelativeFilePath(rawPath) {
   if (requestedPath.endsWith("/")) {
     return { valid: false, path: null, reason: "Directories are not allowed." };
   }
-  const normalizedPath = path31.posix.normalize(requestedPath);
+  const normalizedPath = path32.posix.normalize(requestedPath);
   if (normalizedPath === "." || normalizedPath === ".." || normalizedPath.startsWith("../")) {
     return {
       valid: false,
@@ -99690,7 +101426,7 @@ function hashGodReviewFileSet(args) {
       (left, right) => left.path.localeCompare(right.path)
     )
   });
-  return `sha256:${createHash17("sha256").update(payload).digest("hex")}`;
+  return `sha256:${createHash19("sha256").update(payload).digest("hex")}`;
 }
 async function hashGodReviewResolvedFileSet(args) {
   const contentHashes = await Promise.all(
@@ -99698,7 +101434,7 @@ async function hashGodReviewResolvedFileSet(args) {
       const content = await fs35.readFile(resolveRepoRelativePath(args.projectRoot, file2));
       return {
         path: file2,
-        hash: `sha256:${createHash17("sha256").update(content).digest("hex")}`
+        hash: `sha256:${createHash19("sha256").update(content).digest("hex")}`
       };
     })
   );
@@ -99741,7 +101477,7 @@ function isGeneratedReportReportPath(value) {
   return /^\.blueprint\/reports\/god-review-[A-Za-z0-9._-]+\.md$/.test(value);
 }
 function normalizeSessionOwnedPath(value) {
-  return path31.posix.normalize(normalizePathSeparators(value.trim()));
+  return path32.posix.normalize(normalizePathSeparators(value.trim()));
 }
 function validateGodReviewSessionPaths(session) {
   const issues = [];
@@ -99808,14 +101544,14 @@ function buildInitialGodReviewGroups() {
   }));
 }
 function stableHash2(value) {
-  return `sha256:${createHash17("sha256").update(value).digest("hex")}`;
+  return `sha256:${createHash19("sha256").update(value).digest("hex")}`;
 }
 function isValidRunId(value) {
   return /^[A-Za-z0-9._-]+$/.test(value) && !value.includes("..");
 }
 function generateGodReviewRunId(args) {
   const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const scopeHash = createHash17("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
+  const scopeHash = createHash19("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
   const entropy = randomBytes(3).toString("hex");
   return `god-${day}-${scopeHash}-${entropy}`;
 }
@@ -100493,7 +102229,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Session path must not be empty." };
   }
-  if (path31.isAbsolute(requestedPath)) {
+  if (path32.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -100503,7 +102239,7 @@ function normalizeGodReviewSessionPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path31.posix.normalize(requestedPath);
+  const normalizedPath = path32.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -100532,7 +102268,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (requestedPath.length === 0) {
     return { valid: false, path: null, reason: "Report path must not be empty." };
   }
-  if (path31.isAbsolute(requestedPath)) {
+  if (path32.isAbsolute(requestedPath)) {
     return {
       valid: false,
       path: null,
@@ -100542,7 +102278,7 @@ function normalizeGodReviewReportPath(rawPath) {
   if (hasGlobPattern2(requestedPath)) {
     return { valid: false, path: null, reason: "Globs are not allowed." };
   }
-  const normalizedPath = path31.posix.normalize(requestedPath);
+  const normalizedPath = path32.posix.normalize(requestedPath);
   if (!normalizedPath.startsWith(".blueprint/")) {
     return {
       valid: false,
@@ -101926,7 +103662,7 @@ async function startGodReviewSessionWithResolvedScope(args) {
       });
     }
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path31.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
+    const runId = args.resolvedScope.scopeKind === "phase" ? `god-${String(args.resolvedScope.phase)}` : path32.basename(args.resolvedScope.paths.sessionPath).replace(/^\.god-review-/, "").replace(/\.json$/, "");
     const groups = buildInitialGodReviewGroups();
     const nextGroupId = groups[0]?.id ?? null;
     const session = {
@@ -104130,11 +105866,11 @@ function collectResultDiagnostics(result) {
     addDiagnosticMessage(messages, issue2);
   }
   if (Array.isArray(result.diagnostics)) {
-    for (const diagnostic of result.diagnostics) {
-      if (typeof diagnostic === "string") {
-        addDiagnosticMessage(messages, diagnostic);
+    for (const diagnostic2 of result.diagnostics) {
+      if (typeof diagnostic2 === "string") {
+        addDiagnosticMessage(messages, diagnostic2);
       } else {
-        addDiagnosticMessage(messages, asRecord2(diagnostic)?.message);
+        addDiagnosticMessage(messages, asRecord2(diagnostic2)?.message);
       }
     }
   }
@@ -104310,13 +106046,13 @@ function getNonSuccessSummaryVerb(status, preferredVerb) {
 function buildNonSuccessStatusSummary(toolName, subject, status, result, preferredVerb) {
   const reason = getString(result, "reason");
   const waitingState = getString(result, "waitingState");
-  const path32 = findSummaryPath(result);
+  const path33 = findSummaryPath(result);
   const content = getString(result, "content");
   const mutationFlags = buildMutationFlags(toolName, result);
   const countSummary = buildCountSummary(result);
   const details = [];
-  if (path32) {
-    details.push(`at \`${path32}\``);
+  if (path33) {
+    details.push(`at \`${path33}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
@@ -104343,8 +106079,8 @@ function buildStateNoopSummary(toolName, result) {
   const synced = getBoolean(result, "synced");
   const updatedFieldCount = getArrayCount(result, "updatedFields");
   const syncedFieldCount = getArrayCount(result, "syncedFields");
-  const path32 = findSummaryPath(result);
-  const location2 = path32 ? ` at \`${path32}\`` : "";
+  const path33 = findSummaryPath(result);
+  const location2 = path33 ? ` at \`${path33}\`` : "";
   if (toolName === "blueprint_state_update" && (updated === false || updatedFieldCount === 0)) {
     return `No state changes${location2}.`;
   }
@@ -104428,7 +106164,7 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path32 = findSummaryPath(result);
+  const path33 = findSummaryPath(result);
   const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
@@ -104469,8 +106205,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path32) {
-    details.push(`at \`${path32}\``);
+  if (path33) {
+    details.push(`at \`${path33}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);

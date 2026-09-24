@@ -76,11 +76,27 @@ export type PortableExtractionFailure = {
     readonly diagnostics: readonly ExtractionDiagnostic[];
 };
 export type PortableExtractionResult = PortableExtractionSuccess | PortableExtractionFailure;
+/**
+ * Freshness evidence for an already accepted extraction.  This intentionally
+ * inventories and rechecks the literal root and parser assets without parsing
+ * every source file again; callers still compare the resulting inventory and
+ * provenance hashes with the accepted operation before using its records.
+ */
+export type PortableSourceFreshness = {
+    readonly ok: true;
+    readonly root: ExtractionRootIdentity;
+    readonly inventoryFingerprint: string;
+    readonly provenance: ExtractionParserProvenance;
+} | {
+    readonly ok: false;
+    readonly diagnostics: readonly ExtractionDiagnostic[];
+};
 export type PortableExtractionOptions = {
     readonly repositoryRoot: string;
     readonly generationId: string;
     readonly useGit?: boolean;
 };
+export declare function capturePortableSourceFreshness(repositoryRoot: string, useGit?: boolean): Promise<PortableSourceFreshness>;
 /**
  * Inventory and extract all eligible repository files without writing state.
  * Source bytes are passed only through the private parser reader callback and
@@ -101,6 +117,18 @@ export type ModelPacketSelection = {
     readonly importIds?: readonly string[];
     readonly relationshipIds?: readonly string[];
     readonly capabilities?: readonly PortableModelPacketCapability[];
+    /** Maximum serialized packet bytes, including the operation continuation. */
+    readonly maxSerializedBytes?: number;
+    /**
+     * The operation-facing cursor is longer than the small standalone packet
+     * cursor used by the extraction API.  Let callers reserve the exact public
+     * continuation before greedy splitting so a packet can never grow after it
+     * crosses the model boundary.
+     */
+    readonly continuationFor?: (packetIndex: number, hasMore: boolean) => {
+        readonly cursor: string;
+        readonly hasMore: boolean;
+    } | undefined;
 };
 export type PortableModelPacket = {
     readonly packetVersion: 1;

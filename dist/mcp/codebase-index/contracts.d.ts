@@ -76,10 +76,10 @@ export type PortableSourceCoordinate = z.infer<typeof portableSourceCoordinateSc
 export declare const PORTABLE_MAP_LANGUAGES: readonly ["javascript", "jsx", "typescript", "tsx", "python", "java", "unknown"];
 export declare const portableLanguageSchema: z.ZodEnum<{
     unknown: "unknown";
-    tsx: "tsx";
-    typescript: "typescript";
     javascript: "javascript";
     jsx: "jsx";
+    typescript: "typescript";
+    tsx: "tsx";
     python: "python";
     java: "java";
 }>;
@@ -89,17 +89,17 @@ export declare const portableFileRoleSchema: z.ZodEnum<{
     unknown: "unknown";
     test: "test";
     source: "source";
-    generated: "generated";
     configuration: "configuration";
     documentation: "documentation";
+    generated: "generated";
 }>;
 export declare const PORTABLE_MAP_PARSE_STATUSES: readonly ["parsed", "partial", "failed", "unsupported", "skipped"];
 export declare const portableParseStatusSchema: z.ZodEnum<{
     failed: "failed";
     skipped: "skipped";
     partial: "partial";
-    unsupported: "unsupported";
     parsed: "parsed";
+    unsupported: "unsupported";
 }>;
 export type PortableParseStatus = z.infer<typeof portableParseStatusSchema>;
 export declare const PORTABLE_MAP_COVERAGE_STATUSES: readonly ["full", "file", "none"];
@@ -113,13 +113,13 @@ export declare const PORTABLE_MAP_LIMITATION_REASONS: readonly ["none", "unsuppo
 export declare const portableLimitationReasonSchema: z.ZodEnum<{
     binary: "binary";
     none: "none";
-    unreadable: "unreadable";
-    excluded: "excluded";
-    "too-large": "too-large";
-    "unsafe-content": "unsafe-content";
     "unsupported-language": "unsupported-language";
+    "too-large": "too-large";
     "parse-error": "parse-error";
+    excluded: "excluded";
+    unreadable: "unreadable";
     "not-extracted": "not-extracted";
+    "unsafe-content": "unsafe-content";
     "unsupported-construct": "unsupported-construct";
 }>;
 export declare const portableFileRecordSchema: z.ZodObject<{
@@ -127,10 +127,10 @@ export declare const portableFileRecordSchema: z.ZodObject<{
     path: z.ZodString;
     language: z.ZodEnum<{
         unknown: "unknown";
-        tsx: "tsx";
-        typescript: "typescript";
         javascript: "javascript";
         jsx: "jsx";
+        typescript: "typescript";
+        tsx: "tsx";
         python: "python";
         java: "java";
     }>;
@@ -138,9 +138,9 @@ export declare const portableFileRecordSchema: z.ZodObject<{
         unknown: "unknown";
         test: "test";
         source: "source";
-        generated: "generated";
         configuration: "configuration";
         documentation: "documentation";
+        generated: "generated";
     }>;
     byteSize: z.ZodNumber;
     contentHash: z.ZodString;
@@ -148,8 +148,8 @@ export declare const portableFileRecordSchema: z.ZodObject<{
         failed: "failed";
         skipped: "skipped";
         partial: "partial";
-        unsupported: "unsupported";
         parsed: "parsed";
+        unsupported: "unsupported";
     }>;
     coverageStatus: z.ZodEnum<{
         file: "file";
@@ -159,13 +159,13 @@ export declare const portableFileRecordSchema: z.ZodObject<{
     limitationReason: z.ZodOptional<z.ZodEnum<{
         binary: "binary";
         none: "none";
-        unreadable: "unreadable";
-        excluded: "excluded";
-        "too-large": "too-large";
-        "unsafe-content": "unsafe-content";
         "unsupported-language": "unsupported-language";
+        "too-large": "too-large";
         "parse-error": "parse-error";
+        excluded: "excluded";
+        unreadable: "unreadable";
         "not-extracted": "not-extracted";
+        "unsafe-content": "unsafe-content";
         "unsupported-construct": "unsupported-construct";
     }>>;
     coordinate: z.ZodOptional<z.ZodObject<{
@@ -188,15 +188,15 @@ export declare const portableSymbolKindSchema: z.ZodEnum<{
     unknown: "unknown";
     enum: "enum";
     type: "type";
-    field: "field";
-    constructor: "constructor";
-    method: "method";
     module: "module";
     class: "class";
     interface: "interface";
+    method: "method";
+    constructor: "constructor";
     variable: "variable";
     constant: "constant";
     property: "property";
+    field: "field";
 }>;
 export type PortableSymbolKind = z.infer<typeof portableSymbolKindSchema>;
 export declare const PORTABLE_MAP_STRUCTURAL_DETAIL_FIELDS: readonly ["qualifiedName", "signature"];
@@ -265,15 +265,15 @@ export declare const portableSymbolRecordSchema: z.ZodObject<{
         unknown: "unknown";
         enum: "enum";
         type: "type";
-        field: "field";
-        constructor: "constructor";
-        method: "method";
         module: "module";
         class: "class";
         interface: "interface";
+        method: "method";
+        constructor: "constructor";
         variable: "variable";
         constant: "constant";
         property: "property";
+        field: "field";
     }>;
     signature: z.ZodOptional<z.ZodString>;
     coordinate: z.ZodObject<{
@@ -319,10 +319,10 @@ export declare const portableUnresolvedReasonSchema: z.ZodEnum<{
 export type PortableUnresolvedReason = z.infer<typeof portableUnresolvedReasonSchema>;
 export declare const PORTABLE_MAP_RESOLUTION_STATUSES: readonly ["resolved", "unresolved", "ambiguous", "unsupported"];
 export declare const portableResolutionStatusSchema: z.ZodEnum<{
-    resolved: "resolved";
-    ambiguous: "ambiguous";
     unsupported: "unsupported";
+    resolved: "resolved";
     unresolved: "unresolved";
+    ambiguous: "ambiguous";
 }>;
 export type PortableResolutionStatus = z.infer<typeof portableResolutionStatusSchema>;
 export declare const portableImportRelationshipSchema: z.ZodObject<{
@@ -333,10 +333,10 @@ export declare const portableImportRelationshipSchema: z.ZodObject<{
         "supported-inference": "supported-inference";
     }>;
     resolutionStatus: z.ZodEnum<{
-        resolved: "resolved";
-        ambiguous: "ambiguous";
         unsupported: "unsupported";
+        resolved: "resolved";
         unresolved: "unresolved";
+        ambiguous: "ambiguous";
     }>;
     targetFileId: z.ZodNullable<z.ZodString>;
     targetSymbolId: z.ZodNullable<z.ZodString>;
@@ -385,10 +385,10 @@ export declare const portableImportRecordSchema: z.ZodObject<{
         "supported-inference": "supported-inference";
     }>;
     resolutionStatus: z.ZodEnum<{
-        resolved: "resolved";
-        ambiguous: "ambiguous";
         unsupported: "unsupported";
+        resolved: "resolved";
         unresolved: "unresolved";
+        ambiguous: "ambiguous";
     }>;
     targetFileId: z.ZodNullable<z.ZodString>;
     targetSymbolId: z.ZodNullable<z.ZodString>;
@@ -429,8 +429,8 @@ export declare const portableImportRecordSchema: z.ZodObject<{
 }, z.core.$strict>;
 export declare const portableRelationshipRecordSchema: z.ZodObject<{
     origin: z.ZodEnum<{
-        inferred: "inferred";
         syntax: "syntax";
+        inferred: "inferred";
         authored: "authored";
     }>;
     certainty: z.ZodEnum<{
@@ -439,10 +439,10 @@ export declare const portableRelationshipRecordSchema: z.ZodObject<{
         "supported-inference": "supported-inference";
     }>;
     resolutionStatus: z.ZodEnum<{
-        resolved: "resolved";
-        ambiguous: "ambiguous";
         unsupported: "unsupported";
+        resolved: "resolved";
         unresolved: "unresolved";
+        ambiguous: "ambiguous";
     }>;
     targetFileId: z.ZodNullable<z.ZodString>;
     targetSymbolId: z.ZodNullable<z.ZodString>;
@@ -506,10 +506,10 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
         path: z.ZodString;
         language: z.ZodEnum<{
             unknown: "unknown";
-            tsx: "tsx";
-            typescript: "typescript";
             javascript: "javascript";
             jsx: "jsx";
+            typescript: "typescript";
+            tsx: "tsx";
             python: "python";
             java: "java";
         }>;
@@ -517,9 +517,9 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
             unknown: "unknown";
             test: "test";
             source: "source";
-            generated: "generated";
             configuration: "configuration";
             documentation: "documentation";
+            generated: "generated";
         }>;
         byteSize: z.ZodNumber;
         contentHash: z.ZodString;
@@ -527,8 +527,8 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
             failed: "failed";
             skipped: "skipped";
             partial: "partial";
-            unsupported: "unsupported";
             parsed: "parsed";
+            unsupported: "unsupported";
         }>;
         coverageStatus: z.ZodEnum<{
             file: "file";
@@ -538,13 +538,13 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
         limitationReason: z.ZodOptional<z.ZodEnum<{
             binary: "binary";
             none: "none";
-            unreadable: "unreadable";
-            excluded: "excluded";
-            "too-large": "too-large";
-            "unsafe-content": "unsafe-content";
             "unsupported-language": "unsupported-language";
+            "too-large": "too-large";
             "parse-error": "parse-error";
+            excluded: "excluded";
+            unreadable: "unreadable";
             "not-extracted": "not-extracted";
+            "unsafe-content": "unsafe-content";
             "unsupported-construct": "unsupported-construct";
         }>>;
         coordinate: z.ZodOptional<z.ZodObject<{
@@ -570,15 +570,15 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
             unknown: "unknown";
             enum: "enum";
             type: "type";
-            field: "field";
-            constructor: "constructor";
-            method: "method";
             module: "module";
             class: "class";
             interface: "interface";
+            method: "method";
+            constructor: "constructor";
             variable: "variable";
             constant: "constant";
             property: "property";
+            field: "field";
         }>;
         signature: z.ZodOptional<z.ZodString>;
         coordinate: z.ZodObject<{
@@ -615,10 +615,10 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
             "supported-inference": "supported-inference";
         }>;
         resolutionStatus: z.ZodEnum<{
-            resolved: "resolved";
-            ambiguous: "ambiguous";
             unsupported: "unsupported";
+            resolved: "resolved";
             unresolved: "unresolved";
+            ambiguous: "ambiguous";
         }>;
         targetFileId: z.ZodNullable<z.ZodString>;
         targetSymbolId: z.ZodNullable<z.ZodString>;
@@ -659,8 +659,8 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
     }, z.core.$strict>>;
     relationships: z.ZodArray<z.ZodObject<{
         origin: z.ZodEnum<{
-            inferred: "inferred";
             syntax: "syntax";
+            inferred: "inferred";
             authored: "authored";
         }>;
         certainty: z.ZodEnum<{
@@ -669,10 +669,10 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
             "supported-inference": "supported-inference";
         }>;
         resolutionStatus: z.ZodEnum<{
-            resolved: "resolved";
-            ambiguous: "ambiguous";
             unsupported: "unsupported";
+            resolved: "resolved";
             unresolved: "unresolved";
+            ambiguous: "ambiguous";
         }>;
         targetFileId: z.ZodNullable<z.ZodString>;
         targetSymbolId: z.ZodNullable<z.ZodString>;
@@ -1392,6 +1392,33 @@ export declare const portableSourceBasisSchema: z.ZodObject<{
 export type PortableSourceBasis = z.infer<typeof portableSourceBasisSchema>;
 export declare const portableTargetHashesSchema: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodNullable<z.ZodString>>, z.core.$strict>;
 export type PortableTargetHashes = z.infer<typeof portableTargetHashesSchema>;
+/** Strict v1 publication state shared by legacy writers and readiness guards. */
+export declare const portableLegacyPublicationSnapshotSchema: z.ZodObject<{
+    version: z.ZodLiteral<1>;
+    root: z.ZodString;
+    inventory: z.ZodString;
+    inputs: z.ZodRecord<z.ZodString, z.ZodString>;
+    core: z.ZodString;
+    targets: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodNullable<z.ZodString>>, z.core.$strict>;
+    previousPublication: z.ZodNullable<z.ZodString>;
+}, z.core.$strict>;
+export type PortableLegacyPublicationSnapshot = z.infer<typeof portableLegacyPublicationSnapshotSchema>;
+export declare const portableLegacyPublicationPendingSchema: z.ZodObject<{
+    version: z.ZodLiteral<1>;
+    operationId: z.ZodString;
+    snapshot: z.ZodObject<{
+        version: z.ZodLiteral<1>;
+        root: z.ZodString;
+        inventory: z.ZodString;
+        inputs: z.ZodRecord<z.ZodString, z.ZodString>;
+        core: z.ZodString;
+        targets: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodNullable<z.ZodString>>, z.core.$strict>;
+        previousPublication: z.ZodNullable<z.ZodString>;
+    }, z.core.$strict>;
+    hashes: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodNullable<z.ZodString>>, z.core.$strict>;
+    stage: z.ZodLiteral<"publishing">;
+}, z.core.$strict>;
+export type PortableLegacyPublicationPending = z.infer<typeof portableLegacyPublicationPendingSchema>;
 /** Every portable publication must render all seven compatibility views. */
 export declare const portablePublishedTargetHashesSchema: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodString>, z.core.$strict>;
 export type PortablePublishedTargetHashes = PortableCompatibilityViewHashes;
@@ -1402,9 +1429,9 @@ export declare const portableOperationStageSchema: z.ZodEnum<{
 export type PortableOperationStage = z.infer<typeof portableOperationStageSchema>;
 export declare const PORTABLE_MAP_PUBLICATION_STAGES: readonly ["publishing", "index-committed", "cleanup"];
 export declare const portablePublicationStageSchema: z.ZodEnum<{
-    cleanup: "cleanup";
     publishing: "publishing";
     "index-committed": "index-committed";
+    cleanup: "cleanup";
 }>;
 export type PortablePublicationStage = z.infer<typeof portablePublicationStageSchema>;
 /** Pre-authoring state. It intentionally has no future rendered hash. */
@@ -1415,8 +1442,18 @@ export declare const portableOperationMetadataSchema: z.ZodObject<{
         prepared: "prepared";
     }>;
     generationId: z.ZodString;
+    transactionId: z.ZodOptional<z.ZodString>;
     previousGenerationId: z.ZodNullable<z.ZodString>;
     previousIndexHash: z.ZodNullable<z.ZodString>;
+    rootFingerprint: z.ZodOptional<z.ZodString>;
+    observedMarkerHash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    packetBudgetBytes: z.ZodOptional<z.ZodNumber>;
+    repair: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<false>, z.ZodObject<{
+        authorized: z.ZodLiteral<true>;
+        previousIndexHash: z.ZodNullable<z.ZodString>;
+        targetHashes: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodNullable<z.ZodString>>, z.core.$strict>;
+        observedMarkerHash: z.ZodNullable<z.ZodString>;
+    }, z.core.$strict>]>>;
     sourceBasis: z.ZodObject<{
         rootHash: z.ZodString;
         inventoryHash: z.ZodString;
@@ -1433,8 +1470,18 @@ export declare const portablePreparedOperationMetadataSchema: z.ZodObject<{
         prepared: "prepared";
     }>;
     generationId: z.ZodString;
+    transactionId: z.ZodOptional<z.ZodString>;
     previousGenerationId: z.ZodNullable<z.ZodString>;
     previousIndexHash: z.ZodNullable<z.ZodString>;
+    rootFingerprint: z.ZodOptional<z.ZodString>;
+    observedMarkerHash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    packetBudgetBytes: z.ZodOptional<z.ZodNumber>;
+    repair: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<false>, z.ZodObject<{
+        authorized: z.ZodLiteral<true>;
+        previousIndexHash: z.ZodNullable<z.ZodString>;
+        targetHashes: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodNullable<z.ZodString>>, z.core.$strict>;
+        observedMarkerHash: z.ZodNullable<z.ZodString>;
+    }, z.core.$strict>]>>;
     sourceBasis: z.ZodObject<{
         rootHash: z.ZodString;
         inventoryHash: z.ZodString;
@@ -1450,9 +1497,9 @@ export declare const portablePublicationMarkerSchema: z.ZodObject<{
     operationId: z.ZodString;
     transactionId: z.ZodString;
     stage: z.ZodEnum<{
-        cleanup: "cleanup";
         publishing: "publishing";
         "index-committed": "index-committed";
+        cleanup: "cleanup";
     }>;
     generationId: z.ZodString;
     previousGenerationId: z.ZodNullable<z.ZodString>;
@@ -1502,10 +1549,10 @@ export declare const portableModelPacketSchema: z.ZodObject<{
         path: z.ZodString;
         language: z.ZodEnum<{
             unknown: "unknown";
-            tsx: "tsx";
-            typescript: "typescript";
             javascript: "javascript";
             jsx: "jsx";
+            typescript: "typescript";
+            tsx: "tsx";
             python: "python";
             java: "java";
         }>;
@@ -1513,9 +1560,9 @@ export declare const portableModelPacketSchema: z.ZodObject<{
             unknown: "unknown";
             test: "test";
             source: "source";
-            generated: "generated";
             configuration: "configuration";
             documentation: "documentation";
+            generated: "generated";
         }>;
         byteSize: z.ZodNumber;
         contentHash: z.ZodString;
@@ -1523,8 +1570,8 @@ export declare const portableModelPacketSchema: z.ZodObject<{
             failed: "failed";
             skipped: "skipped";
             partial: "partial";
-            unsupported: "unsupported";
             parsed: "parsed";
+            unsupported: "unsupported";
         }>;
         coverageStatus: z.ZodEnum<{
             file: "file";
@@ -1534,13 +1581,13 @@ export declare const portableModelPacketSchema: z.ZodObject<{
         limitationReason: z.ZodOptional<z.ZodEnum<{
             binary: "binary";
             none: "none";
-            unreadable: "unreadable";
-            excluded: "excluded";
-            "too-large": "too-large";
-            "unsafe-content": "unsafe-content";
             "unsupported-language": "unsupported-language";
+            "too-large": "too-large";
             "parse-error": "parse-error";
+            excluded: "excluded";
+            unreadable: "unreadable";
             "not-extracted": "not-extracted";
+            "unsafe-content": "unsafe-content";
             "unsupported-construct": "unsupported-construct";
         }>>;
         coordinate: z.ZodOptional<z.ZodObject<{
@@ -1566,15 +1613,15 @@ export declare const portableModelPacketSchema: z.ZodObject<{
             unknown: "unknown";
             enum: "enum";
             type: "type";
-            field: "field";
-            constructor: "constructor";
-            method: "method";
             module: "module";
             class: "class";
             interface: "interface";
+            method: "method";
+            constructor: "constructor";
             variable: "variable";
             constant: "constant";
             property: "property";
+            field: "field";
         }>;
         signature: z.ZodOptional<z.ZodString>;
         coordinate: z.ZodObject<{
@@ -1626,10 +1673,10 @@ export declare const portableModelPacketSchema: z.ZodObject<{
             "supported-inference": "supported-inference";
         }>;
         resolutionStatus: z.ZodEnum<{
-            resolved: "resolved";
-            ambiguous: "ambiguous";
             unsupported: "unsupported";
+            resolved: "resolved";
             unresolved: "unresolved";
+            ambiguous: "ambiguous";
         }>;
         targetFileId: z.ZodNullable<z.ZodString>;
         targetSymbolId: z.ZodNullable<z.ZodString>;
@@ -1670,8 +1717,8 @@ export declare const portableModelPacketSchema: z.ZodObject<{
     }, z.core.$strict>>;
     selectedRelationships: z.ZodArray<z.ZodObject<{
         origin: z.ZodEnum<{
-            inferred: "inferred";
             syntax: "syntax";
+            inferred: "inferred";
             authored: "authored";
         }>;
         certainty: z.ZodEnum<{
@@ -1680,10 +1727,10 @@ export declare const portableModelPacketSchema: z.ZodObject<{
             "supported-inference": "supported-inference";
         }>;
         resolutionStatus: z.ZodEnum<{
-            resolved: "resolved";
-            ambiguous: "ambiguous";
             unsupported: "unsupported";
+            resolved: "resolved";
             unresolved: "unresolved";
+            ambiguous: "ambiguous";
         }>;
         targetFileId: z.ZodNullable<z.ZodString>;
         targetSymbolId: z.ZodNullable<z.ZodString>;
@@ -1744,10 +1791,10 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
         path: z.ZodString;
         language: z.ZodEnum<{
             unknown: "unknown";
-            tsx: "tsx";
-            typescript: "typescript";
             javascript: "javascript";
             jsx: "jsx";
+            typescript: "typescript";
+            tsx: "tsx";
             python: "python";
             java: "java";
         }>;
@@ -1755,9 +1802,9 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
             unknown: "unknown";
             test: "test";
             source: "source";
-            generated: "generated";
             configuration: "configuration";
             documentation: "documentation";
+            generated: "generated";
         }>;
         byteSize: z.ZodNumber;
         contentHash: z.ZodString;
@@ -1765,8 +1812,8 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
             failed: "failed";
             skipped: "skipped";
             partial: "partial";
-            unsupported: "unsupported";
             parsed: "parsed";
+            unsupported: "unsupported";
         }>;
         coverageStatus: z.ZodEnum<{
             file: "file";
@@ -1776,13 +1823,13 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
         limitationReason: z.ZodOptional<z.ZodEnum<{
             binary: "binary";
             none: "none";
-            unreadable: "unreadable";
-            excluded: "excluded";
-            "too-large": "too-large";
-            "unsafe-content": "unsafe-content";
             "unsupported-language": "unsupported-language";
+            "too-large": "too-large";
             "parse-error": "parse-error";
+            excluded: "excluded";
+            unreadable: "unreadable";
             "not-extracted": "not-extracted";
+            "unsafe-content": "unsafe-content";
             "unsupported-construct": "unsupported-construct";
         }>>;
         coordinate: z.ZodOptional<z.ZodObject<{
@@ -1808,15 +1855,15 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
             unknown: "unknown";
             enum: "enum";
             type: "type";
-            field: "field";
-            constructor: "constructor";
-            method: "method";
             module: "module";
             class: "class";
             interface: "interface";
+            method: "method";
+            constructor: "constructor";
             variable: "variable";
             constant: "constant";
             property: "property";
+            field: "field";
         }>;
         signature: z.ZodOptional<z.ZodString>;
         coordinate: z.ZodObject<{
@@ -1868,10 +1915,10 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
             "supported-inference": "supported-inference";
         }>;
         resolutionStatus: z.ZodEnum<{
-            resolved: "resolved";
-            ambiguous: "ambiguous";
             unsupported: "unsupported";
+            resolved: "resolved";
             unresolved: "unresolved";
+            ambiguous: "ambiguous";
         }>;
         targetFileId: z.ZodNullable<z.ZodString>;
         targetSymbolId: z.ZodNullable<z.ZodString>;
@@ -1912,8 +1959,8 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
     }, z.core.$strict>>;
     selectedRelationships: z.ZodArray<z.ZodObject<{
         origin: z.ZodEnum<{
-            inferred: "inferred";
             syntax: "syntax";
+            inferred: "inferred";
             authored: "authored";
         }>;
         certainty: z.ZodEnum<{
@@ -1922,10 +1969,10 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
             "supported-inference": "supported-inference";
         }>;
         resolutionStatus: z.ZodEnum<{
-            resolved: "resolved";
-            ambiguous: "ambiguous";
             unsupported: "unsupported";
+            resolved: "resolved";
             unresolved: "unresolved";
+            ambiguous: "ambiguous";
         }>;
         targetFileId: z.ZodNullable<z.ZodString>;
         targetSymbolId: z.ZodNullable<z.ZodString>;

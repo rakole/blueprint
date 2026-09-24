@@ -90,6 +90,12 @@ export type CodebaseNavigationFallback = {
 export type CodebaseNavigationResult = CodebaseNavigationSuccess | CodebaseNavigationFallback;
 /** Resolve the compact immutable navigation context without returning a manifest or corpus. */
 export declare function resolveCodebaseNavigation(root: string, options?: ResolveCodebaseNavigationOptions): Promise<CodebaseNavigationResult>;
+/**
+ * Prove that a literal path is a sealed member of the selected generation.
+ * Directory identity alone is insufficient: an extra child can otherwise be
+ * mistaken for generated evidence after a valid generation is committed.
+ */
+export declare function resolveCodebaseSealedMember(root: string, relativePath: string): Promise<boolean>;
 /** Navigation/search pages are discovery-only and must say so explicitly. */
 export type PortableSelection = {
     readonly kind: "page";

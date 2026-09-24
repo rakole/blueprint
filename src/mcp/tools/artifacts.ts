@@ -38,6 +38,8 @@ import {
   normalizePhaseNumber as normalizePhaseNumberToken,
   slugifyPhaseName
 } from "./phase-numbering.js";
+import { resolveCodebaseNavigation, resolveCodebaseSealedMember } from "../codebase-index/resolver.js";
+import { portableLegacyPublicationPendingSchema, portablePublicationMarkerSchema } from "../codebase-index/contracts.js";
 import {
   blueprintPhaseExecutionTargets,
   blueprintPhasePlanIndex,
@@ -141,6 +143,13 @@ function isOperationalOnlyBlueprintArtifact(relativePath: string): boolean {
     return true;
   }
 
+  if (
+    blueprintLocalPath === "codebase-operations" ||
+    blueprintLocalPath.startsWith("codebase-operations/")
+  ) {
+    return true;
+  }
+
   const artifactName = path.posix.basename(artifact);
 
   return (
@@ -210,6 +219,24 @@ export type CodebaseArtifactDiagnostics = {
   invalid: string[];
   mapped: boolean;
   warnings: string[];
+  portable: PortableCodebaseDiagnostics;
+};
+
+export type PortableCodebaseDiagnostics = {
+  status: "valid" | "absent" | "invalid" | "unsupported" | "guarded";
+  generationId: string | null;
+  index: "present" | "absent" | "unsafe";
+  marker: "absent" | "v1" | "v2" | "unknown";
+  compatibility: "matching" | "absent" | "divergent" | "guarded" | "unknown";
+  guard: "open" | "blocked" | "unknown";
+};
+
+export type CodebaseWriteGuard = {
+  allowed: boolean;
+  noOpReuseAllowed: boolean;
+  legacyPublicationPending: boolean;
+  reason: string | null;
+  portable: PortableCodebaseDiagnostics;
 };
 
 type ArtifactCommandCatalogResult = {
@@ -2651,6 +2678,155 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+type CodebasePathPresence = "absent" | "regular" | "unsafe";
+type CodebaseMarkerKind = PortableCodebaseDiagnostics["marker"];
+
+const PORTABLE_CODEBASE_INDEX_PATH = `${BLUEPRINT_CODEBASE_PATH}/INDEX.md`;
+const PORTABLE_MARKER_MAX_BYTES = 8 * 1024 * 1024;
+
+async function classifyCodebasePath(targetPath: string): Promise<CodebasePathPresence> {
+  try {
+    const stat = await fs.lstat(targetPath);
+
+    if (stat.isSymbolicLink() || !stat.isFile()) {
+      return "unsafe";
+    }
+
+    return "regular";
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT" ? "absent" : "unsafe";
+  }
+}
+
+async function classifyCodebaseMarker(projectRoot: string): Promise<CodebaseMarkerKind> {
+  const markerPath = resolveBlueprintPath(projectRoot, CODEBASE_PUBLICATION_PATH);
+  let stat;
+
+  try {
+    stat = await fs.lstat(markerPath);
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT" ? "absent" : "unknown";
+  }
+
+  if (stat.isSymbolicLink() || !stat.isFile() || Number(stat.size) > PORTABLE_MARKER_MAX_BYTES) {
+    return "unknown";
+  }
+
+  let raw: string;
+
+  try {
+    raw = await fs.readFile(markerPath, "utf8");
+  } catch {
+    return "unknown";
+  }
+
+  let parsed: Record<string, unknown>;
+
+  try {
+    parsed = safeJsonParseObject(raw, {
+      label: "Codebase publication marker",
+      maxBytes: PORTABLE_MARKER_MAX_BYTES
+    });
+  } catch {
+    return "unknown";
+  }
+
+  if (portablePublicationMarkerSchema.safeParse(parsed).success) {
+    return "v2";
+  }
+
+  if (portableLegacyPublicationPendingSchema.safeParse(parsed).success) {
+    return "v1";
+  }
+
+  return "unknown";
+}
+
+async function inspectPortableCodebase(projectRoot: string): Promise<{
+  diagnostics: PortableCodebaseDiagnostics;
+  indexPresent: boolean;
+  markerKind: CodebaseMarkerKind;
+  navigation: Awaited<ReturnType<typeof resolveCodebaseNavigation>>;
+}> {
+  const indexPresence = await classifyCodebasePath(
+    resolveBlueprintPath(projectRoot, PORTABLE_CODEBASE_INDEX_PATH)
+  );
+  const markerKind = await classifyCodebaseMarker(projectRoot);
+  const navigation = await resolveCodebaseNavigation(projectRoot);
+  const indexPresent = indexPresence !== "absent";
+  let status: PortableCodebaseDiagnostics["status"];
+
+  if (navigation.status === "ok") {
+    status = "valid";
+  } else if (markerKind === "v2" && !indexPresent) {
+    status = "guarded";
+  } else if (markerKind === "unknown" && !indexPresent) {
+    status = "unsupported";
+  } else if (!indexPresent) {
+    status = "absent";
+  } else {
+    status = navigation.portable.status;
+  }
+
+  const compatibility = navigation.status === "ok"
+    ? navigation.compatibility.guard === "blocked"
+      ? "guarded"
+      : navigation.compatibility.status === "mismatch"
+        ? "divergent"
+        : navigation.compatibility.status
+    : markerKind === "v2"
+      ? "guarded"
+      : "unknown";
+
+  return {
+    diagnostics: {
+      status,
+      generationId: navigation.status === "ok" ? navigation.portable.generationId : null,
+      index: indexPresence === "unsafe" ? "unsafe" : indexPresent ? "present" : "absent",
+      marker: markerKind,
+      compatibility,
+      guard: navigation.status === "ok"
+        ? navigation.compatibility.guard
+        : markerKind === "v2" || markerKind === "unknown"
+          ? "blocked"
+          : "unknown"
+    },
+    indexPresent,
+    markerKind,
+    navigation
+  };
+}
+
+function codebaseGuardMessage(state: Awaited<ReturnType<typeof inspectPortableCodebase>>): string {
+  if (state.markerKind === "unknown") {
+    return "A codebase publication marker is unknown or malformed; legacy codebase writes are blocked until a complete validated replacement is prepared.";
+  }
+
+  if (state.markerKind === "v2") {
+    return "A portable codebase publication or committed INDEX is present; mutable legacy codebase views are guarded.";
+  }
+
+  if (state.indexPresent) {
+    return "A portable codebase INDEX is present; mutable legacy codebase views are guarded.";
+  }
+
+  return "An accepted codebase bundle publication is incomplete; resume /blu-map-codebase before using mapping evidence.";
+}
+
+export async function inspectCodebaseWriteGuard(projectRoot: string): Promise<CodebaseWriteGuard> {
+  const state = await inspectPortableCodebase(projectRoot);
+  const blocked = state.indexPresent || state.markerKind === "v2" || state.markerKind === "unknown";
+  const legacyPublicationPending = state.markerKind === "v1";
+
+  return {
+    allowed: !blocked,
+    noOpReuseAllowed: blocked || legacyPublicationPending,
+    legacyPublicationPending,
+    reason: blocked ? codebaseGuardMessage(state) : null,
+    portable: state.diagnostics
+  };
+}
+
 export function toPosixPath(relativePath: string): string {
   return relativePath.split(path.sep).join("/");
 }
@@ -2765,8 +2941,44 @@ export function resolveBlueprintPath(
 export async function assertCodebasePublicationComplete(projectRoot: string, relativePath: string): Promise<void> {
   const canonical = toRepoRelativePath(projectRoot, resolveRepoRelativePath(projectRoot, relativePath));
   if (!canonical.startsWith(`${BLUEPRINT_CODEBASE_PATH}/`)) return;
-  if (await pathExists(resolveBlueprintPath(projectRoot, CODEBASE_PUBLICATION_PATH))) {
-    throw new Error("Codebase bundle publication is incomplete. Resume /blu-map-codebase before using mapping evidence.");
+
+  const state = await inspectPortableCodebase(projectRoot);
+  const generationMatch = canonical.match(
+    /^\.blueprint\/codebase\/generations\/([^/]+)\//
+  );
+
+  if (generationMatch) {
+    const generation = await resolveCodebaseNavigation(projectRoot, {
+      requestedGenerationId: generationMatch[1]
+    });
+
+    if (generation.status === "ok" && generation.portable.generationId === generationMatch[1] && await resolveCodebaseSealedMember(projectRoot, canonical)) {
+      return;
+    }
+
+    throw new Error(
+      "The requested portable codebase generation is not a verified committed generation. Use ordinary bounded live-source discovery."
+    );
+  }
+
+  if (canonical === PORTABLE_CODEBASE_INDEX_PATH) {
+    if (state.navigation.status === "ok") return;
+    throw new Error(
+      "The portable codebase INDEX is unavailable or unverified. Use ordinary bounded live-source discovery."
+    );
+  }
+
+  if (
+    state.markerKind === "v1" ||
+    state.markerKind === "v2" ||
+    state.markerKind === "unknown" ||
+    state.indexPresent
+  ) {
+    throw new Error(
+      state.markerKind === "v1"
+        ? "Codebase bundle publication is incomplete. Resume /blu-map-codebase before using mapping evidence."
+        : "Mutable legacy codebase views are guarded while a portable map publication is present. Use a verified immutable generation instead."
+    );
   }
 }
 
@@ -3331,6 +3543,42 @@ async function acquireBlueprintRepoLock(lockPath: string): Promise<BlueprintRepo
   }
 }
 
+/**
+ * Lock acquisition creates `.blueprint/locks` before the callback runs. Check
+ * the existing parent chain first so a symlink cannot redirect lock metadata.
+ * Missing parents remain allowed because the lock helper creates them for
+ * brownfield repositories that have no Blueprint state yet.
+ */
+export async function assertBlueprintRepoLockParentSafe(projectRoot: string): Promise<void> {
+  const candidates = [
+    projectRoot,
+    path.join(projectRoot, BLUEPRINT_DIR),
+    path.join(projectRoot, BLUEPRINT_DIR, "locks")
+  ];
+
+  for (const candidate of candidates) {
+    let stat;
+
+    try {
+      stat = await fs.lstat(candidate);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw new Error("Blueprint repository lock parent is not a safe literal directory.");
+    }
+
+    if (stat.isSymbolicLink() && candidate === projectRoot) {
+      const resolved = await fs.realpath(candidate).catch(() => null);
+      if (!resolved) throw new Error("Blueprint repository lock parent is not a safe literal directory.");
+      const target = await fs.stat(resolved).catch(() => null);
+      if (!target?.isDirectory()) throw new Error("Blueprint repository lock parent is not a safe literal directory.");
+      continue;
+    }
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error("Blueprint repository lock parent is not a safe literal directory.");
+    }
+  }
+}
+
 function startBlueprintRepoLockHeartbeat(lockHandle: BlueprintRepoLockHandle): () => void {
   const timer = setInterval(() => {
     void refreshBlueprintRepoLockLease(lockHandle).then((refreshed) => {
@@ -3366,6 +3614,7 @@ export async function withBlueprintRepoLock<T>(
   lockName: string,
   task: () => Promise<T>
 ): Promise<T> {
+  await assertBlueprintRepoLockParentSafe(projectRoot);
   const lockPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/locks/${lockName}.lock`);
 
   const lockHandle = await acquireBlueprintRepoLock(lockPath);
@@ -9276,6 +9525,7 @@ export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
   const blueprintRoot = getBlueprintRoot(projectRoot);
   const blueprintRootExists = await pathExists(blueprintRoot);
   const codebaseRootExists = await pathExists(resolveBlueprintPath(projectRoot, BLUEPRINT_CODEBASE_PATH));
+  const portable = await inspectPortableCodebase(projectRoot);
   const rootShape = await assessRootBootstrapShape(projectRoot);
   const blueprintFiles = blueprintRootExists
     ? await listRelativeFiles(blueprintRoot, projectRoot)
@@ -9336,13 +9586,35 @@ export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
     }
   }
 
-  const publicationPending = await pathExists(resolveBlueprintPath(projectRoot, CODEBASE_PUBLICATION_PATH));
-  if (publicationPending) {
+  const publicationPending = portable.markerKind === "v1";
+  if (
+    publicationPending ||
+    portable.diagnostics.status === "guarded" ||
+    portable.diagnostics.guard === "blocked" ||
+    portable.markerKind === "unknown"
+  ) {
     codebaseValid.length = 0;
     for (const artifact of codebasePresent) {
       if (!codebaseInvalid.includes(artifact)) codebaseInvalid.push(artifact);
     }
-    codebaseWarnings.push("An accepted codebase bundle publication is incomplete; resume /blu-map-codebase before consuming it.");
+
+    if (publicationPending) {
+      codebaseWarnings.push("An accepted codebase bundle publication is incomplete; resume /blu-map-codebase before consuming it.");
+    } else if (portable.markerKind === "unknown") {
+      codebaseWarnings.push("A codebase publication marker is unknown or malformed; mapping readiness remains conservative until a complete validated replacement is available.");
+    } else {
+      codebaseWarnings.push("A portable codebase publication is guarded; mutable compatibility views remain unavailable until the committed generation is settled.");
+    }
+  }
+
+  if (portable.diagnostics.status === "invalid" || portable.diagnostics.status === "unsupported") {
+    codebaseWarnings.push("A portable codebase INDEX or generation is present but cannot be used as mapping evidence; fall back to ordinary source discovery.");
+  }
+
+  if (portable.diagnostics.compatibility === "divergent") {
+    codebaseWarnings.push("Portable map generation is valid, but one or more root compatibility views diverged after commit.");
+  } else if (portable.diagnostics.compatibility === "absent") {
+    codebaseWarnings.push("Portable map generation is valid; root compatibility views are absent and the immutable generation remains the mapping authority.");
   }
 
   let readiness: BlueprintReadiness = "uninitialized";
@@ -9362,10 +9634,15 @@ export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
     corePresent.length === 0 &&
     (codebaseRootExists || rootShape.repoShape === "brownfield")
   ) {
-    readiness =
+    const legacyCodebaseMapped =
       codebaseMissing.length === 0 &&
       codebaseInvalid.length === 0 &&
-      codebasePresent.length > 0
+      codebasePresent.length > 0;
+    const portableCodebaseMapped = portable.diagnostics.status === "valid";
+    readiness =
+      (portable.markerKind !== "unknown" &&
+        portable.markerKind !== "v1" &&
+        (portableCodebaseMapped || (!portable.indexPresent && legacyCodebaseMapped)))
         ? "mapped-only"
         : "mapping-incomplete";
   } else {
@@ -9387,8 +9664,13 @@ export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
       missing: codebaseMissing,
       valid: codebaseValid,
       invalid: codebaseInvalid,
-      mapped: codebaseMissing.length === 0 && codebaseInvalid.length === 0 && codebasePresent.length > 0,
-      warnings: codebaseWarnings
+      mapped:
+        portable.markerKind !== "unknown" &&
+        portable.markerKind !== "v1" &&
+        (portable.diagnostics.status === "valid" ||
+          (!portable.indexPresent && codebaseMissing.length === 0 && codebaseInvalid.length === 0 && codebasePresent.length > 0)),
+      warnings: codebaseWarnings,
+      portable: portable.diagnostics
     }
   };
 }
@@ -9587,9 +9869,10 @@ function validateBootstrapRequirementTraceability(
 }
 
 export async function inspectBootstrapArtifacts(
-  projectRoot: string
+  projectRoot: string,
+  existingInspection?: Awaited<ReturnType<typeof inspectBlueprintArtifacts>>
 ): Promise<BootstrapArtifactDiagnostics> {
-  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const inspection = existingInspection ?? await inspectBlueprintArtifacts(projectRoot);
   const brownfield = await assessBootstrapRepoShape(projectRoot, inspection);
   const placeholderArtifacts: string[] = [];
   const traceabilityWarnings: string[] = [];
@@ -9646,7 +9929,17 @@ export async function inspectBootstrapArtifacts(
       "Brownfield roadmap remains provisional until `/blu-map-codebase` captures the existing codebase."
     );
   } else if (inspection.codebase.mapped) {
-    traceabilityWarnings.push("Codebase artifact bundle is validated and ready for reuse.");
+    if (inspection.codebase.portable.compatibility === "divergent") {
+      traceabilityWarnings.push(
+        "Portable codebase generation is validated and ready for reuse; divergent root compatibility views remain guarded."
+      );
+    } else if (inspection.codebase.portable.compatibility === "absent") {
+      traceabilityWarnings.push(
+        "Portable codebase generation is validated and ready for reuse; root compatibility views are absent."
+      );
+    } else {
+      traceabilityWarnings.push("Codebase artifact bundle is validated and ready for reuse.");
+    }
   } else if (inspection.codebase.present.length > 0 && inspection.codebase.invalid.length > 0) {
     traceabilityWarnings.push(
       "Codebase artifacts are present but remain incomplete or non-canonical; reuse should stay provisional until validation passes."
@@ -9861,10 +10154,27 @@ export async function blueprintArtifactScaffold(
   }
 
   const projectRoot = await ensureRepoRoot(args.cwd);
+  const artifacts = normalizeRequestedArtifacts(args.artifacts);
+
+  if (artifacts.some((artifact) => isCodebaseArtifact(artifact as SupportedScaffoldArtifact))) {
+    return withBlueprintRepoLock(
+      projectRoot,
+      "codebase-publication",
+      () => blueprintArtifactScaffoldUnlocked(args, projectRoot, artifacts)
+    );
+  }
+
+  return blueprintArtifactScaffoldUnlocked(args, projectRoot, artifacts);
+}
+
+async function blueprintArtifactScaffoldUnlocked(
+  args: ArtifactScaffoldArgs,
+  projectRoot: string,
+  artifacts: string[]
+): Promise<ArtifactScaffoldResult> {
   const projectName = inferProjectName(projectRoot, args.projectName);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
   const overwrite = args.overwrite ?? false;
-  const artifacts = normalizeRequestedArtifacts(args.artifacts);
   const createdFiles: string[] = [];
   const reusedFiles: string[] = [];
   const warnings: string[] = [];
@@ -9879,6 +10189,26 @@ export async function blueprintArtifactScaffold(
     bootstrapSeed: args.bootstrapSeed,
     bootstrapAssessment: bootstrapDiagnostics.brownfield
   };
+
+  if (artifacts.some((artifact) => isCodebaseArtifact(artifact as SupportedScaffoldArtifact))) {
+    const guard = await inspectCodebaseWriteGuard(projectRoot);
+    const protectedWrite = !guard.allowed || guard.legacyPublicationPending;
+
+    if (protectedWrite) {
+      const codebaseArtifacts = artifacts.filter((artifact) =>
+        isCodebaseArtifact(artifact as SupportedScaffoldArtifact)
+      );
+      const allReusable = !overwrite && (await Promise.all(codebaseArtifacts.map(async (artifact) =>
+        pathExists(resolveBlueprintPath(projectRoot, artifact))
+      ))).every(Boolean);
+
+      if (!allReusable) {
+        throw new Error(
+          guard.reason ?? "Mutable legacy codebase views are guarded while a portable map publication is present."
+        );
+      }
+    }
+  }
 
   await fs.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
 
@@ -10849,7 +11179,8 @@ export async function blueprintArtifactValidate(
 
   if (
     inspection.codebase.present.length > 0 &&
-    (inspection.codebase.missing.length > 0 || inspection.codebase.invalid.length > 0)
+    (inspection.codebase.missing.length > 0 || inspection.codebase.invalid.length > 0) &&
+    inspection.codebase.portable.status !== "valid"
   ) {
     const missingText =
       inspection.codebase.missing.length > 0
@@ -10863,14 +11194,20 @@ export async function blueprintArtifactValidate(
     suggestedRepairs.add("Re-run /blu-map-codebase to recreate the missing codebase artifacts.");
   }
 
-  if (inspection.readiness === "mapping-incomplete" && inspection.codebase.present.length === 0) {
+  if (
+    inspection.readiness === "mapping-incomplete" &&
+    inspection.codebase.present.length === 0 &&
+    inspection.codebase.portable.status !== "valid"
+  ) {
     issues.push("Codebase mapping bundle has not been written yet.");
     suggestedRepairs.add("Run /blu-map-codebase to create the seven-document codebase bundle.");
   }
 
   if (inspection.codebase.invalid.length > 0) {
     warnings.push(
-      `Existing codebase artifacts are present but not yet valid: ${inspection.codebase.invalid.join(", ")}`
+      inspection.codebase.portable.status === "valid"
+        ? `Portable codebase generation is valid; root compatibility artifacts remain non-canonical: ${inspection.codebase.invalid.join(", ")}`
+        : `Existing codebase artifacts are present but not yet valid: ${inspection.codebase.invalid.join(", ")}`
     );
   } else if (inspection.codebase.present.length > 0) {
     warnings.push(
@@ -16539,9 +16876,6 @@ export async function blueprintCodebaseArtifactWrite(
   const root = await ensureRepoRoot(args.cwd);
   await scrubLegacyCodebaseFailureLog(root);
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
-    if (await pathExists(resolveBlueprintPath(root, CODEBASE_PUBLICATION_PATH))) {
-      throw new Error("Resume the pending bundle through blueprint_map_submit before individual codebase writes.");
-    }
     return writeCodebaseArtifact(args);
   });
 }
@@ -16572,6 +16906,33 @@ async function writeCodebaseArtifact(args: ArtifactCodebaseWriteArgs): Promise<A
   const warnings: string[] = [];
   const exists = await pathExists(absolutePath);
   const validation = validateCodebaseArtifactContent(normalizedContent, args.artifactId);
+
+  const guard = await inspectCodebaseWriteGuard(projectRoot);
+  if (!guard.allowed || guard.legacyPublicationPending) {
+    if (exists) {
+      const existingContent = await fs.readFile(absolutePath, "utf8");
+
+      if (existingContent === normalizedContent) {
+        return {
+          path: pathValue,
+          artifactId: args.artifactId,
+          written: false,
+          created: false,
+          overwritten: false,
+          reused: true,
+          status: "reused",
+          issues: [],
+          warnings: ["Preserved the existing codebase artifact because portable publication state guards mutable legacy views."]
+        };
+      }
+    }
+
+    throw new Error(
+      guard.legacyPublicationPending
+        ? "Resume the pending bundle through blueprint_map_submit before individual codebase writes."
+        : guard.reason ?? "Mutable legacy codebase views are guarded while a portable map publication is present."
+    );
+  }
 
   if (normalizedContent.trim().length === 0) {
     const diagnostics = [

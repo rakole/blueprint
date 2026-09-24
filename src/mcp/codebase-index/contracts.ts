@@ -679,6 +679,26 @@ const portableTargetHashesShape = Object.fromEntries(
 ) as Record<CodebaseDocumentId, z.ZodNullable<typeof sha256Schema>>;
 export const portableTargetHashesSchema = z.strictObject(portableTargetHashesShape);
 export type PortableTargetHashes = z.infer<typeof portableTargetHashesSchema>;
+
+/** Strict v1 publication state shared by legacy writers and readiness guards. */
+export const portableLegacyPublicationSnapshotSchema = z.strictObject({
+  version: z.literal(1),
+  root: sha256Schema,
+  inventory: sha256Schema,
+  inputs: z.record(z.string(), sha256Schema),
+  core: sha256Schema,
+  targets: portableTargetHashesSchema,
+  previousPublication: sha256Schema.nullable()
+});
+export type PortableLegacyPublicationSnapshot = z.infer<typeof portableLegacyPublicationSnapshotSchema>;
+export const portableLegacyPublicationPendingSchema = z.strictObject({
+  version: z.literal(1),
+  operationId: sha256Schema,
+  snapshot: portableLegacyPublicationSnapshotSchema,
+  hashes: portableTargetHashesSchema,
+  stage: z.literal("publishing")
+});
+export type PortableLegacyPublicationPending = z.infer<typeof portableLegacyPublicationPendingSchema>;
 /** Every portable publication must render all seven compatibility views. */
 export const portablePublishedTargetHashesSchema = portableCompatibilityViewHashesSchema;
 export type PortablePublishedTargetHashes = PortableCompatibilityViewHashes;
@@ -711,8 +731,18 @@ export const portableOperationMetadataSchema = z.strictObject({
   operationId: generationLocalIdSchema,
   stage: portableOperationStageSchema,
   generationId: generationLocalIdSchema,
+  transactionId: generationLocalIdSchema.optional(),
   previousGenerationId: generationLocalIdSchema.nullable(),
   previousIndexHash: sha256Schema.nullable(),
+  rootFingerprint: sha256Schema.optional(),
+  observedMarkerHash: sha256Schema.nullable().optional(),
+  packetBudgetBytes: safePositiveIntegerSchema.optional(),
+  repair: z.union([z.literal(false), z.strictObject({
+    authorized: z.literal(true),
+    previousIndexHash: sha256Schema.nullable(),
+    targetHashes: portableTargetHashesSchema,
+    observedMarkerHash: sha256Schema.nullable()
+  })]).optional(),
   sourceBasis: portableSourceBasisSchema,
   targetHashes: portableTargetHashesSchema,
   createdAt: timestampSchema

@@ -1,0 +1,218 @@
+{
+  "generatorVersion": "portable-map-scale-v1",
+  "environment": {
+    "node": "v26.0.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "memoryMethod": "Sampled end-of-stage process.memoryUsage().rss; this is an observed lower bound, not peak RSS."
+  },
+  "fixture": {
+    "generatorVersion": "portable-map-scale-v1",
+    "requestedFileCount": 10000,
+    "fileCount": 10000,
+    "languageCounts": {
+      "javascript": 1600,
+      "jsx": 1400,
+      "typescript": 1700,
+      "tsx": 1400,
+      "python": 1800,
+      "java": 1700,
+      "unsupported": 400
+    },
+    "knownResponsibilities": [
+      {
+        "path": "src/domains/checkout/cart.ts",
+        "responsibility": "checkout totals and basket line validation"
+      },
+      {
+        "path": "src/domains/checkout/authorize.ts",
+        "responsibility": "checkout authorization boundary"
+      },
+      {
+        "path": "src/domains/shipping/label.js",
+        "responsibility": "shipping label creation and carrier routing"
+      },
+      {
+        "path": "src/domains/ui/CheckoutPanel.jsx",
+        "responsibility": "customer checkout interaction surface"
+      },
+      {
+        "path": "src/domains/catalog/CatalogSearch.tsx",
+        "responsibility": "catalog search and result rendering"
+      },
+      {
+        "path": "python/fulfillment/rates.py",
+        "responsibility": "shipping rate policy and carrier quote calculation"
+      },
+      {
+        "path": "java/com/example/payments/PaymentGateway.java",
+        "responsibility": "payment gateway authorization and receipt creation"
+      },
+      {
+        "path": "db/migrations/001_orders.sql",
+        "responsibility": "orders persistence schema migration (file-level unsupported coverage)"
+      }
+    ],
+    "largeSource": {
+      "path": "src/scale/oversized.ts",
+      "byteSize": 1100037
+    }
+  },
+  "extraction": {
+    "elapsedMs": 13566.224124999999,
+    "files": 10000,
+    "fileCoverageFull": 9581,
+    "fileCoverageOnly": 419,
+    "symbols": 19212,
+    "imports": 9208,
+    "relationships": 4811,
+    "structuralShards": 5,
+    "sourceBytes": 2290612,
+    "sourceHashManifest": {
+      "records": 10000,
+      "serializedBytes": 1554753,
+      "sha256": "0b25dda3ee87bcab049c7fa6d2558017892db5bba891109bfa92dc527aeedfcd"
+    },
+    "coverageStatement": "File inventory covers every eligible source path. Full declaration coverage applies only to successfully parsed supported files at or below the one MiB limit; unsupported and oversized files are intentionally file-level. Authored semantics cover eight named responsibilities with eight claims and eight aliases."
+  },
+  "packets": {
+    "elapsedMs": 11281.981875000001,
+    "count": 451,
+    "serializedBytes": 22069895,
+    "maxSerializedBytes": 49143,
+    "allWithinUtf8Cap": true,
+    "losslessReconstruction": true,
+    "sourceRecordCounts": {
+      "files": 10000,
+      "symbols": 19212,
+      "imports": 9208,
+      "relationships": 4811
+    },
+    "method": "packetizePortableModelEvidence over the complete extracted structural inventory; records were sorted by id and reconstructed byte-for-byte by record JSON equality. Persisted public operation receipts were not walked at 10k because each receipt revalidates the full source basis."
+  },
+  "authoredModel": {
+    "completeSubmissionUtf8Bytes": 14979,
+    "capabilities": 8,
+    "claims": 8,
+    "aliases": 8,
+    "documents": 7,
+    "semanticEvidenceDependencies": 15,
+    "validated": true,
+    "coverage": "Eight named capabilities; eight observed source-linked claims; eight source-linked aliases; all seven compatibility documents substantive."
+  },
+  "rendering": {
+    "elapsedMs": 5835.484541999998,
+    "files": 8797,
+    "pages": 8787,
+    "bytes": 47126013,
+    "indexBytes": 2570,
+    "entryBytes": 1733,
+    "compatibilityViews": 7
+  },
+  "publication": {
+    "first": {
+      "elapsedMs": 50421.509916999996,
+      "status": "published",
+      "committed": true,
+      "retainedGenerations": 1,
+      "retainedBytes": 47121458
+    },
+    "firstResolution": {
+      "elapsedMs": 4781.462874999997,
+      "status": "ok",
+      "generationId": "gen-scale-001",
+      "fallbackUsed": false
+    },
+    "secondGeneration": {
+      "elapsedMs": 52773.80391700001,
+      "status": "published",
+      "committed": true,
+      "retainedGenerations": 2,
+      "retainedBytes": 94246381
+    },
+    "secondResolution": {
+      "elapsedMs": 4718.386333000002,
+      "status": "ok",
+      "generationId": "gen-scale-002",
+      "fallbackUsed": false
+    },
+    "retainedFirstResolution": {
+      "elapsedMs": 10912.017541999987,
+      "status": "ok",
+      "generationId": "gen-scale-001",
+      "fallbackUsed": false
+    },
+      "generationDisk": {
+      "firstBytes": 47121458,
+      "secondBytes": 94246381,
+      "refreshGrowthBytes": 47124923,
+      "allocatedGenerationDirectories": 2,
+      "provedPublishedGenerationIds": [
+        "gen-scale-001",
+        "gen-scale-002"
+      ],
+      "method": "Counted and summed literal files under .blueprint/codebase/generations after each committed publication; retained ids were proved by cold resolver calls."
+    },
+    "freshnessMethod": "Publisher verifyFreshness callback rebuilt the current source inventory and compared its freshly hashed inventory fingerprint on each pre-commit publication phase."
+  },
+  "multipartDecision": {
+    "thresholdUtf8Bytes": 49152,
+    "completeAuthoredSubmissionUtf8Bytes": 14979,
+    "requiresMultipart": false,
+    "decision": "The authored model fits the PLAN5.3 threshold; this is a model-size observation and does not establish operation continuation safety.",
+    "boundedSingleSubmissionCovers": [
+      "eight named capabilities",
+      "eight source-linked observed claims",
+      "eight source-linked aliases",
+      "seven substantive compatibility documents",
+      "structural inventory supplied separately through bounded packets"
+    ]
+  },
+  "operationContinuation": {
+    "measured": false,
+    "fixture": "tests/portable-map-operations.test.ts",
+    "method": "The 10,000-file run measures direct packetization and model size. Durable receipt traversal, disk reload, and lossless reconstruction are measured by the manageable operation fixture; this scale run does not claim a 10,000-file operation walk."
+  },
+  "memory": {
+    "observedRssMiB": 1325.38,
+    "samples": [
+      {
+        "stage": "start",
+        "rssMiB": 154.81
+      },
+      {
+        "stage": "extraction",
+        "rssMiB": 284.75
+      },
+      {
+        "stage": "packets",
+        "rssMiB": 556.05
+      },
+      {
+        "stage": "validation",
+        "rssMiB": 573.8
+      },
+      {
+        "stage": "render",
+        "rssMiB": 507.95
+      },
+      {
+        "stage": "first-resolution",
+        "rssMiB": 901.42
+      },
+      {
+        "stage": "refresh-resolution",
+        "rssMiB": 1325.38
+      }
+    ],
+    "method": "Sampled process.memoryUsage().rss after named stages; observed maximum is not a peak allocation measurement."
+  },
+  "limitations": [
+    "The fixture is deterministic source generation and is not a hosted-model quality or downstream-efficiency benchmark.",
+    "Wallclock values depend on the host and are recorded for reproducibility only; no timing threshold is asserted.",
+    "RSS samples are end-of-stage observations rather than peak or per-stage allocations.",
+    "The authored model intentionally covers eight known responsibilities; generated modules remain structural-only semantics.",
+    "The refresh adds one source file and retains both published generations; garbage collection is not exercised.",
+    "No multipart protocol is implemented in Wave12 C."
+  ]
+}

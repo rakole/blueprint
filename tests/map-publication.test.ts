@@ -186,17 +186,15 @@ test("lost-model partial publication can restart from fresh evidence without del
   assert.equal((await blueprintMapSubmit({cwd:root,snapshot:restart.snapshot!,documents:model(),overwrite:true})).status,"reused");
 });
 
-test("malformed pending metadata can restart only through a complete validated replacement", async t => {
+test("unknown pending metadata blocks legacy restart until a reviewed portable replacement exists", async t => {
   const root = await fixture(t);
   await fs.mkdir(path.join(root,".blueprint/codebase"),{recursive:true});
   await fs.writeFile(path.join(root,CODEBASE_PUBLICATION_PATH),"{broken metadata");
   const pending = await blueprintMapPrepare({cwd:root});
-  assert.equal(pending.status,"partial");
+  assert.equal(pending.status,"blocked");
   const restart = await blueprintMapPrepare({cwd:root,inputs:["package.json","src/index.ts"],restart:true});
-  assert.equal(restart.status,"ready");
-  const result = await blueprintMapSubmit({cwd:root,snapshot:restart.snapshot!,documents:model(),overwrite:true});
-  assert.equal(result.status,"published",JSON.stringify(result));
-  assert.equal((await blueprintMapSubmit({cwd:root,snapshot:restart.snapshot!,documents:model(),overwrite:true})).status,"reused");
+  assert.equal(restart.status,"blocked");
+  assert.equal(await fs.readFile(path.join(root,CODEBASE_PUBLICATION_PATH),"utf8"),"{broken metadata");
 });
 
 test("source changes during writes keep the bundle pending until a fresh restart", async t => {

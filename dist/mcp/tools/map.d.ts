@@ -1,22 +1,6 @@
 import * as z from "zod/v4";
-declare const snapshotSchema: z.ZodObject<{
-    version: z.ZodLiteral<1>;
-    root: z.ZodString;
-    inventory: z.ZodString;
-    inputs: z.ZodRecord<z.ZodString, z.ZodString>;
-    core: z.ZodString;
-    targets: z.ZodObject<{
-        stack: z.ZodNullable<z.ZodString>;
-        architecture: z.ZodNullable<z.ZodString>;
-        structure: z.ZodNullable<z.ZodString>;
-        conventions: z.ZodNullable<z.ZodString>;
-        testing: z.ZodNullable<z.ZodString>;
-        integrations: z.ZodNullable<z.ZodString>;
-        concerns: z.ZodNullable<z.ZodString>;
-    }, z.core.$strict>;
-    previousPublication: z.ZodNullable<z.ZodString>;
-}, z.core.$strict>;
-type Snapshot = z.infer<typeof snapshotSchema>;
+import { type PortableLegacyPublicationSnapshot } from "../codebase-index/contracts.js";
+type Snapshot = PortableLegacyPublicationSnapshot;
 export declare function blueprintMapPrepare(raw: {
     cwd?: string;
     inputs?: string[];
@@ -26,9 +10,25 @@ export declare function blueprintMapPrepare(raw: {
     status: string;
     readiness: "partial" | "uninitialized" | "mapping-incomplete" | "mapped-only" | "initialized";
     nextAction: string | null;
+    issues?: undefined;
     snapshot?: undefined;
     expectedHashes?: undefined;
-    issues?: undefined;
+    focus?: undefined;
+    existing?: undefined;
+    requiredDocuments?: undefined;
+    inputsUsed?: undefined;
+    inventory?: undefined;
+    omittedInventoryCount?: undefined;
+    workflow?: undefined;
+    authoring?: undefined;
+    warnings?: undefined;
+} | {
+    status: string;
+    readiness: "partial" | "uninitialized" | "mapping-incomplete" | "mapped-only" | "initialized";
+    issues: string[];
+    nextAction: null;
+    snapshot?: undefined;
+    expectedHashes?: undefined;
     focus?: undefined;
     existing?: undefined;
     requiredDocuments?: undefined;
@@ -263,9 +263,25 @@ export declare const mapToolDefinitions: ({
         status: string;
         readiness: "partial" | "uninitialized" | "mapping-incomplete" | "mapped-only" | "initialized";
         nextAction: string | null;
+        issues?: undefined;
         snapshot?: undefined;
         expectedHashes?: undefined;
-        issues?: undefined;
+        focus?: undefined;
+        existing?: undefined;
+        requiredDocuments?: undefined;
+        inputsUsed?: undefined;
+        inventory?: undefined;
+        omittedInventoryCount?: undefined;
+        workflow?: undefined;
+        authoring?: undefined;
+        warnings?: undefined;
+    } | {
+        status: string;
+        readiness: "partial" | "uninitialized" | "mapping-incomplete" | "mapped-only" | "initialized";
+        issues: string[];
+        nextAction: null;
+        snapshot?: undefined;
+        expectedHashes?: undefined;
         focus?: undefined;
         existing?: undefined;
         requiredDocuments?: undefined;
@@ -434,15 +450,7 @@ export declare const mapToolDefinitions: ({
             inventory: z.ZodString;
             inputs: z.ZodRecord<z.ZodString, z.ZodString>;
             core: z.ZodString;
-            targets: z.ZodObject<{
-                stack: z.ZodNullable<z.ZodString>;
-                architecture: z.ZodNullable<z.ZodString>;
-                structure: z.ZodNullable<z.ZodString>;
-                conventions: z.ZodNullable<z.ZodString>;
-                testing: z.ZodNullable<z.ZodString>;
-                integrations: z.ZodNullable<z.ZodString>;
-                concerns: z.ZodNullable<z.ZodString>;
-            }, z.core.$strict>;
+            targets: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodNullable<z.ZodString>>, z.core.$strict>;
             previousPublication: z.ZodNullable<z.ZodString>;
         }, z.core.$strict>;
         documents: z.ZodDefault<z.ZodObject<{
