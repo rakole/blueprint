@@ -69,3 +69,12 @@ await cp(
   path.join(distDir, "mcp", "artifact-contracts", "schemas"),
   { recursive: true }
 );
+
+// Parser runtime and grammar WASM are loaded relative to the compiled MCP
+// entrypoint.  Keep the bundle self-contained so its loader never consults
+// the analyzed repository, cwd, or installed project dependencies.
+await cp(
+  path.join(repoRoot, "src", "mcp", "codebase-index", "parser-assets"),
+  path.join(distDir, "mcp", "parser-assets"),
+  { recursive: true }
+);

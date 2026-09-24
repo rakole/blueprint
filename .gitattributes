@@ -1,0 +1,4 @@
+# Pinned upstream web-tree-sitter runtime copies retain one upstream trailing
+# space; keep whitespace checks enabled for all owned files.
+/src/mcp/codebase-index/parser-assets/runtime/web-tree-sitter.js whitespace=-blank-at-eol
+/dist/mcp/parser-assets/runtime/web-tree-sitter.js whitespace=-blank-at-eol
