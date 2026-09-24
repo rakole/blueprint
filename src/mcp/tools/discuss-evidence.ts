@@ -11,6 +11,15 @@ import {
   assertCodebasePublicationComplete,
   isScaffoldGeneratedArtifact,
 } from "./artifacts.js";
+import {
+  preparePortableProviderEvidence,
+  resolvePortableProviderEvidence,
+  type PortableProviderEvidenceBasis,
+  type PortableProviderEvidenceDelivery,
+  type PortableProviderEvidenceNext,
+  type PortableProviderEvidenceSuccess
+} from "../codebase-index/provider-evidence.js";
+import {type PortableSelection} from "../codebase-index/resolver.js";
 
 export const evidenceDigest = (value: string | Buffer) =>
   createHash("sha256").update(value).digest("hex");
@@ -73,11 +82,59 @@ export async function discussEvidenceHash(root: string, relative: string) {
     );
   return (await readDiscussEvidence(root, relative)).hash;
 }
+
+export type DiscussPortableMetadata = {
+  selections: PortableSelection[];
+  basis: PortableProviderEvidenceBasis;
+  next: PortableProviderEvidenceNext;
+};
+
+export type DiscussPortableDelivery = Pick<PortableProviderEvidenceDelivery, "mode" | "readTimeEvidence">;
+
+export type DiscussOrdinaryDelivery = {
+  delivered: Array<{path: string; hash: string}>;
+  registered: Array<{path: string; hash: string}>;
+};
+
+// Keep the evidence-delivery hash's canonical key order when metadata has
+// crossed the Zod/session boundary (the schema's field order is different).
+function portablePriorIdentities(
+  values: readonly {path: string; generation: string; hash: string}[],
+) {
+  return values.map((item) => ({
+    path: item.path,
+    hash: item.hash,
+    generation: item.generation,
+  }));
+}
+
+function discussEvidenceBudget(
+  readSet: readonly {path: string}[],
+  evidencePaths: readonly string[],
+  portableSelections: readonly unknown[] | undefined,
+) {
+  const explicit = new Set(evidencePaths);
+  const baseline = readSet.filter((item) => !explicit.has(item.path)).length;
+  const selected = explicit.size;
+  const compactEntryBaseline = portableSelections?.length ? 0 : 1;
+  return {
+    baselineSelectedCount: baseline + selected + compactEntryBaseline,
+    baselineReadSetCount: baseline + selected,
+    maxSourceCount: 20 + baseline + compactEntryBaseline,
+  };
+}
+
 export async function collectDiscussEvidence(args: {
   cwd?: string;
   phase?: string | number;
   evidencePaths?: string[];
   resolveEvidencePaths?: (root: string, sessionPath: string) => Promise<string[]>;
+  portableSelections?: PortableSelection[];
+  evidenceDelivery?: DiscussPortableDelivery;
+  expectedRevision?: number;
+  acknowledgeChangedInputs?: boolean;
+  resolvePortableMetadata?: (root: string, sessionPath: string) => Promise<DiscussPortableMetadata | undefined>;
+  resolveOrdinaryDelivery?: (root: string, sessionPath: string) => Promise<DiscussOrdinaryDelivery | undefined>;
 }) {
   // Resolution helpers read separately: bind their result to the exact roadmap bytes before/after.
   const { ensureRepoRoot } = await import("./artifacts.js");
@@ -104,9 +161,29 @@ export async function collectDiscussEvidence(args: {
       reason: snapshot.located.reason,
     };
   const selected = snapshot.resolved;
+  const sessionPath = `${selected.phaseDir}/${selected.phasePrefix}-DISCUSS-SESSION.json`;
   const evidencePaths = args.resolveEvidencePaths
-    ? await args.resolveEvidencePaths(root, `${selected.phaseDir}/${selected.phasePrefix}-DISCUSS-SESSION.json`)
+    ? await args.resolveEvidencePaths(root, sessionPath)
     : args.evidencePaths ?? [];
+  const priorPortable = args.resolvePortableMetadata
+    ? await args.resolvePortableMetadata(root, sessionPath)
+    : undefined;
+  const priorOrdinary = args.resolveOrdinaryDelivery
+    ? await args.resolveOrdinaryDelivery(root, sessionPath)
+    : undefined;
+  const portableSelections = args.portableSelections ?? priorPortable?.selections;
+  // Prefer a verified portable map when one is already available, while
+  // preserving ordinary discovery for absent, malformed, or unsupported maps.
+  // The probe is intentionally read-only; the owner below issues the durable
+  // receipt once the complete packet has been assembled.
+  const defaultPortable = portableSelections === undefined && !priorPortable
+    ? await resolvePortableProviderEvidence({root})
+    : undefined;
+  const portableIndexPresent = portableSelections !== undefined || Boolean(priorPortable) || defaultPortable?.status === "ok";
+  const effectivePortableSelections = portableSelections ?? (defaultPortable?.status === "ok" ? [] : undefined);
+  const guardedPortableFallback = defaultPortable !== undefined && defaultPortable.status !== "ok" &&
+    (defaultPortable.diagnostics ?? []).some(item => (item as {code?: string}).code !== "missing");
+  const skipCompatibilityViews = portableIndexPresent || guardedPortableFallback;
   const contextPath = artifactPathFor(selected, "context");
   const logPath = artifactPathFor(selected, "discussion-log");
   const specPath = artifactPathFor(selected, "spec");
@@ -177,9 +254,13 @@ export async function collectDiscussEvidence(args: {
       ".blueprint/PROJECT.md",
       ".blueprint/REQUIREMENTS.md",
       ".blueprint/config.json",
-      ".blueprint/codebase/ARCHITECTURE.md",
-      ".blueprint/codebase/STRUCTURE.md",
-      ".blueprint/codebase/CONVENTIONS.md",
+      ...(skipCompatibilityViews
+        ? []
+        : [
+            ".blueprint/codebase/ARCHITECTURE.md",
+            ".blueprint/codebase/STRUCTURE.md",
+            ".blueprint/codebase/CONVENTIONS.md",
+          ]),
       "package.json",
       "README.md",
       ...priorPaths,
@@ -248,6 +329,108 @@ export async function collectDiscussEvidence(args: {
       reason: "Inputs changed while preparing; retry.",
       changedPaths: changed,
     };
+  let portableResult: PortableProviderEvidenceSuccess | null = null;
+  if (portableIndexPresent) {
+    const samePortableSelections =
+      priorPortable &&
+      JSON.stringify(priorPortable.selections) ===
+        JSON.stringify(effectivePortableSelections ?? priorPortable.selections);
+    const refreshingPortable = Boolean(
+      priorPortable && args.acknowledgeChangedInputs && args.expectedRevision !== undefined,
+    );
+    const reusePortable = Boolean(samePortableSelections && priorPortable && !refreshingPortable);
+    const prior = reusePortable && priorPortable
+      ? {
+          binding: {
+            pinnedGeneration: priorPortable.basis.generationId,
+            identities: portablePriorIdentities(priorPortable.basis.bound),
+            hash: priorPortable.basis.bindingHash,
+          },
+          delivered: portablePriorIdentities(priorPortable.next.delivered),
+          registered: portablePriorIdentities(priorPortable.next.registered),
+        }
+      : undefined;
+    const budget = discussEvidenceBudget(readSet, evidencePaths, portableSelections);
+    const portableInput = {
+      root,
+      ...(effectivePortableSelections !== undefined ? {selections: effectivePortableSelections} : {}),
+      ...(reusePortable && priorPortable?.basis.pinReceipt
+        ? {pinReceipt: priorPortable.basis.pinReceipt}
+        : {}),
+      ...(reusePortable && priorPortable ? {generationId: priorPortable.basis.generationId} : {}),
+      evidenceDelivery: {
+        mode: args.evidenceDelivery?.mode ?? "full",
+        ...(prior ? {prior} : {}),
+        ...(effectivePortableSelections?.length && args.evidenceDelivery?.readTimeEvidence
+          ? {readTimeEvidence: args.evidenceDelivery.readTimeEvidence}
+          : {}),
+        limits: {
+          maxSourceCount: budget.maxSourceCount,
+          maxReadSetCount: 100,
+        },
+        baseline: {
+          selectedCount: budget.baselineSelectedCount,
+          readSetCount: budget.baselineReadSetCount,
+        },
+      },
+    } as const;
+    const result = reusePortable
+      ? await resolvePortableProviderEvidence(portableInput)
+      : await preparePortableProviderEvidence(portableInput);
+    if (result.status !== "ok") {
+      return {
+        ...result,
+        root,
+        phase: selected.phaseNumber,
+        changedPaths: result.paths,
+      };
+    }
+    portableResult = result;
+  }
+  const priorOrdinaryDelivered = new Map(
+    (priorOrdinary?.delivered ?? []).map((item) => [item.path, item.hash]),
+  );
+  const priorOrdinaryRegistered = new Map(
+    (priorOrdinary?.registered ?? []).map((item) => [item.path, item.hash]),
+  );
+  const ordinaryReadTime = new Map<string, string>();
+  for (const item of args.evidenceDelivery?.readTimeEvidence ?? []) {
+    const bytes = item.bytes === undefined
+      ? undefined
+      : typeof item.bytes === "string"
+        ? new TextEncoder().encode(item.bytes)
+        : item.bytes;
+    const actual = bytes === undefined ? item.hash : evidenceDigest(Buffer.from(bytes));
+    if (!actual || (item.hash !== undefined && item.hash !== actual))
+      return {
+        status: "invalid" as const,
+        reason: "Read-time evidence does not match its supplied bytes or hash.",
+        changedPaths: [item.path],
+      };
+    const source = sources.find((candidate) => candidate.path === item.path);
+    if (source && source.hash !== actual)
+      return {
+        status: "invalid" as const,
+        reason: "Read-time evidence does not match selected ordinary source bytes.",
+        changedPaths: [item.path],
+      };
+    ordinaryReadTime.set(item.path, actual);
+  }
+  const ordinaryDelivered = new Map(priorOrdinaryDelivered);
+  const ordinaryRegistered = new Map(priorOrdinaryRegistered);
+  const ordinaryShouldDeliver = new Map<string, boolean>();
+  for (const item of sources) {
+    if (!evidencePaths.includes(item.path) || !item.hash) continue;
+    const priorValid =
+      priorOrdinaryDelivered.get(item.path) === item.hash ||
+      priorOrdinaryRegistered.get(item.path) === item.hash;
+    const readProof = ordinaryReadTime.get(item.path) === item.hash;
+    const mode = args.evidenceDelivery?.mode ?? "full";
+    const include = mode === "full" || (mode === "delta" ? !priorValid : !priorValid && !readProof);
+    ordinaryShouldDeliver.set(item.path, include);
+    if (include) ordinaryDelivered.set(item.path, item.hash);
+    else if (mode === "register" && readProof) ordinaryRegistered.set(item.path, item.hash);
+  }
   const artifact = (
     item: typeof context,
     kind: "context" | "spec" | "discussion-log",
@@ -262,7 +445,22 @@ export async function collectDiscussEvidence(args: {
     validation:
       item.content === null
         ? null
-        : validatePhaseArtifactContent(item.content, kind),
+          : validatePhaseArtifactContent(item.content, kind),
+  });
+  // Ground all ordinary sources privately above, then apply the caller's
+  // outward delivery mode. Session metadata retains hashes and paths only.
+  const outwardSources = sources.map((item) => {
+    if (
+      args.evidenceDelivery?.mode !== "full" &&
+      evidencePaths.includes(item.path) &&
+      ordinaryShouldDeliver.get(item.path) === false
+    ) {
+      // Keep the packet shape stable while dropping the body itself. JSON
+      // serialization omits this undefined field, and private grounding above
+      // has already validated the bytes and hash.
+      return {...item, content: undefined};
+    }
+    return item;
   });
   return {
     status: "collected" as const,
@@ -278,7 +476,8 @@ export async function collectDiscussEvidence(args: {
         spec: artifact(spec, "spec"),
         log: artifact(log, "discussion-log"),
       },
-      sources: [roadmap, ...sources],
+      ...(portableResult ? {portableEvidence: portableResult.packet} : {}),
+      sources: [roadmap, ...outwardSources],
       priorContextPaths: priorPaths,
       omittedPriorPhases,
       checkpoint,
@@ -304,7 +503,25 @@ export async function collectDiscussEvidence(args: {
           : [
               "No saved codebase summaries; inspect narrow live evidence if implementation choices need it.",
             ]),
+        ...(portableResult
+          ? [
+              "Portable codebase ENTRY and selected evidence were freshly verified; compatibility summaries were omitted.",
+            ]
+          : []),
       ],
     },
+    ...(portableResult
+      ? {
+          portable: {
+            selections: [...(portableSelections ?? [])],
+            basis: portableResult.basis,
+            next: portableResult.next,
+          } satisfies DiscussPortableMetadata,
+        }
+      : {}),
+    ordinaryDelivery: {
+      delivered: [...ordinaryDelivered.entries()].map(([path, hash]) => ({path, hash})).sort((a, b) => a.path.localeCompare(b.path)),
+      registered: [...ordinaryRegistered.entries()].map(([path, hash]) => ({path, hash})).sort((a, b) => a.path.localeCompare(b.path)),
+    } satisfies DiscussOrdinaryDelivery,
   };
 }

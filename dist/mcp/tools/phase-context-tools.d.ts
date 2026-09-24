@@ -1,5 +1,5 @@
 import { type PhaseArtifactValidationDiagnostic } from "./artifacts.js";
-import type { PhaseContextResult, PhaseLocateResult, PhaseLookupArgs, PhasePlanningReadiness, PhaseResearchStatusResult } from "./phase-tool-types.js";
+import type { PhaseContextResult, PhaseLocateResult, PhaseLookupArgs, PhaseContextInternalOptions, PhasePlanningReadiness, PhaseResearchStatusResult } from "./phase-tool-types.js";
 type PhaseArtifactUsability = {
     present: boolean;
     valid: boolean | null;
@@ -19,8 +19,8 @@ export declare function buildPhasePlanningReadiness(args: {
     noUiSignalDetected: boolean;
 }): PhasePlanningReadiness;
 export declare function blueprintPhaseLocate(args?: PhaseLookupArgs): Promise<PhaseLocateResult>;
-export declare function blueprintPhaseContext(args?: PhaseLookupArgs): Promise<PhaseContextResult>;
-export declare function buildPhaseContext(projectRoot: string, args?: PhaseLookupArgs): Promise<PhaseContextResult>;
+export declare function blueprintPhaseContext(args?: PhaseLookupArgs, options?: PhaseContextInternalOptions): Promise<PhaseContextResult>;
+export declare function buildPhaseContext(projectRoot: string, args?: PhaseLookupArgs, options?: PhaseContextInternalOptions): Promise<PhaseContextResult>;
 export declare function blueprintPhaseResearchStatus(args?: PhaseLookupArgs): Promise<PhaseResearchStatusResult>;
 export declare function buildPhaseResearchStatusFromContext(projectRoot: string, context: PhaseContextResult): Promise<PhaseResearchStatusResult>;
 export {};

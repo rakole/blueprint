@@ -4,9 +4,11 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { resolveRepoRelativeInputPathSync, safeJsonParseObject } from "../../shared/security.js";
 import { blueprintConfigGet } from "./config.js";
+import { hashPortableProviderMemberSets, portableProviderEvidenceBasisSchema, type PortableProviderEvidenceBasis } from "../codebase-index/provider-evidence.js";
+import { readHardenedLiteralFile } from "../codebase-index/literal-read.js";
 
 export type ResearchReadSet = Array<{ path: string; hash: string | null }>;
-export const researchDigest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
+export const researchDigest = (value: string | Buffer | Uint8Array) => createHash("sha256").update(value).digest("hex");
 export const stableResearchValue = (value: unknown): string => JSON.stringify(value, (_key, item) =>
   item && typeof item === "object" && !Array.isArray(item)
     ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
@@ -38,7 +40,64 @@ export async function researchInputHash(root: string, relative: string): Promise
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
 }
 
-export async function researchBasisFreshness(root: string, readSet: ResearchReadSet) {
+async function portableBasisFreshness(root: string, basis: PortableProviderEvidenceBasis) {
+  const parsed = portableProviderEvidenceBasisSchema.safeParse(basis);
+  if (!parsed.success) return {status: "unknown" as const, stalePaths: [] as string[], unknownPaths: ["portable"]};
+  const value = parsed.data;
+  const receipt = value.pinReceipt ?? value.trustedPins.find(item => item.pin.generationId === value.generationId)?.receipt;
+  if (!receipt) return {status: "unknown" as const, stalePaths: [] as string[], unknownPaths: ["portable"]};
+  const memberName = (member: {path: string; generationId: string}) => {
+    const mapPath = member.path.startsWith(".blueprint/codebase/")
+      ? member.path.slice(".blueprint/codebase/".length)
+      : member.path;
+    const prefix = `generations/${member.generationId}/`;
+    return mapPath.startsWith(prefix) ? mapPath.slice(prefix.length) : mapPath;
+  };
+  const memberNames = [...new Set([
+    "ENTRY.md",
+    "manifest.json",
+    ...value.readSet.sourceAndPage.filter(item => item.kind === "page").map(item => memberName({path: item.path, generationId: item.generation})),
+    ...value.readSet.sealedMembers.map(memberName)
+  ])];
+  const members = await hashPortableProviderMemberSets(root, [{receipt, pin: value.pin, members: memberNames}]);
+  if (members.status !== "ok") return {status: "unknown" as const, stalePaths: [] as string[], unknownPaths: ["portable"]};
+  const generationPrefix = `generations/${value.generationId}/`;
+  const expectedMembers = new Map<string, string>([
+    [`${generationPrefix}ENTRY.md`, value.pin.entry.sha256],
+    [`${generationPrefix}manifest.json`, value.pin.manifest.sha256],
+    ...value.readSet.sourceAndPage.filter(item => item.kind === "page").map(item => [`${generationPrefix}${memberName({path: item.path, generationId: item.generation})}`, item.hash] as const),
+    ...value.readSet.sealedMembers.map(member => {
+      return [`${generationPrefix}${memberName(member)}`, member.sha256] as const;
+    })
+  ]);
+  if (members.members.some(member => expectedMembers.get(member.path) !== member.sha256)) {
+    return {status: "unknown" as const, stalePaths: [] as string[], unknownPaths: ["portable"]};
+  }
+  const stalePaths: string[] = [];
+  const unknownPaths: string[] = [];
+  await Promise.all(value.readSet.sourceAndPage.map(async item => {
+    if (item.kind === "page") return;
+    if (item.path.startsWith("@")) {
+      unknownPaths.push(item.path);
+      return;
+    }
+    try {
+      const read = await readHardenedLiteralFile(root, item.path, 128 * 1024 * 1024);
+      if (!read.ok) {
+        unknownPaths.push(item.path);
+        return;
+      }
+      if (researchDigest(read.bytes) !== (item.fullFileHash ?? item.hash)) stalePaths.push(item.path);
+    } catch {
+      unknownPaths.push(item.path);
+    }
+  }));
+  stalePaths.sort();
+  unknownPaths.sort();
+  return {status: stalePaths.length ? "stale" as const : unknownPaths.length ? "unknown" as const : "fresh" as const, stalePaths, unknownPaths};
+}
+
+export async function researchBasisFreshness(root: string, readSet: ResearchReadSet, portableBasis?: PortableProviderEvidenceBasis) {
   const stalePaths: string[] = [];
   const unknownPaths: string[] = [];
   if (!readSet.length) unknownPaths.push("readSet");
@@ -47,6 +106,11 @@ export async function researchBasisFreshness(root: string, readSet: ResearchRead
       if (await researchInputHash(root, item.path) !== item.hash) stalePaths.push(item.path);
     } catch { unknownPaths.push(item.path); }
   }));
+  if (portableBasis) {
+    const portable = await portableBasisFreshness(root, portableBasis);
+    stalePaths.push(...portable.stalePaths);
+    unknownPaths.push(...portable.unknownPaths);
+  }
   stalePaths.sort(); unknownPaths.sort();
   return { status: stalePaths.length ? "stale" as const : unknownPaths.length ? "unknown" as const : "fresh" as const, stalePaths, unknownPaths };
 }
@@ -56,7 +120,7 @@ export function researchProvenancePath(researchPath: string) {
   return researchPath.replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json");
 }
 
-export type ResearchProvenance = { version: 1; researchHash: string; readSet: ResearchReadSet; publishedAt: string; planningReady?: boolean };
+export type ResearchProvenance = { version: 1; researchHash: string; readSet: ResearchReadSet; publishedAt: string; planningReady?: boolean; portable?: PortableProviderEvidenceBasis };
 
 export async function readPublishedResearchFreshness(root: string, researchPath: string): Promise<{ status: "fresh" | "stale" | "unknown"; stalePaths: string[]; unknownPaths: string[]; reason: string | null; planningReady?: boolean }> {
   try {
@@ -74,10 +138,10 @@ export async function readPublishedResearchFreshness(root: string, researchPath:
     if (parsed.version !== 1 || (parsed.planningReady !== undefined && typeof parsed.planningReady !== "boolean") || typeof parsed.researchHash !== "string" || !/^[a-f0-9]{64}$/.test(parsed.researchHash) || !Array.isArray(parsed.readSet) || parsed.readSet.length > 100 || !parsed.readSet.every((r: unknown) => {
       const x = r as { path?: unknown; hash?: unknown } | null;
       return x && typeof x.path === "string" && (x.hash === null || typeof x.hash === "string" && /^[a-f0-9]{64}$/.test(x.hash));
-    })) throw new Error("Invalid research provenance.");
+    }) || parsed.portable !== undefined && !portableProviderEvidenceBasisSchema.safeParse(parsed.portable).success) throw new Error("Invalid research provenance.");
     if (await researchInputHash(root, researchPath) !== parsed.researchHash)
       return { status: "stale" as const, stalePaths: [researchPath], unknownPaths: [] as string[], reason: "Research content changed after publication." };
-    return { ...await researchBasisFreshness(root, parsed.readSet as ResearchReadSet), reason: null, ...(typeof parsed.planningReady === "boolean" ? { planningReady: parsed.planningReady } : {}) };
+    return { ...await researchBasisFreshness(root, parsed.readSet as ResearchReadSet, parsed.portable as PortableProviderEvidenceBasis | undefined), reason: null, ...(typeof parsed.planningReady === "boolean" ? { planningReady: parsed.planningReady } : {}) };
   } catch (error) {
     return { status: "unknown" as const, stalePaths: [] as string[], unknownPaths: [researchProvenancePath(researchPath)], reason: (error as Error).message };
   }

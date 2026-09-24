@@ -5,6 +5,13 @@ import { ensureRepoRoot, resolveBlueprintPath, withBlueprintRepoLock, writeTextF
 import { resolveLocatedPhaseForMutation } from "./phase-resolution.js";
 import { PHASE_TOPOLOGY_LOCK_NAME, phaseTopologyFingerprintFromLocation, phaseTopologyFingerprintsMatch } from "./phase-topology-lock.js";
 import { researchDigest, stableResearchValue } from "./research-evidence.js";
+import {
+  portableProviderEvidenceBasisSchema,
+  portableProviderEvidenceNextSchema,
+  type PortableProviderEvidenceBasis,
+  type PortableProviderEvidenceNext
+} from "../codebase-index/provider-evidence.js";
+import { portableSelectionSchema, type PortableSelection } from "../codebase-index/resolver.js";
 
 export const researchNumericPhase = z.union([z.string().regex(/^\d+(?:\.\d+)*$/), z.number().nonnegative()]);
 export const researchLookup = { cwd: z.string().optional(), phase: researchNumericPhase };
@@ -21,6 +28,16 @@ const receiptSchema = z.object({
   revision: z.number().int(), path: z.string(), sessionPath: z.string(), provenancePath: z.string(),
   contentHash: hash, provenanceHash: hash, nextAction: z.string(),
 });
+const portableSessionSchema = z.strictObject({
+  selections: z.array(portableSelectionSchema).max(60),
+  basis: portableProviderEvidenceBasisSchema,
+  next: portableProviderEvidenceNextSchema
+});
+const ordinaryDeliveryIdentitySchema = z.strictObject({path: z.string().min(1), hash});
+const ordinaryDeliverySchema = z.strictObject({
+  delivered: z.array(ordinaryDeliveryIdentitySchema).max(100),
+  registered: z.array(ordinaryDeliveryIdentitySchema).max(100)
+});
 const journalSchema = z.object({
   requestId: researchRequestId, requestHash: hash, revision: z.number().int().min(0),
   modelHash: hash.optional(), researchedAt: z.string(),
@@ -28,6 +45,7 @@ const journalSchema = z.object({
   provenance: z.string(), provenanceHash: hash, baselineProvenanceHash: hash.nullable(),
   readSet: readSetSchema, reuse: z.boolean(), planningReady: z.boolean(),
   stages: z.partialRecord(z.enum(["artifact", "provenance", "state", "routing", "cleanup"]), z.enum(["intent", "complete"])),
+  portable: portableProviderEvidenceBasisSchema.optional(),
   receipt: receiptSchema.optional(),
 });
 const sessionSchema = z.object({
@@ -36,11 +54,18 @@ const sessionSchema = z.object({
   baselineHash: hash.nullable(), baselineProvenanceHash: hash.nullable(),
   grounding: z.object({ requirements: z.array(z.object({ id: z.string(), description: z.string() })), lockedDecisions: z.array(z.string()), userConstraints: z.array(z.string()) }),
   requests: z.record(researchRequestId, z.object({ hash, modelHash: hash.optional(), revision: z.number().int().min(0), receipt: receiptSchema.optional() })),
+  portable: portableSessionSchema.optional(),
+  delivery: ordinaryDeliverySchema.optional(),
   legacyPublication: z.object({ contentHash: hash }).optional(),
   journal: journalSchema.optional(),
 });
-export type ResearchSession = Omit<z.infer<typeof sessionSchema>, "topology"> & { topology: import("./phase-topology-lock.js").PhaseTopologyFingerprint };
-export type ResearchJournal = z.infer<typeof journalSchema>;
+export type ResearchPortableSession = {
+  selections: PortableSelection[];
+  basis: PortableProviderEvidenceBasis;
+  next: PortableProviderEvidenceNext;
+};
+export type ResearchSession = Omit<z.infer<typeof sessionSchema>, "topology" | "portable" | "delivery" | "journal"> & { topology: import("./phase-topology-lock.js").PhaseTopologyFingerprint; portable?: ResearchPortableSession; delivery?: {delivered: Array<{path: string; hash: string}>; registered: Array<{path: string; hash: string}>}; journal?: ResearchJournal };
+export type ResearchJournal = Omit<z.infer<typeof journalSchema>, "portable"> & { portable?: PortableProviderEvidenceBasis };
 export type ResearchLocation = Awaited<ReturnType<typeof researchLocation>>;
 
 export async function researchLocation(args: { cwd?: string; phase?: string | number }) {
@@ -86,7 +111,9 @@ export async function readResearchSession(loc: ResearchLocation): Promise<Resear
     const j = session.journal;
     const request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : undefined;
     const provenance = safeJsonParseObject(j.provenance, { label: "Research journal provenance" });
-    if (!request || request.hash !== j.requestHash || request.modelHash !== j.modelHash || j.revision > session.revision || (!j.receipt && j.revision !== session.revision) || researchDigest(j.provenance) !== j.provenanceHash || provenance.researchHash !== j.contentHash || stableResearchValue(provenance.readSet) !== stableResearchValue(j.readSet)) throw new Error("Research publication journal integrity mismatch.");
+    const provenancePortable = provenance.portable;
+    if (provenancePortable !== undefined && !portableProviderEvidenceBasisSchema.safeParse(provenancePortable).success) throw new Error("Research publication journal portable provenance is invalid.");
+    if (!request || request.hash !== j.requestHash || request.modelHash !== j.modelHash || j.revision > session.revision || (!j.receipt && j.revision !== session.revision) || researchDigest(j.provenance) !== j.provenanceHash || provenance.researchHash !== j.contentHash || stableResearchValue(provenance.readSet) !== stableResearchValue(j.readSet) || stableResearchValue(provenancePortable) !== stableResearchValue(j.portable)) throw new Error("Research publication journal integrity mismatch.");
   }
   if (migrate) {
     // Re-prepare against observed targets after legacy publication; no old request

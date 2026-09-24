@@ -1,8 +1,8 @@
 import { promises as fs } from "node:fs";
 import * as z from "zod/v4";
-import { prepareTextForPersistence } from "../../shared/security.js";
+import { prepareTextForPersistence, safeJsonParseObject } from "../../shared/security.js";
 import type { ToolDefinition } from "../tool-types.js";
-import { isBootstrapStarterContext, resolveBlueprintPath, validatePhaseArtifactContent, withBlueprintRepoLock, writeTextFile } from "./artifacts.js";
+import { CODEBASE_ARTIFACTS, isBootstrapStarterContext, resolveBlueprintPath, validatePhaseArtifactContent, withBlueprintRepoLock, writeTextFile } from "./artifacts.js";
 import { artifactPathFor } from "./phase-locations.js";
 import { extractMarkdownSection } from "./phase-markdown.js";
 import { blueprintPhasePlanIndex, blueprintPhasePlanReadiness, validatePhasePlanCandidateSet } from "./phase.js";
@@ -13,14 +13,29 @@ import { blueprintCommandCatalog } from "./project.js";
 import { withFreshPhaseTopologyForMutation } from "./phase-resolution.js";
 import { phaseTopologyFingerprintFromLocation, phaseTopologyFingerprintsMatch } from "./phase-topology-lock.js";
 import { researchDigest, researchInputHash, stableResearchValue } from "./research-evidence.js";
-import { capturePlanEvidence, planBasisFreshness, planTargetFreshness, readPlanTargetHashes } from "./plan-evidence.js";
+import { capturePlanEvidence, planBasisFreshness, planTargetFreshness, readPlanTargetHashes, shapePlanOrdinaryEvidence } from "./plan-evidence.js";
 import { checkedPlanPayload, initialPlanSession, planLocation, planLookup, planNumericPhase, planPublicationPath, planRequestId, readPlanPublicationStatus, readPlanSession, savePlanSession, withPlanSession, type PlanJournal, type PlanLocation, type PlanSession } from "./plan-session.js";
+import {
+  portableProviderEvidenceBasisSchema,
+  portableProviderEvidenceModeSchema,
+  preparePortableProviderEvidence,
+  resolvePortableProviderEvidence,
+  type PortableProviderEvidenceBasis,
+  type PortableProviderEvidenceDelivery,
+  type PortableProviderEvidenceResult
+} from "../codebase-index/provider-evidence.js";
+import { portableSelectionSchema, type PortableSelection } from "../codebase-index/resolver.js";
 
 const mode = z.enum(["add", "revise", "replace"]);
 const planId = z.string().regex(/^\d+$/).transform(value => value.padStart(2, "0"));
 const prepareInput = z.object({
   cwd: z.string().optional(), phase: planNumericPhase.optional(), mode: mode.optional(), targetPlanIds: z.array(planId).max(100).optional(),
   evidencePaths: z.array(z.string().min(1)).max(60).optional(), expectedRevision: z.number().int().nonnegative().optional(), acknowledgeChangedInputs: z.boolean().optional(),
+  portableSelections: z.array(portableSelectionSchema).max(60).optional(),
+  evidenceDelivery: z.strictObject({
+    mode: portableProviderEvidenceModeSchema,
+    readTimeEvidence: z.array(z.strictObject({ path: z.string().min(1).max(4096), hash: z.string().regex(/^[a-f0-9]{64}$/).optional(), bytes: z.string().max(1024 * 1024).optional() }).refine(item => item.hash !== undefined || item.bytes !== undefined, { message: "Read-time evidence requires hash or bytes." })).max(300).optional()
+  }).optional(),
   reconcile: z.object({ confirmed: z.literal(true), targetHashes: z.record(z.string(), z.string().nullable()) }).optional(),
 });
 const reviewInput = z.object({ verdict: z.enum(["accept", "revise"]), summary: z.string().min(1).max(20000) });
@@ -53,11 +68,119 @@ async function readinessGates(loc: PlanLocation, readiness: Awaited<ReturnType<t
   return { ready: readiness.status === "ready" && blockers.length === 0, blockers: [...new Set(blockers)], checkerRequired: readiness.effectiveConfig.workflow.plan_check };
 }
 
-function boundedEvidence(inputs: Awaited<ReturnType<typeof capturePlanEvidence>>["inputs"]) {
+type PublicPortableDelivery = z.infer<NonNullable<typeof prepareInput.shape.evidenceDelivery>>;
+
+function canonicalPortableSelections(session: PlanSession, requested?: readonly PortableSelection[]): PortableSelection[] {
+  const values = requested ?? session.portable?.selections ?? [];
+  const seen = new Set<string>();
+  const selections: PortableSelection[] = [];
+  for (const value of values) {
+    const parsed = portableSelectionSchema.parse(value);
+    const key = JSON.stringify(parsed);
+    if (!seen.has(key)) { seen.add(key); selections.push(parsed); }
+  }
+  return selections;
+}
+
+function portablePrior(session: PlanSession, selections: readonly PortableSelection[]) {
+  const previous = session.portable;
+  if (!previous || stableResearchValue(previous.selections) !== stableResearchValue(selections)) return undefined;
+  return {
+    binding: { pinnedGeneration: previous.basis.generationId, identities: previous.next.bound.map(item => ({ path: item.path, hash: item.hash, generation: item.generation })), hash: previous.next.bindingHash },
+    delivered: previous.next.delivered.map(item => ({ path: item.path, hash: item.hash, generation: item.generation })),
+    registered: previous.next.registered.map(item => ({ path: item.path, hash: item.hash, generation: item.generation }))
+  };
+}
+
+function portableDelivery(args: PublicPortableDelivery | undefined, session: PlanSession, selections: readonly PortableSelection[], ordinaryReadSetCount: number, ordinarySelectedCount: number, reusePinnedBasis: boolean): PortableProviderEvidenceDelivery {
+  const prior = reusePinnedBasis ? portablePrior(session, selections) : undefined;
+  return {
+    mode: args?.mode ?? "full",
+    ...(prior ? { prior } : {}),
+    ...(args?.readTimeEvidence && selections.length ? { readTimeEvidence: args.readTimeEvidence.map(item => ({ path: item.path, ...(item.hash ? { hash: item.hash } : {}), ...(item.bytes !== undefined ? { bytes: item.bytes } : {}) })) } : {}),
+    limits: { maxSourceCount: 60, maxReadSetCount: 300 },
+    baseline: { selectedCount: ordinarySelectedCount, readSetCount: ordinaryReadSetCount }
+  };
+}
+
+function portableCodebaseOverride(result: Extract<PortableProviderEvidenceResult, { status: "ok" }>) {
+  return { mapped: true, artifacts: [result.context.entry.path], missingArtifacts: [], digest: [], warnings: [] };
+}
+
+function directEvidenceCodebaseOverride() {
+  return { mapped: false, artifacts: [], missingArtifacts: [...CODEBASE_ARTIFACTS], digest: [], warnings: ["Portable codebase navigation was not requested; use the selected live source evidence."] };
+}
+
+function provenancePortableBasis(inputs: Awaited<ReturnType<typeof capturePlanEvidence>>["inputs"], loc: PlanLocation): PortableProviderEvidenceBasis | undefined {
+  const researchPath = artifactPathFor(loc.resolved, "research").replace(/-RESEARCH\.md$/, "-RESEARCH-PROVENANCE.json");
+  const input = inputs.find(item => item.path === researchPath);
+  if (!input?.content) return undefined;
+  try {
+    const parsed = safeJsonParseObject(input.content, { label: researchPath, maxBytes: 1024 * 1024 });
+    const result = portableProviderEvidenceBasisSchema.safeParse(parsed.portable);
+    return result.success ? result.data : undefined;
+  } catch { return undefined; }
+}
+
+function portablePinnedMemberSets(basis: PortableProviderEvidenceBasis) {
+  const contexts = basis.trustedPins.length ? basis.trustedPins : [{ pin: basis.pin, ...(basis.pinReceipt ? { receipt: basis.pinReceipt } : {}) }];
+  const memberName = (pathValue: string, generationId: string) => {
+    const mapPath = pathValue.startsWith(".blueprint/codebase/") ? pathValue.slice(".blueprint/codebase/".length) : pathValue;
+    const prefix = `generations/${generationId}/`;
+    return mapPath.startsWith(prefix) ? mapPath.slice(prefix.length) : mapPath;
+  };
+  return contexts.map(context => ({
+    pin: context.pin,
+    ...(context.receipt ? { receipt: context.receipt } : {}),
+    members: [...new Set([
+      "ENTRY.md", "manifest.json",
+      ...basis.readSet.sourceAndPage.filter(item => item.kind === "page" && item.generation === context.pin.generationId).map(item => memberName(item.path, context.pin.generationId)),
+      ...basis.readSet.sealedMembers.filter(item => item.generationId === context.pin.generationId).map(item => memberName(item.path, context.pin.generationId))
+    ])].sort()
+  }));
+}
+
+function mergePortableReadSets(primary: PortableProviderEvidenceBasis, inherited?: PortableProviderEvidenceBasis): PortableProviderEvidenceBasis {
+  if (!inherited) return primary;
+  const sourceAndPage = [...new Map(
+    [...inherited.readSet.sourceAndPage, ...primary.readSet.sourceAndPage]
+      .map(item => [JSON.stringify(item), item] as const),
+  ).values()].sort((left, right) =>
+    left.path.localeCompare(right.path) || left.generation.localeCompare(right.generation) || left.kind.localeCompare(right.kind) || left.hash.localeCompare(right.hash),
+  );
+  const sealedMembers = [...new Map(
+    [...inherited.readSet.sealedMembers, ...primary.readSet.sealedMembers]
+      .map(item => [`${item.generationId}\u0000${item.path}`, item] as const),
+  ).values()].sort((left, right) => left.generationId.localeCompare(right.generationId) || left.path.localeCompare(right.path));
+  return {
+    ...primary,
+    readSet: { sourceAndPage, sealedMembers },
+  };
+}
+
+function portableSourceCount(basis: PortableProviderEvidenceBasis | undefined): number {
+  if (!basis) return 0;
+  return new Set(
+    basis.readSet.sourceAndPage
+      .filter(item => item.kind === "source" && !item.path.startsWith("@"))
+      .map(item => `${item.path}\u0000${item.generation}\u0000${item.fullFileHash ?? item.hash}`),
+  ).size;
+}
+
+function portableReadSetCount(basis: PortableProviderEvidenceBasis | undefined): number {
+  if (!basis) return 0;
+  return new Set([
+    ...basis.readSet.sourceAndPage.map(item => `${item.kind}\u0000${item.path}\u0000${item.generation}\u0000${item.deliveryPath ?? ""}`),
+    ...basis.readSet.sealedMembers.map(item => `sealed\u0000${item.path}\u0000${item.generationId}`),
+  ]).size;
+}
+
+function boundedEvidence(inputs: Awaited<ReturnType<typeof capturePlanEvidence>>["inputs"], preservePaths: readonly string[] = []) {
   let remaining = 48000;
+  const preserve = new Set(preservePaths.filter(pathValue => !pathValue.startsWith(".blueprint/")));
   const priority = (path: string) => /-CONTEXT\.md$/.test(path) ? 0 : /-RESEARCH\.md$/.test(path) ? 1 : /-(?:UI-)?SPEC\.md$/.test(path) ? 2 : /\/(?:PROJECT|REQUIREMENTS)\.md$/.test(path) ? 3 : 4;
   return [...inputs].sort((left, right) => priority(left.path) - priority(right.path)).map(input => {
-    const content = input.content === null ? null : input.content.slice(0, Math.min(/-(?:CONTEXT|SPEC|UI-SPEC)\.md$/.test(input.path) ? 16000 : 6000, remaining));
+    const content = input.content === null ? null : preserve.has(input.path) ? input.content : input.content.slice(0, Math.min(/-(?:CONTEXT|SPEC|UI-SPEC)\.md$/.test(input.path) ? 16000 : 6000, remaining));
     remaining -= content?.length ?? 0;
     return { ...input, content, truncated: (input.content?.length ?? 0) > (content?.length ?? 0) };
   });
@@ -80,10 +203,78 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
         marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
       }
       const initialTargets = await readPlanTargetHashes(loc);
-      const capture = await capturePlanEvidence(loc, [...new Set([...session.evidencePaths, ...args.evidencePaths ?? []])]);
-      const readiness = await blueprintPhasePlanReadiness({ cwd: loc.projectRoot, phase: session.phase, bodyMode: "summary" });
+      const explicitPortable = args.portableSelections !== undefined || Boolean(session.portable);
+      const defaultPortable = !explicitPortable
+        ? await resolvePortableProviderEvidence({root: loc.projectRoot})
+        : undefined;
+      // A valid existing map is preferred by default.  Absent, malformed, or
+      // unsupported maps continue through the ordinary bounded capture path.
+      const portableRequested = explicitPortable || defaultPortable?.status === "ok";
+      const guardedPortableFallback = defaultPortable !== undefined && defaultPortable.status !== "ok" &&
+        (defaultPortable.diagnostics ?? []).some(item => (item as {code?: string}).code !== "missing");
+      const directEvidenceOnly = (!portableRequested && args.evidenceDelivery !== undefined) || guardedPortableFallback;
+      const selections = canonicalPortableSelections(session, args.portableSelections);
+      const priorPortableBasis = !args.acknowledgeChangedInputs && session.portable && stableResearchValue(session.portable.selections) === stableResearchValue(selections)
+        ? session.portable.basis
+        : undefined;
+      const acknowledgedPortableSources = args.acknowledgeChangedInputs
+        ? (session.portable?.next.readSet.sourceAndPage ?? []).filter(item => item.kind === "source" && !item.path.startsWith("@")).map(item => item.path)
+        : [];
+      // A successful portable refresh keeps selected declaration dependencies
+      // private.  Re-capture their whole files only for an actual portable
+      // failure that is handled by the ordinary fallback path.
+      const selectedPaths = [...new Set([...session.evidencePaths, ...args.evidencePaths ?? []])];
+      let capture = await capturePlanEvidence(loc, selectedPaths, { skipCodebaseArtifacts: portableRequested || directEvidenceOnly });
+      let inheritedBasis = provenancePortableBasis(capture.inputs, loc);
+      const provider = portableRequested
+        ? await preparePortableProviderEvidence({
+            root: loc.projectRoot,
+            selections,
+            evidenceDelivery: portableDelivery(args.evidenceDelivery, session, selections, capture.readSet.length + 1, capture.evidencePaths.length, !args.acknowledgeChangedInputs),
+            ...(session.portable && !args.acknowledgeChangedInputs && stableResearchValue(session.portable.selections) === stableResearchValue(selections) && session.portable.basis.pinReceipt ? { pinReceipt: session.portable.basis.pinReceipt } : {}),
+            ...((inheritedBasis ?? priorPortableBasis) ? { pinnedMemberSets: portablePinnedMemberSets(inheritedBasis ?? priorPortableBasis!) } : {})
+          })
+        : ({ status: "fallback", code: "portable_not_requested", reason: "Portable evidence was not requested.", paths: [] } satisfies PortableProviderEvidenceResult);
+      const acknowledgedPortableFailure = args.acknowledgeChangedInputs && portableRequested && provider.status === "reread_required";
+      if (acknowledgedPortableFailure && acknowledgedPortableSources.length) {
+        capture = await capturePlanEvidence(loc, [...new Set([...selectedPaths, ...acknowledgedPortableSources])], { skipCodebaseArtifacts: true });
+        inheritedBasis = provenancePortableBasis(capture.inputs, loc);
+      }
+      const providerFailure = !portableRequested || provider.status === "ok" || acknowledgedPortableFailure ? null : provider;
+      if (providerFailure) return {
+        status: providerFailure.status, saved: false, ready: false, reason: providerFailure.reason, paths: providerFailure.paths,
+        ...(providerFailure.code ? { code: providerFailure.code } : {}), ...(providerFailure.counts ? { counts: providerFailure.counts } : {}),
+        ...(providerFailure.scopeReduction ? { scopeReduction: providerFailure.scopeReduction } : {}),
+        nextAction: providerFailure.status === "evidence_limit" ? "Reduce portableSelections or evidencePaths to fit the planning evidence limits, then retry blueprint_plan_prepare." : "Read the selected source again and retry blueprint_plan_prepare with matching read-time evidence, or refresh the portable map."
+      };
+      const portableResult = provider.status === "ok" ? provider : null;
+      // Portable source bindings are private freshness dependencies.  They do
+      // not become ordinary evidence paths or whole-file bodies merely because
+      // a selected declaration range depends on the source file.
+      const portableBasis = portableResult
+        ? mergePortableReadSets(mergePortableReadSets(portableResult.basis, inheritedBasis), priorPortableBasis)
+        : acknowledgedPortableFailure
+          ? undefined
+          : inheritedBasis ?? session.portable?.basis;
+      const portableBases = portableBasis ? [portableBasis] : [];
+      const portableReadSetSources = portableBasis?.readSet.sourceAndPage.filter(item => item.kind === "source" && !item.path.startsWith("@")) ?? [];
+      // Keep every expected portable source hash.  A research source and a
+      // plan source may share a path across generations; collapsing by path
+      // would let whichever generation sorts last decide freshness.
+      const readSet = [...capture.readSet, ...portableReadSetSources.map(item => ({ path: item.path, hash: item.fullFileHash ?? item.hash }))];
+      const combinedSourceCount = capture.evidencePaths.length + portableSourceCount(portableBasis);
+      const combinedReadSetCount = capture.readSet.length + portableReadSetCount(portableBasis) + 1;
+      if (combinedSourceCount > 60 || combinedReadSetCount > 300) return {
+        status: "evidence_limit", saved: false, ready: false,
+        counts: { selectedCount: combinedSourceCount, sourceCount: combinedSourceCount, readSetCount: combinedReadSetCount, deliveredCount: 0, omittedCount: 0, packetBytes: 0 },
+        scopeReduction: { selectedCount: combinedSourceCount, suggestedMaxCount: combinedSourceCount > 60 ? 60 : 300, omittedBodyCount: 0, omittedPathCount: Math.max(0, combinedReadSetCount - 300) },
+        reason: "Planning evidence exceeds the fixed portable source or read-set limit.",
+        nextAction: "Reduce evidencePaths or portableSelections to fit the planning evidence limits, then retry blueprint_plan_prepare.",
+      };
+      const readinessOptions = portableResult ? { codebase: portableCodebaseOverride(portableResult) } : directEvidenceOnly || acknowledgedPortableFailure ? { codebase: directEvidenceCodebaseOverride() } : undefined;
+      const readiness = await blueprintPhasePlanReadiness({ cwd: loc.projectRoot, phase: session.phase, bodyMode: "summary" }, readinessOptions);
       const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
-      const fresh = await planBasisFreshness(loc.projectRoot, session.phase, capture.readSet);
+      const fresh = await planBasisFreshness(loc.projectRoot, session.phase, readSet, portableBases);
       const targets = await readPlanTargetHashes(current);
       const finalMarker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
       if (fresh.status !== "fresh" || marker.token !== finalMarker.token || stableResearchValue(targets) !== stableResearchValue(initialTargets) || !phaseTopologyFingerprintsMatch(phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) return { status: "stale", ...responseBase(loc, session), freshness: fresh, nextAction: "Retry prepare; inputs changed during collection." };
@@ -93,7 +284,7 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
       const packet = {
         phase: readiness.phaseSelection, gates, config: { workflow: readiness.effectiveConfig.workflow },
         requirements: readiness.context?.requirementsGrounding, projectBrief: readiness.context?.projectBrief,
-        evidence: boundedEvidence(capture.inputs),
+        evidence: boundedEvidence(capture.inputs, capture.evidencePaths),
         grounding: {
           lockedDecisions: extractMarkdownSection(contextContent, "Implementation Decisions"),
           phaseBoundary: extractMarkdownSection(contextContent, "Phase Boundary"),
@@ -107,38 +298,46 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
         example: planningModelExample({ knownRequirements: readiness.authoringContext.knownRequirements, knownEvidenceArtifacts: readiness.authoringContext.knownEvidenceArtifacts }),
         validationRules: planningValidationRules, derivedFields: planningDerivedFields, exampleNote: "Example paths are illustrative; replace them with inspected repository files and cover every phase requirement across the complete plan set.",
       };
-      if (args.expectedRevision !== undefined && args.expectedRevision !== session.revision) return { ...packet, status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
+      const ordinary = shapePlanOrdinaryEvidence(boundedEvidence(capture.inputs, capture.evidencePaths), args.evidenceDelivery, session.delivery);
+      if (ordinary.status !== "ok") return { ...packet, status: ordinary.status, saved: false, ready: false, paths: ordinary.paths, reason: "Read-time evidence does not match the selected repository source.", nextAction: "Read the selected source again and retry blueprint_plan_prepare with matching read-time evidence." };
+      const packetWithDelivery = { ...packet, evidence: ordinary.evidence, ...(portableResult ? { portable: { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet }, packet: portableResult.packet, binding: portableResult.binding, counts: portableResult.counts, mode: portableResult.mode } } : {}) };
+      if (args.expectedRevision !== undefined && args.expectedRevision !== session.revision) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
       if (plans.length && !args.mode && (!session.readSet.length || session.journal?.receipt || session.needsIntent)) {
         await savePlanSession(loc, session);
-        return { ...packet, status: "choice_required", ...responseBase(loc, session), nextAction: "Choose add, revise selected plans, or replace selected plans; supply mode and targetPlanIds for revise/replace." };
+        return { ...packetWithDelivery, status: "choice_required", ...responseBase(loc, session), nextAction: "Choose add, revise selected plans, or replace selected plans; supply mode and targetPlanIds for revise/replace." };
       }
       const nextMode = args.mode ?? (plans.length ? session.mode : "add");
       const targetPlanIds = [...new Set(args.targetPlanIds ?? (nextMode === "add" ? [] : nextMode === "replace" && args.mode ? plans.map(plan => plan.planId) : session.targetPlanIds))];
-      if (nextMode === "add" && targetPlanIds.length || nextMode !== "add" && !targetPlanIds.length || targetPlanIds.some(id => !plans.some(plan => plan.planId === id))) return { ...packet, status: "choice_required", ...responseBase(loc, session), reason: "Add accepts no targets; revise/replace require existing selected targetPlanIds." };
-      const changed = session.readSet.length ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet) : null;
+      if (nextMode === "add" && targetPlanIds.length || nextMode !== "add" && !targetPlanIds.length || targetPlanIds.some(id => !plans.some(plan => plan.planId === id))) return { ...packetWithDelivery, status: "choice_required", ...responseBase(loc, session), reason: "Add accepts no targets; revise/replace require existing selected targetPlanIds." };
+      const changed = session.readSet.length ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : []) : null;
       const topologyChanged = !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase));
       const targetsChanged = session.readSet.length > 0 && stableResearchValue(targets) !== stableResearchValue(session.targets);
       const modeChanged = session.readSet.length > 0 && (nextMode !== session.mode || stableResearchValue(targetPlanIds) !== stableResearchValue(session.targetPlanIds));
       const selectedEvidenceChanged = session.readSet.length > 0 && stableResearchValue(capture.evidencePaths) !== stableResearchValue(session.evidencePaths);
-      if ((targetsChanged || topologyChanged) && (!args.reconcile || args.expectedRevision !== session.revision || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(packet.targetHashes))) return { ...packet, status: "reconciliation_required", ...responseBase(loc, session), reason: "Review changed topology and publication targets, then prepare with expectedRevision and reconcile containing the observed targetHashes." };
-      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packet, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
-      const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && changed?.status === "fresh";
+      const portableSelectionChanged = session.readSet.length > 0 && stableResearchValue(selections) !== stableResearchValue(session.portable?.selections ?? []);
+      const deliveryChanged = stableResearchValue(ordinary.delivery) !== stableResearchValue(session.delivery);
+      if ((targetsChanged || topologyChanged) && (!args.reconcile || args.expectedRevision !== session.revision || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(packet.targetHashes))) return { ...packetWithDelivery, status: "reconciliation_required", ...responseBase(loc, session), reason: "Review changed topology and publication targets, then prepare with expectedRevision and reconcile containing the observed targetHashes." };
+      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged || portableSelectionChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
+      const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && !portableSelectionChanged && !deliveryChanged && changed?.status === "fresh";
       if (!unchanged) {
         delete session.journal;
         session.requests = {};
         session.topology = phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase);
         session.prepared = gates.ready; session.mode = nextMode; session.targetPlanIds = targetPlanIds;
         if (args.mode || !plans.length) session.needsIntent = false;
-        session.readSet = capture.readSet; session.evidencePaths = capture.evidencePaths; session.targets = targets;
+        session.readSet = readSet; session.evidencePaths = capture.evidencePaths; session.targets = targets;
         session.existingPlans = plans.map(plan => ({ planId: plan.planId, wave: plan.wave ?? 1, dependsOn: plan.dependsOn, requirements: plan.requirements }));
         session.knownRequirements = readiness.authoringContext.knownRequirements;
         const selectedPaths = new Set(targetPlanIds.map(id => `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-${id}-PLAN.md`));
         session.knownEvidenceArtifacts = readiness.authoringContext.knownEvidenceArtifacts.filter(p => !selectedPaths.has(p));
         session.checkerRequired = gates.checkerRequired;
+        if (portableResult) session.portable = { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet } };
+        else if (acknowledgedPortableFailure) delete session.portable;
+        if (ordinary.delivery.delivered.length || ordinary.delivery.registered.length) session.delivery = ordinary.delivery;
         session.revision++;
         await savePlanSession(loc, session);
       }
-      return { ...packet, schema: planningPreparedSchema(session), status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds, knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, nextAction: gates.ready ? "Use schema, example and validationRules to author the model. If checkerRequired, review this model in memory, then call blueprint_plan_submit once with model and the review verdict. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction(readiness.nextSafeAction) };
+      return { ...packetWithDelivery, schema: planningPreparedSchema(session), status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds, knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, nextAction: gates.ready ? "Use schema, example and validationRules to author the model. If checkerRequired, review this model in memory, then call blueprint_plan_submit once with model and the review verdict. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction(readiness.nextSafeAction) };
     });
   } catch (error) {
     return { status: "blocked", reason: (error as Error).message, nextAction: await safeNextAction("Run /blu-progress to resolve planning preparation.") };
@@ -189,7 +388,7 @@ export async function blueprintPlanRead(raw: z.input<typeof lookupSchema>) {
     const publication = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
     if (before.token !== publication.token) for (const file of published) file.content = null;
     return { status: session || published.length ? "found" : "not_found", sessionPath: loc.sessionPath, session, published, publication,
-      freshness: session ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet) : null };
+      freshness: session ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : []) : null };
   });
 }
 
@@ -246,7 +445,7 @@ export async function blueprintPlanSubmit(raw: z.input<typeof submitInput>) {
       if (!journal || journal.revision !== session.revision) return reject("stale", { reason: "This publication belongs to an earlier preparation." });
       try {
         await verifyPublished(loc, journal, session);
-        if ((await planBasisFreshness(loc.projectRoot, session.phase, session.readSet)).status !== "fresh") throw new Error("Planning evidence changed after publication; refresh preparation.");
+        if ((await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : [])).status !== "fresh") throw new Error("Planning evidence changed after publication; refresh preparation.");
         if (await fs.readFile(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), "utf8") !== markerContent(session, journal, "committed")) throw new Error("Publication marker changed after publication.");
         return accepted.receipt;
       } catch (error) { return reject("stale", { reason: (error as Error).message }); }
@@ -255,7 +454,7 @@ export async function blueprintPlanSubmit(raw: z.input<typeof submitInput>) {
     if (!journal) {
       try {
         if (args.model === undefined) return reject("needs_revision", { reason: "Supply model using prepare.schema and prepare.example." });
-        const freshness = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
+        const freshness = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : []);
         const targets = await planTargetFreshness(loc, session);
         const current = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
         if (!phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase))) return reject("stale", { reason: "Phase topology changed; reconcile preparation." });
@@ -299,7 +498,7 @@ export async function blueprintPlanSubmit(raw: z.input<typeof submitInput>) {
     }
     const publicationPath = planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix);
     const assertFresh = async () => {
-      const fresh = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet);
+      const fresh = await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : []);
       if (fresh.status !== "fresh") throw new Error(`Planning evidence changed: ${[...fresh.stalePaths, ...fresh.unknownPaths].join(", ")}. Reconcile observed canonical files before continuing.`);
     };
     try {
