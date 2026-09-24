@@ -183,6 +183,23 @@ export type PortableExtractionOptions = {
   readonly useGit?: boolean;
 };
 
+/** @internal Test-only instrumentation for proving reuse avoids adapter calls. */
+export const extractionTestHooks: {
+  adapterCalls: number;
+  beforeAdapter?: (path: string) => Promise<void> | void;
+} = {adapterCalls: 0};
+
+/** A checked inventory/provenance boundary shared by cold and incremental extraction. */
+export type PortableExtractionSnapshot = {
+  readonly root: ExtractionRootIdentity;
+  readonly inventory: SourceInventory;
+  readonly provenance: ExtractionParserProvenance;
+};
+
+function isPortableExtractionFailure(value: PortableExtractionSnapshot | PortableExtractionFailure): value is PortableExtractionFailure {
+  return "ok" in value && value.ok === false;
+}
+
 function sha256(value: string | Uint8Array): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -199,7 +216,7 @@ function compareById<T extends {readonly id: string}>(left: T, right: T): number
   return compareText(left.id, right.id);
 }
 
-function makeInitialFile(file: SourceInventoryFile): PortableFileRecord {
+export function makePortableInitialFile(file: SourceInventoryFile): PortableFileRecord {
   const id = stableId("file-", file.path);
   if (file.support === "unsupported") {
     return {
@@ -240,12 +257,14 @@ function makeInitialFile(file: SourceInventoryFile): PortableFileRecord {
   };
 }
 
+const makeInitialFile = makePortableInitialFile;
+
 function sameRoot(left: ExtractionRootIdentity, right: ExtractionRootIdentity): boolean {
   return left.path === right.path && left.realPath === right.realPath &&
     left.device === right.device && left.inode === right.inode;
 }
 
-async function captureRoot(repositoryRoot: string): Promise<ExtractionRootIdentity | null> {
+export async function capturePortableRoot(repositoryRoot: string): Promise<ExtractionRootIdentity | null> {
   const requested = path.resolve(repositoryRoot);
   const actual = await realpath(requested).catch(() => null);
   if (!actual) return null;
@@ -259,20 +278,26 @@ async function captureRoot(repositoryRoot: string): Promise<ExtractionRootIdenti
   };
 }
 
-function hasUnsafePathBoundary(inventory: SourceInventory): boolean {
+const captureRoot = capturePortableRoot;
+
+export function portableInventoryHasUnsafePathBoundary(inventory: SourceInventory): boolean {
   return inventory.files.some(file => {
     if (sourcePathSafetyReason(file.path) || sourcePathExclusionReason(file.path)) return true;
     return !inspectContentBoundaries(file.path).safe;
   });
 }
 
-function hasUnstableExclusion(inventory: SourceInventory): boolean {
+const hasUnsafePathBoundary = portableInventoryHasUnsafePathBoundary;
+
+export function portableInventoryHasUnstableExclusion(inventory: SourceInventory): boolean {
   return inventory.exclusions.some(item => [
     "missing", "not-a-regular-file", "unreadable", "changed-during-read", "symlink"
   ].includes(item.reason));
 }
 
-async function adaptFile(
+const hasUnstableExclusion = portableInventoryHasUnstableExclusion;
+
+export async function adaptPortableFile(
   file: PortableFileRecord,
   source: Uint8Array,
   knownFiles: readonly PortableFileRecord[]
@@ -302,6 +327,9 @@ async function adaptFile(
   }
 }
 
+/** @internal Compatibility alias for the cold extractor's private adapter seam. */
+const adaptFile = adaptPortableFile;
+
 function sourceBasisRecord(
   kind: PortableAuthoritativeSourceRecord["kind"],
   record: {readonly id: string; readonly path?: string; readonly sourcePath?: string; readonly contentHash: string; readonly coordinate?: PortableFileRecord["coordinate"]}
@@ -330,12 +358,12 @@ function makeSourceBasis(
       ...symbols.map(symbol => sourceBasisRecord("symbol", symbol)),
       ...imports.map(item => sourceBasisRecord("import", item)),
       ...relationships.map(item => sourceBasisRecord("relationship", item))
-    ]
+    ].sort((left, right) => compareText(left.recordId, right.recordId))
   };
   return portableAuthoritativeSourceBasisSchema.parse(basis);
 }
 
-type StructuralRecords = {
+export type PortableStructuralRecords = {
   readonly files: readonly PortableFileRecord[];
   readonly symbols: readonly PortableSymbolRecord[];
   readonly imports: readonly PortableImportRelationship[];
@@ -343,7 +371,9 @@ type StructuralRecords = {
   readonly details: readonly PortableStructuralDetailRecord[];
 };
 
-function makeStructuralShards(generationId: string, records: StructuralRecords): PortableStructuralInventory[] {
+type StructuralRecords = PortableStructuralRecords;
+
+export function makePortableStructuralShards(generationId: string, records: StructuralRecords): PortableStructuralInventory[] {
   const sorted = {
     files: [...records.files].sort(compareById),
     symbols: [...records.symbols].sort(compareById),
@@ -373,7 +403,9 @@ function makeStructuralShards(generationId: string, records: StructuralRecords):
   return shards;
 }
 
-function makeProvenance(manifest: Awaited<ReturnType<typeof getParserAssetManifest>>): ExtractionParserProvenance {
+const makeStructuralShards = makePortableStructuralShards;
+
+export function makePortableExtractionProvenance(manifest: Awaited<ReturnType<typeof getParserAssetManifest>>): ExtractionParserProvenance {
   const grammars = manifest.grammars.flatMap(raw => {
     const grammar = raw as Record<string, unknown>;
     const packageName = typeof grammar.package === "string" ? grammar.package : "";
@@ -412,7 +444,9 @@ function makeProvenance(manifest: Awaited<ReturnType<typeof getParserAssetManife
   };
 }
 
-export async function capturePortableSourceFreshness(repositoryRoot: string, useGit?: boolean): Promise<PortableSourceFreshness> {
+const makeProvenance = makePortableExtractionProvenance;
+
+export async function capturePortableExtractionSnapshot(repositoryRoot: string, useGit?: boolean): Promise<PortableExtractionSnapshot | PortableExtractionFailure> {
   const beforeRoot = await captureRoot(repositoryRoot);
   if (!beforeRoot) return {ok: false, diagnostics: [diagnostic("root-unavailable")]};
   let inventory: SourceInventory;
@@ -437,41 +471,93 @@ export async function capturePortableSourceFreshness(repositoryRoot: string, use
   if (!afterProvenanceRoot || !sameRoot(beforeRoot, afterProvenanceRoot)) {
     return {ok: false, diagnostics: [diagnostic("root-changed")]};
   }
-  return {ok: true, root: beforeRoot, inventoryFingerprint: inventory.inventoryFingerprint, provenance};
+  return {root: beforeRoot, inventory, provenance};
+}
+
+export async function capturePortableSourceFreshness(repositoryRoot: string, useGit?: boolean): Promise<PortableSourceFreshness> {
+  const snapshot = await capturePortableExtractionSnapshot(repositoryRoot, useGit);
+  if (isPortableExtractionFailure(snapshot)) return snapshot;
+  return {
+    ok: true,
+    root: snapshot.root,
+    inventoryFingerprint: snapshot.inventory.inventoryFingerprint,
+    provenance: snapshot.provenance
+  };
 }
 
 /**
- * Inventory and extract all eligible repository files without writing state.
- * Source bytes are passed only through the private parser reader callback and
- * are cleared by that reader as soon as the adapter returns.
+ * Per-file structural records accepted from a trusted operational extraction.
+ * The caller decides which paths are safe to reuse after comparing source and
+ * parser provenance.  This type carries records only; it never carries source
+ * bytes or model-authored content.
  */
-export async function extractPortableRepository(
-  options: PortableExtractionOptions
-): Promise<PortableExtractionResult> {
-  const beforeRoot = await captureRoot(options.repositoryRoot);
-  if (!beforeRoot) return {ok: false, diagnostics: [diagnostic("root-unavailable")]};
+export type PortableExtractionReuse = {
+  readonly paths: ReadonlySet<string>;
+  readonly files: ReadonlyMap<string, PortableFileRecord>;
+  readonly symbols: ReadonlyMap<string, readonly PortableSymbolRecord[]>;
+  readonly imports: ReadonlyMap<string, readonly PortableImportRelationship[]>;
+  readonly relationships: ReadonlyMap<string, readonly PortableRelationshipRecord[]>;
+  readonly details: ReadonlyMap<string, readonly PortableStructuralDetailRecord[]>;
+};
 
-  let inventory: SourceInventory;
-  try {
-    inventory = await buildSourceInventory(options.repositoryRoot, {useGit: options.useGit});
-  } catch {
-    return {ok: false, diagnostics: [diagnostic("inventory-failed")]};
+function recordsByPath(extraction: PortableExtractionSuccess): {
+  files: Map<string, PortableFileRecord>;
+  symbols: Map<string, PortableSymbolRecord[]>;
+  imports: Map<string, PortableImportRelationship[]>;
+  relationships: Map<string, PortableRelationshipRecord[]>;
+  details: Map<string, PortableStructuralDetailRecord[]>;
+} {
+  const files = new Map<string, PortableFileRecord>();
+  const symbols = new Map<string, PortableSymbolRecord[]>();
+  const imports = new Map<string, PortableImportRelationship[]>();
+  const relationships = new Map<string, PortableRelationshipRecord[]>();
+  const details = new Map<string, PortableStructuralDetailRecord[]>();
+  const symbolPathById = new Map<string, string>();
+  for (const shard of extraction.structuralShards) {
+    for (const file of shard.files) files.set(file.path, file);
+    for (const symbol of shard.symbols) {
+      symbolPathById.set(symbol.id, symbol.path);
+      (symbols.get(symbol.path) ?? (symbols.set(symbol.path, []), symbols.get(symbol.path)!)).push(symbol);
+    }
+    for (const item of shard.imports) (imports.get(item.sourcePath) ?? (imports.set(item.sourcePath, []), imports.get(item.sourcePath)!)).push(item);
+    for (const item of shard.relationships) (relationships.get(item.sourcePath) ?? (relationships.set(item.sourcePath, []), relationships.get(item.sourcePath)!)).push(item);
   }
-  const afterInventoryRoot = await captureRoot(options.repositoryRoot);
-  if (!afterInventoryRoot || !sameRoot(beforeRoot, afterInventoryRoot)) {
-    return {ok: false, diagnostics: [diagnostic("root-changed")]};
+  for (const shard of extraction.structuralShards) {
+    for (const item of shard.details ?? []) {
+      const ownerPath = symbolPathById.get(item.sourceRecordId);
+      if (ownerPath) (details.get(ownerPath) ?? (details.set(ownerPath, []), details.get(ownerPath)!)).push(item);
+    }
   }
-  if (hasUnstableExclusion(inventory)) return {ok: false, diagnostics: [diagnostic("unstable-inventory")]};
-  if (hasUnsafePathBoundary(inventory)) return {ok: false, diagnostics: [diagnostic("unsafe-path")]};
+  return {files, symbols, imports, relationships, details};
+}
 
-  let provenance: ExtractionParserProvenance;
-  try {
-    provenance = makeProvenance(await getParserAssetManifest());
-  } catch {
-    return {ok: false, diagnostics: [diagnostic("parser-provenance")]};
-  }
+/** Build a reuse projection from a complete cold extraction. */
+export function createPortableExtractionReuse(extraction: PortableExtractionSuccess): PortableExtractionReuse {
+  const grouped = recordsByPath(extraction);
+  return {
+    paths: new Set(grouped.files.keys()),
+    files: grouped.files,
+    symbols: grouped.symbols,
+    imports: grouped.imports,
+    relationships: grouped.relationships,
+    details: grouped.details
+  };
+}
 
-  const initialFiles = inventory.files.map(makeInitialFile).sort((left, right) => compareText(left.path, right.path));
+type ExtractionReadResult = {
+  readonly files: PortableFileRecord[];
+  readonly symbols: PortableSymbolRecord[];
+  readonly imports: PortableImportRelationship[];
+  readonly relationships: PortableRelationshipRecord[];
+  readonly details: PortableStructuralDetailRecord[];
+};
+
+async function extractPortableRecords(
+  options: PortableExtractionOptions,
+  snapshot: PortableExtractionSnapshot,
+  reuse?: PortableExtractionReuse
+): Promise<PortableExtractionResult | ExtractionReadResult> {
+  const initialFiles = snapshot.inventory.files.map(makeInitialFile).sort((left, right) => compareText(left.path, right.path));
   const knownFiles = initialFiles;
   const files: PortableFileRecord[] = [];
   const symbols: PortableSymbolRecord[] = [];
@@ -479,6 +565,15 @@ export async function extractPortableRepository(
   const relationships: PortableRelationshipRecord[] = [];
   const details: PortableStructuralDetailRecord[] = [];
   for (const file of initialFiles) {
+    const reuseFile = reuse?.paths.has(file.path) && reuse.files.get(file.path);
+    if (reuseFile && reuse) {
+      files.push(reuseFile);
+      symbols.push(...(reuse.symbols.get(file.path) ?? []));
+      imports.push(...(reuse.imports.get(file.path) ?? []));
+      relationships.push(...(reuse.relationships.get(file.path) ?? []));
+      details.push(...(reuse.details.get(file.path) ?? []));
+      continue;
+    }
     if (file.language === "unknown" || file.byteSize > INVENTORY_MAX_FILE_BYTES) {
       files.push(file);
       continue;
@@ -488,6 +583,8 @@ export async function extractPortableRepository(
       byteSize: file.byteSize,
       contentHash: file.contentHash
     };
+    extractionTestHooks.adapterCalls += 1;
+    await extractionTestHooks.beforeAdapter?.(file.path);
     const read = await withParserSource(options.repositoryRoot, sourceBasis, source => adaptFile(file, source, knownFiles));
     if (!read.ok) {
       const code = read.diagnostic.reason === "hash-mismatch" || read.diagnostic.reason === "size-mismatch"
@@ -503,40 +600,67 @@ export async function extractPortableRepository(
     relationships.push(...result.relationships);
     details.push(...result.details);
   }
+  return {files, symbols, imports, relationships, details};
+}
 
-  const structuralRecords: StructuralRecords = {files, symbols, imports, relationships, details};
+/**
+ * Extract using a caller-owned, already validated inventory/provenance
+ * snapshot. Reuse is per-file and never bypasses the source reader for files
+ * selected for parsing.
+ */
+export async function extractPortableRepositoryFromSnapshot(
+  options: PortableExtractionOptions,
+  snapshot: PortableExtractionSnapshot,
+  reuse?: PortableExtractionReuse
+): Promise<PortableExtractionResult> {
+  const records = await extractPortableRecords(options, snapshot, reuse);
+  if ("ok" in records) return records;
+  const structuralRecords: StructuralRecords = records;
   let structuralShards: PortableStructuralInventory[];
   let sourceBasis: PortableAuthoritativeSourceBasis;
   try {
     structuralShards = makeStructuralShards(options.generationId, structuralRecords);
-    sourceBasis = makeSourceBasis(options.generationId, files, symbols, imports, relationships);
+    sourceBasis = makeSourceBasis(options.generationId, records.files, records.symbols, records.imports, records.relationships);
   } catch {
     return {ok: false, diagnostics: [diagnostic("invalid-structure")]};
   }
   const structural = {
-    filesInventoried: files.length,
-    filesWithFullCoverage: files.filter(file => file.coverageStatus === "full").length,
-    filesWithFileCoverage: files.filter(file => file.coverageStatus === "file").length,
-    symbolsExtracted: symbols.length,
-    importsExtracted: imports.length,
-    relationshipsExtracted: relationships.length
+    filesInventoried: records.files.length,
+    filesWithFullCoverage: records.files.filter(file => file.coverageStatus === "full").length,
+    filesWithFileCoverage: records.files.filter(file => file.coverageStatus === "file").length,
+    symbolsExtracted: records.symbols.length,
+    importsExtracted: records.imports.length,
+    relationshipsExtracted: records.relationships.length
   };
   return {
     ok: true,
     generationId: options.generationId,
-    root: beforeRoot,
-    inventoryFingerprint: inventory.inventoryFingerprint,
+    root: snapshot.root,
+    inventoryFingerprint: snapshot.inventory.inventoryFingerprint,
     structuralShards,
     sourceBasis,
     coverage: {
-      candidateCount: inventory.candidateCount,
-      includedCount: inventory.includedCount,
-      excludedCount: inventory.excludedCount,
-      exclusions: inventory.exclusions,
+      candidateCount: snapshot.inventory.candidateCount,
+      includedCount: snapshot.inventory.includedCount,
+      excludedCount: snapshot.inventory.excludedCount,
+      exclusions: snapshot.inventory.exclusions,
       structural
     },
-    provenance
+    provenance: snapshot.provenance
   };
+}
+
+/**
+ * Inventory and extract all eligible repository files without writing state.
+ * Source bytes are passed only through the private parser reader callback and
+ * are cleared by that reader as soon as the adapter returns.
+ */
+export async function extractPortableRepository(
+  options: PortableExtractionOptions
+): Promise<PortableExtractionResult> {
+  const snapshot = await capturePortableExtractionSnapshot(options.repositoryRoot, options.useGit);
+  if (isPortableExtractionFailure(snapshot)) return snapshot;
+  return extractPortableRepositoryFromSnapshot(options, snapshot);
 }
 
 export const extractCodebaseStructure = extractPortableRepository;

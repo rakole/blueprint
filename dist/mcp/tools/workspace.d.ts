@@ -332,9 +332,9 @@ export declare const workspaceToolDefinitions: ({
             }>>;
             outcome: z.ZodOptional<z.ZodEnum<{
                 blocked: "blocked";
-                recorded: "recorded";
                 applied: "applied";
                 conflict: "conflict";
+                recorded: "recorded";
             }>>;
             conflicts: z.ZodOptional<z.ZodArray<z.ZodString>>;
             warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;

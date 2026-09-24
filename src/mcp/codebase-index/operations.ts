@@ -10,6 +10,8 @@ import {
   PORTABLE_MAP_MAX_MODEL_PACKET_BYTES,
   PORTABLE_MAP_OPERATION_METADATA_VERSION,
   generationLocalIdSchema,
+  portableGenerationManifestSchema,
+  portablePredecessorPublicationProofSchema,
   portableModelPacketSchema,
   portableSha256Schema,
   portableSourceBasisSchema,
@@ -46,6 +48,10 @@ export const PORTABLE_OPERATION_INACTIVITY_MS = 7 * 24 * 60 * 60 * 1000;
 /** Reserve deterministic server-owned room for the complete public receipt envelope. */
 export const PORTABLE_OPERATION_RECEIPT_ENVELOPE_RESERVE_BYTES = 4 * 1024;
 export const PORTABLE_OPERATION_PACKET_BUDGET_BYTES = PORTABLE_MAP_MAX_MODEL_PACKET_BYTES - PORTABLE_OPERATION_RECEIPT_ENVELOPE_RESERVE_BYTES;
+/** Public map receipts carry a source-owned authoring contract on the first page. */
+export const PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES = 28 * 1024;
+export const PORTABLE_OPERATION_ACCEPTED_FILE = "accepted.json";
+export const PORTABLE_OPERATION_COMMITTED_FILE = "committed.json";
 
 /** Fixture-only seam for exercising the post-bind filesystem recheck. */
 export const portableOperationTestHooks: {
@@ -156,6 +162,8 @@ const metadataSchema = z.strictObject({
   lastActivityAt: timestamp,
   expiresAt: timestamp,
   revision: safePositiveInteger,
+  renderGeneratedAt: timestamp,
+  predecessorProof: portablePredecessorPublicationProofSchema.nullable(),
   rootIdentity: identitySchema,
   inventoryFingerprint: digest,
   coverage: coverageSchema,
@@ -189,6 +197,28 @@ const packetStoreSchema = z.strictObject({
   packets: z.array(portableModelPacketSchema).min(1).max(1_000_000)
 });
 
+const acceptedSubmissionSchema = z.strictObject({
+  version: z.literal(1),
+  operationId: generationLocalIdSchema,
+  generationId: generationLocalIdSchema,
+  modelHash: digest,
+  rootIndexHash: digest,
+  acceptedAt: timestamp
+});
+export type PortableAcceptedSubmission = z.infer<typeof acceptedSubmissionSchema>;
+
+const committedSubmissionSchema = z.strictObject({
+  version: z.literal(1),
+  operationId: generationLocalIdSchema,
+  generationId: generationLocalIdSchema,
+  modelHash: digest,
+  rootIndexHash: digest,
+  manifestHash: digest,
+  entryHash: digest,
+  committedAt: timestamp
+});
+export type PortableCommittedSubmission = z.infer<typeof committedSubmissionSchema>;
+
 const operationMarkerSchema = z.strictObject({
   version: z.literal(PORTABLE_MAP_OPERATION_METADATA_VERSION),
   operationId: generationLocalIdSchema, stage: z.literal("prepared"), generationId: generationLocalIdSchema,
@@ -204,7 +234,7 @@ const operationIdSchema = generationLocalIdSchema;
 export type PortableOperationDiagnosticCode =
   | "invalid-input" | "not-found" | "unsafe-root" | "invalid-state" | "integrity-failure"
   | "stale-root" | "stale-source" | "stale-target" | "stale-provenance" | "expired"
-  | "invalid-cursor" | "packet-too-large" | "publication-conflict";
+  | "invalid-cursor" | "packet-too-large" | "publication-conflict" | "unknown-marker";
 
 export type PortableOperationDiagnostic = {
   readonly code: PortableOperationDiagnosticCode;
@@ -224,7 +254,8 @@ const DIAGNOSTICS: Record<PortableOperationDiagnosticCode, string> = {
   "expired": "The prepared operation is expired for new authoring.",
   "invalid-cursor": "The continuation cursor is invalid for this operation.",
   "packet-too-large": "The selected evidence packet exceeds its fixed byte bound.",
-  "publication-conflict": "The publication preflight no longer matches the prepared operation."
+  "publication-conflict": "The publication preflight no longer matches the prepared operation.",
+  "unknown-marker": "An unknown portable publication marker blocks this operation."
 };
 
 function diagnostic(code: PortableOperationDiagnosticCode): PortableOperationDiagnostic {
@@ -640,11 +671,47 @@ function publicationBasisFromPreflight(value: PortablePublicationPreflight, repa
   });
 }
 
+/** Reconstitute the exact prepared publication CAS; never recapture it from current files. */
+export function portableOperationPublicationPreflight(metadata: PortablePreparedOperationMetadata): PortablePublicationPreflight {
+  const publication = metadata.publication;
+  return {
+    repositoryRoot: publication.repositoryRoot,
+    operationId: publication.operationId,
+    transactionId: publication.transactionId,
+    generationId: publication.generationId,
+    sourceBasis: publication.sourceBasis,
+    rootFingerprint: publication.rootFingerprint,
+    previousGenerationId: publication.previousGenerationId,
+    previousIndexHash: publication.previousIndexHash,
+    previousTargetHashes: publication.previousTargetHashes,
+    observedMarkerHash: publication.observedMarkerHash,
+    legacyBackup: publication.legacyBackup,
+    repair: publication.repair !== false
+  };
+}
+
 function sourceBasisFor(extraction: PortableExtractionSuccess, root: RootIdentity): PortableSourceBasis {
   return portableSourceBasisSchema.parse({
     rootHash: rootBasisHash(root),
     inventoryHash: extraction.inventoryFingerprint,
     evidenceHash: sha256(canonicalJson(extraction.sourceBasis))
+  });
+}
+
+async function capturePredecessorProof(repositoryRoot: string, preflight: PortablePublicationPreflight): Promise<z.infer<typeof portablePredecessorPublicationProofSchema> | null> {
+  if (!preflight.previousGenerationId || !preflight.previousIndexHash) return null;
+  const manifestPath = `.blueprint/codebase/generations/${preflight.previousGenerationId}/manifest.json`;
+  const entryPath = `.blueprint/codebase/generations/${preflight.previousGenerationId}/ENTRY.md`;
+  const manifestBytes = await readLiteralFile(repositoryRoot, manifestPath).catch(() => null);
+  const entryBytes = await readLiteralFile(repositoryRoot, entryPath).catch(() => null);
+  if (!manifestBytes || !entryBytes) return null;
+  const manifest = parseStoredJson(manifestBytes, portableGenerationManifestSchema);
+  if (!manifest || manifest.generationId !== preflight.previousGenerationId || manifest.checksums.entry !== sha256(entryBytes)) return null;
+  return portablePredecessorPublicationProofSchema.parse({
+    generationId: preflight.previousGenerationId,
+    manifest: {path: manifestPath.replace(/^\.blueprint\/codebase\//, ""), checksum: sha256(manifestBytes)},
+    entry: {path: entryPath.replace(/^\.blueprint\/codebase\//, ""), checksum: sha256(entryBytes)},
+    committedIndexHash: preflight.previousIndexHash
   });
 }
 
@@ -766,7 +833,7 @@ async function revalidateLoaded(repositoryRoot: string, loaded: PortableOperatio
     verifyFreshness: () => true,
     ...(repairBasis ? {repair: {authorized: true}} : {})
   });
-  if (!("operationId" in target)) return fixedFailure(target.status === "conflict" ? "conflict" : "stale", target.status === "conflict" ? "publication-conflict" : "stale-target", loaded.metadata.operationId, loaded.metadata.generationId);
+  if (!("operationId" in target)) return fixedFailure(target.status === "conflict" ? "conflict" : "stale", target.diagnostics[0]?.code === "unknown-marker" ? "unknown-marker" : target.status === "conflict" ? "publication-conflict" : "stale-target", loaded.metadata.operationId, loaded.metadata.generationId);
   const currentPublication = publicationBasisFromPreflight(target, repairBasis);
   const difference = comparePublication(loaded.metadata.publication, currentPublication);
   if (difference) return fixedFailure("stale", difference, loaded.metadata.operationId, loaded.metadata.generationId);
@@ -791,7 +858,11 @@ async function touchMetadata(repositoryRoot: string, metadata: PortablePreparedO
   }
 }
 
-export async function preparePortableOperation(input: RepositoryInput & NowInput & {readonly repair?: PortableOperationRepairInput} = {}): Promise<PortablePrepareOperationResult> {
+export async function preparePortableOperation(input: RepositoryInput & NowInput & {
+  readonly repair?: PortableOperationRepairInput;
+  /** Internal callers may reserve more room for their public response envelope. */
+  readonly packetBudgetBytes?: number;
+} = {}): Promise<PortablePrepareOperationResult> {
   const repositoryRoot = resolveRepositoryRoot(input);
   if (!repositoryRoot) return fixedFailure("invalid", "invalid-input");
   const initialRoot = await captureLiteralRoot(repositoryRoot);
@@ -818,7 +889,7 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
     ...(input.repair ? {repair: {authorized: true}} : {})
   });
   if (!("operationId" in preflight)) {
-    const code = preflight.status === "conflict" ? "publication-conflict" : preflight.status === "rejected" ? "invalid-state" : "unsafe-root";
+    const code = preflight.diagnostics[0]?.code === "unknown-marker" ? "unknown-marker" : preflight.status === "conflict" ? "publication-conflict" : preflight.status === "rejected" ? "invalid-state" : "unsafe-root";
     return fixedFailure(preflight.status === "conflict" ? "conflict" : "invalid-state", code, operationId, generationId);
   }
   if (input.repair && (preflight.previousIndexHash !== input.repair.previousIndexHash ||
@@ -828,6 +899,12 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
   }
   const publication = publicationBasisFromPreflight(preflight, input.repair);
   const createdAt = validNow(input.now);
+  const predecessorProof = await capturePredecessorProof(repositoryRoot, preflight);
+  if (preflight.previousGenerationId && !predecessorProof) return fixedFailure("conflict", "publication-conflict", operationId, generationId);
+  const packetBudgetBytes = input.packetBudgetBytes ?? PORTABLE_OPERATION_PACKET_BUDGET_BYTES;
+  if (!Number.isSafeInteger(packetBudgetBytes) || packetBudgetBytes < 1 || packetBudgetBytes > PORTABLE_OPERATION_PACKET_BUDGET_BYTES) {
+    return fixedFailure("invalid", "invalid-input", operationId, generationId);
+  }
   const metadata = metadataSchema.parse({
     version: PORTABLE_MAP_OPERATION_METADATA_VERSION,
     operationId, stage: "prepared", generationId,
@@ -836,7 +913,7 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
     previousIndexHash: preflight.previousIndexHash,
     rootFingerprint: preflight.rootFingerprint,
     observedMarkerHash: preflight.observedMarkerHash,
-    packetBudgetBytes: PORTABLE_OPERATION_PACKET_BUDGET_BYTES,
+    packetBudgetBytes,
     repair: publication.repair,
     sourceBasis,
     targetHashes: preflight.previousTargetHashes,
@@ -844,6 +921,8 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
     lastActivityAt: createdAt,
     expiresAt: new Date(new Date(createdAt).getTime() + PORTABLE_OPERATION_INACTIVITY_MS).toISOString(),
     revision: 1,
+    renderGeneratedAt: createdAt,
+    predecessorProof,
     rootIdentity: root,
     inventoryFingerprint: extraction.inventoryFingerprint,
     coverage: extraction.coverage,
@@ -879,6 +958,189 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
 
 export const preparePortableMapOperation = preparePortableOperation;
 export const prepareCodebaseOperation = preparePortableOperation;
+
+/**
+ * Retain only the identity of an accepted model.  The model itself remains
+ * transient and is never written to operation state, which lets a retry tell
+ * an exact committed submission from a changed submission without retaining
+ * rejected content.
+ */
+export async function readPortableOperationAcceptance(input: RepositoryInput & {readonly operationId: string}): Promise<PortableAcceptedSubmission | null> {
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success) return null;
+  const result = await withOperationLock(repositoryRoot, input.operationId, async () => {
+    if (!(await assertLiteralRelativePath(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_ACCEPTED_FILE}`))) return null;
+    const bytes = await readLiteralFile(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_ACCEPTED_FILE}`).catch(() => null);
+    const accepted = bytes ? parseStoredJson(bytes, acceptedSubmissionSchema) : null;
+    return accepted && accepted.operationId === input.operationId ? accepted : null;
+  });
+  return result && "ok" in result ? null : result as PortableAcceptedSubmission | null;
+}
+
+export async function recordPortableOperationAcceptance(input: RepositoryInput & {
+  readonly operationId: string;
+  readonly generationId: string;
+  readonly modelHash: string;
+  readonly rootIndexHash: string;
+  readonly acceptedAt?: Date | string;
+}): Promise<boolean> {
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success ||
+      !digest.safeParse(input.modelHash).success || !digest.safeParse(input.rootIndexHash).success) return false;
+  const accepted = acceptedSubmissionSchema.safeParse({
+    version: 1,
+    operationId: input.operationId,
+    generationId: input.generationId,
+    modelHash: input.modelHash,
+    rootIndexHash: input.rootIndexHash,
+    acceptedAt: validNow(input.acceptedAt)
+  });
+  if (!accepted.success) return false;
+  const result = await withOperationLock(repositoryRoot, input.operationId, async () => {
+    try {
+      if (!(await assertLiteralRelativePath(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}`))) return false;
+      const currentBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_ACCEPTED_FILE}`).catch(() => null);
+      const current = currentBytes ? parseStoredJson(currentBytes, acceptedSubmissionSchema) : null;
+      if (current) {
+        return current.generationId === accepted.data.generationId && current.modelHash === accepted.data.modelHash && current.rootIndexHash === accepted.data.rootIndexHash;
+      }
+      await atomicWriteLiteral(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_ACCEPTED_FILE}`,
+        new TextEncoder().encode(canonicalJson(accepted.data)), true);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  return result && typeof result === "object" && "ok" in result ? false : Boolean(result);
+}
+
+type PortableOperationCommitInput = RepositoryInput & {
+  readonly operationId: string;
+  readonly generationId: string;
+  readonly modelHash: string;
+  readonly rootIndexHash: string;
+  readonly manifestHash: string;
+  readonly entryHash: string;
+  readonly committedAt?: Date | string;
+};
+
+async function recordPortableOperationCommitUnlocked(input: PortableOperationCommitInput): Promise<boolean> {
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success ||
+      !digest.safeParse(input.modelHash).success || !digest.safeParse(input.rootIndexHash).success ||
+      !digest.safeParse(input.manifestHash).success || !digest.safeParse(input.entryHash).success) return false;
+  const committed = committedSubmissionSchema.safeParse({
+    version: 1,
+    operationId: input.operationId,
+    generationId: input.generationId,
+    modelHash: input.modelHash,
+    rootIndexHash: input.rootIndexHash,
+    manifestHash: input.manifestHash,
+    entryHash: input.entryHash,
+    committedAt: validNow(input.committedAt)
+  });
+  if (!committed.success) return false;
+  try {
+    if (!(await assertLiteralRelativePath(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}`))) return false;
+    const acceptedBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_ACCEPTED_FILE}`).catch(() => null);
+    const accepted = acceptedBytes ? parseStoredJson(acceptedBytes, acceptedSubmissionSchema) : null;
+    if (!accepted || accepted.operationId !== input.operationId || accepted.generationId !== input.generationId || accepted.modelHash !== input.modelHash || accepted.rootIndexHash !== input.rootIndexHash) return false;
+    const existingBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_COMMITTED_FILE}`).catch(() => null);
+    const existing = existingBytes ? parseStoredJson(existingBytes, committedSubmissionSchema) : null;
+    if (existing) {
+      return existing.generationId === committed.data.generationId && existing.modelHash === committed.data.modelHash && existing.rootIndexHash === committed.data.rootIndexHash &&
+        existing.manifestHash === committed.data.manifestHash && existing.entryHash === committed.data.entryHash;
+    }
+    await atomicWriteLiteral(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_COMMITTED_FILE}`, new TextEncoder().encode(canonicalJson(committed.data)), true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function recordPortableOperationCommit(input: PortableOperationCommitInput): Promise<boolean> {
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success ||
+      !digest.safeParse(input.modelHash).success || !digest.safeParse(input.rootIndexHash).success ||
+      !digest.safeParse(input.manifestHash).success || !digest.safeParse(input.entryHash).success) return false;
+  const result = await withOperationLock(repositoryRoot, input.operationId, () => recordPortableOperationCommitUnlocked(input));
+  return result && typeof result === "object" && "ok" in result ? false : Boolean(result);
+}
+
+/**
+ * Publication already owns the repository lock when it reaches INDEX commit.
+ * Persisting this immutable receipt through the operation lock here would
+ * invert the revalidation lock order (operation -> publication), so this
+ * narrow atomic helper is reserved for the publication callback. The write is
+ * still anchored, CAS-checked against accepted identity, and idempotent.
+ */
+export async function recordPortableOperationCommitUnderPublicationLock(input: PortableOperationCommitInput): Promise<boolean> {
+  return recordPortableOperationCommitUnlocked(input);
+}
+
+async function verifySealedGeneration(repositoryRoot: string, generationId: string, manifestHash: string, entryHash: string): Promise<boolean> {
+  if (!generationLocalIdSchema.safeParse(generationId).success || !digest.safeParse(manifestHash).success || !digest.safeParse(entryHash).success) return false;
+  const prefix = `.blueprint/codebase/generations/${generationId}`;
+  const manifestBytes = await readLiteralFile(repositoryRoot, `${prefix}/manifest.json`).catch(() => null);
+  const entryBytes = await readLiteralFile(repositoryRoot, `${prefix}/ENTRY.md`).catch(() => null);
+  if (!manifestBytes || !entryBytes || sha256(manifestBytes) !== manifestHash || sha256(entryBytes) !== entryHash) return false;
+  const manifest = parseStoredJson(manifestBytes, portableGenerationManifestSchema);
+  if (!manifest || manifest.generationId !== generationId || manifest.checksums.entry !== entryHash) return false;
+  for (const page of manifest.checksums.pages) {
+    if (!page.path.startsWith(`generations/${generationId}/`) || !(await assertLiteralRelativePath(repositoryRoot, `.blueprint/codebase/${page.path}`))) return false;
+    const bytes = await readLiteralFile(repositoryRoot, `.blueprint/codebase/${page.path}`).catch(() => null);
+    if (!bytes || sha256(bytes) !== page.checksum) return false;
+  }
+  for (const id of CODEBASE_DOCUMENT_IDS) {
+    const bytes = await readLiteralFile(repositoryRoot, `${prefix}/compatibility/${id.toUpperCase()}.md`).catch(() => null);
+    if (!bytes || sha256(bytes) !== manifest.checksums.compatibility[id]) return false;
+  }
+  return true;
+}
+
+/** Determine both historical commit truth and whether that generation is active. */
+export async function portableOperationCommitState(input: RepositoryInput & {readonly operationId: string}): Promise<{
+  readonly accepted: PortableAcceptedSubmission | null;
+  readonly receipt: PortableCommittedSubmission | null;
+  /** A durable receipt proves the operation reached the commit point historically. */
+  readonly historicallyCommitted: boolean;
+  /** Fresh manifest, ENTRY, page, compatibility, and INDEX checks for this retry. */
+  readonly generationValid: boolean;
+  readonly committed: boolean;
+  readonly current: boolean;
+}> {
+  const accepted = await readPortableOperationAcceptance(input);
+  if (!accepted) return {accepted: null, receipt: null, historicallyCommitted: false, generationValid: false, committed: false, current: false};
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot) return {accepted, receipt: null, historicallyCommitted: false, generationValid: false, committed: false, current: false};
+  const metadataBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_METADATA_FILE}`).catch(() => null);
+  const metadata = metadataBytes ? parseStoredJson(metadataBytes, metadataSchema) : null;
+  if (!metadata || metadata.operationId !== input.operationId || metadata.generationId !== accepted.generationId) return {accepted: null, receipt: null, historicallyCommitted: false, generationValid: false, committed: false, current: false};
+  const committedBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_OPERATIONS_ROOT}/${input.operationId}/${PORTABLE_OPERATION_COMMITTED_FILE}`).catch(() => null);
+  const receipt = committedBytes ? parseStoredJson(committedBytes, committedSubmissionSchema) : null;
+  const receiptMatches = Boolean(receipt && receipt.operationId === accepted.operationId && receipt.generationId === accepted.generationId && receipt.modelHash === accepted.modelHash && receipt.rootIndexHash === accepted.rootIndexHash);
+  const manifestHash = receiptMatches ? receipt!.manifestHash : "";
+  const entryHash = receiptMatches ? receipt!.entryHash : "";
+  const indexBytes = await readLiteralFile(repositoryRoot, ".blueprint/codebase/INDEX.md").catch(() => null);
+  const current = Boolean(indexBytes && sha256(indexBytes) === accepted.rootIndexHash);
+  const sealed = receiptMatches
+    ? await verifySealedGeneration(repositoryRoot, accepted.generationId, manifestHash, entryHash)
+    : current
+      ? await verifySealedGenerationFromOperation(repositoryRoot, accepted.generationId, accepted.rootIndexHash)
+      : false;
+  return {accepted, receipt, historicallyCommitted: receiptMatches, generationValid: sealed, committed: sealed && (current || receiptMatches), current};
+}
+
+async function verifySealedGenerationFromOperation(repositoryRoot: string, generationId: string, rootIndexHash: string): Promise<boolean> {
+  const prefix = `.blueprint/codebase/generations/${generationId}`;
+  const manifestBytes = await readLiteralFile(repositoryRoot, `${prefix}/manifest.json`).catch(() => null);
+  const entryBytes = await readLiteralFile(repositoryRoot, `${prefix}/ENTRY.md`).catch(() => null);
+  if (!manifestBytes || !entryBytes) return false;
+  const manifest = parseStoredJson(manifestBytes, portableGenerationManifestSchema);
+  if (!manifest || manifest.generationId !== generationId || manifest.checksums.entry !== sha256(entryBytes)) return false;
+  const indexBytes = await readLiteralFile(repositoryRoot, ".blueprint/codebase/INDEX.md").catch(() => null);
+  return await verifySealedGeneration(repositoryRoot, generationId, sha256(manifestBytes), sha256(entryBytes)) && Boolean(indexBytes && sha256(indexBytes) === rootIndexHash);
+}
 
 export async function loadPortableOperation(input: RepositoryInput & {readonly operationId: string}): Promise<PortableOperationLoad | OperationFailure> {
   const repositoryRoot = resolveRepositoryRoot(input);

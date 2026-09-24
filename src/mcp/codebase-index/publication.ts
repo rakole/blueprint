@@ -109,6 +109,8 @@ export type PortablePublicationResult = {
   readonly cleanupPending?: boolean;
   readonly retainedGenerations: number;
   readonly retainedBytes: number;
+  readonly allocatedGenerations: number;
+  readonly allocatedBytes: number;
   readonly diagnostics: readonly PortablePublicationDiagnostic[];
   readonly preflight?: PortablePublicationPreflight;
 };
@@ -132,6 +134,8 @@ export type CapturePortablePublicationInput = {
 export type PublishPortableMapInput = CapturePortablePublicationInput & {
   readonly rendered: PortableRenderSuccess;
   readonly preflight?: PortablePublicationPreflight;
+  /** Persist metadata-only commit truth before cleanup removes the marker. */
+  readonly onCommitted?: () => Promise<boolean> | boolean;
 };
 
 export type RecoverPortableMapInput = {
@@ -179,6 +183,8 @@ function failure(
     committed: false,
     retainedGenerations: 0,
     retainedBytes: 0,
+    allocatedGenerations: 0,
+    allocatedBytes: 0,
     diagnostics: [diagnostic(code)],
     ...(preflight ? {preflight} : {})
   };
@@ -531,22 +537,55 @@ function renderedTargetHashes(rendered: PortableRenderSuccess): PortableTargetHa
   })) as PortableTargetHashes;
 }
 
-async function retainedReport(root: string): Promise<{count: number; bytes: number}> {
+async function publishedGenerationIds(root: string): Promise<ReadonlySet<string>> {
+  const index = await readRegular(indexPath(root)).catch(() => null);
+  if (!index) return new Set();
+  let descriptor: ReturnType<typeof parsePortableRootDescriptor>;
+  try { descriptor = parsePortableRootDescriptor(text(index)); } catch { return new Set(); }
+  if (!descriptor) return new Set();
+  const ids = new Set<string>();
+  let current: string | null = descriptor.generationId;
+  for (let depth = 0; current && depth < 100_000 && !ids.has(current); depth += 1) {
+    ids.add(current);
+    const manifestBytes = await readGeneratedRegular(root, `generations/${current}/manifest.json`).catch(() => null);
+    if (!manifestBytes) break;
+    try {
+      const manifest = portableGenerationManifestSchema.parse(JSON.parse(text(manifestBytes)));
+      const predecessor = manifest.predecessorGenerationId;
+      const proof = manifest.predecessorPublicationProof;
+      current = predecessor && proof?.generationId === predecessor ? predecessor : null;
+    } catch {
+      break;
+    }
+  }
+  return ids;
+}
+
+async function retainedReport(root: string): Promise<{count: number; bytes: number; allocatedCount: number; allocatedBytes: number}> {
   const parentState = await artifactParentState(root, "generations");
-  if (parentState !== "ok") return {count: 0, bytes: 0};
+  if (parentState !== "ok") return {count: 0, bytes: 0, allocatedCount: 0, allocatedBytes: 0};
   const generations = generationAbsolute(root, "generations");
   const names = await fs.readdir(generations, {withFileTypes: true}).catch(() => []);
+  const published = await publishedGenerationIds(root);
   let bytes = 0;
   let count = 0;
-  const walk = async (filePath: string): Promise<void> => {
-    const stat = await fs.lstat(filePath).catch(() => null);
-    if (!stat || stat.isSymbolicLink()) return;
-    if (stat.isDirectory()) {
-      for (const child of await fs.readdir(filePath)) await walk(path.join(filePath, child));
-    } else if (stat.isFile()) bytes += Number(stat.size);
-  };
-  for (const name of names) if (name.isDirectory()) {count += 1; await walk(path.join(generations, name.name));}
-  return {count, bytes};
+  let allocatedBytes = 0;
+  let allocatedCount = 0;
+  for (const name of names) if (name.isDirectory()) {
+    allocatedCount += 1;
+    let generationBytes = 0;
+    const countBytes = async (filePath: string): Promise<void> => {
+      const stat = await fs.lstat(filePath).catch(() => null);
+      if (!stat || stat.isSymbolicLink()) return;
+      if (stat.isDirectory()) {
+        for (const child of await fs.readdir(filePath)) await countBytes(path.join(filePath, child));
+      } else if (stat.isFile()) generationBytes += Number(stat.size);
+    };
+    await countBytes(path.join(generations, name.name));
+    allocatedBytes += generationBytes;
+    if (published.has(name.name)) { count += 1; bytes += generationBytes; }
+  }
+  return {count, bytes, allocatedCount, allocatedBytes};
 }
 
 async function writeGeneration(root: string, rendered: PortableRenderSuccess, legacyBackup: Readonly<Record<CodebaseDocumentId, Uint8Array>> | null): Promise<void> {
@@ -821,7 +860,14 @@ async function finalPrecommitValidation(
 
 async function resultAfter(root: string, status: PortablePublicationResult["status"], committed: boolean, diagnostics: readonly PortablePublicationDiagnostic[], preflight?: PortablePublicationPreflight, cleanupPending = false): Promise<PortablePublicationResult> {
   const retained = await retainedReport(root);
-  return {ok: committed || status === "published" || status === "reused" || status === "recovered", status, committed, cleanupPending: cleanupPending || undefined, retainedGenerations: retained.count, retainedBytes: retained.bytes, diagnostics, ...(preflight ? {preflight} : {})};
+  return {ok: committed || status === "published" || status === "reused" || status === "recovered", status, committed, cleanupPending: cleanupPending || undefined,
+    retainedGenerations: retained.count, retainedBytes: retained.bytes, allocatedGenerations: retained.allocatedCount, allocatedBytes: retained.allocatedBytes,
+    diagnostics, ...(preflight ? {preflight} : {})};
+}
+
+async function commitReceipt(input: PublishPortableMapInput): Promise<boolean> {
+  if (!input.onCommitted) return true;
+  try { return (await input.onCommitted()) === true; } catch { return false; }
 }
 
 /** Test seam for real rename crash-window tests; production callers leave it empty. */
@@ -902,6 +948,7 @@ async function publishLocked(input: PublishPortableMapInput, root: string, direc
   // never asks for a new freshness proof.
   if (resumed && await rootIndexMatches(root, marker.nextIndexHash) && await generationFilesFromManifest(root, marker.sealedGeneration, marker.nextIndexHash)) {
     try {
+      if (!(await commitReceipt(input))) return resultAfter(root, "committed", true, [diagnostic("publication-failed")], preflight, true);
       await portablePublicationTestHooks.beforeCleanup?.();
       const cleaned = await cleanupCommitted(root, marker);
       return resultAfter(root, "committed", true, cleaned ? [] : [diagnostic("publication-failed")], preflight, !cleaned);
@@ -946,6 +993,7 @@ async function publishLocked(input: PublishPortableMapInput, root: string, direc
       const committedMarker = {...marker, stage: "index-committed" as const};
       try { if (await markerStill(root, marker)) await exactAtomicWrite(markerPath(root), markerBytes(committedMarker)); } catch { /* recovery can infer the commit from INDEX */ }
       try {
+        if (!(await commitReceipt(input))) return resultAfter(root, "committed", true, [diagnostic("publication-failed")], preflight, true);
         const cleanupMarker = {...committedMarker, stage: "cleanup" as const};
         if (await markerStill(root, committedMarker)) await exactAtomicWrite(markerPath(root), markerBytes(cleanupMarker));
         await portablePublicationTestHooks.beforeCleanup?.();
@@ -964,6 +1012,7 @@ async function publishLocked(input: PublishPortableMapInput, root: string, direc
   try {
     const committedMarker = {...marker, stage: "index-committed" as const};
     if (await markerStill(root, marker)) await exactAtomicWrite(markerPath(root), markerBytes(committedMarker));
+    if (!(await commitReceipt(input))) return resultAfter(root, "committed", true, [diagnostic("publication-failed")], preflight, true);
     const cleanupMarker = {...committedMarker, stage: "cleanup" as const};
     if (await markerStill(root, committedMarker)) await exactAtomicWrite(markerPath(root), markerBytes(cleanupMarker));
     await portablePublicationTestHooks.beforeCleanup?.();
@@ -997,10 +1046,11 @@ export async function publishPortableMap(input: PublishPortableMapInput): Promis
           await generationFilesFromManifest(root, input.rendered.sealedGeneration, input.rendered.rootIndexHash)) {
         if (markerRead.kind === "recognized") {
           const transactionId = input.preflight?.transactionId ?? input.transactionId ?? `${input.operationId}-tx`;
-          if (!markerIdentityMatches(markerRead.marker, {operationId: input.operationId, transactionId, generationId: input.generationId})) {
+        if (!markerIdentityMatches(markerRead.marker, {operationId: input.operationId, transactionId, generationId: input.generationId})) {
             return failure("publication-conflict", "conflict", input.preflight);
           }
           try {
+            if (!(await commitReceipt(input))) return resultAfter(root, "committed", true, [diagnostic("publication-failed")], input.preflight, true);
             await portablePublicationTestHooks.beforeCleanup?.();
             const cleaned = await cleanupCommitted(root, markerRead.marker);
             return resultAfter(root, "committed", true, cleaned ? [] : [diagnostic("publication-failed")], input.preflight, !cleaned);
@@ -1011,6 +1061,7 @@ export async function publishPortableMap(input: PublishPortableMapInput): Promis
         if (!sameTargetHashes(state.targetHashes, renderedTargetHashes(input.rendered))) {
           return resultAfter(root, "committed", true, [diagnostic("compatibility-divergence")], input.preflight);
         }
+        if (!(await commitReceipt(input))) return resultAfter(root, "committed", true, [diagnostic("publication-failed")], input.preflight, true);
         return resultAfter(root, "reused", true, [], input.preflight);
       }
       const preflightValue = input.preflight ?? await buildPreflight(input, root, directories, state);
@@ -1033,7 +1084,8 @@ async function recoverLocked(root: string, observedMarker?: PortablePublicationM
   const markerRead = await readMarker(root);
   if (markerRead.kind === "absent") {
     const retained = await retainedReport(root);
-    return {ok: true, status: "reused", committed: false, retainedGenerations: retained.count, retainedBytes: retained.bytes, diagnostics: []};
+    return {ok: true, status: "reused", committed: false, retainedGenerations: retained.count, retainedBytes: retained.bytes,
+      allocatedGenerations: retained.allocatedCount, allocatedBytes: retained.allocatedBytes, diagnostics: []};
   }
   if (markerRead.kind === "unknown") return failure("unknown-marker", "conflict");
   const marker = markerRead.marker;

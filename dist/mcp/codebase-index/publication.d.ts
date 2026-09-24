@@ -50,6 +50,8 @@ export type PortablePublicationResult = {
     readonly cleanupPending?: boolean;
     readonly retainedGenerations: number;
     readonly retainedBytes: number;
+    readonly allocatedGenerations: number;
+    readonly allocatedBytes: number;
     readonly diagnostics: readonly PortablePublicationDiagnostic[];
     readonly preflight?: PortablePublicationPreflight;
 };
@@ -73,6 +75,8 @@ export type CapturePortablePublicationInput = {
 export type PublishPortableMapInput = CapturePortablePublicationInput & {
     readonly rendered: PortableRenderSuccess;
     readonly preflight?: PortablePublicationPreflight;
+    /** Persist metadata-only commit truth before cleanup removes the marker. */
+    readonly onCommitted?: () => Promise<boolean> | boolean;
 };
 export type RecoverPortableMapInput = {
     readonly repositoryRoot?: string;

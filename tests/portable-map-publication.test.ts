@@ -149,6 +149,25 @@ test("post-commit failure is recovered from actual INDEX and sealed generation",
   await assert.rejects(readFile(path.join(root, PORTABLE_PUBLICATION_MARKER)));
 });
 
+test("commit receipt is recorded before marker cleanup and remains retryable on receipt failure", async () => {
+  const root = await tempRoot("receipt-boundary");
+  const rendered = renderFixture("gen_receipt_boundary");
+  const input = baseInput(root, "gen_receipt_boundary", rendered);
+  const preflight = await capturePortablePublicationPreflight(input);
+  assert.ok("operationId" in preflight);
+  let attempts = 0;
+  const onCommitted = () => { attempts += 1; return attempts > 1; };
+  const first = await publishPortableMap({...input, preflight: preflight as PortablePublicationPreflight, onCommitted});
+  assert.equal(first.committed, true);
+  assert.equal(first.cleanupPending, true);
+  await readFile(path.join(root, PORTABLE_PUBLICATION_MARKER));
+  const retry = await publishPortableMap({...input, preflight: preflight as PortablePublicationPreflight, onCommitted});
+  assert.equal(retry.committed, true);
+  assert.equal(retry.cleanupPending, undefined);
+  await assert.rejects(readFile(path.join(root, PORTABLE_PUBLICATION_MARKER)));
+  assert.equal(attempts, 2);
+});
+
 test("post-commit cleanup preserves a divergent compatibility view as cleanup debt", async () => {
   const root = await tempRoot("postcommit-divergence");
   const rendered = renderFixture("gen_postcommit_divergence");

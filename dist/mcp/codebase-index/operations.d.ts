@@ -1,6 +1,7 @@
 import * as z from "zod/v4";
 import { portableTargetHashesSchema, type PortableModelPacket } from "./contracts.js";
 import { type PortableExtractionSuccess } from "./extraction.js";
+import { type PortablePublicationPreflight } from "./publication.js";
 /** Operational state intentionally lives beside, but outside, the portable bundle. */
 export declare const PORTABLE_OPERATIONS_ROOT = ".blueprint/codebase-operations";
 export declare const PORTABLE_OPERATION_METADATA_FILE = "metadata.json";
@@ -13,6 +14,10 @@ export declare const PORTABLE_OPERATION_INACTIVITY_MS: number;
 /** Reserve deterministic server-owned room for the complete public receipt envelope. */
 export declare const PORTABLE_OPERATION_RECEIPT_ENVELOPE_RESERVE_BYTES: number;
 export declare const PORTABLE_OPERATION_PACKET_BUDGET_BYTES: number;
+/** Public map receipts carry a source-owned authoring contract on the first page. */
+export declare const PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES: number;
+export declare const PORTABLE_OPERATION_ACCEPTED_FILE = "accepted.json";
+export declare const PORTABLE_OPERATION_COMMITTED_FILE = "committed.json";
 /** Fixture-only seam for exercising the post-bind filesystem recheck. */
 export declare const portableOperationTestHooks: {
     beforeAtomicWrite?: (relativePath: string) => Promise<void> | void;
@@ -45,6 +50,19 @@ declare const metadataSchema: z.ZodObject<{
     lastActivityAt: z.ZodString;
     expiresAt: z.ZodString;
     revision: z.ZodNumber;
+    renderGeneratedAt: z.ZodString;
+    predecessorProof: z.ZodNullable<z.ZodObject<{
+        generationId: z.ZodString;
+        manifest: z.ZodObject<{
+            path: z.ZodString;
+            checksum: z.ZodString;
+        }, z.core.$strict>;
+        entry: z.ZodObject<{
+            path: z.ZodString;
+            checksum: z.ZodString;
+        }, z.core.$strict>;
+        committedIndexHash: z.ZodString;
+    }, z.core.$strict>>;
     rootIdentity: z.ZodObject<{
         path: z.ZodString;
         realPath: z.ZodString;
@@ -146,7 +164,27 @@ declare const metadataSchema: z.ZodObject<{
     }, z.core.$strict>;
 }, z.core.$strict>;
 export type PortablePreparedOperationMetadata = z.infer<typeof metadataSchema>;
-export type PortableOperationDiagnosticCode = "invalid-input" | "not-found" | "unsafe-root" | "invalid-state" | "integrity-failure" | "stale-root" | "stale-source" | "stale-target" | "stale-provenance" | "expired" | "invalid-cursor" | "packet-too-large" | "publication-conflict";
+declare const acceptedSubmissionSchema: z.ZodObject<{
+    version: z.ZodLiteral<1>;
+    operationId: z.ZodString;
+    generationId: z.ZodString;
+    modelHash: z.ZodString;
+    rootIndexHash: z.ZodString;
+    acceptedAt: z.ZodString;
+}, z.core.$strict>;
+export type PortableAcceptedSubmission = z.infer<typeof acceptedSubmissionSchema>;
+declare const committedSubmissionSchema: z.ZodObject<{
+    version: z.ZodLiteral<1>;
+    operationId: z.ZodString;
+    generationId: z.ZodString;
+    modelHash: z.ZodString;
+    rootIndexHash: z.ZodString;
+    manifestHash: z.ZodString;
+    entryHash: z.ZodString;
+    committedAt: z.ZodString;
+}, z.core.$strict>;
+export type PortableCommittedSubmission = z.infer<typeof committedSubmissionSchema>;
+export type PortableOperationDiagnosticCode = "invalid-input" | "not-found" | "unsafe-root" | "invalid-state" | "integrity-failure" | "stale-root" | "stale-source" | "stale-target" | "stale-provenance" | "expired" | "invalid-cursor" | "packet-too-large" | "publication-conflict" | "unknown-marker";
 export type PortableOperationDiagnostic = {
     readonly code: PortableOperationDiagnosticCode;
     readonly message: string;
@@ -204,11 +242,62 @@ type RepositoryInput = {
 type NowInput = {
     readonly now?: Date | string;
 };
+/** Reconstitute the exact prepared publication CAS; never recapture it from current files. */
+export declare function portableOperationPublicationPreflight(metadata: PortablePreparedOperationMetadata): PortablePublicationPreflight;
 export declare function preparePortableOperation(input?: RepositoryInput & NowInput & {
     readonly repair?: PortableOperationRepairInput;
+    /** Internal callers may reserve more room for their public response envelope. */
+    readonly packetBudgetBytes?: number;
 }): Promise<PortablePrepareOperationResult>;
 export declare const preparePortableMapOperation: typeof preparePortableOperation;
 export declare const prepareCodebaseOperation: typeof preparePortableOperation;
+/**
+ * Retain only the identity of an accepted model.  The model itself remains
+ * transient and is never written to operation state, which lets a retry tell
+ * an exact committed submission from a changed submission without retaining
+ * rejected content.
+ */
+export declare function readPortableOperationAcceptance(input: RepositoryInput & {
+    readonly operationId: string;
+}): Promise<PortableAcceptedSubmission | null>;
+export declare function recordPortableOperationAcceptance(input: RepositoryInput & {
+    readonly operationId: string;
+    readonly generationId: string;
+    readonly modelHash: string;
+    readonly rootIndexHash: string;
+    readonly acceptedAt?: Date | string;
+}): Promise<boolean>;
+type PortableOperationCommitInput = RepositoryInput & {
+    readonly operationId: string;
+    readonly generationId: string;
+    readonly modelHash: string;
+    readonly rootIndexHash: string;
+    readonly manifestHash: string;
+    readonly entryHash: string;
+    readonly committedAt?: Date | string;
+};
+export declare function recordPortableOperationCommit(input: PortableOperationCommitInput): Promise<boolean>;
+/**
+ * Publication already owns the repository lock when it reaches INDEX commit.
+ * Persisting this immutable receipt through the operation lock here would
+ * invert the revalidation lock order (operation -> publication), so this
+ * narrow atomic helper is reserved for the publication callback. The write is
+ * still anchored, CAS-checked against accepted identity, and idempotent.
+ */
+export declare function recordPortableOperationCommitUnderPublicationLock(input: PortableOperationCommitInput): Promise<boolean>;
+/** Determine both historical commit truth and whether that generation is active. */
+export declare function portableOperationCommitState(input: RepositoryInput & {
+    readonly operationId: string;
+}): Promise<{
+    readonly accepted: PortableAcceptedSubmission | null;
+    readonly receipt: PortableCommittedSubmission | null;
+    /** A durable receipt proves the operation reached the commit point historically. */
+    readonly historicallyCommitted: boolean;
+    /** Fresh manifest, ENTRY, page, compatibility, and INDEX checks for this retry. */
+    readonly generationValid: boolean;
+    readonly committed: boolean;
+    readonly current: boolean;
+}>;
 export declare function loadPortableOperation(input: RepositoryInput & {
     readonly operationId: string;
 }): Promise<PortableOperationLoad | OperationFailure>;
@@ -261,6 +350,19 @@ export declare function readPortableOperationMetadata(input: RepositoryInput & {
         lastActivityAt: string;
         expiresAt: string;
         revision: number;
+        renderGeneratedAt: string;
+        predecessorProof: {
+            generationId: string;
+            manifest: {
+                path: string;
+                checksum: string;
+            };
+            entry: {
+                path: string;
+                checksum: string;
+            };
+            committedIndexHash: string;
+        } | null;
         rootIdentity: {
             path: string;
             realPath: string;
@@ -408,6 +510,19 @@ export declare function readPortableOperationExtraction(input: RepositoryInput &
         lastActivityAt: string;
         expiresAt: string;
         revision: number;
+        renderGeneratedAt: string;
+        predecessorProof: {
+            generationId: string;
+            manifest: {
+                path: string;
+                checksum: string;
+            };
+            entry: {
+                path: string;
+                checksum: string;
+            };
+            committedIndexHash: string;
+        } | null;
         rootIdentity: {
             path: string;
             realPath: string;

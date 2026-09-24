@@ -1,6 +1,4 @@
-import {constants} from "node:fs";
 import {createHash} from "node:crypto";
-import {lstat, open, realpath} from "node:fs/promises";
 import path from "node:path";
 import * as z from "zod/v4";
 
@@ -32,6 +30,14 @@ import {
   type PortableSemanticIndexEntry,
   type PortableRootDescriptor
 } from "./render.js";
+import {readHardenedLiteralFile} from "./literal-read.js";
+import {
+  capturePortablePinAuthorityRoot,
+  persistPortablePinReceipt,
+  restorePortablePinReceipt as restoreStoredPortablePinReceipt,
+  type PortablePinReceipt
+} from "./pin-authority.js";
+export type {PortablePinReceipt} from "./pin-authority.js";
 
 /**
  * The generated bundle has a different safety boundary from source files.
@@ -42,6 +48,7 @@ const CODEBASE_ROOT = ".blueprint/codebase";
 const INDEX_PATH = `${CODEBASE_ROOT}/INDEX.md`;
 const PUBLICATION_MARKER_PATH = `${CODEBASE_ROOT}/.publication.json`;
 const MAX_DIAGNOSTICS = 32;
+const SHA256 = /^[a-f0-9]{64}$/;
 const DEFAULT_LIMITS = {
   indexBytes: 4 * 1024,
   entryBytes: 4 * 1024,
@@ -54,6 +61,9 @@ const DEFAULT_LIMITS = {
   semanticFragments: 100_000,
   predecessorDepth: 32
 } as const;
+/** Ordinary untrusted retained-generation navigation remains bounded. Durable
+ * owner receipts use direct target verification and do not use this budget. */
+export const PORTABLE_PIN_HANDOFF_PREDECESSOR_DEPTH = 100_000;
 
 export type PortableResolverLimits = {
   readonly indexBytes?: number;
@@ -72,10 +82,11 @@ type EffectiveLimits = {
   readonly [K in keyof typeof DEFAULT_LIMITS]: number;
 };
 
-function limitsOf(input?: PortableResolverLimits): EffectiveLimits {
-  const result = {...DEFAULT_LIMITS, ...(input ?? {})};
+function limitsOf(input?: PortableResolverLimits): EffectiveLimits | null {
+  if (input !== undefined && (input === null || typeof input !== "object" || Array.isArray(input))) return null;
+  const result = {...DEFAULT_LIMITS, ...(input ?? {})} as EffectiveLimits;
   for (const value of Object.values(result)) {
-    if (!Number.isSafeInteger(value) || value <= 0) return {...DEFAULT_LIMITS};
+    if (!Number.isSafeInteger(value) || value <= 0) return null;
   }
   return result;
 }
@@ -156,87 +167,13 @@ function safeGenerationId(value: string): boolean {
   return z.string().min(1).max(128).regex(/^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/).safeParse(value).success;
 }
 
-type LiteralFile = {readonly absolutePath: string; readonly size: number; readonly dev: number; readonly ino: number; readonly mtimeMs: number; readonly ctimeMs: number};
-
-function sameStat(left: LiteralFile, right: {size: number; dev: number; ino: number; mtimeMs: number; ctimeMs: number}): boolean {
-  return left.size === right.size && left.dev === right.dev && left.ino === right.ino &&
-    left.mtimeMs === right.mtimeMs && left.ctimeMs === right.ctimeMs;
-}
-
-async function literalFile(root: string, relativePath: string): Promise<LiteralFile | null> {
-  if (!safeRelativePath(relativePath)) return null;
-  const absoluteRoot = path.resolve(root);
-  const absolutePath = path.resolve(absoluteRoot, relativePath);
-  const rel = path.relative(absoluteRoot, absolutePath);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
-  let rootReal: string;
-  try {
-    rootReal = await realpath(absoluteRoot);
-  } catch {
-    return null;
-  }
-  let current = absoluteRoot;
-  const pieces = relativePath.split("/");
-  for (let index = 0; index <= pieces.length; index += 1) {
-    const stat = await lstat(current).catch(() => null);
-    if (!stat) return null;
-    if (index > 0 && stat.isSymbolicLink()) return null;
-    if (index < pieces.length && !stat.isDirectory()) return null;
-    if (index < pieces.length) current = path.join(current, pieces[index]!);
-  }
-  const stat = await lstat(absolutePath).catch(() => null);
-  if (!stat || stat.isSymbolicLink() || !stat.isFile()) return null;
-  const resolved = await realpath(absolutePath).catch(() => null);
-  if (!resolved) return null;
-  const resolvedRel = path.relative(rootReal, resolved);
-  if (resolvedRel.startsWith("..") || path.isAbsolute(resolvedRel)) return null;
-  return {
-    absolutePath,
-    size: Number(stat.size),
-    dev: stat.dev,
-    ino: stat.ino,
-    mtimeMs: stat.mtimeMs,
-    ctimeMs: stat.ctimeMs
-  };
-}
-
 async function readLiteralBytes(root: string, relativePath: string, maxBytes: number): Promise<
   {ok: true; bytes: Uint8Array} | {ok: false; reason: "missing" | "unsafe-path" | "too-large" | "unreadable" | "changed" | "binary"}
 > {
   if (!safeRelativePath(relativePath)) return {ok: false, reason: "unsafe-path"};
-  const file = await literalFile(root, relativePath);
-  if (!file) return {ok: false, reason: "missing"};
-  if (file.size > maxBytes) return {ok: false, reason: "too-large"};
-  let handle;
-  try {
-    handle = await open(file.absolutePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-  } catch {
-    return {ok: false, reason: "unreadable"};
-  }
-  try {
-    const opened = await handle.stat();
-    if (!opened.isFile() || !sameStat(file, {
-      size: Number(opened.size), dev: opened.dev, ino: opened.ino,
-      mtimeMs: opened.mtimeMs, ctimeMs: opened.ctimeMs
-    })) return {ok: false, reason: "changed"};
-    const bytes = Buffer.alloc(file.size);
-    let offset = 0;
-    while (offset < bytes.length) {
-      const read = await handle.read(bytes, offset, bytes.length - offset, offset);
-      if (read.bytesRead === 0) return {ok: false, reason: "changed"};
-      offset += read.bytesRead;
-    }
-    const after = await handle.stat();
-    if (!after.isFile() || !sameStat(file, {
-      size: Number(after.size), dev: after.dev, ino: after.ino,
-      mtimeMs: after.mtimeMs, ctimeMs: after.ctimeMs
-    })) return {ok: false, reason: "changed"};
-    return {ok: true, bytes: new Uint8Array(bytes)};
-  } catch {
-    return {ok: false, reason: "unreadable"};
-  } finally {
-    await handle.close().catch(() => undefined);
-  }
+  const result = await readHardenedLiteralFile(root, relativePath, maxBytes);
+  if (result.ok) return result;
+  return {ok: false, reason: result.reason === "unsafe" ? "unsafe-path" : result.reason};
 }
 
 function parsedJson<T>(bytes: Uint8Array, parse: (value: unknown) => T | null): T | null {
@@ -442,6 +379,7 @@ function mergeSemanticParts(parts: readonly PortableSemanticFragment[]): Semanti
 
 async function verifyGeneration(root: string, generationId: string, inputLimits: PortableResolverLimits | undefined, predecessorMode: boolean): Promise<VerifyResult> {
   const limits = limitsOf(inputLimits);
+  if (!limits) return {ok: false, diagnostics: [diagnostic("resource-limit", "selection")]};
   const diagnostics: PortableResolverDiagnostic[] = [];
   if (!safeGenerationId(generationId)) return {ok: false, diagnostics: [diagnostic("unsafe-path", "generation")]};
   const generationPrefix = `generations/${generationId}`;
@@ -716,6 +654,10 @@ type NavigationInternal = {
 
 async function readNavigationInternal(root: string, options: ResolveCodebaseNavigationOptions = {}): Promise<NavigationInternal> {
   const limits = limitsOf(options.limits);
+  if (!limits) return {
+    indexBody: "", indexHash: "", descriptor: null, marker: {kind: "none"}, active: null,
+    portableState: "invalid", diagnostics: [diagnostic("resource-limit", "selection")]
+  };
   const diagnostics: PortableResolverDiagnostic[] = [];
   const index = await readLiteralBytes(root, INDEX_PATH, limits.indexBytes);
   if (!index.ok) {
@@ -782,6 +724,7 @@ async function verifyCompatibility(root: string, generation: VerifiedGeneration,
 async function verifyRetainedLineage(root: string, active: VerifiedGeneration, requestedGenerationId: string, options: ResolveCodebaseNavigationOptions): Promise<VerifyResult> {
   if (requestedGenerationId === active.generationId) return {ok: true, value: active};
   const limits = limitsOf(options.limits);
+  if (!limits) return {ok: false, diagnostics: [diagnostic("resource-limit", "predecessor")]};
   const diagnostics: PortableResolverDiagnostic[] = [];
   const seen = new Set<string>([active.generationId]);
   let current = active;
@@ -825,6 +768,95 @@ export type PortableImmutablePin = {
   readonly manifest: {readonly path: string; readonly sha256: string};
 };
 
+/**
+ * An in-process owner capability for carrying an immutable pin to a later
+ * bridge call.  The WeakSet below is the authority; the visible fields are
+ * only fresh-verification inputs and are deliberately not serializable state.
+ * A future persisted session must reacquire this capability by calling
+ * verifyPortablePinHandoff after provider restart rather than trusting JSON.
+ */
+export type PortablePinHandoff = PortableImmutablePin & {
+  readonly predecessorDepth: number;
+};
+export type PortableDurablePinHandoff = PortablePinHandoff & {
+  /** Type-only owner authority brand; the runtime authority is a WeakSet. */
+  readonly ownerAuthority: "durable";
+};
+const issuedPinHandoffs = new WeakSet<object>();
+const issuedDurablePinHandoffs = new WeakSet<object>();
+
+export function isPortablePinHandoff(value: unknown): value is PortablePinHandoff {
+  return Boolean(value && typeof value === "object" && issuedPinHandoffs.has(value));
+}
+
+/** True only for a handoff restored from the owner-authenticated receipt store. */
+export function isPortableDurablePinHandoff(value: unknown): value is PortableDurablePinHandoff {
+  return Boolean(value && typeof value === "object" && issuedDurablePinHandoffs.has(value));
+}
+
+function issuePinHandoff(pin: PortableImmutablePin, predecessorDepth: number, durable = false): PortablePinHandoff {
+  const immutable = Object.freeze({
+    generationId: pin.generationId,
+    entry: Object.freeze({path: pin.entry.path, sha256: pin.entry.sha256}),
+    manifest: Object.freeze({path: pin.manifest.path, sha256: pin.manifest.sha256})
+  });
+  const handoff = Object.freeze({...immutable, predecessorDepth});
+  issuedPinHandoffs.add(handoff);
+  if (durable) issuedDurablePinHandoffs.add(handoff);
+  return handoff;
+}
+
+export type PortablePinReceiptResult =
+  | {readonly status: "ok"; readonly receipt: PortablePinReceipt; readonly handoff: PortableDurablePinHandoff}
+  | {readonly status: "invalid"; readonly reason: string};
+
+/**
+ * Freshly prove a published pin, then persist an owner-authenticated receipt.
+ * The low-level receipt writer never receives unverified caller data from the
+ * public API: this function performs the publication proof first.
+ */
+export async function issuePortablePinReceipt(
+  root: string,
+  pin: PortableImmutablePin,
+  options: ResolveCodebaseNavigationOptions = {}
+): Promise<PortablePinReceiptResult> {
+  const provedRoot = await capturePortablePinAuthorityRoot(root);
+  if (!provedRoot) return {status: "invalid", reason: "The repository root is not a safe literal owner root."};
+  const verified = await verifyPortablePinHandoff(root, pin, options);
+  if (verified.status !== "ok" || !verified.handoff) return {status: "invalid", reason: "The requested pin is not a freshly proved published generation."};
+  const receipt = await persistPortablePinReceipt(root, verified.handoff, provedRoot);
+  if (!receipt) return {status: "invalid", reason: "The owning pin receipt store is unavailable."};
+  return {status: "ok", receipt, handoff: issuePinHandoff(receipt.pin, 0, true) as PortableDurablePinHandoff};
+}
+
+export type PortableRestoredPin = {
+  readonly status: "ok";
+  readonly receipt: PortablePinReceipt;
+  readonly handoff: PortableDurablePinHandoff;
+} | {
+  readonly status: "invalid";
+  readonly reason: string;
+};
+
+/**
+ * Restore a durable pin without consulting INDEX or any predecessor. The
+ * receipt's MAC proves that this owner previously proved publication; the
+ * target generation is still fully re-read and checksum verified here.
+ */
+export async function restorePortablePinReceipt(
+  root: string,
+  value: unknown,
+  options: ResolveCodebaseNavigationOptions = {}
+): Promise<PortableRestoredPin> {
+  const receipt = await restoreStoredPortablePinReceipt(root, value);
+  if (!receipt) return {status: "invalid", reason: "The pin receipt is not authenticated by this repository owner."};
+  const verified = await verifyGeneration(root, receipt.pin.generationId, options.limits, false);
+  if (!verified.ok || verified.value.entry.hash !== receipt.pin.entry.sha256 || verified.value.manifestHash !== receipt.pin.manifest.sha256) {
+    return {status: "invalid", reason: "The authenticated pin target is missing or its sealed bytes changed."};
+  }
+  return {status: "ok", receipt, handoff: issuePinHandoff(receipt.pin, 0, true) as PortableDurablePinHandoff};
+}
+
 export type PortableFallback = {
   readonly used: boolean;
   readonly reason: "none" | "absent" | "invalid" | "unsupported" | "stale" | "not-found";
@@ -844,6 +876,8 @@ export type CodebaseNavigationSuccess = {
   readonly fallbackReason: "none";
   readonly fallbackGuidance: string;
   readonly diagnostics: readonly PortableResolverDiagnostic[];
+  /** Owner-only capability returned by explicit handoff verification. */
+  readonly handoff?: PortablePinHandoff;
 };
 
 export type CodebaseNavigationFallback = {
@@ -906,6 +940,14 @@ export async function resolveCodebaseNavigation(root: string, options: ResolveCo
     };
   }
   const limits = limitsOf(options.limits);
+  if (!limits) {
+    return {
+      status: "fallback", portable: {status: "unsupported", generationId: active.generationId}, entry: null, immutable: null, pin: null, coverage: null,
+      compatibility: {status: "unknown", guard: "unknown"},
+      fallback: {used: true, reason: "unsupported", guidance: fallbackGuidance()}, fallbackUsed: true,
+      fallbackReason: "unsupported", fallbackGuidance: fallbackGuidance(), diagnostics: [...diagnostics, diagnostic("resource-limit", "selection")]
+    };
+  }
   const compatibilityDiagnostics: PortableResolverDiagnostic[] = [];
   const compatibilityStatus = await verifyCompatibility(root, active, limits, compatibilityDiagnostics);
   diagnostics = [...diagnostics, ...compatibilityDiagnostics];
@@ -928,6 +970,92 @@ export async function resolveCodebaseNavigation(root: string, options: ResolveCo
     fallbackUsed: false, fallbackReason: "none", fallbackGuidance: "Read selected map pages and verify current source before relying on a generated claim.", diagnostics
   };
 }
+
+/**
+ * Prove a previously published immutable pin before handing it to a future
+ * lifecycle owner.  The supplied pin is only a lookup target: the active
+ * INDEX, sealed generation, and predecessor proofs are read again here.  A
+ * caller cannot make an unpublished or tampered generation trusted by copying
+ * this metadata.
+ *
+ * Pin handoff has a larger bounded predecessor budget than ordinary
+ * navigation so an immutable session can remain usable across many unrelated
+ * publications.  The budget is still finite and may be lowered or raised by
+ * the owning caller through `limits.predecessorDepth`.
+ */
+export async function verifyPortablePinHandoff(
+  root: string,
+  pin: PortableImmutablePin,
+  options: ResolveCodebaseNavigationOptions = {}
+): Promise<CodebaseNavigationResult> {
+  if (!pin || typeof pin.generationId !== "string" ||
+      pin.entry?.path !== `generations/${pin.generationId}/ENTRY.md` ||
+      pin.manifest?.path !== `generations/${pin.generationId}/manifest.json` ||
+      !SHA256.test(pin.entry?.sha256 ?? "") || !SHA256.test(pin.manifest?.sha256 ?? "")) {
+    return {
+      status: "fallback",
+      portable: {status: "unsupported", generationId: null},
+      entry: null,
+      immutable: null,
+      pin: null,
+      coverage: null,
+      compatibility: {status: "unknown", guard: "unknown"},
+      fallback: {used: true, reason: "unsupported", guidance: fallbackGuidance()},
+      fallbackUsed: true,
+      fallbackReason: "unsupported",
+      fallbackGuidance: fallbackGuidance(),
+      diagnostics: [diagnostic("unsupported", "selection")]
+    };
+  }
+  const normalized = limitsOf(options.limits);
+  if (!normalized) {
+    return {
+      status: "fallback",
+      portable: {status: "unsupported", generationId: pin.generationId},
+      entry: null,
+      immutable: null,
+      pin: null,
+      coverage: null,
+      compatibility: {status: "unknown", guard: "unknown"},
+      fallback: {used: true, reason: "unsupported", guidance: fallbackGuidance()},
+      fallbackUsed: true,
+      fallbackReason: "unsupported",
+      fallbackGuidance: fallbackGuidance(),
+      diagnostics: [diagnostic("resource-limit", "selection")]
+    };
+  }
+  const predecessorDepth = options.limits?.predecessorDepth ?? PORTABLE_PIN_HANDOFF_PREDECESSOR_DEPTH;
+  const resolved = await resolveCodebaseNavigation(root, {
+    ...options,
+    requestedGenerationId: pin.generationId,
+    limits: {...(options.limits ?? {}), predecessorDepth}
+  });
+  if (resolved.status !== "ok") return resolved;
+  if (resolved.immutable.generationId !== pin.generationId ||
+      resolved.immutable.entry.path !== pin.entry.path ||
+      resolved.immutable.entry.sha256 !== pin.entry.sha256 ||
+      resolved.immutable.manifest.path !== pin.manifest.path ||
+      resolved.immutable.manifest.sha256 !== pin.manifest.sha256) {
+    return {
+      status: "fallback",
+      portable: {status: "unsupported", generationId: pin.generationId},
+      entry: null,
+      immutable: null,
+      pin: null,
+      coverage: null,
+      compatibility: {status: "unknown", guard: "unknown"},
+      fallback: {used: true, reason: "stale", guidance: fallbackGuidance()},
+      fallbackUsed: true,
+      fallbackReason: "stale",
+      fallbackGuidance: fallbackGuidance(),
+      diagnostics: [diagnostic("stale", "selection")]
+    };
+  }
+  return {...resolved, handoff: issuePinHandoff(resolved.pin, predecessorDepth)};
+}
+
+/** Naming alias for lifecycle owners that describe this operation as a handoff. */
+export const handoffPortableGenerationPin = verifyPortablePinHandoff;
 
 /**
  * Prove that a literal path is a sealed member of the selected generation.
@@ -987,6 +1115,19 @@ export type PortableSelectedEvidence = {
   readonly bytes?: string;
 };
 
+/**
+ * Request-local proof material for a selected generation.  This is returned
+ * by the resolver that created it and is deliberately not accepted as an
+ * input to any resolver call.  Consumers must prove the generation again when
+ * starting a new request; a copied snapshot can never bless changed bytes.
+ */
+export type PortableSelectionSnapshot = {
+  readonly generationId: string;
+  readonly entry: {readonly path: string; readonly sha256: string};
+  readonly manifest: {readonly path: string; readonly sha256: string};
+  readonly pages: readonly {readonly path: string; readonly sha256: string}[];
+};
+
 export type PortableSelectionResult = {
   readonly status: "ok";
   /** Consumers may register implementation results; discovery results are only navigation hints. */
@@ -996,6 +1137,7 @@ export type PortableSelectionResult = {
   readonly entries: readonly PortableSelectedEvidence[];
   readonly selected: readonly {readonly kind: PortableDirectSelectionKind; readonly recordId?: string; readonly page: string}[];
   readonly sourceBindings: readonly PortableSourceBinding[];
+  readonly snapshot: PortableSelectionSnapshot;
   readonly diagnostics: readonly PortableResolverDiagnostic[];
 };
 
@@ -1018,19 +1160,28 @@ function sourceBindingForRecord(item: StructuralRecord, files: ReadonlyMap<strin
 }
 
 /** Resolve exact selected page/record dependencies for later evidence delivery. */
-export async function resolveSelectedCodebaseEvidence(root: string, selection: PortableSelection, options: ResolveCodebaseNavigationOptions = {}): Promise<PortableSelectionResolution> {
-  const internal = await readNavigationInternal(root, options);
-  if (!internal.active || internal.portableState !== "valid") {
-    const reason = fallbackReasonFor(internal.portableState);
-    return {status: "fallback", reason, diagnostics: internal.diagnostics, fallback: {used: true, reason, guidance: fallbackGuidance()}};
-  }
-  let generation = internal.active;
-  if (options.requestedGenerationId && options.requestedGenerationId !== generation.generationId) {
-    const retained = await verifyRetainedLineage(root, generation, options.requestedGenerationId, options);
-    if (!retained.ok) return {status: "not-found", reason: "The requested retained generation could not be proved.", diagnostics: retained.diagnostics, fallback: {used: true, reason: "not-found", guidance: fallbackGuidance()}};
-    generation = retained.value;
+export async function resolveSelectedCodebaseEvidence(root: string, selection: PortableSelection, options: ResolveCodebaseNavigationOptions = {}, authenticatedGeneration?: VerifiedGeneration): Promise<PortableSelectionResolution> {
+  let generation: VerifiedGeneration;
+  if (authenticatedGeneration) {
+    generation = authenticatedGeneration;
+    if (options.requestedGenerationId && options.requestedGenerationId !== generation.generationId) {
+      return {status: "invalid", reason: "The requested generation does not match the authenticated pin.", diagnostics: [diagnostic("stale", "selection")], fallback: {used: true, reason: "invalid", guidance: fallbackGuidance()}};
+    }
+  } else {
+    const internal = await readNavigationInternal(root, options);
+    if (!internal.active || internal.portableState !== "valid") {
+      const reason = fallbackReasonFor(internal.portableState);
+      return {status: "fallback", reason, diagnostics: internal.diagnostics, fallback: {used: true, reason, guidance: fallbackGuidance()}};
+    }
+    generation = internal.active;
+    if (options.requestedGenerationId && options.requestedGenerationId !== generation.generationId) {
+      const retained = await verifyRetainedLineage(root, generation, options.requestedGenerationId, options);
+      if (!retained.ok) return {status: "not-found", reason: "The requested retained generation could not be proved.", diagnostics: retained.diagnostics, fallback: {used: true, reason: "not-found", guidance: fallbackGuidance()}};
+      generation = retained.value;
+    }
   }
   const limits = limitsOf(options.limits);
+  if (!limits) return {status: "invalid", reason: "Resolver limits are invalid.", diagnostics: [diagnostic("resource-limit", "selection")], fallback: {used: true, reason: "invalid", guidance: fallbackGuidance()}};
   const entries = new Map<string, PortableSelectedEvidence>();
   const selected: Array<{kind: PortableDirectSelectionKind; recordId?: string; page: string}> = [];
   const bindings = new Map<string, PortableSourceBinding>();
@@ -1081,7 +1232,13 @@ export async function resolveSelectedCodebaseEvidence(root: string, selection: P
         if (item.kind === "compatibility-document") continue;
         const target = evidenceRecord(item, generation.structural as Map<string, {kind: StructuralKind; record: StructuralRecord; page: Page}>, generation.files as Map<string, PortableFileRecord>, generation.symbols as Map<string, PortableSymbolRecord>, generation.imports as Map<string, PortableImportRelationship>, generation.relationships as Map<string, PortableRelationshipRecord>);
         if (target.record && target.file) {
-          const binding: PortableSourceBinding = {path: target.file.path, fullFileHash: target.file.contentHash, ...(target.rangeHash ? {rangeHash: target.rangeHash} : {}), ...(item.coordinate ? {coordinate: item.coordinate} : {})};
+          const recordCoordinate = target.record && "coordinate" in target.record ? target.record.coordinate : undefined;
+          const binding: PortableSourceBinding = {
+            path: target.file.path,
+            fullFileHash: target.file.contentHash,
+            ...(target.rangeHash ? {rangeHash: target.rangeHash} : {}),
+            ...((item.coordinate ?? recordCoordinate) ? {coordinate: item.coordinate ?? recordCoordinate} : {})
+          };
           bindings.set(`${binding.path}\u0000${binding.rangeHash ?? ""}\u0000${binding.coordinate ? JSON.stringify(binding.coordinate) : ""}`, binding);
           dependencyPaths.add(binding.path);
         }
@@ -1132,7 +1289,39 @@ export async function resolveSelectedCodebaseEvidence(root: string, selection: P
   if (entries.size > limits.generationFiles) {
     return {status: "invalid", reason: "Selected evidence exceeds the resolver limit.", diagnostics: [diagnostic("resource-limit", "selection")], fallback: {used: true, reason: "unsupported", guidance: fallbackGuidance()}};
   }
-  return {status: "ok", mode: selection.kind === "page" ? "discovery" : "implementation", generationId: generation.generationId, roots: [...entries.keys()], entries: [...entries.values()], selected, sourceBindings: [...bindings.values()], diagnostics};
+  return {
+    status: "ok",
+    mode: selection.kind === "page" ? "discovery" : "implementation",
+    generationId: generation.generationId,
+    roots: [...entries.keys()],
+    entries: [...entries.values()],
+    selected,
+    sourceBindings: [...bindings.values()],
+    snapshot: {
+      generationId: generation.generationId,
+      entry: {path: generation.entry.path, sha256: generation.entry.hash},
+      manifest: {path: `generations/${generation.generationId}/manifest.json`, sha256: generation.manifestHash},
+      pages: [...entries.values()].map(item => ({path: item.path, sha256: item.hash}))
+    },
+    diagnostics
+  };
+}
+
+/** Select evidence from an owner-authenticated target without reading INDEX or predecessors. */
+export async function resolveSelectedCodebaseEvidenceWithPortablePin(
+  root: string,
+  selection: PortableSelection,
+  handoff: PortablePinHandoff,
+  options: ResolveCodebaseNavigationOptions = {}
+): Promise<PortableSelectionResolution> {
+  if (!isPortableDurablePinHandoff(handoff)) {
+    return {status: "invalid", reason: "The supplied pin is not an owner-authenticated durable handoff.", diagnostics: [diagnostic("unsupported", "selection")], fallback: {used: true, reason: "invalid", guidance: fallbackGuidance()}};
+  }
+  const verified = await verifyGeneration(root, handoff.generationId, options.limits, false);
+  if (!verified.ok || verified.value.entry.hash !== handoff.entry.sha256 || verified.value.manifestHash !== handoff.manifest.sha256) {
+    return {status: "invalid", reason: "The authenticated pin target is missing or its sealed bytes changed.", diagnostics: verified.ok ? [diagnostic("checksum-mismatch", "selection")] : verified.diagnostics, fallback: {used: true, reason: "invalid", guidance: fallbackGuidance()}};
+  }
+  return resolveSelectedCodebaseEvidence(root, selection, {...options, requestedGenerationId: handoff.generationId}, verified.value);
 }
 
 export const resolvePortableCodebaseEvidence = resolveSelectedCodebaseEvidence;
