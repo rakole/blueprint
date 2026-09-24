@@ -1,3 +1,4 @@
+import * as z from "zod/v4";
 import { type PortableAlias, type PortableCapability, type PortableClaim, type PortableFileRecord, type PortableGenerationManifest, type PortableImportRelationship, type PortableRelationshipRecord, type PortableStructuralDetailRecord, type PortableSymbolRecord } from "./contracts.js";
 import { parsePortableSemanticShard, type PortableSemanticFragment, type PortableSemanticIndexEntry } from "./render.js";
 import { type PortablePinReceipt } from "./pin-authority.js";
@@ -100,6 +101,15 @@ export type PortableDurablePinHandoff = PortablePinHandoff & {
 export declare function isPortablePinHandoff(value: unknown): value is PortablePinHandoff;
 /** True only for a handoff restored from the owner-authenticated receipt store. */
 export declare function isPortableDurablePinHandoff(value: unknown): value is PortableDurablePinHandoff;
+/**
+ * Verify that a request-local handoff is used in the same literal repository
+ * root that issued it, then freshly prove the complete sealed generation.
+ * Visible handoff fields are lookup metadata; the WeakMap root capability and
+ * current sealed bytes are the authority.
+ */
+export declare function verifyPortablePinHandoffAuthority(root: string, handoff: PortablePinHandoff, options?: ResolveCodebaseNavigationOptions): Promise<boolean>;
+/** Freshly verify an immutable generation pin without following INDEX lineage. */
+export declare function verifyPortableGenerationPin(root: string, pin: PortableImmutablePin, options?: ResolveCodebaseNavigationOptions): Promise<boolean>;
 export type PortablePinReceiptResult = {
     readonly status: "ok";
     readonly receipt: PortablePinReceipt;
@@ -203,26 +213,76 @@ export declare const handoffPortableGenerationPin: typeof verifyPortablePinHando
  * mistaken for generated evidence after a valid generation is committed.
  */
 export declare function resolveCodebaseSealedMember(root: string, relativePath: string): Promise<boolean>;
-/** Navigation/search pages are discovery-only and must say so explicitly. */
-export type PortableSelection = {
-    readonly kind: "page";
+/**
+ * Freshly hash members of an owner-authenticated generation pin.
+ *
+ * This is deliberately separate from resolveCodebaseSealedMember: ordinary
+ * navigation may follow INDEX and retained predecessors, while a provider
+ * that has already persisted an owner receipt must be able to authenticate
+ * its old basis directly after restart.  A raw JSON-shaped pin is never an
+ * authority.  Members are generation-relative (for example `ENTRY.md` or
+ * `routes/root.md`); an extra file that is absent from the sealed manifest is
+ * refused instead of being treated as generated evidence.
+ */
+export type PortablePinnedMemberHash = {
     readonly path: string;
-    readonly mode: "discovery";
-} | {
-    readonly kind: "file" | "symbol" | "import" | "relationship" | "detail";
-    readonly recordId: string;
-} | {
-    readonly kind: "capability" | "claim" | "alias";
-    readonly recordId: string;
-} | {
-    readonly kind: "structural";
-    readonly recordKind: "file" | "symbol" | "import" | "relationship" | "detail";
-    readonly recordId: string;
-} | {
-    readonly kind: "semantic";
-    readonly recordKind: "capability" | "claim" | "alias";
-    readonly recordId: string;
+    readonly sha256: string;
+    readonly generationId: string;
 };
+export type PortablePinnedMemberHashResult = {
+    readonly status: "ok";
+    readonly generationId: string;
+    readonly members: readonly PortablePinnedMemberHash[];
+} | {
+    readonly status: "invalid";
+    readonly reason: string;
+    readonly paths: readonly string[];
+    readonly diagnostics: readonly PortableResolverDiagnostic[];
+};
+/** Hash one or more sealed generation members without reading INDEX/lineage. */
+export declare function hashPortablePinnedMembers(root: string, handoff: PortablePinHandoff, members: readonly string[], options?: ResolveCodebaseNavigationOptions): Promise<PortablePinnedMemberHashResult>;
+/** Naming alias for provider freshness callers. */
+export declare const readPortablePinnedMemberHashes: typeof hashPortablePinnedMembers;
+export declare const portableSelectionSchema: z.ZodUnion<readonly [z.ZodObject<{
+    kind: z.ZodLiteral<"page">;
+    path: z.ZodString;
+    mode: z.ZodLiteral<"discovery">;
+}, z.core.$strict>, z.ZodObject<{
+    kind: z.ZodEnum<{
+        symbol: "symbol";
+        file: "file";
+        import: "import";
+        relationship: "relationship";
+        detail: "detail";
+    }>;
+    recordId: z.ZodString;
+}, z.core.$strict>, z.ZodObject<{
+    kind: z.ZodEnum<{
+        alias: "alias";
+        capability: "capability";
+        claim: "claim";
+    }>;
+    recordId: z.ZodString;
+}, z.core.$strict>, z.ZodObject<{
+    kind: z.ZodLiteral<"structural">;
+    recordKind: z.ZodEnum<{
+        symbol: "symbol";
+        file: "file";
+        import: "import";
+        relationship: "relationship";
+        detail: "detail";
+    }>;
+    recordId: z.ZodString;
+}, z.core.$strict>, z.ZodObject<{
+    kind: z.ZodLiteral<"semantic">;
+    recordKind: z.ZodEnum<{
+        alias: "alias";
+        capability: "capability";
+        claim: "claim";
+    }>;
+    recordId: z.ZodString;
+}, z.core.$strict>]>;
+export type PortableSelection = z.infer<typeof portableSelectionSchema>;
 type PortableDirectSelectionKind = "page" | "file" | "symbol" | "import" | "relationship" | "detail" | "capability" | "claim" | "alias";
 export type PortableSourceBinding = {
     readonly path: string;

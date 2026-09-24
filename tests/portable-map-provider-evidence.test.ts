@@ -11,9 +11,13 @@ import {renderPortableMap} from "../src/mcp/codebase-index/render.js";
 import {validatePortableMapModel, type PortableAuthoritativeSourceBasis} from "../src/mcp/codebase-index/model-validation.js";
 import {
   hashPortableProviderMemberSets,
+  portableProviderEvidenceBasisSchema,
+  portableProviderEvidenceContextSchema,
+  portableProviderEvidenceNextSchema,
   preparePortableProviderEvidence,
   resolvePortableProviderEvidence
 } from "../src/mcp/codebase-index/provider-evidence.js";
+import {verifyPortablePinHandoff} from "../src/mcp/codebase-index/resolver.js";
 
 const digest = (value: string | Uint8Array): string => createHash("sha256").update(value).digest("hex");
 const source = "export function entry() {\n  return \"entry\";\n}\n";
@@ -35,8 +39,8 @@ function coordinateFor(value: string, from: string, to: string): PortableSourceC
   return result;
 }
 
-function fixture(generationId: string) {
-  const sourceBytes = new TextEncoder().encode(source);
+function fixture(generationId: string, sourceText = source) {
+  const sourceBytes = new TextEncoder().encode(sourceText);
   const fileHash = digest(sourceBytes);
   const coordinate = coordinateFor(source, "export function entry()", "export function entry() {");
   const rangeHash = digest(sourceBytes.slice(coordinate.start.byte, coordinate.end.byte));
@@ -89,12 +93,12 @@ async function install(root: string, rendered: {files: Readonly<Record<string, U
   }
 }
 
-async function rootFixture(): Promise<{root: string; rendered: ReturnType<typeof fixture>["rendered"]; fileHash: string}> {
+async function rootFixture(sourceText = source): Promise<{root: string; rendered: ReturnType<typeof fixture>["rendered"]; fileHash: string}> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-provider-evidence-"));
-  const built = fixture("generation_a");
+  const built = fixture("generation_a", sourceText);
   await install(root, built.rendered);
   await fs.mkdir(path.join(root, "src"), {recursive: true});
-  await fs.writeFile(path.join(root, "src", "entry.ts"), source);
+  await fs.writeFile(path.join(root, "src", "entry.ts"), sourceText);
   return {root, rendered: built.rendered, fileHash: built.fileHash};
 }
 
@@ -178,5 +182,113 @@ test("portable provider falls back for absent maps and rejects stale selected so
     const stale = await resolvePortableProviderEvidence({root: fixtureState.root, selection: {kind: "symbol", recordId: "symbol_entry"}, evidenceDelivery: {mode: "delta", prior: {binding: first.binding, delivered: first.next.delivered}}});
     assert.equal(stale.status, "reread_required");
     assert.doesNotMatch(JSON.stringify(stale), /stale-source-sentinel/);
+  } finally { await fs.rm(fixtureState.root, {recursive: true, force: true}); }
+});
+
+test("register requires an actual caller read and rejects an incorrect source hash", async () => {
+  const fixtureState = await rootFixture();
+  try {
+    const selection = {kind: "symbol" as const, recordId: "symbol_entry"};
+    const withoutRead = await resolvePortableProviderEvidence({root: fixtureState.root, selection, evidenceDelivery: {mode: "register"}});
+    assert.equal(withoutRead.status, "ok", JSON.stringify(withoutRead));
+    if (withoutRead.status !== "ok") return;
+    assert.ok(withoutRead.packet.entries.some(entry => entry.content !== undefined));
+    assert.equal(withoutRead.next.registered.length, 0);
+
+    const wrong = await resolvePortableProviderEvidence({
+      root: fixtureState.root,
+      selection,
+      evidenceDelivery: {mode: "register", readTimeEvidence: [{path: "src/entry.ts", hash: "0".repeat(64)}]}
+    });
+    assert.equal(wrong.status, "invalid");
+    assert.doesNotMatch(JSON.stringify(wrong), /REJECTED|entry\(\)/);
+
+    const actual = await resolvePortableProviderEvidence({
+      root: fixtureState.root,
+      selection,
+      evidenceDelivery: {mode: "register", readTimeEvidence: [{path: "src/entry.ts", hash: fixtureState.fileHash}]}
+    });
+    assert.equal(actual.status, "ok", JSON.stringify(actual));
+    if (actual.status !== "ok") return;
+    const ranges = actual.packet.entries.filter(entry => entry.path.startsWith("@codebase/source-range/"));
+    assert.ok(ranges.length > 0);
+    assert.ok(ranges.every(entry => entry.content === undefined));
+    assert.ok(ranges.every(entry => actual.next.registered.some(item => item.path === entry.path && item.hash === entry.hash)));
+  } finally { await fs.rm(fixtureState.root, {recursive: true, force: true}); }
+});
+
+test("prepared and restored ENTRY-only provider metadata stays canonical and trusted", async () => {
+  const fixtureState = await rootFixture();
+  try {
+    const prepared = await preparePortableProviderEvidence({root: fixtureState.root});
+    assert.equal(prepared.status, "ok", JSON.stringify(prepared));
+    if (prepared.status !== "ok" || !prepared.pinReceipt) return;
+    assert.equal(portableProviderEvidenceContextSchema.safeParse(prepared.context).success, true);
+    assert.equal(portableProviderEvidenceBasisSchema.safeParse(prepared.basis).success, true);
+    assert.equal(portableProviderEvidenceNextSchema.safeParse(prepared.next).success, true);
+    assert.ok(prepared.context.trustedPins.some(item => item.receipt?.authentication === prepared.pinReceipt?.authentication));
+
+    const restored = await resolvePortableProviderEvidence({root: fixtureState.root, pinReceipt: prepared.pinReceipt});
+    assert.equal(restored.status, "ok", JSON.stringify(restored));
+    if (restored.status !== "ok") return;
+    assert.equal(portableProviderEvidenceContextSchema.safeParse(restored.context).success, true);
+    assert.equal(portableProviderEvidenceBasisSchema.safeParse(restored.basis).success, true);
+    assert.equal(portableProviderEvidenceNextSchema.safeParse(restored.next).success, true);
+    assert.equal("predecessorDepth" in (restored.context.pin as object), false);
+    assert.equal("predecessorDepth" in (restored.basis.pin as object), false);
+  } finally { await fs.rm(fixtureState.root, {recursive: true, force: true}); }
+});
+
+test("request-local handoffs cannot cross repository roots", async t => {
+  const fixtureState = await rootFixture();
+  const foreign = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-provider-foreign-"));
+  t.after(async () => fs.rm(foreign, {recursive: true, force: true}));
+  try {
+    const resolved = await resolvePortableProviderEvidence({root: fixtureState.root});
+    assert.equal(resolved.status, "ok", JSON.stringify(resolved));
+    if (resolved.status !== "ok") return;
+    const handoff = await verifyPortablePinHandoff(fixtureState.root, resolved.context.pin);
+    assert.equal(handoff.status, "ok", JSON.stringify(handoff));
+    if (handoff.status !== "ok" || !handoff.handoff) return;
+    await fs.cp(fixtureState.root, foreign, {recursive: true});
+    const rejected = await resolvePortableProviderEvidence({root: foreign, pinHandoff: handoff.handoff});
+    assert.equal(rejected.status, "invalid");
+  } finally { await fs.rm(fixtureState.root, {recursive: true, force: true}); }
+});
+
+test("broken sealed generation rejects a previously issued handoff", async () => {
+  const fixtureState = await rootFixture();
+  try {
+    const resolved = await resolvePortableProviderEvidence({root: fixtureState.root});
+    assert.equal(resolved.status, "ok", JSON.stringify(resolved));
+    if (resolved.status !== "ok") return;
+    const handoff = await verifyPortablePinHandoff(fixtureState.root, resolved.context.pin);
+    assert.equal(handoff.status, "ok", JSON.stringify(handoff));
+    if (handoff.status !== "ok" || !handoff.handoff) return;
+    const manifest = path.join(fixtureState.root, ".blueprint", "codebase", handoff.handoff.manifest.path);
+    await fs.appendFile(manifest, "\n");
+    const rejected = await resolvePortableProviderEvidence({root: fixtureState.root, pinHandoff: handoff.handoff});
+    assert.equal(rejected.status, "invalid");
+  } finally { await fs.rm(fixtureState.root, {recursive: true, force: true}); }
+});
+
+test("register can omit a large known source while full remains packet-bounded", async () => {
+  const largeSource = `${"x".repeat(76_000)}\n${source}`;
+  const fixtureState = await rootFixture(largeSource);
+  try {
+    const selection = {kind: "alias" as const, recordId: "alias_entry"};
+    const full = await resolvePortableProviderEvidence({root: fixtureState.root, selection, evidenceDelivery: {mode: "full"}});
+    assert.equal(full.status, "evidence_limit");
+    const registered = await resolvePortableProviderEvidence({
+      root: fixtureState.root,
+      selection,
+      evidenceDelivery: {mode: "register", readTimeEvidence: [{path: "src/entry.ts", hash: fixtureState.fileHash}]}
+    });
+    assert.equal(registered.status, "ok", JSON.stringify(registered));
+    if (registered.status !== "ok") return;
+    const sourceEntry = registered.packet.entries.find(entry => entry.path === "src/entry.ts");
+    assert.ok(sourceEntry);
+    assert.equal(sourceEntry.content, undefined);
+    assert.ok(registered.next.registered.some(entry => entry.path === "src/entry.ts" && entry.hash === fixtureState.fileHash));
   } finally { await fs.rm(fixtureState.root, {recursive: true, force: true}); }
 });

@@ -49,6 +49,8 @@ export interface PriorEvidenceDelivery {
   binding: PriorEvidenceBinding;
   /** Hashes actually delivered in the prior session, usually a subset. */
   delivered: readonly EvidenceIdentity[];
+  /** Hashes registered from a fresh read without delivering a body. */
+  registered?: readonly EvidenceIdentity[];
 }
 
 export interface EvidenceDeliveryLimits {
@@ -399,13 +401,17 @@ export function selectEvidenceDelivery(input: EvidenceDeliveryInput): EvidenceDe
   let priorBinding: EvidenceIdentity[] | null = null;
   let priorBindingHash: string | null = null;
   const priorDelivered = new Map<string, EvidenceIdentity>();
+  const priorRegistered = new Map<string, EvidenceIdentity>();
   if (prior) {
-    if (!prior.binding || !Array.isArray(prior.binding.identities) || !Array.isArray(prior.delivered) || prior.binding.pinnedGeneration !== input.pinnedGeneration || !SHA256.test(prior.binding.hash))
+    if (!prior.binding || !Array.isArray(prior.binding.identities) || !Array.isArray(prior.delivered) ||
+        prior.registered !== undefined && !Array.isArray(prior.registered) ||
+        prior.binding.pinnedGeneration !== input.pinnedGeneration || !SHA256.test(prior.binding.hash))
       return metadataFailure("invalid", "Prior evidence binding is invalid.", [], { code: "invalid_prior_binding" });
     const checkedBinding = checkIdentityList(prior.binding.identities, input.pinnedGeneration);
     const checkedDelivered = checkIdentityList(prior.delivered);
-    if (!checkedBinding.ok || !checkedDelivered.ok || prior.binding.hash !== evidenceBindingHash(checkedBinding.identities))
-      return metadataFailure("invalid", "Prior evidence binding failed identity verification.", [...(checkedBinding.ok ? [] : checkedBinding.paths), ...(checkedDelivered.ok ? [] : checkedDelivered.paths)], { code: "invalid_prior_binding" });
+    const checkedRegistered = checkIdentityList(prior.registered ?? []);
+    if (!checkedBinding.ok || !checkedDelivered.ok || !checkedRegistered.ok || prior.binding.hash !== evidenceBindingHash(checkedBinding.identities))
+      return metadataFailure("invalid", "Prior evidence binding failed identity verification.", [...(checkedBinding.ok ? [] : checkedBinding.paths), ...(checkedDelivered.ok ? [] : checkedDelivered.paths), ...(checkedRegistered.ok ? [] : checkedRegistered.paths)], { code: "invalid_prior_binding" });
     priorBinding = checkedBinding.identities;
     priorBindingHash = prior.binding.hash;
     for (const identity of checkedDelivered.identities) {
@@ -413,6 +419,12 @@ export function selectEvidenceDelivery(input: EvidenceDeliveryInput): EvidenceDe
       if (!basis || identityKey(basis) !== identityKey(identity))
         return metadataFailure("invalid", "Prior delivery is not covered by its binding.", [identity.path], { code: "invalid_prior_binding" });
       priorDelivered.set(identity.path, identity);
+    }
+    for (const identity of checkedRegistered.identities) {
+      const basis = checkedBinding.identities.find(candidate => candidate.path === identity.path);
+      if (!basis || identityKey(basis) !== identityKey(identity))
+        return metadataFailure("invalid", "Prior registration is not covered by its binding.", [identity.path], { code: "invalid_prior_binding" });
+      priorRegistered.set(identity.path, identity);
     }
   }
 
@@ -443,6 +455,11 @@ export function selectEvidenceDelivery(input: EvidenceDeliveryInput): EvidenceDe
   const identities = resolved.map(item => ({ path: item.path, hash: item.hash, generation: item.generation }));
   const bindingHash = evidenceBindingHash(identities);
   const priorBindingStructurallyValid = priorBinding !== null && priorBindingHash === evidenceBindingHash(priorBinding);
+  for (const identity of priorRegistered.values()) {
+    const current = identities.find(candidate => candidate.path === identity.path);
+    if (!current || identityKey(current) !== identityKey(identity))
+      return metadataFailure("reread_required", "A previously registered evidence identity changed.", [identity.path], { code: "invalid_prior_binding" });
+  }
 
   const delivered = new Map<string, EvidenceIdentity>();
   for (const item of resolved) delivered.set(item.path, { path: item.path, hash: item.hash, generation: item.generation });
@@ -450,7 +467,11 @@ export function selectEvidenceDelivery(input: EvidenceDeliveryInput): EvidenceDe
   const omittedPaths: string[] = [];
   for (const item of resolved) {
     const priorIdentity = priorDelivered.get(item.path);
-    const priorDeliveryValid = priorBindingStructurallyValid && priorIdentity !== undefined && identityKey(priorIdentity) === identityKey(delivered.get(item.path)!);
+    const priorRegisteredIdentity = priorRegistered.get(item.path);
+    const currentIdentity = delivered.get(item.path)!;
+    const priorDeliveryValid = priorBindingStructurallyValid &&
+      ((priorIdentity !== undefined && identityKey(priorIdentity) === identityKey(currentIdentity)) ||
+       (priorRegisteredIdentity !== undefined && identityKey(priorRegisteredIdentity) === identityKey(currentIdentity)));
     let includeBody = false;
     if (input.mode === "full") {
       includeBody = true;

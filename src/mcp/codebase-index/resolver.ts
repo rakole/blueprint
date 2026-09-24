@@ -35,6 +35,8 @@ import {
   capturePortablePinAuthorityRoot,
   persistPortablePinReceipt,
   restorePortablePinReceipt as restoreStoredPortablePinReceipt,
+  samePortablePinAuthorityRootIdentity,
+  type PortablePinAuthorityRootIdentity,
   type PortablePinReceipt
 } from "./pin-authority.js";
 export type {PortablePinReceipt} from "./pin-authority.js";
@@ -784,6 +786,7 @@ export type PortableDurablePinHandoff = PortablePinHandoff & {
 };
 const issuedPinHandoffs = new WeakSet<object>();
 const issuedDurablePinHandoffs = new WeakSet<object>();
+const issuedPinHandoffRoots = new WeakMap<object, PortablePinAuthorityRootIdentity>();
 
 export function isPortablePinHandoff(value: unknown): value is PortablePinHandoff {
   return Boolean(value && typeof value === "object" && issuedPinHandoffs.has(value));
@@ -794,7 +797,12 @@ export function isPortableDurablePinHandoff(value: unknown): value is PortableDu
   return Boolean(value && typeof value === "object" && issuedDurablePinHandoffs.has(value));
 }
 
-function issuePinHandoff(pin: PortableImmutablePin, predecessorDepth: number, durable = false): PortablePinHandoff {
+function issuePinHandoff(
+  pin: PortableImmutablePin,
+  predecessorDepth: number,
+  durable = false,
+  rootIdentity?: PortablePinAuthorityRootIdentity
+): PortablePinHandoff {
   const immutable = Object.freeze({
     generationId: pin.generationId,
     entry: Object.freeze({path: pin.entry.path, sha256: pin.entry.sha256}),
@@ -803,7 +811,41 @@ function issuePinHandoff(pin: PortableImmutablePin, predecessorDepth: number, du
   const handoff = Object.freeze({...immutable, predecessorDepth});
   issuedPinHandoffs.add(handoff);
   if (durable) issuedDurablePinHandoffs.add(handoff);
+  if (rootIdentity) issuedPinHandoffRoots.set(handoff, rootIdentity);
   return handoff;
+}
+
+/**
+ * Verify that a request-local handoff is used in the same literal repository
+ * root that issued it, then freshly prove the complete sealed generation.
+ * Visible handoff fields are lookup metadata; the WeakMap root capability and
+ * current sealed bytes are the authority.
+ */
+export async function verifyPortablePinHandoffAuthority(
+  root: string,
+  handoff: PortablePinHandoff,
+  options: ResolveCodebaseNavigationOptions = {}
+): Promise<boolean> {
+  if (!isPortablePinHandoff(handoff)) return false;
+  const issuedRoot = issuedPinHandoffRoots.get(handoff);
+  const currentRoot = await capturePortablePinAuthorityRoot(root);
+  if (!issuedRoot || !currentRoot || !samePortablePinAuthorityRootIdentity(issuedRoot, currentRoot)) return false;
+  const verified = await verifyGeneration(root, handoff.generationId, options.limits, false);
+  return verified.ok && verified.value.entry.hash === handoff.entry.sha256 && verified.value.manifestHash === handoff.manifest.sha256;
+}
+
+/** Freshly verify an immutable generation pin without following INDEX lineage. */
+export async function verifyPortableGenerationPin(
+  root: string,
+  pin: PortableImmutablePin,
+  options: ResolveCodebaseNavigationOptions = {}
+): Promise<boolean> {
+  if (!pin || typeof pin.generationId !== "string" ||
+      pin.entry?.path !== `generations/${pin.generationId}/ENTRY.md` ||
+      pin.manifest?.path !== `generations/${pin.generationId}/manifest.json` ||
+      !SHA256.test(pin.entry?.sha256 ?? "") || !SHA256.test(pin.manifest?.sha256 ?? "")) return false;
+  const verified = await verifyGeneration(root, pin.generationId, options.limits, false);
+  return verified.ok && verified.value.entry.hash === pin.entry.sha256 && verified.value.manifestHash === pin.manifest.sha256;
 }
 
 export type PortablePinReceiptResult =
@@ -826,7 +868,7 @@ export async function issuePortablePinReceipt(
   if (verified.status !== "ok" || !verified.handoff) return {status: "invalid", reason: "The requested pin is not a freshly proved published generation."};
   const receipt = await persistPortablePinReceipt(root, verified.handoff, provedRoot);
   if (!receipt) return {status: "invalid", reason: "The owning pin receipt store is unavailable."};
-  return {status: "ok", receipt, handoff: issuePinHandoff(receipt.pin, 0, true) as PortableDurablePinHandoff};
+  return {status: "ok", receipt, handoff: issuePinHandoff(receipt.pin, 0, true, provedRoot) as PortableDurablePinHandoff};
 }
 
 export type PortableRestoredPin = {
@@ -850,11 +892,15 @@ export async function restorePortablePinReceipt(
 ): Promise<PortableRestoredPin> {
   const receipt = await restoreStoredPortablePinReceipt(root, value);
   if (!receipt) return {status: "invalid", reason: "The pin receipt is not authenticated by this repository owner."};
+  const currentRoot = await capturePortablePinAuthorityRoot(root);
+  if (!currentRoot || !samePortablePinAuthorityRootIdentity(currentRoot, receipt.root)) {
+    return {status: "invalid", reason: "The authenticated pin receipt belongs to a different repository root."};
+  }
   const verified = await verifyGeneration(root, receipt.pin.generationId, options.limits, false);
   if (!verified.ok || verified.value.entry.hash !== receipt.pin.entry.sha256 || verified.value.manifestHash !== receipt.pin.manifest.sha256) {
     return {status: "invalid", reason: "The authenticated pin target is missing or its sealed bytes changed."};
   }
-  return {status: "ok", receipt, handoff: issuePinHandoff(receipt.pin, 0, true) as PortableDurablePinHandoff};
+  return {status: "ok", receipt, handoff: issuePinHandoff(receipt.pin, 0, true, currentRoot) as PortableDurablePinHandoff};
 }
 
 export type PortableFallback = {
@@ -1007,6 +1053,26 @@ export async function verifyPortablePinHandoff(
       diagnostics: [diagnostic("unsupported", "selection")]
     };
   }
+  // Capture the issuing root before any publication proof. A replacement
+  // root must invalidate the proof rather than becoming the root bound to a
+  // newly issued request-local capability.
+  const issuingRoot = await capturePortablePinAuthorityRoot(root);
+  if (!issuingRoot) {
+    return {
+      status: "fallback",
+      portable: {status: "unsupported", generationId: pin.generationId},
+      entry: null,
+      immutable: null,
+      pin: null,
+      coverage: null,
+      compatibility: {status: "unknown", guard: "unknown"},
+      fallback: {used: true, reason: "unsupported", guidance: fallbackGuidance()},
+      fallbackUsed: true,
+      fallbackReason: "unsupported",
+      fallbackGuidance: fallbackGuidance(),
+      diagnostics: [diagnostic("unsafe-path", "selection")]
+    };
+  }
   const normalized = limitsOf(options.limits);
   if (!normalized) {
     return {
@@ -1051,7 +1117,24 @@ export async function verifyPortablePinHandoff(
       diagnostics: [diagnostic("stale", "selection")]
     };
   }
-  return {...resolved, handoff: issuePinHandoff(resolved.pin, predecessorDepth)};
+  const provedRoot = await capturePortablePinAuthorityRoot(root);
+  if (!provedRoot || !samePortablePinAuthorityRootIdentity(issuingRoot, provedRoot)) {
+    return {
+      status: "fallback",
+      portable: {status: "unsupported", generationId: pin.generationId},
+      entry: null,
+      immutable: null,
+      pin: null,
+      coverage: null,
+      compatibility: {status: "unknown", guard: "unknown"},
+      fallback: {used: true, reason: "unsupported", guidance: fallbackGuidance()},
+      fallbackUsed: true,
+      fallbackReason: "unsupported",
+      fallbackGuidance: fallbackGuidance(),
+      diagnostics: [diagnostic("unsafe-path", "selection")]
+    };
+  }
+  return {...resolved, handoff: issuePinHandoff(resolved.pin, predecessorDepth, false, issuingRoot)};
 }
 
 /** Naming alias for lifecycle owners that describe this operation as a handoff. */
@@ -1129,6 +1212,9 @@ export async function hashPortablePinnedMembers(
   if (!Array.isArray(members) || members.some(member => !safeGenerationMember(member))) {
     return {status: "invalid", reason: "Pinned generation members are not canonical.", paths: [], diagnostics: [diagnostic("unsafe-path", "selection")]};
   }
+  if (!(await verifyPortablePinHandoffAuthority(root, handoff, options))) {
+    return {status: "invalid", reason: "The authenticated pin does not belong to this repository root or its sealed bytes changed.", paths: [], diagnostics: [diagnostic("stale", "selection")]};
+  }
   const verified = await verifyGeneration(root, handoff.generationId, options.limits, false);
   if (!verified.ok || verified.value.entry.hash !== handoff.entry.sha256 || verified.value.manifestHash !== handoff.manifest.sha256) {
     return {
@@ -1175,12 +1261,19 @@ export async function hashPortablePinnedMembers(
 export const readPortablePinnedMemberHashes = hashPortablePinnedMembers;
 
 /** Navigation/search pages are discovery-only and must say so explicitly. */
-export type PortableSelection =
-  | {readonly kind: "page"; readonly path: string; readonly mode: "discovery"}
-  | {readonly kind: "file" | "symbol" | "import" | "relationship" | "detail"; readonly recordId: string}
-  | {readonly kind: "capability" | "claim" | "alias"; readonly recordId: string}
-  | {readonly kind: "structural"; readonly recordKind: "file" | "symbol" | "import" | "relationship" | "detail"; readonly recordId: string}
-  | {readonly kind: "semantic"; readonly recordKind: "capability" | "claim" | "alias"; readonly recordId: string};
+const portableRecordIdSchema = z.string().min(1).max(512);
+const portableStructuralRecordKindSchema = z.enum(["file", "symbol", "import", "relationship", "detail"]);
+const portableSemanticRecordKindSchema = z.enum(["capability", "claim", "alias"]);
+
+export const portableSelectionSchema = z.union([
+  z.strictObject({kind: z.literal("page"), path: repositoryRelativePathSchema, mode: z.literal("discovery")}),
+  z.strictObject({kind: z.enum(["file", "symbol", "import", "relationship", "detail"]), recordId: portableRecordIdSchema}),
+  z.strictObject({kind: z.enum(["capability", "claim", "alias"]), recordId: portableRecordIdSchema}),
+  z.strictObject({kind: z.literal("structural"), recordKind: portableStructuralRecordKindSchema, recordId: portableRecordIdSchema}),
+  z.strictObject({kind: z.literal("semantic"), recordKind: portableSemanticRecordKindSchema, recordId: portableRecordIdSchema})
+]);
+
+export type PortableSelection = z.infer<typeof portableSelectionSchema>;
 
 type PortableDirectSelectionKind = "page" | "file" | "symbol" | "import" | "relationship" | "detail" | "capability" | "claim" | "alias";
 

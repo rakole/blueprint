@@ -42,6 +42,8 @@ export interface PriorEvidenceDelivery {
     binding: PriorEvidenceBinding;
     /** Hashes actually delivered in the prior session, usually a subset. */
     delivered: readonly EvidenceIdentity[];
+    /** Hashes registered from a fresh read without delivering a body. */
+    registered?: readonly EvidenceIdentity[];
 }
 export interface EvidenceDeliveryLimits {
     /** Counted over the complete selected transitive closure, before mode shaping. */

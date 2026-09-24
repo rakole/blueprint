@@ -507,6 +507,14 @@ export declare function portableProvenanceHash(provenance: ExtractionParserProve
 export declare function createPortableIncrementalCache(extraction: PortableExtractionSuccess, semantic?: PortableAcceptedSemanticModel): PortableIncrementalCache;
 export declare function parsePortableIncrementalCache(input: unknown): PortableIncrementalCache | null;
 /**
+ * Restore a cache read from the runtime-owned authenticated store.  Raw
+ * caller snapshots must continue through parsePortableIncrementalCache and
+ * therefore cannot acquire this capability by recomputing cacheHash.
+ */
+export declare function restorePortableIncrementalCache(input: unknown): PortableIncrementalCache | null;
+/** Return the metadata-only JSON projection used by the operational store. */
+export declare function serializePortableIncrementalCache(cache: PortableIncrementalCache): unknown;
+/**
  * Remove semantic records whose declared evidence changed, then close over
  * capability -> claims and alias -> capability/symbol dependencies.  The
  * returned model contains only records still eligible to be called fresh.

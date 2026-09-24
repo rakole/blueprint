@@ -13,6 +13,7 @@ import {
   PORTABLE_PIN_HANDOFF_PREDECESSOR_DEPTH,
   isPortablePinHandoff,
   isPortableDurablePinHandoff,
+  verifyPortablePinHandoffAuthority,
   restorePortablePinReceipt,
   resolveSelectedCodebaseEvidenceWithPortablePin,
   type PortableDurablePinHandoff,
@@ -244,12 +245,12 @@ function pagePath(relativePath: string): string {
   return `${CODEBASE_ROOT}/${relativePath}`;
 }
 
-function normalizeLimits(limits: EvidenceDeliveryLimits | undefined): EvidenceDeliveryLimits | null {
+function normalizeLimits(limits: EvidenceDeliveryLimits | undefined, verificationOnly = false): EvidenceDeliveryLimits | null {
   if (limits !== undefined && (!limits || typeof limits !== "object" || Array.isArray(limits))) return null;
   const hasPacketLimit = limits !== undefined && Object.hasOwn(limits, "maxPacketBytes");
   const normalized: EvidenceDeliveryLimits = {
     ...(limits ?? {}),
-    maxPacketBytes: hasPacketLimit ? limits?.maxPacketBytes : PORTABLE_MAP_MAX_MODEL_PACKET_BYTES
+    maxPacketBytes: hasPacketLimit ? limits?.maxPacketBytes : verificationOnly ? undefined : PORTABLE_MAP_MAX_MODEL_PACKET_BYTES
   };
   for (const key of ["maxSourceCount", "maxReadSetCount", "maxPacketBytes"] as const) {
     const explicit = limits !== undefined && Object.hasOwn(limits, key);
@@ -291,7 +292,7 @@ function limitsFailure(
  * This function has no session or persistence side effects.  In particular,
  * it never accepts a caller-provided resolver snapshot or pin as authority.
  */
-export async function resolveConsumerEvidence(input: ConsumerEvidenceInput): Promise<ConsumerEvidenceResult> {
+async function resolveConsumerEvidenceInternal(input: ConsumerEvidenceInput, verificationOnly: boolean): Promise<ConsumerEvidenceResult> {
   if (!input || typeof input.root !== "string" || !input.selection || !["full", "delta", "register"].includes(input.mode)) {
     return failure("invalid", "invalid_input", "Consumer evidence input is invalid.");
   }
@@ -301,6 +302,9 @@ export async function resolveConsumerEvidence(input: ConsumerEvidenceInput): Pro
 
   if (input.pinHandoff !== undefined && !isPortablePinHandoff(input.pinHandoff)) {
     return failure("invalid", "invalid_input", "The portable pin handoff is not an owner-issued capability.");
+  }
+  if (input.pinHandoff && !(await verifyPortablePinHandoffAuthority(input.root, input.pinHandoff, input.resolverOptions))) {
+    return failure("invalid", "invalid_input", "The portable pin handoff belongs to a different root or its sealed generation changed.");
   }
 
   let restoredHandoff: PortableDurablePinHandoff | undefined;
@@ -459,7 +463,7 @@ export async function resolveConsumerEvidence(input: ConsumerEvidenceInput): Pro
     }
   }
 
-  const deliveryLimits = normalizeLimits(input.limits);
+  const deliveryLimits = normalizeLimits(input.limits, verificationOnly);
   if (!deliveryLimits) return failure("invalid", "invalid_input", "Evidence delivery limits must be positive safe integers.");
   let delivered: ReturnType<typeof selectEvidenceDelivery>;
   try {
@@ -505,6 +509,20 @@ export async function resolveConsumerEvidence(input: ConsumerEvidenceInput): Pro
     selected: selected.selected,
     diagnostics: selected.diagnostics
   };
+}
+
+/** Resolve one consumer selection with the caller-visible packet cap applied. */
+export function resolveConsumerEvidence(input: ConsumerEvidenceInput): Promise<ConsumerEvidenceResult> {
+  return resolveConsumerEvidenceInternal(input, false);
+}
+
+/**
+ * Provider-only closure verification.  This keeps the complete, freshly
+ * verified closure available for final register/delta shaping without making
+ * the packet-cap bypass a caller-controlled input field.
+ */
+export function resolveConsumerEvidenceForProvider(input: ConsumerEvidenceInput): Promise<ConsumerEvidenceResult> {
+  return resolveConsumerEvidenceInternal(input, true);
 }
 
 export const prepareConsumerEvidence = resolveConsumerEvidence;

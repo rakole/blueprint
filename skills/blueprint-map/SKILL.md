@@ -1,9 +1,9 @@
 ---
 name: blueprint-map
 description: >
-  Map a brownfield repository into the seven-document Blueprint codebase bundle.
-  Use for evidence-backed repository analysis, focused deepening, and an
-  explicitly requested refresh. Reuse a valid existing map by default.
+  Map a brownfield repository into generated Blueprint codebase views, with
+  explicit portable v1 opt-in, evidence-backed focused deepening, and ordinary
+  valid reuse by default.
 status: implemented
 commands:
   - /blu-map-codebase
@@ -22,7 +22,9 @@ input_bundles:
 This skill and its local `references/map-runtime-contract.md` are the active
 orchestration contract. MCP prepares context, compiles authored content, validates
 the complete bundle, and owns canonical writes. The parent owns submission and
-routing. Optional `blueprint-mapper` agents only analyze assigned evidence.
+routing. Optional `blueprint-mapper` agents only analyze assigned evidence. The
+portable v1 contract is an explicit opt-in on this command; it does not change
+ordinary valid-map reuse into an automatic upgrade.
 
 ## Runtime Call Rules
 
@@ -35,61 +37,89 @@ Never run `/blu-*` in the shell.
 
 ## Workflow
 
-1. Resolve the repository, optional focus area, and whether refresh/replacement
-   was explicitly requested. Use targeted file inventory to select representative
-   repo-relative evidence files; the reference explains selection and usefulness.
-2. Call prepare with `inputs` and optional `focus`. It owns project readiness,
-   effective config, existing bundle status, authoring schema/example, required
-   document keys, and the opaque evidence/target `snapshot`. Stop on its blockers.
-3. A supplied focus authorizes targeted refresh of affected documents. Read those
-   existing canonical documents after prepare; its target hashes cover these reads.
-   Preserve useful context and reuse unaffected documents. Without a focus or
-   refresh request, reuse a complete valid bundle by default: report prepare's reuse result and
-   next action without generation or submit. Do not ask a routine reuse question.
-   If the user explicitly requested refresh/replacement, that request authorizes
-   `overwrite: true`; no second confirmation is needed. Otherwise obtain approval
-   through `ask_user` before replacing populated documents.
-4. Read the selected evidence files after prepare. Author every key in
-   `requiredDocuments`, plus any existing documents whose refresh is authorized.
-   Omit valid unchanged documents so submit can reuse them. Follow the returned
-   schema and example; do not reconstruct Markdown templates or calculate hashes.
-5. Use a single parent authoring pass by default. Optional mapper lanes require
-   a suitable code-analysis capability, effective `workflow.subagents=true`, and
+1. Resolve the repository, optional focus area, refresh/replacement authority, and
+   whether the user explicitly requested portable mode. Portable mode sends
+   `formatVersion: 1`; absence of that selector keeps the ordinary compatibility
+   path. Use targeted inventory to select representative repo-relative evidence.
+2. Ordinary mapping calls prepare with `inputs` and optional `focus`. Read selected
+   files only after prepare, echo its opaque legacy `snapshot` unchanged at submit,
+   and reuse a valid complete map by default. Focus and explicit refresh authorize
+   replacement according to the legacy `overwrite` gate; do not ask a routine reuse
+   question.
+3. Portable mapping calls `blueprint_map_prepare` with `formatVersion: 1` and one
+   intent: `new`, `upgrade`, `refresh`, or `repair`. Prepare returns an opaque
+   `operationId`, deterministic bounded packets, and an opaque cursor. Continue with
+   `{formatVersion: 1, operationId, cursor}` until no cursor remains. For `repair`,
+   pass the exact returned basis `{authorized: true, previousIndexHash,
+   targetHashes, observedMarkerHash}`; never calculate or invent it.
+4. Read packet-selected live source after portable prepare and author one complete
+   model: `formatVersion: 1`, the prepared `generationId`, all seven `documents`,
+   and `semantic` `capabilities`, `claims`, and `aliases`, with exact evidence and
+   explicit unknowns. The raw authored JSON has a 48 KiB cap. Reduce scope or
+   report an unsupported limit when it cannot fit; do not omit records or invent
+   multipart tools.
+5. Use a single parent authoring pass by default. Optional mapper lanes require a
+   suitable code-analysis capability, effective `workflow.subagents=true`, and
    independent work that benefits from delegation. Give each lane exact selected
-   paths, requested document keys, schema, focus, and stop conditions. The parent
-   combines the results into one submission; agents never persist the bundle.
-6. Call submit with the unchanged `snapshot`, authored `documents`, and authorized
-   `overwrite` when needed. It validates all new and reused documents before any
-   write. There is no separate scaffold, digest, per-document write, or final
-   validation call in the normal path.
-7. Treat returned publication status, artifact outcomes, issues, warnings, and
-   `nextAction` as authoritative. Fix blocking authoring issues in conversation;
-   follow the local reference for stale evidence and partial publication. Do not
-   regenerate accepted output or retry solely because advisory warnings exist.
+   paths, requested keys, packet/schema, focus, and stop conditions. The parent
+   combines results and calls the one submit/finalizer; agents never persist the bundle.
+6. Submit through `mcp_blueprint_blueprint_map_submit` only. Ordinary submission
+   echoes the unchanged `snapshot`; portable submission uses the same `formatVersion`,
+   `operationId`, `intent`, and complete model. Portable prepare-time source/target
+   CAS, provenance, and generation basis are authoritative. Stale or conflicting
+   evidence means reprepare; retry an accepted publication with the exact original
+   operation/model so the owning tool can finish committed cleanup.
+7. Treat returned publication status, compatibility completeness, retained historical
+   generations, instruction-link receipt, issues, warnings, and `nextAction` as
+   authoritative. Unknown marker/version, malformed generation, invalid cursor, or
+   stale repair basis is a hard stop. Portable validity is separate from root seven
+   compatibility-view completeness; no root seven view may be independently mutated
+   while portable `INDEX.md` is active. Do not regenerate accepted output or retry
+   solely because advisory warnings exist.
 
 ## Scope And Progress
 
-The target remains the same seven `.blueprint/codebase/*.md` files. Focus deepens
-relevant content in that bundle. Brownfield mapping may be the first Blueprint
+Ordinary mapping targets the seven `.blueprint/codebase/*.md` compatibility views.
+Portable mode additionally publishes `INDEX.md` and a complete immutable generation
+containing routes, records, search pages, semantic data, and immutable compatibility
+copies. Its portable transfer unit is `INDEX.md` plus that referenced generation;
+root seven views are optional. Sessions, receipts, operation state, HMAC keys, and
+rejected diagnostics are excluded. Brownfield mapping may be the first Blueprint
 write; it does not bootstrap project core state or create repo-root `CONTEXT.md`.
+
+Portable consumption is generic read/search. Read the index only when repository
+understanding is needed, follow the smallest capability route or literal search,
+then verify selected claims against current live source. The map is generated from
+its baseline and cannot detect new files by itself. Consumption never regenerates
+the map, and administrative commands do not acquire a mandatory map-read step.
 
 Execution profile: `long-running-mutation`. Use `Resolve`, `Read`, `Decide`,
 `Execute`, `Persist`, `Validate`, and `Route` for meaningful progress, combining
 stages covered by one call. State resolved scope, active stage, pending gate,
 execution mode, and next safe action when the run pauses or spans multiple steps.
 
+## Optional Instruction Integration
+
+Instruction integration is separate and only runs when explicitly requested. Pass
+`linkInstructions: true` and, when the user chooses one, an existing clean
+repository-relative `instructionPath` to submit. Use the owning tool's returned
+snippet, choices, or link receipt. It never creates instruction files, preserves
+bytes outside its managed block and existing newline style, and uses expected-hash
+CAS plus regular-file, containment, and symlink checks. A link failure is reported
+separately from successful map publication.
+
 ## Completion Self-Check
 
 - The command and this skill's active local reference were loaded.
-- Evidence was selected before prepare, read after snapshot capture, and kept
-  within that snapshot through submission. Newly discovered evidence triggered
+- Evidence was selected before prepare, read after its snapshot or operation basis,
+  and kept within that basis through submission. Newly discovered evidence triggered
   prepare again before authoring from it.
 - Required document keys were supplied; unchanged valid documents were reused.
   Any overwrite was already authorized, and no manual-edit heuristic or needless
   reuse prompt was introduced.
 - All persistence stayed inside the parent-owned submit tool. Rejected content
   was not saved, logged, archived, or described as published. Partial publication
-  was reported honestly until retry completed.
+  was reported honestly until the exact retry or explicit fresh reprepare completed.
 - Completion used prepare's valid reuse result or submit's successful publication
   receipt, with exact paths and relevant warnings. No extra validation ritual.
 - Follow-ups are implemented-only: successful `mapped-only` → `/blu-new-project`,

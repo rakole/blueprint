@@ -63,6 +63,14 @@ function sameIdentity(left: PortablePinAuthorityRootIdentity, right: PortablePin
     });
 }
 
+/** Compare the complete repository identity captured for an owner receipt. */
+export function samePortablePinAuthorityRootIdentity(
+  left: PortablePinAuthorityRootIdentity,
+  right: PortablePinAuthorityRootIdentity
+): boolean {
+  return sameIdentity(left, right);
+}
+
 async function captureRootIdentity(root: string): Promise<PortablePinAuthorityRootIdentity | null> {
   if (typeof root !== "string" || root.length === 0 || root.includes("\0")) return null;
   const absolute = path.resolve(root);

@@ -4,6 +4,7 @@ import * as z from "zod/v4";
 import {
   PORTABLE_MAP_MAX_MODEL_PACKET_BYTES,
   portableSha256Schema,
+  portableSourceCoordinateSchema,
   repositoryRelativePathSchema
 } from "./contracts.js";
 import {
@@ -12,6 +13,9 @@ import {
   issuePortablePinReceipt,
   restorePortablePinReceipt,
   resolveCodebaseNavigation,
+  verifyPortableGenerationPin,
+  verifyPortablePinHandoffAuthority,
+  portableSelectionSchema,
   type PortableDurablePinHandoff,
   type PortableImmutablePin,
   type PortablePinHandoff,
@@ -21,7 +25,7 @@ import {
   type ResolveCodebaseNavigationOptions
 } from "./resolver.js";
 import {
-  resolveConsumerEvidence,
+  resolveConsumerEvidenceForProvider,
   type ConsumerEvidenceBaseline,
   type ConsumerEvidenceFailure,
   type ConsumerReadSetEntry
@@ -44,6 +48,31 @@ import {readHardenedLiteralFile} from "./literal-read.js";
 const SHA256 = /^[a-f0-9]{64}$/;
 const MAX_DIAGNOSTIC_PATHS = 32;
 const PROVIDER_SCHEMA_VERSION = 1 as const;
+
+export const portableProviderRootIdentitySchema = z.strictObject({
+  path: z.string().min(1),
+  realPath: z.string().min(1),
+  device: z.number().int().nonnegative(),
+  inode: z.number().int().nonnegative(),
+  ancestors: z.array(z.strictObject({
+    path: z.string().min(1),
+    device: z.number().int().nonnegative(),
+    inode: z.number().int().nonnegative()
+  }))
+});
+
+/** Canonical metadata-only receipt projection accepted in provider sessions. */
+export const portableProviderReceiptSchema = z.strictObject({
+  version: z.literal(1),
+  root: portableProviderRootIdentitySchema,
+  pin: z.strictObject({
+    generationId: z.string().min(1).max(128),
+    entry: z.strictObject({path: z.string().min(1), sha256: portableSha256Schema}),
+    manifest: z.strictObject({path: z.string().min(1), sha256: portableSha256Schema})
+  }),
+  issuedAt: z.string().min(1).max(128),
+  authentication: portableSha256Schema
+});
 
 /** The nested delivery control avoids colliding with a lifecycle's own mode. */
 export const portableProviderEvidenceModeSchema = z.enum(["full", "delta", "register"]);
@@ -110,7 +139,7 @@ export type PortableProviderPinContext = {
   readonly receipt?: PortablePinReceipt;
 };
 
-const portableProviderPinSchema = z.strictObject({
+export const portableProviderPinSchema = z.strictObject({
   generationId: z.string().min(1).max(128),
   entry: z.strictObject({path: z.string().min(1), sha256: portableSha256Schema}),
   manifest: z.strictObject({path: z.string().min(1), sha256: portableSha256Schema})
@@ -120,7 +149,18 @@ export const portableProviderPinContextSchema = z.strictObject({
   pin: portableProviderPinSchema,
   // The receipt is intentionally metadata-only. Its authenticated owner
   // identity is checked by restorePortablePinReceipt before use.
-  receipt: z.unknown().optional()
+  receipt: portableProviderReceiptSchema.optional()
+});
+
+export const portableProviderReadSetEntrySchema = z.strictObject({
+  path: safeEvidencePathSchema,
+  generation: z.string().min(1).max(256),
+  hash: portableSha256Schema,
+  kind: z.enum(["page", "source"]),
+  fullFileHash: portableSha256Schema.optional(),
+  rangeHash: portableSha256Schema.optional(),
+  coordinate: portableSourceCoordinateSchema.optional(),
+  deliveryPath: safeEvidencePathSchema.optional()
 });
 
 /** A common metadata-only pin/read-set shape for research-to-plan handoffs. */
@@ -204,7 +244,7 @@ export const portableProviderEvidenceNextSchema = z.strictObject({
   delivered: z.array(portableProviderEvidenceIdentitySchema),
   registered: z.array(portableProviderEvidenceIdentitySchema),
   readSet: z.strictObject({
-    sourceAndPage: z.array(z.unknown()),
+    sourceAndPage: z.array(portableProviderReadSetEntrySchema),
     sealedMembers: z.array(z.strictObject({path: z.string().min(1), sha256: portableSha256Schema, generationId: z.string().min(1)}))
   })
 });
@@ -217,17 +257,17 @@ export const portableProviderEvidenceBasisSchema = z.strictObject({
   bound: z.array(portableProviderEvidenceIdentitySchema),
   bindingHash: portableSha256Schema,
   readSet: z.strictObject({
-    sourceAndPage: z.array(z.unknown()),
+    sourceAndPage: z.array(portableProviderReadSetEntrySchema),
     sealedMembers: z.array(z.strictObject({path: z.string().min(1), sha256: portableSha256Schema, generationId: z.string().min(1)}))
   }),
   trustedPins: z.array(portableProviderPinContextSchema),
-  pinReceipt: z.unknown().optional()
+  pinReceipt: portableProviderReceiptSchema.optional()
 });
 
 export const portableProviderEvidenceInputSchema = z.strictObject({
   root: z.string().min(1),
-  selection: z.unknown().optional(),
-  selections: z.array(z.unknown()).optional(),
+  selection: portableSelectionSchema.optional(),
+  selections: z.array(portableSelectionSchema).optional(),
   evidenceDelivery: portableProviderEvidenceDeliverySchema.optional(),
   mode: portableProviderEvidenceModeSchema.optional(),
   prior: z.unknown().optional(),
@@ -323,12 +363,13 @@ function selectionList(input: PortableProviderEvidenceInput): readonly PortableS
   const seen = new Set<string>();
   const result: PortableSelection[] = [];
   for (const value of values) {
-    if (!value || typeof value !== "object") return null;
+    const parsed = portableSelectionSchema.safeParse(value);
+    if (!parsed.success) return null;
     let key: string;
-    try { key = JSON.stringify(value); } catch { return null; }
+    try { key = JSON.stringify(parsed.data); } catch { return null; }
     if (!seen.has(key)) {
       seen.add(key);
-      result.push(value);
+      result.push(parsed.data);
     }
   }
   return result;
@@ -336,6 +377,41 @@ function selectionList(input: PortableProviderEvidenceInput): readonly PortableS
 
 function identityKey(identity: EvidenceIdentity): string {
   return JSON.stringify([identity.path, identity.hash, identity.generation]);
+}
+
+function canonicalReceipt(value: PortablePinReceipt): PortablePinReceipt {
+  return {
+    version: value.version,
+    root: {
+      path: value.root.path,
+      realPath: value.root.realPath,
+      device: value.root.device,
+      inode: value.root.inode,
+      ancestors: value.root.ancestors.map(item => ({path: item.path, device: item.device, inode: item.inode}))
+    },
+    pin: {
+      generationId: value.pin.generationId,
+      entry: {path: value.pin.entry.path, sha256: value.pin.entry.sha256},
+      manifest: {path: value.pin.manifest.path, sha256: value.pin.manifest.sha256}
+    },
+    issuedAt: value.issuedAt,
+    authentication: value.authentication
+  };
+}
+
+function canonicalPinContext(pin: PortableImmutablePin, receipt?: PortablePinReceipt): PortableProviderPinContext {
+  return {
+    pin: {
+      generationId: pin.generationId,
+      entry: {path: pin.entry.path, sha256: pin.entry.sha256},
+      manifest: {path: pin.manifest.path, sha256: pin.manifest.sha256}
+    },
+    ...(receipt ? {receipt: canonicalReceipt(receipt)} : {})
+  };
+}
+
+function canonicalPin(pin: PortableImmutablePin): PortableImmutablePin {
+  return canonicalPinContext(pin).pin;
 }
 
 function mergeIdentities(values: readonly EvidenceIdentity[]): EvidenceIdentity[] {
@@ -347,13 +423,63 @@ function mergeIdentities(values: readonly EvidenceIdentity[]): EvidenceIdentity[
 function mergeReadSet(values: readonly ConsumerReadSetEntry[]): ConsumerReadSetEntry[] | null {
   const byKey = new Map<string, ConsumerReadSetEntry>();
   for (const value of values) {
-    if (!safePath(value.path) || !SHA256.test(value.hash) || !value.generation) return null;
-    const key = JSON.stringify([value.kind, value.path, value.generation, value.rangeHash ?? "", value.deliveryPath ?? ""]);
+    if (!safePath(value.path) || !SHA256.test(value.hash) || !value.generation ||
+        value.fullFileHash !== undefined && !SHA256.test(value.fullFileHash) ||
+        value.rangeHash !== undefined && !SHA256.test(value.rangeHash) ||
+        value.deliveryPath !== undefined && !safePath(value.deliveryPath)) return null;
+    const coordinate = value.coordinate === undefined ? undefined : portableSourceCoordinateSchema.safeParse(value.coordinate);
+    if (value.coordinate !== undefined && !coordinate?.success) return null;
+    const projected: ConsumerReadSetEntry = {
+      path: value.path,
+      generation: value.generation,
+      hash: value.hash,
+      kind: value.kind,
+      ...(value.fullFileHash ? {fullFileHash: value.fullFileHash} : {}),
+      ...(value.rangeHash ? {rangeHash: value.rangeHash} : {}),
+      ...(coordinate?.success ? {coordinate: coordinate.data} : {}),
+      ...(value.deliveryPath ? {deliveryPath: value.deliveryPath} : {})
+    };
+    const key = JSON.stringify([projected.kind, projected.path, projected.generation, projected.rangeHash ?? "", projected.deliveryPath ?? ""]);
     const prior = byKey.get(key);
-    if (prior && (prior.hash !== value.hash || prior.fullFileHash !== value.fullFileHash)) return null;
-    byKey.set(key, {...value});
+    if (prior && (prior.hash !== projected.hash || prior.fullFileHash !== projected.fullFileHash || prior.rangeHash !== projected.rangeHash || JSON.stringify(prior.coordinate) !== JSON.stringify(projected.coordinate))) return null;
+    byKey.set(key, projected);
   }
   return [...byKey.values()].sort((left, right) => comparePath(left.path, right.path) || comparePath(left.deliveryPath ?? "", right.deliveryPath ?? ""));
+}
+
+/**
+ * Translate only caller-supplied read-time proofs into selected evidence
+ * identities. A provider's own verification read is not a lifecycle-owner
+ * read and cannot authorize register omission.
+ */
+function projectCallerReadTimeEvidence(
+  supplied: readonly ReadTimeEvidence[] | undefined,
+  readSet: readonly ConsumerReadSetEntry[],
+  evidence: ReadonlyMap<string, CanonicalEvidence>
+): {readonly ok: true; readonly evidence: readonly ReadTimeEvidence[]} | {readonly ok: false; readonly reason: string; readonly paths: readonly string[]} {
+  const projected = new Map<string, ReadTimeEvidence>();
+  for (const item of supplied ?? []) {
+    if (!item || typeof item.path !== "string" || !safePath(item.path)) return {ok: false, reason: "Caller read-time evidence contains an unsafe path.", paths: [String(item?.path ?? "")]};
+    const bytes = item.bytes === undefined ? undefined : typeof item.bytes === "string" ? new TextEncoder().encode(item.bytes) : item.bytes;
+    const actualHash = bytes === undefined ? item.hash : sha256(bytes);
+    if (!actualHash || !SHA256.test(actualHash) || item.hash !== undefined && item.hash !== actualHash) {
+      return {ok: false, reason: "Caller read-time evidence does not match its supplied bytes or hash.", paths: [item.path]};
+    }
+    const direct = evidence.get(item.path);
+    const sourceReads = readSet.filter(read => read.kind === "source" && read.path === item.path && read.fullFileHash !== undefined);
+    if (!direct && sourceReads.length === 0) return {ok: false, reason: "Caller read-time evidence does not identify selected evidence.", paths: [item.path]};
+    if (direct && direct.hash !== actualHash) return {ok: false, reason: "Caller read-time evidence does not match selected evidence.", paths: [item.path]};
+    for (const read of sourceReads) {
+      if (read.fullFileHash !== actualHash) return {ok: false, reason: "Caller read-time evidence does not match the selected source file.", paths: [item.path]};
+    }
+    if (direct) projected.set(item.path, {path: item.path, hash: direct.hash ?? actualHash});
+    for (const read of sourceReads) {
+      const targetPath = read.deliveryPath ?? read.path;
+      const targetHash = read.rangeHash ?? read.hash;
+      projected.set(targetPath, {path: targetPath, hash: targetHash});
+    }
+  }
+  return {ok: true, evidence: [...projected.values()].sort((left, right) => comparePath(left.path, right.path))};
 }
 
 function mergeEvidence(
@@ -436,8 +562,13 @@ function mapConsumerFailure(result: ConsumerEvidenceFailure): PortableProviderEv
 
 async function directEntry(
   root: string,
-  pin: PortableImmutablePin
+  pin: PortableImmutablePin,
+  options: ResolveCodebaseNavigationOptions = {}
 ): Promise<{ok: true; bytes: Uint8Array} | {ok: false; result: PortableProviderEvidenceFailure}> {
+  const verified = isPortablePinHandoff(pin)
+    ? await verifyPortablePinHandoffAuthority(root, pin, options)
+    : await verifyPortableGenerationPin(root, pin, options);
+  if (!verified) return {ok: false, result: failure("invalid", "pin_authority", "The pinned generation does not belong to this repository root or its sealed bytes changed.")};
   const relative = `.blueprint/codebase/${pin.entry.path}`;
   const read = await readHardenedLiteralFile(root, relative, 4 * 1024);
   if (!read.ok || sha256(read.bytes) !== pin.entry.sha256) return {ok: false, result: failure("reread_required", "entry_tampered", "The pinned ENTRY could not be freshly verified.", [relative])};
@@ -450,18 +581,19 @@ async function navigationEntry(
   root: string,
   input: PortableProviderEvidenceInput,
   requestedGenerationId: string | undefined
-): Promise<{ok: true; pin: PortableImmutablePin; entryBytes: Uint8Array} | {ok: false; result: PortableProviderEvidenceFailure}> {
+): Promise<{ok: true; pin: PortableImmutablePin; entryBytes: Uint8Array; receipt?: PortablePinReceipt} | {ok: false; result: PortableProviderEvidenceFailure}> {
   if (input.pinReceipt !== undefined) {
     const restored = await restorePortablePinReceipt(root, input.pinReceipt, input.resolverOptions);
     if (restored.status !== "ok") return {ok: false, result: failure("invalid", "invalid_pin_receipt", restored.reason)};
     if (requestedGenerationId && requestedGenerationId !== restored.handoff.generationId) return {ok: false, result: failure("invalid", "pin_generation_mismatch", "The requested generation does not match the authenticated pin.")};
-    const read = await directEntry(root, restored.handoff);
-    return read.ok ? {ok: true, pin: restored.handoff, entryBytes: read.bytes} : read;
+    const read = await directEntry(root, restored.handoff, input.resolverOptions);
+    return read.ok ? {ok: true, pin: restored.handoff, entryBytes: read.bytes, receipt: restored.receipt} : read;
   }
   if (input.pinHandoff !== undefined && !isPortablePinHandoff(input.pinHandoff)) return {ok: false, result: failure("invalid", "invalid_pin_handoff", "The portable pin handoff is not an owner-issued capability.")};
   if (input.pinHandoff) {
     if (requestedGenerationId && requestedGenerationId !== input.pinHandoff.generationId) return {ok: false, result: failure("invalid", "pin_generation_mismatch", "The requested generation does not match the owner-issued pin.")};
-    const read = await directEntry(root, input.pinHandoff);
+    if (!(await verifyPortablePinHandoffAuthority(root, input.pinHandoff, input.resolverOptions))) return {ok: false, result: failure("invalid", "pin_authority", "The portable pin handoff belongs to a different repository root or its sealed bytes changed.")};
+    const read = await directEntry(root, input.pinHandoff, input.resolverOptions);
     return read.ok ? {ok: true, pin: input.pinHandoff, entryBytes: read.bytes} : read;
   }
   const resolved = await resolveCodebaseNavigation(root, {...(input.resolverOptions ?? {}), ...(requestedGenerationId ? {requestedGenerationId} : {})});
@@ -469,7 +601,7 @@ async function navigationEntry(
   // The navigation result is a compact descriptor. Re-read the immutable
   // entry as bytes so its hash is based on the exact sealed bytes (including
   // BOM/line endings), rather than on a decoded response string.
-  const read = await directEntry(root, resolved.pin);
+  const read = await directEntry(root, resolved.pin, input.resolverOptions);
   return read.ok ? {ok: true, pin: resolved.pin, entryBytes: read.bytes} : read;
 }
 
@@ -541,12 +673,21 @@ export async function resolvePortableProviderEvidence(input: PortableProviderEvi
   let generationId: string | null = null;
   let pin: PortableImmutablePin | null = null;
   let entryIdentity: EvidenceIdentity | null = null;
-  let pinReceipt = input.pinReceipt;
+  let pinReceipt: PortablePinReceipt | undefined;
+  let pinHandoff = input.pinHandoff;
+  if (input.pinReceipt !== undefined) {
+    const restored = await restorePortablePinReceipt(input.root, input.pinReceipt, input.resolverOptions);
+    if (restored.status !== "ok") return failure("invalid", "invalid_pin_receipt", restored.reason);
+    pinReceipt = canonicalReceipt(restored.receipt);
+    pinHandoff = restored.handoff;
+    if (input.pinHandoff && input.pinHandoff.generationId !== restored.handoff.generationId) return failure("invalid", "pin_generation_mismatch", "The handoff and durable pin receipt identify different generations.");
+  }
 
   if (selections.length === 0) {
-    const navigation = await navigationEntry(input.root, input, requestedGenerationId);
+    const navigation = await navigationEntry(input.root, {...input, ...(pinReceipt ? {pinReceipt} : {}), ...(pinHandoff ? {pinHandoff} : {})}, requestedGenerationId);
     if (!navigation.ok) return navigation.result;
     pin = navigation.pin;
+    pinReceipt = navigation.receipt ?? pinReceipt;
     generationId = pin.generationId;
     const entryPath = `.blueprint/codebase/${pin.entry.path}`;
     entryIdentity = {path: entryPath, generation: pin.generationId, hash: pin.entry.sha256};
@@ -555,13 +696,14 @@ export async function resolvePortableProviderEvidence(input: PortableProviderEvi
     readSets.push({path: entryPath, generation: pin.generationId, hash: pin.entry.sha256, kind: "page", deliveryPath: entryPath});
   } else {
     for (const selection of selections) {
-      const result = await resolveConsumerEvidence({
+      const result = await resolveConsumerEvidenceForProvider({
         root: input.root,
         selection,
         mode: "full",
         generationId: requestedGenerationId,
         pinReceipt,
-        pinHandoff: input.pinHandoff,
+        readTimeEvidence: delivery.readTimeEvidence,
+        pinHandoff,
         resolverOptions: input.resolverOptions
       });
       if (result.status !== "ok") return mapConsumerFailure(result);
@@ -583,39 +725,46 @@ export async function resolvePortableProviderEvidence(input: PortableProviderEvi
   const pinnedMembers = memberSets.length ? await hashPortableProviderMemberSets(input.root, memberSets, input.resolverOptions) : {status: "ok" as const, members: [], pins: []};
   if (pinnedMembers.status !== "ok") return pinnedMembers;
   const trustedPins = new Map<string, PortableProviderPinContext>();
-  trustedPins.set(pin.generationId, {pin, ...(pinReceipt ? {receipt: pinReceipt} : {})});
+  trustedPins.set(pin.generationId, canonicalPinContext(pin, pinReceipt));
   for (const trusted of pinnedMembers.pins) trustedPins.set(trusted.pin.generationId, trusted);
 
+  const mergedReadSet = mergeReadSet(readSets);
+  if (!mergedReadSet) return failure("invalid", "conflicting_read_set", "Portable read-set identities conflict.");
+  const callerReadTime = projectCallerReadTimeEvidence(delivery.readTimeEvidence, mergedReadSet, evidence);
+  if (!callerReadTime.ok) return failure("invalid", "invalid_read_time_evidence", callerReadTime.reason, callerReadTime.paths);
+  const effectiveReadTimeEvidence = callerReadTime.evidence;
   const shaped = selectEvidenceDelivery({
     pinnedGeneration: generationId,
     mode: delivery.mode,
     roots: [...roots].sort(comparePath),
     evidence: [...evidence.values()],
     prior: delivery.prior,
-    readTimeEvidence: delivery.readTimeEvidence,
+    readTimeEvidence: effectiveReadTimeEvidence,
     limits: {maxPacketBytes: limits.maxPacketBytes}
   });
   if (shaped.status !== "ok") {
     const status = shaped.status === "evidence_limit" ? "evidence_limit" : shaped.status === "reread_required" ? "reread_required" : "invalid";
     return failure(status, shaped.code ?? "delivery_failure", shaped.reason, shaped.paths, {counts: shaped.counts, scopeReduction: shaped.scopeReduction});
   }
-  const mergedReadSet = mergeReadSet(readSets);
-  if (!mergedReadSet) return failure("invalid", "conflicting_read_set", "Portable read-set identities conflict.");
   const counts = providerCounts(shaped, mergedReadSet, pinnedMembers.members, delivery.baseline);
   const limited = limitFailure(counts, limits);
   if (limited) return limited;
   const bound = shaped.binding.identities;
   const priorDelivered = delivery.prior?.delivered ?? [];
   const delivered = mergeIdentities([...priorDelivered, ...shaped.packet.entries.filter(entry => entry.content !== undefined).map(packetIdentity)]).filter(item => bound.some(boundItem => identityKey(boundItem) === identityKey(item)));
-  const readTimePaths = new Set((delivery.readTimeEvidence ?? []).map(item => item.path));
-  const registered = mergeIdentities(shaped.packet.entries.filter(entry => entry.content === undefined && readTimePaths.has(entry.path)).map(packetIdentity));
+  const readTimePaths = new Set(effectiveReadTimeEvidence.map(item => item.path));
+  const registered = mergeIdentities([
+    ...(delivery.prior?.registered ?? []),
+    ...shaped.packet.entries.filter(entry => entry.content === undefined && readTimePaths.has(entry.path)).map(packetIdentity)
+  ]).filter(item => bound.some(boundItem => identityKey(boundItem) === identityKey(item)));
   const nextReadSet: PortableProviderEvidenceReadSet = {sourceAndPage: mergedReadSet, sealedMembers: pinnedMembers.members};
+  const publicPin = canonicalPin(pin);
   const trustedPinList = [...trustedPins.values()].sort((left, right) => comparePath(left.pin.generationId, right.pin.generationId));
   const bindingHash = evidenceBindingHash(bound);
   const basis: PortableProviderEvidenceBasis = {
     schemaVersion: PROVIDER_SCHEMA_VERSION,
     generationId,
-    pin,
+    pin: publicPin,
     entry: entryIdentity,
     bound,
     bindingHash,
@@ -630,7 +779,7 @@ export async function resolvePortableProviderEvidence(input: PortableProviderEvi
     context: {
       generationId,
       entry: entryIdentity,
-      pin,
+      pin: publicPin,
       trustedPins: trustedPinList
     },
     basis,
@@ -655,7 +804,18 @@ export async function preparePortableProviderEvidence(input: PortableProviderEvi
   if (result.status !== "ok" || result.pinReceipt) return result;
   const issued = await issuePortablePinReceipt(input.root, result.context.pin, input.resolverOptions);
   if (issued.status !== "ok") return failure("invalid", "pin_receipt_failed", issued.reason);
-  return {...result, pinReceipt: issued.receipt, basis: {...result.basis, pinReceipt: issued.receipt}};
+  const receipt = canonicalReceipt(issued.receipt);
+  const trustedPins = result.context.trustedPins.map(context =>
+    context.pin.generationId === receipt.pin.generationId
+      ? canonicalPinContext(context.pin, receipt)
+      : canonicalPinContext(context.pin, context.receipt)
+  );
+  return {
+    ...result,
+    pinReceipt: receipt,
+    context: {...result.context, trustedPins},
+    basis: {...result.basis, trustedPins, pinReceipt: receipt}
+  };
 }
 
 /** Compact aliases for provider owners that call this operation a context read. */

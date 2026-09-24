@@ -10089,26 +10089,26 @@ var require_json_schema_traverse = __commonJS({
       maxProperties: true,
       minProperties: true
     };
-    function _traverse(opts, pre, post, schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex) {
+    function _traverse(opts, pre, post, schema2, jsonPtr, rootSchema2, parentJsonPtr, parentKeyword, parentSchema, keyIndex) {
       if (schema2 && typeof schema2 == "object" && !Array.isArray(schema2)) {
-        pre(schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
+        pre(schema2, jsonPtr, rootSchema2, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
         for (var key2 in schema2) {
           var sch = schema2[key2];
           if (Array.isArray(sch)) {
             if (key2 in traverse.arrayKeywords) {
               for (var i = 0; i < sch.length; i++)
-                _traverse(opts, pre, post, sch[i], jsonPtr + "/" + key2 + "/" + i, rootSchema, jsonPtr, key2, schema2, i);
+                _traverse(opts, pre, post, sch[i], jsonPtr + "/" + key2 + "/" + i, rootSchema2, jsonPtr, key2, schema2, i);
             }
           } else if (key2 in traverse.propsKeywords) {
             if (sch && typeof sch == "object") {
               for (var prop in sch)
-                _traverse(opts, pre, post, sch[prop], jsonPtr + "/" + key2 + "/" + escapeJsonPtr(prop), rootSchema, jsonPtr, key2, schema2, prop);
+                _traverse(opts, pre, post, sch[prop], jsonPtr + "/" + key2 + "/" + escapeJsonPtr(prop), rootSchema2, jsonPtr, key2, schema2, prop);
             }
           } else if (key2 in traverse.keywords || opts.allKeys && !(key2 in traverse.skipKeywords)) {
-            _traverse(opts, pre, post, sch, jsonPtr + "/" + key2, rootSchema, jsonPtr, key2, schema2);
+            _traverse(opts, pre, post, sch, jsonPtr + "/" + key2, rootSchema2, jsonPtr, key2, schema2);
           }
         }
-        post(schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
+        post(schema2, jsonPtr, rootSchema2, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
       }
     }
     function escapeJsonPtr(str) {
@@ -15957,16 +15957,14 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-map-codebase`",
         executionProfile: "long-running-mutation",
         rootRoutable: true,
-        purpose: "`map-codebase` prepares selected repository evidence, authors structured content, and directly publishes the stable seven-document Blueprint codebase bundle. Valid maps are reused by default; focus areas deepen the same bundle.",
-        reads: [],
+        purpose: "`map-codebase` prepares selected repository evidence and directly publishes the generated seven-document compatibility views, with explicit portable format v1 opt-in for an INDEX.md plus a complete immutable generation. Valid maps are reused by default; focus areas deepen the same bundle.",
+        reads: [
+          "Selected repository evidence and generated map state through blueprint_map_prepare"
+        ],
         writes: [
-          ".blueprint/codebase/STACK.md",
-          ".blueprint/codebase/ARCHITECTURE.md",
-          ".blueprint/codebase/STRUCTURE.md",
-          ".blueprint/codebase/CONVENTIONS.md",
-          ".blueprint/codebase/TESTING.md",
-          ".blueprint/codebase/INTEGRATIONS.md",
-          ".blueprint/codebase/CONCERNS.md"
+          ".blueprint/codebase/INDEX.md and its referenced generations/<generation-id>/",
+          ".blueprint/codebase/{STACK,ARCHITECTURE,STRUCTURE,CONVENTIONS,TESTING,INTEGRATIONS,CONCERNS}.md compatibility views when applicable",
+          "an explicitly selected existing repository instruction file only when linkInstructions is requested"
         ]
       },
       runtimeReference: {
@@ -15977,7 +15975,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: MAP_CODEBASE_REQUIRED_TOOLS,
         optionalAgents: MAP_CODEBASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md. Select repo-relative evidence paths, then prepare before reading and authoring; echo its opaque snapshot unchanged at submit. Prepare owns readiness, effective subagent config, existing document status, required keys, schema/example, and implemented-only routing. Reuse valid maps without generation or a reuse question; an explicit refresh request authorizes overwrite without a second confirmation. Focus areas deepen the same seven-document bundle. Optional mapper lanes are bounded and read-only; the parent submits one structured bundle. MCP compiles canonical headings, validates the complete bundle before writes, and reuses omitted valid documents. Rejected content is never saved; partial publication retries the same snapshot and documents using metadata-only recovery. Greenfield/scaffold-only routes to /blu-new-project, broken partial core state to /blu-health, successful mapped-only to /blu-new-project, and initialized projects to /blu-progress.",
+        contractNotes: "Long-running-mutation profile: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md. Keep ordinary compatibility mapping on the two-tool prepare -> author -> submit flow, select repo-relative evidence, prepare before reading and authoring, read it after the returned basis, and echo its opaque legacy snapshot unchanged at submit. Reuse valid maps without generation or a reuse question; an explicit refresh request authorizes overwrite without a second confirmation, while focus and explicit replace authority control the affected scope. Portable generation is explicit opt-in through formatVersion: 1, with intents new, upgrade, refresh, or repair; prepare returns an opaque operationId and continuation cursor plus bounded deterministic packets, and repair carries the exact authorized previousIndexHash, seven targetHashes, and observedMarkerHash basis. Author and submit one complete seven-document plus semantic model with the prepared generationId; the raw model cap is 48 KiB, so richer requests must be narrowed or reported unsupported without silent omissions or invented multipart. The complete bundle is validated before writes; the runtime validates the complete bundle before writes. Optional mapper lanes are bounded/read-only; the parent submits through the one MCP finalizer. Prepared source/target CAS, stale/reprepare, exact operation/model retry, metadata-only committed cleanup, retained historical generations, unknown-marker hard stops, and separate portable/compatibility completeness are authoritative. No root seven view is independently mutated while portable INDEX.md is active. Optional instruction linking occurs only when requested and uses the owning tool's returned snippet/receipt with byte/newline/CAS/containment/symlink safety. Transfer is INDEX.md plus its complete immutable relative-path generation; sessions, receipts, keys, and rejected diagnostics are excluded. Generic consumption reads/searches selected routes and verifies selected live source, treats the baseline as unverified for current-tree freshness, and never regenerates or becomes mandatory for administrative commands. Rejected content is never saved; partial publication uses metadata-only recovery. No performance or default-adoption claims. Greenfield/scaffold-only routes to /blu-new-project, broken partial core state to /blu-health, successful mapped-only to /blu-new-project, and initialized projects to /blu-progress.",
         evidenceState: ["locked", "runtime-owned", "behavior-audited"]
       }
     };
@@ -29111,7 +29109,7 @@ async function resolveCodebaseSealedMember(root, relativePath) {
   const bytes = await readLiteralBytes(root, `${CODEBASE_ROOT}/${generationRelative}`, DEFAULT_LIMITS.pageBytes * 256);
   return bytes.ok && sha256(bytes.bytes) === expected;
 }
-var CODEBASE_ROOT, INDEX_PATH, PUBLICATION_MARKER_PATH, MAX_DIAGNOSTICS, DEFAULT_LIMITS, DIAGNOSTIC_MESSAGES;
+var CODEBASE_ROOT, INDEX_PATH, PUBLICATION_MARKER_PATH, MAX_DIAGNOSTICS, DEFAULT_LIMITS, DIAGNOSTIC_MESSAGES, portableRecordIdSchema, portableStructuralRecordKindSchema, portableSemanticRecordKindSchema2, portableSelectionSchema;
 var init_resolver = __esm({
   "src/mcp/codebase-index/resolver.ts"() {
     "use strict";
@@ -29149,6 +29147,16 @@ var init_resolver = __esm({
       stale: "The portable map publication basis is stale or guarded.",
       "not-found": "The requested retained generation or evidence was not found."
     };
+    portableRecordIdSchema = string2().min(1).max(512);
+    portableStructuralRecordKindSchema = _enum(["file", "symbol", "import", "relationship", "detail"]);
+    portableSemanticRecordKindSchema2 = _enum(["capability", "claim", "alias"]);
+    portableSelectionSchema = union([
+      strictObject({ kind: literal("page"), path: repositoryRelativePathSchema, mode: literal("discovery") }),
+      strictObject({ kind: _enum(["file", "symbol", "import", "relationship", "detail"]), recordId: portableRecordIdSchema }),
+      strictObject({ kind: _enum(["capability", "claim", "alias"]), recordId: portableRecordIdSchema }),
+      strictObject({ kind: literal("structural"), recordKind: portableStructuralRecordKindSchema, recordId: portableRecordIdSchema }),
+      strictObject({ kind: literal("semantic"), recordKind: portableSemanticRecordKindSchema2, recordId: portableRecordIdSchema })
+    ]);
   }
 });
 
@@ -29652,9 +29660,9 @@ function classifyReviewFixTargetSummary(summary) {
   return "fixable";
 }
 function extractReviewFindingSummary(item) {
-  const canonical2 = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN);
-  if (canonical2) {
-    return canonical2[7]?.trim() ?? "";
+  const canonical3 = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN);
+  if (canonical3) {
+    return canonical3[7]?.trim() ?? "";
   }
   const recommendationMatch = item.match(/Fix\/verification:\s*(.+)$/i);
   return recommendationMatch?.[1]?.trim() ?? stripVisibleReviewTargetId(item);
@@ -36314,7 +36322,7 @@ async function readMappedCodebaseContext(projectRoot) {
   const artifacts = [];
   const missingArtifacts = [];
   const invalidArtifacts = new Set(inspection.codebase.invalid);
-  const digest8 = [];
+  const digest9 = [];
   for (const artifact of CODEBASE_ARTIFACTS) {
     if (invalidArtifacts.has(artifact)) {
       continue;
@@ -36324,7 +36332,7 @@ async function readMappedCodebaseContext(projectRoot) {
       const raw = await fs10.readFile(absolutePath, "utf8");
       const summary = summarizeSavedArtifact(raw);
       artifacts.push(artifact);
-      digest8.push({
+      digest9.push({
         artifact,
         title: summary.title,
         summary: summary.summary
@@ -36360,7 +36368,7 @@ async function readMappedCodebaseContext(projectRoot) {
     mapped,
     artifacts,
     missingArtifacts,
-    digest: digest8,
+    digest: digest9,
     warnings
   };
 }
@@ -47495,24 +47503,24 @@ function resolveBlueprintPath(projectRoot, relativePath) {
   return absolutePath;
 }
 async function assertCodebasePublicationComplete(projectRoot, relativePath) {
-  const canonical2 = toRepoRelativePath(projectRoot, resolveRepoRelativePath(projectRoot, relativePath));
-  if (!canonical2.startsWith(`${BLUEPRINT_CODEBASE_PATH}/`)) return;
+  const canonical3 = toRepoRelativePath(projectRoot, resolveRepoRelativePath(projectRoot, relativePath));
+  if (!canonical3.startsWith(`${BLUEPRINT_CODEBASE_PATH}/`)) return;
   const state = await inspectPortableCodebase(projectRoot);
-  const generationMatch = canonical2.match(
+  const generationMatch = canonical3.match(
     /^\.blueprint\/codebase\/generations\/([^/]+)\//
   );
   if (generationMatch) {
     const generation = await resolveCodebaseNavigation(projectRoot, {
       requestedGenerationId: generationMatch[1]
     });
-    if (generation.status === "ok" && generation.portable.generationId === generationMatch[1] && await resolveCodebaseSealedMember(projectRoot, canonical2)) {
+    if (generation.status === "ok" && generation.portable.generationId === generationMatch[1] && await resolveCodebaseSealedMember(projectRoot, canonical3)) {
       return;
     }
     throw new Error(
       "The requested portable codebase generation is not a verified committed generation. Use ordinary bounded live-source discovery."
     );
   }
-  if (canonical2 === PORTABLE_CODEBASE_INDEX_PATH) {
+  if (canonical3 === PORTABLE_CODEBASE_INDEX_PATH) {
     if (state.navigation.status === "ok") return;
     throw new Error(
       "The portable codebase INDEX is unavailable or unverified. Use ordinary bounded live-source discovery."
@@ -48574,7 +48582,7 @@ function canonicalizeResearchRequiredHeadings(content) {
   const canonicalHeadingByKey = new Map(
     RESEARCH_CANONICAL_HEADINGS.map((heading2) => [normalizeResearchHeadingKey(heading2), heading2])
   );
-  for (const [alias, canonical2] of Object.entries({
+  for (const [alias, canonical3] of Object.entries({
     Overview: "Summary",
     "Executive Summary": "Summary",
     "Research Summary": "Summary",
@@ -48582,7 +48590,7 @@ function canonicalizeResearchRequiredHeadings(content) {
     "Implementation Guidance": "Recommendations",
     References: "Sources",
     Evidence: "Sources"
-  })) canonicalHeadingByKey.set(normalizeResearchHeadingKey(alias), canonical2);
+  })) canonicalHeadingByKey.set(normalizeResearchHeadingKey(alias), canonical3);
   const canonicalizedHeadings = [];
   const unmatchedTopLevelHeadings = [];
   const canonicalizedLines = scanResearchMarkdown(content).map(({ text: line2, heading: heading2 }) => {
@@ -53584,20 +53592,20 @@ function buildRepoEvidenceDigestSections(args) {
   return sections;
 }
 async function buildArtifactDigestSections(projectRoot, artifactPaths) {
-  const digest8 = [];
+  const digest9 = [];
   for (const artifactPath2 of artifactPaths) {
     const absolutePath = resolveRepoRelativePath(projectRoot, artifactPath2);
     await assertCodebasePublicationComplete(projectRoot, artifactPath2);
     const raw = await fs15.readFile(absolutePath, "utf8");
     const summary = summarizeArtifactContent(raw);
-    digest8.push({
+    digest9.push({
       artifact: artifactPath2,
       title: summary.title.length > 0 ? summary.title : path18.basename(artifactPath2, path18.extname(artifactPath2)),
       summary: summary.summary,
       evidence: [artifactPath2]
     });
   }
-  return digest8;
+  return digest9;
 }
 async function blueprintArtifactSummaryDigest(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -53613,7 +53621,7 @@ async function blueprintArtifactSummaryDigest(args = {}) {
   const docFiles = normalizeInputPaths(projectRoot, args.docFiles);
   const trackedFiles = normalizeInputPaths(projectRoot, args.trackedFiles);
   if (artifactPaths.length > 0) {
-    const digest9 = await buildArtifactDigestSections(projectRoot, artifactPaths);
+    const digest10 = await buildArtifactDigestSections(projectRoot, artifactPaths);
     const repoEvidenceDigest = buildRepoEvidenceDigestSections({
       packageJsonPath,
       readmePath,
@@ -53623,7 +53631,7 @@ async function blueprintArtifactSummaryDigest(args = {}) {
       trackedFiles
     });
     return {
-      digest: [...digest9, ...repoEvidenceDigest],
+      digest: [...digest10, ...repoEvidenceDigest],
       inputsUsed: uniqueSorted([
         ...artifactPaths,
         packageJsonPath ?? "",
@@ -53646,7 +53654,7 @@ async function blueprintArtifactSummaryDigest(args = {}) {
       packageManifest = {};
     }
   }
-  const digest8 = buildCodebaseDigestSections({
+  const digest9 = buildCodebaseDigestSections({
     focusArea: args.focusArea,
     packageManifest,
     packageJsonPath,
@@ -53665,7 +53673,7 @@ async function blueprintArtifactSummaryDigest(args = {}) {
     ...trackedFiles
   ]).filter((value) => value.length > 0);
   return {
-    digest: digest8,
+    digest: digest9,
     inputsUsed
   };
 }
@@ -58704,8 +58712,8 @@ function evidenceRecord2(evidence, records) {
   }
 }
 function validateEvidence(evidence, records, diagnostics, index) {
-  const canonical2 = evidenceRecord2(evidence, records);
-  if (!canonical2 || canonical2.path !== evidence.path || canonical2.contentHash !== evidence.contentHash || !coordinatesEqual(canonical2.coordinate, evidence.coordinate)) {
+  const canonical3 = evidenceRecord2(evidence, records);
+  if (!canonical3 || canonical3.path !== evidence.path || canonical3.contentHash !== evidence.contentHash || !coordinatesEqual(canonical3.coordinate, evidence.coordinate)) {
     pushDiagnostic(diagnostics, "invalid-evidence", "semantic", "evidence", index);
   }
 }
@@ -61533,7 +61541,7 @@ async function withParserSource(repositoryRoot, basis, callback, options = {}) {
     }
     if (Number(opened.size) !== basis.byteSize) return failure("size-mismatch");
     source = Buffer.allocUnsafe(basis.byteSize);
-    const digest8 = createHash16("sha256");
+    const digest9 = createHash16("sha256");
     let offset = 0;
     let chunkIndex = 0;
     while (offset < source.byteLength) {
@@ -61545,7 +61553,7 @@ async function withParserSource(repositoryRoot, basis, callback, options = {}) {
         return failure("unreadable");
       }
       if (read.bytesRead === 0) return failure("changed-during-read");
-      digest8.update(source.subarray(offset, offset + read.bytesRead));
+      digest9.update(source.subarray(offset, offset + read.bytesRead));
       offset += read.bytesRead;
       await parserSourceTestHooks.afterChunk?.(resolved.absolutePath, chunkIndex);
       chunkIndex += 1;
@@ -61559,7 +61567,7 @@ async function withParserSource(repositoryRoot, basis, callback, options = {}) {
     if (!finalSnapshot || !samePathSnapshot(resolved.snapshot, finalSnapshot)) {
       return failure("changed-during-read");
     }
-    if (digest8.digest("hex") !== basis.contentHash) return failure("hash-mismatch");
+    if (digest9.digest("hex") !== basis.contentHash) return failure("hash-mismatch");
     if (source.includes(0)) return failure("binary");
     try {
       new TextDecoder("utf-8", { fatal: true }).decode(source);
@@ -61857,6 +61865,41 @@ async function capturePortableSourceFreshness(repositoryRoot, useGit) {
     provenance: snapshot3.provenance
   };
 }
+function recordsByPath(extraction) {
+  const files = /* @__PURE__ */ new Map();
+  const symbols = /* @__PURE__ */ new Map();
+  const imports = /* @__PURE__ */ new Map();
+  const relationships = /* @__PURE__ */ new Map();
+  const details = /* @__PURE__ */ new Map();
+  const symbolPathById = /* @__PURE__ */ new Map();
+  for (const shard of extraction.structuralShards) {
+    for (const file2 of shard.files) files.set(file2.path, file2);
+    for (const symbol2 of shard.symbols) {
+      symbolPathById.set(symbol2.id, symbol2.path);
+      (symbols.get(symbol2.path) ?? (symbols.set(symbol2.path, []), symbols.get(symbol2.path))).push(symbol2);
+    }
+    for (const item of shard.imports) (imports.get(item.sourcePath) ?? (imports.set(item.sourcePath, []), imports.get(item.sourcePath))).push(item);
+    for (const item of shard.relationships) (relationships.get(item.sourcePath) ?? (relationships.set(item.sourcePath, []), relationships.get(item.sourcePath))).push(item);
+  }
+  for (const shard of extraction.structuralShards) {
+    for (const item of shard.details ?? []) {
+      const ownerPath = symbolPathById.get(item.sourceRecordId);
+      if (ownerPath) (details.get(ownerPath) ?? (details.set(ownerPath, []), details.get(ownerPath))).push(item);
+    }
+  }
+  return { files, symbols, imports, relationships, details };
+}
+function createPortableExtractionReuse(extraction) {
+  const grouped = recordsByPath(extraction);
+  return {
+    paths: new Set(grouped.files.keys()),
+    files: grouped.files,
+    symbols: grouped.symbols,
+    imports: grouped.imports,
+    relationships: grouped.relationships,
+    details: grouped.details
+  };
+}
 async function extractPortableRecords(options, snapshot3, reuse) {
   const initialFiles = snapshot3.inventory.files.map(makeInitialFile).sort((left, right) => compareText2(left.path, right.path));
   const knownFiles = initialFiles;
@@ -61937,11 +61980,6 @@ async function extractPortableRepositoryFromSnapshot(options, snapshot3, reuse) 
     },
     provenance: snapshot3.provenance
   };
-}
-async function extractPortableRepository(options) {
-  const snapshot3 = await capturePortableExtractionSnapshot(options.repositoryRoot, options.useGit);
-  if (isPortableExtractionFailure(snapshot3)) return snapshot3;
-  return extractPortableRepositoryFromSnapshot(options, snapshot3);
 }
 function flattenShards(extraction) {
   const records = { files: [], symbols: [], details: [], imports: [], relationships: [] };
@@ -62641,8 +62679,377 @@ var init_instruction_link = __esm({
   }
 });
 
-// src/mcp/codebase-index/publication.ts
+// src/mcp/codebase-index/incremental.ts
 import { createHash as createHash19 } from "node:crypto";
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key2) => `${JSON.stringify(key2)}:${canonical(value[key2])}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+function digest4(value) {
+  return sha2567(canonical(value));
+}
+function provenanceProjection(provenance) {
+  return {
+    runtime: provenance.runtime,
+    grammars: [...provenance.grammars].sort((left, right) => `${left.package}\0${left.asset}`.localeCompare(`${right.package}\0${right.asset}`)),
+    adapters: [...provenance.adapters].sort((left, right) => left.name.localeCompare(right.name))
+  };
+}
+function cachePayload(cache) {
+  return cache;
+}
+function portableProvenanceHash(provenance) {
+  return digest4(provenanceProjection(provenance));
+}
+function validateCacheShape(input, requireAuthority) {
+  if (!input || typeof input !== "object" || requireAuthority && input[CACHE_AUTHORITY] !== true) return null;
+  const parsed = cacheSchema.safeParse(input);
+  if (!parsed.success) return null;
+  const cache = parsed.data;
+  try {
+    if (cache.provenanceHash !== portableProvenanceHash(cache.provenance)) return null;
+    const { cacheHash, ...payload } = cache;
+    if (cacheHash !== digest4(cachePayload(payload))) return null;
+    const fileRecords = cache.structuralShards.flatMap((shard) => shard.files);
+    const sourceFiles = cache.sourceBasis.files;
+    if (cache.structuralShards.some((shard) => shard.generationId !== cache.generationId) || cache.sourceBasis.generationId !== cache.generationId || new Set(fileRecords.map((file2) => file2.path)).size !== fileRecords.length || new Set(sourceFiles.map((file2) => file2.path)).size !== sourceFiles.length || fileRecords.length !== sourceFiles.length) return null;
+    for (const file2 of fileRecords) {
+      const basis = sourceFiles.find((item) => item.path === file2.path);
+      if (!basis || basis.byteSize !== file2.byteSize || basis.contentHash !== file2.contentHash) return null;
+    }
+  } catch {
+    return null;
+  }
+  const trusted = parsed.data;
+  if (requireAuthority) return input;
+  Object.defineProperty(trusted, CACHE_AUTHORITY, { value: true, enumerable: false, configurable: false, writable: false });
+  return trusted;
+}
+function createPortableIncrementalCache(extraction, semantic) {
+  const payload = {
+    version: CACHE_VERSION,
+    trust: "operational",
+    generationId: extraction.generationId,
+    root: extraction.root,
+    inventoryFingerprint: extraction.inventoryFingerprint,
+    provenance: extraction.provenance,
+    provenanceHash: portableProvenanceHash(extraction.provenance),
+    structuralShards: extraction.structuralShards,
+    sourceBasis: extraction.sourceBasis,
+    coverage: extraction.coverage,
+    ...semantic ? { semantic } : {}
+  };
+  const parsed = cacheWithoutHashSchema.safeParse(payload);
+  if (!parsed.success || !portableAuthoritativeSourceBasisSchema.safeParse(payload.sourceBasis).success) {
+    throw new Error("invalid portable incremental cache");
+  }
+  const cache = { ...payload, cacheHash: digest4(cachePayload(payload)) };
+  Object.defineProperty(cache, CACHE_AUTHORITY, { value: true, enumerable: false, configurable: false, writable: false });
+  return cache;
+}
+function parsePortableIncrementalCache(input) {
+  return validateCacheShape(input, true);
+}
+function restorePortableIncrementalCache(input) {
+  return validateCacheShape(input, false);
+}
+function serializePortableIncrementalCache(cache) {
+  return {
+    version: cache.version,
+    trust: cache.trust,
+    generationId: cache.generationId,
+    root: cache.root,
+    inventoryFingerprint: cache.inventoryFingerprint,
+    provenance: cache.provenance,
+    provenanceHash: cache.provenanceHash,
+    structuralShards: cache.structuralShards,
+    sourceBasis: cache.sourceBasis,
+    coverage: cache.coverage,
+    ...cache.semantic ? { semantic: cache.semantic } : {},
+    cacheHash: cache.cacheHash
+  };
+}
+function sameRoot2(left, right) {
+  return left.path === right.path && left.realPath === right.realPath && left.device === right.device && left.inode === right.inode;
+}
+function flatten(cache) {
+  return {
+    ok: true,
+    generationId: cache.generationId,
+    root: cache.root,
+    inventoryFingerprint: cache.inventoryFingerprint,
+    structuralShards: cache.structuralShards,
+    sourceBasis: cache.sourceBasis,
+    coverage: cache.coverage,
+    provenance: cache.provenance
+  };
+}
+function sourceFacts(extraction) {
+  const files = /* @__PURE__ */ new Map();
+  const records = /* @__PURE__ */ new Map();
+  for (const shard of extraction.structuralShards) {
+    for (const file2 of shard.files) {
+      files.set(file2.path, file2);
+      records.set(file2.id, { path: file2.path, contentHash: file2.contentHash });
+    }
+    for (const record2 of [...shard.symbols, ...shard.imports, ...shard.relationships]) {
+      records.set(record2.id, { path: "path" in record2 ? record2.path : record2.sourcePath, contentHash: record2.contentHash });
+    }
+  }
+  return { files, records };
+}
+function changedEvidence(before, after, afterSnapshot, added, deleted, changed) {
+  const oldFacts = sourceFacts(before);
+  const newFacts = sourceFacts(after);
+  const currentFiles = new Map(afterSnapshot.inventory.files.map((file2) => [file2.path, makePortableInitialFile(file2)]));
+  const paths = /* @__PURE__ */ new Set([...added, ...deleted, ...changed]);
+  const recordIds = /* @__PURE__ */ new Set();
+  for (const [id, item] of oldFacts.records) {
+    if (paths.has(item.path)) recordIds.add(id);
+  }
+  for (const [path44, file2] of currentFiles) {
+    if (paths.has(path44)) recordIds.add(file2.id);
+  }
+  const changedTargets = new Set(recordIds);
+  for (const shard of before.structuralShards) {
+    for (const record2 of [...shard.imports, ...shard.relationships]) {
+      if (record2.targetFileId && changedTargets.has(record2.targetFileId) || record2.targetSymbolId && changedTargets.has(record2.targetSymbolId)) {
+        recordIds.add(record2.id);
+      }
+    }
+  }
+  for (const [id, current] of newFacts.records) {
+    const previous = oldFacts.records.get(id);
+    if (!previous || previous.contentHash !== current.contentHash || paths.has(current.path)) {
+      recordIds.add(id);
+      paths.add(current.path);
+    }
+  }
+  for (const [id, previous] of oldFacts.records) {
+    if (!newFacts.records.has(id)) {
+      recordIds.add(id);
+      paths.add(previous.path);
+    }
+  }
+  return { paths, recordIds };
+}
+function invalidatePortableSemanticModel(model, options = {}) {
+  if (!model) return { model: void 0, invalidatedCapabilityIds: [], invalidatedClaimIds: [], invalidatedAliasIds: [], reasons: [] };
+  const changedPaths = options.changedPaths ?? /* @__PURE__ */ new Set();
+  const changedRecordIds = options.changedRecordIds ?? /* @__PURE__ */ new Set();
+  const allScope = Boolean(options.inventoryScopeChanged);
+  const evidenceChanged = (evidence) => allScope || evidence.some((item) => changedPaths.has(item.path) || changedRecordIds.has(item.recordId));
+  const invalidClaims = /* @__PURE__ */ new Set();
+  const invalidCapabilities = /* @__PURE__ */ new Set();
+  const invalidAliases = /* @__PURE__ */ new Set();
+  for (const claim of model.claims) if (evidenceChanged(claim.evidence)) invalidClaims.add(claim.id);
+  for (const capability of model.capabilities) {
+    if (evidenceChanged(capability.evidence) || capability.claimIds.some((id) => invalidClaims.has(id))) invalidCapabilities.add(capability.id);
+  }
+  for (const alias of model.aliases) {
+    if (evidenceChanged(alias.evidence) || alias.targetKind === "capability" && invalidCapabilities.has(alias.targetId) || alias.targetKind === "symbol" && changedRecordIds.has(alias.targetId)) invalidAliases.add(alias.id);
+  }
+  const reasons = /* @__PURE__ */ new Set();
+  if (allScope && (invalidClaims.size > 0 || invalidCapabilities.size > 0 || invalidAliases.size > 0)) reasons.add("inventory-scope");
+  if (!allScope && (invalidClaims.size > 0 || invalidCapabilities.size > 0 || invalidAliases.size > 0)) reasons.add("evidence-changed");
+  if ([...invalidCapabilities].some((id) => model.capabilities.find((item) => item.id === id)?.claimIds.some((claim) => invalidClaims.has(claim))) || [...invalidAliases].some((id) => {
+    const alias = model.aliases.find((item) => item.id === id);
+    return alias?.targetKind === "capability" && invalidCapabilities.has(alias.targetId);
+  })) {
+    reasons.add("dependency-closure");
+  }
+  return {
+    model: {
+      capabilities: model.capabilities.filter((item) => !invalidCapabilities.has(item.id)),
+      claims: model.claims.filter((item) => !invalidClaims.has(item.id)),
+      aliases: model.aliases.filter((item) => !invalidAliases.has(item.id))
+    },
+    invalidatedCapabilityIds: [...invalidCapabilities].sort(),
+    invalidatedClaimIds: [...invalidClaims].sort(),
+    invalidatedAliasIds: [...invalidAliases].sort(),
+    reasons: [...reasons]
+  };
+}
+function makeFallbackReason(cache) {
+  return cache === void 0 ? "no-cache" : "invalid-cache";
+}
+function isParserEligible(file2) {
+  return file2.language !== "unknown" && file2.byteSize <= INVENTORY_MAX_FILE_BYTES;
+}
+async function extractPortableRepositoryIncremental(options) {
+  const snapshot3 = await capturePortableExtractionSnapshot(options.repositoryRoot, options.useGit);
+  if ("ok" in snapshot3) return snapshot3;
+  const effectiveSnapshot = incrementalTestHooks.provenanceOverride ? { ...snapshot3, provenance: incrementalTestHooks.provenanceOverride } : snapshot3;
+  const supplied = options.previous;
+  const cache = parsePortableIncrementalCache(supplied);
+  const currentRoot = effectiveSnapshot.root;
+  const currentProvenanceHash = portableProvenanceHash(effectiveSnapshot.provenance);
+  if (!cache || !sameRoot2(cache.root, currentRoot) || cache.provenanceHash !== currentProvenanceHash) {
+    const extraction2 = await extractPortableRepositoryFromSnapshot(options, effectiveSnapshot);
+    if (!extraction2.ok) return extraction2;
+    const semantic2 = invalidatePortableSemanticModel(options.semantic, {
+      inventoryScopeChanged: Boolean(options.semantic)
+    });
+    const nextCache2 = createPortableIncrementalCache(extraction2, semantic2.model);
+    return {
+      ...extraction2,
+      cache: nextCache2,
+      incremental: {
+        reason: !cache ? makeFallbackReason(supplied) : !sameRoot2(cache.root, currentRoot) ? "root-drift" : "provenance-drift",
+        counters: {
+          cacheAccepted: false,
+          filesConsidered: effectiveSnapshot.inventory.files.length,
+          filesReused: 0,
+          filesParsed: effectiveSnapshot.inventory.files.map(makePortableInitialFile).filter(isParserEligible).length,
+          filesAdded: effectiveSnapshot.inventory.files.length,
+          filesChanged: 0,
+          filesDeleted: 0,
+          importerFilesReparsed: 0
+        },
+        semantic: semantic2
+      }
+    };
+  }
+  const before = flatten(cache);
+  const beforeFacts = sourceFacts(before);
+  const currentFiles = new Map(effectiveSnapshot.inventory.files.map((file2) => [file2.path, makePortableInitialFile(file2)]));
+  const oldPaths = new Set(beforeFacts.files.keys());
+  const newPaths = new Set(currentFiles.keys());
+  const added = new Set([...newPaths].filter((path44) => !oldPaths.has(path44)));
+  const deleted = new Set([...oldPaths].filter((path44) => !newPaths.has(path44)));
+  const changed = new Set([...newPaths].filter((path44) => {
+    const previous = beforeFacts.files.get(path44);
+    const current = currentFiles.get(path44);
+    return Boolean(previous && (previous.contentHash !== current.contentHash || previous.byteSize !== current.byteSize || previous.language !== current.language || previous.role !== current.role));
+  }));
+  const inventoryScopeChanged = added.size > 0 || deleted.size > 0;
+  const importerPaths = new Set(before.structuralShards.flatMap((shard) => shard.imports.map((item) => item.sourcePath)));
+  const reparsePaths = /* @__PURE__ */ new Set([...added, ...changed]);
+  if (inventoryScopeChanged) {
+    for (const path44 of importerPaths) if (newPaths.has(path44)) reparsePaths.add(path44);
+  }
+  const reusablePaths = new Set([...newPaths].filter((path44) => beforeFacts.files.has(path44) && !reparsePaths.has(path44)));
+  const reuse = createPortableExtractionReuse(before);
+  const extraction = await extractPortableRepositoryFromSnapshot(options, effectiveSnapshot, { ...reuse, paths: reusablePaths });
+  if (!extraction.ok) return extraction;
+  const verification2 = await capturePortableExtractionSnapshot(options.repositoryRoot, options.useGit);
+  if ("ok" in verification2) return verification2;
+  const effectiveVerification = incrementalTestHooks.provenanceOverride ? { ...verification2, provenance: incrementalTestHooks.provenanceOverride } : verification2;
+  if (!sameRoot2(effectiveVerification.root, currentRoot) || effectiveVerification.inventory.inventoryFingerprint !== effectiveSnapshot.inventory.inventoryFingerprint) {
+    return { ok: false, diagnostics: [{ code: "source-mismatch", message: "A source file no longer matches its inventory basis." }] };
+  }
+  if (portableProvenanceHash(effectiveVerification.provenance) !== currentProvenanceHash) {
+    return { ok: false, diagnostics: [{ code: "parser-provenance", message: "Pinned parser provenance could not be verified." }] };
+  }
+  const changedFacts = changedEvidence(before, extraction, effectiveSnapshot, added, deleted, changed);
+  const semantic = invalidatePortableSemanticModel(options.semantic ?? cache.semantic, {
+    changedPaths: changedFacts.paths,
+    changedRecordIds: changedFacts.recordIds,
+    inventoryScopeChanged
+  });
+  const nextCache = createPortableIncrementalCache(extraction, semantic.model);
+  const reason = inventoryScopeChanged ? "inventory-scope-changed" : changed.size > 0 ? "source-changed" : reparsePaths.size > 0 ? "dependency-reparse" : "unchanged";
+  return {
+    ...extraction,
+    cache: nextCache,
+    incremental: {
+      reason,
+      counters: {
+        cacheAccepted: true,
+        filesConsidered: currentFiles.size,
+        filesReused: reusablePaths.size,
+        filesParsed: [...reparsePaths].filter((path44) => isParserEligible(currentFiles.get(path44))).length,
+        filesAdded: added.size,
+        filesChanged: changed.size,
+        filesDeleted: deleted.size,
+        importerFilesReparsed: [...reparsePaths].filter((path44) => importerPaths.has(path44)).length
+      },
+      semantic
+    }
+  };
+}
+var CACHE_VERSION, CACHE_AUTHORITY, cacheTrust, rootSchema, portableIncrementalProvenanceSchema, coverageSchema, cacheWithoutHashSchema, cacheSchema, portableIncrementalCacheSchema, incrementalTestHooks, sha2567;
+var init_incremental = __esm({
+  "src/mcp/codebase-index/incremental.ts"() {
+    "use strict";
+    init_v4();
+    init_contracts();
+    init_model_validation();
+    init_extraction();
+    init_inventory();
+    CACHE_VERSION = 1;
+    CACHE_AUTHORITY = /* @__PURE__ */ Symbol("blueprint.portable.incremental.cache-authority");
+    cacheTrust = literal("operational");
+    rootSchema = strictObject({
+      path: string2().min(1),
+      realPath: string2().min(1),
+      device: number2().int().nonnegative(),
+      inode: number2().int().nonnegative()
+    });
+    portableIncrementalProvenanceSchema = strictObject({
+      runtime: strictObject({
+        package: string2().min(1),
+        version: string2().min(1),
+        packageSha256: portableSha256Schema,
+        module: string2().min(1),
+        moduleSha256: portableSha256Schema,
+        wasm: string2().min(1),
+        wasmSha256: portableSha256Schema,
+        languageVersion: number2().int().nonnegative(),
+        minimumCompatibleVersion: number2().int().nonnegative()
+      }),
+      grammars: array(strictObject({
+        package: string2().min(1),
+        version: string2().min(1),
+        packageSha256: portableSha256Schema,
+        asset: string2().min(1),
+        sha256: portableSha256Schema,
+        abiVersion: number2().int().nonnegative()
+      })),
+      adapters: array(strictObject({
+        name: _enum(["javascript", "python", "java"]),
+        ruleVersion: string2().min(1)
+      }))
+    });
+    coverageSchema = strictObject({
+      candidateCount: number2().int().nonnegative(),
+      includedCount: number2().int().nonnegative(),
+      excludedCount: number2().int().nonnegative(),
+      exclusions: array(strictObject({ reason: string2().min(1), count: number2().int().nonnegative() })),
+      structural: strictObject({
+        filesInventoried: number2().int().nonnegative(),
+        filesWithFullCoverage: number2().int().nonnegative(),
+        filesWithFileCoverage: number2().int().nonnegative(),
+        symbolsExtracted: number2().int().nonnegative(),
+        importsExtracted: number2().int().nonnegative(),
+        relationshipsExtracted: number2().int().nonnegative()
+      })
+    });
+    cacheWithoutHashSchema = strictObject({
+      version: literal(CACHE_VERSION),
+      trust: cacheTrust,
+      generationId: generationLocalIdSchema,
+      root: rootSchema,
+      inventoryFingerprint: portableSha256Schema,
+      provenance: portableIncrementalProvenanceSchema,
+      provenanceHash: portableSha256Schema,
+      structuralShards: array(portableStructuralInventorySchema).min(1),
+      sourceBasis: portableAuthoritativeSourceBasisSchema,
+      coverage: coverageSchema,
+      semantic: portableAcceptedSemanticModelSchema.optional()
+    });
+    cacheSchema = cacheWithoutHashSchema.extend({ cacheHash: portableSha256Schema });
+    portableIncrementalCacheSchema = cacheSchema;
+    incrementalTestHooks = {};
+    sha2567 = (value) => createHash19("sha256").update(value, "utf8").digest("hex");
+  }
+});
+
+// src/mcp/codebase-index/publication.ts
+import { createHash as createHash20 } from "node:crypto";
 import { promises as fs17 } from "node:fs";
 import path26 from "node:path";
 function diagnostic4(code) {
@@ -62700,7 +63107,7 @@ async function assertDirectorySnapshot(snapshot3) {
   return true;
 }
 function directoryFingerprint(snapshot3) {
-  return digest4(encoder.encode(JSON.stringify(snapshot3.map((entry) => ({
+  return digest5(encoder.encode(JSON.stringify(snapshot3.map((entry) => ({
     path: entry.path,
     device: entry.identity.device,
     inode: entry.identity.inode
@@ -62832,7 +63239,7 @@ async function captureState(root, directories) {
   const idx = await readRegular(indexPath(root));
   const targetEntries = await Promise.all(CODEBASE_DOCUMENT_IDS.map(async (id) => [id, await readRegular(targetPath(root, id))]));
   const targetBytes = Object.fromEntries(targetEntries);
-  const targetHashes2 = Object.fromEntries(CODEBASE_DOCUMENT_IDS.map((id) => [id, targetBytes[id] === null ? null : digest4(targetBytes[id])]));
+  const targetHashes2 = Object.fromEntries(CODEBASE_DOCUMENT_IDS.map((id) => [id, targetBytes[id] === null ? null : digest5(targetBytes[id])]));
   let indexDescriptor = null;
   if (idx !== null) {
     try {
@@ -62845,7 +63252,7 @@ async function captureState(root, directories) {
     rootFingerprint: directoryFingerprint(directories),
     directories,
     indexBytes: idx,
-    indexHash: idx === null ? null : digest4(idx),
+    indexHash: idx === null ? null : digest5(idx),
     indexDescriptor,
     targetBytes,
     targetHashes: targetHashes2
@@ -62854,7 +63261,7 @@ async function captureState(root, directories) {
 async function readMarker2(root) {
   const bytes = await readRegular(markerPath(root));
   if (bytes === null) return { kind: "absent" };
-  const markerHash = digest4(bytes);
+  const markerHash = digest5(bytes);
   try {
     const parsed = portablePublicationMarkerSchema.safeParse(JSON.parse(text(bytes)));
     return parsed.success ? { kind: "recognized", marker: parsed.data, hash: markerHash } : { kind: "unknown", hash: markerHash };
@@ -62894,7 +63301,7 @@ async function generationFilesFromManifest(root, sealed, expectedRootIndexHash) 
   if (!safeRelative(sealed.generationId) || sealed.manifest.path !== `generations/${sealed.generationId}/manifest.json` || sealed.entry.path !== `generations/${sealed.generationId}/ENTRY.md`) return false;
   const manifestBytes = await readGeneratedRegular(root, sealed.manifest.path).catch(() => null);
   const entryBytes = await readGeneratedRegular(root, sealed.entry.path).catch(() => null);
-  if (!manifestBytes || !entryBytes || digest4(manifestBytes) !== sealed.manifest.checksum || digest4(entryBytes) !== sealed.entry.checksum) return false;
+  if (!manifestBytes || !entryBytes || digest5(manifestBytes) !== sealed.manifest.checksum || digest5(entryBytes) !== sealed.entry.checksum) return false;
   let manifest;
   try {
     manifest = portableGenerationManifestSchema.parse(JSON.parse(text(manifestBytes)));
@@ -62905,16 +63312,16 @@ async function generationFilesFromManifest(root, sealed, expectedRootIndexHash) 
   for (const page of manifest.checksums.pages) {
     if (!safeRelative(page.path) || !page.path.startsWith(`generations/${sealed.generationId}/`)) return false;
     const bytes = await readGeneratedRegular(root, page.path).catch(() => null);
-    if (!bytes || digest4(bytes) !== page.checksum) return false;
+    if (!bytes || digest5(bytes) !== page.checksum) return false;
   }
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const relative = `generations/${sealed.generationId}/compatibility/${DOCUMENT_FILE(id)}`;
     const bytes = await readGeneratedRegular(root, relative).catch(() => null);
-    if (!bytes || digest4(bytes) !== manifest.checksums.compatibility[id]) return false;
+    if (!bytes || digest5(bytes) !== manifest.checksums.compatibility[id]) return false;
   }
   if (expectedRootIndexHash !== void 0) {
     const stagedIndex = await readGeneratedRegular(root, `generations/${sealed.generationId}/${PORTABLE_GENERATION_INDEX_NAME}`).catch(() => null);
-    if (!stagedIndex || digest4(stagedIndex) !== expectedRootIndexHash) return false;
+    if (!stagedIndex || digest5(stagedIndex) !== expectedRootIndexHash) return false;
   }
   return true;
 }
@@ -62926,23 +63333,23 @@ async function renderBundleValid(rendered4) {
   const generationPrefix = `generations/${rendered4.manifest.generationId}/`;
   const allowedRootFiles = /* @__PURE__ */ new Set(["INDEX.md", ...CODEBASE_DOCUMENT_IDS.map(DOCUMENT_FILE)]);
   if (paths.some((relative) => !allowedRootFiles.has(relative) && !relative.startsWith(generationPrefix))) return false;
-  if (digest4(files["INDEX.md"]) !== rendered4.rootIndexHash || digest4(rendered4.rootIndexBytes) !== rendered4.rootIndexHash) return false;
-  if (digest4(files[rendered4.sealedGeneration.entry.path]) !== rendered4.sealedGeneration.entry.checksum || digest4(files[rendered4.sealedGeneration.manifest.path]) !== rendered4.sealedGeneration.manifest.checksum) return false;
+  if (digest5(files["INDEX.md"]) !== rendered4.rootIndexHash || digest5(rendered4.rootIndexBytes) !== rendered4.rootIndexHash) return false;
+  if (digest5(files[rendered4.sealedGeneration.entry.path]) !== rendered4.sealedGeneration.entry.checksum || digest5(files[rendered4.sealedGeneration.manifest.path]) !== rendered4.sealedGeneration.manifest.checksum) return false;
   if (!portableSha256Schema.safeParse(rendered4.rootIndexHash).success) return false;
   for (const [relative, bytes] of Object.entries(files)) {
-    if (!safeRelative(relative) || !(bytes instanceof Uint8Array) || rendered4.checksums[relative] !== digest4(bytes)) return false;
+    if (!safeRelative(relative) || !(bytes instanceof Uint8Array) || rendered4.checksums[relative] !== digest5(bytes)) return false;
   }
   if (rendered4.sealedGeneration.generationId !== rendered4.manifest.generationId) return false;
   if (rendered4.manifest.checksums.entry !== rendered4.sealedGeneration.entry.checksum) return false;
   for (const page of rendered4.manifest.checksums.pages) {
-    if (!files[page.path] || digest4(files[page.path]) !== page.checksum) return false;
+    if (!files[page.path] || digest5(files[page.path]) !== page.checksum) return false;
   }
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const rootName = DOCUMENT_FILE(id);
     const generationName = `generations/${rendered4.manifest.generationId}/compatibility/${rootName}`;
     const bytes = rendered4.rootViewBytes[rootName];
-    if (!files[rootName] || !files[generationName] || !bytes || digest4(bytes) !== rendered4.manifest.checksums.compatibility[id] || digest4(files[rootName]) !== digest4(bytes)) return false;
-    if (digest4(files[generationName]) !== digest4(bytes)) return false;
+    if (!files[rootName] || !files[generationName] || !bytes || digest5(bytes) !== rendered4.manifest.checksums.compatibility[id] || digest5(files[rootName]) !== digest5(bytes)) return false;
+    if (digest5(files[generationName]) !== digest5(bytes)) return false;
   }
   try {
     const parsed = JSON.parse(text(files[rendered4.sealedGeneration.manifest.path]));
@@ -62955,7 +63362,7 @@ async function renderBundleValid(rendered4) {
 function renderedTargetHashes(rendered4) {
   return Object.fromEntries(CODEBASE_DOCUMENT_IDS.map((id) => {
     const bytes = rendered4.rootViewBytes[DOCUMENT_FILE(id)];
-    return [id, bytes ? digest4(bytes) : null];
+    return [id, bytes ? digest5(bytes) : null];
   }));
 }
 async function publishedGenerationIds(root) {
@@ -63026,11 +63433,11 @@ async function writeGeneration(root, rendered4, legacyBackup2) {
     const existing = await readRegular(absolute).catch((error2) => {
       throw error2;
     });
-    if (existing && digest4(existing) === digest4(bytes)) continue;
+    if (existing && digest5(existing) === digest5(bytes)) continue;
     if (existing) throw new Error("publication-conflict");
     await exactAtomicWrite(absolute, bytes);
     const after = await readRegular(absolute);
-    if (!after || digest4(after) !== digest4(bytes)) throw new Error("invalid-generation");
+    if (!after || digest5(after) !== digest5(bytes)) throw new Error("invalid-generation");
   }
   if (!await generationFilesFromManifest(root, rendered4.sealedGeneration, rendered4.rootIndexHash)) throw new Error("invalid-generation");
 }
@@ -63145,14 +63552,14 @@ async function markerStill(root, expected) {
     if (error2.message === "unsafe-target") throw error2;
     return null;
   });
-  return bytes !== null && digest4(bytes) === digest4(markerBytes(expected));
+  return bytes !== null && digest5(bytes) === digest5(markerBytes(expected));
 }
 async function rootIndexMatches(root, hash5) {
   const bytes = await readRegular(indexPath(root)).catch((error2) => {
     if (error2.message === "unsafe-target") throw error2;
     return null;
   });
-  return bytes !== null && digest4(bytes) === hash5;
+  return bytes !== null && digest5(bytes) === hash5;
 }
 async function readRestoreBytes(root, marker, id) {
   const previous = marker.previousTargetHashes[id];
@@ -63160,7 +63567,7 @@ async function readRestoreBytes(root, marker, id) {
   let bytes = null;
   if (marker.v1BackupReference) bytes = await readGeneratedRegular(root, marker.v1BackupReference.compatibility[id].path).catch(() => null);
   if (!bytes && marker.previousGenerationId) bytes = await readGeneratedRegular(root, `generations/${marker.previousGenerationId}/compatibility/${DOCUMENT_FILE(id)}`).catch(() => null);
-  if (!bytes || digest4(bytes) !== previous) return null;
+  if (!bytes || digest5(bytes) !== previous) return null;
   return bytes;
 }
 async function previousGenerationIsRestorable(root, marker) {
@@ -63169,7 +63576,7 @@ async function previousGenerationIsRestorable(root, marker) {
       const reference2 = marker.v1BackupReference.compatibility[id];
       if (!safeRelative(reference2.path)) return false;
       const bytes = await readGeneratedRegular(root, reference2.path).catch(() => null);
-      if (!bytes || digest4(bytes) !== reference2.checksum || digest4(bytes) !== marker.previousTargetHashes[id]) return false;
+      if (!bytes || digest5(bytes) !== reference2.checksum || digest5(bytes) !== marker.previousTargetHashes[id]) return false;
     }
   }
   if (!marker.previousGenerationId) return true;
@@ -63196,7 +63603,7 @@ async function restorePrecommit(root, marker) {
       if (error2.message === "unsafe-target") throw error2;
       return null;
     });
-    const currentHash = current === null ? null : digest4(current);
+    const currentHash = current === null ? null : digest5(current);
     const next = marker.nextTargetHashes[id];
     const previous = marker.previousTargetHashes[id];
     if (currentHash === previous) continue;
@@ -63230,7 +63637,7 @@ async function restorePrecommit(root, marker) {
       if (error2.message === "unsafe-target") throw error2;
       return null;
     });
-    if (!after || digest4(after) !== previous) complete = false;
+    if (!after || digest5(after) !== previous) complete = false;
   }
   if (!complete) return false;
   if (await rootIndexMatches(root, marker.nextIndexHash)) {
@@ -63244,7 +63651,7 @@ async function cleanupCommitted(root, marker) {
   if (!await rootIndexMatches(root, marker.nextIndexHash)) return false;
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const bytes = await readRegular(targetPath(root, id));
-    const currentHash = bytes === null ? null : digest4(bytes);
+    const currentHash = bytes === null ? null : digest5(bytes);
     if (currentHash !== marker.nextTargetHashes[id]) return false;
   }
   const current = await readMarker2(root);
@@ -63258,12 +63665,12 @@ async function finalPrecommitValidation(root, directories, marker, freshnessChec
   if (!await assertDirectorySnapshot(directories)) throw new Error("unsafe-root");
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const bytes = await readRegular(targetPath(root, id));
-    if (!bytes || digest4(bytes) !== marker.nextTargetHashes[id]) throw new Error("stale-target");
+    if (!bytes || digest5(bytes) !== marker.nextTargetHashes[id]) throw new Error("stale-target");
   }
   if (!await markerStill(root, marker)) throw new Error("publication-conflict");
   if (!await assertDirectorySnapshot(directories)) throw new Error("unsafe-root");
   const currentIndex = await readRegular(indexPath(root));
-  const currentIndexHash = currentIndex === null ? null : digest4(currentIndex);
+  const currentIndexHash = currentIndex === null ? null : digest5(currentIndex);
   if (currentIndexHash !== marker.previousIndexHash && currentIndexHash !== marker.nextIndexHash) throw new Error("stale-target");
   return currentIndexHash;
 }
@@ -63367,7 +63774,7 @@ async function publishLocked(input, root, directories, preflight) {
     if (!await generationFilesFromManifest(root, marker.sealedGeneration, marker.nextIndexHash)) throw new Error("invalid-generation");
     for (const id of CODEBASE_DOCUMENT_IDS) {
       const current = await readRegular(targetPath(root, id));
-      const currentHash = current === null ? null : digest4(current);
+      const currentHash = current === null ? null : digest5(current);
       const previous = marker.previousTargetHashes[id];
       const next = marker.nextTargetHashes[id];
       if (currentHash === next) continue;
@@ -63375,7 +63782,7 @@ async function publishLocked(input, root, directories, preflight) {
       await portablePublicationTestHooks.beforeCompatibilityWrite?.(id);
       await exactAtomicWrite(targetPath(root, id), input.rendered.rootViewBytes[DOCUMENT_FILE(id)]);
       const after = await readRegular(targetPath(root, id));
-      if (!after || digest4(after) !== next) throw new Error("publication-failed");
+      if (!after || digest5(after) !== next) throw new Error("publication-failed");
     }
     if (!await verifyFreshness(input.verifyFreshness, {
       phase: "before-index",
@@ -63485,7 +63892,7 @@ async function publishPortableMap(input) {
     }
   });
 }
-var PORTABLE_CODEBASE_ROOT, PORTABLE_CODEBASE_INDEX, PORTABLE_PUBLICATION_MARKER, PORTABLE_PUBLICATION_LOCK, PORTABLE_GENERATION_INDEX_NAME, DOCUMENT_FILE, digest4, text, encoder, MESSAGES, portablePublicationTestHooks;
+var PORTABLE_CODEBASE_ROOT, PORTABLE_CODEBASE_INDEX, PORTABLE_PUBLICATION_MARKER, PORTABLE_PUBLICATION_LOCK, PORTABLE_GENERATION_INDEX_NAME, DOCUMENT_FILE, digest5, text, encoder, MESSAGES, portablePublicationTestHooks;
 var init_publication = __esm({
   "src/mcp/codebase-index/publication.ts"() {
     "use strict";
@@ -63499,7 +63906,7 @@ var init_publication = __esm({
     PORTABLE_PUBLICATION_LOCK = "codebase-publication";
     PORTABLE_GENERATION_INDEX_NAME = "INDEX.md";
     DOCUMENT_FILE = (id) => `${id.toUpperCase()}.md`;
-    digest4 = (bytes) => createHash19("sha256").update(bytes).digest("hex");
+    digest5 = (bytes) => createHash20("sha256").update(bytes).digest("hex");
     text = (bytes) => new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     encoder = new TextEncoder();
     MESSAGES = {
@@ -63520,7 +63927,7 @@ var init_publication = __esm({
 });
 
 // src/mcp/codebase-index/operations.ts
-import { createHash as createHash20, createHmac, randomBytes } from "node:crypto";
+import { createHash as createHash21, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { constants as fsConstants2 } from "node:fs";
 import { promises as fs18 } from "node:fs";
 import path27 from "node:path";
@@ -63530,8 +63937,8 @@ function diagnostic5(code) {
 function fixedFailure(status, code, operationId, generationId) {
   return { ok: false, status, diagnostics: [diagnostic5(code)], ...operationId ? { operationId } : {}, ...generationId ? { generationId } : {} };
 }
-function sha2567(value) {
-  return createHash20("sha256").update(value).digest("hex");
+function sha2568(value) {
+  return createHash21("sha256").update(value).digest("hex");
 }
 function canonicalJson(value) {
   return `${JSON.stringify(value)}
@@ -63556,7 +63963,7 @@ function resolveRepositoryRoot(input) {
 function generatedOpaqueId(prefix) {
   return `${prefix}-${randomBytes(18).toString("hex")}`;
 }
-function sameRoot2(left, right) {
+function sameRoot3(left, right) {
   return left.path === right.path && left.realPath === right.realPath && left.device === right.device && left.inode === right.inode && left.ancestors.length === right.ancestors.length && left.ancestors.every((entry, index) => {
     const other = right.ancestors[index];
     return entry.path === other.path && entry.device === other.device && entry.inode === other.inode;
@@ -63589,10 +63996,10 @@ function sameDirectoryChain(left, right) {
   }));
 }
 function rootBasisHash(root) {
-  return sha2567(JSON.stringify({ path: root.path, realPath: root.realPath, device: root.device, inode: root.inode, ancestors: root.ancestors }));
+  return sha2568(JSON.stringify({ path: root.path, realPath: root.realPath, device: root.device, inode: root.inode, ancestors: root.ancestors }));
 }
 function basisHash(metadata) {
-  return sha2567(JSON.stringify({ generationId: metadata.generationId, inventoryFingerprint: metadata.inventoryFingerprint, sourceBasis: metadata.sourceBasis }));
+  return sha2568(JSON.stringify({ generationId: metadata.generationId, inventoryFingerprint: metadata.inventoryFingerprint, sourceBasis: metadata.sourceBasis }));
 }
 function rootFromExtraction(root, ancestors) {
   return identitySchema.parse({ path: root.path, realPath: root.realPath, device: root.device, inode: root.inode, ancestors });
@@ -63631,7 +64038,7 @@ async function ensureLiteralDirectory(repositoryRoot, relative) {
     const after = await fs18.lstat(current).catch(() => null);
     if (!after || after.isSymbolicLink() || !after.isDirectory()) return false;
   }
-  return sameRoot2(root, await captureLiteralRoot(repositoryRoot));
+  return sameRoot3(root, await captureLiteralRoot(repositoryRoot));
 }
 async function assertLiteralRelativePath(repositoryRoot, relative, allowMissingLeaf = false) {
   if (!relative || relative.startsWith("/") || relative.includes("\\") || /[\0-\u001f\u007f]/.test(relative) || relative.split("/").some((segment) => !segment || segment === "." || segment === "..")) return false;
@@ -63681,7 +64088,7 @@ async function readLiteralFile(repositoryRoot, relative) {
   if (!sameDirectoryChain(beforeChain, await captureDirectoryChain(repositoryRoot, parent))) throw new Error("unsafe");
   return bytes;
 }
-async function atomicWriteLiteral(repositoryRoot, relative, bytes, overwrite) {
+async function atomicWriteLiteral(repositoryRoot, relative, bytes, overwrite, mode2 = 438) {
   if (!await assertLiteralRelativePath(repositoryRoot, path27.posix.dirname(relative), false)) throw new Error("unsafe");
   if (!await assertLiteralRelativePath(repositoryRoot, relative, true)) throw new Error("unsafe");
   const absolute = path27.join(repositoryRoot, relative);
@@ -63706,7 +64113,7 @@ async function atomicWriteLiteral(repositoryRoot, relative, bytes, overwrite) {
   try {
     await portableOperationTestHooks.beforeAtomicWrite?.(relative);
     if (!sameDirectoryChain(chain, await captureDirectoryChain(repositoryRoot, parentRelative))) throw new Error("unsafe");
-    await fs18.writeFile(temp, bytes, { flag: "wx" });
+    await fs18.writeFile(temp, bytes, { flag: "wx", mode: mode2 });
     const created = await fs18.lstat(temp);
     if (created.isSymbolicLink() || !created.isFile()) throw new Error("unsafe");
     ownedTemp = fileIdentity(created);
@@ -63723,7 +64130,7 @@ async function atomicWriteLiteral(repositoryRoot, relative, bytes, overwrite) {
     if (!sameDirectoryChain(chain, await captureDirectoryChain(repositoryRoot, parentRelative))) throw new Error("unsafe");
     const after = await fs18.lstat(anchored(path27.basename(relative)));
     if (after.isSymbolicLink() || !after.isFile()) throw new Error("unsafe");
-    if (sha2567(await fs18.readFile(anchored(path27.basename(relative)))) !== sha2567(bytes)) throw new Error("integrity");
+    if (sha2568(await fs18.readFile(anchored(path27.basename(relative)))) !== sha2568(bytes)) throw new Error("integrity");
   } finally {
     if (ownedTemp) {
       const currentTemp = await fs18.lstat(temp).catch(() => null);
@@ -63735,7 +64142,7 @@ async function atomicWriteLiteral(repositoryRoot, relative, bytes, overwrite) {
   }
 }
 function refFor(file2, bytes) {
-  return { path: file2, checksum: sha2567(bytes), byteSize: bytes.byteLength };
+  return { path: file2, checksum: sha2568(bytes), byteSize: bytes.byteLength };
 }
 function parseStoredJson(bytes, schema2) {
   try {
@@ -63745,9 +64152,72 @@ function parseStoredJson(bytes, schema2) {
     return null;
   }
 }
+function incrementalCachePayload(cache) {
+  return canonicalJson({ version: 1, cache });
+}
+function incrementalCacheAuthTag(key2, cache) {
+  return createHmac("sha256", key2).update(incrementalCachePayload(cache), "utf8").digest("hex");
+}
+function sameSecret(left, right) {
+  const leftBytes = Buffer.from(left, "utf8");
+  const rightBytes = Buffer.from(right, "utf8");
+  return leftBytes.byteLength === rightBytes.byteLength && timingSafeEqual(leftBytes, rightBytes);
+}
+async function readPortableIncrementalCacheUnlocked(repositoryRoot) {
+  if (!await assertLiteralRelativePath(repositoryRoot, PORTABLE_INCREMENTAL_CACHE_ROOT)) return null;
+  const keyBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_INCREMENTAL_CACHE_ROOT}/${PORTABLE_INCREMENTAL_CACHE_KEY_FILE}`).catch(() => null);
+  const cacheBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_INCREMENTAL_CACHE_ROOT}/${PORTABLE_INCREMENTAL_CACHE_FILE}`).catch(() => null);
+  if (!keyBytes || !cacheBytes) return null;
+  const keyStat = await fs18.lstat(path27.join(repositoryRoot, PORTABLE_INCREMENTAL_CACHE_ROOT, PORTABLE_INCREMENTAL_CACHE_KEY_FILE)).catch(() => null);
+  if (!keyStat || keyStat.isSymbolicLink() || !keyStat.isFile() || (keyStat.mode & 63) !== 0) return null;
+  const key2 = parseStoredJson(keyBytes, incrementalCacheKeySchema);
+  const envelope = parseStoredJson(cacheBytes, incrementalCacheEnvelopeSchema);
+  if (!key2 || !envelope || !sameSecret(envelope.authTag, incrementalCacheAuthTag(key2.key, envelope.cache))) return null;
+  return restorePortableIncrementalCache(envelope.cache);
+}
+async function writePortableIncrementalCacheUnlocked(repositoryRoot, cache) {
+  const initialRoot = await captureLiteralRoot(repositoryRoot);
+  if (!initialRoot || !await ensureLiteralDirectory(repositoryRoot, PORTABLE_INCREMENTAL_CACHE_ROOT)) return false;
+  try {
+    const keyRelative = `${PORTABLE_INCREMENTAL_CACHE_ROOT}/${PORTABLE_INCREMENTAL_CACHE_KEY_FILE}`;
+    const existingKeyBytes = await readLiteralFile(repositoryRoot, keyRelative).catch(() => null);
+    const keyAbsolute = path27.join(repositoryRoot, PORTABLE_INCREMENTAL_CACHE_ROOT, PORTABLE_INCREMENTAL_CACHE_KEY_FILE);
+    const existingKeyStat = await fs18.lstat(keyAbsolute).catch(() => null);
+    const broadExistingKey = Boolean(existingKeyStat && existingKeyStat.isFile() && !existingKeyStat.isSymbolicLink() && (existingKeyStat.mode & 63) !== 0);
+    let key2 = existingKeyBytes && !broadExistingKey ? parseStoredJson(existingKeyBytes, incrementalCacheKeySchema) : null;
+    if (!key2) {
+      key2 = incrementalCacheKeySchema.parse({ version: 1, key: randomBytes(32).toString("hex") });
+      await atomicWriteLiteral(repositoryRoot, keyRelative, new TextEncoder().encode(canonicalJson(key2)), Boolean(existingKeyBytes), 384);
+    }
+    const cacheProjection = serializePortableIncrementalCache(cache);
+    if (!portableIncrementalCacheSchema.safeParse(cacheProjection).success) return false;
+    const envelope = incrementalCacheEnvelopeSchema.parse({
+      version: 1,
+      cache: cacheProjection,
+      authTag: incrementalCacheAuthTag(key2.key, cacheProjection)
+    });
+    await atomicWriteLiteral(repositoryRoot, `${PORTABLE_INCREMENTAL_CACHE_ROOT}/${PORTABLE_INCREMENTAL_CACHE_FILE}`, new TextEncoder().encode(canonicalJson(envelope)), true);
+    const afterRoot = await captureLiteralRoot(repositoryRoot);
+    return Boolean(afterRoot && afterRoot.path === initialRoot.path && afterRoot.realPath === initialRoot.realPath && afterRoot.device === initialRoot.device && afterRoot.inode === initialRoot.inode);
+  } catch {
+    return false;
+  }
+}
+async function readPortableIncrementalCache(input) {
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot) return null;
+  const result = await withOperationLock(repositoryRoot, "codebase-incremental-cache", () => readPortableIncrementalCacheUnlocked(repositoryRoot));
+  return result && typeof result === "object" && "ok" in result ? null : result;
+}
+async function writePortableIncrementalCache(input) {
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot) return false;
+  const result = await withOperationLock(repositoryRoot, "codebase-incremental-cache", () => writePortableIncrementalCacheUnlocked(repositoryRoot, input.cache));
+  return result && typeof result === "object" && "ok" in result ? false : Boolean(result);
+}
 function extractionFromStored(metadata, structural, authority, provenance) {
   if (structural.operationId !== metadata.operationId || structural.generationId !== metadata.generationId || authority.operationId !== metadata.operationId || authority.generationId !== metadata.generationId || provenance.operationId !== metadata.operationId || provenance.generationId !== metadata.generationId) return null;
-  if (authority.sourceBasis.generationId !== metadata.generationId || provenance.inventoryFingerprint !== metadata.inventoryFingerprint || !sameRoot2(provenance.root, metadata.rootIdentity) || sha2567(canonicalJson(provenance.provenance)) !== metadata.provenanceHash) return null;
+  if (authority.sourceBasis.generationId !== metadata.generationId || provenance.inventoryFingerprint !== metadata.inventoryFingerprint || !sameRoot3(provenance.root, metadata.rootIdentity) || sha2568(canonicalJson(provenance.provenance)) !== metadata.provenanceHash) return null;
   return {
     ok: true,
     generationId: metadata.generationId,
@@ -63787,7 +64257,7 @@ async function loadPortableOperationUnlocked(repositoryRoot, operationId) {
       return fixedFailure("invalid-state", "integrity-failure", operationId, metadata.generationId);
     }
     const bytes = await readLiteralFile(repositoryRoot, `${operationDirectory}/${reference2.path}`).catch(() => null);
-    if (!bytes || bytes.byteLength !== reference2.byteSize || sha2567(bytes) !== reference2.checksum) return fixedFailure("invalid-state", "integrity-failure", operationId, metadata.generationId);
+    if (!bytes || bytes.byteLength !== reference2.byteSize || sha2568(bytes) !== reference2.checksum) return fixedFailure("invalid-state", "integrity-failure", operationId, metadata.generationId);
     const value = parseStoredJson(bytes, schema2);
     if (!value) return fixedFailure("invalid-state", "integrity-failure", operationId, metadata.generationId);
     parsed[kind] = value;
@@ -63812,7 +64282,7 @@ async function withOperationLock(repositoryRoot, operationId, task) {
   try {
     return await withBlueprintRepoLock(repositoryRoot, `codebase-operation-${operationId}`, async () => {
       const inside = await captureLiteralRoot(repositoryRoot);
-      if (!inside || !sameRoot2(root, inside)) return fixedFailure("unsafe", "unsafe-root", operationId);
+      if (!inside || !sameRoot3(root, inside)) return fixedFailure("unsafe", "unsafe-root", operationId);
       return task();
     });
   } catch {
@@ -63861,7 +64331,7 @@ function sourceBasisFor(extraction, root) {
   return portableSourceBasisSchema.parse({
     rootHash: rootBasisHash(root),
     inventoryHash: extraction.inventoryFingerprint,
-    evidenceHash: sha2567(canonicalJson(extraction.sourceBasis))
+    evidenceHash: sha2568(canonicalJson(extraction.sourceBasis))
   });
 }
 async function capturePredecessorProof(repositoryRoot, preflight) {
@@ -63872,11 +64342,11 @@ async function capturePredecessorProof(repositoryRoot, preflight) {
   const entryBytes = await readLiteralFile(repositoryRoot, entryPath).catch(() => null);
   if (!manifestBytes || !entryBytes) return null;
   const manifest = parseStoredJson(manifestBytes, portableGenerationManifestSchema);
-  if (!manifest || manifest.generationId !== preflight.previousGenerationId || manifest.checksums.entry !== sha2567(entryBytes)) return null;
+  if (!manifest || manifest.generationId !== preflight.previousGenerationId || manifest.checksums.entry !== sha2568(entryBytes)) return null;
   return portablePredecessorPublicationProofSchema.parse({
     generationId: preflight.previousGenerationId,
-    manifest: { path: manifestPath2.replace(/^\.blueprint\/codebase\//, ""), checksum: sha2567(manifestBytes) },
-    entry: { path: entryPath.replace(/^\.blueprint\/codebase\//, ""), checksum: sha2567(entryBytes) },
+    manifest: { path: manifestPath2.replace(/^\.blueprint\/codebase\//, ""), checksum: sha2568(manifestBytes) },
+    entry: { path: entryPath.replace(/^\.blueprint\/codebase\//, ""), checksum: sha2568(entryBytes) },
     committedIndexHash: preflight.previousIndexHash
   });
 }
@@ -63956,11 +64426,11 @@ function comparePublication(left, right) {
 async function revalidateLoaded(repositoryRoot, loaded, now) {
   if (isExpired(loaded.metadata, now)) return fixedFailure("expired", "expired", loaded.metadata.operationId, loaded.metadata.generationId);
   const currentRoot = await captureLiteralRoot(repositoryRoot);
-  if (!currentRoot || !sameRoot2(currentRoot, loaded.metadata.rootIdentity)) return fixedFailure("stale", currentRoot ? "stale-root" : "unsafe-root", loaded.metadata.operationId, loaded.metadata.generationId);
+  if (!currentRoot || !sameRoot3(currentRoot, loaded.metadata.rootIdentity)) return fixedFailure("stale", currentRoot ? "stale-root" : "unsafe-root", loaded.metadata.operationId, loaded.metadata.generationId);
   const fresh = await capturePortableSourceFreshness(repositoryRoot);
   if (!fresh.ok) return fixedFailure("stale", fresh.diagnostics[0]?.code === "root-unavailable" || fresh.diagnostics[0]?.code === "root-changed" ? "stale-root" : "stale-source", loaded.metadata.operationId, loaded.metadata.generationId);
   const freshRoot = rootFromExtraction(fresh.root, loaded.metadata.rootIdentity.ancestors);
-  if (!sameRoot2(freshRoot, loaded.metadata.rootIdentity)) return fixedFailure("stale", "stale-root", loaded.metadata.operationId, loaded.metadata.generationId);
+  if (!sameRoot3(freshRoot, loaded.metadata.rootIdentity)) return fixedFailure("stale", "stale-root", loaded.metadata.operationId, loaded.metadata.generationId);
   const currentBasis = portableSourceBasisSchema.parse({
     rootHash: rootBasisHash(currentRoot),
     inventoryHash: fresh.inventoryFingerprint,
@@ -63969,7 +64439,7 @@ async function revalidateLoaded(repositoryRoot, loaded, now) {
   if (currentBasis.inventoryHash !== loaded.metadata.sourceBasis.inventoryHash || currentBasis.rootHash !== loaded.metadata.sourceBasis.rootHash || fresh.inventoryFingerprint !== loaded.metadata.inventoryFingerprint) {
     return fixedFailure("stale", "stale-source", loaded.metadata.operationId, loaded.metadata.generationId);
   }
-  if (sha2567(canonicalJson(fresh.provenance)) !== loaded.metadata.provenanceHash) return fixedFailure("stale", "stale-provenance", loaded.metadata.operationId, loaded.metadata.generationId);
+  if (sha2568(canonicalJson(fresh.provenance)) !== loaded.metadata.provenanceHash) return fixedFailure("stale", "stale-provenance", loaded.metadata.operationId, loaded.metadata.generationId);
   const repairBasis = loaded.metadata.repair === false ? void 0 : loaded.metadata.repair;
   const target = await capturePortablePublicationPreflight({
     repositoryRoot,
@@ -64011,12 +64481,14 @@ async function preparePortableOperation(input = {}) {
   const operationId = generatedOpaqueId("op");
   const generationId = generatedOpaqueId("gen");
   const transactionId = generatedOpaqueId("tx");
-  const extraction = await extractPortableRepository({ repositoryRoot, generationId });
-  if (!extraction.ok) return fixedFailure("stale", "stale-source", operationId, generationId);
-  const root = rootFromExtraction(extraction.root, initialRoot.ancestors);
-  if (!sameRoot2(initialRoot, root)) return fixedFailure("stale", "stale-root", operationId, generationId);
-  const sourceBasis = sourceBasisFor(extraction, root);
   if (!await ensureLiteralDirectory(repositoryRoot, ".blueprint/locks")) return fixedFailure("unsafe", "unsafe-root", operationId, generationId);
+  const previousCache = await readPortableIncrementalCache({ repositoryRoot });
+  const extraction = await extractPortableRepositoryIncremental({ repositoryRoot, generationId, ...previousCache ? { previous: previousCache } : {} });
+  if (!extraction.ok) return fixedFailure("stale", "stale-source", operationId, generationId);
+  await writePortableIncrementalCache({ repositoryRoot, cache: extraction.cache });
+  const root = rootFromExtraction(extraction.root, initialRoot.ancestors);
+  if (!sameRoot3(initialRoot, root)) return fixedFailure("stale", "stale-root", operationId, generationId);
+  const sourceBasis = sourceBasisFor(extraction, root);
   const preflight = await capturePortablePublicationPreflight({
     repositoryRoot,
     operationId,
@@ -64064,7 +64536,7 @@ async function preparePortableOperation(input = {}) {
     rootIdentity: root,
     inventoryFingerprint: extraction.inventoryFingerprint,
     coverage: extraction.coverage,
-    provenanceHash: sha2567(canonicalJson(extraction.provenance)),
+    provenanceHash: sha2568(canonicalJson(extraction.provenance)),
     publication,
     files: {
       structural: refFor(PORTABLE_OPERATION_STRUCTURAL_FILE, new TextEncoder().encode(canonicalJson({ version: 1, operationId, generationId, shards: extraction.structuralShards }))),
@@ -64083,7 +64555,7 @@ async function preparePortableOperation(input = {}) {
   });
   const written = await withOperationLock(repositoryRoot, operationId, async () => {
     const inside = await captureLiteralRoot(repositoryRoot);
-    if (!inside || !sameRoot2(inside, root)) return fixedFailure("stale", "stale-root", operationId, generationId);
+    if (!inside || !sameRoot3(inside, root)) return fixedFailure("stale", "stale-root", operationId, generationId);
     if (!await ensureLiteralDirectory(repositoryRoot, PORTABLE_OPERATIONS_ROOT)) return fixedFailure("unsafe", "unsafe-root", operationId, generationId);
     await writePreparedOperation(repositoryRoot, preparedMetadata, extraction, packetBytes);
     return null;
@@ -64091,7 +64563,7 @@ async function preparePortableOperation(input = {}) {
   if (written) return written;
   const receipt2 = boundedReceipt(preparedMetadata, initialPackets.packets, void 0);
   if (!receipt2.ok) return fixedFailure("invalid-state", receipt2.diagnostics[0]?.code ?? "invalid-state", operationId, generationId);
-  return { ok: true, status: "ready", operationId, generationId, metadata: preparedMetadata, receipt: receipt2 };
+  return { ok: true, status: "ready", operationId, generationId, metadata: preparedMetadata, receipt: receipt2, incremental: extraction.incremental };
 }
 async function readPortableOperationAcceptance(input) {
   const repositoryRoot = resolveRepositoryRoot(input);
@@ -64106,7 +64578,7 @@ async function readPortableOperationAcceptance(input) {
 }
 async function recordPortableOperationAcceptance(input) {
   const repositoryRoot = resolveRepositoryRoot(input);
-  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success || !digest5.safeParse(input.modelHash).success || !digest5.safeParse(input.rootIndexHash).success) return false;
+  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success || !digest6.safeParse(input.modelHash).success || !digest6.safeParse(input.rootIndexHash).success) return false;
   const accepted = acceptedSubmissionSchema.safeParse({
     version: 1,
     operationId: input.operationId,
@@ -64139,7 +64611,7 @@ async function recordPortableOperationAcceptance(input) {
 }
 async function recordPortableOperationCommitUnlocked(input) {
   const repositoryRoot = resolveRepositoryRoot(input);
-  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success || !digest5.safeParse(input.modelHash).success || !digest5.safeParse(input.rootIndexHash).success || !digest5.safeParse(input.manifestHash).success || !digest5.safeParse(input.entryHash).success) return false;
+  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success || !digest6.safeParse(input.modelHash).success || !digest6.safeParse(input.rootIndexHash).success || !digest6.safeParse(input.manifestHash).success || !digest6.safeParse(input.entryHash).success) return false;
   const committed = committedSubmissionSchema.safeParse({
     version: 1,
     operationId: input.operationId,
@@ -64171,21 +64643,21 @@ async function recordPortableOperationCommitUnderPublicationLock(input) {
   return recordPortableOperationCommitUnlocked(input);
 }
 async function verifySealedGeneration(repositoryRoot, generationId, manifestHash, entryHash) {
-  if (!generationLocalIdSchema.safeParse(generationId).success || !digest5.safeParse(manifestHash).success || !digest5.safeParse(entryHash).success) return false;
+  if (!generationLocalIdSchema.safeParse(generationId).success || !digest6.safeParse(manifestHash).success || !digest6.safeParse(entryHash).success) return false;
   const prefix = `.blueprint/codebase/generations/${generationId}`;
   const manifestBytes = await readLiteralFile(repositoryRoot, `${prefix}/manifest.json`).catch(() => null);
   const entryBytes = await readLiteralFile(repositoryRoot, `${prefix}/ENTRY.md`).catch(() => null);
-  if (!manifestBytes || !entryBytes || sha2567(manifestBytes) !== manifestHash || sha2567(entryBytes) !== entryHash) return false;
+  if (!manifestBytes || !entryBytes || sha2568(manifestBytes) !== manifestHash || sha2568(entryBytes) !== entryHash) return false;
   const manifest = parseStoredJson(manifestBytes, portableGenerationManifestSchema);
   if (!manifest || manifest.generationId !== generationId || manifest.checksums.entry !== entryHash) return false;
   for (const page of manifest.checksums.pages) {
     if (!page.path.startsWith(`generations/${generationId}/`) || !await assertLiteralRelativePath(repositoryRoot, `.blueprint/codebase/${page.path}`)) return false;
     const bytes = await readLiteralFile(repositoryRoot, `.blueprint/codebase/${page.path}`).catch(() => null);
-    if (!bytes || sha2567(bytes) !== page.checksum) return false;
+    if (!bytes || sha2568(bytes) !== page.checksum) return false;
   }
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const bytes = await readLiteralFile(repositoryRoot, `${prefix}/compatibility/${id.toUpperCase()}.md`).catch(() => null);
-    if (!bytes || sha2567(bytes) !== manifest.checksums.compatibility[id]) return false;
+    if (!bytes || sha2568(bytes) !== manifest.checksums.compatibility[id]) return false;
   }
   return true;
 }
@@ -64203,7 +64675,7 @@ async function portableOperationCommitState(input) {
   const manifestHash = receiptMatches ? receipt2.manifestHash : "";
   const entryHash = receiptMatches ? receipt2.entryHash : "";
   const indexBytes = await readLiteralFile(repositoryRoot, ".blueprint/codebase/INDEX.md").catch(() => null);
-  const current = Boolean(indexBytes && sha2567(indexBytes) === accepted.rootIndexHash);
+  const current = Boolean(indexBytes && sha2568(indexBytes) === accepted.rootIndexHash);
   const sealed = receiptMatches ? await verifySealedGeneration(repositoryRoot, accepted.generationId, manifestHash, entryHash) : current ? await verifySealedGenerationFromOperation(repositoryRoot, accepted.generationId, accepted.rootIndexHash) : false;
   return { accepted, receipt: receipt2, historicallyCommitted: receiptMatches, generationValid: sealed, committed: sealed && (current || receiptMatches), current };
 }
@@ -64213,9 +64685,9 @@ async function verifySealedGenerationFromOperation(repositoryRoot, generationId,
   const entryBytes = await readLiteralFile(repositoryRoot, `${prefix}/ENTRY.md`).catch(() => null);
   if (!manifestBytes || !entryBytes) return false;
   const manifest = parseStoredJson(manifestBytes, portableGenerationManifestSchema);
-  if (!manifest || manifest.generationId !== generationId || manifest.checksums.entry !== sha2567(entryBytes)) return false;
+  if (!manifest || manifest.generationId !== generationId || manifest.checksums.entry !== sha2568(entryBytes)) return false;
   const indexBytes = await readLiteralFile(repositoryRoot, ".blueprint/codebase/INDEX.md").catch(() => null);
-  return await verifySealedGeneration(repositoryRoot, generationId, sha2567(manifestBytes), sha2567(entryBytes)) && Boolean(indexBytes && sha2567(indexBytes) === rootIndexHash);
+  return await verifySealedGeneration(repositoryRoot, generationId, sha2568(manifestBytes), sha2568(entryBytes)) && Boolean(indexBytes && sha2568(indexBytes) === rootIndexHash);
 }
 async function loadPortableOperation(input) {
   const repositoryRoot = resolveRepositoryRoot(input);
@@ -64250,7 +64722,7 @@ async function readPortableOperationReceipt(input) {
   });
   return result;
 }
-var PORTABLE_OPERATIONS_ROOT, PORTABLE_OPERATION_METADATA_FILE, PORTABLE_OPERATION_MARKER_FILE, PORTABLE_OPERATION_STRUCTURAL_FILE, PORTABLE_OPERATION_AUTHORITY_FILE, PORTABLE_OPERATION_PROVENANCE_FILE, PORTABLE_OPERATION_PACKETS_FILE, PORTABLE_OPERATION_INACTIVITY_MS, PORTABLE_OPERATION_RECEIPT_ENVELOPE_RESERVE_BYTES, PORTABLE_OPERATION_PACKET_BUDGET_BYTES, PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES, PORTABLE_OPERATION_ACCEPTED_FILE, PORTABLE_OPERATION_COMMITTED_FILE, portableOperationTestHooks, safeNonNegativeInteger2, safePositiveInteger, boundedPath, opaqueSecret, timestamp, digest5, identitySchema, provenanceSchema, coverageSchema, fileRefSchema, publicationSchema, metadataSchema2, structuralStoreSchema, authorityStoreSchema, provenanceStoreSchema, packetStoreSchema, acceptedSubmissionSchema, committedSubmissionSchema, operationMarkerSchema, cursorSchema, operationIdSchema, DIAGNOSTICS;
+var PORTABLE_OPERATIONS_ROOT, PORTABLE_OPERATION_METADATA_FILE, PORTABLE_OPERATION_MARKER_FILE, PORTABLE_OPERATION_STRUCTURAL_FILE, PORTABLE_OPERATION_AUTHORITY_FILE, PORTABLE_OPERATION_PROVENANCE_FILE, PORTABLE_OPERATION_PACKETS_FILE, PORTABLE_OPERATION_INACTIVITY_MS, PORTABLE_OPERATION_RECEIPT_ENVELOPE_RESERVE_BYTES, PORTABLE_OPERATION_PACKET_BUDGET_BYTES, PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES, PORTABLE_OPERATION_ACCEPTED_FILE, PORTABLE_OPERATION_COMMITTED_FILE, PORTABLE_INCREMENTAL_CACHE_ROOT, PORTABLE_INCREMENTAL_CACHE_FILE, PORTABLE_INCREMENTAL_CACHE_KEY_FILE, portableOperationTestHooks, safeNonNegativeInteger2, safePositiveInteger, boundedPath, opaqueSecret, timestamp, digest6, identitySchema, provenanceSchema, coverageSchema2, fileRefSchema, publicationSchema, metadataSchema2, structuralStoreSchema, authorityStoreSchema, provenanceStoreSchema, packetStoreSchema, acceptedSubmissionSchema, committedSubmissionSchema, operationMarkerSchema, cursorSchema, operationIdSchema, incrementalCacheKeySchema, incrementalCacheEnvelopeSchema, DIAGNOSTICS;
 var init_operations = __esm({
   "src/mcp/codebase-index/operations.ts"() {
     "use strict";
@@ -64260,6 +64732,7 @@ var init_operations = __esm({
     init_contracts();
     init_model_validation();
     init_extraction();
+    init_incremental();
     init_publication();
     PORTABLE_OPERATIONS_ROOT = ".blueprint/codebase-operations";
     PORTABLE_OPERATION_METADATA_FILE = "metadata.json";
@@ -64274,13 +64747,16 @@ var init_operations = __esm({
     PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES = 28 * 1024;
     PORTABLE_OPERATION_ACCEPTED_FILE = "accepted.json";
     PORTABLE_OPERATION_COMMITTED_FILE = "committed.json";
+    PORTABLE_INCREMENTAL_CACHE_ROOT = ".blueprint/codebase-incremental";
+    PORTABLE_INCREMENTAL_CACHE_FILE = "cache.json";
+    PORTABLE_INCREMENTAL_CACHE_KEY_FILE = "key.json";
     portableOperationTestHooks = {};
     safeNonNegativeInteger2 = number2().int().nonnegative().refine(Number.isSafeInteger, "Expected a safe integer.");
     safePositiveInteger = safeNonNegativeInteger2.positive();
     boundedPath = string2().min(1).max(4096).refine((value) => !/[\0]/.test(value), "Path contains a NUL byte.");
     opaqueSecret = string2().regex(/^[a-f0-9]{64}$/);
     timestamp = string2().datetime({ offset: true });
-    digest5 = portableSha256Schema;
+    digest6 = portableSha256Schema;
     identitySchema = strictObject({
       path: boundedPath,
       realPath: boundedPath,
@@ -64296,20 +64772,20 @@ var init_operations = __esm({
       runtime: strictObject({
         package: string2().min(1).max(256),
         version: string2().min(1).max(128),
-        packageSha256: digest5,
+        packageSha256: digest6,
         module: string2().min(1).max(256),
-        moduleSha256: digest5,
+        moduleSha256: digest6,
         wasm: string2().min(1).max(256),
-        wasmSha256: digest5,
+        wasmSha256: digest6,
         languageVersion: safeNonNegativeInteger2,
         minimumCompatibleVersion: safeNonNegativeInteger2
       }),
       grammars: array(strictObject({
         package: string2().min(1).max(256),
         version: string2().min(1).max(128),
-        packageSha256: digest5,
+        packageSha256: digest6,
         asset: string2().min(1).max(256),
-        sha256: digest5,
+        sha256: digest6,
         abiVersion: safeNonNegativeInteger2
       })).max(128),
       adapters: array(strictObject({
@@ -64317,7 +64793,7 @@ var init_operations = __esm({
         ruleVersion: string2().min(1).max(128)
       })).max(16)
     });
-    coverageSchema = strictObject({
+    coverageSchema2 = strictObject({
       candidateCount: safeNonNegativeInteger2,
       includedCount: safeNonNegativeInteger2,
       excludedCount: safeNonNegativeInteger2,
@@ -64338,7 +64814,7 @@ var init_operations = __esm({
         PORTABLE_OPERATION_PROVENANCE_FILE,
         PORTABLE_OPERATION_PACKETS_FILE
       ]),
-      checksum: digest5,
+      checksum: digest6,
       byteSize: safeNonNegativeInteger2
     });
     publicationSchema = strictObject({
@@ -64347,19 +64823,19 @@ var init_operations = __esm({
       transactionId: generationLocalIdSchema,
       generationId: generationLocalIdSchema,
       sourceBasis: portableSourceBasisSchema,
-      rootFingerprint: digest5,
+      rootFingerprint: digest6,
       previousGenerationId: generationLocalIdSchema.nullable(),
-      previousIndexHash: digest5.nullable(),
+      previousIndexHash: digest6.nullable(),
       previousTargetHashes: portableTargetHashesSchema,
-      observedMarkerHash: digest5.nullable(),
+      observedMarkerHash: digest6.nullable(),
       legacyBackup: boolean2(),
       repair: union([
         literal(false),
         strictObject({
           authorized: literal(true),
-          previousIndexHash: digest5.nullable(),
+          previousIndexHash: digest6.nullable(),
           targetHashes: portableTargetHashesSchema,
-          observedMarkerHash: digest5.nullable()
+          observedMarkerHash: digest6.nullable()
         })
       ])
     });
@@ -64370,9 +64846,9 @@ var init_operations = __esm({
       generationId: generationLocalIdSchema,
       transactionId: generationLocalIdSchema,
       previousGenerationId: generationLocalIdSchema.nullable(),
-      previousIndexHash: digest5.nullable(),
-      rootFingerprint: digest5,
-      observedMarkerHash: digest5.nullable(),
+      previousIndexHash: digest6.nullable(),
+      rootFingerprint: digest6,
+      observedMarkerHash: digest6.nullable(),
       packetBudgetBytes: safePositiveInteger,
       repair: publicationSchema.shape.repair,
       sourceBasis: portableSourceBasisSchema,
@@ -64384,9 +64860,9 @@ var init_operations = __esm({
       renderGeneratedAt: timestamp,
       predecessorProof: portablePredecessorPublicationProofSchema.nullable(),
       rootIdentity: identitySchema,
-      inventoryFingerprint: digest5,
-      coverage: coverageSchema,
-      provenanceHash: digest5,
+      inventoryFingerprint: digest6,
+      coverage: coverageSchema2,
+      provenanceHash: digest6,
       publication: publicationSchema,
       files: strictObject({
         structural: fileRefSchema,
@@ -64394,7 +64870,7 @@ var init_operations = __esm({
         provenance: fileRefSchema,
         packets: fileRefSchema
       }),
-      cursor: strictObject({ basisHash: digest5, secret: opaqueSecret })
+      cursor: strictObject({ basisHash: digest6, secret: opaqueSecret })
     });
     structuralStoreSchema = strictObject({
       version: literal(1),
@@ -64413,8 +64889,8 @@ var init_operations = __esm({
       operationId: generationLocalIdSchema,
       generationId: generationLocalIdSchema,
       root: identitySchema,
-      inventoryFingerprint: digest5,
-      coverage: coverageSchema,
+      inventoryFingerprint: digest6,
+      coverage: coverageSchema2,
       provenance: provenanceSchema
     });
     packetStoreSchema = strictObject({
@@ -64428,18 +64904,18 @@ var init_operations = __esm({
       version: literal(1),
       operationId: generationLocalIdSchema,
       generationId: generationLocalIdSchema,
-      modelHash: digest5,
-      rootIndexHash: digest5,
+      modelHash: digest6,
+      rootIndexHash: digest6,
       acceptedAt: timestamp
     });
     committedSubmissionSchema = strictObject({
       version: literal(1),
       operationId: generationLocalIdSchema,
       generationId: generationLocalIdSchema,
-      modelHash: digest5,
-      rootIndexHash: digest5,
-      manifestHash: digest5,
-      entryHash: digest5,
+      modelHash: digest6,
+      rootIndexHash: digest6,
+      manifestHash: digest6,
+      entryHash: digest6,
       committedAt: timestamp
     });
     operationMarkerSchema = strictObject({
@@ -64449,9 +64925,9 @@ var init_operations = __esm({
       generationId: generationLocalIdSchema,
       transactionId: generationLocalIdSchema,
       previousGenerationId: generationLocalIdSchema.nullable(),
-      previousIndexHash: digest5.nullable(),
-      rootFingerprint: digest5,
-      observedMarkerHash: digest5.nullable(),
+      previousIndexHash: digest6.nullable(),
+      rootFingerprint: digest6,
+      observedMarkerHash: digest6.nullable(),
       packetBudgetBytes: safePositiveInteger,
       repair: publicationSchema.shape.repair,
       sourceBasis: portableSourceBasisSchema,
@@ -64460,6 +64936,12 @@ var init_operations = __esm({
     });
     cursorSchema = generationLocalIdSchema;
     operationIdSchema = generationLocalIdSchema;
+    incrementalCacheKeySchema = strictObject({ version: literal(1), key: opaqueSecret });
+    incrementalCacheEnvelopeSchema = strictObject({
+      version: literal(1),
+      cache: portableIncrementalCacheSchema,
+      authTag: opaqueSecret
+    });
     DIAGNOSTICS = {
       "invalid-input": "The prepared operation request is invalid.",
       "not-found": "The prepared operation is unavailable.",
@@ -64480,23 +64962,23 @@ var init_operations = __esm({
 });
 
 // src/mcp/codebase-index/map-coordinator.ts
-import { createHash as createHash21 } from "node:crypto";
-function digest6(value) {
-  return createHash21("sha256").update(value).digest("hex");
+import { createHash as createHash22 } from "node:crypto";
+function digest7(value) {
+  return createHash22("sha256").update(value).digest("hex");
 }
-function canonical(value) {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+function canonical2(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical2).join(",")}]`;
   if (value && typeof value === "object") {
-    return `{${Object.keys(value).sort().map((key2) => `${JSON.stringify(key2)}:${canonical(value[key2])}`).join(",")}}`;
+    return `{${Object.keys(value).sort().map((key2) => `${JSON.stringify(key2)}:${canonical2(value[key2])}`).join(",")}}`;
   }
   return JSON.stringify(value);
 }
 function modelHash(model) {
-  return digest6(`${canonical(model)}
+  return digest7(`${canonical2(model)}
 `);
 }
 function modelBytes(model) {
-  return Buffer.byteLength(canonical(model), "utf8");
+  return Buffer.byteLength(canonical2(model), "utf8");
 }
 function rawModelBytes(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -64586,8 +65068,8 @@ function freshnessFor(repositoryRoot, extraction) {
     const fresh = await capturePortableSourceFreshness(repositoryRoot);
     if (!fresh.ok) return false;
     const root = extraction.root;
-    return fresh.root.path === root.path && fresh.root.realPath === root.realPath && fresh.root.device === root.device && fresh.root.inode === root.inode && fresh.inventoryFingerprint === extraction.inventoryFingerprint && digest6(`${canonical(fresh.provenance)}
-`) === digest6(`${canonical(extraction.provenance)}
+    return fresh.root.path === root.path && fresh.root.realPath === root.realPath && fresh.root.device === root.device && fresh.root.inode === root.inode && fresh.inventoryFingerprint === extraction.inventoryFingerprint && digest7(`${canonical2(fresh.provenance)}
+`) === digest7(`${canonical2(extraction.provenance)}
 `);
   };
 }
@@ -64669,6 +65151,16 @@ async function blueprintPortableMapPrepare(raw) {
         excluded: prepared.metadata.coverage.excludedCount,
         structural: prepared.metadata.coverage.structural,
         exclusions: prepared.metadata.coverage.exclusions
+      },
+      incremental: {
+        reason: prepared.incremental.reason,
+        counters: prepared.incremental.counters,
+        semantic: {
+          invalidatedCapabilityCount: prepared.incremental.semantic.invalidatedCapabilityIds.length,
+          invalidatedClaimCount: prepared.incremental.semantic.invalidatedClaimIds.length,
+          invalidatedAliasCount: prepared.incremental.semantic.invalidatedAliasIds.length,
+          reasons: prepared.incremental.semantic.reasons
+        }
       },
       authoring: authoringContract(prepared.generationId),
       warnings: []
@@ -64772,8 +65264,8 @@ async function blueprintPortableMapSubmit(raw) {
         generationId: fresh.metadata.generationId,
         modelHash: modelDigest,
         rootIndexHash: rendered4.rootIndexHash,
-        manifestHash: digest6(rendered4.files[rendered4.sealedGeneration.manifest.path]),
-        entryHash: digest6(rendered4.files[rendered4.sealedGeneration.entry.path])
+        manifestHash: digest7(rendered4.files[rendered4.sealedGeneration.manifest.path]),
+        entryHash: digest7(rendered4.files[rendered4.sealedGeneration.entry.path])
       }),
       verifyFreshness: freshnessFor(root, fresh.extraction)
     });
@@ -64841,7 +65333,7 @@ var init_map_coordinator = __esm({
 
 // src/mcp/tools/map.ts
 import { execFile as execFile3 } from "node:child_process";
-import { createHash as createHash22 } from "node:crypto";
+import { createHash as createHash23 } from "node:crypto";
 import { promises as fs19 } from "node:fs";
 import path28 from "node:path";
 import { promisify as promisify3 } from "node:util";
@@ -64921,6 +65413,11 @@ async function blueprintMapPrepare(raw) {
   const args = legacyPrepareSchema.parse(raw);
   const root = await ensureRepoRoot(args.cwd);
   await scrubLegacyCodebaseFailureLog(root);
+  const existingGuard = await inspectCodebaseWriteGuard(root);
+  if (existingGuard.portable.status === "valid" && (args.focus !== void 0 || args.restart)) {
+    const portableRoot = await fs19.realpath(root).catch(() => root);
+    return blueprintPortableMapPrepare({ cwd: portableRoot, formatVersion: 1, intent: "refresh" });
+  }
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
     const gate = await eligibility(root);
     if (!gate.allowed) return { status: "blocked", readiness: gate.readiness, nextAction: await route(gate.next) };
@@ -65029,7 +65526,7 @@ async function blueprintMapSubmit(raw) {
       inputHashes(root, Object.keys(snapshot3.inputs)),
       coreHash(root)
     ]);
-    if (snapshot3.root !== hash2(await fs19.realpath(root)) || snapshot3.inventory !== hash2(JSON.stringify(files)) || snapshot3.core !== core || Object.keys(inputs).length !== Object.keys(snapshot3.inputs).length || Object.entries(inputs).some(([file2, digest8]) => snapshot3.inputs[file2] !== digest8)) {
+    if (snapshot3.root !== hash2(await fs19.realpath(root)) || snapshot3.inventory !== hash2(JSON.stringify(files)) || snapshot3.core !== core || Object.keys(inputs).length !== Object.keys(snapshot3.inputs).length || Object.entries(inputs).some(([file2, digest9]) => snapshot3.inputs[file2] !== digest9)) {
       return { status: "stale", saved: false, issues: ["Prepared source evidence, repository inventory, or project state changed. Review fresh evidence before generating again."], warnings: [] };
     }
     const warnings = [];
@@ -65099,7 +65596,7 @@ async function blueprintMapSubmit(raw) {
       const finalHashes = targetHashes(await targets(root));
       if (JSON.stringify(finalHashes) !== JSON.stringify(hashes)) throw new Error("Publication verification failed.");
       const finalInputs = await inputHashes(root, Object.keys(snapshot3.inputs));
-      if (Object.entries(finalInputs).some(([file2, digest8]) => snapshot3.inputs[file2] !== digest8) || await coreHash(root) !== snapshot3.core || hash2(JSON.stringify(await inventory(root))) !== snapshot3.inventory) {
+      if (Object.entries(finalInputs).some(([file2, digest9]) => snapshot3.inputs[file2] !== digest9) || await coreHash(root) !== snapshot3.core || hash2(JSON.stringify(await inventory(root))) !== snapshot3.inventory) {
         throw new Error("Evidence changed during publication.");
       }
       await fs19.unlink(resolveBlueprintPath(root, CODEBASE_PUBLICATION_PATH));
@@ -65133,7 +65630,7 @@ var init_map = __esm({
     init_project();
     init_map_coordinator();
     execFileAsync3 = promisify3(execFile3);
-    hash2 = (value) => createHash22("sha256").update(value).digest("hex");
+    hash2 = (value) => createHash23("sha256").update(value).digest("hex");
     snapshotSchema = portableLegacyPublicationSnapshotSchema;
     pendingSchema = portableLegacyPublicationPendingSchema;
     legacyPrepareSchema = object2({ cwd: string2().optional(), inputs: array(string2()).default([]), focus: string2().optional(), restart: boolean2().default(false) }).strict();
@@ -65282,7 +65779,7 @@ var init_bootstrap_authoring = __esm({
 });
 
 // src/mcp/tools/discuss-evidence.ts
-import { createHash as createHash23 } from "node:crypto";
+import { createHash as createHash24 } from "node:crypto";
 import { promises as fs20 } from "node:fs";
 async function readDiscussEvidence(root, relative) {
   await assertCodebasePublicationComplete(root, relative);
@@ -65524,7 +66021,7 @@ var init_discuss_evidence = __esm({
     init_phase_artifacts();
     init_state();
     init_artifacts();
-    evidenceDigest = (value) => createHash23("sha256").update(value).digest("hex");
+    evidenceDigest = (value) => createHash24("sha256").update(value).digest("hex");
     stableEvidence = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
@@ -65535,11 +66032,11 @@ var init_discuss_evidence = __esm({
 });
 
 // src/mcp/tools/discuss.ts
-import { createHash as createHash24 } from "node:crypto";
+import { createHash as createHash25 } from "node:crypto";
 import { promises as fs21 } from "node:fs";
 async function hashPath(root, relative) {
   try {
-    return digest7(
+    return digest8(
       await fs21.readFile(resolveRepoRelativeInputPathSync(root, relative))
     );
   } catch (error2) {
@@ -65857,7 +66354,7 @@ async function blueprintDiscussRecord(raw) {
   checkedPayload(args);
   return locked(args, async (loc) => {
     const session = await readSession(loc.projectRoot, loc.sessionPath) ?? await initial(loc);
-    const requestHash2 = digest7(stable(args));
+    const requestHash2 = digest8(stable(args));
     const replay = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
     if (replay) {
       if (replay.hash !== requestHash2)
@@ -65965,7 +66462,7 @@ async function blueprintDiscussFinalize(raw) {
         nextAction: "Call blueprint_discuss_prepare."
       };
     const { model: inputModel, ...identity4 } = args;
-    const requestHash2 = digest7(stable(identity4));
+    const requestHash2 = digest8(stable(identity4));
     let journal = session.journal;
     let publicationModel = null;
     if (journal?.requestId === args.requestId && journal.revision !== session.revision) return { status: "stale", saved: false, outcome: "rejected-not-saved", reason: "Revision conflict" };
@@ -66045,7 +66542,7 @@ async function blueprintDiscussFinalize(raw) {
             resolveBlueprintPath(loc.projectRoot, target),
             "utf8"
           );
-          if (!isScaffoldGeneratedArtifact(existing) && digest7(kind === "context" ? content : log) !== observed)
+          if (!isScaffoldGeneratedArtifact(existing) && digest8(kind === "context" ? content : log) !== observed)
             return {
               status: "blocked",
               saved: false,
@@ -66069,16 +66566,16 @@ async function blueprintDiscussFinalize(raw) {
         revision: session.revision,
         context: {
           path: artifactPathFor(loc.resolved, "context"),
-          hash: digest7(content)
+          hash: digest8(content)
         },
         ...log ? {
           log: {
             path: artifactPathFor(loc.resolved, "discussion-log"),
-            hash: digest7(log)
+            hash: digest8(log)
           }
         } : {},
         stages: {},
-        modelHash: digest7(stable(inputModel))
+        modelHash: digest8(stable(inputModel))
       };
       publicationModel = assessment2.model;
       session.journal = journal;
@@ -66104,14 +66601,14 @@ async function blueprintDiscussFinalize(raw) {
     };
     try {
       await assertTopology();
-      if (inputModel !== void 0 && journal.modelHash && digest7(stable(inputModel)) !== journal.modelHash)
+      if (inputModel !== void 0 && journal.modelHash && digest8(stable(inputModel)) !== journal.modelHash)
         throw new Error("Request ID conflict: model differs from publication intent.");
       if (!publicationModel && await hashPath(loc.projectRoot, journal.context.path) !== journal.context.hash) {
         if (inputModel === void 0) throw new Error("Resubmit model with the same requestId; context was not committed.");
         const evidence = await collectDiscussEvidence({ cwd: loc.projectRoot, phase: session.phase, evidencePaths: session.basis.evidencePaths });
         if (evidence.status !== "collected") throw new Error("Unable to refresh evidence.");
         const assessment2 = assess(session, loc.resolved, inputModel, discussAuthoring(evidence.packet, session.records).defaults);
-        if (!assessment2.ready || !assessment2.model || !assessment2.content || digest7(prepareTextForPersistence(assessment2.content).content.replace(/\r\n/g, "\n")) !== journal.context.hash)
+        if (!assessment2.ready || !assessment2.model || !assessment2.content || digest8(prepareTextForPersistence(assessment2.content).content.replace(/\r\n/g, "\n")) !== journal.context.hash)
           throw new Error("Resubmitted model does not match validated publication intent.");
         publicationModel = assessment2.model;
       }
@@ -66133,7 +66630,7 @@ async function blueprintDiscussFinalize(raw) {
           throw new Error(
             `Stale ${kind} baseline; preserve canonical content and reconcile through a new prepared session.`
           );
-        if (kind === "log" && digest7(prepareTextForPersistence(renderLog(session, loc.resolved.phasePrefix)).content.replace(/\r\n/g, "\n")) !== item.hash)
+        if (kind === "log" && digest8(prepareTextForPersistence(renderLog(session, loc.resolved.phasePrefix)).content.replace(/\r\n/g, "\n")) !== item.hash)
           throw new Error("Discussion log no longer matches stable note history; reconcile publication metadata.");
         journal.stages[kind] = "intent";
         await checkpoint();
@@ -66317,7 +66814,7 @@ function discussAuthoring(packet, records) {
     ]
   };
 }
-var recordSchema, numericPhase, lookupShape, idSchema, recordInput, finalizeInput, digest7, stable, sessionSchema, discussFinalizeDependencies, prepareInput, discussToolDefinitions;
+var recordSchema, numericPhase, lookupShape, idSchema, recordInput, finalizeInput, digest8, stable, sessionSchema, discussFinalizeDependencies, prepareInput, discussToolDefinitions;
 var init_discuss = __esm({
   "src/mcp/tools/discuss.ts"() {
     "use strict";
@@ -66360,7 +66857,7 @@ var init_discuss = __esm({
       overwrite: boolean2().optional(),
       includeLog: boolean2().optional()
     });
-    digest7 = (value) => createHash24("sha256").update(value).digest("hex");
+    digest8 = (value) => createHash25("sha256").update(value).digest("hex");
     stable = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
@@ -68475,7 +68972,7 @@ var init_plan = __esm({
 
 // src/mcp/tools/workspace.ts
 import { execFile as execFile4 } from "node:child_process";
-import { createHash as createHash25 } from "node:crypto";
+import { createHash as createHash26 } from "node:crypto";
 import { promises as fs26 } from "node:fs";
 import os3 from "node:os";
 import path29 from "node:path";
@@ -69826,12 +70323,12 @@ function patchContentPath(registryPath, patchId) {
 function patchAuditPath(registryPath, patchId) {
   return path29.join(registryPath, `${patchId}.audit.ndjson`);
 }
-function sha2568(value) {
-  return createHash25("sha256").update(value).digest("hex");
+function sha2569(value) {
+  return createHash26("sha256").update(value).digest("hex");
 }
 async function fileContentHash(filePath) {
   try {
-    return sha2568(await fs26.readFile(filePath));
+    return sha2569(await fs26.readFile(filePath));
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -70004,7 +70501,7 @@ async function loadPatchContent(registryPath, patchId, manifest) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
   const patch = await fs26.readFile(contentPath, "utf8");
-  if (sha2568(patch) !== manifest.patchHash) {
+  if (sha2569(patch) !== manifest.patchHash) {
     throw new Error(
       `Patch registry is malformed for ${patchId}; recorded patch content does not match its manifest.`
     );
@@ -71165,7 +71662,7 @@ async function blueprintPatchRecord(args, options = {}) {
     assertNoNullBytes(patch, "Patch content");
     const normalizedPatch = patch.endsWith("\n") ? patch : `${patch}
 `;
-    const patchHash = sha2568(normalizedPatch);
+    const patchHash = sha2569(normalizedPatch);
     let repoRemote;
     let sourceVersion;
     let compatibility;
@@ -74038,14 +74535,14 @@ var init_plan_run = __esm({
 
 // src/mcp/tools/phase-execution-control.ts
 import { execFile as execFile6 } from "node:child_process";
-import { createHash as createHash26, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash27, randomUUID as randomUUID4 } from "node:crypto";
 import { promises as fs28 } from "node:fs";
 import path31 from "node:path";
 function dependencies(overrides) {
   return { ...defaultDependencies, ...overrides };
 }
-function sha2569(value) {
-  return createHash26("sha256").update(value).digest("hex");
+function sha25610(value) {
+  return createHash27("sha256").update(value).digest("hex");
 }
 function canonicalize(value) {
   if (Array.isArray(value)) {
@@ -74064,7 +74561,7 @@ function canonicalize(value) {
   return value;
 }
 function fingerprintPacket(packet) {
-  return sha2569(JSON.stringify(canonicalize(packet)));
+  return sha25610(JSON.stringify(canonicalize(packet)));
 }
 function canonicalJson2(value) {
   return JSON.stringify(canonicalize(value));
@@ -74113,7 +74610,7 @@ async function readRepoFile(projectRoot, canonicalRoot, relativePath) {
     content,
     digest: {
       path: safePath2,
-      sha256: sha2569(bytes),
+      sha256: sha25610(bytes),
       sizeBytes: bytes.byteLength,
       mode: stats.mode & 4095
     }
@@ -74206,7 +74703,7 @@ async function digestRepoBoundaryPath(args) {
   }
   return {
     path: safePath2,
-    sha256: sha2569(bytes),
+    sha256: sha25610(bytes),
     sizeBytes: bytes.byteLength,
     mode: stats.mode & 4095
   };
@@ -74214,14 +74711,14 @@ async function digestRepoBoundaryPath(args) {
 async function workingTreeDigests(projectRoot, canonicalRoot, porcelainV1Z) {
   const digests = [];
   for (const entry of porcelainEntries(porcelainV1Z)) {
-    const digest8 = await digestRepoBoundaryPath({
+    const digest9 = await digestRepoBoundaryPath({
       projectRoot,
       canonicalRoot,
       relativePath: entry.path,
       allowBlueprint: true,
       allowMissing: true
     });
-    digests.push({ ...digest8, status: entry.status });
+    digests.push({ ...digest9, status: entry.status });
   }
   return digests.sort(
     (left, right) => left.path.localeCompare(right.path) || left.status.localeCompare(right.status)
@@ -74250,7 +74747,7 @@ async function gitSnapshot(projectRoot, deps) {
     canonicalRoot,
     head,
     porcelainV1Z,
-    porcelainSha256: sha2569(porcelainV1Z),
+    porcelainSha256: sha25610(porcelainV1Z),
     workingTree
   };
 }
@@ -74367,7 +74864,7 @@ async function buildPacket(projectRoot, args, deps) {
       verificationCriteria: [...plan.acceptanceCriteria],
       verificationCommands: extractBoundVerificationCommands(content),
       content,
-      contentSha256: sha2569(content),
+      contentSha256: sha25610(content),
       ownedFilePreimages,
       readFirstArtifacts
     });
@@ -74514,7 +75011,7 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
   let stateMatchesPendingPostimage = false;
   if (pendingStateUpdate) {
     const observed = await observe(BLUEPRINT_STATE_PATH, true);
-    const matches = (digest8) => observed.sha256 === digest8.sha256 && observed.sizeBytes === digest8.sizeBytes && observed.mode === digest8.mode;
+    const matches = (digest9) => observed.sha256 === digest9.sha256 && observed.sizeBytes === digest9.sizeBytes && observed.mode === digest9.mode;
     stateMatchesPendingPostimage = matches(pendingStateUpdate.postimage);
     if (!matches(pendingStateUpdate.preimage) && !stateMatchesPendingPostimage) {
       blockers.push("Execute-phase pending STATE effect matches neither its trusted preimage nor prepared postimage.");
@@ -74566,7 +75063,7 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
       observed: await observe(mutation.path, false)
     })));
     const allAfter = observations.every(
-      ({ mutation, observed }) => observed.sha256 === (mutation.operation === "write" ? sha2569(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
+      ({ mutation, observed }) => observed.sha256 === (mutation.operation === "write" ? sha25610(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
     );
     const allBeforeWithMode = observations.every(
       ({ mutation, observed }) => observed.sha256 === mutation.expectedHash && observed.mode === mutation.expectedMode
@@ -74705,8 +75202,8 @@ function asIndex(value) {
 }
 function isArtifactDigest(value) {
   if (!value || typeof value !== "object") return false;
-  const digest8 = value;
-  return typeof digest8.path === "string" && (digest8.sha256 === null || typeof digest8.sha256 === "string" && /^[0-9a-f]{64}$/.test(digest8.sha256)) && (digest8.sizeBytes === null || Number.isInteger(digest8.sizeBytes) && (digest8.sizeBytes ?? -1) >= 0) && (digest8.mode === null || Number.isInteger(digest8.mode));
+  const digest9 = value;
+  return typeof digest9.path === "string" && (digest9.sha256 === null || typeof digest9.sha256 === "string" && /^[0-9a-f]{64}$/.test(digest9.sha256)) && (digest9.sizeBytes === null || Number.isInteger(digest9.sizeBytes) && (digest9.sizeBytes ?? -1) >= 0) && (digest9.mode === null || Number.isInteger(digest9.mode));
 }
 function isVerificationOutputValid(receipt2, channel) {
   const text3 = receipt2[channel];
@@ -74717,7 +75214,7 @@ function isVerificationOutputValid(receipt2, channel) {
     return false;
   }
   if (truncated) return bytes > Buffer.byteLength(text3);
-  return bytes === Buffer.byteLength(text3) && hash5 === sha2569(text3);
+  return bytes === Buffer.byteLength(text3) && hash5 === sha25610(text3);
 }
 function isValidPhaseExecutionVerificationReceipt(value, command) {
   if (!value || typeof value !== "object") return false;
@@ -74745,7 +75242,7 @@ function isPreparedStateUpdate(value, packet) {
   const expectedAbsolutePath = path31.join(packet.repository.canonicalRoot, ...BLUEPRINT_STATE_PATH.split("/"));
   const expectedStateContent = prepared.expectedStateContent;
   if (!(expectedStateContent === null || typeof expectedStateContent === "string")) return false;
-  if (prepared.projectRoot !== packet.repository.canonicalRoot || prepared.statePath !== BLUEPRINT_STATE_PATH || prepared.absoluteStatePath !== expectedAbsolutePath || typeof prepared.content !== "string" || typeof prepared.updated !== "boolean" || !Array.isArray(prepared.updatedFields) || !prepared.updatedFields.every((entry) => typeof entry === "string") || !Array.isArray(prepared.warnings) || !prepared.warnings.every((entry) => typeof entry === "string") || effect.preimage.path !== BLUEPRINT_STATE_PATH || effect.postimage.path !== BLUEPRINT_STATE_PATH || effect.preimage.sha256 !== (expectedStateContent === null ? null : sha2569(expectedStateContent)) || effect.preimage.sizeBytes !== (expectedStateContent === null ? null : Buffer.byteLength(expectedStateContent)) || effect.postimage.sha256 !== sha2569(prepared.content) || effect.postimage.sizeBytes !== Buffer.byteLength(prepared.content)) {
+  if (prepared.projectRoot !== packet.repository.canonicalRoot || prepared.statePath !== BLUEPRINT_STATE_PATH || prepared.absoluteStatePath !== expectedAbsolutePath || typeof prepared.content !== "string" || typeof prepared.updated !== "boolean" || !Array.isArray(prepared.updatedFields) || !prepared.updatedFields.every((entry) => typeof entry === "string") || !Array.isArray(prepared.warnings) || !prepared.warnings.every((entry) => typeof entry === "string") || effect.preimage.path !== BLUEPRINT_STATE_PATH || effect.postimage.path !== BLUEPRINT_STATE_PATH || effect.preimage.sha256 !== (expectedStateContent === null ? null : sha25610(expectedStateContent)) || effect.preimage.sizeBytes !== (expectedStateContent === null ? null : Buffer.byteLength(expectedStateContent)) || effect.postimage.sha256 !== sha25610(prepared.content) || effect.postimage.sizeBytes !== Buffer.byteLength(prepared.content)) {
     return false;
   }
   return true;
@@ -75258,12 +75755,12 @@ var init_phase_execution_control = __esm({
 
 // src/mcp/tools/phase-execution-runtime.ts
 import { spawn } from "node:child_process";
-import { createHash as createHash27, randomUUID as randomUUID5 } from "node:crypto";
+import { createHash as createHash28, randomUUID as randomUUID5 } from "node:crypto";
 import { promises as fs29 } from "node:fs";
 import path32 from "node:path";
 import { createInterface } from "node:readline";
-function sha25610(value) {
-  return createHash27("sha256").update(value).digest("hex");
+function sha25611(value) {
+  return createHash28("sha256").update(value).digest("hex");
 }
 function uniqueSorted2(values) {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
@@ -75549,7 +76046,7 @@ async function applyPinnedPhaseExecutionMutations(args) {
     let divergence = null;
     for (const receipt2 of receipts) {
       const mutation = normalizedMutations.find((candidate) => candidate.path === receipt2.path);
-      const expectedHash = mutation.operation === "write" ? sha25610(mutation.content ?? "") : null;
+      const expectedHash = mutation.operation === "write" ? sha25611(mutation.content ?? "") : null;
       if (receipt2.afterHash !== expectedHash) {
         divergence = `Mutation postimage diverged before receipt persistence for ${receipt2.path}.`;
         break;
@@ -75656,7 +76153,7 @@ async function applyPhaseExecutionMutations(args) {
       }
       await assertNoSymlinkTraversal(realRoot, mutation.path, fileSystem);
       const existing = await readExistingFile(absolutePath, fileSystem);
-      const beforeHash = existing.content === null ? null : sha25610(existing.content);
+      const beforeHash = existing.content === null ? null : sha25611(existing.content);
       if (beforeHash !== mutation.expectedHash) {
         throw new Error(
           `Mutation preimage is stale for ${mutation.path}: expected ${mutation.expectedHash ?? "missing"}, observed ${beforeHash ?? "missing"}.`
@@ -75719,8 +76216,8 @@ async function applyPhaseExecutionMutations(args) {
         );
         await assertNoSymlinkTraversal(realRoot, entry.mutation.path, fileSystem);
         const observed = await readExistingFile(entry.absolutePath, fileSystem);
-        const observedHash = observed.content === null ? null : sha25610(observed.content);
-        const requestedHash = sha25610(entry.mutation.content ?? "");
+        const observedHash = observed.content === null ? null : sha25611(observed.content);
+        const requestedHash = sha25611(entry.mutation.content ?? "");
         if (observedHash !== requestedHash) {
           throw new Error(
             `Mutation postimage mismatch for ${entry.mutation.path}: expected ${requestedHash}, observed ${observedHash ?? "missing"}.`
@@ -75785,7 +76282,7 @@ async function applyPhaseExecutionMutations(args) {
           operation: entry.mutation.operation,
           beforeHash: entry.beforeHash,
           beforeMode: entry.beforeMode,
-          afterHash: observed.content === null ? null : sha25610(observed.content),
+          afterHash: observed.content === null ? null : sha25611(observed.content),
           afterMode: observed.mode,
           bytesWritten: observed.content?.byteLength ?? 0
         };
@@ -75818,8 +76315,8 @@ async function applyPhaseExecutionMutations(args) {
   const receipts = await Promise.all(prepared.map(async (entry) => {
     try {
       const observed = await readExistingFile(entry.absolutePath, fileSystem);
-      const afterHash = observed.content === null ? null : sha25610(observed.content);
-      const expectedHash = entry.mutation.operation === "write" ? sha25610(entry.mutation.content ?? "") : null;
+      const afterHash = observed.content === null ? null : sha25611(observed.content);
+      const expectedHash = entry.mutation.operation === "write" ? sha25611(entry.mutation.content ?? "") : null;
       if (afterHash !== expectedHash) {
         finalObservationFailure ??= `Mutation postimage diverged before receipt persistence for ${entry.mutation.path}.`;
       }
@@ -75860,7 +76357,7 @@ function receiptOutput(value) {
   return {
     text: truncated ? buffer.subarray(0, MAX_RECEIPT_OUTPUT_BYTES).toString("utf8") : value,
     bytes,
-    hash: sha25610(buffer),
+    hash: sha25611(buffer),
     truncated
   };
 }
@@ -76471,11 +76968,11 @@ if (!finalized) await rollback();
 });
 
 // src/mcp/tools/phase-execution-tools.ts
-import { createHash as createHash28 } from "node:crypto";
+import { createHash as createHash29 } from "node:crypto";
 import { promises as fs30 } from "node:fs";
 import path33 from "node:path";
-function sha25611(value) {
-  return createHash28("sha256").update(value).digest("hex");
+function sha25612(value) {
+  return createHash29("sha256").update(value).digest("hex");
 }
 function canonicalize2(value) {
   if (Array.isArray(value)) return value.map(canonicalize2);
@@ -76500,7 +76997,7 @@ async function readRepoHash(projectRoot, relativePath) {
       throw new Error(`Execution authority path is not a regular file: ${relativePath}.`);
     }
     const content = await fs30.readFile(absolutePath);
-    return { hash: sha25611(content), bytes: content.byteLength, mode: stats.mode & 4095 };
+    return { hash: sha25612(content), bytes: content.byteLength, mode: stats.mode & 4095 };
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return { hash: null, bytes: 0, mode: null };
@@ -76520,11 +77017,11 @@ function interruptedVerificationReceipt(command) {
     passed: false,
     stdout: "",
     stdoutBytes: 0,
-    stdoutHash: sha25611(""),
+    stdoutHash: sha25612(""),
     stdoutTruncated: false,
     stderr,
     stderrBytes: Buffer.byteLength(stderr),
-    stderrHash: sha25611(stderr),
+    stderrHash: sha25612(stderr),
     stderrTruncated: false
   };
 }
@@ -76616,7 +77113,7 @@ async function assertSessionAuthority(projectRoot, session) {
   let stateMatchesPendingPostimage = false;
   if (pendingStateUpdate) {
     const observed = await readRepoHash(projectRoot, ".blueprint/STATE.md");
-    const matches = (digest8) => observed.hash === digest8.sha256 && observed.bytes === digest8.sizeBytes && observed.mode === digest8.mode;
+    const matches = (digest9) => observed.hash === digest9.sha256 && observed.bytes === digest9.sizeBytes && observed.mode === digest9.mode;
     stateMatchesPendingPostimage = matches(pendingStateUpdate.postimage);
     if (!matches(pendingStateUpdate.preimage) && !stateMatchesPendingPostimage) {
       throw new Error(
@@ -76678,7 +77175,7 @@ async function recoverInterruptedMutation(projectRoot, session, progress) {
     ({ mutation, observed }) => observed.hash === mutation.expectedHash && observed.mode === mutation.expectedMode
   );
   const allAfter = observations.every(
-    ({ mutation, observed }) => observed.hash === (mutation.operation === "write" ? sha25611(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
+    ({ mutation, observed }) => observed.hash === (mutation.operation === "write" ? sha25612(mutation.content ?? "") : null) && observed.mode === mutation.expectedAfterMode
   );
   if (allBefore) {
     progress.status = progress.status === "repairing" ? "awaiting-repair" : "pending";
@@ -77179,7 +77676,7 @@ async function blueprintPhaseExecutionFinalize(args, dependencyOverrides = {}) {
             },
             postimage: {
               path: ".blueprint/STATE.md",
-              sha256: sha25611(prepared.content),
+              sha256: sha25612(prepared.content),
               sizeBytes: Buffer.byteLength(prepared.content),
               mode: observed.mode ?? 438 & ~process.umask()
             }
@@ -77189,7 +77686,7 @@ async function blueprintPhaseExecutionFinalize(args, dependencyOverrides = {}) {
         await assertSessionAuthority(context.projectRoot, session);
         const effect = progress.pendingStateUpdate;
         const stateBeforeWrite = await readRepoHash(context.projectRoot, ".blueprint/STATE.md");
-        const matches = (digest8) => stateBeforeWrite.hash === digest8.sha256 && stateBeforeWrite.bytes === digest8.sizeBytes && stateBeforeWrite.mode === digest8.mode;
+        const matches = (digest9) => stateBeforeWrite.hash === digest9.sha256 && stateBeforeWrite.bytes === digest9.sizeBytes && stateBeforeWrite.mode === digest9.mode;
         if (matches(effect.preimage)) {
           await deps.stateWrite(effect.prepared);
         } else if (!matches(effect.postimage)) {
@@ -77578,14 +78075,14 @@ async function computeCleanupArchiveScope(projectRoot) {
     ...selectedEvidencePaths,
     ...await protectedArtifactPaths(projectRoot, protectedEntries)
   ]);
-  const digest8 = await blueprintArtifactSummaryDigest({
+  const digest9 = await blueprintArtifactSummaryDigest({
     cwd: projectRoot,
     artifactPaths: digestArtifactPaths
   });
   return {
     selectedPhaseDirs: uniqueSorted3(selectedPhaseDirs),
     protectedEntries,
-    digestInputs: digest8.inputsUsed,
+    digestInputs: digest9.inputsUsed,
     blockers,
     warnings
   };
@@ -78107,7 +78604,7 @@ var init_cleanup = __esm({
 });
 
 // src/mcp/tools/review.ts
-import { createHash as createHash29 } from "node:crypto";
+import { createHash as createHash30 } from "node:crypto";
 import { promises as fs32 } from "node:fs";
 import path35 from "node:path";
 function createAjvValidator2() {
@@ -78269,8 +78766,8 @@ function stripVisibleReviewTargetId2(value) {
   return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
 }
 function buildLegacyReviewTargetId(prefix, sourceSection, value) {
-  const digest8 = createHash29("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
-  return `${prefix}-LEGACY-${digest8}`;
+  const digest9 = createHash30("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
+  return `${prefix}-LEGACY-${digest9}`;
 }
 function sanitizeMarkdownScalar(value) {
   return value.replace(/\r\n|\r|\n/g, " ").replace(/\s+/g, " ").trim();
@@ -80612,9 +81109,9 @@ function classifyCodeReviewModelFinding(finding2) {
 }
 function parseCodeReviewFindingEntry(item, sourceSection, index) {
   const visibleId = extractVisibleReviewTargetId2(item);
-  const canonical2 = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN3);
-  if (canonical2) {
-    const [, severity2, disposition, canonicalId, location2, evidence, impact, recommendation] = canonical2;
+  const canonical3 = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN3);
+  if (canonical3) {
+    const [, severity2, disposition, canonicalId, location2, evidence, impact, recommendation] = canonical3;
     const normalizedDisposition = disposition.toLowerCase();
     const classification2 = normalizedDisposition === "follow-up" ? classifyFollowUpTarget(recommendation) : classificationForFindingDisposition(normalizedDisposition);
     return buildReviewFinding({
@@ -80806,9 +81303,9 @@ function parseCanonicalReviewFixFindingBody(body) {
   return null;
 }
 function parseReviewFixFindingBody(body) {
-  const canonical2 = parseCanonicalReviewFixFindingBody(body);
-  if (canonical2) {
-    return canonical2;
+  const canonical3 = parseCanonicalReviewFixFindingBody(body);
+  if (canonical3) {
+    return canonical3;
   }
   const dispositionStart = findRightmostLabeledSegmentStart(body, "Disposition:");
   if (dispositionStart === null) {
@@ -80837,11 +81334,11 @@ function parseReviewFixFindingBody(body) {
 function parseReviewFixFindingEntry(item, sourceSection) {
   const visibleId = extractVisibleReviewTargetId2(item);
   const stableId5 = visibleId === null ? buildLegacyReviewTargetId("F", sourceSection, item) : null;
-  const canonical2 = item.match(
+  const canonical3 = item.match(
     /^\[(critical|high|medium|low|unknown)\]\[([a-z0-9-]+)\]\s+`([^`]+)`\s*-\s*(.+)$/i
   );
-  if (canonical2) {
-    const [, severity, , canonicalId, body] = canonical2;
+  if (canonical3) {
+    const [, severity, , canonicalId, body] = canonical3;
     const parsedBody2 = parseReviewFixFindingBody(body);
     return buildReviewFinding({
       id: canonicalId.toUpperCase(),
@@ -86411,13 +86908,13 @@ var init_update = __esm({
 
 // src/mcp/tools/impact.ts
 import { execFile as execFile9 } from "node:child_process";
-import { createHash as createHash30 } from "node:crypto";
+import { createHash as createHash31 } from "node:crypto";
 import { promises as fs34 } from "node:fs";
 import os6 from "node:os";
 import path37 from "node:path";
 import { promisify as promisify8 } from "node:util";
 function stableHash(value) {
-  return createHash30("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
+  return createHash31("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
 }
 function stableStringify(value) {
   if (Array.isArray(value)) {
@@ -92418,7 +92915,7 @@ var init_impact = __esm({
 
 // src/mcp/quality-shipping-safety.ts
 import { execFile as execFile10 } from "node:child_process";
-import { createHash as createHash31 } from "node:crypto";
+import { createHash as createHash32 } from "node:crypto";
 function canonicalize3(value) {
   if (Array.isArray(value)) {
     return value.map(canonicalize3);
@@ -92434,7 +92931,7 @@ function qualityShippingStableSerialize(value) {
   return JSON.stringify(canonicalize3(value));
 }
 function qualityShippingSha256(value) {
-  return createHash31("sha256").update(value).digest("hex");
+  return createHash32("sha256").update(value).digest("hex");
 }
 function qualityShippingFingerprint(value) {
   return qualityShippingSha256(qualityShippingStableSerialize(value));
@@ -94121,11 +94618,11 @@ async function evidenceReceipts2(repoRoot, evidencePaths) {
       if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path39.sep}`) || path39.isAbsolute(resolvedRelative)) {
         throw new Error(`Evidence path ${relative} resolves outside the canonical repository.`);
       }
-      const canonical2 = resolvedRelative.replaceAll("\\", "/");
-      if (canonical2 !== relative) {
+      const canonical3 = resolvedRelative.replaceAll("\\", "/");
+      if (canonical3 !== relative) {
         throw new Error(`Evidence path ${relative} uses a symlink or non-canonical repository alias.`);
       }
-      receipts.push({ path: canonical2, contentSha256: qualityShippingSha256(await readFile3(resolved)) });
+      receipts.push({ path: canonical3, contentSha256: qualityShippingSha256(await readFile3(resolved)) });
     } catch (error2) {
       const code = error2.code;
       if (code === "ENOENT") receipts.push({ path: relative, contentSha256: null });
@@ -95262,9 +95759,9 @@ function parsePrBranchDigestInputs(content) {
     const split = token.lastIndexOf(":");
     if (split <= 0) return null;
     const evidencePath2 = token.slice(0, split);
-    const sha25612 = token.slice(split + 1);
-    if (!/^[0-9a-f]{64}$/.test(sha25612)) return null;
-    entries.push({ path: evidencePath2, sha256: sha25612 });
+    const sha25613 = token.slice(split + 1);
+    if (!/^[0-9a-f]{64}$/.test(sha25613)) return null;
+    entries.push({ path: evidencePath2, sha256: sha25613 });
   }
   return entries;
 }
@@ -108964,7 +109461,7 @@ init_phase_topology_lock();
 init_artifacts();
 init_review();
 import { execFile as execFile11 } from "node:child_process";
-import { createHash as createHash32, randomBytes as randomBytes2 } from "node:crypto";
+import { createHash as createHash33, randomBytes as randomBytes2 } from "node:crypto";
 import { promises as fs37 } from "node:fs";
 import path43 from "node:path";
 import { promisify as promisify9 } from "node:util";
@@ -109338,7 +109835,7 @@ function hashGodReviewFileSet(args) {
       (left, right) => left.path.localeCompare(right.path)
     )
   });
-  return `sha256:${createHash32("sha256").update(payload).digest("hex")}`;
+  return `sha256:${createHash33("sha256").update(payload).digest("hex")}`;
 }
 async function hashGodReviewResolvedFileSet(args) {
   const contentHashes = await Promise.all(
@@ -109346,7 +109843,7 @@ async function hashGodReviewResolvedFileSet(args) {
       const content = await fs37.readFile(resolveRepoRelativePath(args.projectRoot, file2));
       return {
         path: file2,
-        hash: `sha256:${createHash32("sha256").update(content).digest("hex")}`
+        hash: `sha256:${createHash33("sha256").update(content).digest("hex")}`
       };
     })
   );
@@ -109456,14 +109953,14 @@ function buildInitialGodReviewGroups() {
   }));
 }
 function stableHash2(value) {
-  return `sha256:${createHash32("sha256").update(value).digest("hex")}`;
+  return `sha256:${createHash33("sha256").update(value).digest("hex")}`;
 }
 function isValidRunId(value) {
   return /^[A-Za-z0-9._-]+$/.test(value) && !value.includes("..");
 }
 function generateGodReviewRunId(args) {
   const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const scopeHash = createHash32("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
+  const scopeHash = createHash33("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
   const entropy = randomBytes2(3).toString("hex");
   return `god-${day}-${scopeHash}-${entropy}`;
 }

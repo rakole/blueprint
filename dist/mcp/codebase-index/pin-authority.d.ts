@@ -37,6 +37,8 @@ export type PortablePinAuthorityDirectoryIdentity = {
     readonly device: number;
     readonly inode: number;
 };
+/** Compare the complete repository identity captured for an owner receipt. */
+export declare function samePortablePinAuthorityRootIdentity(left: PortablePinAuthorityRootIdentity, right: PortablePinAuthorityRootIdentity): boolean;
 /** Capture the canonical repository identity before a publication proof. */
 export declare function capturePortablePinAuthorityRoot(root: string): Promise<PortablePinAuthorityRootIdentity | null>;
 /** Create and persist an owner-authenticated receipt after the resolver has proved the pin. */

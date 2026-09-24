@@ -1,6 +1,7 @@
 import * as z from "zod/v4";
 import { portableTargetHashesSchema, type PortableModelPacket } from "./contracts.js";
 import { type PortableExtractionSuccess } from "./extraction.js";
+import { type PortableIncrementalCache, type PortableIncrementalSuccess } from "./incremental.js";
 import { type PortablePublicationPreflight } from "./publication.js";
 /** Operational state intentionally lives beside, but outside, the portable bundle. */
 export declare const PORTABLE_OPERATIONS_ROOT = ".blueprint/codebase-operations";
@@ -18,6 +19,10 @@ export declare const PORTABLE_OPERATION_PACKET_BUDGET_BYTES: number;
 export declare const PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES: number;
 export declare const PORTABLE_OPERATION_ACCEPTED_FILE = "accepted.json";
 export declare const PORTABLE_OPERATION_COMMITTED_FILE = "committed.json";
+/** Runtime-owned, metadata-only structural reuse state. */
+export declare const PORTABLE_INCREMENTAL_CACHE_ROOT = ".blueprint/codebase-incremental";
+export declare const PORTABLE_INCREMENTAL_CACHE_FILE = "cache.json";
+export declare const PORTABLE_INCREMENTAL_CACHE_KEY_FILE = "key.json";
 /** Fixture-only seam for exercising the post-bind filesystem recheck. */
 export declare const portableOperationTestHooks: {
     beforeAtomicWrite?: (relativePath: string) => Promise<void> | void;
@@ -228,6 +233,7 @@ export type PortablePrepareOperationResult = ({
     readonly generationId: string;
     readonly metadata: PortablePreparedOperationMetadata;
     readonly receipt: PortableOperationReceipt;
+    readonly incremental: PortableIncrementalSuccess["incremental"];
 }) | OperationFailure;
 export type PortableOperationRepairInput = {
     readonly authorized: true;
@@ -242,6 +248,12 @@ type RepositoryInput = {
 type NowInput = {
     readonly now?: Date | string;
 };
+/** Read only a runtime-authenticated cache; invalid or missing state means cold fallback. */
+export declare function readPortableIncrementalCache(input: RepositoryInput): Promise<PortableIncrementalCache | null>;
+/** Persist structural records and provenance only; authored/rejected model content never enters this store. */
+export declare function writePortableIncrementalCache(input: RepositoryInput & {
+    readonly cache: PortableIncrementalCache;
+}): Promise<boolean>;
 /** Reconstitute the exact prepared publication CAS; never recapture it from current files. */
 export declare function portableOperationPublicationPreflight(metadata: PortablePreparedOperationMetadata): PortablePublicationPreflight;
 export declare function preparePortableOperation(input?: RepositoryInput & NowInput & {

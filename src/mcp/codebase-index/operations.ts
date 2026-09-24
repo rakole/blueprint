@@ -1,4 +1,4 @@
-import {createHash, createHmac, randomBytes} from "node:crypto";
+import {createHash, createHmac, randomBytes, timingSafeEqual} from "node:crypto";
 import {constants as fsConstants} from "node:fs";
 import {promises as fs} from "node:fs";
 import path from "node:path";
@@ -32,6 +32,14 @@ import {
   type PortableExtractionSuccess
 } from "./extraction.js";
 import {
+  extractPortableRepositoryIncremental,
+  portableIncrementalCacheSchema,
+  restorePortableIncrementalCache,
+  serializePortableIncrementalCache,
+  type PortableIncrementalCache,
+  type PortableIncrementalSuccess
+} from "./incremental.js";
+import {
   capturePortablePublicationPreflight,
   type PortablePublicationPreflight
 } from "./publication.js";
@@ -52,6 +60,10 @@ export const PORTABLE_OPERATION_PACKET_BUDGET_BYTES = PORTABLE_MAP_MAX_MODEL_PAC
 export const PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES = 28 * 1024;
 export const PORTABLE_OPERATION_ACCEPTED_FILE = "accepted.json";
 export const PORTABLE_OPERATION_COMMITTED_FILE = "committed.json";
+/** Runtime-owned, metadata-only structural reuse state. */
+export const PORTABLE_INCREMENTAL_CACHE_ROOT = ".blueprint/codebase-incremental";
+export const PORTABLE_INCREMENTAL_CACHE_FILE = "cache.json";
+export const PORTABLE_INCREMENTAL_CACHE_KEY_FILE = "key.json";
 
 /** Fixture-only seam for exercising the post-bind filesystem recheck. */
 export const portableOperationTestHooks: {
@@ -231,6 +243,13 @@ const operationMarkerSchema = z.strictObject({
 const cursorSchema = generationLocalIdSchema;
 const operationIdSchema = generationLocalIdSchema;
 
+const incrementalCacheKeySchema = z.strictObject({version: z.literal(1), key: opaqueSecret});
+const incrementalCacheEnvelopeSchema = z.strictObject({
+  version: z.literal(1),
+  cache: portableIncrementalCacheSchema,
+  authTag: opaqueSecret
+});
+
 export type PortableOperationDiagnosticCode =
   | "invalid-input" | "not-found" | "unsafe-root" | "invalid-state" | "integrity-failure"
   | "stale-root" | "stale-source" | "stale-target" | "stale-provenance" | "expired"
@@ -293,7 +312,7 @@ export type PortableOperationRevalidation =
   | OperationFailure;
 
 export type PortablePrepareOperationResult =
-  | ({readonly ok: true; readonly status: "ready"; readonly operationId: string; readonly generationId: string; readonly metadata: PortablePreparedOperationMetadata; readonly receipt: PortableOperationReceipt})
+  | ({readonly ok: true; readonly status: "ready"; readonly operationId: string; readonly generationId: string; readonly metadata: PortablePreparedOperationMetadata; readonly receipt: PortableOperationReceipt; readonly incremental: PortableIncrementalSuccess["incremental"]})
   | OperationFailure;
 
 export type PortableOperationRepairInput = {
@@ -486,7 +505,7 @@ async function readLiteralFile(repositoryRoot: string, relative: string): Promis
   return bytes;
 }
 
-async function atomicWriteLiteral(repositoryRoot: string, relative: string, bytes: Uint8Array, overwrite: boolean): Promise<void> {
+async function atomicWriteLiteral(repositoryRoot: string, relative: string, bytes: Uint8Array, overwrite: boolean, mode = 0o666): Promise<void> {
   if (!(await assertLiteralRelativePath(repositoryRoot, path.posix.dirname(relative), false))) throw new Error("unsafe");
   if (!(await assertLiteralRelativePath(repositoryRoot, relative, true))) throw new Error("unsafe");
   const absolute = path.join(repositoryRoot, relative);
@@ -511,7 +530,7 @@ async function atomicWriteLiteral(repositoryRoot: string, relative: string, byte
   try {
     await portableOperationTestHooks.beforeAtomicWrite?.(relative);
     if (!sameDirectoryChain(chain, await captureDirectoryChain(repositoryRoot, parentRelative))) throw new Error("unsafe");
-    await fs.writeFile(temp, bytes, {flag: "wx"});
+    await fs.writeFile(temp, bytes, {flag: "wx", mode});
     const created = await fs.lstat(temp);
     if (created.isSymbolicLink() || !created.isFile()) throw new Error("unsafe");
     ownedTemp = fileIdentity(created);
@@ -551,6 +570,78 @@ function parseStoredJson<T>(bytes: Uint8Array, schema: z.ZodType<T>): T | null {
   } catch {
     return null;
   }
+}
+
+function incrementalCachePayload(cache: unknown): string {
+  return canonicalJson({version: 1, cache});
+}
+
+function incrementalCacheAuthTag(key: string, cache: unknown): string {
+  return createHmac("sha256", key).update(incrementalCachePayload(cache), "utf8").digest("hex");
+}
+
+function sameSecret(left: string, right: string): boolean {
+  const leftBytes = Buffer.from(left, "utf8");
+  const rightBytes = Buffer.from(right, "utf8");
+  return leftBytes.byteLength === rightBytes.byteLength && timingSafeEqual(leftBytes, rightBytes);
+}
+
+async function readPortableIncrementalCacheUnlocked(repositoryRoot: string): Promise<PortableIncrementalCache | null> {
+  if (!(await assertLiteralRelativePath(repositoryRoot, PORTABLE_INCREMENTAL_CACHE_ROOT))) return null;
+  const keyBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_INCREMENTAL_CACHE_ROOT}/${PORTABLE_INCREMENTAL_CACHE_KEY_FILE}`).catch(() => null);
+  const cacheBytes = await readLiteralFile(repositoryRoot, `${PORTABLE_INCREMENTAL_CACHE_ROOT}/${PORTABLE_INCREMENTAL_CACHE_FILE}`).catch(() => null);
+  if (!keyBytes || !cacheBytes) return null;
+  const keyStat = await fs.lstat(path.join(repositoryRoot, PORTABLE_INCREMENTAL_CACHE_ROOT, PORTABLE_INCREMENTAL_CACHE_KEY_FILE)).catch(() => null);
+  if (!keyStat || keyStat.isSymbolicLink() || !keyStat.isFile() || (keyStat.mode & 0o077) !== 0) return null;
+  const key = parseStoredJson(keyBytes, incrementalCacheKeySchema);
+  const envelope = parseStoredJson(cacheBytes, incrementalCacheEnvelopeSchema);
+  if (!key || !envelope || !sameSecret(envelope.authTag, incrementalCacheAuthTag(key.key, envelope.cache))) return null;
+  return restorePortableIncrementalCache(envelope.cache);
+}
+
+async function writePortableIncrementalCacheUnlocked(repositoryRoot: string, cache: PortableIncrementalCache): Promise<boolean> {
+  const initialRoot = await captureLiteralRoot(repositoryRoot);
+  if (!initialRoot || !(await ensureLiteralDirectory(repositoryRoot, PORTABLE_INCREMENTAL_CACHE_ROOT))) return false;
+  try {
+    const keyRelative = `${PORTABLE_INCREMENTAL_CACHE_ROOT}/${PORTABLE_INCREMENTAL_CACHE_KEY_FILE}`;
+    const existingKeyBytes = await readLiteralFile(repositoryRoot, keyRelative).catch(() => null);
+    const keyAbsolute = path.join(repositoryRoot, PORTABLE_INCREMENTAL_CACHE_ROOT, PORTABLE_INCREMENTAL_CACHE_KEY_FILE);
+    const existingKeyStat = await fs.lstat(keyAbsolute).catch(() => null);
+    const broadExistingKey = Boolean(existingKeyStat && existingKeyStat.isFile() && !existingKeyStat.isSymbolicLink() && (existingKeyStat.mode & 0o077) !== 0);
+    let key = existingKeyBytes && !broadExistingKey ? parseStoredJson(existingKeyBytes, incrementalCacheKeySchema) : null;
+    if (!key) {
+      key = incrementalCacheKeySchema.parse({version: 1, key: randomBytes(32).toString("hex")});
+      await atomicWriteLiteral(repositoryRoot, keyRelative, new TextEncoder().encode(canonicalJson(key)), Boolean(existingKeyBytes), 0o600);
+    }
+    const cacheProjection = serializePortableIncrementalCache(cache);
+    if (!portableIncrementalCacheSchema.safeParse(cacheProjection).success) return false;
+    const envelope = incrementalCacheEnvelopeSchema.parse({
+      version: 1,
+      cache: cacheProjection,
+      authTag: incrementalCacheAuthTag(key.key, cacheProjection)
+    });
+    await atomicWriteLiteral(repositoryRoot, `${PORTABLE_INCREMENTAL_CACHE_ROOT}/${PORTABLE_INCREMENTAL_CACHE_FILE}`, new TextEncoder().encode(canonicalJson(envelope)), true);
+    const afterRoot = await captureLiteralRoot(repositoryRoot);
+    return Boolean(afterRoot && afterRoot.path === initialRoot.path && afterRoot.realPath === initialRoot.realPath && afterRoot.device === initialRoot.device && afterRoot.inode === initialRoot.inode);
+  } catch {
+    return false;
+  }
+}
+
+/** Read only a runtime-authenticated cache; invalid or missing state means cold fallback. */
+export async function readPortableIncrementalCache(input: RepositoryInput): Promise<PortableIncrementalCache | null> {
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot) return null;
+  const result = await withOperationLock(repositoryRoot, "codebase-incremental-cache", () => readPortableIncrementalCacheUnlocked(repositoryRoot));
+  return result && typeof result === "object" && "ok" in result ? null : result as PortableIncrementalCache | null;
+}
+
+/** Persist structural records and provenance only; authored/rejected model content never enters this store. */
+export async function writePortableIncrementalCache(input: RepositoryInput & {readonly cache: PortableIncrementalCache}): Promise<boolean> {
+  const repositoryRoot = resolveRepositoryRoot(input);
+  if (!repositoryRoot) return false;
+  const result = await withOperationLock(repositoryRoot, "codebase-incremental-cache", () => writePortableIncrementalCacheUnlocked(repositoryRoot, input.cache));
+  return result && typeof result === "object" && "ok" in result ? false : Boolean(result);
 }
 
 function extractionFromStored(
@@ -870,15 +961,17 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
   const operationId = generatedOpaqueId("op");
   const generationId = generatedOpaqueId("gen");
   const transactionId = generatedOpaqueId("tx");
-  const extraction = await extractPortableRepository({repositoryRoot, generationId});
+  // Create the lock parent before consulting the durable cache.  The cache is
+  // an operational optimization; inability to read it must remain a safe cold
+  // fallback and must never block a valid prepared operation.
+  if (!(await ensureLiteralDirectory(repositoryRoot, ".blueprint/locks"))) return fixedFailure("unsafe", "unsafe-root", operationId, generationId);
+  const previousCache = await readPortableIncrementalCache({repositoryRoot});
+  const extraction = await extractPortableRepositoryIncremental({repositoryRoot, generationId, ...(previousCache ? {previous: previousCache} : {})});
   if (!extraction.ok) return fixedFailure("stale", "stale-source", operationId, generationId);
+  await writePortableIncrementalCache({repositoryRoot, cache: extraction.cache});
   const root = rootFromExtraction(extraction.root, initialRoot.ancestors);
   if (!sameRoot(initialRoot, root)) return fixedFailure("stale", "stale-root", operationId, generationId);
   const sourceBasis = sourceBasisFor(extraction, root);
-  // The reviewed publication preflight creates its shared lock parent before
-  // acquiring the publication lock. Make that parent literal and race-safe
-  // here so concurrent prepared operations cannot both call mkdir blindly.
-  if (!(await ensureLiteralDirectory(repositoryRoot, ".blueprint/locks"))) return fixedFailure("unsafe", "unsafe-root", operationId, generationId);
   const preflight = await capturePortablePublicationPreflight({
     repositoryRoot,
     operationId,
@@ -953,7 +1046,7 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
   if (written) return written;
   const receipt = boundedReceipt(preparedMetadata, initialPackets.packets as unknown as readonly PortableModelPacket[], undefined);
   if (!receipt.ok) return fixedFailure("invalid-state", receipt.diagnostics[0]?.code ?? "invalid-state", operationId, generationId);
-  return {ok: true, status: "ready", operationId, generationId, metadata: preparedMetadata, receipt};
+  return {ok: true, status: "ready", operationId, generationId, metadata: preparedMetadata, receipt, incremental: extraction.incremental};
 }
 
 export const preparePortableMapOperation = preparePortableOperation;

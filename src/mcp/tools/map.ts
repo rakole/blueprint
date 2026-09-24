@@ -139,6 +139,16 @@ export async function blueprintMapPrepare(raw: unknown): Promise<BlueprintMapLeg
   const args = legacyPrepareSchema.parse(raw);
   const root = await ensureRepoRoot(args.cwd);
   await scrubLegacyCodebaseFailureLog(root);
+  // A focused or explicitly restarted request against an existing portable
+  // map must continue through the owning portable prepare contract. Resolve
+  // this route before taking the legacy publication lock so the portable
+  // operation cannot recurse under the same lock.
+  const existingGuard = await inspectCodebaseWriteGuard(root);
+  if (existingGuard.portable.status === "valid" &&
+      (args.focus !== undefined || args.restart)) {
+    const portableRoot = await fs.realpath(root).catch(() => root);
+    return blueprintPortableMapPrepare({cwd: portableRoot, formatVersion: 1, intent: "refresh"});
+  }
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
     const gate = await eligibility(root);
     if (!gate.allowed) return {status: "blocked", readiness: gate.readiness, nextAction: await route(gate.next)};

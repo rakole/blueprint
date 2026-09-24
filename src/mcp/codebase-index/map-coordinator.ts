@@ -270,6 +270,16 @@ export async function blueprintPortableMapPrepare(raw: unknown): Promise<PublicR
       receipt: prepared.receipt,
       coverage: {candidates: prepared.metadata.coverage.candidateCount, included: prepared.metadata.coverage.includedCount, excluded: prepared.metadata.coverage.excludedCount,
         structural: prepared.metadata.coverage.structural, exclusions: prepared.metadata.coverage.exclusions},
+      incremental: {
+        reason: prepared.incremental.reason,
+        counters: prepared.incremental.counters,
+        semantic: {
+          invalidatedCapabilityCount: prepared.incremental.semantic.invalidatedCapabilityIds.length,
+          invalidatedClaimCount: prepared.incremental.semantic.invalidatedClaimIds.length,
+          invalidatedAliasCount: prepared.incremental.semantic.invalidatedAliasIds.length,
+          reasons: prepared.incremental.semantic.reasons
+        }
+      },
       authoring: authoringContract(prepared.generationId),
       warnings: []
     };

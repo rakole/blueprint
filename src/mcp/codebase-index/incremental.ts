@@ -31,10 +31,10 @@ import {INVENTORY_MAX_FILE_BYTES} from "./inventory.js";
 
 const CACHE_VERSION = 1 as const;
 /**
- * Incremental reuse is internal until an owning runtime can authenticate a
- * persisted cache. A checksum catches accidental corruption but cannot prove
- * who created a caller-supplied object, so this non-serializable capability is
- * required for the current in-process contract.
+ * A checksum catches accidental corruption but cannot prove who created a
+ * caller-supplied object.  The symbol remains required for direct callers;
+ * the operation owner may reissue it only after authenticating its durable
+ * envelope with its own secret.
  */
 const CACHE_AUTHORITY = Symbol("blueprint.portable.incremental.cache-authority");
 const cacheTrust = z.literal("operational");
@@ -196,8 +196,8 @@ export function portableProvenanceHash(provenance: ExtractionParserProvenance): 
   return digest(provenanceProjection(provenance));
 }
 
-function validateCacheShape(input: unknown): PortableIncrementalCache | null {
-  if (!input || typeof input !== "object" || (input as {[CACHE_AUTHORITY]?: true})[CACHE_AUTHORITY] !== true) return null;
+function validateCacheShape(input: unknown, requireAuthority: boolean): PortableIncrementalCache | null {
+  if (!input || typeof input !== "object" || (requireAuthority && (input as {[CACHE_AUTHORITY]?: true})[CACHE_AUTHORITY] !== true)) return null;
   const parsed = cacheSchema.safeParse(input);
   if (!parsed.success) return null;
   const cache = parsed.data as unknown as PortableIncrementalCache;
@@ -219,7 +219,10 @@ function validateCacheShape(input: unknown): PortableIncrementalCache | null {
   } catch {
     return null;
   }
-  return input as PortableIncrementalCache;
+  const trusted = parsed.data as unknown as PortableIncrementalCache;
+  if (requireAuthority) return input as PortableIncrementalCache;
+  Object.defineProperty(trusted, CACHE_AUTHORITY, {value: true, enumerable: false, configurable: false, writable: false});
+  return trusted;
 }
 
 export function createPortableIncrementalCache(
@@ -249,7 +252,34 @@ export function createPortableIncrementalCache(
 }
 
 export function parsePortableIncrementalCache(input: unknown): PortableIncrementalCache | null {
-  return validateCacheShape(input);
+  return validateCacheShape(input, true);
+}
+
+/**
+ * Restore a cache read from the runtime-owned authenticated store.  Raw
+ * caller snapshots must continue through parsePortableIncrementalCache and
+ * therefore cannot acquire this capability by recomputing cacheHash.
+ */
+export function restorePortableIncrementalCache(input: unknown): PortableIncrementalCache | null {
+  return validateCacheShape(input, false);
+}
+
+/** Return the metadata-only JSON projection used by the operational store. */
+export function serializePortableIncrementalCache(cache: PortableIncrementalCache): unknown {
+  return {
+    version: cache.version,
+    trust: cache.trust,
+    generationId: cache.generationId,
+    root: cache.root,
+    inventoryFingerprint: cache.inventoryFingerprint,
+    provenance: cache.provenance,
+    provenanceHash: cache.provenanceHash,
+    structuralShards: cache.structuralShards,
+    sourceBasis: cache.sourceBasis,
+    coverage: cache.coverage,
+    ...(cache.semantic ? {semantic: cache.semantic} : {}),
+    cacheHash: cache.cacheHash
+  };
 }
 
 function sameRoot(left: ExtractionRootIdentity, right: ExtractionRootIdentity): boolean {

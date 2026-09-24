@@ -1,7 +1,7 @@
 import test, {afterEach, type TestContext} from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {access, mkdir, mkdtemp, readFile, rm, symlink, writeFile} from "node:fs/promises";
+import {access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile} from "node:fs/promises";
 import path from "node:path";
 
 import {CODEBASE_DOCUMENT_IDS} from "../src/mcp/codebase-authoring.js";
@@ -28,7 +28,7 @@ import {
 import {readResearchEvidence} from "../src/mcp/tools/research-evidence.js";
 import {blueprintProjectInit, blueprintProjectPrepare, blueprintProjectStatus} from "../src/mcp/tools/project.js";
 import {blueprintMapPrepare} from "../src/mcp/tools/map.js";
-import {createGitRepo, initializeGitRepo} from "./helpers/git-fixtures.js";
+import {createCommittedGitRepo, createGitRepo, initializeGitRepo} from "./helpers/git-fixtures.js";
 
 const digest = (value: string | Uint8Array): string => createHash("sha256").update(value).digest("hex");
 
@@ -183,6 +183,19 @@ test("any INDEX or unknown marker blocks legacy mutation while preserving exact 
   const map = await blueprintMapPrepare({cwd: root, inputs: ["src/index.ts"]});
   assert.equal(map.status, "blocked");
   assert.equal(map.nextAction, null);
+});
+
+test("explicit focus routes an existing portable map through portable refresh", async t => {
+  const root = await createCommittedGitRepo("blueprint-portable-focus-");
+  t.after(() => rm(path.dirname(root), {recursive: true, force: true}));
+  await mkdir(path.join(root, "src"), {recursive: true});
+  await writeFile(path.join(root, "src", "index.ts"), "export const entry = 1;\n", "utf8");
+  const rendered = renderFixture("generation_focus_refresh");
+  await installBundle(root, rendered, filePath => filePath === "INDEX.md" || filePath.startsWith("generations/generation_focus_refresh/"));
+
+  const focused = await blueprintMapPrepare({cwd: await realpath(root), focus: "src/index.ts"});
+  assert.equal(focused.formatVersion, 1, JSON.stringify(focused));
+  assert.notEqual(focused.status, "unsafe");
 });
 
 test("malformed marker is a conservative hard stop and cannot invent readiness", async t => {

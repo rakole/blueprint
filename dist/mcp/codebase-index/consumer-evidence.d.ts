@@ -68,12 +68,13 @@ export type ConsumerEvidenceFailure = {
     };
 };
 export type ConsumerEvidenceResult = ConsumerEvidenceSuccess | ConsumerEvidenceFailure;
-/**
- * Resolve one consumer selection, re-read every selected page/source literally,
- * and shape the verified bytes through the pure full/delta/register helper.
- * This function has no session or persistence side effects.  In particular,
- * it never accepts a caller-provided resolver snapshot or pin as authority.
- */
+/** Resolve one consumer selection with the caller-visible packet cap applied. */
 export declare function resolveConsumerEvidence(input: ConsumerEvidenceInput): Promise<ConsumerEvidenceResult>;
+/**
+ * Provider-only closure verification.  This keeps the complete, freshly
+ * verified closure available for final register/delta shaping without making
+ * the packet-cap bypass a caller-controlled input field.
+ */
+export declare function resolveConsumerEvidenceForProvider(input: ConsumerEvidenceInput): Promise<ConsumerEvidenceResult>;
 export declare const prepareConsumerEvidence: typeof resolveConsumerEvidence;
 export declare const resolvePortableConsumerEvidence: typeof resolveConsumerEvidence;
