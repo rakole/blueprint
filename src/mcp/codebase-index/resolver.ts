@@ -1089,6 +1089,91 @@ export async function resolveCodebaseSealedMember(root: string, relativePath: st
   return bytes.ok && sha256(bytes.bytes) === expected;
 }
 
+/**
+ * Freshly hash members of an owner-authenticated generation pin.
+ *
+ * This is deliberately separate from resolveCodebaseSealedMember: ordinary
+ * navigation may follow INDEX and retained predecessors, while a provider
+ * that has already persisted an owner receipt must be able to authenticate
+ * its old basis directly after restart.  A raw JSON-shaped pin is never an
+ * authority.  Members are generation-relative (for example `ENTRY.md` or
+ * `routes/root.md`); an extra file that is absent from the sealed manifest is
+ * refused instead of being treated as generated evidence.
+ */
+export type PortablePinnedMemberHash = {
+  readonly path: string;
+  readonly sha256: string;
+  readonly generationId: string;
+};
+
+export type PortablePinnedMemberHashResult =
+  | {readonly status: "ok"; readonly generationId: string; readonly members: readonly PortablePinnedMemberHash[]}
+  | {readonly status: "invalid"; readonly reason: string; readonly paths: readonly string[]; readonly diagnostics: readonly PortableResolverDiagnostic[]};
+
+function safeGenerationMember(value: string): boolean {
+  return typeof value === "string" && value.length > 0 && value.length <= 4096 &&
+    !value.startsWith("/") && !value.includes("\\") && !/[\u0000-\u001f\u007f]/.test(value) &&
+    !value.split("/").some(segment => !segment || segment === "." || segment === "..");
+}
+
+/** Hash one or more sealed generation members without reading INDEX/lineage. */
+export async function hashPortablePinnedMembers(
+  root: string,
+  handoff: PortablePinHandoff,
+  members: readonly string[],
+  options: ResolveCodebaseNavigationOptions = {}
+): Promise<PortablePinnedMemberHashResult> {
+  if (!isPortablePinHandoff(handoff)) {
+    return {status: "invalid", reason: "The supplied pin is not an owner-authenticated handoff.", paths: [], diagnostics: [diagnostic("unsupported", "selection")]};
+  }
+  if (!Array.isArray(members) || members.some(member => !safeGenerationMember(member))) {
+    return {status: "invalid", reason: "Pinned generation members are not canonical.", paths: [], diagnostics: [diagnostic("unsafe-path", "selection")]};
+  }
+  const verified = await verifyGeneration(root, handoff.generationId, options.limits, false);
+  if (!verified.ok || verified.value.entry.hash !== handoff.entry.sha256 || verified.value.manifestHash !== handoff.manifest.sha256) {
+    return {
+      status: "invalid",
+      reason: "The authenticated pin target is missing or its sealed bytes changed.",
+      paths: [],
+      diagnostics: verified.ok ? [diagnostic("checksum-mismatch", "selection")] : verified.diagnostics
+    };
+  }
+  const requested = [...new Set(members.map(member => {
+    const prefix = `generations/${handoff.generationId}/`;
+    if (member.startsWith(prefix)) return member.slice(prefix.length);
+    return member.startsWith("generations/") ? "" : member;
+  }))].filter(Boolean).sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+  if (requested.length !== new Set(members).size) {
+    return {status: "invalid", reason: "Pinned generation member belongs to a different generation.", paths: [], diagnostics: [diagnostic("unsafe-path", "selection")]};
+  }
+  const results: PortablePinnedMemberHash[] = [];
+  const missing: string[] = [];
+  for (const member of requested) {
+    const relative = `generations/${handoff.generationId}/${member}`;
+    let expected: string | null = null;
+    if (member === "ENTRY.md") expected = verified.value.entry.hash;
+    else if (member === "manifest.json") expected = verified.value.manifestHash;
+    else expected = expectedChecksum(verified.value.manifest, relative);
+    if (!expected) {
+      missing.push(relative);
+      continue;
+    }
+    const read = await readLiteralBytes(root, `${CODEBASE_ROOT}/${relative}`, DEFAULT_LIMITS.pageBytes * 256);
+    if (!read.ok || sha256(read.bytes) !== expected) {
+      missing.push(relative);
+      continue;
+    }
+    results.push({path: relative, sha256: expected, generationId: handoff.generationId});
+  }
+  if (missing.length > 0) {
+    return {status: "invalid", reason: "A requested member is not a freshly verified sealed generation file.", paths: missing.slice(0, MAX_DIAGNOSTICS), diagnostics: [diagnostic("checksum-mismatch", "selection")]};
+  }
+  return {status: "ok", generationId: handoff.generationId, members: results};
+}
+
+/** Naming alias for provider freshness callers. */
+export const readPortablePinnedMemberHashes = hashPortablePinnedMembers;
+
 /** Navigation/search pages are discovery-only and must say so explicitly. */
 export type PortableSelection =
   | {readonly kind: "page"; readonly path: string; readonly mode: "discovery"}
