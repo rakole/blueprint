@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "corpus": "ts-service",
+  "sourceManifestSha256": "3dd4045412f65feebc7c95893da2502e81677f55e0b82244a3890fda7a7d4438",
+  "scenarios": [
+    {
+      "id": "ts-service-scenario-stale-limit",
+      "kind": "stale",
+      "rationale": "The open-reservation threshold changes in place while the frozen map remains based on the prior source bytes.",
+      "operations": [
+        {
+          "type": "replace",
+          "path": "src/domain/reservation-policy.ts",
+          "expectedSha256": "74febf0eead8dfa3e4289b0ac654c4f1d94ee4d42a5c8434f8cce99635ac737c",
+          "oldText": "export const MAX_OPEN_RESERVATIONS = 3;",
+          "newText": "export const MAX_OPEN_RESERVATIONS = 4;"
+        }
+      ]
+    },
+    {
+      "id": "ts-service-scenario-renamed-summary",
+      "kind": "renamed",
+      "rationale": "The standalone UI summary module moves to a new path while retaining its exported component and behavior.",
+      "operations": [
+        {
+          "type": "rename",
+          "from": "src/ui/reservation-summary.jsx",
+          "to": "src/ui/reservation-status-summary.jsx",
+          "expectedSha256": "5914455d3783c9d0b6d7a969e09aab4eb1b3d190c5921f55a9e0b8345eeb5c35"
+        }
+      ]
+    },
+    {
+      "id": "ts-service-scenario-new-window-helper",
+      "kind": "new",
+      "rationale": "A small source helper is added after map freeze to represent a newly introduced reservation-window capability.",
+      "operations": [
+        {
+          "type": "create",
+          "path": "src/domain/reservation-window.ts",
+          "content": "export function isWithinReservationHorizon(startsAt: Date, now: Date, horizonDays: number): boolean {\n  const latestStart = now.getTime() + horizonDays * 86_400_000;\n  const timestamp = startsAt.getTime();\n  return timestamp >= now.getTime() && timestamp <= latestStart;\n}\n"
+        }
+      ]
+    }
+  ]
+}

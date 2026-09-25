@@ -1,0 +1,1501 @@
+{
+  "schemaVersion": 1,
+  "corpus": "python-library",
+  "sourceManifestSha256": "46dae3a2cb2cbaf77c3a9eaaff40655f884465d2b86c3542dce30f168e092ba2",
+  "pilot": [
+    {
+      "id": "python-library-pilot-research",
+      "class": "research",
+      "scenario": "base",
+      "prompt": "Prepare a concise engineering note for a maintainer who needs to explain HarborLog's inspection deadlines and risk output. Trace how configuration supplies due-day values, how category overrides affect an inspection, how an open record can become stale, and how overdue status changes risk scoring. Use concrete examples from the repository and cite the relevant files and symbols.",
+      "expectedDeliverables": [
+        "A short source-grounded note that distinguishes due dates from open-record staleness.",
+        "A trace from TOML configuration through policy decisions to risk assessment.",
+        "At least two concrete examples with file and symbol citations."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/config.py",
+            "range": {
+              "startLine": 17,
+              "endLine": 37
+            },
+            "symbol": "load_config",
+            "rationale": "Configuration parsing and positive-limit checks establish the loaded policy values."
+          },
+          {
+            "path": "src/harborlog/policy.py",
+            "range": {
+              "startLine": 19,
+              "endLine": 31
+            },
+            "symbol": "due_days_for",
+            "rationale": "The policy selects category-specific or standard due windows and computes overdue and stale predicates."
+          },
+          {
+            "path": "src/harborlog/scoring.py",
+            "range": {
+              "startLine": 23,
+              "endLine": 47
+            },
+            "symbol": "assess_risk",
+            "rationale": "Risk scoring adds an overdue adjustment before selecting a band."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/service.py",
+            "range": {
+              "startLine": 115,
+              "endLine": 134
+            },
+            "symbol": "summary",
+            "rationale": "The service combines overdue and stale checks in its operator summary."
+          },
+          {
+            "path": "config/default.toml",
+            "range": {
+              "startLine": 1,
+              "endLine": 9
+            },
+            "rationale": "The default sample shows standard and category-specific policy values."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "python-library-pilot-research-r1",
+          "criterion": "Accurately distinguishes the due-date predicate from the open-record stale predicate and names their policy methods.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/policy.py",
+                "range": {
+                  "startLine": 22,
+                  "endLine": 31
+                },
+                "symbol": "due_on",
+                "rationale": "The two date decisions use different policy methods and inputs."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Conflates the predicates or omits one.",
+            "1": "Clearly explains both predicates and their distinct uses.",
+            "0.5": "Mentions both but leaves their conditions partly unclear."
+          }
+        },
+        {
+          "id": "python-library-pilot-research-r2",
+          "criterion": "Traces standard and category-specific due-day configuration into InspectionPolicy.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/config.py",
+                "range": {
+                  "startLine": 17,
+                  "endLine": 31
+                },
+                "symbol": "load_config",
+                "rationale": "The loader constructs the policy from parsed values."
+              },
+              {
+                "path": "src/harborlog/policy.py",
+                "range": {
+                  "startLine": 13,
+                  "endLine": 20
+                },
+                "symbol": "InspectionPolicy",
+                "rationale": "The policy resolves category overrides."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Does not connect configuration to policy.",
+            "1": "Explains defaults, category override, and policy construction accurately.",
+            "0.5": "Gets the general flow right but misses category fallback or defaults."
+          }
+        },
+        {
+          "id": "python-library-pilot-research-r3",
+          "criterion": "Explains how overdue status affects the risk score and band.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/scoring.py",
+                "range": {
+                  "startLine": 23,
+                  "endLine": 41
+                },
+                "symbol": "assess_risk",
+                "rationale": "The score is capped, adjusted for overdue status, and converted to a band."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Reports an incorrect scoring flow.",
+            "1": "Accurately covers the cap, overdue increment, and band selection.",
+            "0.5": "Identifies the adjustment but not the cap or band thresholds."
+          }
+        },
+        {
+          "id": "python-library-pilot-research-r4",
+          "criterion": "Uses precise source citations and at least two concrete examples without inventing behavior.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "config/default.toml",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 9
+                },
+                "rationale": "The sample configuration supports a concrete example."
+              },
+              {
+                "path": "tests/test_service.py",
+                "range": {
+                  "startLine": 32,
+                  "endLine": 46
+                },
+                "symbol": "test_open_assess_search_and_close",
+                "rationale": "The test supplies a concrete overdue assessment example."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Citations are absent or materially unsupported.",
+            "1": "Examples and citations are concise, precise, and source-grounded.",
+            "0.5": "Some citations support the note but examples are thin."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The note covers configuration, due dates, open staleness, and risk scoring.",
+        "Every material claim has a repository path and symbol or line reference.",
+        "The examples are consistent with the current source behavior."
+      ],
+      "criticalErrors": [
+        "Claims that category due days are ignored.",
+        "Treats an overdue inspection and an open stale inspection as the same predicate.",
+        "Invents a persistence or scoring behavior absent from the source."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v"
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "python-library-pilot-testing",
+      "class": "testing",
+      "scenario": "base",
+      "prompt": "Add focused unit tests for two request-validation boundaries that are not covered by the current tests: a request whose asset id does not match the registered asset must be rejected, and an inspection dated before asset commissioning must be rejected. Keep the tests deterministic with the existing standard-library unittest style and make their failure messages identify each violated rule.",
+      "expectedDeliverables": [
+        "Focused tests covering registered-asset mismatch and pre-commissioning inspection-date rejection.",
+        "Assertions that check ValidationError with rule-specific message text for both boundaries.",
+        "A brief note naming the test file and the command used to run the baseline."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/validation.py",
+            "range": {
+              "startLine": 29,
+              "endLine": 47
+            },
+            "symbol": "validate_request",
+            "rationale": "The asset-match and commissioning-date guards are implemented in request validation."
+          },
+          {
+            "path": "tests/test_validation.py",
+            "range": {
+              "startLine": 8,
+              "endLine": 12
+            },
+            "symbol": "ValidationTests.setUp",
+            "rationale": "The existing deterministic fixture setup supplies a registered asset and fixed today date for new boundary cases."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/errors.py",
+            "range": {
+              "startLine": 8,
+              "endLine": 10
+            },
+            "symbol": "ValidationError",
+            "rationale": "Both validation branches use the domain exception expected by the tests."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "python-library-pilot-testing-r1",
+          "criterion": "Adds a deterministic test that rejects a request whose asset id differs from the registered asset.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/validation.py",
+                "range": {
+                  "startLine": 36,
+                  "endLine": 38
+                },
+                "symbol": "validate_request",
+                "rationale": "The asset-id mismatch guard is explicit."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No test for the asset-id mismatch branch.",
+            "1": "The test uses a mismatched asset id and asserts the asset-mismatch ValidationError.",
+            "0.5": "A test exercises request validation but does not isolate or identify the registered-asset mismatch."
+          }
+        },
+        {
+          "id": "python-library-pilot-testing-r2",
+          "criterion": "Adds a deterministic test that rejects an inspection dated before the registered asset was commissioned.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/validation.py",
+                "range": {
+                  "startLine": 36,
+                  "endLine": 40
+                },
+                "symbol": "validate_request",
+                "rationale": "The commissioning-date guard is the behavior under test."
+              },
+              {
+                "path": "tests/test_validation.py",
+                "range": {
+                  "startLine": 8,
+                  "endLine": 12
+                },
+                "symbol": "ValidationTests.setUp",
+                "rationale": "The fixed asset commissioning date makes the boundary deterministic."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No pre-commissioning date coverage.",
+            "1": "The test uses a date before the asset commissioning date and asserts the pre-commissioning ValidationError.",
+            "0.5": "Coverage exists but the date setup or assertion does not isolate the commissioning boundary."
+          }
+        },
+        {
+          "id": "python-library-pilot-testing-r3",
+          "criterion": "Checks ValidationError and distinguishes the rule through message assertions.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/errors.py",
+                "range": {
+                  "startLine": 8,
+                  "endLine": 10
+                },
+                "symbol": "ValidationError",
+                "rationale": "The requested validation branches raise this domain exception."
+              },
+              {
+                "path": "src/harborlog/validation.py",
+                "range": {
+                  "startLine": 36,
+                  "endLine": 40
+                },
+                "symbol": "validate_request",
+                "rationale": "The asset mismatch and pre-commissioning branches provide distinct rule messages to assert."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "tests/test_validation.py",
+                "range": {
+                  "startLine": 35,
+                  "endLine": 42
+                },
+                "rationale": "Existing tests demonstrate the local assertRaisesRegex style for rule-specific messages."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Uses broad or incorrect exception assertions.",
+            "1": "Checks ValidationError with useful rule-specific message matching.",
+            "0.5": "Checks the exception but only weakly identifies the rule."
+          }
+        },
+        {
+          "id": "python-library-pilot-testing-r4",
+          "criterion": "Keeps tests within the fixture's unittest and standard-library conventions and reports the baseline check.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "README.md",
+                "range": {
+                  "startLine": 10,
+                  "endLine": 16
+                },
+                "rationale": "The README defines the bytecode-disabled unittest command."
+              },
+              {
+                "path": "tests/test_validation.py",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 8
+                },
+                "rationale": "The existing test module establishes the unittest style."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Adds unrelated dependencies or omits verification.",
+            "1": "Uses the existing style and clearly reports the applicable command.",
+            "0.5": "Mostly follows conventions but leaves the check unclear."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "Both uncovered request-validation boundaries have focused deterministic tests.",
+        "Tests assert ValidationError with asset-mismatch and pre-commissioning message text.",
+        "The existing baseline command is reported and passes."
+      ],
+      "criticalErrors": [
+        "Weakens or removes request validation instead of testing it.",
+        "Uses the current wall-clock date so the test is nondeterministic.",
+        "Tests duplicate codes or future dates instead of the requested asset and commissioning boundaries."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v"
+        }
+      ],
+      "knownTarget": false
+    }
+  ],
+  "confirmatory": [
+    {
+      "id": "python-library-confirm-discussion",
+      "class": "discussion",
+      "scenario": "base",
+      "prompt": "Discuss the design trade-offs of adding a CSV export feature for inspection records. Keep the discussion grounded in the current domain models, serialization boundary, and replaceable storage adapters. Identify a small first slice, the invariants it must preserve, and the questions that should be resolved before implementation.",
+      "expectedDeliverables": [
+        "A concise design discussion covering model, serialization, and storage boundaries.",
+        "A proposed first slice with explicit invariants and open questions.",
+        "Source citations for each architectural claim."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/models.py",
+            "range": {
+              "startLine": 42,
+              "endLine": 65
+            },
+            "symbol": "Inspection",
+            "rationale": "Inspection fields define the record data an export must represent."
+          },
+          {
+            "path": "src/harborlog/serialization.py",
+            "range": {
+              "startLine": 29,
+              "endLine": 55
+            },
+            "symbol": "inspection_to_dict",
+            "rationale": "The existing lossless encoding is the current serialization boundary."
+          },
+          {
+            "path": "src/harborlog/storage.py",
+            "range": {
+              "startLine": 21,
+              "endLine": 33
+            },
+            "symbol": "InspectionStore",
+            "rationale": "The protocol separates service behavior from persistence adapters."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/repository.py",
+            "range": {
+              "startLine": 10,
+              "endLine": 32
+            },
+            "symbol": "InspectionRepository",
+            "rationale": "The repository translates adapter details into domain operations and errors."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "python-library-confirm-discussion-r1",
+          "criterion": "Correctly identifies the record fields and nested findings that an export must preserve.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/models.py",
+                "range": {
+                  "startLine": 34,
+                  "endLine": 65
+                },
+                "symbol": "Finding",
+                "rationale": "Finding and Inspection define nested export data."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misses material record data.",
+            "1": "Covers the relevant top-level, nested, and optional fields.",
+            "0.5": "Covers top-level fields but misses nested or optional fields."
+          }
+        },
+        {
+          "id": "python-library-confirm-discussion-r2",
+          "criterion": "Explains how a CSV boundary relates to the existing serialization and storage seams.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/serialization.py",
+                "range": {
+                  "startLine": 11,
+                  "endLine": 55
+                },
+                "symbol": "finding_to_dict",
+                "rationale": "Serialization already owns lossless record conversion."
+              },
+              {
+                "path": "src/harborlog/storage.py",
+                "range": {
+                  "startLine": 56,
+                  "endLine": 105
+                },
+                "symbol": "JsonlInspectionStore",
+                "rationale": "The adapter owns persistence mechanics."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Places export logic in an unsupported layer.",
+            "1": "Clearly assigns conversion and persistence responsibilities to suitable seams.",
+            "0.5": "Recognizes one seam but leaves responsibilities mixed."
+          }
+        },
+        {
+          "id": "python-library-confirm-discussion-r3",
+          "criterion": "Proposes a bounded first slice with explicit invariants and unresolved questions.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/storage.py",
+                "range": {
+                  "startLine": 21,
+                  "endLine": 33
+                },
+                "symbol": "InspectionStore",
+                "rationale": "The adapter protocol is a natural boundary for discussing scope and compatibility."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No bounded slice or invariants.",
+            "1": "The slice, invariants, and questions are concrete and appropriately scoped.",
+            "0.5": "A slice is proposed but invariants or questions are vague."
+          }
+        },
+        {
+          "id": "python-library-confirm-discussion-r4",
+          "criterion": "Supports architectural claims with accurate citations and avoids inventing current behavior.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "README.md",
+                "range": {
+                  "startLine": 23,
+                  "endLine": 27
+                },
+                "rationale": "The project guide summarizes the current layer boundaries."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Claims contradict the source or lack citations.",
+            "1": "Claims are precise, cited, and source-grounded.",
+            "0.5": "Most claims are supported but some are imprecise."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The discussion names current model, serialization, repository, and store boundaries.",
+        "A small first slice and its invariants are explicit.",
+        "Open design questions are separated from observed source behavior."
+      ],
+      "criticalErrors": [
+        "Treats CSV export as already implemented.",
+        "Proposes bypassing the repository or store without discussing the boundary.",
+        "Drops nested findings or lifecycle fields without acknowledging the loss."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v"
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "python-library-confirm-research",
+      "class": "research",
+      "scenario": "base",
+      "prompt": "Research the persistence path for one inspection record. Explain how the repository and both store implementations behave for insert, lookup, replacement, missing records, duplicate identifiers, and atomic JSON-lines writes. Produce a compact source-cited report for an engineer diagnosing adapter behavior.",
+      "expectedDeliverables": [
+        "A source-cited persistence path report.",
+        "A comparison of in-memory and JSON-lines behavior for the requested operations.",
+        "A short list of adapter failure cases and their domain-level exceptions."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/repository.py",
+            "range": {
+              "startLine": 10,
+              "endLine": 32
+            },
+            "symbol": "InspectionRepository",
+            "rationale": "The repository defines the domain-facing persistence operations."
+          },
+          {
+            "path": "src/harborlog/storage.py",
+            "range": {
+              "startLine": 35,
+              "endLine": 105
+            },
+            "symbol": "InMemoryInspectionStore",
+            "rationale": "The two store implementations provide the concrete insert, lookup, replace, and write behavior."
+          },
+          {
+            "path": "src/harborlog/serialization.py",
+            "range": {
+              "startLine": 29,
+              "endLine": 55
+            },
+            "symbol": "inspection_to_dict",
+            "rationale": "JSON-lines writes use this encoding and its inverse."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/errors.py",
+            "range": {
+              "startLine": 4,
+              "endLine": 17
+            },
+            "symbol": "HarborLogError",
+            "rationale": "Domain exceptions describe expected failure categories."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "python-library-confirm-research-r1",
+          "criterion": "Traces repository calls to both store implementations accurately.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/repository.py",
+                "range": {
+                  "startLine": 14,
+                  "endLine": 32
+                },
+                "symbol": "add",
+                "rationale": "Repository methods delegate to store methods and translate missing updates."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misstates the call flow.",
+            "1": "Accurately covers add, get, list, and update delegation.",
+            "0.5": "Gets the main delegation right but omits an operation."
+          }
+        },
+        {
+          "id": "python-library-confirm-research-r2",
+          "criterion": "Compares duplicate, missing, and replacement behavior in memory and JSON-lines storage.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/storage.py",
+                "range": {
+                  "startLine": 42,
+                  "endLine": 89
+                },
+                "symbol": "replace",
+                "rationale": "Store methods show duplicate and missing-record behavior."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Omits or reverses key failure behavior.",
+            "1": "Compares all requested cases accurately.",
+            "0.5": "Covers common cases but misses one adapter difference."
+          }
+        },
+        {
+          "id": "python-library-confirm-research-r3",
+          "criterion": "Explains JSON-lines encoding and temporary-file replacement as the atomic write path.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/storage.py",
+                "range": {
+                  "startLine": 91,
+                  "endLine": 105
+                },
+                "symbol": "_write",
+                "rationale": "The adapter writes records, flushes and fsyncs, then replaces the target."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Does not describe the write path.",
+            "1": "Explains encoding, flush/fsync, replace, and cleanup accurately.",
+            "0.5": "Mentions JSON-lines or temporary files without the full sequence."
+          }
+        },
+        {
+          "id": "python-library-confirm-research-r4",
+          "criterion": "Uses concise, precise citations and identifies domain-level error translation.",
+          "weight": 0.15,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/repository.py",
+                "range": {
+                  "startLine": 18,
+                  "endLine": 32
+                },
+                "symbol": "get",
+                "rationale": "Missing lookup and update errors become RecordNotFoundError."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No usable citations or incorrect exception claims.",
+            "1": "Citations and exception behavior are both accurate.",
+            "0.5": "Citations are present but error translation is incomplete."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "All requested operations are covered for the repository and stores.",
+        "The JSON-lines write sequence is explained from serialization through replace.",
+        "The report names expected domain exceptions."
+      ],
+      "criticalErrors": [
+        "Claims JsonlInspectionStore writes in place without a temporary file.",
+        "Claims missing records return a domain record when the repository raises.",
+        "Conflates duplicate insert handling with replacement."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v"
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "python-library-confirm-planning",
+      "class": "planning",
+      "scenario": "base",
+      "prompt": "Create an implementation plan for adding a configurable maximum risk score threshold to HarborLog's inspection policy. The plan should identify the data/configuration seam, the decision point that would consume the threshold, focused tests, compatibility questions, and the smallest ordered steps. Keep the existing policy and service boundaries visible.",
+      "expectedDeliverables": [
+        "An ordered implementation plan with named files and symbols.",
+        "A proposed configuration shape and policy decision point.",
+        "Focused verification cases and compatibility questions."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/policy.py",
+            "range": {
+              "startLine": 12,
+              "endLine": 42
+            },
+            "symbol": "InspectionPolicy",
+            "rationale": "Policy fields and decisions are the intended extension seam."
+          },
+          {
+            "path": "src/harborlog/config.py",
+            "range": {
+              "startLine": 17,
+              "endLine": 37
+            },
+            "symbol": "load_config",
+            "rationale": "Configuration loading validates and constructs policy values."
+          },
+          {
+            "path": "src/harborlog/scoring.py",
+            "range": {
+              "startLine": 23,
+              "endLine": 47
+            },
+            "symbol": "assess_risk",
+            "rationale": "Risk scoring produces the score and band that a threshold would consume."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "tests/test_service.py",
+            "range": {
+              "startLine": 32,
+              "endLine": 76
+            },
+            "symbol": "test_open_assess_search_and_close",
+            "rationale": "Existing service tests show assessment and summary behavior to extend."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "python-library-confirm-planning-r1",
+          "criterion": "Keeps threshold configuration and decision logic within the existing config, policy, and scoring seams.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/policy.py",
+                "range": {
+                  "startLine": 13,
+                  "endLine": 42
+                },
+                "symbol": "InspectionPolicy",
+                "rationale": "The policy owns configurable limits and decisions."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Places the change in unrelated layers.",
+            "1": "Assigns each responsibility to a coherent existing seam.",
+            "0.5": "Names suitable files but leaves ownership partly unclear."
+          }
+        },
+        {
+          "id": "python-library-confirm-planning-r2",
+          "criterion": "Provides ordered, bounded steps with concrete symbols and compatibility questions.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/config.py",
+                "range": {
+                  "startLine": 17,
+                  "endLine": 35
+                },
+                "symbol": "load_config",
+                "rationale": "The loader's defaults and validation need explicit planning."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No actionable sequence.",
+            "1": "Steps are ordered, bounded, and identify symbols and questions.",
+            "0.5": "Sequence exists but lacks symbols or compatibility detail."
+          }
+        },
+        {
+          "id": "python-library-confirm-planning-r3",
+          "criterion": "Plans focused tests for default, configured, boundary, and invalid threshold cases.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/test_service.py",
+                "range": {
+                  "startLine": 32,
+                  "endLine": 76
+                },
+                "symbol": "test_open_assess_search_and_close",
+                "rationale": "Service tests already cover assessment and summary boundaries."
+              },
+              {
+                "path": "tests/test_validation.py",
+                "range": {
+                  "startLine": 38,
+                  "endLine": 42
+                },
+                "symbol": "test_future_inspection_is_rejected",
+                "rationale": "Validation tests demonstrate rule-specific negative cases."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No meaningful verification cases.",
+            "1": "Covers defaults, configured values, threshold boundaries, and invalid input.",
+            "0.5": "Has tests but misses boundary or invalid configuration behavior."
+          }
+        },
+        {
+          "id": "python-library-confirm-planning-r4",
+          "criterion": "States assumptions without presenting the proposed feature as current behavior.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "README.md",
+                "range": {
+                  "startLine": 18,
+                  "endLine": 26
+                },
+                "rationale": "The current documented boundaries constrain the plan's assumptions."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Describes the feature as already implemented or contradicts the source.",
+            "1": "Clearly labels proposed behavior and source-observed behavior.",
+            "0.5": "Mostly separates plan from current behavior but leaves ambiguity."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The plan names config, policy, scoring, and test surfaces.",
+        "Steps are ordered and small enough to review independently.",
+        "Boundary and invalid-input verification is explicit."
+      ],
+      "criticalErrors": [
+        "Suggests changing persistence to implement a policy threshold.",
+        "Omits invalid configuration handling.",
+        "Presents the proposed threshold as an existing feature."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v"
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "python-library-confirm-implementation",
+      "class": "implementation",
+      "scenario": "base",
+      "prompt": "Implement a `--json` option for the existing `policy` command. When selected, it should emit one valid JSON object containing the configured `max_open_days`, `standard_due_days`, and `critical_requires_resolution` values; the current human-readable output must remain the default. Update focused CLI tests for both modes and keep configuration loading unchanged.",
+      "expectedDeliverables": [
+        "The CLI supports the requested JSON output option while preserving default text output.",
+        "Focused tests cover JSON keys/values and the unchanged default mode.",
+        "The baseline unittest command passes."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/cli.py",
+            "range": {
+              "startLine": 12,
+              "endLine": 33
+            },
+            "symbol": "build_parser",
+            "rationale": "The parser and policy command currently define the CLI output boundary."
+          },
+          {
+            "path": "src/harborlog/config.py",
+            "range": {
+              "startLine": 12,
+              "endLine": 32
+            },
+            "symbol": "AppConfig",
+            "rationale": "Configuration exposes the policy values to the CLI."
+          },
+          {
+            "path": "tests/test_cli.py",
+            "range": {
+              "startLine": 9,
+              "endLine": 18
+            },
+            "symbol": "CliTests.test_policy_command_reads_toml_configuration",
+            "rationale": "The existing test captures CLI output and checks configured values."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "README.md",
+            "range": {
+              "startLine": 18,
+              "endLine": 21
+            },
+            "rationale": "The README documents the CLI and configuration boundary."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "python-library-confirm-implementation-r1",
+          "criterion": "Adds a working JSON mode for the policy command with one valid object and the three requested keys.",
+          "weight": 0.35,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/cli.py",
+                "range": {
+                  "startLine": 25,
+                  "endLine": 33
+                },
+                "symbol": "main",
+                "rationale": "The command branch is the output implementation seam."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "JSON mode is absent or invalid.",
+            "1": "JSON mode emits exactly one valid object with all requested values.",
+            "0.5": "JSON mode works partially but misses a key or emits extra non-JSON output."
+          }
+        },
+        {
+          "id": "python-library-confirm-implementation-r2",
+          "criterion": "Preserves the existing human-readable output when JSON mode is not selected.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/cli.py",
+                "range": {
+                  "startLine": 25,
+                  "endLine": 33
+                },
+                "symbol": "main",
+                "rationale": "The current text output is the compatibility behavior."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Default output is removed or materially changed.",
+            "1": "Default output remains unchanged when the option is absent.",
+            "0.5": "Default remains recognizable but has an avoidable compatibility change."
+          }
+        },
+        {
+          "id": "python-library-confirm-implementation-r3",
+          "criterion": "Adds focused CLI tests for JSON content and default text output.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/test_cli.py",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 18
+                },
+                "symbol": "CliTests",
+                "rationale": "The existing test module is the focused CLI verification surface."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No focused tests.",
+            "1": "Tests cover both modes and assert the requested values.",
+            "0.5": "Tests cover one mode or only weakly inspect output."
+          }
+        },
+        {
+          "id": "python-library-confirm-implementation-r4",
+          "criterion": "Keeps configuration loading and dependency boundaries intact and passes the documented baseline.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/config.py",
+                "range": {
+                  "startLine": 17,
+                  "endLine": 37
+                },
+                "symbol": "load_config",
+                "rationale": "Configuration loading is explicitly outside the requested change."
+              },
+              {
+                "path": "README.md",
+                "range": {
+                  "startLine": 10,
+                  "endLine": 16
+                },
+                "rationale": "The README defines the baseline command."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Changes config loading or introduces unnecessary dependencies.",
+            "1": "Configuration remains intact, no runtime dependency is added, and the baseline passes.",
+            "0.5": "Boundaries are mostly preserved but verification is incomplete."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The policy command accepts the JSON option.",
+        "Default text output is unchanged without the option.",
+        "Focused tests cover both modes and the documented baseline passes."
+      ],
+      "criticalErrors": [
+        "Emits invalid JSON or multiple JSON objects for one invocation.",
+        "Breaks the default text output.",
+        "Changes configuration semantics or adds a runtime dependency."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v"
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "python-library-confirm-review",
+      "class": "review",
+      "scenario": "base",
+      "prompt": "Review the persistence and lifecycle code for correctness risks that could cause an inspection to be lost, duplicated, or transitioned incorrectly. Report concrete findings with severity, file and symbol references, reasoning, and a minimal fix direction. Also state which inspected areas have no finding and why.",
+      "expectedDeliverables": [
+        "A prioritized review with concrete, source-cited findings.",
+        "Reasoning that follows persistence and lifecycle control flow.",
+        "A brief statement of reviewed areas without findings."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/storage.py",
+            "range": {
+              "startLine": 56,
+              "endLine": 105
+            },
+            "symbol": "JsonlInspectionStore",
+            "rationale": "The JSON-lines adapter owns read, duplicate, replace, and atomic-write behavior."
+          },
+          {
+            "path": "src/harborlog/service.py",
+            "range": {
+              "startLine": 75,
+              "endLine": 89
+            },
+            "symbol": "close_inspection",
+            "rationale": "Lifecycle transitions validate before incrementing revision and persisting updates."
+          },
+          {
+            "path": "src/harborlog/validation.py",
+            "range": {
+              "startLine": 50,
+              "endLine": 68
+            },
+            "symbol": "validate_transition",
+            "rationale": "Transition preconditions and date checks are centralized here."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/repository.py",
+            "range": {
+              "startLine": 18,
+              "endLine": 32
+            },
+            "symbol": "get",
+            "rationale": "Repository error translation is part of the lifecycle read/update path."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "python-library-confirm-review-r1",
+          "criterion": "Findings are concrete, prioritized, and tied to an actual control-flow or state invariant.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/service.py",
+                "range": {
+                  "startLine": 75,
+                  "endLine": 89
+                },
+                "symbol": "waive_inspection",
+                "rationale": "Lifecycle methods provide concrete state invariants to inspect."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Speculative or unsupported concerns only.",
+            "1": "Findings are concrete, prioritized, and reasoned from actual state flow.",
+            "0.5": "At least one plausible concern but weak prioritization or reasoning."
+          }
+        },
+        {
+          "id": "python-library-confirm-review-r2",
+          "criterion": "Checks duplicate, missing, replacement, and atomic-write paths in the JSON-lines adapter.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/storage.py",
+                "range": {
+                  "startLine": 70,
+                  "endLine": 105
+                },
+                "symbol": "get",
+                "rationale": "The adapter's edge cases and write sequence are all in this region."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Does not inspect adapter edge cases.",
+            "1": "Reviews all requested adapter paths with accurate conclusions.",
+            "0.5": "Covers some paths but misses a material edge case."
+          }
+        },
+        {
+          "id": "python-library-confirm-review-r3",
+          "criterion": "Checks lifecycle preconditions, critical-finding closure, waiver rules, and revision updates.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/validation.py",
+                "range": {
+                  "startLine": 50,
+                  "endLine": 68
+                },
+                "symbol": "validate_transition",
+                "rationale": "Transition rules enforce status, policy, and date preconditions."
+              },
+              {
+                "path": "src/harborlog/service.py",
+                "range": {
+                  "startLine": 75,
+                  "endLine": 89
+                },
+                "symbol": "close_inspection",
+                "rationale": "Service transitions persist incremented revisions."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misses lifecycle guards or reports behavior contrary to source.",
+            "1": "Accurately reviews all requested lifecycle conditions.",
+            "0.5": "Covers lifecycle broadly but misses one requested invariant."
+          }
+        },
+        {
+          "id": "python-library-confirm-review-r4",
+          "criterion": "Uses precise citations and distinguishes confirmed findings from areas with no finding.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/repository.py",
+                "range": {
+                  "startLine": 18,
+                  "endLine": 32
+                },
+                "symbol": "update",
+                "rationale": "The repository update boundary supports concrete review conclusions."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No citations or no distinction between evidence and speculation.",
+            "1": "Each finding and no-finding statement is clearly grounded and scoped.",
+            "0.5": "Citations exist but coverage statements are incomplete."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The report covers adapter and lifecycle paths.",
+        "Each finding includes severity, location, reasoning, and fix direction.",
+        "Reviewed no-finding areas are identified with evidence."
+      ],
+      "criticalErrors": [
+        "Claims an issue without a source-grounded execution path.",
+        "Misses that closed or waived inspections cannot transition again.",
+        "Recommends weakening critical-finding or atomic-write safeguards without justification."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v"
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "python-library-confirm-testing",
+      "class": "testing",
+      "scenario": "base",
+      "prompt": "Add focused tests for three inspection lifecycle rules that remain uncovered by the current service tests: an open inspection with no findings can be waived, an open inspection with an unresolved non-critical finding cannot be waived, and a second transition from a closed record is rejected. Use FrozenClock and the existing unittest conventions; do not change production behavior.",
+      "expectedDeliverables": [
+        "Focused lifecycle tests for waiver success, rejection of waiver with an unresolved non-critical finding, and repeated-transition rejection.",
+        "Assertions for resulting status/revision or rule-specific ValidationError messages.",
+        "A passing run of the documented baseline command."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/service.py",
+            "range": {
+              "startLine": 75,
+              "endLine": 89
+            },
+            "symbol": "close_inspection",
+            "rationale": "Close and waive service methods are the public lifecycle entry points."
+          },
+          {
+            "path": "src/harborlog/policy.py",
+            "range": {
+              "startLine": 33,
+              "endLine": 42
+            },
+            "symbol": "can_waive",
+            "rationale": "Critical closure and no-unresolved-findings waiver policy predicates are defined here."
+          },
+          {
+            "path": "src/harborlog/validation.py",
+            "range": {
+              "startLine": 50,
+              "endLine": 68
+            },
+            "symbol": "validate_transition",
+            "rationale": "Status and date transition guards produce the expected failures."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "tests/test_service.py",
+            "range": {
+              "startLine": 20,
+              "endLine": 30
+            },
+            "symbol": "ServiceTests.setUp",
+            "rationale": "Existing setup establishes FrozenClock and in-memory dependencies for deterministic lifecycle tests."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "python-library-confirm-testing-r1",
+          "criterion": "Tests successful waiver of an open inspection with no findings and checks the resulting lifecycle fields.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/policy.py",
+                "range": {
+                  "startLine": 41,
+                  "endLine": 42
+                },
+                "symbol": "can_waive",
+                "rationale": "Waiver requires open status and no unresolved findings."
+              },
+              {
+                "path": "src/harborlog/service.py",
+                "range": {
+                  "startLine": 83,
+                  "endLine": 89
+                },
+                "symbol": "waive_inspection",
+                "rationale": "Successful waiver sets status, closed_on, and revision."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No waiver success test.",
+            "1": "The test proves the allowed precondition and resulting state.",
+            "0.5": "Waiver is exercised but resulting state is weakly asserted."
+          }
+        },
+        {
+          "id": "python-library-confirm-testing-r2",
+          "criterion": "Tests rejection of waiving an open inspection with an unresolved non-critical finding and checks the rule-specific error.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/policy.py",
+                "range": {
+                  "startLine": 41,
+                  "endLine": 42
+                },
+                "symbol": "can_waive",
+                "rationale": "Any unresolved finding blocks waiver, including a non-critical finding."
+              },
+              {
+                "path": "src/harborlog/validation.py",
+                "range": {
+                  "startLine": 62,
+                  "endLine": 64
+                },
+                "symbol": "validate_transition",
+                "rationale": "The waiver guard translates a false can_waive result into the rule-specific error."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No waiver-rejection test for an unresolved non-critical finding.",
+            "1": "The test creates an unresolved non-critical finding, asserts waiver rejection, and matches the no-unresolved-findings error.",
+            "0.5": "A waiver failure is exercised but the finding severity or rule-specific message is not established."
+          }
+        },
+        {
+          "id": "python-library-confirm-testing-r3",
+          "criterion": "Tests that a second transition from a closed inspection is rejected.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/harborlog/validation.py",
+                "range": {
+                  "startLine": 50,
+                  "endLine": 66
+                },
+                "symbol": "validate_transition",
+                "rationale": "Non-open records cannot transition again."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No repeated-transition coverage.",
+            "1": "The test closes first, then proves the second transition is rejected.",
+            "0.5": "Attempts a second transition but does not assert the failure clearly."
+          }
+        },
+        {
+          "id": "python-library-confirm-testing-r4",
+          "criterion": "Uses a fixed clock and existing unittest style, leaves production code unchanged, and reports the baseline check.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/test_service.py",
+                "range": {
+                  "startLine": 20,
+                  "endLine": 30
+                },
+                "symbol": "setUp",
+                "rationale": "Existing tests use FrozenClock and in-memory dependencies."
+              },
+              {
+                "path": "README.md",
+                "range": {
+                  "startLine": 10,
+                  "endLine": 16
+                },
+                "rationale": "The README defines the baseline command."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Uses wall-clock behavior, changes production rules, or omits verification.",
+            "1": "Tests are deterministic, scoped, production-neutral, and verified.",
+            "0.5": "Mostly follows conventions but leaves one requested constraint unclear."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "All three uncovered lifecycle boundaries have deterministic focused tests.",
+        "Success state or rule-specific failure messages are asserted.",
+        "Production code is unchanged and the baseline passes."
+      ],
+      "criticalErrors": [
+        "Changes lifecycle production behavior to make tests pass.",
+        "Allows an open inspection with unresolved findings to be waived.",
+        "Uses a wall-clock date that makes outcomes nondeterministic."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v"
+        }
+      ],
+      "knownTarget": false
+    }
+  ]
+}

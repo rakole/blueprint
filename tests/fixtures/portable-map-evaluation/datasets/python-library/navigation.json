@@ -1,0 +1,457 @@
+{
+  "schemaVersion": 1,
+  "corpus": "python-library",
+  "sourceManifestSha256": "46dae3a2cb2cbaf77c3a9eaaff40655f884465d2b86c3542dce30f168e092ba2",
+  "queries": [
+    {
+      "id": "python-library-nav-01",
+      "class": "exact-path",
+      "scenario": "base",
+      "text": "Open src/harborlog/service.py. Which method creates a new inspection record?",
+      "knownTarget": true,
+      "targetPath": "src/harborlog/service.py",
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/service.py",
+            "range": {"startLine": 53, "endLine": 73},
+            "symbol": "open_inspection",
+            "rationale": "The service method validates a request, builds the inspection identifier, and delegates persistence."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/validation.py",
+            "range": {"startLine": 29, "endLine": 47},
+            "symbol": "validate_request",
+            "rationale": "The method calls this request-validation boundary before constructing the record."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Read the named file directly and identify open_inspection with its validation and repository handoff.",
+      "rationale": "The target path is explicit and the requested behavior is a single concrete method."
+    },
+    {
+      "id": "python-library-nav-02",
+      "class": "exact-function",
+      "scenario": "base",
+      "text": "Where is assess_risk defined, and how is its score capped?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/scoring.py",
+            "range": {"startLine": 23, "endLine": 47},
+            "symbol": "assess_risk",
+            "rationale": "The function sums finding scores, adds an overdue adjustment, caps at 100, and selects a band."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/scoring.py",
+            "range": {"startLine": 18, "endLine": 20},
+            "symbol": "_finding_score",
+            "rationale": "Finding-level weights feed the aggregate score before the cap."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the named function and explain both the per-finding score input and the aggregate min(100, ...) cap.",
+      "rationale": "The function name is an exact source declaration and is sufficient to begin a direct read."
+    },
+    {
+      "id": "python-library-nav-03",
+      "class": "domain-wording",
+      "scenario": "base",
+      "text": "Where are the rules that prevent unresolved critical findings from being closed?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/policy.py",
+            "range": {"startLine": 33, "endLine": 39},
+            "symbol": "can_close",
+            "rationale": "The policy rejects closure when a critical finding remains unresolved."
+          },
+          {
+            "path": "src/harborlog/validation.py",
+            "range": {"startLine": 50, "endLine": 64},
+            "symbol": "validate_transition",
+            "rationale": "The lifecycle transition turns the policy decision into the validation error seen by callers."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/models.py",
+            "range": {"startLine": 11, "endLine": 15},
+            "symbol": "Severity",
+            "rationale": "The critical severity value used by the rule is declared in the model."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Discover the policy predicate and the transition validator that enforces it, rather than stopping at the error text.",
+      "rationale": "The wording describes a domain constraint while avoiding the implementation symbol."
+    },
+    {
+      "id": "python-library-nav-04",
+      "class": "aliases",
+      "scenario": "base",
+      "text": "Which component handles equipment check records and their lifecycle?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/service.py",
+            "range": {"startLine": 28, "endLine": 39},
+            "symbol": "InspectionService",
+            "rationale": "The service owns the registered assets, policy, clock, and repository used by inspection lifecycle operations."
+          },
+          {
+            "path": "src/harborlog/service.py",
+            "range": {"startLine": 75, "endLine": 89},
+            "symbol": "close_inspection",
+            "rationale": "Close and waive transitions are exposed as service lifecycle operations."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "README.md",
+            "range": {"startLine": 23, "endLine": 26},
+            "rationale": "The project guide describes service.py as the orchestration boundary and names the surrounding domain layers."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Use the domain synonyms as a bounded discovery query and return the service lifecycle boundary. Absence of the synonym itself in a frozen map is a valid held-out miss.",
+      "rationale": "Equipment check records is a source-grounded synonym for HarborLog inspections; the query does not disclose a path or symbol."
+    },
+    {
+      "id": "python-library-nav-05",
+      "class": "cross-module-flow",
+      "scenario": "base",
+      "text": "Trace an inspection request from normalization through creation and persistence, including duplicate handling.",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/normalization.py",
+            "range": {"startLine": 47, "endLine": 55},
+            "symbol": "normalize_request",
+            "rationale": "Request text, identifiers, and findings are canonicalized before lifecycle validation."
+          },
+          {
+            "path": "src/harborlog/service.py",
+            "range": {"startLine": 53, "endLine": 73},
+            "symbol": "open_inspection",
+            "rationale": "The service validates the normalized request, assigns a sequence-based identifier, and calls the repository."
+          },
+          {
+            "path": "src/harborlog/repository.py",
+            "range": {"startLine": 10, "endLine": 16},
+            "symbol": "add",
+            "rationale": "The repository translates the service add into the store insert boundary."
+          },
+          {
+            "path": "src/harborlog/storage.py",
+            "range": {"startLine": 35, "endLine": 53},
+            "symbol": "insert",
+            "rationale": "The in-memory adapter detects an existing identifier and raises DuplicateInspectionError before storing it."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/errors.py",
+            "range": {"startLine": 12, "endLine": 14},
+            "symbol": "DuplicateInspectionError",
+            "rationale": "The duplicate failure is a named domain exception."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Connect the normalization, service, repository, and adapter stages and state where duplicate identifiers are rejected.",
+      "rationale": "The query requires a multi-module path and cannot be answered by one summary file."
+    },
+    {
+      "id": "python-library-nav-06",
+      "class": "code-to-test",
+      "scenario": "base",
+      "text": "Which tests exercise JSON-lines round trips and duplicate identifier rejection?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "tests/test_repository.py",
+            "range": {"startLine": 17, "endLine": 40},
+            "symbol": "RepositoryTests.test_jsonl_adapter_round_trips_nested_records",
+            "rationale": "The test writes through JsonlInspectionStore, reloads through a new repository, and checks equality; the next test checks duplicate rejection."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/storage.py",
+            "range": {"startLine": 56, "endLine": 89},
+            "symbol": "JsonlInspectionStore",
+            "rationale": "These adapter methods are the production surfaces exercised by the tests."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Start from the test cases and relate each to the JSON-lines adapter and duplicate guard they exercise.",
+      "rationale": "This is a test-to-production lookup with two concrete behaviors in one test module."
+    },
+    {
+      "id": "python-library-nav-07",
+      "class": "trace-to-code",
+      "scenario": "base",
+      "text": "Starting from ServiceTests.test_open_assess_search_and_close, where are the lifecycle and risk calculations implemented?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "tests/test_service.py",
+            "range": {"startLine": 32, "endLine": 52},
+            "symbol": "ServiceTests.test_open_assess_search_and_close",
+            "rationale": "The test opens an inspection, assesses it, searches for it, and closes it."
+          },
+          {
+            "path": "src/harborlog/service.py",
+            "range": {"startLine": 53, "endLine": 113},
+            "symbol": "open_inspection",
+            "rationale": "The service implements opening, closing, searching, and assessment delegation."
+          },
+          {
+            "path": "src/harborlog/scoring.py",
+            "range": {"startLine": 23, "endLine": 47},
+            "symbol": "assess_risk",
+            "rationale": "Risk scoring and band selection are implemented in the dedicated scoring function."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Follow the named test into service lifecycle methods and then into assess_risk for score and band calculation.",
+      "rationale": "The test symbol is an explicit starting point, while the implementation destinations must be traced."
+    },
+    {
+      "id": "python-library-nav-08",
+      "class": "change-impact",
+      "scenario": "base",
+      "text": "If the default inspection due window changes, which source and test surfaces should be reviewed?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/policy.py",
+            "range": {"startLine": 12, "endLine": 23},
+            "symbol": "InspectionPolicy",
+            "rationale": "The policy declares standard_due_days and uses it to compute due dates."
+          },
+          {
+            "path": "src/harborlog/config.py",
+            "range": {"startLine": 17, "endLine": 32},
+            "symbol": "load_config",
+            "rationale": "Configuration loads the standard due-day default and passes it to InspectionPolicy."
+          },
+          {
+            "path": "tests/test_service.py",
+            "range": {"startLine": 21, "endLine": 46},
+            "symbol": "setUp",
+            "rationale": "Service tests provide a category-specific due window and assert overdue assessment behavior."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "config/default.toml",
+            "range": {"startLine": 1, "endLine": 9},
+            "rationale": "The sample operational policy supplies the configured standard and category due windows."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Identify the policy calculation, TOML loading default, sample configuration, and tests that assert due-date behavior.",
+      "rationale": "A due-window change crosses configuration, policy, and behavior tests."
+    },
+    {
+      "id": "python-library-nav-09",
+      "class": "unknown-feature",
+      "scenario": "base",
+      "text": "Where is HarborLog's CSV export subsystem implemented?",
+      "knownTarget": false,
+      "expectedAbsent": true,
+      "evidence": {
+        "required": [],
+        "supporting": [
+          {
+            "path": "README.md",
+            "range": {"startLine": 3, "endLine": 8},
+            "rationale": "The fixture scope names inspections, policy, risk, and persistence but does not describe a CSV export surface."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Abstain conservatively because no CSV export is present; bounded search supports abstention rather than proof of global absence.",
+      "rationale": "The requested feature is intentionally absent from the small source corpus."
+    },
+    {
+      "id": "python-library-nav-10",
+      "class": "unsupported-language",
+      "scenario": "base",
+      "text": "Which Rust module implements HarborLog's inspection service?",
+      "knownTarget": false,
+      "expectedAbsent": true,
+      "evidence": {
+        "required": [],
+        "supporting": [
+          {
+            "path": "pyproject.toml",
+            "range": {"startLine": 1, "endLine": 6},
+            "rationale": "The package is declared as a Python project with a Python 3.11 or newer requirement and no Rust target."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Report that no Rust module is present and avoid substituting the Python service as a Rust answer.",
+      "rationale": "The language requested by the query is outside the corpus language surface."
+    },
+    {
+      "id": "python-library-nav-11",
+      "class": "exact-path",
+      "scenario": "python-library-scn-stale-version",
+      "text": "After the stale scenario, open README.md. Which line states the supported Python version?",
+      "knownTarget": true,
+      "targetPath": "README.md",
+      "evidence": {
+        "required": [
+          {
+            "path": "README.md",
+            "range": {"startLine": 10, "endLine": 11},
+            "rationale": "The disposable stale scenario updates the minimum Python version wording while preserving the line span."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Read the current source copy and report the updated Python-version line, recognizing that the frozen map may contain stale wording.",
+      "rationale": "This query tests freshness after a controlled content replacement."
+    },
+    {
+      "id": "python-library-nav-12",
+      "class": "code-to-test",
+      "scenario": "python-library-scn-rename-reporting-test",
+      "text": "After the rename scenario, where are the operator summary tests located?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "tests/test_summaries.py",
+            "range": {"startLine": 7, "endLine": 18},
+            "symbol": "ReportingTests",
+            "rationale": "The renamed test file contains summary and assessment rendering checks."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/reporting.py",
+            "range": {"startLine": 8, "endLine": 21},
+            "symbol": "render_summary",
+            "rationale": "The tests exercise the reporting functions retained in the source module."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Follow the current test path after the controlled rename and connect its cases to reporting.py.",
+      "rationale": "The source content remains stable while the test path changes, so a frozen path can become stale."
+    },
+    {
+      "id": "python-library-nav-13",
+      "class": "exact-function",
+      "scenario": "python-library-scn-new-readiness",
+      "text": "After the new-file scenario, where is the new readiness helper is_ready defined?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/health.py",
+            "range": {"startLine": 6, "endLine": 7},
+            "symbol": "is_ready",
+            "rationale": "The controlled new-file scenario creates the helper and its short implementation."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Read the disposable source copy and locate the newly created is_ready declaration even though the frozen map predates it.",
+      "rationale": "This query tests discovery of a genuinely new source file."
+    },
+    {
+      "id": "python-library-nav-14",
+      "class": "trace-to-code",
+      "scenario": "base",
+      "text": "Given load_config, which constructor receives the parsed policy values and where are invalid day limits rejected?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/config.py",
+            "range": {"startLine": 17, "endLine": 37},
+            "symbol": "load_config",
+            "rationale": "load_config parses TOML values, constructs InspectionPolicy, and rejects non-positive limits."
+          },
+          {
+            "path": "src/harborlog/policy.py",
+            "range": {"startLine": 12, "endLine": 20},
+            "symbol": "InspectionPolicy",
+            "rationale": "InspectionPolicy is the constructor receiving the parsed values."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "tests/test_cli.py",
+            "range": {"startLine": 9, "endLine": 18},
+            "symbol": "CliTests.test_policy_command_reads_toml_configuration",
+            "rationale": "The CLI test demonstrates the configuration loading path used by callers."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Trace load_config to InspectionPolicy and identify the positive-limit checks in the loader.",
+      "rationale": "The named loader is a precise starting point for a short implementation trace."
+    },
+    {
+      "id": "python-library-nav-15",
+      "class": "cross-module-flow",
+      "scenario": "base",
+      "text": "How does summary decide which inspections need attention and how many unresolved critical findings exist?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/harborlog/service.py",
+            "range": {"startLine": 115, "endLine": 134},
+            "symbol": "summary",
+            "rationale": "The summary loop counts overdue or stale records and unresolved critical findings."
+          },
+          {
+            "path": "src/harborlog/policy.py",
+            "range": {"startLine": 25, "endLine": 31},
+            "symbol": "is_overdue",
+            "rationale": "The policy determines whether the inspection due date has passed."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/harborlog/reporting.py",
+            "range": {"startLine": 8, "endLine": 16},
+            "symbol": "render_summary",
+            "rationale": "The renderer exposes the resulting attention and critical counts to operators."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Explain the service aggregation, the policy due-date check, and the report labels that expose the counts.",
+      "rationale": "The behavior crosses aggregation, policy, and presentation modules."
+    }
+  ]
+}

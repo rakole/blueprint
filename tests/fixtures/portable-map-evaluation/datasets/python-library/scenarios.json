@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "corpus": "python-library",
+  "sourceManifestSha256": "46dae3a2cb2cbaf77c3a9eaaff40655f884465d2b86c3542dce30f168e092ba2",
+  "scenarios": [
+    {
+      "id": "python-library-scn-stale-version",
+      "kind": "stale",
+      "rationale": "A small documentation fact changes in place, making a frozen README statement stale while preserving its coordinates.",
+      "operations": [
+        {
+          "type": "replace",
+          "path": "README.md",
+          "expectedSha256": "758281b943e7ed51b3da25ae420e0a01bc9aeba75a11795f76824441d4936e03",
+          "oldText": "standard library (Python 3.11 or newer)",
+          "newText": "standard library (Python 3.12 or newer)"
+        }
+      ]
+    },
+    {
+      "id": "python-library-scn-rename-reporting-test",
+      "kind": "renamed",
+      "rationale": "The reporting test file moves without changing its contents, so references to the old test path become stale.",
+      "operations": [
+        {
+          "type": "rename",
+          "from": "tests/test_reporting.py",
+          "to": "tests/test_summaries.py",
+          "expectedSha256": "162d1c925ff3597f4ff66ce9d9d8ac5ad138479fdf9c5edba2cd8e7bcfb161ad"
+        }
+      ]
+    },
+    {
+      "id": "python-library-scn-new-readiness",
+      "kind": "new",
+      "rationale": "A self-contained readiness helper is added after map freeze to test discovery of a new file.",
+      "operations": [
+        {
+          "type": "create",
+          "path": "src/harborlog/health.py",
+          "content": "\"\"\"Health checks for the configured inspection service.\"\"\"\n\nfrom __future__ import annotations\n\n\ndef is_ready(active_assets: int) -> bool:\n    return active_assets > 0\n"
+        }
+      ]
+    }
+  ]
+}

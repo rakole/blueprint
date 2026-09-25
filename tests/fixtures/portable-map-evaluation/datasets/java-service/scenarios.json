@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "corpus": "java-service",
+  "sourceManifestSha256": "1c9586b0f3a9d8c1e8388444caf7140b3c8ec27ea7022c82673400b0fe65f2d0",
+  "scenarios": [
+    {
+      "id": "java-service-scenario-stale",
+      "kind": "stale",
+      "rationale": "Change one user-visible error phrase in place so frozen coordinates remain usable while frozen wording becomes stale.",
+      "operations": [
+        {
+          "type": "replace",
+          "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+          "expectedSha256": "e541388649c7edf4e933f788672c5f953646d2c080525c0845ef03cdf5c89bf6",
+          "oldText": ".orElseThrow(() -> new DomainException(\"No locker available in zone \" + command.zone()));",
+          "newText": ".orElseThrow(() -> new DomainException(\"No compatible locker available in zone \" + command.zone()));"
+        }
+      ]
+    },
+    {
+      "id": "java-service-scenario-renamed",
+      "kind": "renamed",
+      "rationale": "Rename the operational note without changing its content or executable source files.",
+      "operations": [
+        {
+          "type": "rename",
+          "from": "docs/OPERATIONS.md",
+          "to": "docs/RUNBOOK.md",
+          "expectedSha256": "ca6825016d10ee5ca84c61fc7c5bd9c201f266937608b098cd30863fe5430dd4"
+        }
+      ]
+    },
+    {
+      "id": "java-service-scenario-new",
+      "kind": "new",
+      "rationale": "Add one small operator note that is absent from the frozen base source.",
+      "operations": [
+        {
+          "type": "create",
+          "path": "docs/RECONCILIATION.md",
+          "content": "# Import reconciliation\n\nReview the delivery repository and notification output after a failed import.\nRetry only after the offending manifest row has been corrected.\n"
+        }
+      ]
+    }
+  ]
+}
