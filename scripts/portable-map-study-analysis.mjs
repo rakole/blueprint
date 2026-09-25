@@ -576,7 +576,8 @@ function groupRows(rows, keyFunction) {
 }
 
 function qualityRowsFromPair(pair) {
-  return pair.left.quality !== null && pair.right.quality !== null;
+  return pair.left.status === "completed" && pair.right.status === "completed" &&
+    pair.left.quality !== null && pair.right.quality !== null;
 }
 
 function pairClusters(pairs, valueFunction) {
@@ -586,16 +587,6 @@ function pairClusters(pairs, valueFunction) {
     const values = clusterPairs.map(valueFunction).filter((value) => isFiniteNumber(value));
     if (values.length === 0) continue;
     clusters.push({ key, repository: clusterPairs[0].left.corpus, value: mean(values), pairs: clusterPairs.length });
-  }
-  return clusters;
-}
-
-function pairedRateClusters(pairs, arm) {
-  const grouped = groupRows(pairs, (pair) => clusterKey(pair.left));
-  const clusters = [];
-  for (const [key, clusterPairs] of grouped) {
-    if (clusterPairs.some((pair) => pair[arm].quality === null)) continue;
-    clusters.push({key, repository: clusterPairs[0].left.corpus, value: mean(clusterPairs.map((pair) => pair[arm].quality.complete ? 1 : 0)), pairs: clusterPairs.length});
   }
   return clusters;
 }
@@ -611,6 +602,26 @@ function pairedQualityClusters(pairs) {
       left: mean(clusterPairs.map((pair) => pair.left.quality.rubricScore)),
       right: mean(clusterPairs.map((pair) => pair.right.quality.rubricScore)),
       value: mean(clusterPairs.map((pair) => pair.left.quality.rubricScore - pair.right.quality.rubricScore)),
+      pairs: clusterPairs.length
+    });
+  }
+  return clusters;
+}
+
+/** Completion uses the exact same completed-and-graded repeats as quality. */
+function pairedCompletionClusters(pairs) {
+  const grouped = groupRows(pairs, (pair) => clusterKey(pair.left));
+  const clusters = [];
+  for (const [key, clusterPairs] of grouped) {
+    if (clusterPairs.some((pair) => !qualityRowsFromPair(pair))) continue;
+    const left = mean(clusterPairs.map((pair) => pair.left.quality.complete ? 1 : 0));
+    const right = mean(clusterPairs.map((pair) => pair.right.quality.complete ? 1 : 0));
+    clusters.push({
+      key,
+      repository: clusterPairs[0].left.corpus,
+      left,
+      right,
+      value: left - right,
       pairs: clusterPairs.length
     });
   }
@@ -633,21 +644,6 @@ function metricClusters(pairs, valueFunction) {
     repository: item.repository,
     value: item.value
   }));
-}
-
-function pairedDifferenceClusters(pairs, valueFunction) {
-  const left = pairClusters(pairs, (pair) => valueFunction(pair.left));
-  const right = pairClusters(pairs, (pair) => valueFunction(pair.right));
-  const byKey = new Map();
-  for (const item of left) byKey.set(item.key, { key: item.key, repository: item.repository, left: item.value });
-  for (const item of right) {
-    const current = byKey.get(item.key) ?? { key: item.key, repository: item.repository };
-    current.right = item.value;
-    byKey.set(item.key, current);
-  }
-  return [...byKey.values()]
-    .filter((item) => isFiniteNumber(item.left) && isFiniteNumber(item.right))
-    .map((item) => ({ key: item.key, repository: item.repository, value: item.left - item.right }));
 }
 
 function hierarchicalMetricBounds(clusters, replicates, seed, statistic = mean) {
@@ -688,16 +684,13 @@ function makeStratumRows(pairs, keyFunction) {
   const groups = groupRows(pairs, keyFunction);
   const output = [];
   for (const [value, rows] of groups) {
-    const completionLeft = pairedRateClusters(rows, "left").map((item) => item.value);
-    const completionRight = pairedRateClusters(rows, "right").map((item) => item.value);
+    const completion = pairedCompletionClusters(rows);
     const quality = pairedQualityClusters(rows);
     output.push({
       value,
       pairedRows: rows.length,
       independentClusters: new Set(rows.map((pair) => clusterKey(pair.left))).size,
-      completionDifference: mean(completionLeft) === null || mean(completionRight) === null
-        ? null
-        : mean(completionLeft) - mean(completionRight),
+      completionDifference: completion.length === 0 ? null : mean(completion.map((item) => item.value)),
       rubricDifference: quality.length === 0 ? null : mean(quality.map((item) => item.value))
     });
     const reductions = rows
@@ -755,18 +748,17 @@ function analyzeComparison(pairs, leftArm, rightArm, design) {
   const label = comparisonLabel(leftArm, rightArm);
   const left = pairs.map((pair) => pair.left);
   const right = pairs.map((pair) => pair.right);
-  const completionLeft = pairedRateClusters(pairs, "left").map((item) => item.value);
-  const completionRight = pairedRateClusters(pairs, "right").map((item) => item.value);
-  const completionClusters = pairedDifferenceClusters(pairs, (row) => row.quality === null ? null : (row.quality.complete ? 1 : 0));
+  const qualityPairs = pairs.filter(qualityRowsFromPair);
+  const completionClusters = pairedCompletionClusters(pairs);
   const completionDifferences = completionClusters.map((item) => item.value);
   const completionBounds = hierarchicalMetricBounds(completionClusters, design.bootstrapReplicates, `${design.seed}:${label}:completion`);
   const completionBootstrap = completionBounds.bootstrap;
   const completionFinite = completionBounds.finiteSample;
   const completion = {
-    pairedRows: pairs.length,
+    pairedRows: qualityPairs.length,
     independentClusters: completionDifferences.length,
-    leftRate: mean(completionLeft),
-    rightRate: mean(completionRight),
+    leftRate: completionClusters.length === 0 ? null : mean(completionClusters.map((item) => item.left)),
+    rightRate: completionClusters.length === 0 ? null : mean(completionClusters.map((item) => item.right)),
     observedDifference: mean(completionDifferences),
     discordantClusters: completionDifferences.filter((value) => value !== 0).length,
     zeroDiscordance: completionDifferences.length > 0 && completionDifferences.every((value) => value === 0),
@@ -790,9 +782,9 @@ function analyzeComparison(pairs, leftArm, rightArm, design) {
   const qualityBootstrap = qualityBounds.bootstrap;
   const qualityFinite = qualityBounds.finiteSample;
   const quality = {
-    pairedRows: pairs.filter(qualityRowsFromPair).length,
+    pairedRows: qualityPairs.length,
     independentClusters: qualityDifferences.length,
-    missingQualityPairs: pairs.length - pairs.filter(qualityRowsFromPair).length,
+    missingQualityPairs: pairs.length - qualityPairs.length,
     leftRubricMean: qualityClusters.length === 0 ? null : mean(qualityClusters.map((item) => item.left)),
     rightRubricMean: qualityClusters.length === 0 ? null : mean(qualityClusters.map((item) => item.right)),
     observedDifference: mean(qualityDifferences),
@@ -811,6 +803,8 @@ function analyzeComparison(pairs, leftArm, rightArm, design) {
       upperBound: qualityFinite.upper,
       zeroDiscordanceIsNotProof: true
     },
+    // Critical failures are descriptive observations, not a paired score. Keep
+    // known failures visible even when the counterpart is missing or failed.
     criticalFailures: criticalComparison(pairs),
     clusteredBy: "repository then corpus/taskId",
     repositoryClusters: qualityBounds.repositorySamples,
@@ -978,10 +972,12 @@ function gateReasons({ diagnostics, comparisons, design, validRows }) {
   if (diagnostics.duplicateRunIds.length > 0) reasons.push("duplicate-run-ids");
   if (diagnostics.missingUsage.length > 0) reasons.push("missing-usage");
   if (diagnostics.missingQuality.length > 0) reasons.push("missing-quality");
+  if (diagnostics.nonCompletedRows.length > 0) reasons.push("non-completed-rows");
   if (diagnostics.metadataMismatches.length > 0) reasons.push("expected-task-metadata-mismatch");
   if (diagnostics.provenanceMismatches.length > 0) reasons.push("shared-provenance-mismatch");
   const navigation = design.navigationEvidence;
-  if (!navigation?.measured || !navigation?.firstUsefulImprovement) reasons.push("navigation-evidence-unmeasured");
+  if (!navigation?.measured) reasons.push("navigation-evidence-unmeasured");
+  else if (!navigation.firstUsefulImprovement) reasons.push("navigation-first-useful-not-improved");
   for (const comparison of Object.values(comparisons)) {
     if (!comparison.available) {
       reasons.push(`${comparison.label}-not-designed`);
@@ -1041,6 +1037,7 @@ export function analyzeStudy(observations, design) {
     unexpectedCells: [],
     missingUsage: [],
     missingQuality: [],
+    nonCompletedRows: [],
     metadataMismatches: [],
     provenanceMismatches: []
   };
@@ -1074,6 +1071,9 @@ export function analyzeStudy(observations, design) {
     if (!expected.has(key)) {
       diagnostics.unexpectedCells.push({ index, runId: row.runId, cell: displayCellKey(key) });
       return;
+    }
+    if (row.status !== "completed") {
+      diagnostics.nonCompletedRows.push({cell: displayCellKey(key), runId: row.runId, status: row.status});
     }
     if (runIds.has(row.runId)) {
       diagnostics.duplicateRunIds.push({ runId: row.runId, indices: [runIds.get(row.runId), index] });

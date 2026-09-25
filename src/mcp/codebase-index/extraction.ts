@@ -41,7 +41,7 @@ import {
   type SourceInventory,
   type SourceInventoryFile
 } from "./inventory.js";
-import {getParserAssetManifest} from "./parser-runtime.js";
+import {getVerifiedParserAssetManifest} from "./parser-runtime.js";
 import {sourcePathExclusionReason, sourcePathSafetyReason} from "./path-policy.js";
 import {withParserSource, type ParserSourceBasis} from "./parser-source.js";
 
@@ -405,7 +405,7 @@ export function makePortableStructuralShards(generationId: string, records: Stru
 
 const makeStructuralShards = makePortableStructuralShards;
 
-export function makePortableExtractionProvenance(manifest: Awaited<ReturnType<typeof getParserAssetManifest>>): ExtractionParserProvenance {
+export function makePortableExtractionProvenance(manifest: Awaited<ReturnType<typeof getVerifiedParserAssetManifest>>): ExtractionParserProvenance {
   const grammars = manifest.grammars.flatMap(raw => {
     const grammar = raw as Record<string, unknown>;
     const packageName = typeof grammar.package === "string" ? grammar.package : "";
@@ -463,7 +463,7 @@ export async function capturePortableExtractionSnapshot(repositoryRoot: string, 
   if (hasUnsafePathBoundary(inventory)) return {ok: false, diagnostics: [diagnostic("unsafe-path")]};
   let provenance: ExtractionParserProvenance;
   try {
-    provenance = makeProvenance(await getParserAssetManifest());
+    provenance = makeProvenance(await getVerifiedParserAssetManifest());
   } catch {
     return {ok: false, diagnostics: [diagnostic("parser-provenance")]};
   }

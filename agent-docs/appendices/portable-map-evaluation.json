@@ -12673,6 +12673,28 @@
       "stopReason": "host-containment-failure"
     }
   },
+  "prospectiveAnalysisRemediation": {
+    "scope": "Applies to future analysis only; it does not recompute, alter, or relabel frozen study rows, navigation observations, costs, grades, or frozenAnalyzerGate records.",
+    "historicalDecisionRetained": {
+      "status": "incomplete",
+      "releaseDecision": "opt-in-only",
+      "defaultAdoptionSupported": false
+    },
+    "changes": [
+      "Parser freshness now verifies deployed pinned runtime and grammar bytes on every extraction snapshot instead of trusting cached manifest declarations.",
+      "Non-completed participant rows block the release gate and are excluded from paired completion and rubric inference while preserving raw grades and usage accounting.",
+      "Completion estimates require completed, graded left/right results from the same repeat.",
+      "Future analyzer gates distinguish navigation measurement absent from measured first-useful navigation without improvement."
+    ],
+    "frozenNavigationReasonMapping": {
+      "historical": "navigation-evidence-unmeasured",
+      "recordedNavigationDecision": {
+        "measured": true,
+        "firstUsefulImprovement": false
+      },
+      "prospective": "navigation-first-useful-not-improved"
+    }
+  },
   "mappingCosts": {
     "corpora": [
       {

@@ -40,6 +40,12 @@ Measured direct map-author usage is a lower bound of 16,679,572 tokens across th
 
 The full suite receipt at `d0978c9b7ae4bb458de949feb5666353119f2c85` recorded 2547 passing checks before the observer fix. The observer now accepts the host’s `final_answer` marker while still requiring a task-complete event; all eight focused observer tests and typechecking passed. Final release checks remain pending. This repository check does not turn the hosted evaluation into a successful benchmark.
 
+## Prospective analysis remediation
+
+The runtime now verifies deployed pinned parser and grammar bytes whenever it captures extraction freshness. Separately, future study analysis treats every failed, interrupted, or not-started participant as a release-gate blocker, excludes those rows from paired completion and rubric estimates, retains their raw grades and actual usage accounting, and pairs completion only when both valid grades belong to the same repeat. Future navigation output distinguishes an unmeasured study from a measured study that did not improve the first useful read.
+
+This is an additive correction for future analysis. It does not modify frozen source, maps, datasets, raw observations, grades, usage, navigation results, costs, or `frozenAnalyzerGate` records. The recorded status remains incomplete and opt-in only; default adoption remains unsupported.
+
 ## Decision and limits
 
 Keep the portable map opt-in. Do not claim default adoption, quality non-inferiority, downstream savings, standalone benefit, or semantic navigation value from these observations. The public report excludes personal paths, session identifiers, and raw transcripts while retaining the exact original outcome evidence and its contamination status in the machine-readable record.

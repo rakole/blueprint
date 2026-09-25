@@ -211,8 +211,8 @@ test("negative completion and quality differences cannot pass conservative nonin
     }
   }
   const result = analyzeStudy(rows, d);
-  assert.equal(result.comparisons.portableVsLegacy.completion.nonInferiority.status, "inconclusive");
-  assert.equal(result.comparisons.portableVsLegacy.quality.nonInferiority.status, "inconclusive");
+  assert.equal(result.comparisons.portableVsLegacy.completion.nonInferiority.status, "incomplete");
+  assert.equal(result.comparisons.portableVsLegacy.quality.nonInferiority.status, "incomplete");
   assert.ok(result.gate.reasons.includes("missing-quality"));
 });
 
@@ -240,6 +240,83 @@ test("failed and interrupted rows stay in participant token accounting instead o
   assert.equal(result.accounting.helper.totalTokens, null);
   assert.equal(result.accounting.parent.totalTokens, null);
   assert.equal(result.accounting.map.totalTokens, null);
+  assert.equal(result.diagnostics.nonCompletedRows.length, 2);
+  assert.ok(result.gate.reasons.includes("non-completed-rows"));
+});
+
+test("non-completed participants with complete grades cannot satisfy the release gate", () => {
+  const expectedTasks = Array.from({length: 2400}, (_, index) => ({
+    corpus: `corpus-${index}`,
+    taskId: `task-${index}`,
+    taskClass: "research",
+    knownTarget: false
+  }));
+  const d = design({
+    expectedTasks,
+    repeats: 1,
+    bootstrapReplicates: 1,
+    navigationEvidence: {measured: true, firstUsefulImprovement: true, mapValueVsCompact: true, standaloneBenefit: true}
+  });
+  const rows = fullRows(d);
+  for (const item of rows) {
+    if (item.arm === "blueprint-portable" || item.arm === "standalone-portable") {
+      item.usage.inputTokens = 60;
+      item.usage.cachedInputTokens = 10;
+      item.usage.outputTokens = 20;
+      item.usage.reasoningOutputTokens = 5;
+      item.usage.totalTokens = 80;
+    }
+  }
+  const baseline = analyzeStudy(rows, d);
+  assert.equal(baseline.decisionAllowed, true, JSON.stringify(baseline.gate));
+  rows.find((item) => item.arm === "blueprint-portable" && item.taskId === "task-0")!.status = "failed";
+  rows.find((item) => item.arm === "blueprint-legacy" && item.taskId === "task-1")!.status = "interrupted";
+  const result = analyzeStudy(rows, d);
+  assert.equal(result.status, "incomplete");
+  assert.equal(result.decisionAllowed, false);
+  assert.equal(result.diagnostics.nonCompletedRows.length, 2);
+  assert.ok(result.gate.reasons.includes("non-completed-rows"));
+  assert.equal(result.comparisons.portableVsLegacy.completion.pairedRows, 2398);
+  assert.equal(result.comparisons.portableVsLegacy.quality.pairedRows, 2398);
+  assert.equal(result.accounting.participant.participantRows, rows.length);
+});
+
+test("completion estimates require a valid quality pair in the same repeat", () => {
+  const base = design();
+  const d = design({
+    expectedTasks: [base.expectedTasks[0]],
+    arms: ["blueprint-legacy", "blueprint-portable"],
+    repeats: 2
+  });
+  const rows = fullRows(d);
+  rows.find((item) => item.arm === "blueprint-legacy" && item.repeat === 1)!.quality = null;
+  rows.find((item) => item.arm === "blueprint-portable" && item.repeat === 2)!.quality = null;
+  const comparison = analyzeStudy(rows, d).comparisons.portableVsLegacy;
+  assert.equal(comparison.completion.observedDifference, null);
+  assert.equal(comparison.completion.independentClusters, 0);
+  assert.equal(comparison.completion.pairedRows, 0);
+  assert.equal(comparison.quality.pairedRows, 0);
+});
+
+test("known critical failures remain descriptive when a failed row is excluded from paired quality", () => {
+  const d = design({repeats: 1});
+  const rows = fullRows(d);
+  const portable = rows.find((item) => item.arm === "blueprint-portable" && item.taskId === "t1")!;
+  portable.status = "failed";
+  portable.quality.criticalFailures = ["known observed failure"];
+  const comparison = analyzeStudy(rows, d).comparisons.portableVsLegacy;
+  assert.equal(comparison.quality.pairedRows, d.expectedTasks.length - 1);
+  assert.equal(comparison.quality.criticalFailures.left.rowsWithCriticalFailures, 1);
+});
+
+test("navigation gates distinguish missing measurement from measured lack of improvement", () => {
+  const rows = fullRows(design({repeats: 1}));
+  const unmeasured = analyzeStudy(rows, design({repeats: 1, navigationEvidence: {measured: false}}));
+  assert.ok(unmeasured.gate.reasons.includes("navigation-evidence-unmeasured"));
+  assert.equal(unmeasured.gate.reasons.includes("navigation-first-useful-not-improved"), false);
+  const measuredNoImprovement = analyzeStudy(rows, design({repeats: 1, navigationEvidence: {measured: true, firstUsefulImprovement: false}}));
+  assert.ok(measuredNoImprovement.gate.reasons.includes("navigation-first-useful-not-improved"));
+  assert.equal(measuredNoImprovement.gate.reasons.includes("navigation-evidence-unmeasured"), false);
 });
 
 test("p90 overhead is descriptive and unavailable when either paired usage is missing", () => {

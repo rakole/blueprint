@@ -259,6 +259,23 @@ async function readVerifiedAsset(assetPath: string, expectedSha256: string): Pro
   return bytes;
 }
 
+/**
+ * Verify the bytes named by the pinned manifest every time provenance is
+ * captured. The manifest itself is cached for parsing efficiency, but its
+ * declared hashes cannot establish that a later deployed asset still matches.
+ */
+async function verifyPinnedParserAssets(manifest: ParserAssetManifest): Promise<void> {
+  const assets = new Map<string, string>([
+    [manifest.runtime.module, manifest.runtime.moduleSha256],
+    [manifest.runtime.wasm, manifest.runtime.wasmSha256]
+  ]);
+  for (const language of PARSER_LANGUAGES) {
+    const grammar = manifest.languages[language];
+    assets.set(grammar.asset, grammar.sha256);
+  }
+  await Promise.all([...assets].map(([asset, checksum]) => readVerifiedAsset(asset, checksum)));
+}
+
 async function loadRuntime(): Promise<WebTreeSitterModule> {
   if (!runtimePromise) {
     runtimePromise = (async () => {
@@ -542,8 +559,14 @@ export async function withParsedSource<T>(
   }
 }
 
-/** Return a copy of the verified pinned asset metadata for diagnostics/tests. */
-export async function getParserAssetManifest(): Promise<ParserAssetManifest> {
+/** Return verified pinned metadata for every extraction freshness capture. */
+export async function getVerifiedParserAssetManifest(): Promise<ParserAssetManifest> {
   const manifest = await loadManifest();
+  await verifyPinnedParserAssets(manifest);
   return JSON.parse(JSON.stringify(manifest)) as ParserAssetManifest;
+}
+
+/** Backwards-compatible diagnostics/test accessor with the same verification. */
+export async function getParserAssetManifest(): Promise<ParserAssetManifest> {
+  return getVerifiedParserAssetManifest();
 }
