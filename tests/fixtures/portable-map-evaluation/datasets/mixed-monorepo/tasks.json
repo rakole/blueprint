@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 1,
+  "corpus": "mixed-monorepo",
+  "sourceManifestSha256": "b790f6dc577221d1bd1fcc706093458e1c9814e88bbdddd5596e55872888f3ff",
+  "pilot": [
+    {
+      "id": "mixed-monorepo-pilot-implementation-calendar-date",
+      "class": "implementation",
+      "scenario": "base",
+      "knownTarget": true,
+      "prompt": "Update validateSlotRequest in apps/dispatch-console/src/domain/slot.ts so routeDate accepts only real calendar dates in YYYY-MM-DD form. Preserve the existing request-id, member, depot, and one-to-twelve-box checks, add focused tests for an impossible month or day and a valid date, and report the TypeScript check and behavior verified.",
+      "expectedDeliverables": [
+        "A bounded domain implementation that rejects impossible calendar dates while preserving the existing request checks.",
+        "Focused tests covering a valid date and at least one impossible month or day.",
+        "A short report naming the baseline command, changed files, and observed validation behavior."
+      ],
+      "evidence": {
+        "required": [
+          {"path": "apps/dispatch-console/src/domain/slot.ts", "range": {"startLine": 4, "endLine": 14}, "symbol": "validateSlotRequest", "rationale": "The validator currently checks only the date's text shape after the request and box rules."},
+          {"path": "apps/dispatch-console/tests/domain.test.ts", "range": {"startLine": 7, "endLine": 10}, "rationale": "The existing domain test is the focused extension point and does not cover impossible calendar dates."}
+        ],
+        "supporting": [{"path": "apps/dispatch-console/src/types.ts", "range": {"startLine": 3, "endLine": 10}, "symbol": "SlotRequest", "rationale": "SlotRequest defines routeDate and the request fields whose existing behavior must remain compatible."}],
+        "alternatives": []
+      },
+      "rubric": [
+        {"id": "calendar-rule", "criterion": "validateSlotRequest rejects impossible calendar dates while retaining the YYYY-MM-DD requirement.", "weight": 0.25, "evidence": {"required": [{"path": "apps/dispatch-console/src/domain/slot.ts", "range": {"startLine": 4, "endLine": 14}, "symbol": "validateSlotRequest", "rationale": "The date rule and its missing calendar-value check belong in this validator."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "Impossible dates are accepted or the YYYY-MM-DD rule is removed.", "0.5": "One invalid date is rejected but calendar comparison is incomplete or valid dates regress.", "1": "Impossible month/day values are rejected and valid calendar dates remain accepted."}},
+        {"id": "existing-guards", "criterion": "Existing identity, depot, and box-count guards remain unchanged in behavior.", "weight": 0.25, "evidence": {"required": [{"path": "apps/dispatch-console/src/domain/slot.ts", "range": {"startLine": 6, "endLine": 13}, "symbol": "validateSlotRequest", "rationale": "The current validator owns the request and box-count guards that must remain before date validation."}], "supporting": [{"path": "apps/dispatch-console/tests/domain.test.ts", "range": {"startLine": 7, "endLine": 10}, "rationale": "The existing test preserves an invalid identity case and config behavior."}], "alternatives": []}, "scoreAnchors": {"0": "Existing request or box-count invalid cases are accepted or unrelated rules change.", "0.5": "Most guards remain but one existing failure behavior is weakened or untested.", "1": "Identity, depot, and one-to-twelve-box validation remain enforced with their existing errors."}},
+        {"id": "date-tests", "criterion": "Focused tests distinguish valid dates from impossible month or day values.", "weight": 0.25, "evidence": {"required": [{"path": "apps/dispatch-console/tests/domain.test.ts", "range": {"startLine": 7, "endLine": 10}, "rationale": "The domain test is the executable location for valid and invalid date cases."}], "supporting": [{"path": "apps/dispatch-console/src/domain/slot.ts", "range": {"startLine": 4, "endLine": 14}, "symbol": "validateSlotRequest", "rationale": "The source rule defines the expected date boundary."}], "alternatives": []}, "scoreAnchors": {"0": "No date-focused test is added.", "0.5": "A date test exists but does not distinguish a valid date from an impossible calendar value.", "1": "Tests clearly assert both acceptance of a valid date and rejection of an impossible month or day."}},
+        {"id": "typescript-report", "criterion": "The documented TypeScript baseline runs and the report identifies the bounded change and result.", "weight": 0.25, "evidence": {"required": [{"path": "apps/dispatch-console/README.md", "range": {"startLine": 8, "endLine": 10}, "rationale": "The component README documents the standard-library TypeScript test command."}, {"path": "apps/dispatch-console/tests/domain.test.ts", "range": {"startLine": 1, "endLine": 10}, "rationale": "The focused test file supplies the executable validation surface."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "The baseline is omitted or the report claims behavior without executable tests.", "0.5": "The command is named but the changed files or observed date outcomes are unclear.", "1": "The documented command passes and the report names the implementation/test files and date outcomes."}}
+      ],
+      "completionCriteria": ["Impossible month or day values are rejected by validateSlotRequest.", "A valid YYYY-MM-DD date remains accepted and existing request guards remain enforced.", "The TypeScript baseline passes and the report names changed files and outcomes."],
+      "criticalErrors": ["Accepting an impossible calendar date.", "Relaxing identity, depot, or one-to-twelve-box validation.", "Adding a dependency or moving domain validation into the HTTP adapter."],
+      "baselineChecks": [{"cwd": "fixture", "command": "node --experimental-strip-types --test apps/dispatch-console/tests/*.test.ts"}]
+    },
+    {
+      "id": "mixed-monorepo-pilot-testing-dispatch-contracts",
+      "class": "testing",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Strengthen test coverage for the shared dispatch.assigned event contract across the TypeScript console, Python route planner, and Java fulfillment service. Inspect the existing tests and add focused cases for malformed or incomplete event payloads while preserving the current accepted shape and lifecycle restriction. Run the component checks and report failures or gaps.",
+      "expectedDeliverables": [
+        "Focused tests for incomplete or malformed assigned-event payloads at the three runtime boundaries.",
+        "Preserved coverage for the accepted assigned shape and rejection of other lifecycle values.",
+        "A test report naming commands run, failures, and any remaining coverage gap."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "contracts/dispatch-event.schema.json",
+            "range": {"startLine": 5, "endLine": 14},
+            "rationale": "The schema defines required fields, the assigned event type, and allowed statuses."
+          },
+          {
+            "path": "apps/dispatch-console/src/application/contracts.ts",
+            "range": {"startLine": 3, "endLine": 13},
+            "symbol": "parseDispatchEvent",
+            "rationale": "The TypeScript parser is the console-side contract boundary."
+          },
+          {
+            "path": "workers/route-planner/src/routeplanner/contracts.py",
+            "range": {"startLine": 7, "endLine": 15},
+            "symbol": "validate_dispatch_event",
+            "rationale": "The Python validator is the planner-side contract boundary."
+          },
+          {
+            "path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java",
+            "range": {"startLine": 8, "endLine": 19},
+            "symbol": "ContractProbe",
+            "rationale": "The Java probe is the fulfillment-side contract boundary."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "apps/dispatch-console/tests/contracts.test.ts",
+            "range": {"startLine": 5, "endLine": 11},
+            "rationale": "The TypeScript tests already demonstrate accepted and wrong-lifecycle cases."
+          },
+          {
+            "path": "workers/route-planner/tests/test_contracts.py",
+            "range": {"startLine": 8, "endLine": 15},
+            "rationale": "The Python tests already demonstrate the corresponding contract cases."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "contract-accepted-shape",
+          "criterion": "Tests preserve the accepted dispatch.assigned payload shape in each applicable boundary.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "contracts/dispatch-event.schema.json",
+                "range": {"startLine": 5, "endLine": 12},
+                "rationale": "The schema is the shared acceptance reference."
+              },
+              {
+                "path": "apps/dispatch-console/tests/contracts.test.ts",
+                "range": {"startLine": 5, "endLine": 8},
+                "rationale": "The existing TypeScript accepted-shape test provides the expected assertion style."
+              },
+              {
+                "path": "workers/route-planner/tests/test_contracts.py",
+                "range": {"startLine": 8, "endLine": 11},
+                "rationale": "The existing Python accepted-shape test provides the corresponding expected tuple."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java",
+                "range": {"startLine": 12, "endLine": 19},
+                "rationale": "The Java probe prints the accepted type and status pair."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "The accepted assigned shape is removed, changed incompatibly, or left untestable.",
+            "0.5": "Accepted-shape coverage exists in only some boundaries or omits a required field.",
+            "1": "The shared accepted shape remains explicitly exercised across TypeScript, Python, and Java checks."
+          }
+        },
+        {
+          "id": "contract-malformed-fields",
+          "criterion": "Tests reject incomplete or blank required fields at each runtime boundary.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "apps/dispatch-console/src/application/contracts.ts",
+                "range": {"startLine": 10, "endLine": 13},
+                "symbol": "parseDispatchEvent",
+                "rationale": "The TypeScript parser rejects missing or empty required strings."
+              },
+              {
+                "path": "workers/route-planner/src/routeplanner/contracts.py",
+                "range": {"startLine": 10, "endLine": 12},
+                "symbol": "validate_dispatch_event",
+                "rationale": "The Python validator rejects missing or empty required strings."
+              },
+              {
+                "path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java",
+                "range": {"startLine": 22, "endLine": 25},
+                "symbol": "match",
+                "rationale": "The Java probe rejects missing or blank extracted contract values."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Malformed payloads are accepted or no new malformed-field checks are added.",
+            "0.5": "Some missing or blank fields are tested, but one runtime boundary or required field remains uncovered.",
+            "1": "Focused tests exercise representative missing or blank fields and reject them consistently in all three boundaries."
+          }
+        },
+        {
+          "id": "contract-lifecycle",
+          "criterion": "Tests preserve rejection of non-assigned lifecycle values.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "apps/dispatch-console/src/application/contracts.ts",
+                "range": {"startLine": 7, "endLine": 9},
+                "symbol": "parseDispatchEvent",
+                "rationale": "The TypeScript boundary accepts only dispatch.assigned with ASSIGNED status."
+              },
+              {
+                "path": "workers/route-planner/src/routeplanner/contracts.py",
+                "range": {"startLine": 13, "endLine": 15},
+                "symbol": "validate_dispatch_event",
+                "rationale": "The Python boundary applies the same lifecycle restriction."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "apps/dispatch-console/tests/contracts.test.ts",
+                "range": {"startLine": 10, "endLine": 11},
+                "rationale": "The existing TypeScript test demonstrates wrong-lifecycle rejection."
+              },
+              {
+                "path": "workers/route-planner/tests/test_contracts.py",
+                "range": {"startLine": 13, "endLine": 15},
+                "rationale": "The existing Python test demonstrates wrong-lifecycle rejection."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "The tests accept a cancelled or otherwise non-assigned event.",
+            "0.5": "Lifecycle rejection remains in one boundary but is missing or weakened elsewhere.",
+            "1": "Tests keep non-assigned lifecycle values rejected at the TypeScript and Python boundaries and retain the Java probe's assigned-only check."
+          }
+        },
+        {
+          "id": "contract-report",
+          "criterion": "The component checks run reproducibly and the report distinguishes failures from remaining gaps.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "README.md",
+                "range": {"startLine": 14, "endLine": 29},
+                "rationale": "The root README defines the reproducible TypeScript, Python, Java, and cross-language checks."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "scripts/check-contracts.mjs",
+                "range": {"startLine": 22, "endLine": 31},
+                "rationale": "The cross-language script reports disagreement as a failing check."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "No reproducible checks or useful test report is supplied.",
+            "0.5": "Checks are run but the report omits one component or does not identify remaining gaps.",
+            "1": "All relevant component checks are named with outcomes and the report clearly records any residual coverage gap."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "Each runtime has a focused malformed or incomplete payload test.",
+        "Accepted assigned shape and non-assigned lifecycle rejection remain covered.",
+        "The TypeScript, Python, Java, and cross-language checks are run or their environment limitation is recorded."
+      ],
+      "criticalErrors": [
+        "Accepting malformed event payloads at any runtime boundary.",
+        "Relaxing the dispatch.assigned and ASSIGNED lifecycle restriction.",
+        "Replacing the standard-library checks with network or downloaded dependencies."
+      ],
+      "baselineChecks": [
+        {"cwd": "fixture", "command": "node --experimental-strip-types --test apps/dispatch-console/tests/*.test.ts"},
+        {"cwd": "fixture", "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=workers/route-planner/src python3 -m unittest discover -s workers/route-planner/tests -v"},
+        {"cwd": "fixture", "command": "set -euo pipefail\ntmp_dir=$(mktemp -d)\ncleanup() { local status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"; }\ntrap cleanup EXIT\nmkdir -p \"$tmp_dir/classes\"\nfind services/fulfillment/src services/fulfillment/tests -name '*.java' -print0 | xargs -0 javac --release 17 -d \"$tmp_dir/classes\"\nfor test_class in com.marketroute.fulfillment.FulfillmentServiceTest com.marketroute.fulfillment.ConfigurationTest\ndo\n  java -ea -cp \"$tmp_dir/classes\" \"$test_class\"\ndone\nnode --experimental-strip-types scripts/check-contracts.mjs \"$tmp_dir/classes\""}
+      ]
+    }
+  ],
+  "confirmatory": [
+    {
+      "id": "mixed-monorepo-confirmatory-discussion-boundaries",
+      "class": "discussion",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Discuss the ownership boundaries among the dispatch console, route-planner worker, fulfillment service, and shared JSON contracts. Use source and test evidence to identify which component owns pickup validation, route ordering and capacity, fulfillment status, and cross-language event compatibility. Deliver a concise decision record with open questions; do not modify code.",
+      "expectedDeliverables": [
+        "A concise boundary decision record naming owners for validation, ordering and capacity, status, and contract compatibility.",
+        "Source and test citations for each ownership claim.",
+        "A short list of unresolved questions that can be answered from future source changes."
+      ],
+      "evidence": {
+        "required": [
+          {"path": "README.md", "range": {"startLine": 3, "endLine": 7}, "rationale": "The root description names the three components and their broad responsibilities."},
+          {"path": "contracts/field-notes.md", "range": {"startLine": 3, "endLine": 6}, "rationale": "The field notes state ownership of IDs, fulfillment status, route ordering, and capacity estimates."},
+          {"path": "apps/dispatch-console/AGENTS.md", "range": {"startLine": 3, "endLine": 6}, "rationale": "The console guidance assigns validation and route ordering to domain/application layers and HTTP translation to adapters."},
+          {"path": "services/fulfillment/README.md", "range": {"startLine": 3, "endLine": 6}, "rationale": "The service documentation assigns shelf assignment and fulfillment status transitions to Java."},
+          {"path": "workers/route-planner/README.md", "range": {"startLine": 3, "endLine": 7}, "rationale": "The worker documentation assigns route ordering and capacity behavior to Python."}
+        ],
+        "supporting": [
+          {"path": "scripts/check-contracts.mjs", "range": {"startLine": 11, "endLine": 31}, "rationale": "The root script shows how the shared event crosses the three runtime checks."}
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "boundary-owners",
+          "criterion": "The record assigns pickup validation, route ordering/capacity, fulfillment status, and contract compatibility to the correct components.",
+          "weight": 0.25,
+          "evidence": {"required": [{"path": "README.md", "range": {"startLine": 3, "endLine": 7}, "rationale": "The root component summary is the ownership baseline."}, {"path": "contracts/field-notes.md", "range": {"startLine": 3, "endLine": 6}, "rationale": "The field notes refine status and route-planning ownership."}], "supporting": [], "alternatives": []},
+          "scoreAnchors": {"0": "The ownership record assigns a core responsibility to the wrong component or omits most responsibilities.", "0.5": "Most owners are correct but one boundary is vague or conflated.", "1": "All four responsibilities are assigned consistently with the source documentation."
+          }
+        },
+        {
+          "id": "boundary-evidence",
+          "criterion": "Each decision is supported by concrete source or test evidence.",
+          "weight": 0.25,
+          "evidence": {"required": [{"path": "apps/dispatch-console/AGENTS.md", "range": {"startLine": 3, "endLine": 6}, "rationale": "Console layer guidance provides direct evidence for its boundaries."}, {"path": "workers/route-planner/README.md", "range": {"startLine": 3, "endLine": 7}, "rationale": "Worker documentation provides direct route ownership evidence."}], "supporting": [{"path": "scripts/check-contracts.mjs", "range": {"startLine": 22, "endLine": 31}, "rationale": "The cross-language check supports the compatibility decision."}], "alternatives": []},
+          "scoreAnchors": {"0": "Claims are unsupported or rely on invented architecture.", "0.5": "Some claims have citations but at least one material ownership decision is asserted without evidence.", "1": "Every material decision is tied to a precise source or test span."
+          }
+        },
+        {
+          "id": "boundary-contract",
+          "criterion": "The record explains the shared JSON contract boundary without moving domain ownership across components.",
+          "weight": 0.25,
+          "evidence": {"required": [{"path": "contracts/dispatch-event.schema.json", "range": {"startLine": 5, "endLine": 14}, "rationale": "The event schema defines the shared payload boundary."}, {"path": "scripts/check-contracts.mjs", "range": {"startLine": 11, "endLine": 31}, "rationale": "The script demonstrates validation in each runtime."}], "supporting": [], "alternatives": []},
+          "scoreAnchors": {"0": "The record treats the shared contract as owned by one unrelated runtime or ignores compatibility checks.", "0.5": "The contract is identified but its relationship to runtime checks is incomplete.", "1": "The record separates shared payload compatibility from each component's domain responsibility and cites the cross-language checks."
+          }
+        },
+        {
+          "id": "boundary-open-questions",
+          "criterion": "Open questions are concrete, bounded, and do not masquerade as source facts.",
+          "weight": 0.25,
+          "evidence": {"required": [{"path": "README.md", "range": {"startLine": 9, "endLine": 12}, "rationale": "The README bounds the fixture to standard-library, in-process behavior and gives context for stating unknowns."}], "supporting": [{"path": "contracts/README.md", "range": {"startLine": 3, "endLine": 9}, "rationale": "Contract documentation identifies the documented versus eventual durable adapter surface."}], "alternatives": []},
+          "scoreAnchors": {"0": "The record presents invented future behavior as current fact or gives no actionable open questions.", "0.5": "Questions are present but broad or partly mixed with unsupported assumptions.", "1": "Questions are clearly separated from facts and point to bounded follow-up evidence."
+          }
+        }
+      ],
+      "completionCriteria": ["All four ownership areas have a decision and source citation.", "The shared event boundary and cross-language checks are described.", "Open questions are concrete and the source tree is unchanged."],
+      "criticalErrors": ["Assigning route ordering to the fulfillment service or status transitions to the route planner.", "Claiming a network broker or runtime dependency that the source explicitly excludes.", "Presenting unsupported assumptions as confirmed behavior."],
+      "baselineChecks": [{"cwd": "fixture", "command": "node --experimental-strip-types --test apps/dispatch-console/tests/*.test.ts"}, {"cwd": "fixture", "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=workers/route-planner/src python3 -m unittest discover -s workers/route-planner/tests -v"}]
+    },
+    {
+      "id": "mixed-monorepo-confirmatory-research-routing-capacity",
+      "class": "research",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Research within the repository how route planning selects requests for a date, orders depots, and enforces capacity. Compare the implementation, models, serialization, and tests, then report confirmed rules, edge cases, and evidence gaps for a future change. Do not browse the internet or change source files.",
+      "expectedDeliverables": ["A source-grounded report of date selection, ordering, and capacity rules.", "A comparison of model and serialized fields with the implementation.", "Confirmed edge cases and evidence gaps for future work."],
+      "evidence": {
+        "required": [{"path": "workers/route-planner/src/routeplanner/planner.py", "range": {"startLine": 7, "endLine": 24}, "symbol": "build_plan", "rationale": "The planner implements selection, capacity enforcement, ordering, and stop numbering."}, {"path": "workers/route-planner/src/routeplanner/scoring.py", "range": {"startLine": 4, "endLine": 10}, "symbol": "priority_key", "rationale": "The scoring key supplies the concrete ordering tuple."}, {"path": "workers/route-planner/src/routeplanner/models.py", "range": {"startLine": 4, "endLine": 26}, "rationale": "The dataclasses define request, stop, and plan fields used by the rules."}, {"path": "workers/route-planner/src/routeplanner/serialization.py", "range": {"startLine": 6, "endLine": 26}, "rationale": "The serializer maps shared request and plan names to JSON."}],
+        "supporting": [{"path": "workers/route-planner/tests/test_planner.py", "range": {"startLine": 15, "endLine": 22}, "rationale": "Planner tests demonstrate priority ordering and capacity rejection."}, {"path": "workers/route-planner/tests/test_serialization.py", "range": {"startLine": 9, "endLine": 14}, "rationale": "Serialization tests demonstrate the output fields."}],
+        "alternatives": []
+      },
+      "rubric": [
+        {"id": "research-date", "criterion": "The report accurately explains date filtering and the resulting stop set.", "weight": 0.25, "evidence": {"required": [{"path": "workers/route-planner/src/routeplanner/planner.py", "range": {"startLine": 13, "endLine": 15}, "symbol": "build_plan", "rationale": "Only requests matching route_date are selected and validated."}], "supporting": [{"path": "workers/route-planner/tests/test_repository.py", "range": {"startLine": 9, "endLine": 13}, "rationale": "Repository tests show date-specific filtering in adjacent source behavior."}], "alternatives": []}, "scoreAnchors": {"0": "The report misses or misstates date selection.", "0.5": "Date filtering is identified but the selected versus ignored requests are not clearly distinguished.", "1": "The report accurately states that only matching route dates are selected and ties the claim to source evidence."}},
+        {"id": "research-order", "criterion": "The report explains priority-depot, box-count, depot-code, and request-id ordering.", "weight": 0.25, "evidence": {"required": [{"path": "workers/route-planner/src/routeplanner/scoring.py", "range": {"startLine": 4, "endLine": 10}, "symbol": "priority_key", "rationale": "The ordering tuple is defined here."}, {"path": "workers/route-planner/src/routeplanner/planner.py", "range": {"startLine": 19, "endLine": 22}, "symbol": "build_plan", "rationale": "The planner applies the ordering key before numbering stops."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "Ordering is absent or materially incorrect.", "0.5": "The primary depot priority is described but tie-breakers are incomplete or wrong.", "1": "All tuple components and their application to stop numbering are accurately reported."}},
+        {"id": "research-capacity", "criterion": "The report states the capacity rule and its failure behavior.", "weight": 0.25, "evidence": {"required": [{"path": "workers/route-planner/src/routeplanner/planner.py", "range": {"startLine": 16, "endLine": 18}, "symbol": "build_plan", "rationale": "The total is compared with daily_capacity and raises PlanningError when exceeded."}, {"path": "workers/route-planner/tests/test_planner.py", "range": {"startLine": 20, "endLine": 22}, "rationale": "The test asserts capacity rejection."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "The capacity rule or error behavior is misreported.", "0.5": "Capacity is mentioned but the threshold or failure signal is incomplete.", "1": "The report accurately connects total boxes, daily_capacity, and PlanningError with the test evidence."}},
+        {"id": "research-gaps", "criterion": "The report separates confirmed implementation rules from edge cases and evidence gaps.", "weight": 0.25, "evidence": {"required": [{"path": "workers/route-planner/tests/test_planner.py", "range": {"startLine": 8, "endLine": 22}, "rationale": "Existing tests show which planner cases are directly covered."}, {"path": "workers/route-planner/tests/test_serialization.py", "range": {"startLine": 9, "endLine": 14}, "rationale": "Existing serialization coverage bounds the evidence claim."}], "supporting": [{"path": "workers/route-planner/src/routeplanner/validation.py", "range": {"startLine": 9, "endLine": 16}, "symbol": "validate_request", "rationale": "Validation rules provide additional edge-case context."}], "alternatives": []}, "scoreAnchors": {"0": "The report invents coverage or provides no evidence-gap analysis.", "0.5": "Some gaps are identified but facts and speculation are mixed.", "1": "Confirmed rules, tested cases, and bounded untested edges are clearly separated."}}
+      ],
+      "completionCriteria": ["The report covers date selection, ordering, capacity, and serialization.", "Every major claim has a source or test citation.", "No source files are modified and open gaps are explicitly labeled."],
+      "criticalErrors": ["Claiming that nonmatching dates are included in plans.", "Reversing priority-depot or capacity semantics.", "Treating an untested edge case as confirmed behavior."],
+      "baselineChecks": [{"cwd": "fixture", "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=workers/route-planner/src python3 -m unittest discover -s workers/route-planner/tests -v"}]
+    },
+    {
+      "id": "mixed-monorepo-confirmatory-planning-contract-hardening",
+      "class": "planning",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Prepare a bounded implementation plan for hardening the shared dispatch-event contract checks when a required field is missing or blank. Identify the TypeScript parser, Python validator, Java probe, relevant tests, and the cross-language command; define acceptance checks and sequencing. Do not implement the plan.",
+      "expectedDeliverables": ["A sequenced file-level implementation plan for missing or blank field handling.", "Acceptance checks covering all runtime boundaries and the cross-language command.", "A concise risk and scope note that keeps the change within standard-library components."],
+      "evidence": {
+        "required": [{"path": "contracts/dispatch-event.schema.json", "range": {"startLine": 5, "endLine": 14}, "rationale": "The schema defines the required event fields and closed payload contract."}, {"path": "apps/dispatch-console/src/application/contracts.ts", "range": {"startLine": 3, "endLine": 13}, "symbol": "parseDispatchEvent", "rationale": "The TypeScript parser is one target boundary."}, {"path": "workers/route-planner/src/routeplanner/contracts.py", "range": {"startLine": 7, "endLine": 15}, "symbol": "validate_dispatch_event", "rationale": "The Python validator is a second target boundary."}, {"path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java", "range": {"startLine": 8, "endLine": 25}, "symbol": "ContractProbe", "rationale": "The Java probe is the third boundary and includes blank-value rejection."}],
+        "supporting": [{"path": "scripts/check-contracts.mjs", "range": {"startLine": 11, "endLine": 31}, "rationale": "The cross-language command wires the three checks together."}, {"path": "apps/dispatch-console/tests/contracts.test.ts", "range": {"startLine": 5, "endLine": 11}, "rationale": "The existing TypeScript tests show accepted and lifecycle-rejection coverage."}],
+        "alternatives": []
+      },
+      "rubric": [
+        {"id": "plan-impact", "criterion": "The plan names every affected contract boundary and relevant test surface.", "weight": 0.25, "evidence": {"required": [{"path": "apps/dispatch-console/src/application/contracts.ts", "range": {"startLine": 3, "endLine": 13}, "symbol": "parseDispatchEvent", "rationale": "TypeScript parser impact."}, {"path": "workers/route-planner/src/routeplanner/contracts.py", "range": {"startLine": 7, "endLine": 15}, "symbol": "validate_dispatch_event", "rationale": "Python validator impact."}, {"path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java", "range": {"startLine": 8, "endLine": 25}, "symbol": "ContractProbe", "rationale": "Java probe impact."}], "supporting": [{"path": "apps/dispatch-console/tests/contracts.test.ts", "range": {"startLine": 1, "endLine": 11}, "rationale": "TypeScript test surface."}], "alternatives": []}, "scoreAnchors": {"0": "The plan omits a runtime boundary or relevant tests.", "0.5": "Most boundaries are named but one test or probe is missing.", "1": "All three boundaries, schema, existing tests, and the cross-language script are explicitly accounted for."}},
+        {"id": "plan-sequence", "criterion": "The plan sequences contract rules, focused tests, and cross-language verification safely.", "weight": 0.25, "evidence": {"required": [{"path": "scripts/check-contracts.mjs", "range": {"startLine": 22, "endLine": 31}, "rationale": "The command's parallel probes define the final integration check."}, {"path": "README.md", "range": {"startLine": 14, "endLine": 29}, "rationale": "The documented baseline order identifies component checks and Java compilation prerequisites."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "The sequence cannot produce a reproducible verification or ignores Java compilation prerequisites.", "0.5": "A plausible sequence is given but one prerequisite or final integration check is missing.", "1": "The sequence moves from source/test updates through component checks to the cross-language command with prerequisites explicit."}},
+        {"id": "plan-acceptance", "criterion": "Acceptance checks distinguish missing, blank, wrong-lifecycle, and valid payload behavior.", "weight": 0.25, "evidence": {"required": [{"path": "contracts/dispatch-event.schema.json", "range": {"startLine": 5, "endLine": 12}, "rationale": "Required fields and lifecycle values define the acceptance cases."}, {"path": "apps/dispatch-console/src/application/contracts.ts", "range": {"startLine": 7, "endLine": 12}, "symbol": "parseDispatchEvent", "rationale": "The implementation distinguishes lifecycle and field checks."}], "supporting": [{"path": "workers/route-planner/tests/test_contracts.py", "range": {"startLine": 9, "endLine": 15}, "rationale": "Existing Python tests show valid and wrong-lifecycle cases."}], "alternatives": []}, "scoreAnchors": {"0": "Acceptance criteria do not cover the contract boundary cases.", "0.5": "Valid and one invalid case are included but missing, blank, or lifecycle cases are conflated.", "1": "The plan defines separately checkable valid, missing/blank, and wrong-lifecycle outcomes across boundaries."}},
+        {"id": "plan-scope", "criterion": "The plan stays bounded to the existing standard-library source and names risks without inventing dependencies.", "weight": 0.25, "evidence": {"required": [{"path": "README.md", "range": {"startLine": 9, "endLine": 12}, "rationale": "The repository is source-only and uses standard libraries without a network or broker."}, {"path": "AGENTS.md", "range": {"startLine": 3, "endLine": 6}, "rationale": "Repository guidance prohibits downloaded dependencies and generated output."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "The plan adds unrelated services, dependencies, or broad refactors.", "0.5": "Scope is mostly bounded but includes one unnecessary dependency or unclear risk.", "1": "The plan remains within the existing files, standard libraries, and contract checks with concrete bounded risks."}}
+      ],
+      "completionCriteria": ["The plan names all three runtime boundaries, the schema, tests, and cross-language command.", "Acceptance cases and sequencing are concrete enough to implement without inventing behavior.", "No source files are modified."],
+      "criticalErrors": ["Omitting one runtime validator or the Java probe.", "Planning to accept wrong lifecycle values or blank required fields.", "Introducing a network dependency or broad unrelated refactor."],
+      "baselineChecks": [{"cwd": "fixture", "command": "node --experimental-strip-types --test apps/dispatch-console/tests/*.test.ts"}, {"cwd": "fixture", "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=workers/route-planner/src python3 -m unittest discover -s workers/route-planner/tests -v"}]
+    },
+    {
+      "id": "mixed-monorepo-confirmatory-implementation-command-identifiers",
+      "class": "implementation",
+      "scenario": "base",
+      "knownTarget": true,
+      "prompt": "In services/fulfillment/src/com/marketroute/fulfillment/application/BoxAssignmentService.java, make BoxAssignmentService.assign reject blank dispatchId or routeDate before it creates, saves, or publishes an assignment. Preserve the existing depot, shelf-capacity, duplicate-box, receipt, and dispatch.assigned behavior for valid commands. Add focused Java tests for rejected identifiers and a valid assignment, then report the checks.",
+      "expectedDeliverables": [
+        "A bounded fulfillment validation change for blank dispatch identifiers or route dates.",
+        "Focused Java assertions that invalid commands cause no persistence or event publication and valid commands retain the existing receipt behavior.",
+        "A report naming the temporary Java compilation and test command and any limitation."
+      ],
+      "evidence": {
+        "required": [
+          {"path": "services/fulfillment/src/com/marketroute/fulfillment/application/BoxAssignmentService.java", "range": {"startLine": 20, "endLine": 29}, "symbol": "assign", "rationale": "The assignment method currently validates depot, weight, and duplicates but does not validate dispatchId or routeDate before side effects."},
+          {"path": "services/fulfillment/src/com/marketroute/fulfillment/application/AssignBoxCommand.java", "range": {"startLine": 3, "endLine": 3}, "symbol": "AssignBoxCommand", "rationale": "The command carries dispatchId and routeDate without constructor validation."},
+          {"path": "services/fulfillment/tests/com/marketroute/fulfillment/FulfillmentServiceTest.java", "range": {"startLine": 10, "endLine": 18}, "rationale": "The existing test establishes the valid assignment path and is the focused extension point."}
+        ],
+        "supporting": [{"path": "services/fulfillment/src/com/marketroute/fulfillment/domain/DispatchEvent.java", "range": {"startLine": 3, "endLine": 10}, "symbol": "DispatchEvent", "rationale": "The event carries both identifiers and retains the dispatch.assigned JSON shape for valid commands."}],
+        "alternatives": []
+      },
+      "rubric": [
+        {"id": "identifier-validation", "criterion": "assign rejects blank dispatchId or routeDate before constructing side-effecting assignment state.", "weight": 0.25, "evidence": {"required": [{"path": "services/fulfillment/src/com/marketroute/fulfillment/application/BoxAssignmentService.java", "range": {"startLine": 20, "endLine": 29}, "symbol": "assign", "rationale": "The new precondition belongs before the existing save and publish sequence."}, {"path": "services/fulfillment/src/com/marketroute/fulfillment/application/AssignBoxCommand.java", "range": {"startLine": 3, "endLine": 3}, "symbol": "AssignBoxCommand", "rationale": "These command fields are the missing validation inputs."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "Blank identifiers still reach persistence or event publication.", "0.5": "One blank field is rejected but the other is accepted or side-effect ordering is unclear.", "1": "Both blank dispatchId and blank routeDate are rejected before any assignment, save, or publish operation."}},
+        {"id": "side-effect-safety", "criterion": "Invalid identifier commands leave the repository and publisher unchanged.", "weight": 0.25, "evidence": {"required": [{"path": "services/fulfillment/src/com/marketroute/fulfillment/application/BoxAssignmentService.java", "range": {"startLine": 24, "endLine": 29}, "symbol": "assign", "rationale": "Save and publish are the side effects that must remain after all validation."}, {"path": "services/fulfillment/src/com/marketroute/fulfillment/adapter/InMemoryDispatchRepository.java", "range": {"startLine": 8, "endLine": 13}, "symbol": "InMemoryDispatchRepository", "rationale": "The in-memory repository exposes observable assignments."}, {"path": "services/fulfillment/src/com/marketroute/fulfillment/adapter/InMemoryEventPublisher.java", "range": {"startLine": 7, "endLine": 11}, "symbol": "InMemoryEventPublisher", "rationale": "The in-memory publisher exposes observable events."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "An invalid command saves an assignment or publishes an event.", "0.5": "The exception is asserted but one side-effect collection is not checked.", "1": "Focused tests prove both repository assignments and publisher events remain empty after each invalid command."}},
+        {"id": "valid-assignment", "criterion": "Valid commands preserve depot, capacity, duplicate, receipt, and dispatch.assigned behavior.", "weight": 0.25, "evidence": {"required": [{"path": "services/fulfillment/src/com/marketroute/fulfillment/application/BoxAssignmentService.java", "range": {"startLine": 21, "endLine": 29}, "symbol": "assign", "rationale": "Existing valid-command guards and the receipt-producing side-effect sequence remain the compatibility target."}, {"path": "services/fulfillment/src/com/marketroute/fulfillment/domain/DispatchEvent.java", "range": {"startLine": 3, "endLine": 10}, "symbol": "DispatchEvent", "rationale": "Valid assignments retain the assigned event type and fields."}], "supporting": [{"path": "services/fulfillment/tests/com/marketroute/fulfillment/FulfillmentServiceTest.java", "range": {"startLine": 12, "endLine": 17}, "rationale": "Existing assertions cover shelf, event type, and one published event."}], "alternatives": []}, "scoreAnchors": {"0": "Valid assignment behavior or the assigned event contract changes.", "0.5": "Valid assignment succeeds but one existing receipt or event assertion is missing.", "1": "Valid assignment retains the existing receipt, assigned event, and exactly one publication while prior guards remain."}},
+        {"id": "fulfillment-tests", "criterion": "Java tests and the documented temporary baseline exercise invalid and valid command paths.", "weight": 0.25, "evidence": {"required": [{"path": "services/fulfillment/tests/com/marketroute/fulfillment/FulfillmentServiceTest.java", "range": {"startLine": 10, "endLine": 18}, "rationale": "The test class is the executable fulfillment behavior surface."}, {"path": "README.md", "range": {"startLine": 19, "endLine": 34}, "rationale": "The root README documents temporary Java compilation, test execution, and the cross-language contract check."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "No executable test covers blank identifiers or the valid path.", "0.5": "One invalid case or the valid path is tested, or the documented baseline cannot run.", "1": "Both invalid identifier cases and a valid assignment run under the documented temporary Java baseline with reported outcomes."}}
+      ],
+      "completionCriteria": ["Blank dispatchId and blank routeDate are rejected before persistence or publication.", "Valid assignment behavior, receipt shape, duplicate guard, and dispatch.assigned event remain compatible.", "Java compilation and tests pass, with the report naming the command and outcomes."],
+      "criticalErrors": ["Publishing or saving for a blank dispatchId or routeDate.", "Changing the existing depot, capacity, duplicate, receipt, or assigned-event behavior.", "Using external dependencies or a persistent external service."],
+      "baselineChecks": [{"cwd": "fixture", "command": "set -euo pipefail\ntmp_dir=$(mktemp -d)\ncleanup() { local status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"; }\ntrap cleanup EXIT\nmkdir -p \"$tmp_dir/classes\"\nfind services/fulfillment/src services/fulfillment/tests -name '*.java' -print0 | xargs -0 javac --release 17 -d \"$tmp_dir/classes\"\nfor test_class in com.marketroute.fulfillment.FulfillmentServiceTest com.marketroute.fulfillment.ConfigurationTest\ndo\n  java -ea -cp \"$tmp_dir/classes\" \"$test_class\"\ndone"}]
+    },
+    {
+      "id": "mixed-monorepo-confirmatory-review-contract-boundaries",
+      "class": "review",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Review the mixed monorepo for defects at the shared dispatch-event boundary and report prioritized findings with concrete evidence. Check agreement among the JSON schemas and examples, the TypeScript parser, Python validator, Java probe, and the cross-language contract script. Focus on behavior that could accept incompatible events or silently diverge; do not edit files.",
+      "expectedDeliverables": ["A prioritized review report with severity, location, and source evidence for each finding.", "A clear statement of agreement or divergence across schema, examples, validators, probe, and script.", "A short list of follow-up checks for any unresolved uncertainty."],
+      "evidence": {
+        "required": [{"path": "contracts/dispatch-event.schema.json", "range": {"startLine": 5, "endLine": 14}, "rationale": "The schema is the shared event contract reference."}, {"path": "contracts/dispatch-event.example.json", "range": {"startLine": 1, "endLine": 8}, "rationale": "The example is the concrete valid payload."}, {"path": "apps/dispatch-console/src/application/contracts.ts", "range": {"startLine": 3, "endLine": 13}, "symbol": "parseDispatchEvent", "rationale": "TypeScript validation surface."}, {"path": "workers/route-planner/src/routeplanner/contracts.py", "range": {"startLine": 7, "endLine": 15}, "symbol": "validate_dispatch_event", "rationale": "Python validation surface."}, {"path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java", "range": {"startLine": 8, "endLine": 25}, "symbol": "ContractProbe", "rationale": "Java validation surface."}],
+        "supporting": [{"path": "scripts/check-contracts.mjs", "range": {"startLine": 11, "endLine": 31}, "rationale": "The script shows the cross-language execution and equality check."}],
+        "alternatives": []
+      },
+      "rubric": [
+        {"id": "review-comparison", "criterion": "The review compares required fields, event type, status, and additional-property behavior across the contract surfaces.", "weight": 0.25, "evidence": {"required": [{"path": "contracts/dispatch-event.schema.json", "range": {"startLine": 5, "endLine": 14}, "rationale": "Schema constraints to compare."}, {"path": "apps/dispatch-console/src/application/contracts.ts", "range": {"startLine": 7, "endLine": 13}, "symbol": "parseDispatchEvent", "rationale": "TypeScript constraints to compare."}, {"path": "workers/route-planner/src/routeplanner/contracts.py", "range": {"startLine": 10, "endLine": 15}, "symbol": "validate_dispatch_event", "rationale": "Python constraints to compare."}], "supporting": [{"path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java", "range": {"startLine": 12, "endLine": 25}, "symbol": "ContractProbe", "rationale": "Java extracted-field constraints."}], "alternatives": []}, "scoreAnchors": {"0": "The review omits material contract fields or compares only one runtime.", "0.5": "Most surfaces are compared but one constraint or runtime is unaddressed.", "1": "The report systematically compares required fields, lifecycle, and extra-field handling across all relevant surfaces."}},
+        {"id": "review-findings", "criterion": "Findings are prioritized, concrete, and distinguish confirmed divergence from a coverage gap.", "weight": 0.25, "evidence": {"required": [{"path": "scripts/check-contracts.mjs", "range": {"startLine": 22, "endLine": 31}, "rationale": "The integration script defines an observable disagreement failure."}, {"path": "apps/dispatch-console/tests/contracts.test.ts", "range": {"startLine": 5, "endLine": 11}, "rationale": "Existing tests bound the TypeScript evidence claim."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "Findings are vague, unprioritized, or present speculation as a confirmed defect.", "0.5": "Some findings are concrete but priority or evidence status is inconsistent.", "1": "Each finding has severity, location, evidence, and a clear distinction between divergence and missing coverage."}},
+        {"id": "review-safety", "criterion": "The review identifies acceptance risks without proposing to relax assigned-event safeguards.", "weight": 0.25, "evidence": {"required": [{"path": "apps/dispatch-console/src/application/contracts.ts", "range": {"startLine": 7, "endLine": 12}, "symbol": "parseDispatchEvent", "rationale": "Assigned-only and nonempty-field safeguards must remain intact."}, {"path": "workers/route-planner/src/routeplanner/contracts.py", "range": {"startLine": 10, "endLine": 14}, "symbol": "validate_dispatch_event", "rationale": "Python has the corresponding safeguards."}], "supporting": [{"path": "contracts/dispatch-event.schema.json", "range": {"startLine": 7, "endLine": 14}, "rationale": "The schema's closed payload is a review safety reference."}], "alternatives": []}, "scoreAnchors": {"0": "The review recommends accepting incompatible lifecycle or blank required fields.", "0.5": "Risks are identified but one lifecycle or required-field safeguard is not considered.", "1": "The review explicitly protects assigned-only, nonempty-field, and closed-payload safeguards."}},
+        {"id": "review-repro", "criterion": "The report identifies the reproducible cross-language check and any environment limitation.", "weight": 0.25, "evidence": {"required": [{"path": "README.md", "range": {"startLine": 19, "endLine": 29}, "rationale": "The root README supplies the Java and cross-language commands."}, {"path": "scripts/check-contracts.mjs", "range": {"startLine": 14, "endLine": 31}, "rationale": "The script's Python and Java probes and final comparison are the reproducibility anchor."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "No reproducible validation path is reported.", "0.5": "A check is named but prerequisites or limitations are missing.", "1": "The report names the temporary Java prerequisite, cross-language command, result, and any concrete limitation."}}
+      ],
+      "completionCriteria": ["All five contract surfaces are compared with source evidence.", "Findings are prioritized and separate confirmed divergence from missing coverage.", "The cross-language check and any limitation are reported without source edits."],
+      "criticalErrors": ["Ignoring one runtime validator or the schema's closed payload rule.", "Recommending acceptance of wrong lifecycle values or blank required fields.", "Claiming a cross-language pass without identifying the command or evidence."],
+      "baselineChecks": [{"cwd": "fixture", "command": "node --experimental-strip-types --test apps/dispatch-console/tests/*.test.ts"}, {"cwd": "fixture", "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=workers/route-planner/src python3 -m unittest discover -s workers/route-planner/tests -v"}, {"cwd": "fixture", "command": "set -euo pipefail\ntmp_dir=$(mktemp -d)\ncleanup() { local status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"; }\ntrap cleanup EXIT\nmkdir -p \"$tmp_dir/classes\"\nfind services/fulfillment/src services/fulfillment/tests -name '*.java' -print0 | xargs -0 javac --release 17 -d \"$tmp_dir/classes\"\nfor test_class in com.marketroute.fulfillment.FulfillmentServiceTest com.marketroute.fulfillment.ConfigurationTest\ndo\n  java -ea -cp \"$tmp_dir/classes\" \"$test_class\"\ndone\nnode --experimental-strip-types scripts/check-contracts.mjs \"$tmp_dir/classes\""}]
+    },
+    {
+      "id": "mixed-monorepo-confirmatory-testing-route-capacity",
+      "class": "testing",
+      "scenario": "base",
+      "knownTarget": true,
+      "prompt": "Test the Python worker's build_plan function with focused cases for route-date selection, priority-depot ordering, and capacity rejection. Add or adjust tests only where coverage is needed, preserve the existing request validation rules, and report the commands and outcomes.",
+      "expectedDeliverables": ["Focused Python tests for date selection, ordering, and capacity failure.", "Preserved coverage for request validation and serialized plan fields where relevant.", "A test report naming the command and outcomes."],
+      "evidence": {
+        "required": [{"path": "workers/route-planner/src/routeplanner/planner.py", "range": {"startLine": 7, "endLine": 24}, "symbol": "build_plan", "rationale": "The target function implements selection, capacity, sorting, and stop numbering."}, {"path": "workers/route-planner/src/routeplanner/scoring.py", "range": {"startLine": 4, "endLine": 10}, "symbol": "priority_key", "rationale": "The ordering behavior is source-owned here."}, {"path": "workers/route-planner/tests/test_planner.py", "range": {"startLine": 8, "endLine": 22}, "rationale": "Existing planner tests cover priority and capacity and provide the focused extension point."}],
+        "supporting": [{"path": "workers/route-planner/src/routeplanner/validation.py", "range": {"startLine": 9, "endLine": 16}, "symbol": "validate_request", "rationale": "Planner validation remains a required precondition."}, {"path": "workers/route-planner/tests/test_serialization.py", "range": {"startLine": 9, "endLine": 14}, "rationale": "Serialization tests show the output fields that should remain compatible."}],
+        "alternatives": []
+      },
+      "rubric": [
+        {"id": "planner-date-tests", "criterion": "Tests prove requests for other dates are excluded from the plan.", "weight": 0.25, "evidence": {"required": [{"path": "workers/route-planner/src/routeplanner/planner.py", "range": {"startLine": 13, "endLine": 15}, "symbol": "build_plan", "rationale": "Selection filters by route_date before validation and aggregation."}], "supporting": [{"path": "workers/route-planner/tests/test_repository.py", "range": {"startLine": 9, "endLine": 13}, "rationale": "Existing repository coverage demonstrates date-specific filtering."}], "alternatives": []}, "scoreAnchors": {"0": "No date-selection case is tested or the test includes nonmatching requests.", "0.5": "A date case exists but does not assert exclusion or plan contents clearly.", "1": "A focused test asserts that only requests matching the requested route date contribute to the plan."}},
+        {"id": "planner-order-tests", "criterion": "Tests prove priority-depot ordering and the documented tie-break behavior.", "weight": 0.25, "evidence": {"required": [{"path": "workers/route-planner/src/routeplanner/scoring.py", "range": {"startLine": 4, "endLine": 10}, "symbol": "priority_key", "rationale": "The key defines the ordering dimensions."}, {"path": "workers/route-planner/tests/test_planner.py", "range": {"startLine": 15, "endLine": 18}, "rationale": "The existing test asserts priority-depot-first ordering."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "Ordering is untested or a nonpriority depot is asserted first without source basis.", "0.5": "Priority-depot ordering is tested but tie-break behavior is not distinguished.", "1": "Tests assert priority-depot-first behavior and, where applicable, deterministic box-count/depot/request ordering from priority_key."}},
+        {"id": "planner-capacity-tests", "criterion": "Tests prove capacity overflow raises PlanningError without changing the successful plan behavior.", "weight": 0.25, "evidence": {"required": [{"path": "workers/route-planner/src/routeplanner/planner.py", "range": {"startLine": 16, "endLine": 18}, "symbol": "build_plan", "rationale": "The source raises PlanningError when total exceeds daily_capacity."}, {"path": "workers/route-planner/tests/test_planner.py", "range": {"startLine": 20, "endLine": 22}, "rationale": "The existing overflow test establishes the expected failure type."}], "supporting": [], "alternatives": []}, "scoreAnchors": {"0": "Overflow is accepted or the successful plan path is broken.", "0.5": "Overflow raises but the test does not prove a valid plan still succeeds.", "1": "Focused tests cover both a valid plan and a capacity overflow with the expected PlanningError."}},
+        {"id": "planner-report", "criterion": "The test report names the reproducible command and distinguishes passes from uncovered validation or serialization cases.", "weight": 0.25, "evidence": {"required": [{"path": "workers/route-planner/README.md", "range": {"startLine": 9, "endLine": 13}, "rationale": "The worker README defines the standard-library unittest command."}, {"path": "workers/route-planner/tests/test_serialization.py", "range": {"startLine": 9, "endLine": 14}, "rationale": "Serialization coverage is a separate existing evidence surface."}], "supporting": [{"path": "workers/route-planner/src/routeplanner/validation.py", "range": {"startLine": 9, "endLine": 16}, "symbol": "validate_request", "rationale": "Validation coverage should be distinguished from planner ordering coverage."}], "alternatives": []}, "scoreAnchors": {"0": "No reproducible command or coverage report is supplied.", "0.5": "The command is named but remaining validation or serialization gaps are not distinguished.", "1": "The report names the documented command, its outcome, and any remaining gap by source area."}}
+      ],
+      "completionCriteria": ["Tests cover date selection, ordering, and capacity rejection with source-grounded assertions.", "Existing validation and serialization behavior is preserved or its gap is reported.", "The documented Python baseline passes and the report names outcomes."],
+      "criticalErrors": ["Including requests from a different route date in the plan.", "Reversing priority-depot ordering or accepting capacity overflow.", "Changing validation semantics solely to satisfy a test."],
+      "baselineChecks": [{"cwd": "fixture", "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=workers/route-planner/src python3 -m unittest discover -s workers/route-planner/tests -v"}]
+    }
+  ]
+}

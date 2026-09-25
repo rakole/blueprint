@@ -23,7 +23,7 @@ import {
   fixtureRoot
 } from "../scripts/portable-map-pilot.mjs";
 
-const heldOutPath = path.join(fixtureRoot, "evaluation", "held-out-queries.json");
+const developmentQueriesPath = path.join(fixtureRoot, "evaluation", "development-queries.json");
 const developmentPath = path.join(fixtureRoot, "evaluation", "development-probes.json");
 
 async function exists(filePath: string): Promise<boolean> {
@@ -127,9 +127,9 @@ test("portable links and pages satisfy the bounded transfer contract", async (t)
   assert.equal(manifest.structuralCoverage.filesWithFileCoverage, 1);
 });
 
-test("lexical baseline and map navigation record deterministic fixture checks", async (t) => {
+test("development query dataset records deterministic fixture checks", async (t) => {
   const root = await makeMaterialized(t);
-  const queries = JSON.parse(await readFile(heldOutPath, "utf8")).queries;
+  const queries = JSON.parse(await readFile(developmentQueriesPath, "utf8")).queries;
   const report = await runPilotReport(root, queries);
   const secondReport = await runPilotReport(root, queries);
   assert.deepEqual(report, secondReport);
@@ -185,7 +185,7 @@ test("lexical baseline and map navigation record deterministic fixture checks", 
   assert.ok(ambiguous.portableMap.searchBytesRead > 0);
   assert.equal(ambiguous.portableMap.sourceBytesRead, 556 + 98);
   const changedGold = {
-    ...JSON.parse(JSON.stringify(JSON.parse(await readFile(heldOutPath, "utf8")).queries.find((candidate: {id: string}) => candidate.id === "ambiguous-checkout-receipt"))),
+    ...JSON.parse(JSON.stringify(JSON.parse(await readFile(developmentQueriesPath, "utf8")).queries.find((candidate: {id: string}) => candidate.id === "ambiguous-checkout-receipt"))),
     gold: {paths: ["src/checkout/cart.ts"], range: [9, 18]},
     evidence: {required: [{path: "src/checkout/cart.ts", role: "direct source"}]}
   };
@@ -240,7 +240,7 @@ test("freshness drift selects the documented stale-map fallback", async (t) => {
   assert.equal(freshness.status, "stale");
   assert.deepEqual(freshness.stalePaths, ["src/checkout/cart.ts"]);
 
-  const query = JSON.parse(await readFile(heldOutPath, "utf8")).queries.find(
+  const query = JSON.parse(await readFile(developmentQueriesPath, "utf8")).queries.find(
     (candidate: {id: string}) => candidate.id === "stale-old-checkout"
   );
   const navigation = await navigatePortableMap(root, query);
@@ -326,7 +326,7 @@ test("deleted and unreadable sources produce bounded freshness statuses", async 
 
 test("known targets and malformed maps fall back without reading outside the roots", async (t) => {
   const root = await makeMaterialized(t);
-  const knownQuery = JSON.parse(await readFile(heldOutPath, "utf8")).queries.find(
+  const knownQuery = JSON.parse(await readFile(developmentQueriesPath, "utf8")).queries.find(
     (candidate: {id: string}) => candidate.id === "known-cart-path"
   );
   await rm(path.join(root, "src", "checkout", "cart.ts"));
@@ -397,9 +397,9 @@ test("known targets and malformed maps fall back without reading outside the roo
   assert.equal(symlinkResult.fallbackReason, "malformed-map");
 });
 
-test("baseline results expose ordered actions, useful evidence, bytes, and task mode", async (t) => {
+test("development query baseline results expose ordered actions, useful evidence, bytes, and task mode", async (t) => {
   const root = await makeMaterialized(t);
-  const queries = JSON.parse(await readFile(heldOutPath, "utf8")).queries;
+  const queries = JSON.parse(await readFile(developmentQueriesPath, "utf8")).queries;
   const result = await runLexicalBaseline(root, queries[0]);
   assert.equal(result.label, "fixture-checks-only");
   assert.equal(result.knownTarget, true);
