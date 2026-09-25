@@ -1,0 +1,7 @@
+# symbols search
+
+symbol | DeliveryApplicationServiceTest.expectDomain | tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java | kind: method | source: tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java:93-100 | record: ../records/p-4a4cdbb10e32-009.md#symbol-sym-efce63ebc906769d0b87162af6263b45
+symbol | DeliveryApplicationServiceTest.rejectsOversizedParcelWhenNoLockerFits | tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java | kind: method | source: tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java:68-78 | record: ../records/p-4a4cdbb10e32-009.md#symbol-sym-fe4b30924a4a39ad8c39b5d98272e4e7
+symbol | MainSmokeTest.main | tests/com/blueprint/fixture/lockers/MainSmokeTest.java | kind: method | source: tests/com/blueprint/fixture/lockers/MainSmokeTest.java:7-17 | record: ../records/p-4a4cdbb10e32-007.md#symbol-sym-04776b3042fe27feb9c2b4a1797899e5
+symbol | MainSmokeTest | tests/com/blueprint/fixture/lockers/MainSmokeTest.java | kind: class | source: tests/com/blueprint/fixture/lockers/MainSmokeTest.java:6-18 | record: ../records/p-4a4cdbb10e32-007.md#symbol-sym-5e41072a2c101049ea3f06c31b2958fd
+symbol | com.blueprint.fixture.lockers | tests/com/blueprint/fixture/lockers/MainSmokeTest.java | kind: module | source: tests/com/blueprint/fixture/lockers/MainSmokeTest.java:1 | record: ../records/p-4a4cdbb10e32-008.md#symbol-sym-7c98ee5800398ac006e38bfe4ae3f59b

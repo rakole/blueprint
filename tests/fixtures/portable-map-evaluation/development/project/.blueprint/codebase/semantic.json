@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "apply-order-policy",
+      "name": "Apply order policy",
+      "aliases": ["order validation", "order rule"],
+      "summary": "Validates an order before the API returns it.",
+      "evidence": [
+        {"path": "src/order.ts", "range": [3, 5], "symbol": "applyOrderPolicy", "role": "required"},
+        {"path": "src/api.ts", "range": [3, 5], "symbol": "createOrder", "role": "supporting"},
+        {"path": "tests/order.test.ts", "range": [3, 6], "role": "supporting"}
+      ]
+    },
+    {
+      "id": "order-total",
+      "name": "Calculate order total",
+      "aliases": ["sum order items"],
+      "summary": "Adds item values for a new order.",
+      "evidence": [
+        {"path": "src/order.ts", "range": [7, 9], "symbol": "calculateOrderTotal", "role": "required"}
+      ]
+    }
+  ]
+}
