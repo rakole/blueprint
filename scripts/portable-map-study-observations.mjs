@@ -531,7 +531,7 @@ function sourceReadFromPair(call, result, options) {
 
 function visibleAssistantText(payload) {
   if (payload?.role !== "assistant" || payload?.type !== "message") return null;
-  if (payload.phase !== "final") return null;
+  if (!['final', 'final_answer'].includes(payload.phase)) return null;
   const blocks = extractTextBlocks(payload.content, { visibleOnly: true });
   if (blocks.length === 0 && typeof payload.text === "string") return payload.text;
   return blocks.length > 0 ? blocks.join("") : null;

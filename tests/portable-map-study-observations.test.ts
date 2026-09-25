@@ -131,6 +131,29 @@ test("extracts the real custom exec envelope, preserves ordered calls/results, a
   });
 });
 
+test("recognizes final_answer while rejecting commentary and unmarked assistant messages", async () => {
+  await withTemp(async (directory) => {
+    const rows = [
+      lineage(),
+      event("response_item", { type: "message", role: "assistant", phase: "commentary", content: [{ type: "output_text", text: "Working from src/commentary.ts:1" }] }, 1),
+      event("response_item", { type: "message", role: "assistant", content: [{ type: "output_text", text: "Unmarked src/unmarked.ts:1" }] }, 2),
+      event("response_item", { type: "message", role: "assistant", phase: "final_answer", content: [{ type: "output_text", text: "Finished src/final.ts:1" }] }, 3)
+    ];
+    const incompleteFile = await writeSession(directory, rows, "final-answer-incomplete.jsonl");
+    const incomplete = await extractObservedSession({ sessionFile: incompleteFile, parentId, agentPath });
+    assert.equal(incomplete.completionStatus, "incomplete");
+    assert.equal(incomplete.completionEvidence.explicitFinalMarker, true);
+    assert.equal(incomplete.assistantFinals.length, 1);
+    assert.deepEqual(incomplete.assistantFinals[0].evidenceRefs, ["src/final.ts"]);
+
+    const completeFile = await writeSession(directory, [...rows, event("event_msg", { type: "task_complete" }, 4)], "final-answer-complete.jsonl");
+    const complete = await extractObservedSession({ sessionFile: completeFile, parentId, agentPath });
+    assert.equal(complete.completionStatus, "completed");
+    assert.equal(complete.parseIssues.length, 0);
+    assert.equal(complete.assistantFinals.length, 1);
+  });
+});
+
 test("keeps missing, duplicate, decreasing, and truncated token metadata visible", async () => {
   await withTemp(async (directory) => {
     const rows = [

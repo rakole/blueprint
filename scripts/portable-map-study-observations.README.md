@@ -55,7 +55,7 @@ output. Snapshot content is never returned. The `retentionProxy` separates
 path-only citation overlap from verified range overlap and leaves unknown-read
 metrics unavailable.
 
-An explicit final assistant marker and task-complete event are both required for
+An explicit final assistant marker (`final` or `final_answer`) and task-complete event are both required for
 `completionStatus: "completed"`; malformed or incomplete sessions remain
 incomplete even when a completion event appears.
 
