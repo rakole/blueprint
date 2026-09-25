@@ -25,6 +25,12 @@ focused confirmation, creates or reuses the returned worktree and branch only
 after approval, records a PREPARED PlanRun through MCP-owned state, and later
 captures authorized implementation diffs into the patch registry.
 
+Plan-run preparation and diff capture are administrative control paths and do not
+require a map read. If later implementation work needs repository discovery, use
+the saved plan's `task.readFirst`, known live targets, and parent-supplied compact
+evidence first; consult a verified portable index only for unresolved discovery,
+with ordinary source fallback when it is absent or unusable.
+
 ## Runtime Call Rules
 
 - Call Blueprint MCP tools only through runtime FQNs such as

@@ -42,6 +42,16 @@ Blueprint's host-native boundaries:
 - repo doc edits stay narrowly scoped instead of becoming a broad rewrite pass
 - follow-up routing stays inside the implemented Blueprint surface
 
+Use named documentation targets and known source files directly. For unresolved
+repository responsibilities or related tests, consult a verified portable
+`.blueprint/codebase/INDEX.md` through its generated `ENTRY.md` routes and select
+only relevant evidence. A broad refresh requires a valid saved mapping bundle:
+either the portable INDEX plus selected ENTRY route or the legacy compatibility
+bundle; absence or unusability stops and routes to `/blu-map-codebase`. A narrow
+named-doc request may use the existing bounded source and saved-artifact path;
+docs update never regenerates a map or automatically loads all seven
+compatibility views to enrich a valid portable map.
+
 ## Runtime Inputs
 
 Command-specific inputs are resolved from the structured `input_bundles`
@@ -91,8 +101,10 @@ artifacts, and optional docs agents when the command contract allows them.
    drafting or verification, report persistence, and routing stay visible
    without becoming persistence.
 5. Keep broad repo-doc refreshes confirmation-gated and blocked until the repo
-   has enough saved evidence, especially the `.blueprint/codebase/` bundle from
-   `/blu-map-codebase`.
+   has a valid saved mapping bundle. A verified portable INDEX plus selected
+   ENTRY route or a valid legacy compatibility bundle satisfies this gate; if
+   the mapping is absent or unusable, stop and route to `/blu-map-codebase`.
+   Genuinely narrow named-doc requests may use bounded source evidence.
 6. Treat the selected repo docs, source files, tests, and saved Blueprint
    artifacts as repo truth. Use external web tools only when the user
    explicitly asked for outside verification or the documentation claim depends

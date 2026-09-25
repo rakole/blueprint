@@ -63,8 +63,11 @@ failure, route-refresh failure, and completion.
   `XX-CONTEXT.md` and `XX-RESEARCH.md` bodies through
   `mcp_blueprint_blueprint_phase_artifact_read` before drafting only when the
   active branch actually needs that evidence. Ground real UI-contract drafts in
-  those artifacts, `.blueprint/codebase/*`, roadmap intent, and requirements
-  before asking new questions.
+  those artifacts, prepared codebase/navigation evidence, selected live source
+  or test files, roadmap intent, and requirements before asking new questions.
+  If repository discovery remains unresolved, follow only selected routes from a
+  verified portable `INDEX.md`/`ENTRY.md`; absent or unusable maps use ordinary
+  bounded source search.
 
 ### Decide
 

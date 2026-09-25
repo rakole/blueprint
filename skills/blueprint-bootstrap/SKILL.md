@@ -16,6 +16,14 @@ Start with `mcp_blueprint_blueprint_project_prepare`; it returns readiness, conf
 repo summary and the small authoring schema. Do not separately fetch artifact
 contracts, config or status when prepare already supplied them.
 
+When a brownfield brief needs repository understanding, reuse the prepare packet
+and any known live targets first. If discovery is still unresolved, consult a
+verified `.blueprint/codebase/INDEX.md` and follow its generated `ENTRY.md`
+navigation to selected evidence only. Missing, unsupported, stale, or malformed
+portable maps fall back to ordinary source discovery or existing summaries; this
+skill never regenerates a map. Greenfield bootstrap and readiness or routing
+decisions do not require a map read.
+
 First run must ask a clarifying question and wait for the user, even when there is
 no `.blueprint/config.json`. Only explicit `--auto` enables automatic synthesis.
 The hardcoded config defaults are `mode: "interactive"` and `workflow.auto_advance: false`.

@@ -42,6 +42,13 @@ input_bundles:
 Orchestrate Blueprint's review-family commands so durable review artifacts are
 phase-scoped, evidence-backed, and persisted only through MCP tools.
 
+Review known scope files and saved execution evidence directly, reusing compact
+parent packets before further navigation. When unresolved code understanding is
+needed, consult a verified portable `.blueprint/codebase/INDEX.md` through its
+generated `ENTRY.md` routes and selected pages only. Missing, unknown, stale,
+unsupported, or malformed maps use ordinary source discovery; review routing,
+artifact persistence, and fix administration do not regenerate or require a map.
+
 ## Runtime Call Rules
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.

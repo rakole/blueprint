@@ -27,6 +27,14 @@ Use optional XX-SPEC.md when present; treat missing XX-SPEC.md as nonblocking.
 Consume saved research instead of browsing. Read supplied evidence bodies when
 summaries are insufficient, registering additional evidence through prepare.
 
+Prefer `task.readFirst`, known live files, and compact parent evidence when they
+already resolve the planning question. If repository discovery remains unresolved,
+use prepare's optional `portableSelections` and `evidenceDelivery` controls to
+request only relevant portable evidence; a verified portable map does not imply
+loading the seven compatibility views. Absent, unknown, unsupported, stale, or
+malformed maps keep the existing bounded source or legacy-summary path. MCP owns
+pin and revision metadata; do not supply private receipts or prior session state.
+
 The parent owns user gates, persistence and acceptance. Draft ordinary phases
 inline; use blueprint-planner for bounded decomposition when useful. Give agents
 the schema/example, evidence, constraints and complete model for review. Agents

@@ -152,16 +152,42 @@ search-only agents are not substitutes for repository code analysis.
 
 ## Portable transfer and consumption
 
-The supported transfer unit is `INDEX.md` plus the referenced complete immutable
-generation, preserving relative paths. Root seven compatibility views are optional
-for portable-only consumers. Exclude sessions, receipts, operation directories,
-HMAC keys, rejected diagnostics, and other hidden runtime state. A generic reader
-uses ordinary file read/search: reuse an active index when repository understanding
-is needed, select the smallest capability route or search literal paths/symbols,
-and verify selected claims against current live source. Treat the map as generated
-from a baseline with the current tree unverified; a static index cannot detect new
-files itself. Consumption never regenerates the map and map reads are not mandatory
-for administrative commands.
+The supported transfer unit is the root `INDEX.md` plus exactly the complete
+immutable generation named by its descriptor. The descriptor is the single
+machine-readable comment in `.blueprint/codebase/INDEX.md`; for generation
+`<generation-id>` it names
+`.blueprint/codebase/generations/<generation-id>/manifest.json` and
+`.blueprint/codebase/generations/<generation-id>/ENTRY.md`. Preserve those
+repository-relative paths and copy the entire
+`.blueprint/codebase/generations/<generation-id>/` directory, including every
+manifest-listed page, data shard, and compatibility copy. Do not flatten the
+generation or copy only the pages that a current task happens to use.
+
+For a deliberate repository transfer:
+
+1. Copy `.blueprint/codebase/INDEX.md` and the complete referenced
+   `generations/<generation-id>/` subtree into the destination repository under
+   the same `.blueprint/codebase/` path.
+2. Copy the small ordinary instruction pointer into an existing root instruction
+   file when the project chooses to advertise the map. The pointer is the managed
+   block whose body says to read `.blueprint/codebase/INDEX.md` when locating code,
+   responsibilities, constraints, or related tests. Keep the rest of that file
+   byte-for-byte unchanged; no instruction file is created automatically.
+3. Optionally include the seven root compatibility views for consumers that still
+   use those views. They are not part of the portable-only minimum and are not an
+   independent authority once `INDEX.md` is active.
+
+Do not transfer sessions, receipts, operation directories, journals, rejected
+diagnostics, HMAC keys or other authority material, or unrelated `.blueprint`
+state. No export service, custom consumer runtime, ignore-rule change, or staging
+mutation is needed. A generic reader uses ordinary file read/search: reuse an
+active index when repository understanding is needed, select the smallest
+capability route or search literal paths/symbols, and verify selected claims
+against current live source. Treat the map as generated from a baseline with the
+current tree unverified; a static index cannot detect new files itself.
+Consumption never regenerates the map and map reads are not mandatory for
+administrative commands. This transfer procedure makes no token, latency, quality,
+or hosted-agent performance claim.
 
 The generated `INDEX.md` and its immutable generation `ENTRY.md` carry the same
 navigation protocol:

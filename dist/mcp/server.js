@@ -38282,20 +38282,6 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase, options = {}
     }
   };
 }
-async function readPortablePhaseState(projectRoot) {
-  const state = await loadBlueprintState(projectRoot);
-  return {
-    state,
-    blockers: state.blockers,
-    derivedStatus: {
-      projectStatus: state.projectStatus,
-      currentPhase: state.currentPhase || null,
-      nextAction: state.nextAction,
-      hasBlockers: state.blockers.length > 0,
-      milestoneAudit: {}
-    }
-  };
-}
 async function readMappedCodebaseContext(projectRoot) {
   const portable = await resolvePortableProviderEvidence({ root: projectRoot });
   if (portable.status === "ok") {
@@ -38543,7 +38529,7 @@ async function buildPhaseContext(projectRoot, args = {}, options = {}) {
   const codebase = options.codebase ?? await readMappedCodebaseContext(projectRoot);
   const [roadmapResult, state, rawState, config2] = await Promise.all([
     roadmapResultPromise,
-    codebase.portable ? readPortablePhaseState(projectRoot) : blueprintStateLoad({ cwd: projectRoot }),
+    blueprintStateLoad({ cwd: projectRoot }),
     loadBlueprintState(projectRoot),
     blueprintConfigGet({
       cwd: projectRoot,

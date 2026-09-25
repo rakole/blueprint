@@ -27,11 +27,19 @@ before setting `overwrite: true`.
 
 Investigate questions that could change implementation. Read shared evidence once. Stop when evidence supports
 a decision or identifies a blocker. Start with supplied codebase/navigation
-summaries, scoped file/symbol search, then relevant code, tests, config and contracts.
-Confirm stale summaries against live code. Register relevant repo source paths with
-prepare's `evidencePaths` before drafting; preserve revision guards. Do not invent
-hashes, tests, semantic navigation or coverage. Explain search limits only when they
-affect confidence.
+evidence, parent packets, and known live targets, then use scoped file/symbol
+search and relevant code, tests, config and contracts. When discovery remains
+unresolved, use prepare's optional `portableSelections` and `evidenceDelivery`
+controls for selected portable pages or source ranges; a valid portable map does
+not imply broad compatibility-view reads. Confirm prepared navigation evidence
+against live code. Register relied-on repo source paths with prepare's
+`evidencePaths` before drafting; preserve revision guards. Do not invent hashes,
+tests, semantic navigation, caller-supplied receipts, or prior state. Explain
+search limits only when they affect confidence.
+Use `full` for initial/unbound bodies, `delta` only for new or changed bodies
+relative to accepted delivery, and `register` only for an already-bound same
+hash or a hash computed from bytes read now. Without that proof, reread or
+request a bounded MCP excerpt; never treat an unknown earlier read as fresh.
 
 Tie recommendations and dependency/tool choices to requirements and spec constraints;
 retain spec path and requirement labels in the planning handoff. Include affected

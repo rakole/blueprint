@@ -56,6 +56,13 @@ host-native boundaries:
 - diagnose-only runs stay distinct from fix attempts
 - routing stays inside the implemented Blueprint surface
 
+For repository discovery, start with the issue's known files, live targets, and
+parent evidence. Consult a verified `.blueprint/codebase/INDEX.md` and its
+generated `ENTRY.md` routes only when the target remains unresolved; select only
+the needed evidence. Missing, unknown, stale, unsupported, or malformed maps use
+ordinary bounded search, with no automatic regeneration or automatic loading of
+all seven compatibility views to enrich a valid portable map.
+
 ## Local Runtime Inputs
 
 `/blu-debug` resolves active runtime inputs from the structured

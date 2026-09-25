@@ -21,12 +21,20 @@ Use optional XX-SPEC.md when present; treat missing XX-SPEC.md as nonblocking.
 Required missing/stale research routes to `/blu-research-phase`. Use saved research;
 planning performs no live browsing. Disabled gates are explicit skips.
 
-Resolve missing essential intent before generation. Read truncated evidence when
-needed and register additional relied-on paths through prepare. Changed evidence
-must be acknowledged and reconciled against affected decisions. Follow returned
-paths and safe actions. Give a short Planning Investigation Trace: phase goal,
+Resolve missing essential intent before generation. Prefer `task.readFirst`, known
+live targets, and compact parent evidence. When repository discovery remains
+unresolved, use prepare's optional `portableSelections` and `evidenceDelivery`
+controls for selected portable evidence, without automatically loading all seven
+compatibility views to enrich a valid portable map. Missing or unusable maps keep the existing bounded source path. Read
+truncated evidence when needed and register additional relied-on paths through
+prepare. Changed evidence must be acknowledged and reconciled against affected
+decisions. Follow returned paths and safe actions. Give a short Planning Investigation Trace: phase goal,
 locked constraints, evidence gaps, anticipated split and highest-risk decision.
 Keep material assumptions in the model rather than a separate planning report.
+Use `full` for initial/unbound bodies, `delta` only for new or changed bodies
+relative to accepted delivery, and `register` only for an already-bound same
+hash or a hash computed from bytes read now. Without that proof, reread or
+request a bounded MCP excerpt; never treat an unknown earlier read as fresh.
 
 ## Author And Review
 

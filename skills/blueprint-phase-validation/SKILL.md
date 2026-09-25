@@ -45,6 +45,13 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - persistent writes remain phase-scoped inside `.blueprint/`
 - follow-up routing stays inside the implemented Blueprint surface
 
+Validation remains saved-summary-first. For a missing source, test, or config
+detail, use known live targets and compact parent evidence before consulting a
+verified portable `.blueprint/codebase/INDEX.md`; follow its generated `ENTRY.md`
+routes only to selected evidence. Missing or unusable maps use ordinary bounded
+source discovery, and validation routing or artifact administration does not
+require map reads or regeneration.
+
 ## Shared Visibility Contract
 
 - Execution profile for `validate-phase`, `verify-work`, and the long-running parts of `add-tests`: `long-running-mutation`

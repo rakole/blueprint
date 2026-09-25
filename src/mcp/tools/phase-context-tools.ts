@@ -263,30 +263,6 @@ async function readPhaseContextGrounding(
   };
 }
 
-/**
- * Portable map consumers cannot route through the broad artifact inspection
- * performed by blueprintStateLoad: that inspection reads the seven legacy
- * codebase compatibility views. STATE.md is sufficient for phase context's
- * grounding fields when the caller has already supplied compact portable map
- * context.
- */
-async function readPortablePhaseState(
-  projectRoot: string,
-): Promise<Awaited<ReturnType<typeof blueprintStateLoad>>> {
-  const state = await loadBlueprintState(projectRoot);
-  return {
-    state,
-    blockers: state.blockers,
-    derivedStatus: {
-      projectStatus: state.projectStatus,
-      currentPhase: state.currentPhase || null,
-      nextAction: state.nextAction,
-      hasBlockers: state.blockers.length > 0,
-      milestoneAudit: {} as Awaited<ReturnType<typeof blueprintStateLoad>>["derivedStatus"]["milestoneAudit"],
-    },
-  } as Awaited<ReturnType<typeof blueprintStateLoad>>;
-}
-
 async function readMappedCodebaseContext(
   projectRoot: string
 ): Promise<PhaseContextResult["codebase"]> {
@@ -636,9 +612,7 @@ export async function buildPhaseContext(
   const codebase = options.codebase ?? await readMappedCodebaseContext(projectRoot);
   const [roadmapResult, state, rawState, config] = await Promise.all([
     roadmapResultPromise,
-    codebase.portable
-      ? readPortablePhaseState(projectRoot)
-      : blueprintStateLoad({ cwd: projectRoot }),
+    blueprintStateLoad({ cwd: projectRoot }),
     loadBlueprintState(projectRoot),
     blueprintConfigGet({
       cwd: projectRoot,

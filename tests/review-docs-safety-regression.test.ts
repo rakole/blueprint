@@ -246,7 +246,15 @@ test("docs contracts keep repo truth authoritative and external verification opt
   );
   assert.match(
     docsUpdate,
-    /If a broad refresh lacks the saved codebase mapping bundle, stop and route to\s+`\/blu-map-codebase`/i
+    /a verified\s+portable `\.blueprint\/codebase\/INDEX\.md` with its selected `ENTRY\.md` route\s+satisfies the saved codebase mapping requirement/i
+  );
+  assert.match(
+    docsUpdate,
+    /if it is missing or\s+unusable, stop and route to `\/blu-map-codebase`/i
+  );
+  assert.match(
+    docsUpdate,
+    /A genuinely narrow named-doc\s+request may use bounded source and saved artifact evidence without a map/i
   );
 
   const docsSkill = files["skills/blueprint-docs/SKILL.md"];

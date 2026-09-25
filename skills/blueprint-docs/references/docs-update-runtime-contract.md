@@ -17,8 +17,12 @@ write scope is intentionally narrow.
 - Treat broad repo-wide or multi-directory documentation refreshes as
   confirmation-gated unless the user already approved that breadth or passed
   `--force`.
-- If a broad refresh lacks the saved codebase mapping bundle, stop and route to
-  `/blu-map-codebase` so the docs pass stays evidence-backed.
+- For unresolved repository understanding during a broad refresh, a verified
+  portable `.blueprint/codebase/INDEX.md` with its selected `ENTRY.md` route
+  satisfies the saved codebase mapping requirement. Otherwise, require the
+  existing valid saved mapping bundle before proceeding; if it is missing or
+  unusable, stop and route to `/blu-map-codebase`. A genuinely narrow named-doc
+  request may use bounded source and saved artifact evidence without a map.
 
 ## Evidence Truth
 

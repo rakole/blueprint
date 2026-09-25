@@ -13,6 +13,7 @@ import {blueprintPhaseContext} from "../src/mcp/tools/phase-context-tools.js";
 import {blueprintDiscussPrepare, blueprintDiscussRead} from "../src/mcp/tools/discuss.js";
 import {blueprintResearchPrepare} from "../src/mcp/tools/research.js";
 import {blueprintPlanPrepare} from "../src/mcp/tools/plan.js";
+import {blueprintStateLoad} from "../src/mcp/tools/state.js";
 import {
   countPublicString,
   createProviderFixture,
@@ -107,6 +108,24 @@ test("phase context delivers one compact portable ENTRY without compatibility di
     assert.equal(result.codebase.portable?.entry.content, entry);
   } finally {
     await state.cleanup();
+  }
+});
+
+test("phase context preserves partial-state blockers for portable-only and compatibility layouts", async () => {
+  for (const portableOnly of [true, false]) {
+    const state = await createProviderFixture({portableOnly});
+    try {
+      await fs.writeFile(path.join(state.root, ".blueprint", "ROADMAP.md"), "# malformed roadmap\n", "utf8");
+      await fs.rm(path.join(state.root, ".blueprint", "STATE.md"), {force: true});
+      const expected: any = await blueprintStateLoad({cwd: state.root});
+      const context: any = await blueprintPhaseContext({cwd: state.root, phase: 1});
+      assert.equal(context.workflowPosture.projectStatus, expected.derivedStatus.projectStatus, `${portableOnly ? "portable-only" : "compatibility"} status`);
+      assert.equal(context.workflowPosture.nextAction, expected.derivedStatus.nextAction, `${portableOnly ? "portable-only" : "compatibility"} next action`);
+      assert.deepEqual(context.workflowPosture.blockers, expected.blockers, `${portableOnly ? "portable-only" : "compatibility"} blockers`);
+      assert.equal(context.workflowPosture.activeCommand, expected.state.activeCommand);
+    } finally {
+      await state.cleanup();
+    }
   }
 });
 

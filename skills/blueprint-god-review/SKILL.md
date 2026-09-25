@@ -15,6 +15,13 @@ Hold the private god-review orchestration for `/blu-code-review` and
 `/blu-code-review-fix` so the public review skill and public command manifests
 stay free of hidden control flow.
 
+After the activation guard passes, use the returned selected files, known live
+targets, and parent evidence first. Consult a verified portable index only for
+unresolved code understanding, following its generated `ENTRY.md` routes to
+selected evidence; missing or unusable maps fall back to bounded source reads.
+The hidden routing and persistence control path does not require map navigation
+or regeneration.
+
 ## Runtime Call Rules
 
 - Hidden God-Review Activation Guard: before any MCP call, repo read, file

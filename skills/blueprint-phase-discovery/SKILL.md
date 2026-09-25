@@ -46,6 +46,15 @@ files, installed extensions, or host-global state. Phase context belongs only to
 `/blu-discuss-phase`; research, UI and planning read it and route back for repair.
 Blueprint never creates or repairs repo-root `CONTEXT.md`.
 
+For repository understanding, reuse the parent packet and known live targets
+before navigating. When unresolved discovery benefits from a portable map, read
+`.blueprint/codebase/INDEX.md` and follow its generated `ENTRY.md` routes to the
+smallest selected evidence. A missing, unknown, unsupported, stale, or malformed
+map keeps the existing bounded source or legacy-summary path; discovery never
+regenerates it, and phase routing or artifact administration does not require a
+map read. The generated `INDEX.md`/`ENTRY.md` pair owns the complete navigation
+protocol; this skill provides only the conditional pointer.
+
 For discuss, prepare supplies schema and grounded defaults. Resolve missing
 essentials, save resumable notes only with record, then generate once and pass
 model directly to finalize. Generated or rejected documents are not stored.
