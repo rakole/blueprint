@@ -1,0 +1,9 @@
+[policy]
+max_open_days = 30
+critical_requires_resolution = true
+standard_due_days = 180
+
+[policy.category_due_days]
+crane = 90
+vehicle = 120
+warehouse = 180

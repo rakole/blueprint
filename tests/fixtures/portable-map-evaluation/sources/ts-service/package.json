@@ -1,0 +1,9 @@
+{
+  "name": "tool-library-reservation-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "typecheck": "../../../../../node_modules/.bin/tsc -p tsconfig.json --noEmit"
+  }
+}
