@@ -522,23 +522,33 @@ function jsonPages(
   const manifests: PortableGenerationManifest["inventoryShards"] = [];
   const chunks: AnyRecord[][] = [];
   let chunk: AnyRecord[] = [];
-  let bytes = 0;
+  const shard = (items: readonly AnyRecord[], ordinal: number) => {
+    const shardId = `inv-${sourceShardId}-${kind}-${String(ordinal + 1).padStart(3, "0")}`;
+    const relativePath = `generations/${generationId}/data/${shardId}.json`;
+    const body = `${JSON.stringify({generationId, shardId, recordKind: kind, records: items})}\n`;
+    return {shardId, relativePath, body};
+  };
   for (const record of records) {
-    const single = byteLength(JSON.stringify(record));
-    if (chunk.length > 0 && bytes + single + 128 > PORTABLE_MAP_BYTE_LIMITS.intermediateRoute) {
+    const candidate = [...chunk, record];
+    if (byteLength(shard(candidate, chunks.length).body) <= PORTABLE_MAP_BYTE_LIMITS.intermediateRoute) {
+      chunk = candidate;
+      continue;
+    }
+    if (chunk.length > 0) {
       chunks.push(chunk);
       chunk = [];
-      bytes = 0;
     }
-    chunk.push(record);
-    bytes += single + 1;
+    if (byteLength(shard([record], chunks.length).body) > PORTABLE_MAP_BYTE_LIMITS.intermediateRoute) {
+      // Do not emit an oversized page or truncate a record. The bounded
+      // diagnostic makes the whole render fail safely below.
+      diagnostics.push(diagnostic("page-too-large", "page", "A structured inventory record cannot fit within its fixed UTF-8 byte limit.", "data"));
+      continue;
+    }
+    chunk = [record];
   }
   if (chunk.length > 0) chunks.push(chunk);
   chunks.forEach((items, index) => {
-    const shardId = `inv-${sourceShardId}-${kind}-${String(index + 1).padStart(3, "0")}`;
-    const relativePath = `generations/${generationId}/data/${shardId}.json`;
-    const body = `${JSON.stringify({generationId, shardId, recordKind: kind, records: items})}\n`;
-    if (byteLength(body) > PORTABLE_MAP_BYTE_LIMITS.intermediateRoute) diagnostics.push(diagnostic("page-too-large", "page", "A structured inventory shard exceeds its fixed UTF-8 byte limit.", "data"));
+    const {shardId, relativePath, body} = shard(items, index);
     pages.set(relativePath, body);
     manifests.push({shardId, path: relativePath, recordKind: kind, recordCount: items.length, byteSize: byteLength(body), checksum: hashText(body)});
   });

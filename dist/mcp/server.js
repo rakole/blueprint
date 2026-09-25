@@ -27625,24 +27625,32 @@ function jsonPages(records, kind, generationId, sourceShardId, diagnostics) {
   const manifests = [];
   const chunks = [];
   let chunk = [];
-  let bytes = 0;
-  for (const record2 of records) {
-    const single = byteLength(JSON.stringify(record2));
-    if (chunk.length > 0 && bytes + single + 128 > PORTABLE_MAP_BYTE_LIMITS.intermediateRoute) {
-      chunks.push(chunk);
-      chunk = [];
-      bytes = 0;
-    }
-    chunk.push(record2);
-    bytes += single + 1;
-  }
-  if (chunk.length > 0) chunks.push(chunk);
-  chunks.forEach((items, index) => {
-    const shardId = `inv-${sourceShardId}-${kind}-${String(index + 1).padStart(3, "0")}`;
+  const shard = (items, ordinal) => {
+    const shardId = `inv-${sourceShardId}-${kind}-${String(ordinal + 1).padStart(3, "0")}`;
     const relativePath = `generations/${generationId}/data/${shardId}.json`;
     const body = `${JSON.stringify({ generationId, shardId, recordKind: kind, records: items })}
 `;
-    if (byteLength(body) > PORTABLE_MAP_BYTE_LIMITS.intermediateRoute) diagnostics.push(diagnostic("page-too-large", "page", "A structured inventory shard exceeds its fixed UTF-8 byte limit.", "data"));
+    return { shardId, relativePath, body };
+  };
+  for (const record2 of records) {
+    const candidate = [...chunk, record2];
+    if (byteLength(shard(candidate, chunks.length).body) <= PORTABLE_MAP_BYTE_LIMITS.intermediateRoute) {
+      chunk = candidate;
+      continue;
+    }
+    if (chunk.length > 0) {
+      chunks.push(chunk);
+      chunk = [];
+    }
+    if (byteLength(shard([record2], chunks.length).body) > PORTABLE_MAP_BYTE_LIMITS.intermediateRoute) {
+      diagnostics.push(diagnostic("page-too-large", "page", "A structured inventory record cannot fit within its fixed UTF-8 byte limit.", "data"));
+      continue;
+    }
+    chunk = [record2];
+  }
+  if (chunk.length > 0) chunks.push(chunk);
+  chunks.forEach((items, index) => {
+    const { shardId, relativePath, body } = shard(items, index);
     pages.set(relativePath, body);
     manifests.push({ shardId, path: relativePath, recordKind: kind, recordCount: items.length, byteSize: byteLength(body), checksum: hashText(body) });
   });

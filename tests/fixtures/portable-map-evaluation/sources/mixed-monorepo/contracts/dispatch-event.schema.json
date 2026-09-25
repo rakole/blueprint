@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MarketRoute dispatch event",
+  "type": "object",
+  "required": ["eventType", "dispatchId", "boxId", "depotCode", "routeDate", "status"],
+  "properties": {
+    "eventType": {"const": "dispatch.assigned"},
+    "dispatchId": {"type": "string", "minLength": 1},
+    "boxId": {"type": "string", "minLength": 1},
+    "depotCode": {"type": "string", "minLength": 1},
+    "routeDate": {"type": "string", "format": "date"},
+    "status": {"enum": ["ASSIGNED", "READY", "COLLECTED"]}
+  },
+  "additionalProperties": false
+}

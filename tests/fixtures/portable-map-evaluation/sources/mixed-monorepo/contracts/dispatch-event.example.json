@@ -1,0 +1,8 @@
+{
+  "eventType": "dispatch.assigned",
+  "dispatchId": "dispatch-1042",
+  "boxId": "box-2207",
+  "depotCode": "NORTH-01",
+  "routeDate": "2026-09-25",
+  "status": "ASSIGNED"
+}

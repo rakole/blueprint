@@ -1,0 +1,9 @@
+{
+  "name": "marketroute-dispatch-console",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "typecheck": "../../../../../../../node_modules/.bin/tsc -p tsconfig.json --noEmit"
+  }
+}

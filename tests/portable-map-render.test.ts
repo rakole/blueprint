@@ -330,6 +330,56 @@ test("allocates forward structural locations before rendering paginated records"
   assert.match(new TextDecoder().decode(relationPage![1]), /target symbol: .*#symbol-symbol_99/u);
 });
 
+test("packs structured inventory shards by exact UTF-8 envelope bytes", () => {
+  const input = fixture();
+  const generationId = `gen-2026-09-25-${"a".repeat(110)}`;
+  input.shards[0]!.generationId = generationId;
+  input.model.generationId = generationId;
+  input.basis.generationId = generationId;
+  const relationships = Array.from({length: 80}, (_, index) => ({
+    id: `relationship_${String(index).padStart(3, "0")}_${"r".repeat(35)}`,
+    kind: "references" as const,
+    sourceFileId: "file_main",
+    sourceSymbolId: "symbol_00",
+    sourcePath,
+    coordinate: {start: {line: 1, column: 0, byte: 0}, end: {line: 1, column: 120, byte: 120}},
+    contentHash: "a".repeat(64),
+    resolutionStatus: "resolved" as const,
+    targetFileId: "file_main",
+    targetSymbolId: "symbol_00",
+    origin: "syntax" as const,
+    certainty: "observed" as const
+  }));
+  input.shards[0]!.relationships.push(...relationships);
+  input.basis.records.push(...relationships.map(relationship => ({kind: "relationship" as const, recordId: relationship.id, path: relationship.sourcePath, contentHash: relationship.contentHash, coordinate: relationship.coordinate})));
+  const oldHeuristicBytes = 17 * Buffer.byteLength(JSON.stringify(relationships[0]), "utf8") + 16 + 128;
+  const oldHeuristicBody = `${JSON.stringify({generationId, shardId: "inv-all-relationships-001", recordKind: "relationships", records: relationships.slice(0, 17)})}\n`;
+  assert.ok(oldHeuristicBytes <= 8192);
+  assert.ok(Buffer.byteLength(oldHeuristicBody, "utf8") > 8192);
+  const validated = validatePortableMapModel(input.shards, input.model, input.basis);
+  assert.equal(validated.ok, true, validated.ok ? undefined : JSON.stringify(validated.diagnostics));
+  if (!validated.ok) return;
+  const result = renderPortableMap(validated.data, {
+    generationId,
+    generatedAt: "2026-09-24T10:00:00+00:00",
+    gitCommit: null,
+    inventoryFingerprint: "a".repeat(64),
+    parserAssets: []
+  });
+  assert.equal(result.ok, true, result.ok ? undefined : JSON.stringify(result.diagnostics));
+  if (!result.ok) return;
+  const relationshipPages = Object.entries(result.files)
+    .filter(([filePath]) => filePath.includes(`/data/inv-all-relationships-`) && filePath.endsWith(".json"));
+  const inventoryPages = Object.entries(result.files)
+    .filter(([filePath]) => filePath.includes("/data/inv-") && filePath.endsWith(".json"));
+  assert.ok(relationshipPages.length > 1);
+  assert.ok(inventoryPages.every(([, bytes]) => bytes.byteLength <= 8192));
+  assert.ok(relationshipPages.every(([, bytes]) => bytes.byteLength <= 8192));
+  const emitted = relationshipPages.flatMap(([, bytes]) => (JSON.parse(new TextDecoder().decode(bytes)) as {records: typeof relationships}).records);
+  assert.deepEqual(emitted, relationships);
+  assert.equal(new Set(emitted.map(record => record.id)).size, relationships.length);
+});
+
 test("uses path-prefix and range labels for high-fanout record routes", () => {
   const input = fixture();
   for (let index = 36; index < 520; index += 1) {
