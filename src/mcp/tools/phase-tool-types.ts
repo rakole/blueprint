@@ -42,6 +42,9 @@ import type {
   PhaseValidationDiagnosticCounts,
   PhaseValidationModelDiagnostic
 } from "./phase-validation-diagnostics.js";
+import type {
+  PortableProviderEvidenceSuccess
+} from "../codebase-index/provider-evidence.js";
 
 export type RoadmapReadArgs = {
   cwd?: string;
@@ -566,10 +569,22 @@ export type PhaseContextResult = {
       summary: string;
     }>;
     warnings: string[];
+    /** Compact portable navigation entry; source bodies are delivered once. */
+    portable?: {
+      status: "ok";
+      generationId: string;
+      entry: PortableProviderEvidenceSuccess["packet"]["entries"][number];
+      pin: PortableProviderEvidenceSuccess["context"]["pin"];
+    };
   };
   requirements: string[];
   missingArtifacts: string[];
   warnings: string[];
+};
+
+/** Request-local provider reuse for phase-context consumers. */
+export type PhaseContextInternalOptions = {
+  codebase?: PhaseContextResult["codebase"];
 };
 
 export type PhaseResearchStatusResult = {

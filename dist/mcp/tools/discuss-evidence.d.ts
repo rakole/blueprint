@@ -1,3 +1,5 @@
+import { type PortableProviderEvidenceBasis, type PortableProviderEvidenceDelivery, type PortableProviderEvidenceNext } from "../codebase-index/provider-evidence.js";
+import { type PortableSelection } from "../codebase-index/resolver.js";
 export declare const evidenceDigest: (value: string | Buffer) => string;
 export declare const stableEvidence: (value: unknown) => string;
 export declare function readDiscussEvidence(root: string, relative: string): Promise<{
@@ -12,39 +14,99 @@ export declare function readDiscussEvidence(root: string, relative: string): Pro
 export declare function discussPlanInventory(root: string, phaseDir: string): Promise<string[]>;
 /** Controlled runtime projections; never accept arbitrary virtual fingerprints from the model. */
 export declare function discussEvidenceHash(root: string, relative: string): Promise<string | null>;
+export type DiscussPortableMetadata = {
+    selections: PortableSelection[];
+    basis: PortableProviderEvidenceBasis;
+    next: PortableProviderEvidenceNext;
+};
+export type DiscussPortableDelivery = Pick<PortableProviderEvidenceDelivery, "mode" | "readTimeEvidence">;
+export type DiscussOrdinaryDelivery = {
+    delivered: Array<{
+        path: string;
+        hash: string;
+    }>;
+    registered: Array<{
+        path: string;
+        hash: string;
+    }>;
+};
 export declare function collectDiscussEvidence(args: {
     cwd?: string;
     phase?: string | number;
     evidencePaths?: string[];
     resolveEvidencePaths?: (root: string, sessionPath: string) => Promise<string[]>;
+    portableSelections?: PortableSelection[];
+    evidenceDelivery?: DiscussPortableDelivery;
+    expectedRevision?: number;
+    acknowledgeChangedInputs?: boolean;
+    resolvePortableMetadata?: (root: string, sessionPath: string) => Promise<DiscussPortableMetadata | undefined>;
+    resolveOrdinaryDelivery?: (root: string, sessionPath: string) => Promise<DiscussOrdinaryDelivery | undefined>;
 }): Promise<{
     status: "blocked";
     selection: import("./phase-tool-types.js").PhaseLocateResult;
     reason: string | null;
     changedPaths?: undefined;
-    root?: undefined;
-    phase?: undefined;
-    readSet?: undefined;
-    packet?: undefined;
 } | {
     status: "blocked";
     reason: string;
     selection?: undefined;
     changedPaths?: undefined;
-    root?: undefined;
-    phase?: undefined;
-    readSet?: undefined;
-    packet?: undefined;
 } | {
     status: "stale";
     reason: string;
     changedPaths: string[];
     selection?: undefined;
-    root?: undefined;
-    phase?: undefined;
-    readSet?: undefined;
-    packet?: undefined;
 } | {
+    root: string;
+    phase: string;
+    changedPaths: readonly string[];
+    status: "fallback" | "invalid" | "not-found" | "reread_required" | "evidence_limit";
+    code: string;
+    reason: string;
+    paths: readonly string[];
+    diagnostics?: readonly unknown[];
+    counts?: import("../evidence-delivery.js").EvidenceDeliverySuccess["counts"];
+    scopeReduction?: import("../evidence-delivery.js").EvidenceDeliveryFailure["scopeReduction"];
+    selection?: undefined;
+} | {
+    status: "invalid";
+    reason: string;
+    changedPaths: string[];
+    selection?: undefined;
+} | {
+    ordinaryDelivery: {
+        delivered: {
+            path: string;
+            hash: string;
+        }[];
+        registered: {
+            path: string;
+            hash: string;
+        }[];
+    };
+    portable?: {
+        selections: ({
+            kind: "page";
+            path: string;
+            mode: "discovery";
+        } | {
+            kind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "alias" | "capability" | "claim";
+            recordId: string;
+        } | {
+            kind: "structural";
+            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "semantic";
+            recordKind: "alias" | "capability" | "claim";
+            recordId: string;
+        })[];
+        basis: PortableProviderEvidenceBasis;
+        next: PortableProviderEvidenceNext;
+    } | undefined;
     status: "collected";
     root: string;
     phase: string;
@@ -53,6 +115,37 @@ export declare function collectDiscussEvidence(args: {
         hash: string | null;
     }[];
     packet: {
+        sources: ({
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        } | {
+            content: undefined;
+            path: string;
+            hash: string;
+        } | {
+            content: undefined;
+            path: string;
+            hash: null;
+        })[];
+        priorContextPaths: string[];
+        omittedPriorPhases: string[];
+        checkpoint: {
+            path: string;
+            hash: string;
+            content: string;
+        } | {
+            path: string;
+            hash: null;
+            content: null;
+        };
+        planInventory: string[];
+        warnings: string[];
+        portableEvidence?: import("../evidence-delivery.js").EvidencePacket | undefined;
         selectedPhase: {
             phaseNumber: string;
             phasePrefix: string;
@@ -225,28 +318,6 @@ export declare function collectDiscussEvidence(args: {
                 content: null;
             };
         };
-        sources: ({
-            path: string;
-            hash: string;
-            content: string;
-        } | {
-            path: string;
-            hash: null;
-            content: null;
-        })[];
-        priorContextPaths: string[];
-        omittedPriorPhases: string[];
-        checkpoint: {
-            path: string;
-            hash: string;
-            content: string;
-        } | {
-            path: string;
-            hash: null;
-            content: null;
-        };
-        planInventory: string[];
-        warnings: string[];
     };
     selection?: undefined;
     reason?: undefined;

@@ -46,7 +46,9 @@ export declare function validatePhasePlanCandidateSet(args: {
     planSetValidation: PhasePlanValidationResult | null;
 }>;
 export declare function blueprintPhasePlanAuthoringContext(args?: PhasePlanAuthoringContextArgs): Promise<PhasePlanAuthoringContextResult>;
-export declare function blueprintPhasePlanReadiness(args?: PhasePlanReadinessArgs): Promise<PhasePlanReadinessResult>;
+export declare function blueprintPhasePlanReadiness(args?: PhasePlanReadinessArgs, options?: {
+    codebase?: PhaseContextResult["codebase"];
+}): Promise<PhasePlanReadinessResult>;
 export declare function blueprintPhasePlanValidateModel(args: PhasePlanValidateModelArgs): Promise<PhasePlanStandaloneValidateModelResult>;
 export declare function blueprintPhasePlanWrite(args: PhasePlanWriteArgs): Promise<PhasePlanWriteResult>;
 export declare function blueprintPhaseSummaryIndex(args?: PlanIndexArgs): Promise<PhaseSummaryIndexResult>;

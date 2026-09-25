@@ -1,0 +1,106 @@
+{
+  "formatVersion": 1,
+  "runtime": {
+    "package": "web-tree-sitter",
+    "version": "0.27.0",
+    "origin": {
+      "npm": "https://registry.npmjs.org/web-tree-sitter/-/web-tree-sitter-0.27.0.tgz",
+      "repository": "https://github.com/tree-sitter/tree-sitter/tree/v0.27.0/lib/binding_web"
+    },
+    "packageSha256": "266e839d9d7f89c84ba6ce089ffdec9599b0a668c010308f857baad0570a0d50",
+    "module": "runtime/web-tree-sitter.js",
+    "moduleSha256": "7c49e3c1d87e24e0bb4c2def909d17154dfde281f5f8280225450090bb4b8110",
+    "wasm": "runtime/web-tree-sitter.wasm",
+    "wasmSha256": "c03bccdc3b448a32848f5ae327e209c982bbb0840d43eec8bc2d5759544a1ed3",
+    "license": "MIT",
+    "licenseFile": "licenses/LICENSE.web-tree-sitter",
+    "languageVersion": 15,
+    "minimumCompatibleVersion": 13
+  },
+  "grammars": [
+    {
+      "package": "tree-sitter-javascript",
+      "version": "0.25.0",
+      "origin": {
+        "npm": "https://registry.npmjs.org/tree-sitter-javascript/-/tree-sitter-javascript-0.25.0.tgz",
+        "repository": "https://github.com/tree-sitter/tree-sitter-javascript/tree/v0.25.0"
+      },
+      "packageSha256": "6214ce23d03aba525ba8edd6ca7caf365c969f2c2dbfc353e376ca54507ffb92",
+      "asset": "grammars/tree-sitter-javascript.wasm",
+      "sha256": "5fb488d0cabb4775a594bab85682de5ad6ce83c0d6ac997a9f82dd084d571240",
+      "license": "MIT",
+      "licenseFile": "licenses/LICENSE.tree-sitter-javascript",
+      "abiVersion": 15
+    },
+    {
+      "package": "tree-sitter-typescript",
+      "version": "0.23.2",
+      "origin": {
+        "npm": "https://registry.npmjs.org/tree-sitter-typescript/-/tree-sitter-typescript-0.23.2.tgz",
+        "repository": "https://github.com/tree-sitter/tree-sitter-typescript/tree/v0.23.2"
+      },
+      "packageSha256": "0fdf63c35930a75885145d75ee63cb879da2d49db9bfe454bd8e60b08ba778a1",
+      "assets": [
+        {
+          "id": "typescript",
+          "asset": "grammars/tree-sitter-typescript.wasm",
+          "sha256": "778025db5a8be0e70f8ccc3671e486dfeddd048c25d9e8a70c26de2e1bf6f97d",
+          "abiVersion": 14
+        },
+        {
+          "id": "tsx",
+          "asset": "grammars/tree-sitter-tsx.wasm",
+          "sha256": "79e5da75ea62855a0cd67177685f0164eac87d5f630b3cbe1e0a099751ad30f8",
+          "abiVersion": 14
+        }
+      ],
+      "license": "MIT",
+      "licenseFile": "licenses/LICENSE.tree-sitter-typescript"
+    },
+    {
+      "package": "tree-sitter-python",
+      "version": "0.25.0",
+      "origin": {
+        "npm": "https://registry.npmjs.org/tree-sitter-python/-/tree-sitter-python-0.25.0.tgz",
+        "repository": "https://github.com/tree-sitter/tree-sitter-python/tree/v0.25.0"
+      },
+      "packageSha256": "63b76b3fa8181fd79eaad4abcdb21e2babcb504dbfc7710a89934fa456d26096",
+      "asset": "grammars/tree-sitter-python.wasm",
+      "sha256": "16108b50df4ee9a30168794252ab55e7c93bfc5765d7fa0aa3e335752c515f47",
+      "license": "MIT",
+      "licenseFile": "licenses/LICENSE.tree-sitter-python",
+      "abiVersion": 15
+    },
+    {
+      "package": "tree-sitter-java",
+      "version": "0.23.5",
+      "origin": {
+        "npm": "https://registry.npmjs.org/tree-sitter-java/-/tree-sitter-java-0.23.5.tgz",
+        "repository": "https://github.com/tree-sitter/tree-sitter-java/tree/v0.23.5"
+      },
+      "packageSha256": "6b6c1b62605f9d8bb80efd2ebe5951a87b182faafa3eeb67c460a667818551b6",
+      "asset": "grammars/tree-sitter-java.wasm",
+      "sha256": "4fdeac4ca6ca089f06c6f7e562abcac1733cd465728cc7031ebb73c2019122c4",
+      "license": "MIT",
+      "licenseFile": "licenses/LICENSE.tree-sitter-java",
+      "abiVersion": 14
+    }
+  ],
+  "languages": {
+    "javascript": {"grammar": "javascript", "asset": "grammars/tree-sitter-javascript.wasm", "sha256": "5fb488d0cabb4775a594bab85682de5ad6ce83c0d6ac997a9f82dd084d571240", "abiVersion": 15},
+    "jsx": {"grammar": "javascript", "asset": "grammars/tree-sitter-javascript.wasm", "sha256": "5fb488d0cabb4775a594bab85682de5ad6ce83c0d6ac997a9f82dd084d571240", "abiVersion": 15},
+    "typescript": {"grammar": "typescript", "asset": "grammars/tree-sitter-typescript.wasm", "sha256": "778025db5a8be0e70f8ccc3671e486dfeddd048c25d9e8a70c26de2e1bf6f97d", "abiVersion": 14},
+    "tsx": {"grammar": "tsx", "asset": "grammars/tree-sitter-tsx.wasm", "sha256": "79e5da75ea62855a0cd67177685f0164eac87d5f630b3cbe1e0a099751ad30f8", "abiVersion": 14},
+    "python": {"grammar": "python", "asset": "grammars/tree-sitter-python.wasm", "sha256": "16108b50df4ee9a30168794252ab55e7c93bfc5765d7fa0aa3e335752c515f47", "abiVersion": 15},
+    "java": {"grammar": "java", "asset": "grammars/tree-sitter-java.wasm", "sha256": "4fdeac4ca6ca089f06c6f7e562abcac1733cd465728cc7031ebb73c2019122c4", "abiVersion": 14}
+  },
+  "bindingCoordinates": {
+    "indexUnit": "utf16-code-unit",
+    "columnUnit": "utf16-code-unit",
+    "outputLineBase": 1,
+    "outputColumnUnit": "utf8-byte",
+    "outputColumnBase": 0,
+    "outputByteBase": 0,
+    "endExclusive": true
+  }
+}

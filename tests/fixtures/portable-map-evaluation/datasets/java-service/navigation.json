@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "corpus": "java-service",
+  "sourceManifestSha256": "1c9586b0f3a9d8c1e8388444caf7140b3c8ec27ea7022c82673400b0fe65f2d0",
+  "queries": [
+    {
+      "id": "java-service-nav-01",
+      "class": "exact-path",
+      "scenario": "base",
+      "text": "Open src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java and explain where the application service records an accepted delivery.",
+      "knownTarget": true,
+      "targetPath": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java", "range": {"startLine": 61, "endLine": 64}, "symbol": "accept", "rationale": "The accept method saves the delivery and locker before emitting the ready notification and returning its receipt."}
+        ],
+        "supporting": [
+          {"path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java", "range": {"startLine": 39, "endLine": 59}, "symbol": "accept", "rationale": "These lines establish the accepted delivery and locker state that is persisted."}
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Read the named file directly and identify the persistence-before-notification sequence.",
+      "rationale": "This is a direct path lookup with a concrete source span."
+    },
+    {
+      "id": "java-service-nav-02",
+      "class": "exact-function",
+      "scenario": "base",
+      "text": "Find ZoneAwareLockerPolicy.choose in src/com/blueprint/fixture/lockers/domain/ZoneAwareLockerPolicy.java and describe its locker selection order.",
+      "knownTarget": true,
+      "targetPath": "src/com/blueprint/fixture/lockers/domain/ZoneAwareLockerPolicy.java",
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/domain/ZoneAwareLockerPolicy.java", "range": {"startLine": 7, "endLine": 15}, "symbol": "choose", "rationale": "The choose implementation filters availability, zone, and fit, then selects by size and locker id."}
+        ],
+        "supporting": [
+          {"path": "src/com/blueprint/fixture/lockers/domain/LockerSize.java", "range": {"startLine": 8, "endLine": 10}, "symbol": "fits", "rationale": "LockerSize.fits defines the requested-size comparison used by the policy."}
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the named function and explain each filter and the final ordering.",
+      "rationale": "The function name and file are explicit and source-grounded."
+    },
+    {
+      "id": "java-service-nav-03",
+      "class": "domain-wording",
+      "scenario": "base",
+      "text": "How does the service ensure that a parcel pickup code is never exposed in a receipt?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java", "range": {"startLine": 97, "endLine": 102}, "symbol": "receipt", "rationale": "The receipt projection includes tracking, locker, status, and deadline but no pickup code."}
+        ],
+        "supporting": [
+          {"path": "src/com/blueprint/fixture/lockers/domain/Delivery.java", "range": {"startLine": 15, "endLine": 19}, "symbol": "Delivery", "rationale": "The pickup code is retained inside the delivery aggregate at the application boundary."},
+          {"path": "src/com/blueprint/fixture/lockers/adapter/ConsoleNotificationAdapter.java", "range": {"startLine": 6, "endLine": 16}, "symbol": "deliveryReady", "rationale": "The console notifications expose tracking and locker details without printing the pickup code."}
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Explain the receipt projection and mention the source-grounded privacy boundary; do not claim broader guarantees than the fixture shows.",
+      "rationale": "The query uses the fixture's domain wording rather than a path or function name."
+    },
+    {
+      "id": "java-service-nav-04",
+      "class": "aliases",
+      "scenario": "base",
+      "text": "Where does this project select the smallest compatible locker for an incoming parcel?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/domain/ZoneAwareLockerPolicy.java", "range": {"startLine": 9, "endLine": 15}, "symbol": "choose", "rationale": "The policy's filters and min comparator implement the compatible-locker selection."}
+        ],
+        "supporting": [
+          {"path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java", "range": {"startLine": 50, "endLine": 53}, "symbol": "accept", "rationale": "The application service invokes the assignment policy and rejects the request when no locker is available."}
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Search using the source-grounded synonyms and report the policy implementation. Absence of the synonym compatible in a frozen map is a valid held-out miss.",
+      "rationale": "This tests a source-grounded alias for choose/fits without relying on a map alias."
+    },
+    {
+      "id": "java-service-nav-05",
+      "class": "cross-module-flow",
+      "scenario": "base",
+      "text": "Trace a CSV manifest row from file reading through delivery assignment and notification.",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/adapter/CsvManifestReader.java", "range": {"startLine": 15, "endLine": 37}, "symbol": "read", "rationale": "The adapter reads rows, skips headers and blanks, parses five columns, and creates ManifestLine values."},
+          {"path": "src/com/blueprint/fixture/lockers/application/ManifestImportService.java", "range": {"startLine": 15, "endLine": 23}, "symbol": "importFile", "rationale": "The import service maps each parsed line into a CreateDeliveryCommand and delegates to the delivery service."},
+          {"path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java", "range": {"startLine": 50, "endLine": 64}, "symbol": "accept", "rationale": "The delivery service chooses a locker, persists the delivery and locker, and emits the ready notification."}
+        ],
+        "supporting": [
+          {"path": "src/com/blueprint/fixture/lockers/Main.java", "range": {"startLine": 40, "endLine": 43}, "symbol": "main", "rationale": "The CLI wires the manifest reader and import service when a manifest path is supplied."}
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Describe the call chain across adapter, application, and notification boundaries in order.",
+      "rationale": "The requested behavior crosses three source modules."
+    },
+    {
+      "id": "java-service-nav-06",
+      "class": "code-to-test",
+      "scenario": "base",
+      "text": "Which test in tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java covers a wrong pickup code, and what state does it require to remain unchanged?",
+      "knownTarget": true,
+      "targetPath": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+      "evidence": {
+        "required": [
+          {"path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java", "range": {"startLine": 56, "endLine": 66}, "symbol": "rejectsWrongPickupCodeWithoutChangingState", "rationale": "The test invokes collection with a wrong code and asserts that delivery status and locker assignment remain unchanged."}
+        ],
+        "supporting": [
+          {"path": "src/com/blueprint/fixture/lockers/domain/Delivery.java", "range": {"startLine": 51, "endLine": 58}, "symbol": "collect", "rationale": "The domain method rejects an invalid pickup code before changing status."}
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Read the named test and connect its assertions to the collection guard.",
+      "rationale": "The question names a behavior and its test evidence, with the target path stated explicitly."
+    },
+    {
+      "id": "java-service-nav-07",
+      "class": "trace-to-code",
+      "scenario": "base",
+      "text": "Which application method releases a locker after successful collection, and what domain operation precedes it?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java", "range": {"startLine": 67, "endLine": 76}, "symbol": "collect", "rationale": "The application collection flow validates the delivery, collects the parcel, releases the locker, persists both, and notifies."},
+          {"path": "src/com/blueprint/fixture/lockers/domain/Delivery.java", "range": {"startLine": 51, "endLine": 58}, "symbol": "collect", "rationale": "Delivery.collect validates status and pickup code before the application releases the locker."},
+          {"path": "src/com/blueprint/fixture/lockers/domain/Locker.java", "range": {"startLine": 45, "endLine": 50}, "symbol": "release", "rationale": "Locker.release verifies ownership and clears the parcel tracking id."}
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Trace from the application method to the domain guards and identify the ordering of collect before release.",
+      "rationale": "The query asks for a runtime trace from one boundary to two domain operations."
+    },
+    {
+      "id": "java-service-nav-08",
+      "class": "change-impact",
+      "scenario": "base",
+      "text": "If locker assignment policy changes, which contracts, application code, and tests should be reviewed?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/domain/LockerAssignmentPolicy.java", "range": {"startLine": 6, "endLine": 8}, "symbol": "LockerAssignmentPolicy", "rationale": "The policy interface defines the contract that a replacement implementation must preserve."},
+          {"path": "src/com/blueprint/fixture/lockers/domain/ZoneAwareLockerPolicy.java", "range": {"startLine": 7, "endLine": 15}, "symbol": "choose", "rationale": "The current implementation supplies the selection rules that a policy change would affect."},
+          {"path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java", "range": {"startLine": 50, "endLine": 53}, "symbol": "accept", "rationale": "The application service consumes the policy result and handles the no-locker case."},
+          {"path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java", "range": {"startLine": 29, "endLine": 53}, "symbol": "assignsSmallestFittingLockerAndReleasesOnCollection", "rationale": "The test anchors smallest-fitting selection, assignment, and subsequent release behavior."}
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "List the interface, implementation, consuming application flow, and behavior tests that are directly affected, with a reason for each.",
+      "rationale": "Impact analysis needs both the policy contract and its consumer/test evidence."
+    },
+    {
+      "id": "java-service-nav-09",
+      "class": "unknown-feature",
+      "scenario": "base",
+      "text": "Where is a webhook retry queue implemented for failed notifications?",
+      "knownTarget": false,
+      "expectedAbsent": true,
+      "evidence": {"required": [], "supporting": [], "alternatives": []},
+      "expectedBehavior": "Abstain conservatively: no webhook retry queue is evidenced in this small corpus. Bounded search supports abstention, not proof of global absence.",
+      "rationale": "The requested feature is intentionally absent and must not receive fabricated positive evidence."
+    },
+    {
+      "id": "java-service-nav-10",
+      "class": "unsupported-language",
+      "scenario": "base",
+      "text": "Locate the Python implementation of the locker assignment policy.",
+      "knownTarget": false,
+      "expectedAbsent": true,
+      "evidence": {"required": [], "supporting": [], "alternatives": []},
+      "expectedBehavior": "Abstain: the assigned corpus contains Java source and tests, with no Python implementation evidenced.",
+      "rationale": "The language requested is outside the assigned source corpus."
+    },
+    {
+      "id": "java-service-nav-11",
+      "class": "exact-function",
+      "scenario": "java-service-scenario-stale",
+      "text": "Find DeliveryApplicationService.accept in src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java and explain its no-locker error after the recent wording change.",
+      "knownTarget": true,
+      "targetPath": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java", "range": {"startLine": 50, "endLine": 53}, "symbol": "accept", "rationale": "The stale scenario changes only the no-locker message while preserving the policy call and exception location."}
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the method in the scenario copy and report the currently visible wording rather than relying on stale text.",
+      "rationale": "This is a controlled stale-content scenario with unchanged coordinates."
+    },
+    {
+      "id": "java-service-nav-12",
+      "class": "exact-path",
+      "scenario": "java-service-scenario-renamed",
+      "text": "Open docs/RUNBOOK.md and summarize the import and notification ordering.",
+      "knownTarget": true,
+      "targetPath": "docs/RUNBOOK.md",
+      "evidence": {
+        "required": [
+          {"path": "docs/RUNBOOK.md", "range": {"startLine": 9, "endLine": 12}, "rationale": "The renamed operating note describes the fit check and persistence-before-notification ordering."}
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Follow the explicit renamed path and summarize only the text present in the scenario copy.",
+      "rationale": "The controlled rename tests stale path handling without changing the document contents."
+    },
+    {
+      "id": "java-service-nav-13",
+      "class": "domain-wording",
+      "scenario": "java-service-scenario-new",
+      "text": "What does the new reconciliation note say about retrying a failed import?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {"path": "docs/RECONCILIATION.md", "range": {"startLine": 1, "endLine": 4}, "rationale": "The new note records the bounded operator guidance for reviewing a failed import before retrying it."}
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Discover and summarize the newly created note from the scenario copy.",
+      "rationale": "The feature is introduced only by the disposable new-file scenario."
+    },
+    {
+      "id": "java-service-nav-14",
+      "class": "exact-path",
+      "scenario": "base",
+      "text": "What pickup window is configured in config/default.properties?",
+      "knownTarget": true,
+      "targetPath": "config/default.properties",
+      "evidence": {
+        "required": [
+          {"path": "config/default.properties", "range": {"startLine": 1, "endLine": 3}, "rationale": "The named configuration file sets pickup.window.hours to 48 and the default zone to NORTH."}
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Read the named properties file and report the configured pickup window with its unit.",
+      "rationale": "The path and requested setting are explicit."
+    },
+    {
+      "id": "java-service-nav-15",
+      "class": "exact-function",
+      "scenario": "base",
+      "text": "Find CsvManifestReader.read in src/com/blueprint/fixture/lockers/adapter/CsvManifestReader.java and explain how it handles a header row.",
+      "knownTarget": true,
+      "targetPath": "src/com/blueprint/fixture/lockers/adapter/CsvManifestReader.java",
+      "evidence": {
+        "required": [
+          {"path": "src/com/blueprint/fixture/lockers/adapter/CsvManifestReader.java", "range": {"startLine": 13, "endLine": 25}, "symbol": "read", "rationale": "The read method trims each row and skips a row whose first column equals trackingId, ignoring case."}
+        ],
+        "supporting": [
+          {"path": "tests/com/blueprint/fixture/lockers/ConfigurationAndManifestTest.java", "range": {"startLine": 23, "endLine": 32}, "symbol": "main", "rationale": "The configuration test supplies a header and asserts that it is ignored."}
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the named function and describe its header check and blank-line handling.",
+      "rationale": "This is a direct function lookup with an executable test anchor."
+    }
+  ]
+}

@@ -1,8 +1,9 @@
+import { type PortableProviderEvidenceBasis } from "../codebase-index/provider-evidence.js";
 export type ResearchReadSet = Array<{
     path: string;
     hash: string | null;
 }>;
-export declare const researchDigest: (value: string | Buffer) => string;
+export declare const researchDigest: (value: string | Buffer | Uint8Array) => string;
 export declare const stableResearchValue: (value: unknown) => string;
 export declare function canonicalResearchEvidencePath(root: string, relative: string): string;
 export declare function readResearchEvidence(root: string, relative: string, maxBytes?: number): Promise<{
@@ -15,7 +16,7 @@ export declare function readResearchEvidence(root: string, relative: string, max
     content: null;
 }>;
 export declare function researchInputHash(root: string, relative: string): Promise<string | null>;
-export declare function researchBasisFreshness(root: string, readSet: ResearchReadSet): Promise<{
+export declare function researchBasisFreshness(root: string, readSet: ResearchReadSet, portableBasis?: PortableProviderEvidenceBasis): Promise<{
     status: "unknown" | "stale" | "fresh";
     stalePaths: string[];
     unknownPaths: string[];
@@ -27,6 +28,7 @@ export type ResearchProvenance = {
     readSet: ResearchReadSet;
     publishedAt: string;
     planningReady?: boolean;
+    portable?: PortableProviderEvidenceBasis;
 };
 export declare function readPublishedResearchFreshness(root: string, researchPath: string): Promise<{
     status: "fresh" | "stale" | "unknown";

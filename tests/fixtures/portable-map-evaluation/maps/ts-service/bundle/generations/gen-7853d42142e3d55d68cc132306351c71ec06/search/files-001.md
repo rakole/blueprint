@@ -1,0 +1,36 @@
+# files search
+
+file | AGENTS.md | language: unknown | role: documentation | coverage: file | source: AGENTS.md:file | record: ../records/p-cdb4ee2aea69-001.md#file-file-a54ff182c7e8acf56acfd6e4b9c3ff41
+file | README.md | language: unknown | role: documentation | coverage: file | source: README.md:file | record: ../records/p-cdb4ee2aea69-001.md#file-file-b335630551682c19a781afebcf4d07bf
+file | package.json | language: unknown | role: configuration | coverage: file | source: package.json:file | record: ../records/p-cdb4ee2aea69-001.md#file-file-7ae45ad102eab3b6d7e7896acd08c427
+file | src/adapters/ids.js | language: javascript | role: source | coverage: full | source: src/adapters/ids.js:1-6 | record: ../records/p-dcc5744deae9-001.md#file-file-9ce33623c7c7b0eb0e3dddc441ec502d
+file | src/adapters/system-clock.js | language: javascript | role: source | coverage: full | source: src/adapters/system-clock.js:1-4 | record: ../records/p-dcc5744deae9-001.md#file-file-ebf50083554c6ed081f982d3bde26562
+file | src/application/reservation-service.ts | language: typescript | role: source | coverage: full | source: src/application/reservation-service.ts:1-75 | record: ../records/p-262600367344-001.md#file-file-6c56862cf28257d39acfb03472ced15d
+file | src/config.ts | language: typescript | role: source | coverage: file | source: src/config.ts:1-17 | record: ../records/p-25a6634263c1-001.md#file-file-c3095d5010e65c52737a98a5d618ea24
+file | src/contracts/reservations.ts | language: typescript | role: source | coverage: full | source: src/contracts/reservations.ts:1-20 | record: ../records/p-9902aebe5332-001.md#file-file-844696e242ea90570b9ab9a9cf8bdcb3
+file | src/domain/errors.ts | language: typescript | role: source | coverage: full | source: src/domain/errors.ts:1-27 | record: ../records/p-775cda6157d1-001.md#file-file-0e5e7dc44910960bd3b9444a69fc1f07
+file | src/domain/member.ts | language: typescript | role: source | coverage: full | source: src/domain/member.ts:1-24 | record: ../records/p-775cda6157d1-001.md#file-file-4289528cb4bdf12ad5f7fe608ab75083
+file | src/domain/reservation-policy.ts | language: typescript | role: source | coverage: file | source: src/domain/reservation-policy.ts:1-27 | record: ../records/p-775cda6157d1-001.md#file-file-3352db78d1f256919c0ea76697fb64a7
+file | src/domain/reservation.ts | language: typescript | role: source | coverage: full | source: src/domain/reservation.ts:1-76 | record: ../records/p-775cda6157d1-001.md#file-file-b6af2a88d09d1323849c4d10904ff1ff
+file | src/domain/tool.ts | language: typescript | role: source | coverage: full | source: src/domain/tool.ts:1-26 | record: ../records/p-775cda6157d1-001.md#file-file-55ca14f1e6bea7eab5f13d8c14c46680
+file | src/http/json-response.js | language: javascript | role: source | coverage: full | source: src/http/json-response.js:1-8 | record: ../records/p-2264e626255c-001.md#file-file-a074b12eae178ad747aeb2a452e331ba
+file | src/http/request-parser.js | language: javascript | role: source | coverage: full | source: src/http/request-parser.js:1-16 | record: ../records/p-2264e626255c-001.md#file-file-17e674a8246d1c6feea2e0e2f8676399
+file | src/http/reservation-routes.ts | language: typescript | role: source | coverage: file | source: src/http/reservation-routes.ts:1-51 | record: ../records/p-2264e626255c-001.md#file-file-8d959a67d83701c4ec3e2db09861b6ba
+file | src/http/router.ts | language: typescript | role: source | coverage: full | source: src/http/router.ts:1-19 | record: ../records/p-2264e626255c-001.md#file-file-fb967151ca766d7e0cd0f83330da1828
+file | src/persistence/in-memory-member-repository.ts | language: typescript | role: source | coverage: file | source: src/persistence/in-memory-member-repository.ts:1-16 | record: ../records/p-1faefa47505a-001.md#file-file-197b5f929e5ba67b5fdd2fcdce5ae972
+file | src/persistence/in-memory-reservation-repository.ts | language: typescript | role: source | coverage: file | source: src/persistence/in-memory-reservation-repository.ts:1-26 | record: ../records/p-1faefa47505a-001.md#file-file-e1a656ee7c7be02c7bf095025cb361e2
+file | src/persistence/in-memory-tool-repository.ts | language: typescript | role: source | coverage: file | source: src/persistence/in-memory-tool-repository.ts:1-16 | record: ../records/p-1faefa47505a-001.md#file-file-56655796178d14c3ee0885fc3b4f808b
+file | src/persistence/member-repository.ts | language: typescript | role: source | coverage: file | source: src/persistence/member-repository.ts:1-7 | record: ../records/p-1faefa47505a-001.md#file-file-3e12b303ca47efd52d77601cb0bcf134
+file | src/persistence/reservation-repository.ts | language: typescript | role: source | coverage: file | source: src/persistence/reservation-repository.ts:1-10 | record: ../records/p-1faefa47505a-001.md#file-file-1ec6d00f94a6f13f9695d07d0ee428da
+file | src/persistence/reservations.sql | language: unknown | role: unknown | coverage: file | source: src/persistence/reservations.sql:file | record: ../records/p-1faefa47505a-001.md#file-file-2eddab07b29db01e979043e4e2f64e79
+file | src/persistence/tool-repository.ts | language: typescript | role: source | coverage: file | source: src/persistence/tool-repository.ts:1-7 | record: ../records/p-1faefa47505a-001.md#file-file-595bae8e4f41962925a576b23fcb2284
+file | src/server.ts | language: typescript | role: source | coverage: file | source: src/server.ts:1-35 | record: ../records/p-25a6634263c1-001.md#file-file-8a8ae07582c9d433ec8c2e5c4310ff89
+file | src/types/http.ts | language: typescript | role: source | coverage: full | source: src/types/http.ts:1-12 | record: ../records/p-15bf0633de9d-001.md#file-file-9841be2056992cb2263cde192034863b
+file | src/types/ids.ts | language: typescript | role: source | coverage: file | source: src/types/ids.ts:1-16 | record: ../records/p-15bf0633de9d-001.md#file-file-23a2368636eb2dc90a81e31043a10060
+file | src/types/jsx.d.ts | language: typescript | role: source | coverage: file | source: src/types/jsx.d.ts:1-17 | record: ../records/p-15bf0633de9d-001.md#file-file-41bdfb7e3b71a4cf2b19aaaf5704b2ef
+file | src/ui/reservation-form.tsx | language: tsx | role: source | coverage: full | source: src/ui/reservation-form.tsx:1-17 | record: ../records/p-e144420ba74b-001.md#file-file-164935e44697ce3e46d1a022ad15494c
+file | src/ui/reservation-summary.jsx | language: jsx | role: source | coverage: full | source: src/ui/reservation-summary.jsx:1-10 | record: ../records/p-e144420ba74b-001.md#file-file-03186b9767be2850dd86085b893ad0d1
+file | tests/config.test.ts | language: typescript | role: test | coverage: file | source: tests/config.test.ts:1-12 | record: ../records/p-59830ebc3a41-001.md#file-file-9b210bb9fcd3e28a36905f0c8347fbc8
+file | tests/reservation-service.test.ts | language: typescript | role: test | coverage: file | source: tests/reservation-service.test.ts:1-54 | record: ../records/p-59830ebc3a41-001.md#file-file-9a172d95e8cf990b1aeb0f3e36f5d97b
+file | tests/router.test.ts | language: typescript | role: test | coverage: file | source: tests/router.test.ts:1-83 | record: ../records/p-59830ebc3a41-001.md#file-file-56c92063910ea376ca11a7f6c8f093e3
+file | tsconfig.json | language: unknown | role: configuration | coverage: file | source: tsconfig.json:file | record: ../records/p-cdb4ee2aea69-001.md#file-file-b55cdbef4907b7045f32cc5360d48d26

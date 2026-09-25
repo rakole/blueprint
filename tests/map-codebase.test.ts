@@ -652,15 +652,13 @@ test("map-codebase runtime metadata mirrors the direct publication contract", as
   assert.equal(contract.catalog.specPath, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec?.executionProfile, "long-running-mutation");
   assert.equal(contract.spec?.rootRoutable, true);
-  assert.deepEqual(contract.spec?.reads, []);
+  assert.deepEqual(contract.spec?.reads, [
+    "Selected repository evidence and generated map state through blueprint_map_prepare"
+  ]);
   assert.deepEqual(contract.spec?.writes, [
-    ".blueprint/codebase/STACK.md",
-    ".blueprint/codebase/ARCHITECTURE.md",
-    ".blueprint/codebase/STRUCTURE.md",
-    ".blueprint/codebase/CONVENTIONS.md",
-    ".blueprint/codebase/TESTING.md",
-    ".blueprint/codebase/INTEGRATIONS.md",
-    ".blueprint/codebase/CONCERNS.md"
+    ".blueprint/codebase/INDEX.md and its referenced generations/<generation-id>/",
+    ".blueprint/codebase/{STACK,ARCHITECTURE,STRUCTURE,CONVENTIONS,TESTING,INTEGRATIONS,CONCERNS}.md compatibility views when applicable",
+    "an explicitly selected existing repository instruction file only when linkInstructions is requested"
   ]);
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
     "blueprint_map_prepare",

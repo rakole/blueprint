@@ -33,6 +33,14 @@ input_bundles:
 Orchestrate Blueprint's execution-family flows while keeping command behavior
 host-native, plan-aware, and MCP-owned.
 
+Execution follows saved plan `task.readFirst` paths, known live targets, and
+relevant parent evidence directly. Consult a verified portable
+`.blueprint/codebase/INDEX.md` only when discovery remains unresolved, following
+its generated `ENTRY.md` routes and selected pages. Missing or unusable maps use
+ordinary source discovery; execution does not regenerate maps or automatically
+load all seven compatibility views to enrich a valid portable map, and fast/quick
+administrative routing does not require a map.
+
 ## Runtime Self-Sufficiency
 
 This skill package is the runtime source of truth for `/blu-execute-phase`,

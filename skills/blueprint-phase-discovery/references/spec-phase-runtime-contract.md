@@ -83,9 +83,11 @@ decisions as plain numbered prompts.
 
 Ground the first round before asking questions, but keep the scout narrow.
 
-- Prefer `phase_context.codebase` summaries first.
-- Use targeted repo search only when the phase packet does not answer a needed
-  question.
+- Prefer compact `phase_context.codebase` navigation evidence and known live
+  targets first. If a verified portable map is present and discovery remains
+  unresolved, follow its `INDEX.md`/`ENTRY.md` route to selected evidence only.
+- Use targeted repo search when the phase packet or selected navigation does not
+  answer a needed question; absent or unusable maps keep this path.
 - Read only the minimum repo evidence needed to ask precise questions.
 - Do not broad-read the repository before the first question.
 

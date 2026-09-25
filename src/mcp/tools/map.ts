@@ -10,33 +10,55 @@ import {
   CODEBASE_DOCUMENT_IDS, codebaseMapModelSchema, compileCodebaseMap,
   validateCodebaseContent, type CodebaseDocumentId
 } from "../codebase-authoring.js";
+import {
+  portableLegacyPublicationPendingSchema,
+  portableLegacyPublicationSnapshotSchema,
+  type PortableLegacyPublicationSnapshot
+} from "../codebase-index/contracts.js";
 import { prepareTextForPersistence } from "../../shared/security.js";
 import { scrubLegacyCodebaseFailureLog } from "../write-failure-log.js";
 import {
   CODEBASE_PUBLICATION_PATH, ensureRepoRoot, inspectBlueprintArtifacts,
-  inspectBootstrapArtifacts, resolveBlueprintPath, resolveRepoRelativePath,
+  inspectBootstrapArtifacts, inspectCodebaseWriteGuard, resolveBlueprintPath, resolveRepoRelativePath,
   withBlueprintRepoLock, writeJsonFile, writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
 import { blueprintCommandCatalog } from "./project.js";
+import { blueprintPortableMapPrepare, blueprintPortableMapSubmit } from "../codebase-index/map-coordinator.js";
 
 const execFileAsync = promisify(execFile);
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
-const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
-const targetSchema = z.object(Object.fromEntries(CODEBASE_DOCUMENT_IDS.map(id => [id, digestSchema.nullable()])) as Record<CodebaseDocumentId, z.ZodNullable<typeof digestSchema>>).strict();
-const snapshotSchema = z.object({
-  version: z.literal(1), root: digestSchema, inventory: digestSchema,
-  inputs: z.record(z.string(), digestSchema), core: digestSchema, targets: targetSchema,
-  previousPublication: digestSchema.nullable()
-}).strict();
-type Snapshot = z.infer<typeof snapshotSchema>;
-const pendingSchema = z.object({
-  version: z.literal(1), operationId: digestSchema, snapshot: snapshotSchema,
-  hashes: targetSchema, stage: z.literal("publishing")
-}).strict();
-const prepareSchema = z.object({cwd: z.string().optional(), inputs: z.array(z.string()).default([]), focus: z.string().optional(), restart: z.boolean().default(false)}).strict();
-const submitSchema = z.object({cwd: z.string().optional(), snapshot: snapshotSchema,
+const snapshotSchema = portableLegacyPublicationSnapshotSchema;
+type Snapshot = PortableLegacyPublicationSnapshot;
+const pendingSchema = portableLegacyPublicationPendingSchema;
+const legacyPrepareSchema = z.object({cwd: z.string().optional(), inputs: z.array(z.string()).default([]), focus: z.string().optional(), restart: z.boolean().default(false)}).strict();
+const legacySubmitSchema = z.object({cwd: z.string().optional(), snapshot: snapshotSchema,
   documents: codebaseMapModelSchema.default({}), overwrite: z.boolean().default(false)}).strict();
+export type BlueprintMapLegacyPrepareInput = z.input<typeof legacyPrepareSchema>;
+export type BlueprintMapLegacySubmitInput = z.input<typeof legacySubmitSchema>;
+export type BlueprintMapLegacyPrepareResult = {
+  readonly status: string;
+  readonly snapshot?: Snapshot | null;
+  readonly [key: string]: unknown;
+};
+export type BlueprintMapLegacySubmitResult = {
+  readonly status: string;
+  readonly saved?: boolean;
+  readonly [key: string]: unknown;
+};
+/** A single object shape keeps MCP registration compatible with existing hosts. */
+const prepareSchema = z.object({
+  cwd: z.string().optional(), inputs: z.array(z.string()).optional(), focus: z.string().optional(), restart: z.boolean().optional(),
+  formatVersion: z.number().optional(), operationId: z.string().optional(), cursor: z.string().optional(), intent: z.string().optional(), repair: z.unknown().optional()
+}).strict();
+const submitSchema = z.object({
+  cwd: z.string().optional(), snapshot: snapshotSchema.optional(), documents: codebaseMapModelSchema.optional(), overwrite: z.boolean().optional(),
+  formatVersion: z.number().optional(), operationId: z.string().optional(), model: z.unknown().optional(), submission: z.unknown().optional(),
+  intent: z.string().optional(), linkInstructions: z.boolean().optional(), instructionPath: z.string().optional()
+}).strict();
+function hasPortableSelector(raw: unknown): boolean {
+  return Boolean(raw && typeof raw === "object" && Object.hasOwn(raw, "formatVersion"));
+}
 const artifactId = (id: CodebaseDocumentId) => `codebase.${id}` as const;
 const artifactPath = (id: CodebaseDocumentId) => readArtifactContract(artifactId(id)).canonicalFilePattern;
 
@@ -88,7 +110,7 @@ async function eligibility(root: string) {
   const inspection = await inspectBlueprintArtifacts(root);
   if (inspection.readiness === "partial") return {allowed: false, readiness: inspection.readiness, next: "health"};
   if (inspection.readiness === "uninitialized" || inspection.readiness === "mapping-incomplete") {
-    const bootstrap = await inspectBootstrapArtifacts(root);
+    const bootstrap = await inspectBootstrapArtifacts(root, inspection);
     if (bootstrap.brownfield.repoShape !== "brownfield") return {allowed: false, readiness: inspection.readiness, next: "new-project"};
   }
   return {allowed: true, readiness: inspection.readiness, next: inspection.readiness === "initialized" ? "progress" : "new-project"};
@@ -105,13 +127,55 @@ async function readPending(root: string) {
   catch { return {operationId: hash(content), snapshot: null, hashes: null}; }
 }
 
-export async function blueprintMapPrepare(raw: {cwd?: string; inputs?: string[]; focus?: string; restart?: boolean}) {
-  const args = prepareSchema.parse(raw);
+type PortableMapPrepareResult = Awaited<ReturnType<typeof blueprintPortableMapPrepare>>;
+type PortableMapSubmitResult = Awaited<ReturnType<typeof blueprintPortableMapSubmit>>;
+
+/** Preserve the direct legacy TypeScript contract while retaining the single MCP input shape. */
+export function blueprintMapPrepare(raw: BlueprintMapLegacyPrepareInput): Promise<BlueprintMapLegacyPrepareResult>;
+export function blueprintMapPrepare(raw: {readonly formatVersion: number; readonly [key: string]: unknown}): Promise<PortableMapPrepareResult>;
+export function blueprintMapPrepare(raw: unknown): Promise<BlueprintMapLegacyPrepareResult | PortableMapPrepareResult>;
+export async function blueprintMapPrepare(raw: unknown): Promise<BlueprintMapLegacyPrepareResult | PortableMapPrepareResult> {
+  if (hasPortableSelector(raw)) return blueprintPortableMapPrepare(raw);
+  const args = legacyPrepareSchema.parse(raw);
   const root = await ensureRepoRoot(args.cwd);
   await scrubLegacyCodebaseFailureLog(root);
+  // A focused or explicitly restarted request against an existing portable
+  // map must continue through the owning portable prepare contract. Resolve
+  // this route before taking the legacy publication lock so the portable
+  // operation cannot recurse under the same lock.
+  const existingGuard = await inspectCodebaseWriteGuard(root);
+  if (existingGuard.portable.status === "valid" &&
+      (args.focus !== undefined || args.restart)) {
+    const portableRoot = await fs.realpath(root).catch(() => root);
+    return blueprintPortableMapPrepare({cwd: portableRoot, formatVersion: 1, intent: "refresh"});
+  }
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
     const gate = await eligibility(root);
     if (!gate.allowed) return {status: "blocked", readiness: gate.readiness, nextAction: await route(gate.next)};
+    const guard = await inspectCodebaseWriteGuard(root);
+    if (!guard.allowed) {
+      if (guard.noOpReuseAllowed && guard.portable.status === "valid" && !args.restart && args.inputs.length === 0 && args.focus === undefined) {
+        return {
+          status: "reused",
+          saved: true,
+          readiness: gate.readiness,
+          // A portable-only bundle does not materialize the seven mutable
+          // legacy views. Report the artifact that actually exists and keep
+          // compatibility state separate from the path list.
+          paths: [".blueprint/codebase/INDEX.md"],
+          portable: guard.portable,
+          compatibility: guard.portable.compatibility,
+          warnings: [],
+          nextAction: await route(gate.next)
+        };
+      }
+      return {
+        status: "blocked",
+        readiness: gate.readiness,
+        issues: [guard.reason ?? "Portable codebase publication state blocks legacy mapping mutations."],
+        nextAction: null
+      };
+    }
     const pending = await readPending(root);
     if (pending && !args.restart) return {status: "partial", snapshot: pending.snapshot, expectedHashes: pending.hashes,
       issues: ["An accepted bundle publication is incomplete. Resubmit its original snapshot and documents. If these are unavailable or inputs changed, prepare with restart:true, then author all seven documents from fresh evidence and submit with overwrite:true. Rejected content was not stored."], nextAction: null};
@@ -148,8 +212,12 @@ export async function blueprintMapPrepare(raw: {cwd?: string; inputs?: string[];
   });
 }
 
-export async function blueprintMapSubmit(raw: {cwd?: string; snapshot: Snapshot; documents?: unknown; overwrite?: boolean}) {
-  const parsed = submitSchema.safeParse(raw);
+export function blueprintMapSubmit(raw: BlueprintMapLegacySubmitInput): Promise<BlueprintMapLegacySubmitResult>;
+export function blueprintMapSubmit(raw: {readonly formatVersion: number; readonly [key: string]: unknown}): Promise<PortableMapSubmitResult>;
+export function blueprintMapSubmit(raw: unknown): Promise<BlueprintMapLegacySubmitResult | PortableMapSubmitResult>;
+export async function blueprintMapSubmit(raw: unknown): Promise<BlueprintMapLegacySubmitResult | PortableMapSubmitResult> {
+  if (hasPortableSelector(raw)) return blueprintPortableMapSubmit(raw);
+  const parsed = legacySubmitSchema.safeParse(raw);
   if (!parsed.success) return {status: "invalid", saved: false, issues: parsed.error.issues.map(issue => ({path: issue.path.join("."), code: issue.code})), warnings: []};
   const args = parsed.data;
   const root = await ensureRepoRoot(args.cwd);
@@ -157,6 +225,15 @@ export async function blueprintMapSubmit(raw: {cwd?: string; snapshot: Snapshot;
   return withBlueprintRepoLock(root, "codebase-publication", async () => {
     const gate = await eligibility(root);
     if (!gate.allowed) return {status: "blocked", saved: false, nextAction: await route(gate.next), issues: ["Project prerequisites changed."]};
+    const guard = await inspectCodebaseWriteGuard(root);
+    if (!guard.allowed) {
+      return {
+        status: "blocked",
+        saved: false,
+        issues: [guard.reason ?? "Portable codebase publication state blocks legacy mapping mutations."],
+        warnings: []
+      };
+    }
     const snapshot = {...args.snapshot, inputs: Object.fromEntries(Object.entries(args.snapshot.inputs).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0))};
     const pending = await readPending(root);
     const [current, files, inputs, core] = await Promise.all([
@@ -238,7 +315,7 @@ export async function blueprintMapSubmit(raw: {cwd?: string; snapshot: Snapshot;
 
 export const mapToolDefinitions = [
   {name: "blueprint_map_prepare", description: "Prepare codebase mapping: readiness, reuse, schema, selected evidence hashes and target snapshot. No drafts or scaffolds are written.", inputSchema: prepareSchema.shape,
-    handler: (args: Record<string, unknown>) => blueprintMapPrepare(args as z.input<typeof prepareSchema>)},
+    handler: (args: Record<string, unknown>) => blueprintMapPrepare(args)},
   {name: "blueprint_map_submit", description: "Validate and publish a prepared codebase bundle directly. Echo snapshot unchanged; author substantive summaries, optional sections and references from inputsUsed. Explicit refresh intent authorizes overwrite.", inputSchema: submitSchema.shape,
-    handler: (args: Record<string, unknown>) => blueprintMapSubmit(args as z.input<typeof submitSchema>)}
+    handler: (args: Record<string, unknown>) => blueprintMapSubmit(args)}
 ];

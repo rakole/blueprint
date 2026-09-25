@@ -1,0 +1,47 @@
+{
+  "formatVersion": 1,
+  "protocolVersion": 1,
+  "generationId": "gen-001",
+  "generatedAt": "2026-09-23T00:00:00.000Z",
+  "gitCommit": null,
+  "inventoryFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "structuralCoverage": {
+    "filesInventoried": 6,
+    "filesWithFullCoverage": 5,
+    "filesWithFileCoverage": 1,
+    "symbolsExtracted": 0,
+    "importsExtracted": 0,
+    "relationshipsExtracted": 0
+  },
+  "semanticCoverage": {"capabilitiesAccepted": 2, "claimsAccepted": 0, "aliasesAccepted": 0, "evidenceDependencies": 0},
+  "parserAssets": [],
+  "inventoryShards": [{"shardId": "files-001", "path": "generations/gen-001/data/files.json", "recordKind": "files", "recordCount": 6, "byteSize": 1730, "checksum": "f361654b3415775d382271f8ca7c862a867a05b4b2131e7e0b191c0cf28d6763"}],
+  "checksums": {
+    "entry": "378675fcbe131027ad58e59a66fede2dc2671732900889cc365378117271a9be",
+    "pages": [
+      {"path": "capabilities/checkout.md", "checksum": "66435fb6045a8f5712e38a3c7291863666131c03b44cb2d3f1f2993a63f501b7"},
+      {"path": "capabilities/shipping.md", "checksum": "008e0fde8f477f4da4aebe66a3ff0dde3e1da0df2d4549ffee8c9a2830a52ca5"},
+      {"path": "records/checkout.md", "checksum": "c28f5409c9203a3d09b3be64212e2583b261447a2f3ecc19cb3d3a02b6a484b6"},
+      {"path": "records/shipping.md", "checksum": "8be8a674a1c4b22b9cfb5d23ee52fcef5fa15e2a57975d9cb556a60724d2001f"},
+      {"path": "records/unsupported.md", "checksum": "307ad93b3b329ccb187991be123ee5fab134e687f2427b54dfcc2f7f8bed4ca2"},
+      {"path": "routes/capabilities.md", "checksum": "133629fa8a841ff53b27c216ec358b29b755573f7a4ef295386ebda5c74ee477"},
+      {"path": "routes/records.md", "checksum": "265e9e57e82a874d72b0729ddf8a9658afede8358d3c6aa1a458533dea0ba840"},
+      {"path": "routes/search.md", "checksum": "5bbcd1741d03124295fd5b9b42ec7a5bef536c95bfe32a7e78eafbb5ca2a0001"},
+      {"path": "search/aliases.md", "checksum": "76d06875f539f443133f4f8ebee173d3b8aefdbbac1d8c5beafb717856daba29"},
+      {"path": "search/files.md", "checksum": "7283903c6468b6b2bacc699b4325aa2d56dd82a1c421ce5357d42b7c09860ffc"},
+      {"path": "search/symbols.md", "checksum": "6971309ac98336133ea68ca44b61e922548f2fd63cbc261d221c05d9f21c73a8"},
+      {"path": "data/summary.json", "checksum": "ed793466ee99916b735fb03982c023dc51973d90d7da73c921a265881262b24d"}
+    ],
+    "compatibility": {
+      "architecture": "028344c58ad41b5c1f3064af826fe4df12096d88687d0cd638269c2b57839822",
+      "concerns": "a92fc96d06a956b798c0dfe0a77090879db10d3eaf31d7f32a14d107195981f9",
+      "conventions": "087d9513c60a12a76033c7bff8da48280512dd9048edabd9700099d6c4596b5c",
+      "integrations": "50a71d7a7201a0346919be7b315d4c5f2fa7a9a6cd8be78fcf96d3c5ddc4d3b4",
+      "stack": "577d69bab07282466e91dbb04dbbf47d2a8e6534eb9414a2d521ea0b2fb72da8",
+      "structure": "779b7e127a87a43a960401f99b2f0703e87ed2003a78780104e2f157850588a4",
+      "testing": "ade2ea5b8a79396601377bad1c62dd3391ef4e8ebdd469ef83c8dd8f649d665c"
+    }
+  },
+  "evidenceDependencies": [],
+  "predecessorGenerationId": null
+}

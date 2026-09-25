@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-25",
+  "runtimeRevision": "a37deccf2bf151e869688527903ef7b31f9e3753",
+  "decision": "usable-opt-in-release; hosted evaluation remains incomplete",
+  "finalReview": {
+    "reviewers": 3,
+    "fixAssignments": 2,
+    "status": "accepted findings addressed",
+    "resolved": [
+      "legacy rejected-content scrub on portable routes",
+      "prepare and submit intent binding",
+      "descriptor-rooted mutation and cleanup",
+      "exact partial-publication retry",
+      "instruction permission preservation",
+      "deployed parser asset freshness",
+      "non-completed participant gate",
+      "same-repeat completion pairing",
+      "measured failed navigation classification"
+    ]
+  },
+  "repositoryChecks": {
+    "typecheck": "passed",
+    "build": "passed",
+    "diffCheck": "passed",
+    "canonicalTests": {
+      "command": "npm test",
+      "total": 2556,
+      "passed": 2556,
+      "failed": 0,
+      "skipped": 0,
+      "batches": {
+        "tests": [
+          2549,
+          5,
+          2
+        ],
+        "pass": [
+          2549,
+          5,
+          2
+        ],
+        "fail": [
+          0,
+          0,
+          0
+        ],
+        "skipped": [
+          0,
+          0,
+          0
+        ]
+      },
+      "checkoutRestoredClean": true
+    },
+    "initialPostReviewRun": {
+      "passed": 2547,
+      "failed": 2,
+      "serialBatchesNotRun": true,
+      "resolution": "Updated the cache race injection to the new writer boundary and preserved stale-target diagnostics for drift from an exact prepared basis; focused regressions and the complete rerun passed."
+    }
+  },
+  "installedRuntime": {
+    "shippedTrackedFiles": 306,
+    "linux": {
+      "network": "disabled",
+      "containerFilesystem": "read-only except disposable fixture tmpfs",
+      "result": {
+        "probe": "installed-bundle-stdio-mcp",
+        "node": "v20.20.2",
+        "toolCount": 114,
+        "parserLanguages": [
+          "typescript",
+          "python",
+          "java"
+        ],
+        "unsupportedFile": true,
+        "pages": 1,
+        "maxPacketBytes": 23364,
+        "files": 6,
+        "symbols": 7,
+        "published": "published",
+        "retried": "reused",
+        "reuse": "reused",
+        "instructionLink": "applied",
+        "providerSchemaReady": true,
+        "providerChecks": [
+          {
+            "provider": "discuss",
+            "revision": 1,
+            "fullBytes": 19650,
+            "deltaBytes": 15382,
+            "entryBodies": 1,
+            "sourceBodies": 1
+          },
+          {
+            "provider": "research",
+            "revision": 1,
+            "fullBytes": 25575,
+            "deltaBytes": 20858,
+            "entryBodies": 1,
+            "sourceBodies": 1
+          },
+          {
+            "provider": "plan",
+            "revision": 1,
+            "fullBytes": 27837,
+            "deltaBytes": 22851,
+            "entryBodies": 1,
+            "sourceBodies": 1
+          }
+        ],
+        "phaseStateChecks": [
+          {
+            "portableOnly": false,
+            "projectStatus": "partial",
+            "blockerCount": 2,
+            "nextAction": "Run /blu-health to inspect the partial .blueprint state"
+          },
+          {
+            "portableOnly": true,
+            "projectStatus": "partial",
+            "blockerCount": 2,
+            "nextAction": "Run /blu-health to inspect the partial .blueprint state"
+          }
+        ],
+        "sourceTreeAvailable": false,
+        "nodeModulesAvailable": false
+      }
+    },
+    "darwin": {
+      "result": {
+        "probe": "installed-bundle-stdio-mcp",
+        "node": "v26.0.0",
+        "toolCount": 114,
+        "parserLanguages": [
+          "typescript",
+          "python",
+          "java"
+        ],
+        "unsupportedFile": true,
+        "pages": 1,
+        "maxPacketBytes": 23364,
+        "files": 6,
+        "symbols": 7,
+        "published": "published",
+        "retried": "reused",
+        "reuse": "reused",
+        "instructionLink": "applied",
+        "providerSchemaReady": true,
+        "providerChecks": [
+          {
+            "provider": "discuss",
+            "revision": 1,
+            "fullBytes": 19702,
+            "deltaBytes": 15434,
+            "entryBodies": 1,
+            "sourceBodies": 1
+          },
+          {
+            "provider": "research",
+            "revision": 1,
+            "fullBytes": 26691,
+            "deltaBytes": 21974,
+            "entryBodies": 1,
+            "sourceBodies": 1
+          },
+          {
+            "provider": "plan",
+            "revision": 1,
+            "fullBytes": 28901,
+            "deltaBytes": 23915,
+            "entryBodies": 1,
+            "sourceBodies": 1
+          }
+        ],
+        "phaseStateChecks": [
+          {
+            "portableOnly": false,
+            "projectStatus": "partial",
+            "blockerCount": 2,
+            "nextAction": "Run /blu-health to inspect the partial .blueprint state"
+          },
+          {
+            "portableOnly": true,
+            "projectStatus": "partial",
+            "blockerCount": 2,
+            "nextAction": "Run /blu-health to inspect the partial .blueprint state"
+          }
+        ],
+        "sourceTreeAvailable": false,
+        "nodeModulesAvailable": false
+      }
+    },
+    "perRequestTimeoutMs": 25000
+  },
+  "extensionInstallation": {
+    "tests": 6,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 2,
+    "geminiCliVersion": "0.40.1",
+    "checks": [
+      "Gemini link registration and shipped bundle",
+      "Gemini copied installation and shipped bundle"
+    ],
+    "skips": [
+      "Authenticated Gemini prompt: GEMINI_API_KEY not set",
+      "Tabnine CLI install: BLUEPRINT_TABNINE_CLI_INSTALL_COMMAND not set"
+    ],
+    "geminiCleanHomeTtySmoke": "passed with disposable home"
+  },
+  "postReviewScale": {
+    "runtimeRevision": "cb1ca5cb8107d57a543c19b522b73dd35750473c",
+    "laterRuntimeChanges": "Only exact-preflight drift diagnostics and a test-only post-write hook changed afterward; the scale path does not enable the new internal revalidation flag.",
+    "measurementContext": "Offline Linux arm64 Node20 container; the macOS canonical test suite ran concurrently. Timings include this contention and are not a cross-platform performance comparison.",
+    "result": {
+      "generatorVersion": "portable-map-scale-v1",
+      "environment": {
+        "node": "v20.20.2",
+        "platform": "linux",
+        "arch": "arm64",
+        "memoryMethod": "Sampled end-of-stage process.memoryUsage().rss; this is an observed lower bound, not peak RSS."
+      },
+      "fixture": {
+        "generatorVersion": "portable-map-scale-v1",
+        "requestedFileCount": 10000,
+        "fileCount": 10000,
+        "languageCounts": {
+          "javascript": 1600,
+          "jsx": 1400,
+          "typescript": 1700,
+          "tsx": 1400,
+          "python": 1800,
+          "java": 1700,
+          "unsupported": 400
+        },
+        "knownResponsibilities": [
+          {
+            "path": "src/domains/checkout/cart.ts",
+            "responsibility": "checkout totals and basket line validation"
+          },
+          {
+            "path": "src/domains/checkout/authorize.ts",
+            "responsibility": "checkout authorization boundary"
+          },
+          {
+            "path": "src/domains/shipping/label.js",
+            "responsibility": "shipping label creation and carrier routing"
+          },
+          {
+            "path": "src/domains/ui/CheckoutPanel.jsx",
+            "responsibility": "customer checkout interaction surface"
+          },
+          {
+            "path": "src/domains/catalog/CatalogSearch.tsx",
+            "responsibility": "catalog search and result rendering"
+          },
+          {
+            "path": "python/fulfillment/rates.py",
+            "responsibility": "shipping rate policy and carrier quote calculation"
+          },
+          {
+            "path": "java/com/example/payments/PaymentGateway.java",
+            "responsibility": "payment gateway authorization and receipt creation"
+          },
+          {
+            "path": "db/migrations/001_orders.sql",
+            "responsibility": "orders persistence schema migration (file-level unsupported coverage)"
+          }
+        ],
+        "largeSource": {
+          "path": "src/scale/oversized.ts",
+          "byteSize": 1100037
+        }
+      },
+      "extraction": {
+        "elapsedMs": 44566.532144,
+        "files": 10000,
+        "fileCoverageFull": 9581,
+        "fileCoverageOnly": 419,
+        "symbols": 19212,
+        "imports": 9208,
+        "relationships": 4811,
+        "structuralShards": 5,
+        "sourceBytes": 2290612,
+        "sourceHashManifest": {
+          "records": 10000,
+          "serializedBytes": 1554753,
+          "sha256": "0b25dda3ee87bcab049c7fa6d2558017892db5bba891109bfa92dc527aeedfcd"
+        },
+        "coverageStatement": "File inventory covers every eligible source path. Full declaration coverage applies only to successfully parsed supported files at or below the one MiB limit; unsupported and oversized files are intentionally file-level. Authored semantics cover eight named responsibilities with eight claims and eight aliases."
+      },
+      "packets": {
+        "elapsedMs": 20281.071552,
+        "count": 451,
+        "serializedBytes": 22069895,
+        "maxSerializedBytes": 49143,
+        "allWithinUtf8Cap": true,
+        "losslessReconstruction": true,
+        "sourceRecordCounts": {
+          "files": 10000,
+          "symbols": 19212,
+          "imports": 9208,
+          "relationships": 4811
+        },
+        "method": "packetizePortableModelEvidence over the complete extracted structural inventory; records were sorted by id and reconstructed byte-for-byte by record JSON equality. Persisted public operation receipts were not walked at 10k because each receipt revalidates the full source basis."
+      },
+      "authoredModel": {
+        "completeSubmissionUtf8Bytes": 14979,
+        "capabilities": 8,
+        "claims": 8,
+        "aliases": 8,
+        "documents": 7,
+        "semanticEvidenceDependencies": 15,
+        "validated": true,
+        "coverage": "Eight named capabilities; eight observed source-linked claims; eight source-linked aliases; all seven compatibility documents substantive."
+      },
+      "rendering": {
+        "elapsedMs": 4306.373877000005,
+        "files": 8784,
+        "pages": 8774,
+        "bytes": 47118986,
+        "indexBytes": 2570,
+        "entryBytes": 1733,
+        "compatibilityViews": 7
+      },
+      "publication": {
+        "first": {
+          "elapsedMs": 103661.488714,
+          "status": "published",
+          "committed": true,
+          "retainedGenerations": 1,
+          "retainedBytes": 47114431
+        },
+        "firstResolution": {
+          "elapsedMs": 6111.099128000002,
+          "status": "ok",
+          "generationId": "gen-scale-001",
+          "fallbackUsed": false
+        },
+        "secondGeneration": {
+          "elapsedMs": 99303.26612800002,
+          "status": "published",
+          "committed": true,
+          "retainedGenerations": 2,
+          "retainedBytes": 94232897
+        },
+        "secondResolution": {
+          "elapsedMs": 6976.4880859999685,
+          "status": "ok",
+          "generationId": "gen-scale-002",
+          "fallbackUsed": false
+        },
+        "retainedFirstResolution": {
+          "elapsedMs": 13842.278338999953,
+          "status": "ok",
+          "generationId": "gen-scale-001",
+          "fallbackUsed": false
+        },
+        "generationDisk": {
+          "firstBytes": 47114431,
+          "secondBytes": 94232897,
+          "refreshGrowthBytes": 47118466,
+          "allocatedGenerationDirectories": 2,
+          "provedPublishedGenerationIds": [
+            "gen-scale-001",
+            "gen-scale-002"
+          ],
+          "method": "Counted and summed literal files under .blueprint/codebase/generations after each committed publication; retained ids were proved by cold resolver calls."
+        },
+        "freshnessMethod": "Publisher verifyFreshness callback rebuilt the current source inventory and compared its freshly hashed inventory fingerprint on each pre-commit publication phase."
+      },
+      "multipartDecision": {
+        "thresholdUtf8Bytes": 49152,
+        "completeAuthoredSubmissionUtf8Bytes": 14979,
+        "requiresMultipart": false,
+        "decision": "The authored model fits the PLAN5.3 threshold; this is a model-size observation and does not establish operation continuation safety.",
+        "boundedSingleSubmissionCovers": [
+          "eight named capabilities",
+          "eight source-linked observed claims",
+          "eight source-linked aliases",
+          "seven substantive compatibility documents",
+          "structural inventory supplied separately through bounded packets"
+        ]
+      },
+      "operationContinuation": {
+        "measured": false,
+        "fixture": "tests/portable-map-operations.test.ts",
+        "method": "The 10,000-file run measures direct packetization and model size. Durable receipt traversal, disk reload, and lossless reconstruction are measured by the manageable operation fixture; this scale run does not claim a 10,000-file operation walk."
+      },
+      "memory": {
+        "observedRssMiB": 1386.42,
+        "samples": [
+          {
+            "stage": "start",
+            "rssMiB": 104.26
+          },
+          {
+            "stage": "extraction",
+            "rssMiB": 209.15
+          },
+          {
+            "stage": "packets",
+            "rssMiB": 455.94
+          },
+          {
+            "stage": "validation",
+            "rssMiB": 416.36
+          },
+          {
+            "stage": "render",
+            "rssMiB": 470.05
+          },
+          {
+            "stage": "first-resolution",
+            "rssMiB": 513.68
+          },
+          {
+            "stage": "refresh-resolution",
+            "rssMiB": 1386.42
+          }
+        ],
+        "method": "Sampled process.memoryUsage().rss after named stages; observed maximum is not a peak allocation measurement."
+      },
+      "limitations": [
+        "The fixture is deterministic source generation and is not a hosted-model quality or downstream-efficiency benchmark.",
+        "Wallclock values depend on the host and are recorded for reproducibility only; no timing threshold is asserted.",
+        "RSS samples are end-of-stage observations rather than peak or per-stage allocations.",
+        "The authored model intentionally covers eight known responsibilities; generated modules remain structural-only semantics.",
+        "The refresh adds one source file and retains both published generations; garbage collection is not exercised.",
+        "No multipart protocol is implemented in Wave12 C."
+      ]
+    }
+  },
+  "productionAudit": {
+    "exitCode": 1,
+    "baselineRevision": "086f33aac333bf3d50d68d9f6166d8904e767e46",
+    "packageAndLockfileChanged": false,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 1,
+      "moderate": 3,
+      "high": 2,
+      "critical": 0,
+      "total": 6
+    },
+    "disposition": "Existing baseline advisories; dependency remediation is not included in this change."
+  },
+  "limits": [
+    "The frozen hosted and navigation study outcomes are unchanged; no default-adoption, quality-parity or token-savings claim.",
+    "The 10,000-file fixture did not walk persisted public operation receipts; it verified deterministic packetization and two direct publications with fresh source callbacks.",
+    "macOS large-map latency was not established; its installed small-fixture runtime probe passed.",
+    "Scale RSS is sampled at stage boundaries and is a lower bound on peak memory.",
+    "Existing-leaf replacement and cleanup use cooperative repository locks and do not provide atomic compare-and-swap against hostile non-cooperating writers. Directory identity containment is separately enforced.",
+    "Authenticated host prompts and Tabnine installation were not exercised."
+  ]
+}

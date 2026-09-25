@@ -34,7 +34,16 @@ import { blueprintStateUpdate, blueprintStateLoad } from "./state.js";
 import {
   collectDiscussEvidence,
   discussEvidenceHash,
+  type DiscussOrdinaryDelivery,
+  type DiscussPortableMetadata,
 } from "./discuss-evidence.js";
+import {
+  portableProviderEvidenceBasisSchema,
+  portableProviderEvidenceModeSchema,
+  portableProviderEvidenceNextSchema,
+  resolvePortableProviderEvidence,
+} from "../codebase-index/provider-evidence.js";
+import {portableSelectionSchema} from "../codebase-index/resolver.js";
 import type { ToolDefinition } from "../tool-types.js";
 
 const recordSchema = z.object({
@@ -53,6 +62,8 @@ type Basis = {
   readSet: Array<{ path: string; hash: string | null }>;
   prepared: boolean;
   evidencePaths?: string[];
+  portable?: DiscussPortableMetadata;
+  ordinaryDelivery?: DiscussOrdinaryDelivery;
 };
 type Event = {
   revision: number;
@@ -89,6 +100,43 @@ const numericPhase = z
   .union([z.string().regex(/^\d+(?:\.\d+)*$/), z.number().nonnegative()])
   .describe("Numeric phase reference, never a directory or filename.");
 const lookupShape = { cwd: z.string().optional(), phase: numericPhase };
+const publicPortableDeliverySchema = z.strictObject({
+  mode: portableProviderEvidenceModeSchema,
+  readTimeEvidence: z.array(z.strictObject({
+    path: z.string().min(1).max(4096),
+    hash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    bytes: z.string().max(256 * 1024).optional(),
+  })).max(100).optional(),
+});
+const portableSessionSchema = z.strictObject({
+  selections: z.array(portableSelectionSchema).max(20),
+  basis: portableProviderEvidenceBasisSchema,
+  next: portableProviderEvidenceNextSchema,
+});
+function portablePriorIdentities(
+  values: readonly {path: string; generation: string; hash: string}[],
+) {
+  return values.map((item) => ({
+    path: item.path,
+    hash: item.hash,
+    generation: item.generation,
+  }));
+}
+function discussEvidenceBudget(
+  readSet: readonly {path: string}[],
+  evidencePaths: readonly string[],
+  portableSelections: readonly unknown[] | undefined,
+) {
+  const explicit = new Set(evidencePaths);
+  const baseline = readSet.filter((item) => !explicit.has(item.path)).length;
+  const selected = explicit.size;
+  const compactEntryBaseline = portableSelections?.length ? 0 : 1;
+  return {
+    baselineSelectedCount: baseline + selected + compactEntryBaseline,
+    baselineReadSetCount: baseline + selected,
+    maxSourceCount: 20 + baseline + compactEntryBaseline,
+  };
+}
 const idSchema = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/);
 const recordInput = z.object({
   ...lookupShape,
@@ -170,6 +218,11 @@ const sessionSchema = z.object({
   basis: z.object({
     prepared: z.boolean(),
     evidencePaths: z.array(z.string()).optional(),
+    portable: portableSessionSchema.optional(),
+    ordinaryDelivery: z.object({
+      delivered: z.array(z.object({path: z.string(), hash: z.string().regex(/^[a-f0-9]{64}$/)})),
+      registered: z.array(z.object({path: z.string(), hash: z.string().regex(/^[a-f0-9]{64}$/)})),
+    }).optional(),
     readSet: z.array(
       z.object({
         path: z.string(),
@@ -191,7 +244,7 @@ const sessionSchema = z.object({
       requestId: z.string(),
       kind: z.string(),
       records: z.array(recordSchema).optional(),
-      basis: z.object({ prepared: z.boolean(), readSet: z.array(z.object({ path: z.string(), hash: z.string().nullable() })), evidencePaths: z.array(z.string()).optional() }).optional(),
+      basis: z.object({ prepared: z.boolean(), readSet: z.array(z.object({ path: z.string(), hash: z.string().nullable() })), evidencePaths: z.array(z.string()).optional(), portable: portableSessionSchema.optional(), ordinaryDelivery: z.object({ delivered: z.array(z.object({path: z.string(), hash: z.string().regex(/^[a-f0-9]{64}$/)})), registered: z.array(z.object({path: z.string(), hash: z.string().regex(/^[a-f0-9]{64}$/)})) }).optional() }).optional(),
       baseline: z.object({ context: z.string().nullable(), log: z.string().nullable() }).optional(),
     }),
   ),
@@ -217,15 +270,15 @@ const sessionSchema = z.object({
     })
     .optional(),
 });
-async function basisFreshness(root: string, readSet: Basis["readSet"]) {
+async function basisFreshness(root: string, basis: Basis) {
   const result = {
-    status: readSet.length ? "fresh" : "unknown",
+    status: basis.readSet.length || basis.portable ? "fresh" : "unknown",
     stalePaths: [] as string[],
     unknownPaths: [] as string[],
     warnings: [] as string[],
   };
   await Promise.all(
-    readSet.map(async (item) => {
+    basis.readSet.map(async (item) => {
       try {
         if ((await discussEvidenceHash(root, item.path)) !== item.hash)
           result.stalePaths.push(item.path);
@@ -234,6 +287,44 @@ async function basisFreshness(root: string, readSet: Basis["readSet"]) {
       }
     }),
   );
+  if (basis.portable) {
+    const prior = {
+      binding: {
+        pinnedGeneration: basis.portable.basis.generationId,
+        identities: portablePriorIdentities(basis.portable.basis.bound),
+        hash: basis.portable.basis.bindingHash,
+      },
+      delivered: portablePriorIdentities(basis.portable.next.delivered),
+      registered: portablePriorIdentities(basis.portable.next.registered),
+    };
+    const budget = discussEvidenceBudget(
+      basis.readSet,
+      basis.evidencePaths ?? [],
+      basis.portable.selections,
+    );
+    const portable = await resolvePortableProviderEvidence({
+      root,
+      selections: basis.portable.selections,
+      generationId: basis.portable.basis.generationId,
+      ...(basis.portable.basis.pinReceipt ? {pinReceipt: basis.portable.basis.pinReceipt} : {}),
+      evidenceDelivery: {
+        mode: "register",
+        prior,
+        limits: {
+          maxSourceCount: budget.maxSourceCount,
+          maxReadSetCount: 100,
+        },
+        baseline: {
+          selectedCount: budget.baselineSelectedCount,
+          readSetCount: budget.baselineReadSetCount,
+        },
+      },
+    });
+    if (portable.status !== "ok") {
+      result.stalePaths.push(...portable.paths);
+      result.warnings.push(portable.reason);
+    }
+  }
   result.stalePaths.sort();
   result.unknownPaths.sort();
   result.status = result.stalePaths.length
@@ -347,6 +438,8 @@ export async function prepareDiscussInputBasis(
   args: Lookup & {
     readSet: Array<{ path: string; hash: string | null }>;
     evidencePaths?: string[];
+    portable?: DiscussPortableMetadata;
+    ordinaryDelivery?: DiscussOrdinaryDelivery;
     expectedRevision?: number;
     acknowledgeChangedInputs?: boolean;
     targetHashes?: { context: string | null; log: string | null };
@@ -398,7 +491,12 @@ export async function prepareDiscussInputBasis(
           affectedRecordIds: session.records.map((r) => r.id),
         };
     }
-    const freshness = await basisFreshness(loc.projectRoot, args.readSet);
+    const portable = args.portable ?? session.basis.portable;
+    const freshness = await basisFreshness(loc.projectRoot, {
+      readSet: args.readSet,
+      prepared: session.basis.prepared,
+      portable,
+    });
     if (freshness.status !== "fresh") return { status: "stale", freshness };
     const changedPaths = [
       ...new Set([
@@ -410,6 +508,10 @@ export async function prepareDiscussInputBasis(
         session.basis.readSet.find((i) => i.path === path)?.hash !==
         args.readSet.find((i) => i.path === path)?.hash,
     );
+    const previousSelections = JSON.stringify(session.basis.portable?.selections ?? []);
+    const nextSelections = JSON.stringify(portable?.selections ?? []);
+    if (session.basis.prepared && previousSelections !== nextSelections)
+      changedPaths.push("@discuss/portable");
     if (
       session.basis.prepared &&
       changedPaths.length &&
@@ -488,6 +590,12 @@ export async function prepareDiscussInputBasis(
       prepared: true,
       readSet: checkedPayload(args.readSet) as Basis["readSet"],
       evidencePaths: args.evidencePaths ?? session.basis.evidencePaths,
+      ...(portable ? {portable: checkedPayload(portable) as DiscussPortableMetadata} : {}),
+      ...(args.ordinaryDelivery
+        ? {ordinaryDelivery: checkedPayload(args.ordinaryDelivery) as DiscussOrdinaryDelivery}
+        : session.basis.ordinaryDelivery
+          ? {ordinaryDelivery: session.basis.ordinaryDelivery}
+          : {}),
     };
     session.revision++;
     session.history.push({
@@ -732,7 +840,14 @@ export async function blueprintDiscussFinalize(
           nextAction:
             "Run blueprint_discuss_prepare with explicit target reconciliation.",
         };
-      const evidence = await collectDiscussEvidence({ cwd: loc.projectRoot, phase: session.phase, evidencePaths: session.basis.evidencePaths });
+      const evidence = await collectDiscussEvidence({
+        cwd: loc.projectRoot,
+        phase: session.phase,
+        evidencePaths: session.basis.evidencePaths,
+        portableSelections: session.basis.portable?.selections,
+        resolvePortableMetadata: async () => session.basis.portable,
+        resolveOrdinaryDelivery: async () => session.basis.ordinaryDelivery,
+      });
       if (evidence.status !== "collected") return { ...evidence, saved: false };
       const assessment = assess(session, loc.resolved, inputModel, discussAuthoring(evidence.packet, session.records).defaults);
       if (!assessment.ready || !assessment.model || !assessment.content)
@@ -742,10 +857,7 @@ export async function blueprintDiscussFinalize(
           blockers: assessment.blockers,
           nextAction: "Correct the addressed fields or resolve explicitly blocking notes, then submit model again.",
         };
-      const freshness = await basisFreshness(
-        loc.projectRoot,
-        session.basis.readSet,
-      );
+      const freshness = await basisFreshness(loc.projectRoot, session.basis);
       if (!session.basis.prepared || freshness.status !== "fresh")
         return {
           status: "stale", saved: false, outcome: "rejected-not-saved",
@@ -854,14 +966,21 @@ export async function blueprintDiscussFinalize(
         throw new Error("Request ID conflict: model differs from publication intent.");
       if (!publicationModel && await hashPath(loc.projectRoot, journal.context.path) !== journal.context.hash) {
         if (inputModel === undefined) throw new Error("Resubmit model with the same requestId; context was not committed.");
-        const evidence = await collectDiscussEvidence({ cwd: loc.projectRoot, phase: session.phase, evidencePaths: session.basis.evidencePaths });
+        const evidence = await collectDiscussEvidence({
+          cwd: loc.projectRoot,
+          phase: session.phase,
+          evidencePaths: session.basis.evidencePaths,
+          portableSelections: session.basis.portable?.selections,
+          resolvePortableMetadata: async () => session.basis.portable,
+          resolveOrdinaryDelivery: async () => session.basis.ordinaryDelivery,
+        });
         if (evidence.status !== "collected") throw new Error("Unable to refresh evidence.");
         const assessment = assess(session, loc.resolved, inputModel, discussAuthoring(evidence.packet, session.records).defaults);
         if (!assessment.ready || !assessment.model || !assessment.content || digest(prepareTextForPersistence(assessment.content).content.replace(/\r\n/g, "\n")) !== journal.context.hash)
           throw new Error("Resubmitted model does not match validated publication intent.");
         publicationModel = assessment.model;
       }
-      const freshness = await basisFreshness(loc.projectRoot, session.basis.readSet);
+      const freshness = await basisFreshness(loc.projectRoot, session.basis);
       if (!session.basis.prepared || freshness.status !== "fresh")
         throw new Error("Discussion evidence changed or is unknown; run blueprint_discuss_prepare with explicit target reconciliation and review changed inputs.");
       for (const kind of ["context", "log"] as const) {
@@ -982,6 +1101,8 @@ const prepareInput = z.object({
   cwd: z.string().optional(),
   phase: numericPhase.optional(),
   evidencePaths: z.array(z.string().min(1)).max(20).optional(),
+  portableSelections: z.array(portableSelectionSchema).max(20).optional(),
+  evidenceDelivery: publicPortableDeliverySchema.optional(),
   expectedRevision: z.number().int().min(0).optional(),
   acknowledgeChangedInputs: z.boolean().optional(),
   reconcile: z
@@ -1005,6 +1126,10 @@ export async function blueprintDiscussPrepare(
       }
       return evidencePaths;
     },
+    resolvePortableMetadata: async (root, relative) =>
+      (await readSession(root, relative))?.basis.portable,
+    resolveOrdinaryDelivery: async (root, relative) =>
+      (await readSession(root, relative))?.basis.ordinaryDelivery,
   });
   if (evidence.status !== "collected") return evidence;
   const result = await prepareDiscussInputBasis({
@@ -1013,6 +1138,8 @@ export async function blueprintDiscussPrepare(
     phase: evidence.phase,
     readSet: evidence.readSet,
     evidencePaths,
+    portable: evidence.portable,
+    ordinaryDelivery: evidence.ordinaryDelivery,
     targetHashes: {
       context: evidence.packet.artifacts.context.hash,
       log: evidence.packet.artifacts.log.hash,

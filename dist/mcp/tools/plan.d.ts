@@ -5,6 +5,7 @@ import { validatePhasePlanCandidateSet } from "./phase.js";
 import { compilePlanCandidate } from "./plan-model.js";
 import { blueprintStateLoad, blueprintStateUpdate } from "./state.js";
 import { type PlanSession } from "./plan-session.js";
+import { type PortableProviderEvidenceBasis } from "../codebase-index/provider-evidence.js";
 declare const prepareInput: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
     phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
@@ -17,6 +18,57 @@ declare const prepareInput: z.ZodObject<{
     evidencePaths: z.ZodOptional<z.ZodArray<z.ZodString>>;
     expectedRevision: z.ZodOptional<z.ZodNumber>;
     acknowledgeChangedInputs: z.ZodOptional<z.ZodBoolean>;
+    portableSelections: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
+        kind: z.ZodLiteral<"page">;
+        path: z.ZodString;
+        mode: z.ZodLiteral<"discovery">;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodEnum<{
+            symbol: "symbol";
+            file: "file";
+            import: "import";
+            relationship: "relationship";
+            detail: "detail";
+        }>;
+        recordId: z.ZodString;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodEnum<{
+            alias: "alias";
+            capability: "capability";
+            claim: "claim";
+        }>;
+        recordId: z.ZodString;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodLiteral<"structural">;
+        recordKind: z.ZodEnum<{
+            symbol: "symbol";
+            file: "file";
+            import: "import";
+            relationship: "relationship";
+            detail: "detail";
+        }>;
+        recordId: z.ZodString;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodLiteral<"semantic">;
+        recordKind: z.ZodEnum<{
+            alias: "alias";
+            capability: "capability";
+            claim: "claim";
+        }>;
+        recordId: z.ZodString;
+    }, z.core.$strict>]>>>;
+    evidenceDelivery: z.ZodOptional<z.ZodObject<{
+        mode: z.ZodEnum<{
+            full: "full";
+            delta: "delta";
+            register: "register";
+        }>;
+        readTimeEvidence: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            path: z.ZodString;
+            hash: z.ZodOptional<z.ZodString>;
+            bytes: z.ZodOptional<z.ZodString>;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>;
     reconcile: z.ZodOptional<z.ZodObject<{
         confirmed: z.ZodLiteral<true>;
         targetHashes: z.ZodRecord<z.ZodString, z.ZodNullable<z.ZodString>>;
@@ -50,6 +102,46 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     revision: number;
     sessionPath: string;
     status: string;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    reason?: undefined;
+} | {
+    nextAction: string;
+    scopeReduction?: {
+        selectedCount: number;
+        suggestedMaxCount?: number;
+        omittedBodyCount: number;
+        omittedPathCount?: number;
+    } | undefined;
+    counts?: import("../evidence-delivery.js").EvidenceDeliveryCounts | undefined;
+    code?: string | undefined;
+    status: "invalid" | "not-found" | "fallback" | "reread_required" | "evidence_limit";
+    saved: boolean;
+    ready: boolean;
+    reason: string;
+    paths: readonly string[];
+} | {
+    status: string;
+    saved: boolean;
+    ready: boolean;
+    counts: {
+        selectedCount: number;
+        sourceCount: number;
+        readSetCount: number;
+        deliveredCount: number;
+        omittedCount: number;
+        packetBytes: number;
+    };
+    scopeReduction: {
+        selectedCount: number;
+        suggestedMaxCount: number;
+        omittedBodyCount: number;
+        omittedPathCount: number;
+    };
+    reason: string;
+    nextAction: string;
 } | {
     freshness: {
         status: string;
@@ -60,11 +152,203 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     revision: number;
     sessionPath: string;
     status: string;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    reason?: undefined;
+} | {
+    status: "reread_required";
+    saved: boolean;
+    ready: boolean;
+    paths: string[];
+    reason: string;
+    nextAction: string;
+    phase: import("./phase-tool-types.js").PhaseSelectionResult;
+    gates: {
+        ready: boolean;
+        blockers: string[];
+        checkerRequired: boolean;
+    };
+    config: {
+        workflow: {
+            research: boolean;
+            plan_check: boolean;
+            secure_phase: boolean;
+            verifier: boolean;
+            nyquist_validation: boolean;
+            ui_phase: boolean;
+            ui_safety_gate: boolean;
+            no_uat: boolean;
+            code_review: boolean;
+            code_review_depth: string;
+            auto_advance: boolean;
+            research_before_questions: boolean;
+            discuss_mode: string;
+            use_worktrees: boolean;
+            subagents: boolean;
+            subagent_timeout: number;
+        };
+    };
+    requirements: {
+        found: boolean;
+        path: string | null;
+        canonicalRequirementIds: string[];
+        roadmapRequirementIds: string[];
+        traceabilityNotes: string[];
+        acceptanceNotes: string[];
+        deferredItems: string[];
+        summary: string;
+        warnings: string[];
+    } | undefined;
+    projectBrief: {
+        found: boolean;
+        path: string | null;
+        title: string | null;
+        summary: string;
+        vision: string[];
+        audience: string[];
+        constraints: string[];
+        currentMilestone: string | null;
+        nonGoals: string[];
+        warnings: string[];
+    } | undefined;
+    evidence: ({
+        content: string | null;
+        truncated: boolean;
+        path: string;
+        hash: string;
+    } | {
+        content: string | null;
+        truncated: boolean;
+        path: string;
+        hash: null;
+    })[];
+    grounding: {
+        lockedDecisions: string;
+        phaseBoundary: string;
+        dependencies: string;
+        discoveryGrounding: string;
+        projectConstraints: string[];
+    };
+    existingPlans: {
+        planId: string;
+        path: string;
+        title: string | null;
+        wave: number | null;
+        dependsOn: string[];
+        requirements: string[];
+        status: string | null;
+    }[];
+    targetHashes: {
+        [k: string]: string | null;
+    };
+    schema: Record<string, unknown>;
+    example: {
+        plans: {
+            title: string;
+            goal: string;
+            tasks: {
+                title: string;
+                filesModified: string[];
+                requirements: string[];
+                action: string[];
+                acceptanceCriteria: string[];
+                id?: string | undefined;
+                readFirst?: string[] | undefined;
+            }[];
+            key?: string | undefined;
+            scope?: string[] | undefined;
+            dependsOn?: string[] | undefined;
+            mustHaves?: string[] | undefined;
+            autonomous?: boolean | undefined;
+            gapClosure?: boolean | undefined;
+            externalServicePrerequisites?: {
+                service: string;
+                category: string;
+                purpose: string;
+                userSetup: string;
+                readinessCheck: string;
+                canAgentProceedWithoutIt: boolean;
+            }[] | undefined;
+            verification?: {
+                item: string;
+                method: "test" | "command" | "grep" | "file-read" | "artifact-validation";
+                evidence: string;
+            }[] | undefined;
+            evidence?: {
+                artifact: string;
+                rationale: string;
+            }[] | undefined;
+            unknownsAndDeferrals?: {
+                item: string;
+                disposition: "unknown" | "none" | "deferred" | "blocked";
+                rationale: string;
+                followUp: string;
+            }[] | undefined;
+        }[];
+        deferrals?: {
+            requirement: string;
+            rationale: string;
+            followUp: string;
+        }[] | undefined;
+    };
+    validationRules: {
+        reject: string[];
+        advisory: string[];
+        normalize: string[];
+    };
+    derivedFields: string[];
+    exampleNote: string;
+    counts?: undefined;
+    scopeReduction?: undefined;
 } | {
     reason: string;
     revision: number;
     sessionPath: string;
     status: string;
+    portable?: {
+        selections: ({
+            kind: "page";
+            path: string;
+            mode: "discovery";
+        } | {
+            kind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "alias" | "capability" | "claim";
+            recordId: string;
+        } | {
+            kind: "structural";
+            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "semantic";
+            recordKind: "alias" | "capability" | "claim";
+            recordId: string;
+        })[];
+        basis: PortableProviderEvidenceBasis;
+        next: {
+            readSet: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceReadSet;
+            schemaVersion: 1;
+            bound: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+            bindingHash: string;
+            delivered: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+            registered: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+        };
+        packet: import("../evidence-delivery.js").EvidencePacket;
+        binding: import("../evidence-delivery.js").PriorEvidenceBinding;
+        counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
+        mode: "full" | "delta" | "register";
+    } | undefined;
+    evidence: ({
+        readonly path: string;
+        readonly hash: string | null;
+        readonly content: string | null;
+    } | {
+        path: string;
+        hash: string;
+    })[];
     phase: import("./phase-tool-types.js").PhaseSelectionResult;
     gates: {
         ready: boolean;
@@ -114,17 +398,6 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
         nonGoals: string[];
         warnings: string[];
     } | undefined;
-    evidence: ({
-        content: string | null;
-        truncated: boolean;
-        path: string;
-        hash: string;
-    } | {
-        content: string | null;
-        truncated: boolean;
-        path: string;
-        hash: null;
-    })[];
     grounding: {
         lockedDecisions: string;
         phaseBoundary: string;
@@ -201,11 +474,58 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     };
     derivedFields: string[];
     exampleNote: string;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    nextAction?: undefined;
 } | {
     nextAction: string;
     revision: number;
     sessionPath: string;
     status: string;
+    portable?: {
+        selections: ({
+            kind: "page";
+            path: string;
+            mode: "discovery";
+        } | {
+            kind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "alias" | "capability" | "claim";
+            recordId: string;
+        } | {
+            kind: "structural";
+            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "semantic";
+            recordKind: "alias" | "capability" | "claim";
+            recordId: string;
+        })[];
+        basis: PortableProviderEvidenceBasis;
+        next: {
+            readSet: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceReadSet;
+            schemaVersion: 1;
+            bound: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+            bindingHash: string;
+            delivered: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+            registered: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+        };
+        packet: import("../evidence-delivery.js").EvidencePacket;
+        binding: import("../evidence-delivery.js").PriorEvidenceBinding;
+        counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
+        mode: "full" | "delta" | "register";
+    } | undefined;
+    evidence: ({
+        readonly path: string;
+        readonly hash: string | null;
+        readonly content: string | null;
+    } | {
+        path: string;
+        hash: string;
+    })[];
     phase: import("./phase-tool-types.js").PhaseSelectionResult;
     gates: {
         ready: boolean;
@@ -255,17 +575,6 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
         nonGoals: string[];
         warnings: string[];
     } | undefined;
-    evidence: ({
-        content: string | null;
-        truncated: boolean;
-        path: string;
-        hash: string;
-    } | {
-        content: string | null;
-        truncated: boolean;
-        path: string;
-        hash: null;
-    })[];
     grounding: {
         lockedDecisions: string;
         phaseBoundary: string;
@@ -342,6 +651,11 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     };
     derivedFields: string[];
     exampleNote: string;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    reason?: undefined;
 } | {
     mode: "replace" | "add" | "revise";
     targetPlanIds: string[];
@@ -352,6 +666,48 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     sessionPath: string;
     schema: Record<string, unknown>;
     status: string;
+    portable?: {
+        selections: ({
+            kind: "page";
+            path: string;
+            mode: "discovery";
+        } | {
+            kind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "alias" | "capability" | "claim";
+            recordId: string;
+        } | {
+            kind: "structural";
+            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "semantic";
+            recordKind: "alias" | "capability" | "claim";
+            recordId: string;
+        })[];
+        basis: PortableProviderEvidenceBasis;
+        next: {
+            readSet: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceReadSet;
+            schemaVersion: 1;
+            bound: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+            bindingHash: string;
+            delivered: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+            registered: readonly import("../evidence-delivery.js").EvidenceIdentity[];
+        };
+        packet: import("../evidence-delivery.js").EvidencePacket;
+        binding: import("../evidence-delivery.js").PriorEvidenceBinding;
+        counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
+        mode: "full" | "delta" | "register";
+    } | undefined;
+    evidence: ({
+        readonly path: string;
+        readonly hash: string | null;
+        readonly content: string | null;
+    } | {
+        path: string;
+        hash: string;
+    })[];
     phase: import("./phase-tool-types.js").PhaseSelectionResult;
     gates: {
         ready: boolean;
@@ -401,17 +757,6 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
         nonGoals: string[];
         warnings: string[];
     } | undefined;
-    evidence: ({
-        content: string | null;
-        truncated: boolean;
-        path: string;
-        hash: string;
-    } | {
-        content: string | null;
-        truncated: boolean;
-        path: string;
-        hash: null;
-    })[];
     grounding: {
         lockedDecisions: string;
         phaseBoundary: string;
@@ -487,6 +832,11 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     };
     derivedFields: string[];
     exampleNote: string;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    reason?: undefined;
 } | {
     status: string;
     reason: string;

@@ -1260,16 +1260,14 @@ export const MAP_CODEBASE_RUNTIME_METADATA = {
     executionProfile: "long-running-mutation",
     rootRoutable: true,
     purpose:
-      "`map-codebase` prepares selected repository evidence, authors structured content, and directly publishes the stable seven-document Blueprint codebase bundle. Valid maps are reused by default; focus areas deepen the same bundle.",
-    reads: [],
+      "`map-codebase` prepares selected repository evidence and directly publishes the generated seven-document compatibility views, with explicit portable format v1 opt-in for an INDEX.md plus a complete immutable generation. Valid maps are reused by default; focus areas deepen the same bundle.",
+    reads: [
+      "Selected repository evidence and generated map state through blueprint_map_prepare"
+    ],
     writes: [
-      ".blueprint/codebase/STACK.md",
-      ".blueprint/codebase/ARCHITECTURE.md",
-      ".blueprint/codebase/STRUCTURE.md",
-      ".blueprint/codebase/CONVENTIONS.md",
-      ".blueprint/codebase/TESTING.md",
-      ".blueprint/codebase/INTEGRATIONS.md",
-      ".blueprint/codebase/CONCERNS.md"
+      ".blueprint/codebase/INDEX.md and its referenced generations/<generation-id>/",
+      ".blueprint/codebase/{STACK,ARCHITECTURE,STRUCTURE,CONVENTIONS,TESTING,INTEGRATIONS,CONCERNS}.md compatibility views when applicable",
+      "an explicitly selected existing repository instruction file only when linkInstructions is requested"
     ]
   },
   runtimeReference: {
@@ -1281,7 +1279,7 @@ export const MAP_CODEBASE_RUNTIME_METADATA = {
     optionalAgents: MAP_CODEBASE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation profile: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md. Select repo-relative evidence paths, then prepare before reading and authoring; echo its opaque snapshot unchanged at submit. Prepare owns readiness, effective subagent config, existing document status, required keys, schema/example, and implemented-only routing. Reuse valid maps without generation or a reuse question; an explicit refresh request authorizes overwrite without a second confirmation. Focus areas deepen the same seven-document bundle. Optional mapper lanes are bounded and read-only; the parent submits one structured bundle. MCP compiles canonical headings, validates the complete bundle before writes, and reuses omitted valid documents. Rejected content is never saved; partial publication retries the same snapshot and documents using metadata-only recovery. Greenfield/scaffold-only routes to /blu-new-project, broken partial core state to /blu-health, successful mapped-only to /blu-new-project, and initialized projects to /blu-progress.",
+      "Long-running-mutation profile: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md. Keep ordinary compatibility mapping on the two-tool prepare -> author -> submit flow, select repo-relative evidence, prepare before reading and authoring, read it after the returned basis, and echo its opaque legacy snapshot unchanged at submit. Reuse valid maps without generation or a reuse question; an explicit refresh request authorizes overwrite without a second confirmation, while focus and explicit replace authority control the affected scope. Portable generation is explicit opt-in through formatVersion: 1, with intents new, upgrade, refresh, or repair; prepare returns an opaque operationId and continuation cursor plus bounded deterministic packets, and repair carries the exact authorized previousIndexHash, seven targetHashes, and observedMarkerHash basis. Author and submit one complete seven-document plus semantic model with the prepared generationId; the raw model cap is 48 KiB, so richer requests must be narrowed or reported unsupported without silent omissions or invented multipart. The complete bundle is validated before writes; the runtime validates the complete bundle before writes. Optional mapper lanes are bounded/read-only; the parent submits through the one MCP finalizer. Prepared source/target CAS, stale/reprepare, exact operation/model retry, metadata-only committed cleanup, retained historical generations, unknown-marker hard stops, and separate portable/compatibility completeness are authoritative. No root seven view is independently mutated while portable INDEX.md is active. Optional instruction linking occurs only when requested and uses the owning tool's returned snippet/receipt with byte/newline/CAS/containment/symlink safety. Transfer is INDEX.md plus its complete immutable relative-path generation; sessions, receipts, keys, and rejected diagnostics are excluded. Generic consumption reads/searches selected routes and verifies selected live source, treats the baseline as unverified for current-tree freshness, and never regenerates or becomes mandatory for administrative commands. Rejected content is never saved; partial publication uses metadata-only recovery. No performance or default-adoption claims. Greenfield/scaffold-only routes to /blu-new-project, broken partial core state to /blu-health, successful mapped-only to /blu-new-project, and initialized projects to /blu-progress.",
     evidenceState: ["locked", "runtime-owned", "behavior-audited"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

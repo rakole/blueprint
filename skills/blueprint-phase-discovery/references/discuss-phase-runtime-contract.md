@@ -11,10 +11,18 @@ optional; they never own persistence or completion.
 Call `blueprint_discuss_prepare` with the numeric phase (or omit to resolve it).
 Use its selected phase, which can differ from ambientCurrentPhase, throughout.
 The packet includes roadmap goal/requirements, effective config, context/spec/log
-content and validation, plan inventory, bounded relevant prior context, codebase
-evidence, checkpoint, and compact notes session. Prepare also supplies authoring.schema, defaults,
+content and validation, plan inventory, bounded relevant prior context,
+codebase/navigation evidence when relevant, checkpoint, and compact notes session.
+When unresolved repository discovery benefits from a verified portable map, use
+prepare's optional `portableSelections` and `evidenceDelivery` controls for the
+selected pages or source ranges; known targets and parent-supplied evidence stay
+direct. Prepare also supplies authoring.schema, defaults,
 missingEssentialFields, records and examples from the selected evidence. Independent reads are bundled
 inside MCP. Do not repeat primitive read/config/contract/checkpoint calls.
+Use `full` for initial/unbound bodies, `delta` only for new or changed bodies
+relative to accepted delivery, and `register` only for an already-bound same
+hash or a hash computed from bytes read now. Without that proof, reread or
+request a bounded MCP excerpt; never treat an unknown earlier read as fresh.
 A missing directory is seeded only for a proven planned ROADMAP phase through
 the existing scaffold owner. Ambiguous or unknown targets stop with the returned diagnostic. Completed phases
 cannot seed missing directories; existing phase contexts remain refreshable. Missing optional spec is nonblocking.
@@ -27,8 +35,12 @@ safety and handoffs. If it is wrong, use `ask_user` to route to
 `/blu-spec-phase <phase>`; never silently override contradicted intent in context.
 
 Cite the packet's sources. For an evidence-backed default, inspect the narrow live
-source when a saved codebase summary may be stale; add the exact repo-relative
-paths with `evidencePaths` in prepare. No broad prior-context or todo/backlog crawl.
+source when prepared navigation evidence may be stale; add exact repo-relative
+paths with `evidencePaths` in prepare. A portable packet replaces broad
+compatibility-view bodies or digests only for selected evidence; absent, unknown,
+unsupported, stale, or malformed maps use the existing bounded source path. No
+broad prior-context or todo/backlog crawl, and no caller-supplied private receipt
+or prior session state.
 Preserve existing-plan refresh warnings: changed decisions may require
 `/blu-plan-phase`. Read-set hashes include optional absence and plan inventory;
 STATE and canonical publication baselines remain separate.

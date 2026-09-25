@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "corpus": "mixed-monorepo",
+  "sourceManifestSha256": "b790f6dc577221d1bd1fcc706093458e1c9814e88bbdddd5596e55872888f3ff",
+  "scenarios": [
+    {
+      "id": "mixed-monorepo-scenario-stale-slot-limit",
+      "kind": "stale",
+      "rationale": "The current slot validator lowers the box-count ceiling after the frozen source map, so a query carrying the former ceiling is stale evidence.",
+      "operations": [
+        {
+          "type": "replace",
+          "path": "apps/dispatch-console/src/domain/slot.ts",
+          "expectedSha256": "7c6fb103586151a1f2bd503f9a85ff2ab3817f8874bd4167930bdce1f15015cb",
+          "oldText": "request.boxCount > 12",
+          "newText": "request.boxCount > 10"
+        }
+      ]
+    },
+    {
+      "id": "mixed-monorepo-scenario-renamed-status-badge",
+      "kind": "renamed",
+      "rationale": "The status render helper moves to a new filename while retaining its declaration and behavior, exercising filename recovery after the frozen map.",
+      "operations": [
+        {
+          "type": "rename",
+          "from": "apps/dispatch-console/src/ui/status-badge.jsx",
+          "to": "apps/dispatch-console/src/ui/status-label.jsx",
+          "expectedSha256": "4d14897d264e9f217c9cc04da26115a1844d5f916e792c7aba852c3644424bf5"
+        }
+      ]
+    },
+    {
+      "id": "mixed-monorepo-scenario-new-status-schema",
+      "kind": "new",
+      "rationale": "A small status-only contract is introduced after map freeze so discovery of a newly created contract file can be measured.",
+      "operations": [
+        {
+          "type": "create",
+          "path": "contracts/dispatch-status.schema.json",
+          "content": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"title\": \"MarketRoute dispatch status\",\n  \"type\": \"object\",\n  \"required\": [\"status\"],\n  \"properties\": {\n    \"status\": {\"enum\": [\"ASSIGNED\", \"READY\", \"COLLECTED\"]}\n  },\n  \"additionalProperties\": false\n}\n"
+        }
+      ]
+    }
+  ]
+}

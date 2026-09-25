@@ -1,8 +1,11 @@
 # Blueprint Map Runtime Contract
 
-This reference owns evidence selection and useful mapping content. Prepare's
-returned schema, example, required keys, and blocking rules are the authoring
-contract; do not duplicate or guess them from legacy Markdown templates.
+This reference owns evidence selection, portable opt-in behavior, and useful
+mapping content. Prepare's returned schema, example, required keys, and blocking
+rules are the authoring contract; do not duplicate or guess them from legacy
+Markdown templates. The same two MCP tools support ordinary compatibility output
+and portable format v1. Portable mode is explicit and is never an automatic
+upgrade or default-adoption claim.
 
 ## Evidence Before Authoring
 
@@ -16,13 +19,32 @@ Exclude dependency trees, generated build output, unrelated docs, and Blueprint
 runtime state from source analysis. Inventory is for path selection, not a
 request to read every file.
 
-Call `mcp_blueprint_blueprint_map_prepare` with those repo-relative `inputs` and
-optional `focus` before reading their content or generating documents. Prepare
-hashes the selected evidence and target bundle. Its opaque `snapshot` is a
-runtime receipt: return it unchanged, never calculate or alter it. Read the exact
-selected inputs after prepare. If more evidence is needed, prepare again with the
-expanded selection before using the new files to author content. Re-read any
-changed evidence and use the latest snapshot.
+For ordinary output, call `mcp_blueprint_blueprint_map_prepare` with those
+repo-relative `inputs` and optional `focus` before reading their content or
+generating documents. Prepare hashes the selected evidence and target bundle. Its
+opaque legacy `snapshot` is a runtime receipt: return it unchanged, never
+calculate or alter it. Read the exact selected inputs after prepare. If more
+evidence is needed, prepare again with the expanded selection before using the new
+files to author content. Re-read any changed evidence and use the latest snapshot.
+
+For explicit portable output, call the same tool with `formatVersion: 1` and
+`intent: "new" | "upgrade" | "refresh" | "repair"`. Prepare returns an opaque
+`operationId`, a bounded deterministic packet, and a continuation object whose
+opaque `cursor` is passed back with the same operation id until `hasMore` is false.
+`new` requires no portable root, compatibility view, or pending marker; it never
+adopts or replaces existing output. `upgrade` requires a complete verified legacy
+seven-view bundle and no portable root. `refresh` requires the current portable
+INDEX and its sealed generation to verify. `repair` requires the exact returned
+repair basis and only resumes that captured state. Submit must echo the prepared
+intent exactly; a different intent is rejected.
+The prepare-time source/target basis is the portable prepared CAS. A repair must
+use the exact returned basis object: `authorized: true`, `previousIndexHash`, the
+seven `targetHashes`, and `observedMarkerHash`. Do not compute replacement hashes
+or infer a repair basis. The packet is a complete bounded deterministic slice of
+inventory, symbols, details, imports, relationships, capabilities, and source
+coordinates; packet boundaries are navigational, not permission to omit records.
+Read selected live source after preparation and keep all authored claims tied to
+the packet and source evidence.
 
 Never read secret-bearing files such as `.env` contents. Describe authentication
 sources or configuration names without credential values. Evidence paths must
@@ -31,15 +53,22 @@ unknowns. Do not invent a successful test run from a configured test command.
 
 ## Authoring And Publication
 
-Use the returned authoring packet to write one `documents` object keyed by
-`stack`, `architecture`, `structure`, `conventions`, `testing`, `integrations`,
-and `concerns` as needed. Each authored document supplies a substantive `summary`
-and `evidencePaths`; `sections` contains optional `{heading, content}` entries.
-The runtime renders canonical titles and required headings. Omit irrelevant
-sections instead of adding filler. Natural multiline prose, code examples, and
-honest unknowns should retain their meaning; obey actual returned blocking rules.
+Ordinary output uses the returned authoring packet to write one `documents` object
+keyed by `stack`, `architecture`, `structure`, `conventions`, `testing`,
+`integrations`, and `concerns`. Each authored document supplies a substantive
+`summary` and `evidencePaths`; `sections` contains optional `{heading, content}`
+entries. The runtime renders canonical titles and required headings. Omit irrelevant
+sections instead of adding filler.
 
-Provide every `requiredDocuments` key. Submit reuses omitted valid existing
+Portable output submits one complete model with `formatVersion: 1`, the prepared
+`generationId`, all seven substantive `documents`, and `semantic` objects for
+`capabilities`, `claims`, and `aliases`. Ground every document and semantic record
+in the prepared packet and selected live source; keep unknowns explicit. The raw
+authored model is capped at 48 KiB UTF-8 JSON. If a richer request exceeds that
+limit, reduce scope or report the unsupported limit for a narrower request. Do not
+silently omit records and do not invent multipart tools.
+
+For ordinary output, provide every `requiredDocuments` key. Submit reuses omitted valid existing
 documents, so do not regenerate them without a refresh request. A complete valid
 prepare result can finish as reuse without submit when no focus or refresh was
 requested. A supplied focus authorizes targeted refresh of affected documents;
@@ -49,11 +78,14 @@ edit Blueprint documents: there is no heavily-edited classification or routine
 reuse-versus-refresh gate. Explicit refresh/replacement authorizes `overwrite:
 true`; ask only if replacement of populated documents is not already authorized.
 
-The parent calls `mcp_blueprint_blueprint_map_submit` once with `snapshot` and
-`documents`. All new and reused documents must validate before publication.
-Separate scaffold, digest, per-document writes, and post-submit validation are
-not part of the normal workflow. Keep all persistence in MCP and only use the
-seven canonical codebase artifacts.
+The parent calls `mcp_blueprint_blueprint_map_submit` once. Ordinary submission
+passes the unchanged `snapshot` and authored documents; portable submission passes
+`formatVersion: 1`, the same `operationId` and `intent`, and the complete model.
+There are exactly two MCP tools and one finalizer. All new and reused documents,
+semantic records, source references, links, and generation contents validate before
+publication. Separate scaffold, digest, per-document writes, generated-path
+handoffs, and post-submit validation are not part of the normal workflow. Keep all
+persistence in MCP; mapper agents never write or submit.
 
 ## Useful Content
 
@@ -101,22 +133,106 @@ search-only agents are not substitutes for repository code analysis.
   Rejected content is never saved or logged; there are no failed-draft archives.
 - Advisory warnings: report meaningful uncertainty; do not force a regeneration
   when publication succeeded or valid reuse was returned.
-- Stale evidence or target: prepare again, inspect what changed, and revise only
-  affected content. Do not bypass freshness with guessed hashes or overwrite.
-- Partial publication: report the incomplete result. Retry the same snapshot and
-  identical documents using the owning submit tool so its metadata-only recovery
-  marker can reconcile accepted writes. If the original model is unavailable or
-  source evidence changed, prepare with `restart:true`, read fresh evidence, and
-  submit all seven documents with `overwrite:true`. This replaces the pending
-  operation only after the new bundle validates; existing canonical files remain.
-  Do not switch to raw writes or invent a
-  successful receipt. Recovery metadata contains identity, hashes, paths, and
-  stages, never document bodies.
+- Stale evidence, source inventory, parser provenance, target, root, or repair basis:
+  prepare again, inspect what changed, and revise only affected content. Do not
+  bypass freshness with guessed hashes or overwrite.
+- Portable partial publication: report the incomplete result. Retry the exact
+  original `operationId` and identical model through submit so its metadata-only
+  marker can reconcile accepted writes and committed cleanup. A committed
+  historical generation may be retained even when it is not current; report the
+  returned historical/current/retained/cleanup state. If the original model is
+  unavailable or evidence changed, use the owning tool's fresh reprepare/repair
+  guidance and submit a complete validated model. Never switch to raw writes or
+  invent a successful receipt. Recovery metadata contains identity, hashes, paths,
+  and stages, never document bodies or rejected bodies.
+- Ordinary partial publication: report the incomplete result and Retry the same snapshot and identical documents
+  through the owning submit tool. If the original
+  model is unavailable or source evidence changed, use the ordinary restart/reprepare
+  guidance and submit a complete fresh bundle with the authorized overwrite gate.
+- Unknown marker/version, malformed generation, or invalid cursor: stop. Do not
+  guess a portable state or overwrite the marker.
+- Once portable `INDEX.md` is active, root seven compatibility views are not an
+  independent write surface. Portable generation validity and compatibility-view
+  completeness/divergence are separate statuses; a valid immutable generation can
+  remain usable while compatibility cleanup or repair is reported.
+
+## Portable transfer and consumption
+
+The supported transfer unit is the root `INDEX.md` plus exactly the complete
+immutable generation named by its descriptor. The descriptor is the single
+machine-readable comment in `.blueprint/codebase/INDEX.md`; for generation
+`<generation-id>` it names
+`.blueprint/codebase/generations/<generation-id>/manifest.json` and
+`.blueprint/codebase/generations/<generation-id>/ENTRY.md`. Preserve those
+repository-relative paths and copy the entire
+`.blueprint/codebase/generations/<generation-id>/` directory, including every
+manifest-listed page, data shard, and compatibility copy. Do not flatten the
+generation or copy only the pages that a current task happens to use.
+
+For a deliberate repository transfer:
+
+1. Copy `.blueprint/codebase/INDEX.md` and the complete referenced
+   `generations/<generation-id>/` subtree into the destination repository under
+   the same `.blueprint/codebase/` path.
+2. Copy the small ordinary instruction pointer into an existing root instruction
+   file when the project chooses to advertise the map. The pointer is the managed
+   block whose body says to read `.blueprint/codebase/INDEX.md` when locating code,
+   responsibilities, constraints, or related tests. Keep the rest of that file
+   byte-for-byte unchanged; no instruction file is created automatically.
+3. Optionally include the seven root compatibility views for consumers that still
+   use those views. They are not part of the portable-only minimum and are not an
+   independent authority once `INDEX.md` is active.
+
+Do not transfer sessions, receipts, operation directories, journals, rejected
+diagnostics, HMAC keys or other authority material, or unrelated `.blueprint`
+state. No export service, custom consumer runtime, ignore-rule change, or staging
+mutation is needed. A generic reader uses ordinary file read/search: reuse an
+active index when repository understanding is needed, select the smallest
+capability route or search literal paths/symbols, and verify selected claims
+against current live source. Treat the map as generated from a baseline with the
+current tree unverified; a static index cannot detect new files itself.
+Consumption never regenerates the map and map reads are not mandatory for
+administrative commands. This transfer procedure makes no token, latency, quality,
+or hosted-agent performance claim.
+
+The generated `INDEX.md` and its immutable generation `ENTRY.md` carry the same
+navigation protocol:
+
+1. Reuse the active index; load it after context loss or when repository
+   understanding is needed and it has not already been supplied.
+2. If the task already names a live file or function, read that source directly;
+   consult the map only for related constraints, tests, or dependencies.
+3. For a conceptual task, choose the smallest matching capability route. For a
+   path, symbol, error term, or alias, search the text index directly under
+   `search/` using ordinary literal file search.
+4. Read only selected capability, record, route, or search pages. Never load every
+   search shard or the entire generation by default.
+5. Follow coordinates into current source and relevant tests before relying on a
+   mapped claim, and re-find symbols if line ranges moved.
+6. Expand dependencies only as the task requires; do not traverse every relation.
+7. Treat map content as generated evidence. Repository instructions and current
+   source retain authority, and a map cannot prove absence or newly added behavior.
+8. After two unproductive map-navigation actions, use ordinary bounded source
+   search. Missing, unsupported, unreadable, or malformed maps use the same
+   fallback.
+
+## Optional instruction integration
+
+Instruction integration is only for an explicit request. Submit with
+`linkInstructions: true` and, when selected, an existing repository-relative
+`instructionPath`. Use the owning tool's returned `snippet`, `choices`, or applied
+receipt. It preserves bytes outside the managed block and existing newline style,
+uses expected-hash CAS, and rejects traversal, outside-root, symlink, non-regular,
+or concurrent targets. A link failure is reported separately from map publication;
+the helper does not create instruction files or mutate installed/host-global files.
 - Readiness block: do not author or mutate around it. Greenfield/scaffold-only
   maps route to `/blu-new-project`; broken partial core state to `/blu-health`.
 
-Completion requires all seven canonical documents to be valid, demonstrated by
-prepare's reuse result or submit's successful receipt. Report returned paths and
-created/updated/reused outcomes, warnings or blockers, and the implemented-only
-next action. A successful map-first repo is `mapped-only` and proceeds to
-`/blu-new-project`; an initialized project proceeds to `/blu-progress`.
+Completion requires all seven compatibility documents to be valid for ordinary
+mapping, or a sealed portable `INDEX.md` plus complete referenced generation and
+semantic model for portable mapping, demonstrated by prepare's reuse result or
+submit's successful receipt. Report returned paths, generation and compatibility
+status, created/updated/reused outcomes, warnings or blockers, retention/cleanup
+state, and the implemented-only next action. A successful map-first repo is
+`mapped-only` and proceeds to `/blu-new-project`; an initialized project proceeds
+to `/blu-progress`.

@@ -40,6 +40,7 @@ import {
 import { blueprintConfigGet } from "./config.js";
 import { readPlanPublicationStatus } from "./plan-publication.js";
 import { researchInputHash, researchProvenancePath } from "./research-evidence.js";
+import { resolvePortableProviderEvidence } from "../codebase-index/provider-evidence.js";
 import { loadBlueprintState } from "./state.js";
 import { blueprintStateLoad } from "./state.js";
 import {
@@ -5084,19 +5085,34 @@ export async function blueprintPhasePlanAuthoringContext(
 }
 
 export async function blueprintPhasePlanReadiness(
-  args: PhasePlanReadinessArgs = {}
+  args: PhasePlanReadinessArgs = {},
+  options: { codebase?: PhaseContextResult["codebase"] } = {}
 ): Promise<PhasePlanReadinessResult> {
   const maxBodyBytes = args.maxBodyBytes ?? 8192;
   const includeContent = args.bodyMode === "bounded" && args.readMode !== "hashes-only";
   const snapshot = await resolvePhaseRuntimeSnapshot(args);
   const projectRoot = snapshot.projectRoot;
+  const defaultPortableCodebase = options.codebase === undefined
+    ? await resolvePortableProviderEvidence({ root: projectRoot }).then(result => {
+        if (result.status !== "ok") return undefined;
+        return {
+          mapped: true,
+          artifacts: [result.context.entry.path],
+          missingArtifacts: [],
+          digest: [],
+          warnings: []
+        } satisfies PhaseContextResult["codebase"];
+      }).catch(() => undefined)
+    : undefined;
+  const codebaseOverride = options.codebase ?? defaultPortableCodebase;
+  const portableMode = Boolean(codebaseOverride?.mapped && codebaseOverride.missingArtifacts.length === 0 && codebaseOverride.artifacts.length > 0);
   // Bind the inputs before deriving summaries. If an input changes while
   // readiness is being assembled, retain its original hash so a later writer
   // cannot accept an older summary against a newer input fingerprint.
   const consistencyPaths = uniqueSortedStrings([
     `${BLUEPRINT_DIR}/PROJECT.md`, `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
     `${BLUEPRINT_DIR}/ROADMAP.md`, `${BLUEPRINT_DIR}/STATE.md`, `${BLUEPRINT_DIR}/config.json`,
-    ...CODEBASE_ARTIFACTS,
+    ...(portableMode ? [] : CODEBASE_ARTIFACTS),
     ...(snapshot.resolved ? [
       ...canonicalPhaseReadinessInventory(snapshot.artifacts, snapshot.resolved),
       ...(["context", "discussion-log", "research", "spec", "ui-spec"] as const)
@@ -5113,7 +5129,7 @@ export async function blueprintPhasePlanReadiness(
     cwd: projectRoot,
     scope: "effective"
   });
-  const context = await buildPhaseContext(projectRoot, args);
+  const context = await buildPhaseContext(projectRoot, args, { ...(codebaseOverride ? { codebase: codebaseOverride } : {}) });
   const researchStatus = await buildPhaseResearchStatusFromContext(projectRoot, context);
   const resolved = snapshot.resolved;
   const located = snapshot.located;
@@ -5125,7 +5141,7 @@ export async function blueprintPhasePlanReadiness(
   for (const [pathValue, kind] of [
     [`${BLUEPRINT_DIR}/PROJECT.md`, "project"],
     [`${BLUEPRINT_DIR}/REQUIREMENTS.md`, "requirements"],
-    ...CODEBASE_ARTIFACTS.map((artifact) => [artifact, "codebase"] as const),
+    ...(portableMode ? [] : CODEBASE_ARTIFACTS.map((artifact) => [artifact, "codebase"] as const)),
     [`${BLUEPRINT_DIR}/ROADMAP.md`, "roadmap"],
     [`${BLUEPRINT_DIR}/STATE.md`, "state"],
     [`${BLUEPRINT_DIR}/config.json`, "config.project"]

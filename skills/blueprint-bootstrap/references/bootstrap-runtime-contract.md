@@ -16,7 +16,8 @@ Call `mcp_blueprint_blueprint_project_prepare` from the target repo root. Pass
 - Config defaults stay `mode: "interactive"`, `workflow.auto_advance: false`.
 - If prepare is blocked, report its nextAction. Unmapped brownfield and
   mapping-incomplete require `/blu-map-codebase`; partial bootstrap requires health.
-- A valid mapped-only repo can initialize while preserving `.blueprint/codebase/*.md`.
+- A valid mapped-only repo can initialize while preserving `.blueprint/codebase/*.md`
+  generated outputs, including a portable index when present.
 - Replacing initialized project artifacts requires explicit overwrite approval.
 - Use prepare's config provenance and warnings. Offer valid saved defaults; if
   declined use `savedDefaultsPolicy: "skip"`. Explicit --auto may use valid defaults.

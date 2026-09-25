@@ -76,6 +76,22 @@ export type CodebaseArtifactDiagnostics = {
     invalid: string[];
     mapped: boolean;
     warnings: string[];
+    portable: PortableCodebaseDiagnostics;
+};
+export type PortableCodebaseDiagnostics = {
+    status: "valid" | "absent" | "invalid" | "unsupported" | "guarded";
+    generationId: string | null;
+    index: "present" | "absent" | "unsafe";
+    marker: "absent" | "v1" | "v2" | "unknown";
+    compatibility: "matching" | "absent" | "divergent" | "guarded" | "unknown";
+    guard: "open" | "blocked" | "unknown";
+};
+export type CodebaseWriteGuard = {
+    allowed: boolean;
+    noOpReuseAllowed: boolean;
+    legacyPublicationPending: boolean;
+    reason: string | null;
+    portable: PortableCodebaseDiagnostics;
 };
 export declare const DURABLE_REQUIREMENT_ID_PATTERN: RegExp;
 export type NormalizedBootstrapRequirementRow = Required<BootstrapRequirementRow>;
@@ -700,6 +716,7 @@ export declare function parseCaptureIndexDocument(content: string, target: Artif
 export declare function buildDefaultBootstrapSeed(projectName: string, assessment: BootstrapAssessment, seed?: BootstrapSeed): NormalizedBootstrapSeed;
 export declare function normalizeReportSlug(value: string): string;
 export declare function buildBlueprintReportPath(reportName: string): string;
+export declare function inspectCodebaseWriteGuard(projectRoot: string): Promise<CodebaseWriteGuard>;
 export declare function toPosixPath(relativePath: string): string;
 export declare function getProjectRoot(cwd?: string): string;
 export declare function getBlueprintRoot(cwd?: string): string;
@@ -719,6 +736,13 @@ export declare const blueprintArtifactsTestHooks: {
 export declare function readJsonIfPresent(filePath: string): Promise<Record<string, unknown> | null>;
 export declare function writeJsonFile(filePath: string, value: Record<string, unknown>): Promise<void>;
 export declare function writeTextFile(filePath: string, value: string, options?: TextWriteOptions): Promise<string[]>;
+/**
+ * Lock acquisition creates `.blueprint/locks` before the callback runs. Check
+ * the existing parent chain first so a symlink cannot redirect lock metadata.
+ * Missing parents remain allowed because the lock helper creates them for
+ * brownfield repositories that have no Blueprint state yet.
+ */
+export declare function assertBlueprintRepoLockParentSafe(projectRoot: string): Promise<void>;
 export declare function withBlueprintRepoLock<T>(projectRoot: string, lockName: string, task: () => Promise<T>): Promise<T>;
 export declare function extractMarkdownTableRows(section: string): string[][];
 type ResearchHeadingCanonicalizationResult = {
@@ -829,7 +853,7 @@ export declare function inspectBlueprintArtifacts(projectRoot: string): Promise<
     reports: string[];
     codebase: CodebaseArtifactDiagnostics;
 }>;
-export declare function inspectBootstrapArtifacts(projectRoot: string): Promise<BootstrapArtifactDiagnostics>;
+export declare function inspectBootstrapArtifacts(projectRoot: string, existingInspection?: Awaited<ReturnType<typeof inspectBlueprintArtifacts>>): Promise<BootstrapArtifactDiagnostics>;
 export declare function prepareBootstrapArtifactContents(context: BootstrapRenderContext): {
     contents: Record<string, string>;
     issues: string[];

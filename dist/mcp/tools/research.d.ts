@@ -4,6 +4,7 @@ import { writeTextFile } from "./artifacts.js";
 import { blueprintPhaseArtifactWrite } from "./phase-artifacts.js";
 import { blueprintPhaseCheckpointDelete } from "./phase-checkpoints.js";
 import { blueprintStateUpdate, blueprintStateLoad } from "./state.js";
+import { type PortableProviderEvidenceBasis } from "../codebase-index/provider-evidence.js";
 import { type ResearchReadSet } from "./research-evidence.js";
 import { type ResearchSession } from "./research-session.js";
 declare const prepareInput: z.ZodObject<{
@@ -16,6 +17,57 @@ declare const prepareInput: z.ZodObject<{
         confirmed: z.ZodLiteral<true>;
         researchHash: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>;
+    portableSelections: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
+        kind: z.ZodLiteral<"page">;
+        path: z.ZodString;
+        mode: z.ZodLiteral<"discovery">;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodEnum<{
+            symbol: "symbol";
+            file: "file";
+            import: "import";
+            relationship: "relationship";
+            detail: "detail";
+        }>;
+        recordId: z.ZodString;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodEnum<{
+            alias: "alias";
+            capability: "capability";
+            claim: "claim";
+        }>;
+        recordId: z.ZodString;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodLiteral<"structural">;
+        recordKind: z.ZodEnum<{
+            symbol: "symbol";
+            file: "file";
+            import: "import";
+            relationship: "relationship";
+            detail: "detail";
+        }>;
+        recordId: z.ZodString;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodLiteral<"semantic">;
+        recordKind: z.ZodEnum<{
+            alias: "alias";
+            capability: "capability";
+            claim: "claim";
+        }>;
+        recordId: z.ZodString;
+    }, z.core.$strict>]>>>;
+    evidenceDelivery: z.ZodOptional<z.ZodObject<{
+        mode: z.ZodEnum<{
+            full: "full";
+            delta: "delta";
+            register: "register";
+        }>;
+        readTimeEvidence: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            path: z.ZodString;
+            hash: z.ZodOptional<z.ZodString>;
+            bytes: z.ZodOptional<z.ZodString>;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>;
 }, z.core.$strip>;
 declare const submitInput: z.ZodObject<{
     requestId: z.ZodString;
@@ -29,6 +81,43 @@ declare const submitInput: z.ZodObject<{
     phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
 }, z.core.$strip>;
 export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInput>): Promise<{
+    nextAction: string;
+    scopeReduction?: {
+        selectedCount: number;
+        suggestedMaxCount?: number;
+        omittedBodyCount: number;
+        omittedPathCount?: number;
+    } | undefined;
+    counts?: import("../evidence-delivery.js").EvidenceDeliveryCounts | undefined;
+    diagnostics?: readonly unknown[] | undefined;
+    code?: string | undefined;
+    status: "invalid" | "not-found" | "fallback" | "reread_required" | "evidence_limit";
+    saved: boolean;
+    ready: boolean;
+    reason: string;
+    paths: readonly string[];
+} | {
+    status: "evidence_limit";
+    saved: boolean;
+    ready: boolean;
+    counts: {
+        selectedCount: number;
+        sourceCount: number;
+        readSetCount: number;
+        deliveredCount: number;
+        omittedCount: number;
+        packetBytes: number;
+    };
+    scopeReduction: {
+        selectedCount: number;
+        suggestedMaxCount: number;
+        omittedBodyCount: number;
+        omittedPathCount: number;
+    };
+    reason: string;
+    nextAction: string;
+    freshness?: undefined;
+} | {
     status: string;
     freshness: {
         status: "unknown" | "stale" | "fresh";
@@ -36,34 +125,43 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         unknownPaths: string[];
     };
     nextAction: string;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    reason?: undefined;
 } | {
     status: string;
     revision: number;
     reason: string;
-    phase: {
-        phaseNumber: string;
-        phasePrefix: string;
-        phaseName: string;
-        phaseDir: string;
-        roadmap: {
-            completed: boolean;
-            summary: string | null;
-            goal: string | null;
-            successCriteria: string | null;
-        };
-        artifacts: {
-            all: string[];
-            context: string | null;
-            discussionLog: string | null;
-            research: string | null;
-            spec: string | null;
-            uiSpec: string | null;
-            verification: string | null;
-            uat: string | null;
-            plans: string[];
-            summaries: string[];
-        };
-    } | null;
+    portable?: {
+        selections: ({
+            kind: "page";
+            path: string;
+            mode: "discovery";
+        } | {
+            kind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "alias" | "capability" | "claim";
+            recordId: string;
+        } | {
+            kind: "structural";
+            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "semantic";
+            recordKind: "alias" | "capability" | "claim";
+            recordId: string;
+        })[];
+        basis: PortableProviderEvidenceBasis;
+        next: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceNext;
+        packet: import("../evidence-delivery.js").EvidencePacket;
+        binding: import("../evidence-delivery.js").PriorEvidenceBinding;
+        counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
+        mode: "full" | "delta" | "register";
+    } | undefined;
+    phase: any;
     context: {
         path: string;
         hash: string;
@@ -82,19 +180,8 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         hash: null;
         content: null;
     };
-    requirements: string[];
-    projectBrief: {
-        found: boolean;
-        path: string | null;
-        title: string | null;
-        summary: string;
-        vision: string[];
-        audience: string[];
-        constraints: string[];
-        currentMilestone: string | null;
-        nonGoals: string[];
-        warnings: string[];
-    };
+    requirements: any;
+    projectBrief: any;
     config: {
         version: number;
         mode: string;
@@ -171,17 +258,7 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         };
         agent_skills: Record<string, unknown>;
     };
-    codebase: {
-        mapped: boolean;
-        artifacts: string[];
-        missingArtifacts: string[];
-        digest: Array<{
-            artifact: string;
-            title: string;
-            summary: string;
-        }>;
-        warnings: string[];
-    };
+    codebase: any;
     evidence: ({
         path: string;
         hash: string;
@@ -190,6 +267,9 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         path: string;
         hash: null;
         content: null;
+    } | {
+        path: string;
+        hash: string;
     })[];
     readSet: ResearchReadSet;
     existing: {
@@ -222,36 +302,44 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         normalize: string[];
     };
     checkpoint: import("./phase-tool-types.js").PhaseCheckpointGetResult;
-    freshness?: undefined;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
     nextAction?: undefined;
+    freshness?: undefined;
 } | {
     status: string;
     revision: number;
     nextAction: string;
-    phase: {
-        phaseNumber: string;
-        phasePrefix: string;
-        phaseName: string;
-        phaseDir: string;
-        roadmap: {
-            completed: boolean;
-            summary: string | null;
-            goal: string | null;
-            successCriteria: string | null;
-        };
-        artifacts: {
-            all: string[];
-            context: string | null;
-            discussionLog: string | null;
-            research: string | null;
-            spec: string | null;
-            uiSpec: string | null;
-            verification: string | null;
-            uat: string | null;
-            plans: string[];
-            summaries: string[];
-        };
-    } | null;
+    portable?: {
+        selections: ({
+            kind: "page";
+            path: string;
+            mode: "discovery";
+        } | {
+            kind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "alias" | "capability" | "claim";
+            recordId: string;
+        } | {
+            kind: "structural";
+            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "semantic";
+            recordKind: "alias" | "capability" | "claim";
+            recordId: string;
+        })[];
+        basis: PortableProviderEvidenceBasis;
+        next: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceNext;
+        packet: import("../evidence-delivery.js").EvidencePacket;
+        binding: import("../evidence-delivery.js").PriorEvidenceBinding;
+        counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
+        mode: "full" | "delta" | "register";
+    } | undefined;
+    phase: any;
     context: {
         path: string;
         hash: string;
@@ -270,19 +358,8 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         hash: null;
         content: null;
     };
-    requirements: string[];
-    projectBrief: {
-        found: boolean;
-        path: string | null;
-        title: string | null;
-        summary: string;
-        vision: string[];
-        audience: string[];
-        constraints: string[];
-        currentMilestone: string | null;
-        nonGoals: string[];
-        warnings: string[];
-    };
+    requirements: any;
+    projectBrief: any;
     config: {
         version: number;
         mode: string;
@@ -359,17 +436,7 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         };
         agent_skills: Record<string, unknown>;
     };
-    codebase: {
-        mapped: boolean;
-        artifacts: string[];
-        missingArtifacts: string[];
-        digest: Array<{
-            artifact: string;
-            title: string;
-            summary: string;
-        }>;
-        warnings: string[];
-    };
+    codebase: any;
     evidence: ({
         path: string;
         hash: string;
@@ -378,6 +445,9 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         path: string;
         hash: null;
         content: null;
+    } | {
+        path: string;
+        hash: string;
     })[];
     readSet: ResearchReadSet;
     existing: {
@@ -410,6 +480,11 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         normalize: string[];
     };
     checkpoint: import("./phase-tool-types.js").PhaseCheckpointGetResult;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    reason?: undefined;
     freshness?: undefined;
 } | {
     status: string;
@@ -417,30 +492,34 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
     sessionPath: string;
     diagnostics: import("./artifacts.js").PhaseArtifactValidationDiagnostic[];
     nextAction: string | null;
-    phase: {
-        phaseNumber: string;
-        phasePrefix: string;
-        phaseName: string;
-        phaseDir: string;
-        roadmap: {
-            completed: boolean;
-            summary: string | null;
-            goal: string | null;
-            successCriteria: string | null;
-        };
-        artifacts: {
-            all: string[];
-            context: string | null;
-            discussionLog: string | null;
-            research: string | null;
-            spec: string | null;
-            uiSpec: string | null;
-            verification: string | null;
-            uat: string | null;
-            plans: string[];
-            summaries: string[];
-        };
-    } | null;
+    portable?: {
+        selections: ({
+            kind: "page";
+            path: string;
+            mode: "discovery";
+        } | {
+            kind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "alias" | "capability" | "claim";
+            recordId: string;
+        } | {
+            kind: "structural";
+            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "semantic";
+            recordKind: "alias" | "capability" | "claim";
+            recordId: string;
+        })[];
+        basis: PortableProviderEvidenceBasis;
+        next: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceNext;
+        packet: import("../evidence-delivery.js").EvidencePacket;
+        binding: import("../evidence-delivery.js").PriorEvidenceBinding;
+        counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
+        mode: "full" | "delta" | "register";
+    } | undefined;
+    phase: any;
     context: {
         path: string;
         hash: string;
@@ -459,19 +538,8 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         hash: null;
         content: null;
     };
-    requirements: string[];
-    projectBrief: {
-        found: boolean;
-        path: string | null;
-        title: string | null;
-        summary: string;
-        vision: string[];
-        audience: string[];
-        constraints: string[];
-        currentMilestone: string | null;
-        nonGoals: string[];
-        warnings: string[];
-    };
+    requirements: any;
+    projectBrief: any;
     config: {
         version: number;
         mode: string;
@@ -548,17 +616,7 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         };
         agent_skills: Record<string, unknown>;
     };
-    codebase: {
-        mapped: boolean;
-        artifacts: string[];
-        missingArtifacts: string[];
-        digest: Array<{
-            artifact: string;
-            title: string;
-            summary: string;
-        }>;
-        warnings: string[];
-    };
+    codebase: any;
     evidence: ({
         path: string;
         hash: string;
@@ -567,6 +625,9 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         path: string;
         hash: null;
         content: null;
+    } | {
+        path: string;
+        hash: string;
     })[];
     readSet: ResearchReadSet;
     existing: {
@@ -599,6 +660,11 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
         normalize: string[];
     };
     checkpoint: import("./phase-tool-types.js").PhaseCheckpointGetResult;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    reason?: undefined;
     freshness?: undefined;
 } | {
     status: string;

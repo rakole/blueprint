@@ -40,6 +40,10 @@ import {
 import { slugToTitle, normalizePhaseNumber } from "./phase-numbering.js";
 import { parseCanonicalPlanArtifactPath } from "./phase-plan-identifiers.js";
 import {
+  resolvePortableProviderEvidence,
+  type PortableProviderEvidenceSuccess
+} from "../codebase-index/provider-evidence.js";
+import {
   locatePhaseFromRoadmap,
   phaseLocateFailureFromError,
   phaseSelectionFromLocate,
@@ -50,6 +54,7 @@ import type {
   PhaseContextResult,
   PhaseLocateResult,
   PhaseLookupArgs,
+  PhaseContextInternalOptions,
   PhasePlanningReadiness,
   PhaseResearchStatusResult
 } from "./phase-tool-types.js";
@@ -261,6 +266,30 @@ async function readPhaseContextGrounding(
 async function readMappedCodebaseContext(
   projectRoot: string
 ): Promise<PhaseContextResult["codebase"]> {
+  const portable = await resolvePortableProviderEvidence({root: projectRoot});
+  if (portable.status === "ok") {
+    const entry = portable.packet.entries.find((item) => item.path.endsWith("/ENTRY.md"));
+    if (entry?.content !== undefined) {
+      return {
+        mapped: true,
+        // The portable ENTRY is the available codebase artifact.  The seven
+        // compatibility views are optional in a valid portable transfer and
+        // must not be reported as required missing inputs.
+        artifacts: [entry.path],
+        missingArtifacts: [],
+        digest: [],
+        warnings: [
+          "Portable codebase navigation is available; read the compact ENTRY and selected evidence before broad repository discovery."
+        ],
+        portable: {
+          status: "ok",
+          generationId: portable.context.generationId,
+          entry,
+          pin: portable.context.pin
+        }
+      };
+    }
+  }
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const artifacts: string[] = [];
   const missingArtifacts: string[] = [];
@@ -556,16 +585,18 @@ export async function blueprintPhaseLocate(
 }
 
 export async function blueprintPhaseContext(
-  args: PhaseLookupArgs = {}
+  args: PhaseLookupArgs = {},
+  options: PhaseContextInternalOptions = {}
 ): Promise<PhaseContextResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
 
-  return buildPhaseContext(projectRoot, args);
+  return buildPhaseContext(projectRoot, args, options);
 }
 
 export async function buildPhaseContext(
   projectRoot: string,
-  args: PhaseLookupArgs = {}
+  args: PhaseLookupArgs = {},
+  options: PhaseContextInternalOptions = {}
 ): Promise<PhaseContextResult> {
   const roadmapResultPromise: Promise<
     { ok: true; roadmap: ParsedRoadmap } | { ok: false; failure: PhaseLocateResult }
@@ -578,15 +609,15 @@ export async function buildPhaseContext(
       ok: false as const,
       failure: phaseLocateFailureFromError(error)
     }));
-  const [roadmapResult, state, rawState, config, codebase] = await Promise.all([
+  const codebase = options.codebase ?? await readMappedCodebaseContext(projectRoot);
+  const [roadmapResult, state, rawState, config] = await Promise.all([
     roadmapResultPromise,
     blueprintStateLoad({ cwd: projectRoot }),
     loadBlueprintState(projectRoot),
     blueprintConfigGet({
       cwd: projectRoot,
       scope: "effective"
-    }),
-    readMappedCodebaseContext(projectRoot)
+    })
   ]);
   if (!roadmapResult.ok) {
     const phaseSelection = phaseSelectionFromLocate(roadmapResult.failure);

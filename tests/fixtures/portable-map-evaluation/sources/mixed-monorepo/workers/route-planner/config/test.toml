@@ -1,0 +1,4 @@
+[planner]
+daily_capacity = 8
+max_boxes_per_request = 4
+priority_depot = "SOUTH-02"

@@ -27,6 +27,7 @@ router plus direct `/blu-<command>` commands, stores workflow state in
   command-family guide.
 - Hook, extension host, install, or build changes: read
   `07-hosts-packaging-and-build.md`.
+- Evaluation results: read [the portable codebase map evaluation](appendices/portable-map-evaluation.md).
 - Any code or source-controlled file change: read `08-change-recipes.md`,
   `09-verification-guide.md`, and `10-risk-checklists.md`.
 

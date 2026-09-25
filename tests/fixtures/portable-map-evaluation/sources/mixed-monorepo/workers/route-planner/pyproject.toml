@@ -1,0 +1,9 @@
+[project]
+name = "marketroute-planner"
+version = "0.1.0"
+description = "Synthetic standard-library-only route planner"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.marketroute]
+daily-capacity = 40

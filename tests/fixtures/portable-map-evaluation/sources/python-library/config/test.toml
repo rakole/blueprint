@@ -1,0 +1,7 @@
+[policy]
+max_open_days = 7
+critical_requires_resolution = true
+standard_due_days = 14
+
+[policy.category_due_days]
+crane = 5

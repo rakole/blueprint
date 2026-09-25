@@ -1,0 +1,1804 @@
+{
+  "schemaVersion": 1,
+  "corpus": "ts-service",
+  "sourceManifestSha256": "3dd4045412f65feebc7c95893da2502e81677f55e0b82244a3890fda7a7d4438",
+  "pilot": [
+    {
+      "id": "ts-service-pilot-discussion",
+      "class": "discussion",
+      "scenario": "base",
+      "prompt": "Explain the reservation creation lifecycle in this TypeScript service. Trace a POST /reservations request from body validation through member and tool lookup, domain validation, reservation policy, persistence, and the HTTP response. Identify every rule that can reject creation and the status/code mapping a caller receives. Keep the explanation grounded in the local source.",
+      "expectedDeliverables": [
+        "A concise source-ordered lifecycle explanation.",
+        "A complete list of creation rejection rules with their owning layer.",
+        "The HTTP status and error-code behavior for domain failures, supported by source paths and line spans."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/http/reservation-routes.ts",
+            "range": {
+              "startLine": 31,
+              "endLine": 49
+            },
+            "symbol": "handleReservationRoute",
+            "rationale": "The route boundary validates create input and delegates supported requests to the service."
+          },
+          {
+            "path": "src/application/reservation-service.ts",
+            "range": {
+              "startLine": 25,
+              "endLine": 46
+            },
+            "symbol": "create",
+            "rationale": "The service performs lookups, creates the reservation, invokes policy, persists, and returns a view."
+          },
+          {
+            "path": "src/domain/reservation.ts",
+            "range": {
+              "startLine": 24,
+              "endLine": 38
+            },
+            "symbol": "Reservation.create",
+            "rationale": "The domain factory enforces valid timestamps, ordering, future starts, and duration bounds."
+          },
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {
+              "startLine": 8,
+              "endLine": 26
+            },
+            "symbol": "assertReservationAllowed",
+            "rationale": "The policy enforces member, tool, open-reservation, and overlap conditions."
+          },
+          {
+            "path": "src/http/router.ts",
+            "range": {
+              "startLine": 7,
+              "endLine": 17
+            },
+            "symbol": "routeRequest",
+            "rationale": "The router converts domain error codes into HTTP statuses and JSON bodies."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/persistence/in-memory-reservation-repository.ts",
+            "range": {
+              "startLine": 16,
+              "endLine": 24
+            },
+            "symbol": "findOverlapping",
+            "rationale": "The concrete repository supplies overlap checks and stores accepted reservations."
+          },
+          {
+            "path": "src/domain/errors.ts",
+            "range": {
+              "startLine": 1,
+              "endLine": 26
+            },
+            "symbol": "DomainError",
+            "rationale": "The error hierarchy defines the codes the router translates."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "ts-service-pilot-discussion-rubric-flow",
+          "criterion": "Traces the request through route validation, application service, domain/policy checks, repository save, and response serialization in the correct order.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/reservation-routes.ts",
+                "range": {
+                  "startLine": 31,
+                  "endLine": 37
+                },
+                "symbol": "handleReservationRoute",
+                "rationale": "The create request enters through this route branch."
+              },
+              {
+                "path": "src/application/reservation-service.ts",
+                "range": {
+                  "startLine": 25,
+                  "endLine": 46
+                },
+                "symbol": "create",
+                "rationale": "The service owns creation orchestration and persistence."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "src/persistence/in-memory-reservation-repository.ts",
+                "range": {
+                  "startLine": 22,
+                  "endLine": 24
+                },
+                "symbol": "save",
+                "rationale": "Accepted reservations are stored here."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Omits the route-to-service flow or puts persistence before policy checks.",
+            "1": "Traces handleReservationRoute through ReservationService.create, domain and policy checks, repository save, and the router response in runtime order.",
+            "0.5": "Names some boundaries but misses either route validation, policy/domain order, repository save, or response serialization."
+          }
+        },
+        {
+          "id": "ts-service-pilot-discussion-rubric-domain",
+          "criterion": "Covers all domain rejection rules: invalid dates/order, past start, duration outside two hours to seven days, member status, tool condition, three-open-reservation cap, and overlap.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/reservation.ts",
+                "range": {
+                  "startLine": 24,
+                  "endLine": 38
+                },
+                "symbol": "Reservation.create",
+                "rationale": "The reservation factory contains timestamp, ordering, start-time, and duration rules."
+              },
+              {
+                "path": "src/domain/reservation-policy.ts",
+                "range": {
+                  "startLine": 14,
+                  "endLine": 26
+                },
+                "symbol": "assertReservationAllowed",
+                "rationale": "The policy contains member, tool, count, and overlap rules."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Omits most of the rejection rules or assigns them to the wrong layer.",
+            "1": "Covers invalid dates and order, past start, two-hour to seven-day duration, member status, tool condition, three-open cap, and overlap from the cited domain and policy code.",
+            "0.5": "Covers either the Reservation.create date/duration rules or the policy member/tool/count/overlap rules, but not both completely."
+          }
+        },
+        {
+          "id": "ts-service-pilot-discussion-rubric-http",
+          "criterion": "Correctly explains not-found, conflict, validation, and unexpected-error response behavior with the stable JSON shape.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/router.ts",
+                "range": {
+                  "startLine": 11,
+                  "endLine": 17
+                },
+                "symbol": "routeRequest",
+                "rationale": "The router maps domain codes to 404, 409, or 400 and catches unknown errors as 500."
+              },
+              {
+                "path": "src/domain/errors.ts",
+                "range": {
+                  "startLine": 10,
+                  "endLine": 26
+                },
+                "symbol": "ValidationError",
+                "rationale": "Domain error subclasses define validation, not-found, and conflict codes."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "src/http/json-response.js",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 6
+                },
+                "symbol": "jsonResponse",
+                "rationale": "Responses use the JSON content-type header and body wrapper."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misstates the status mapping or omits the stable JSON error shape.",
+            "1": "Correctly maps not-found to 404, conflict to 409, validation to 400, unexpected errors to 500, and explains the JSON response shape from router and error classes.",
+            "0.5": "Gets some 404, 409, 400, or 500 cases right but leaves a mapping or the error-code body unclear."
+          }
+        },
+        {
+          "id": "ts-service-pilot-discussion-rubric-evidence",
+          "criterion": "Uses source citations that support the explanation and keeps HTTP, application, domain, and persistence responsibilities distinct.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/reservation-routes.ts",
+                "range": {
+                  "startLine": 31,
+                  "endLine": 49
+                },
+                "symbol": "handleReservationRoute",
+                "rationale": "HTTP responsibility is anchored in the route handler."
+              },
+              {
+                "path": "src/persistence/in-memory-reservation-repository.ts",
+                "range": {
+                  "startLine": 22,
+                  "endLine": 24
+                },
+                "symbol": "save",
+                "rationale": "Persistence responsibility is anchored in the repository save method."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Provides no usable source citations or conflates HTTP, application, domain, and persistence ownership.",
+            "1": "Uses precise route and repository citations while keeping HTTP handling, application orchestration, domain rules, and persistence responsibilities distinct.",
+            "0.5": "Cites some relevant code but leaves one responsibility unsupported or assigned to the wrong layer."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The response traces the create request in runtime order.",
+        "Every creation rejection condition is named with its source-owning layer.",
+        "HTTP status and error-code behavior is tied to the router and error classes.",
+        "Citations identify concrete local source files and spans."
+      ],
+      "criticalErrors": [
+        "Claims that the repository saves a reservation before policy validation.",
+        "Omits either the domain duration/past-start rules or the policy member/tool/count/overlap rules.",
+        "States that all domain errors become HTTP 500 responses."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "node --experimental-strip-types --test tests/*.test.ts"
+        },
+        {
+          "cwd": "fixture",
+          "command": "\"$EVALUATION_TSC\" -p tsconfig.json --noEmit --typeRoots \"$EVALUATION_TYPE_ROOTS\""
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "ts-service-pilot-implementation",
+      "class": "implementation",
+      "scenario": "base",
+      "prompt": "Add support for the configured reservation horizon. A reservation start must be no earlier than the injected current time and no later than now plus reservationHorizonDays. Thread the configured horizon through the application service and enforce it without weakening the existing date, duration, member, tool, overlap, cancellation, or HTTP error behavior. Add focused tests for the new boundary and keep the existing baseline green.",
+      "expectedDeliverables": [
+        "The smallest coherent source change that carries the configured horizon into reservation creation.",
+        "Focused tests covering an allowed start and the first start beyond the configured horizon.",
+        "Passing baseline test and typecheck commands, with any affected files identified."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/config.ts",
+            "range": {
+              "startLine": 1,
+              "endLine": 15
+            },
+            "symbol": "loadConfig",
+            "rationale": "Configuration already defines and validates reservationHorizonDays."
+          },
+          {
+            "path": "src/application/reservation-service.ts",
+            "range": {
+              "startLine": 10,
+              "endLine": 38
+            },
+            "symbol": "ReservationService",
+            "rationale": "The service dependency object and create method are the application boundary for an injected horizon."
+          },
+          {
+            "path": "src/domain/reservation.ts",
+            "range": {
+              "startLine": 24,
+              "endLine": 38
+            },
+            "symbol": "Reservation.create",
+            "rationale": "Existing date and duration validation must remain intact while the new horizon rule is added."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "tests/reservation-service.test.ts",
+            "range": {
+              "startLine": 11,
+              "endLine": 33
+            },
+            "symbol": "setup",
+            "rationale": "The test setup already injects a deterministic clock and is the natural boundary for horizon cases."
+          },
+          {
+            "path": "src/server.ts",
+            "range": {
+              "startLine": 17,
+              "endLine": 24
+            },
+            "symbol": "createService",
+            "rationale": "Production wiring constructs the application service and must supply any new configuration dependency."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "ts-service-pilot-implementation-rubric-rule",
+          "criterion": "Rejects reservation starts after now plus the configured horizon while accepting a start at the inclusive upper boundary.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/config.ts",
+                "range": {
+                  "startLine": 6,
+                  "endLine": 15
+                },
+                "symbol": "loadConfig",
+                "rationale": "The configured horizon is validated and returned from this function."
+              },
+              {
+                "path": "src/application/reservation-service.ts",
+                "range": {
+                  "startLine": 25,
+                  "endLine": 38
+                },
+                "symbol": "create",
+                "rationale": "Creation receives the injected current time and is the application boundary for the new setting."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Ignores the configured horizon, uses a different bound, or rejects the inclusive upper boundary.",
+            "1": "Rejects a start strictly after now plus reservationHorizonDays and accepts the inclusive upper boundary using the configured value.",
+            "0.5": "Rejects starts beyond a horizon but does not clearly accept the exact now-plus-horizon boundary."
+          }
+        },
+        {
+          "id": "ts-service-pilot-implementation-rubric-threading",
+          "criterion": "Threads the setting through service construction without hard-coding a different horizon or reading process environment inside the domain.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/application/reservation-service.ts",
+                "range": {
+                  "startLine": 10,
+                  "endLine": 23
+                },
+                "symbol": "ReservationServiceDeps",
+                "rationale": "Service dependencies are explicitly injected here."
+              },
+              {
+                "path": "src/server.ts",
+                "range": {
+                  "startLine": 17,
+                  "endLine": 24
+                },
+                "symbol": "createService",
+                "rationale": "The composition root owns service dependency construction."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Hard-codes the horizon, reads process environment in the domain, or bypasses injected service dependencies.",
+            "1": "Carries the validated configuration from createService into ReservationService dependencies without hard-coding or domain environment reads.",
+            "0.5": "Adds a dependency at one boundary but leaves configuration or composition-root wiring incomplete."
+          }
+        },
+        {
+          "id": "ts-service-pilot-implementation-rubric-regressions",
+          "criterion": "Preserves existing date validity, duration, member/tool, overlap, cancellation, and HTTP error behavior.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/reservation.ts",
+                "range": {
+                  "startLine": 24,
+                  "endLine": 57
+                },
+                "symbol": "Reservation.create",
+                "rationale": "Existing timestamp, duration, confirmation, cancellation, and overlap behavior is here."
+              },
+              {
+                "path": "src/domain/reservation-policy.ts",
+                "range": {
+                  "startLine": 8,
+                  "endLine": 26
+                },
+                "symbol": "assertReservationAllowed",
+                "rationale": "Existing member, tool, open-count, and conflict rules must remain unchanged."
+              },
+              {
+                "path": "src/http/router.ts",
+                "range": {
+                  "startLine": 11,
+                  "endLine": 17
+                },
+                "symbol": "routeRequest",
+                "rationale": "HTTP translation is an observable compatibility boundary."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Weakens an existing date, duration, member/tool, overlap, cancellation, or HTTP error rule.",
+            "1": "Keeps Reservation.create, assertReservationAllowed, and routeRequest behavior intact across all listed validation, cancellation, conflict, and HTTP translation cases.",
+            "0.5": "Preserves some existing behavior but changes or fails to verify one of the cited compatibility boundaries."
+          }
+        },
+        {
+          "id": "ts-service-pilot-implementation-rubric-tests",
+          "criterion": "Adds focused deterministic tests for the horizon boundary and runs the existing test and typecheck baselines successfully.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/reservation-service.test.ts",
+                "range": {
+                  "startLine": 11,
+                  "endLine": 53
+                },
+                "symbol": "setup",
+                "rationale": "The current service tests provide deterministic clock and lifecycle patterns for new cases."
+              },
+              {
+                "path": "README.md",
+                "range": {
+                  "startLine": 9,
+                  "endLine": 20
+                },
+                "rationale": "The fixture documents the executable test and root typecheck baselines."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Adds no deterministic boundary test or does not run the documented checks.",
+            "1": "Adds deterministic allowed and first-beyond-horizon tests in the existing setup and reports both the fixture test command and injected-compiler typecheck.",
+            "0.5": "Adds only one boundary or reports an incomplete/non-reproducible test or typecheck run."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "A configured horizon is passed through composition into reservation creation.",
+        "Starts after the inclusive horizon are rejected with the existing domain-error translation path.",
+        "A boundary test and an over-boundary test are present and deterministic.",
+        "Existing tests and typecheck pass."
+      ],
+      "criticalErrors": [
+        "Uses a hard-coded horizon instead of the validated configuration.",
+        "Allows starts beyond the configured horizon or rejects the inclusive boundary unexpectedly.",
+        "Changes or bypasses existing duration, overlap, member/tool, cancellation, or HTTP error rules.",
+        "Leaves composition wiring unable to construct the updated service."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "node --experimental-strip-types --test tests/*.test.ts"
+        },
+        {
+          "cwd": "fixture",
+          "command": "\"$EVALUATION_TSC\" -p tsconfig.json --noEmit --typeRoots \"$EVALUATION_TYPE_ROOTS\""
+        }
+      ],
+      "knownTarget": false
+    }
+  ],
+  "confirmatory": [
+    {
+      "id": "ts-service-confirm-discussion",
+      "class": "discussion",
+      "scenario": "base",
+      "prompt": "Explain what happens after a reservation is cancelled. Describe how cancellation changes the domain object, how overlap detection treats the cancelled record, and whether the cancelled record counts toward the member's open-reservation limit. Support each claim with local source evidence.",
+      "expectedDeliverables": [
+        "A short lifecycle explanation for cancellation.",
+        "The effects on overlap detection and the open-reservation count.",
+        "Source citations for domain, repository, policy, and service behavior."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation.ts",
+            "range": {
+              "startLine": 41,
+              "endLine": 57
+            },
+            "symbol": "confirm",
+            "rationale": "The domain methods define cancellation status and overlap treatment."
+          },
+          {
+            "path": "src/persistence/in-memory-reservation-repository.ts",
+            "range": {
+              "startLine": 12,
+              "endLine": 19
+            },
+            "symbol": "findByMember",
+            "rationale": "The repository supplies member records and delegates overlap semantics."
+          },
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {
+              "startLine": 20,
+              "endLine": 21
+            },
+            "symbol": "assertReservationAllowed",
+            "rationale": "The policy excludes cancelled records from the open-count limit."
+          },
+          {
+            "path": "src/application/reservation-service.ts",
+            "range": {
+              "startLine": 62,
+              "endLine": 66
+            },
+            "symbol": "cancel",
+            "rationale": "The service loads, cancels, saves, and returns the updated view."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "ts-service-confirm-discussion-rubric-status",
+          "criterion": "Explains that cancel returns a reservation with cancelled status and persists the updated object through the service.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/reservation.ts",
+                "range": {
+                  "startLine": 48,
+                  "endLine": 52
+                },
+                "symbol": "cancel",
+                "rationale": "Cancellation returns a reservation carrying cancelled status."
+              },
+              {
+                "path": "src/application/reservation-service.ts",
+                "range": {
+                  "startLine": 62,
+                  "endLine": 66
+                },
+                "symbol": "cancel",
+                "rationale": "The updated reservation is saved and returned."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Claims cancellation deletes the record or leaves its status/persistence behavior wrong.",
+            "1": "Explains that Reservation.cancel produces cancelled status and ReservationService.cancel persists the updated reservation.",
+            "0.5": "Mentions cancelled status or persistence but omits the other or misplaces the update in the service flow."
+          }
+        },
+        {
+          "id": "ts-service-confirm-discussion-rubric-overlap",
+          "criterion": "Correctly states that cancelled reservations do not overlap a later request.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/reservation.ts",
+                "range": {
+                  "startLine": 55,
+                  "endLine": 57
+                },
+                "symbol": "overlaps",
+                "rationale": "Overlap begins with a non-cancelled status check."
+              },
+              {
+                "path": "src/persistence/in-memory-reservation-repository.ts",
+                "range": {
+                  "startLine": 16,
+                  "endLine": 19
+                },
+                "symbol": "findOverlapping",
+                "rationale": "Repository lookup invokes Reservation.overlaps."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Claims a cancelled record still blocks overlap or omits status filtering.",
+            "1": "Explains that findOverlapping excludes cancelled reservations, so a later request does not conflict with a cancelled record.",
+            "0.5": "Mentions cancelled records but does not connect the repository filter to later overlap checks."
+          }
+        },
+        {
+          "id": "ts-service-confirm-discussion-rubric-count",
+          "criterion": "Correctly states that cancelled records are filtered out before the member open-reservation limit is evaluated.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/reservation-policy.ts",
+                "range": {
+                  "startLine": 20,
+                  "endLine": 21
+                },
+                "symbol": "assertReservationAllowed",
+                "rationale": "The count filters status !== cancelled before comparing with the limit."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "src/persistence/in-memory-reservation-repository.ts",
+                "range": {
+                  "startLine": 12,
+                  "endLine": 14
+                },
+                "symbol": "findByMember",
+                "rationale": "The policy receives all reservations for the member before filtering."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Counts every stored record toward the open-reservation limit.",
+            "1": "States that the policy receives non-cancelled/open reservations before evaluating the three-open limit.",
+            "0.5": "Recognizes cancellation affects the count but does not identify the pre-limit filtering step."
+          }
+        },
+        {
+          "id": "ts-service-confirm-discussion-rubric-citations",
+          "criterion": "Cites the domain, service, repository, and policy spans accurately without claiming cancellation deletes the record.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/reservation.ts",
+                "range": {
+                  "startLine": 48,
+                  "endLine": 57
+                },
+                "symbol": "cancel",
+                "rationale": "The cited span supports status and overlap behavior."
+              },
+              {
+                "path": "src/application/reservation-service.ts",
+                "range": {
+                  "startLine": 62,
+                  "endLine": 66
+                },
+                "symbol": "cancel",
+                "rationale": "The cited span supports persistence of the update."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Citations are absent or claim cancellation removes the stored record.",
+            "1": "Cites the domain transition, service persistence, repository overlap behavior, and policy count path without claiming deletion.",
+            "0.5": "Cites some layers accurately but misses domain, service, repository, or policy support."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "Cancellation behavior is explained from service through domain and repository semantics.",
+        "Overlap and open-count effects are both addressed.",
+        "The response includes source-grounded citations."
+      ],
+      "criticalErrors": [
+        "Claims cancellation removes the record from the repository.",
+        "Claims a cancelled record still blocks overlap or consumes an open-reservation slot."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "node --experimental-strip-types --test tests/*.test.ts"
+        },
+        {
+          "cwd": "fixture",
+          "command": "\"$EVALUATION_TSC\" -p tsconfig.json --noEmit --typeRoots \"$EVALUATION_TYPE_ROOTS\""
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "ts-service-confirm-research",
+      "class": "research",
+      "scenario": "base",
+      "prompt": "Investigate the persistence boundary in this service. Determine whether src/persistence/reservations.sql is executed at runtime, which repository implementation is actually wired by the server, and what the repository interface exposes. Report the evidence and the practical implication for a future storage adapter.",
+      "expectedDeliverables": [
+        "A source-grounded finding about the SQL file's runtime role.",
+        "The concrete repository wiring used by the server.",
+        "A concise description of the repository contract and implications for a future adapter."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/persistence/reservations.sql",
+            "range": {
+              "startLine": 1,
+              "endLine": 13
+            },
+            "rationale": "The SQL file explicitly describes itself as a future-adapter reference and defines the schema/index."
+          },
+          {
+            "path": "src/server.ts",
+            "range": {
+              "startLine": 17,
+              "endLine": 24
+            },
+            "symbol": "createService",
+            "rationale": "The composition root wires the in-memory repository implementations."
+          },
+          {
+            "path": "src/persistence/reservation-repository.ts",
+            "range": {
+              "startLine": 4,
+              "endLine": 9
+            },
+            "symbol": "ReservationRepository",
+            "rationale": "The interface defines the operations any reservation storage adapter must implement."
+          },
+          {
+            "path": "src/persistence/in-memory-reservation-repository.ts",
+            "range": {
+              "startLine": 5,
+              "endLine": 24
+            },
+            "symbol": "InMemoryReservationRepository",
+            "rationale": "The current implementation stores records in a Map and provides the interface methods."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "ts-service-confirm-research-rubric-sql",
+          "criterion": "Correctly concludes from the SQL comments and source references that reservations.sql is documentation for a future adapter, not an executed runtime path.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/persistence/reservations.sql",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 3
+                },
+                "rationale": "The file identifies its reference-only role."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Claims reservations.sql is executed by the running service.",
+            "1": "Uses the SQL comments and runtime references to conclude reservations.sql documents a future adapter and is not executed.",
+            "0.5": "Calls the SQL a reference but does not connect that conclusion to its comments and the active implementation."
+          }
+        },
+        {
+          "id": "ts-service-confirm-research-rubric-wiring",
+          "criterion": "Identifies InMemoryReservationRepository as the repository implementation wired into ReservationService by createService.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/server.ts",
+                "range": {
+                  "startLine": 17,
+                  "endLine": 24
+                },
+                "symbol": "createService",
+                "rationale": "The server constructs and injects the in-memory reservation repository."
+              },
+              {
+                "path": "src/persistence/in-memory-reservation-repository.ts",
+                "range": {
+                  "startLine": 5,
+                  "endLine": 6
+                },
+                "symbol": "InMemoryReservationRepository",
+                "rationale": "The implementation is explicitly named here."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Identifies a SQL or different repository as the active implementation.",
+            "1": "Identifies createService wiring InMemoryReservationRepository into ReservationService.",
+            "0.5": "Names InMemoryReservationRepository or createService but does not show the wiring connection."
+          }
+        },
+        {
+          "id": "ts-service-confirm-research-rubric-contract",
+          "criterion": "Accurately lists findById, findByMember, findOverlapping, and save as the reservation repository contract.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/persistence/reservation-repository.ts",
+                "range": {
+                  "startLine": 4,
+                  "endLine": 9
+                },
+                "symbol": "ReservationRepository",
+                "rationale": "The interface lists all four required methods."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Lists the wrong interface or omits most repository operations.",
+            "1": "Accurately lists all four methods exposed by ReservationRepository.",
+            "0.5": "Lists some methods but misses one or more of findById, findByMember, findOverlapping, and save."
+          }
+        },
+        {
+          "id": "ts-service-confirm-research-rubric-implication",
+          "criterion": "States a practical future-adapter implication: preserve the interface semantics, including overlap lookup and status-aware behavior, while replacing the Map-backed implementation.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/persistence/reservation-repository.ts",
+                "range": {
+                  "startLine": 4,
+                  "endLine": 9
+                },
+                "symbol": "ReservationRepository",
+                "rationale": "The interface is the stable adapter boundary."
+              },
+              {
+                "path": "src/persistence/in-memory-reservation-repository.ts",
+                "range": {
+                  "startLine": 12,
+                  "endLine": 23
+                },
+                "symbol": "findOverlapping",
+                "rationale": "The current implementation's member and overlap semantics inform adapter compatibility."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Recommends changing repository semantics or ignores status-aware overlap behavior.",
+            "1": "States that a future adapter should preserve the interface semantics, including overlap lookup and cancelled-status filtering.",
+            "0.5": "Suggests replacing the Map implementation but gives only generic compatibility guidance."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The SQL runtime role is determined from source evidence.",
+        "The actual repository wiring and interface methods are identified.",
+        "The future-adapter implication preserves the observed contract semantics."
+      ],
+      "criticalErrors": [
+        "Claims the SQL file is executed by the server.",
+        "Names a SQL or network repository as the current runtime implementation.",
+        "Omits either overlap lookup or save from the repository contract."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "node --experimental-strip-types --test tests/*.test.ts"
+        },
+        {
+          "cwd": "fixture",
+          "command": "\"$EVALUATION_TSC\" -p tsconfig.json --noEmit --typeRoots \"$EVALUATION_TYPE_ROOTS\""
+        }
+      ],
+      "knownTarget": true
+    },
+    {
+      "id": "ts-service-confirm-planning",
+      "class": "planning",
+      "scenario": "base",
+      "prompt": "Plan a bounded change that exposes cancellation through DELETE /reservations/:id while preserving the existing POST /reservations/:id/cancel behavior. Identify the source files to change, the request-parser and route decisions, the service behavior to reuse, focused tests, and compatibility risks. Do not implement the change.",
+      "expectedDeliverables": [
+        "An ordered implementation plan with affected source and test files.",
+        "The intended DELETE path and method behavior, including unknown-path handling.",
+        "Focused verification cases and compatibility risks."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/http/request-parser.js",
+            "range": {
+              "startLine": 5,
+              "endLine": 14
+            },
+            "symbol": "reservationRouteFromPath",
+            "rationale": "The parser currently recognizes reservation IDs and confirm/cancel actions."
+          },
+          {
+            "path": "src/http/reservation-routes.ts",
+            "range": {
+              "startLine": 38,
+              "endLine": 49
+            },
+            "symbol": "handleReservationRoute",
+            "rationale": "The route handler currently exposes cancellation only through POST and delegates to service.cancel."
+          },
+          {
+            "path": "src/application/reservation-service.ts",
+            "range": {
+              "startLine": 62,
+              "endLine": 66
+            },
+            "symbol": "cancel",
+            "rationale": "The existing application cancellation behavior should be reused."
+          },
+          {
+            "path": "tests/router.test.ts",
+            "range": {
+              "startLine": 32,
+              "endLine": 53
+            },
+            "symbol": "router rejects unknown nested reservation paths",
+            "rationale": "Router tests establish the compatibility pattern for unsupported nested paths."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "ts-service-confirm-planning-rubric-scope",
+          "criterion": "Names the parser, reservation routes, service, and router tests as the primary change surface and reuses service.cancel.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/request-parser.js",
+                "range": {
+                  "startLine": 5,
+                  "endLine": 14
+                },
+                "symbol": "reservationRouteFromPath",
+                "rationale": "Path/action parsing is a primary affected surface."
+              },
+              {
+                "path": "src/http/reservation-routes.ts",
+                "range": {
+                  "startLine": 43,
+                  "endLine": 47
+                },
+                "symbol": "handleReservationRoute",
+                "rationale": "The existing cancel route delegates to service.cancel."
+              },
+              {
+                "path": "src/application/reservation-service.ts",
+                "range": {
+                  "startLine": 62,
+                  "endLine": 66
+                },
+                "symbol": "cancel",
+                "rationale": "The service method is the reusable behavior."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Plans unrelated domain changes or does not identify the HTTP/service boundary.",
+            "1": "Scopes the change to request-parser, reservation routes, router tests, and reuse of service.cancel.",
+            "0.5": "Names some files but misses parser, routes, service reuse, or router tests."
+          }
+        },
+        {
+          "id": "ts-service-confirm-planning-rubric-method",
+          "criterion": "Specifies DELETE /reservations/:id as the new method/path behavior while retaining POST cancel and returning the same success/error shapes.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/reservation-routes.ts",
+                "range": {
+                  "startLine": 38,
+                  "endLine": 49
+                },
+                "symbol": "handleReservationRoute",
+                "rationale": "Method and action branches are defined here."
+              },
+              {
+                "path": "src/http/router.ts",
+                "range": {
+                  "startLine": 7,
+                  "endLine": 16
+                },
+                "symbol": "routeRequest",
+                "rationale": "The router preserves response and domain-error translation for either route."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Uses the wrong method/path or changes the existing POST cancel contract.",
+            "1": "Specifies DELETE /reservations/:id while retaining POST /reservations/:id/cancel and the router’s existing success/error shapes.",
+            "0.5": "Proposes DELETE /reservations/:id but leaves the POST behavior or success/error shapes unspecified."
+          }
+        },
+        {
+          "id": "ts-service-confirm-planning-rubric-tests",
+          "criterion": "Plans focused tests for DELETE success, missing reservations, preservation of POST cancel, and unsupported nested paths.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/router.test.ts",
+                "range": {
+                  "startLine": 5,
+                  "endLine": 53
+                },
+                "symbol": "routeRequest",
+                "rationale": "Existing router tests show create/confirm, not-found, and unknown nested path patterns."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "tests/reservation-service.test.ts",
+                "range": {
+                  "startLine": 48,
+                  "endLine": 53
+                },
+                "symbol": "cancellation releases a time window",
+                "rationale": "Service-level cancellation behavior already has focused coverage."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Omits focused route tests or tests unrelated behavior.",
+            "1": "Plans all four focused cases in router.test.ts, including DELETE success, not-found, POST compatibility, and unsupported nested paths.",
+            "0.5": "Covers some route cases but misses one or more of DELETE success, missing reservation, POST preservation, and nested-path rejection."
+          }
+        },
+        {
+          "id": "ts-service-confirm-planning-rubric-risks",
+          "criterion": "Calls out compatibility risks around method matching, parser action validation, not-found mapping, and accidental acceptance of unknown nested paths.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/request-parser.js",
+                "range": {
+                  "startLine": 7,
+                  "endLine": 14
+                },
+                "symbol": "reservationRouteFromPath",
+                "rationale": "The parser returns undefined for unsupported actions."
+              },
+              {
+                "path": "src/http/router.ts",
+                "range": {
+                  "startLine": 9,
+                  "endLine": 14
+                },
+                "symbol": "routeRequest",
+                "rationale": "Unsupported routes become 404 and domain not-found errors become 404 with a stable body."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Does not address parser, method, not-found, or nested-path compatibility risks.",
+            "1": "Calls out method matching, parser action validation, not-found mapping, and rejection of unknown nested paths.",
+            "0.5": "Mentions generic routing risk but omits one or more concrete safeguards in the cited parser/router code."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The plan stays within the parser, route, service, and focused router-test surfaces.",
+        "Existing POST cancellation behavior is preserved explicitly.",
+        "DELETE success, error, and unsupported-path cases are covered.",
+        "Compatibility risks are tied to concrete source behavior."
+      ],
+      "criticalErrors": [
+        "Plans to duplicate cancellation persistence logic instead of reusing service.cancel.",
+        "Removes or changes the existing POST cancel route without a requested reason.",
+        "Omits unsupported nested path or not-found behavior from verification."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "node --experimental-strip-types --test tests/*.test.ts"
+        },
+        {
+          "cwd": "fixture",
+          "command": "\"$EVALUATION_TSC\" -p tsconfig.json --noEmit --typeRoots \"$EVALUATION_TYPE_ROOTS\""
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "ts-service-confirm-implementation",
+      "class": "implementation",
+      "scenario": "base",
+      "prompt": "Update ReservationForm so it can submit the member identifier required by the reservation API. Add a required memberId prop and a form field that submits it while preserving the existing tool identifier, start/end inputs, POST action, and required attributes. Keep the public CreateReservationInput contract and route validation behavior coherent, and add the smallest useful verification.",
+      "expectedDeliverables": [
+        "The updated ReservationForm prop type and submitted member identifier field.",
+        "Preserved tool and date input behavior with no weakening of route validation.",
+        "Focused verification or typecheck evidence for the UI contract change."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/ui/reservation-form.tsx",
+            "range": {
+              "startLine": 3,
+              "endLine": 15
+            },
+            "symbol": "ReservationFormProps",
+            "rationale": "The current form accepts toolId/minStart and submits only date controls."
+          },
+          {
+            "path": "src/contracts/reservations.ts",
+            "range": {
+              "startLine": 5,
+              "endLine": 10
+            },
+            "symbol": "CreateReservationInput",
+            "rationale": "The API create contract requires memberId, toolId, startsAt, and endsAt."
+          },
+          {
+            "path": "src/http/reservation-routes.ts",
+            "range": {
+              "startLine": 16,
+              "endLine": 29
+            },
+            "symbol": "parseCreateReservationInput",
+            "rationale": "The HTTP boundary rejects create bodies missing a non-empty memberId string."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/types/ids.ts",
+            "range": {
+              "startLine": 1,
+              "endLine": 11
+            },
+            "symbol": "MemberId",
+            "rationale": "Member and tool identifiers use branded string types."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "ts-service-confirm-implementation-rubric-member",
+          "criterion": "Adds a required memberId prop with the existing branded member identifier type and submits it in the form.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/ui/reservation-form.tsx",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 10
+                },
+                "symbol": "ReservationFormProps",
+                "rationale": "The form prop type and component signature own the required UI input."
+              },
+              {
+                "path": "src/contracts/reservations.ts",
+                "range": {
+                  "startLine": 5,
+                  "endLine": 10
+                },
+                "symbol": "CreateReservationInput",
+                "rationale": "The submitted field must match the API contract's memberId requirement."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Does not add memberId or uses an untyped/different identifier.",
+            "1": "Adds required memberId with the existing branded member identifier type and submits it in the form payload.",
+            "0.5": "Adds a memberId prop or field but does not preserve the branded type and submitted value together."
+          }
+        },
+        {
+          "id": "ts-service-confirm-implementation-rubric-preserve",
+          "criterion": "Preserves toolId, startsAt, endsAt, POST /reservations, required date controls, and the existing minStart behavior.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/ui/reservation-form.tsx",
+                "range": {
+                  "startLine": 8,
+                  "endLine": 15
+                },
+                "symbol": "ReservationForm",
+                "rationale": "The existing form action, tool data attribute, and date controls are the compatibility surface."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Removes or changes toolId, date fields, POST action, required attributes, or minStart behavior.",
+            "1": "Preserves toolId, startsAt, endsAt, POST /reservations, required controls, and minStart while adding memberId.",
+            "0.5": "Preserves most existing form behavior but changes one cited control or attribute."
+          }
+        },
+        {
+          "id": "ts-service-confirm-implementation-rubric-boundary",
+          "criterion": "Keeps the route boundary's non-empty string validation for all four create fields intact.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/reservation-routes.ts",
+                "range": {
+                  "startLine": 16,
+                  "endLine": 29
+                },
+                "symbol": "isCreateReservationInput",
+                "rationale": "The boundary validates the complete create input shape."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Weakens or bypasses route validation for one or more create fields.",
+            "1": "Keeps non-empty string validation intact for memberId, toolId, startsAt, and endsAt at the route boundary.",
+            "0.5": "Retains validation for some fields but changes the required non-empty string boundary for another."
+          }
+        },
+        {
+          "id": "ts-service-confirm-implementation-rubric-verification",
+          "criterion": "Provides focused verification that the component contract/typechecks and the existing service baseline remains valid.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "README.md",
+                "range": {
+                  "startLine": 9,
+                  "endLine": 20
+                },
+                "rationale": "The source README defines the executable test and typecheck commands."
+              },
+              {
+                "path": "src/ui/reservation-form.tsx",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 15
+                },
+                "symbol": "ReservationForm",
+                "rationale": "The changed component is included by the fixture typecheck configuration."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Provides no useful verification or reports a failing/irrelevant command.",
+            "1": "Verifies the ReservationForm contract/typechecks and reports a passing existing service baseline from the documented README commands.",
+            "0.5": "Reports either component/type verification or the existing service baseline, but not both."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "ReservationForm requires and submits memberId.",
+        "Existing tool and date fields, action, and required behavior remain intact.",
+        "The create contract and boundary validation remain aligned.",
+        "Focused verification and the documented baseline are run."
+      ],
+      "criticalErrors": [
+        "Leaves memberId absent from the submitted form.",
+        "Weakens or removes route validation for create fields.",
+        "Drops toolId or either date field, or changes the POST reservation action unexpectedly."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "node --experimental-strip-types --test tests/*.test.ts"
+        },
+        {
+          "cwd": "fixture",
+          "command": "\"$EVALUATION_TSC\" -p tsconfig.json --noEmit --typeRoots \"$EVALUATION_TYPE_ROOTS\""
+        }
+      ],
+      "knownTarget": true
+    },
+    {
+      "id": "ts-service-confirm-review",
+      "class": "review",
+      "scenario": "base",
+      "prompt": "Review the HTTP reservation boundary for correctness and maintainability. Inspect path parsing, create-body validation, supported methods, unknown nested paths, and DomainError translation. Report concrete findings with severity, source spans, impact, and a suggested fix; distinguish real defects from intentional behavior and say when the current code is sound.",
+      "expectedDeliverables": [
+        "A prioritized review report with concrete source citations.",
+        "Impact and a practical fix or explicit no-change rationale for each finding.",
+        "Coverage of parser, route, router, and existing boundary tests."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/http/request-parser.js",
+            "range": {
+              "startLine": 1,
+              "endLine": 14
+            },
+            "symbol": "reservationRouteFromPath",
+            "rationale": "Path segmentation and supported confirm/cancel actions are defined here."
+          },
+          {
+            "path": "src/http/reservation-routes.ts",
+            "range": {
+              "startLine": 8,
+              "endLine": 49
+            },
+            "symbol": "handleReservationRoute",
+            "rationale": "Body guards, method/path matching, and service delegation are defined here."
+          },
+          {
+            "path": "src/http/router.ts",
+            "range": {
+              "startLine": 7,
+              "endLine": 17
+            },
+            "symbol": "routeRequest",
+            "rationale": "Domain and unknown-error translation is the outer boundary behavior."
+          },
+          {
+            "path": "tests/router.test.ts",
+            "range": {
+              "startLine": 32,
+              "endLine": 82
+            },
+            "symbol": "router rejects unknown nested reservation paths",
+            "rationale": "Existing tests specify unknown nested paths, malformed bodies, and unrelated routes."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "ts-service-confirm-review-rubric-coverage",
+          "criterion": "Reviews path parsing, create-body validation, method/path matching, unknown nested paths, and DomainError translation rather than discussing unrelated domain code.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/request-parser.js",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 14
+                },
+                "symbol": "reservationRouteFromPath",
+                "rationale": "Parser behavior is in scope."
+              },
+              {
+                "path": "src/http/reservation-routes.ts",
+                "range": {
+                  "startLine": 16,
+                  "endLine": 49
+                },
+                "symbol": "handleReservationRoute",
+                "rationale": "Body and route behavior is in scope."
+              },
+              {
+                "path": "src/http/router.ts",
+                "range": {
+                  "startLine": 7,
+                  "endLine": 17
+                },
+                "symbol": "routeRequest",
+                "rationale": "Outer error translation is in scope."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Reviews unrelated domain behavior while omitting the HTTP boundary cases.",
+            "1": "Reviews all five requested HTTP boundary areas using request-parser, routes, and router code.",
+            "0.5": "Covers some HTTP cases but misses path parsing, body validation, method matching, nested paths, or error translation."
+          }
+        },
+        {
+          "id": "ts-service-confirm-review-rubric-findings",
+          "criterion": "Distinguishes verified safeguards from actual gaps and avoids inventing defects contradicted by source tests or control flow.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/router.test.ts",
+                "range": {
+                  "startLine": 55,
+                  "endLine": 82
+                },
+                "symbol": "router validates create bodies at the HTTP boundary",
+                "rationale": "Tests demonstrate current malformed-body and unrelated-route behavior."
+              }
+            ],
+            "supporting": [
+              {
+                "path": "src/http/request-parser.js",
+                "range": {
+                  "startLine": 7,
+                  "endLine": 14
+                },
+                "symbol": "reservationRouteFromPath",
+                "rationale": "Unsupported actions return undefined and are intentionally rejected upstream."
+              }
+            ],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Invents defects contradicted by the router tests or misses the tested safeguards entirely.",
+            "1": "Uses router.test.ts and control flow to separate verified safeguards, real gaps, and sound behavior without inventing defects.",
+            "0.5": "Distinguishes some tested behavior from gaps but leaves a claim unsupported."
+          }
+        },
+        {
+          "id": "ts-service-confirm-review-rubric-severity",
+          "criterion": "Reports severity, user-visible or operational impact, and a concrete fix or rationale for each finding.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/router.ts",
+                "range": {
+                  "startLine": 11,
+                  "endLine": 17
+                },
+                "symbol": "routeRequest",
+                "rationale": "The response behavior provides the impact surface for boundary findings."
+              },
+              {
+                "path": "tests/router.test.ts",
+                "range": {
+                  "startLine": 23,
+                  "endLine": 30
+                },
+                "symbol": "router reports domain errors with stable status and code",
+                "rationale": "Stable status and body behavior should be considered when prioritizing changes."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Provides neither severity nor concrete impact/fix reasoning.",
+            "1": "Assigns severity, explains user-visible or operational impact, and gives a concrete fix or defensible rationale for each finding.",
+            "0.5": "Ranks findings but gives incomplete user impact or remediation rationale."
+          }
+        },
+        {
+          "id": "ts-service-confirm-review-rubric-citations",
+          "criterion": "Uses precise source spans and gives a defensible overall conclusion about the boundary's current correctness.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/http/reservation-routes.ts",
+                "range": {
+                  "startLine": 35,
+                  "endLine": 49
+                },
+                "symbol": "handleReservationRoute",
+                "rationale": "Route method matching and fallback are observable in this span."
+              },
+              {
+                "path": "tests/router.test.ts",
+                "range": {
+                  "startLine": 32,
+                  "endLine": 53
+                },
+                "symbol": "router rejects unknown nested reservation paths",
+                "rationale": "The test anchors the unknown-path conclusion."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Uses vague references or reaches no defensible boundary conclusion.",
+            "1": "Uses precise route and test spans and gives a defensible conclusion about current HTTP boundary correctness.",
+            "0.5": "Cites some relevant lines but leaves the overall correctness conclusion unsupported."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "All requested HTTP boundary surfaces are reviewed.",
+        "Findings are prioritized and source-cited.",
+        "Intentional behavior is distinguished from a defect.",
+        "Each finding includes impact and a concrete next step or rationale."
+      ],
+      "criticalErrors": [
+        "Claims malformed create bodies bypass validation despite the explicit type guards.",
+        "Claims unknown nested paths are accepted as reservation actions.",
+        "Reports a severity without a source span or impact explanation."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "node --experimental-strip-types --test tests/*.test.ts"
+        },
+        {
+          "cwd": "fixture",
+          "command": "\"$EVALUATION_TSC\" -p tsconfig.json --noEmit --typeRoots \"$EVALUATION_TYPE_ROOTS\""
+        }
+      ],
+      "knownTarget": false
+    },
+    {
+      "id": "ts-service-confirm-testing",
+      "class": "testing",
+      "scenario": "base",
+      "prompt": "Add focused service tests for the reservation policy branches that are currently under-covered: a suspended member, a maintenance tool, and the maximum open-reservation limit. Include a case showing that cancelled reservations do not consume the limit. Keep the tests deterministic and use the existing service/repository setup patterns.",
+      "expectedDeliverables": [
+        "Focused tests for suspended members and maintenance tools.",
+        "A test for the open-reservation limit and a test proving cancellation frees a slot.",
+        "Passing fixture tests and typecheck with no production behavior changes."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {
+              "startLine": 8,
+              "endLine": 26
+            },
+            "symbol": "assertReservationAllowed",
+            "rationale": "The requested branches are the policy's member, tool, and open-count checks."
+          },
+          {
+            "path": "src/domain/member.ts",
+            "range": {
+              "startLine": 4,
+              "endLine": 23
+            },
+            "symbol": "Member",
+            "rationale": "Member status and canReserve define the suspended-member setup."
+          },
+          {
+            "path": "src/domain/tool.ts",
+            "range": {
+              "startLine": 4,
+              "endLine": 24
+            },
+            "symbol": "Tool",
+            "rationale": "Tool condition and canReserve define the maintenance-tool setup."
+          },
+          {
+            "path": "tests/reservation-service.test.ts",
+            "range": {
+              "startLine": 11,
+              "endLine": 53
+            },
+            "symbol": "setup",
+            "rationale": "Existing tests provide deterministic service construction and cancellation patterns."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/persistence/in-memory-reservation-repository.ts",
+            "range": {
+              "startLine": 12,
+              "endLine": 14
+            },
+            "symbol": "findByMember",
+            "rationale": "Member reservation counts are sourced from this repository method."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "ts-service-confirm-testing-rubric-status",
+          "criterion": "Adds a deterministic test proving a suspended member is rejected with the member-not-allowed conflict behavior.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/member.ts",
+                "range": {
+                  "startLine": 4,
+                  "endLine": 23
+                },
+                "symbol": "Member",
+                "rationale": "Suspended is a supported member status and canReserve returns false."
+              },
+              {
+                "path": "src/domain/reservation-policy.ts",
+                "range": {
+                  "startLine": 14,
+                  "endLine": 16
+                },
+                "symbol": "assertReservationAllowed",
+                "rationale": "The policy raises the expected conflict for a member that cannot reserve."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Does not test suspended-member rejection or changes the expected behavior.",
+            "1": "Adds a deterministic suspended-member case and asserts the member-not-allowed conflict behavior from member and policy code.",
+            "0.5": "Exercises the branch but does not make the member-not-allowed conflict observable."
+          }
+        },
+        {
+          "id": "ts-service-confirm-testing-rubric-tool",
+          "criterion": "Adds a deterministic test proving a maintenance tool is rejected with the tool-unavailable conflict behavior.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/tool.ts",
+                "range": {
+                  "startLine": 4,
+                  "endLine": 24
+                },
+                "symbol": "Tool",
+                "rationale": "Maintenance is a supported tool condition and canReserve returns false."
+              },
+              {
+                "path": "src/domain/reservation-policy.ts",
+                "range": {
+                  "startLine": 17,
+                  "endLine": 19
+                },
+                "symbol": "assertReservationAllowed",
+                "rationale": "The policy raises the expected conflict for an unavailable tool."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Does not test maintenance-tool rejection or expects the wrong outcome.",
+            "1": "Adds a deterministic maintenance-tool case and asserts the tool-unavailable conflict behavior.",
+            "0.5": "Exercises a tool condition but does not distinguish maintenance from other tool failures."
+          }
+        },
+        {
+          "id": "ts-service-confirm-testing-rubric-limit",
+          "criterion": "Adds coverage showing the open-reservation limit rejects the next reservation after the configured number of non-cancelled reservations.",
+          "weight": 0.3,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/reservation-policy.ts",
+                "range": {
+                  "startLine": 6,
+                  "endLine": 21
+                },
+                "symbol": "MAX_OPEN_RESERVATIONS",
+                "rationale": "The constant and count comparison define the limit branch."
+              },
+              {
+                "path": "src/application/reservation-service.ts",
+                "range": {
+                  "startLine": 39,
+                  "endLine": 45
+                },
+                "symbol": "create",
+                "rationale": "Service creation supplies the member reservation collection to the policy."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Omits the open-reservation limit or tests the wrong count.",
+            "1": "Creates the configured number of non-cancelled reservations and proves the next reservation is rejected by the limit.",
+            "0.5": "Shows a limit failure but does not establish the configured number of non-cancelled reservations."
+          }
+        },
+        {
+          "id": "ts-service-confirm-testing-rubric-cancelled",
+          "criterion": "Adds coverage showing cancellation frees an open-reservation slot and does not weaken the existing overlap behavior.",
+          "weight": 0.2,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/domain/reservation-policy.ts",
+                "range": {
+                  "startLine": 20,
+                  "endLine": 21
+                },
+                "symbol": "assertReservationAllowed",
+                "rationale": "Cancelled records are explicitly excluded from the open-count filter."
+              },
+              {
+                "path": "tests/reservation-service.test.ts",
+                "range": {
+                  "startLine": 48,
+                  "endLine": 53
+                },
+                "symbol": "cancellation releases a time window",
+                "rationale": "Existing cancellation coverage anchors the expected release behavior."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Claims cancellation consumes a slot or weakens overlap behavior.",
+            "1": "Shows cancellation frees an open-reservation slot and verifies existing overlap behavior remains enforced.",
+            "0.5": "Covers either slot freeing or overlap preservation but not both."
+          }
+        },
+        {
+          "id": "ts-service-confirm-testing-rubric-quality",
+          "criterion": "Uses the existing deterministic setup, asserts stable error messages or codes, and leaves production source unchanged.",
+          "weight": 0.1,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/reservation-service.test.ts",
+                "range": {
+                  "startLine": 11,
+                  "endLine": 25
+                },
+                "symbol": "setup",
+                "rationale": "The setup injects a fixed clock and sequence for repeatable tests."
+              },
+              {
+                "path": "src/domain/errors.ts",
+                "range": {
+                  "startLine": 22,
+                  "endLine": 26
+                },
+                "symbol": "ConflictError",
+                "rationale": "Conflict errors carry stable code and messages suitable for assertions."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Uses nondeterministic setup, unstable assertions, or modifies production source.",
+            "1": "Uses deterministic setup, asserts stable codes/messages, and keeps production source unchanged.",
+            "0.5": "Uses the existing setup but leaves error stability or production-scope verification incomplete."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "Tests cover suspended members, maintenance tools, the open limit, and a cancelled slot.",
+        "Tests use the existing fixed clock and in-memory setup.",
+        "The test and typecheck baselines pass.",
+        "No production behavior is changed for this testing-only task."
+      ],
+      "criticalErrors": [
+        "Tests the wrong branch or uses an invalid status/condition that cannot reach the intended policy check.",
+        "Omits either the open-limit or cancelled-slot case.",
+        "Makes production changes to satisfy the tests or leaves the baseline failing."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "node --experimental-strip-types --test tests/*.test.ts"
+        },
+        {
+          "cwd": "fixture",
+          "command": "\"$EVALUATION_TSC\" -p tsconfig.json --noEmit --typeRoots \"$EVALUATION_TYPE_ROOTS\""
+        }
+      ],
+      "knownTarget": false
+    }
+  ]
+}

@@ -1,0 +1,1382 @@
+{
+  "schemaVersion": 1,
+  "corpus": "java-service",
+  "sourceManifestSha256": "1c9586b0f3a9d8c1e8388444caf7140b3c8ec27ea7022c82673400b0fe65f2d0",
+  "pilot": [
+    {
+      "id": "java-service-pilot-planning",
+      "class": "planning",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Prepare a bounded implementation plan for making manifest imports handle a repeated tracking id safely while preserving the existing assignment and notification invariants. Inspect the current Java source and tests. Identify the current flow, affected boundaries, validation and persistence concerns, proposed regression coverage, and any assumptions. Do not edit files.",
+      "expectedDeliverables": [
+        "A concise implementation plan with ordered steps and the files or symbols each step would touch.",
+        "A list of current invariants and failure modes, including when persistence and notification occur.",
+        "A focused regression-test plan and explicit assumptions or questions."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/ManifestImportService.java",
+            "range": {
+              "startLine": 15,
+              "endLine": 23
+            },
+            "symbol": "importFile",
+            "rationale": "The import service sends every parsed line to the delivery application service."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+            "range": {
+              "startLine": 39,
+              "endLine": 64
+            },
+            "symbol": "accept",
+            "rationale": "The accept flow checks duplicate tracking ids, assigns a locker, persists state, and then notifies."
+          },
+          {
+            "path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+            "range": {
+              "startLine": 39,
+              "endLine": 77
+            },
+            "symbol": "assignsSmallestFittingLockerAndReleasesOnCollection",
+            "rationale": "Existing tests anchor assignment, collection, wrong-code preservation, and no-fit rejection behavior."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/adapter/CsvManifestReader.java",
+            "range": {
+              "startLine": 15,
+              "endLine": 37
+            },
+            "symbol": "read",
+            "rationale": "The parser defines the input rows that feed the import flow."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/DeliveryRepository.java",
+            "range": {
+              "startLine": 7,
+              "endLine": 10
+            },
+            "symbol": "DeliveryRepository",
+            "rationale": "The repository contract exposes the lookup and save operations relevant to duplicate handling."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "scope",
+          "criterion": "Plan is bounded to the manifest import and delivery application flow, naming concrete files or symbols.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/ManifestImportService.java",
+                "range": {
+                  "startLine": 15,
+                  "endLine": 23
+                },
+                "rationale": "The import boundary is the requested change scope."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Plans unrelated work or does not identify the manifest-import boundary.",
+            "1": "Bounds the plan to ManifestImportService and the delivery application flow with concrete affected files and symbols.",
+            "0.5": "Mentions manifest import but omits concrete symbols or the delivery flow."
+          }
+        },
+        {
+          "id": "invariants",
+          "criterion": "Plan accurately preserves duplicate detection, assignment, persistence, and notification ordering.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+                "range": {
+                  "startLine": 39,
+                  "endLine": 64
+                },
+                "rationale": "These lines define the current invariants the plan must respect."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Breaks duplicate handling, assignment, persistence, or notification semantics.",
+            "1": "Preserves repeated-id detection, locker assignment, repository persistence, and notification ordering from the cited service flow.",
+            "0.5": "Preserves some invariants but leaves duplicate detection or ordering unspecified."
+          }
+        },
+        {
+          "id": "tests",
+          "criterion": "Plan proposes focused regression cases that distinguish repeated tracking ids from existing no-fit and wrong-code cases.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+                "range": {
+                  "startLine": 56,
+                  "endLine": 77
+                },
+                "rationale": "Existing rejection tests provide the local testing style and neighboring behaviors."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Proposes no focused regression or tests unrelated behavior.",
+            "1": "Plans focused repeated-tracking-id coverage that remains distinct from existing no-fit and wrong-code cases.",
+            "0.5": "Adds a repeated-id test but does not distinguish it from no-fit or wrong-code cases."
+          }
+        },
+        {
+          "id": "risks",
+          "criterion": "Plan calls out meaningful persistence, notification, and input assumptions without inventing dependencies.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/DeliveryRepository.java",
+                "range": {
+                  "startLine": 7,
+                  "endLine": 10
+                },
+                "rationale": "The repository is an in-memory contract with explicit lookup and save semantics."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Invents dependencies or ignores persistence, notification, and input assumptions.",
+            "1": "Calls out concrete persistence, notification-ordering, and manifest-input assumptions without adding dependencies.",
+            "0.5": "Mentions generic risks but omits one or more cited boundaries."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The plan names the import boundary, delivery service boundary, and relevant existing tests.",
+        "The plan states what happens to a repeated tracking id and when a notification may be emitted.",
+        "The plan includes at least two concrete regression cases and records open assumptions."
+      ],
+      "criticalErrors": [
+        "Claims that the current import silently deduplicates rows when the source calls accept for each row.",
+        "Omits the existing duplicate-id guard or persistence-before-notification ordering.",
+        "Proposes network services or downloaded dependencies outside the self-contained fixture."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\""
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.DeliveryApplicationServiceTest"
+        }
+      ]
+    },
+    {
+      "id": "java-service-pilot-review",
+      "class": "review",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Review the current cancellation workflow for an assigned delivery. Produce a concise code-review report that checks state transitions, locker ownership and release, repository writes, and observable notifications. Identify concrete defects or missing coverage with severity and source evidence. Do not edit files and do not assume behavior that is not present in the source.",
+      "expectedDeliverables": [
+        "A review report with findings ordered by severity and precise file and line references.",
+        "A short explanation of the cancellation state flow and any consistency risks.",
+        "A focused list of missing or useful regression tests."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+            "range": {
+              "startLine": 79,
+              "endLine": 90
+            },
+            "symbol": "cancel",
+            "rationale": "The application cancellation path changes delivery state, conditionally releases a locker, returns the parcel, and saves the delivery."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/domain/Delivery.java",
+            "range": {
+              "startLine": 61,
+              "endLine": 66
+            },
+            "symbol": "cancel",
+            "rationale": "The aggregate defines when cancellation is legal and changes delivery status."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/domain/Locker.java",
+            "range": {
+              "startLine": 45,
+              "endLine": 50
+            },
+            "symbol": "release",
+            "rationale": "Locker release verifies the tracking id before clearing occupancy."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/adapter/InMemoryDeliveryRepository.java",
+            "range": {
+              "startLine": 13,
+              "endLine": 21
+            },
+            "symbol": "save",
+            "rationale": "The in-memory repository replaces the stored delivery on save."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/NotificationPort.java",
+            "range": {
+              "startLine": 5,
+              "endLine": 8
+            },
+            "symbol": "NotificationPort",
+            "rationale": "The notification contract exposes ready and collected events but no cancellation event."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "findings",
+          "criterion": "Findings are concrete, severity-ranked, and tied to source evidence rather than general style opinions.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+                "range": {
+                  "startLine": 79,
+                  "endLine": 90
+                },
+                "rationale": "The cancellation implementation is the primary review target."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Reports style opinions without source evidence or misses the cancellation flow.",
+            "1": "Reports concrete cancellation findings with severity, source evidence, and impact.",
+            "0.5": "Provides source-backed observations but lacks severity ranking or concrete impact."
+          }
+        },
+        {
+          "id": "state",
+          "criterion": "Report correctly traces legal cancellation, parcel return, locker release, and repository persistence.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/domain/Delivery.java",
+                "range": {
+                  "startLine": 61,
+                  "endLine": 66
+                },
+                "rationale": "The domain guard establishes the delivery status transition."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misstates the legal cancellation transition or state effects.",
+            "1": "Correctly traces legal cancellation through parcel return, locker release, and repository persistence.",
+            "0.5": "Covers some of parcel return, locker release, and persistence but misses one step."
+          }
+        },
+        {
+          "id": "ownership",
+          "criterion": "Review checks that locker release is conditional on the assigned locker and validates tracking ownership.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/domain/Locker.java",
+                "range": {
+                  "startLine": 45,
+                  "endLine": 50
+                },
+                "rationale": "Locker.release is the ownership safeguard."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Releases an unrelated locker or ignores tracking ownership.",
+            "1": "Verifies release is conditional on the assigned locker and that tracking ownership is validated.",
+            "0.5": "Mentions conditional release but does not connect it to assigned-locker and tracking checks."
+          }
+        },
+        {
+          "id": "coverage",
+          "criterion": "Report proposes focused tests for assigned cancellation, illegal post-collection cancellation, and observable effects as applicable.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+                "range": {
+                  "startLine": 21,
+                  "endLine": 27
+                },
+                "rationale": "The existing test class uses executable scenario methods and is the natural coverage location."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Proposes no useful cancellation coverage.",
+            "1": "Proposes focused tests for assigned cancellation, illegal post-collection cancellation, and observable state effects.",
+            "0.5": "Covers one cancellation path but omits illegal post-collection or observable effects."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "Every finding includes a source path and line span.",
+        "The report distinguishes confirmed behavior from a proposed test or design improvement.",
+        "The report covers delivery status, parcel status, locker occupancy, persistence, and notification surface."
+      ],
+      "criticalErrors": [
+        "Claims cancellation emits a notification when the current notification contract has no cancellation method.",
+        "Claims a collected delivery can be cancelled despite the domain guard.",
+        "Ignores locker ownership validation or the separate parcel return transition."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\""
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.DeliveryApplicationServiceTest"
+        }
+      ]
+    }
+  ],
+  "confirmatory": [
+    {
+      "id": "java-service-confirm-discussion",
+      "class": "discussion",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Assess whether the service configuration boundary guarantees a usable positive pickup window and a meaningful default zone. Write a short decision note grounded in the current loader, record validation, and default properties. Separate confirmed behavior from questions that would need product direction. Do not edit files.",
+      "expectedDeliverables": [
+        "A decision note describing the current validation and defaulting behavior.",
+        "A list of concrete edge cases and questions requiring product direction.",
+        "Source references for each confirmed claim."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/config/PropertiesServiceConfigLoader.java",
+            "range": {
+              "startLine": 18,
+              "endLine": 26
+            },
+            "symbol": "load",
+            "rationale": "The loader parses pickup.window.hours and applies defaults before constructing ServiceConfig."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/config/ServiceConfig.java",
+            "range": {
+              "startLine": 6,
+              "endLine": 19
+            },
+            "symbol": "ServiceConfig",
+            "rationale": "The record validates a positive duration and nonblank default zone."
+          },
+          {
+            "path": "config/default.properties",
+            "range": {
+              "startLine": 1,
+              "endLine": 3
+            },
+            "rationale": "The checked-in defaults set a 48-hour window and NORTH zone."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "current",
+          "criterion": "Accurately explains parsing, default values, and positive-window/nonblank-zone validation.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/config/ServiceConfig.java",
+                "range": {
+                  "startLine": 6,
+                  "endLine": 19
+                },
+                "rationale": "The record contains the final validation rules."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misstates parsing, defaults, or ServiceConfig validation.",
+            "1": "Accurately explains parsing, defaults, positive pickup-window validation, and nonblank-zone validation.",
+            "0.5": "Covers some configuration behavior but omits either defaults or positive-window/nonblank-zone checks."
+          }
+        },
+        {
+          "id": "edge-cases",
+          "criterion": "Identifies relevant malformed, missing, zero, negative, or blank configuration cases without inventing handling.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/config/PropertiesServiceConfigLoader.java",
+                "range": {
+                  "startLine": 18,
+                  "endLine": 26
+                },
+                "rationale": "The loader's parse and default paths bound the edge-case analysis."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Invents handling for malformed, missing, zero, negative, or blank values.",
+            "1": "Grounds malformed, missing, zero, negative, and blank configuration cases in the loader and record behavior.",
+            "0.5": "Identifies some relevant edge cases but leaves their actual loader behavior unclear."
+          }
+        },
+        {
+          "id": "decision",
+          "criterion": "Separates source-confirmed facts from product questions and gives a clear bounded recommendation or decision.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "config/default.properties",
+                "range": {
+                  "startLine": 1,
+                  "endLine": 3
+                },
+                "rationale": "The local defaults provide concrete baseline context."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Presents a proposed product choice as current source behavior.",
+            "1": "Separates source-confirmed behavior from product questions and gives a bounded recommendation tied to default.properties.",
+            "0.5": "Separates some facts from questions but does not give a bounded decision."
+          }
+        },
+        {
+          "id": "evidence",
+          "criterion": "Uses precise source references for the claims in the note.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/config/PropertiesServiceConfigLoader.java",
+                "range": {
+                  "startLine": 18,
+                  "endLine": 26
+                },
+                "rationale": "The loader span supports the key claims."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Uses no precise source references for configuration claims.",
+            "1": "Uses precise loader and configuration references for each claim in the note.",
+            "0.5": "Cites some loader lines but leaves record or default evidence vague."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The note covers both pickup window and default zone.",
+        "The note distinguishes defaults from validation and lists at least two concrete edge cases.",
+        "Every conclusion is tied to a source span or marked as a question."
+      ],
+      "criticalErrors": [
+        "Claims zero or negative windows are accepted by ServiceConfig.",
+        "Claims the loader always requires both properties despite its defaults.",
+        "Presents an ungrounded product decision as current implementation behavior."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\""
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.ConfigurationAndManifestTest"
+        }
+      ]
+    },
+    {
+      "id": "java-service-confirm-research",
+      "class": "research",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Research the local source behavior for CSV manifest input hardening. Explain how headers, blank lines, column counts, whitespace, locker-size values, and file I/O errors are handled. Recommend two or three small hardening options that fit the existing dependency-free conventions, and identify the regression tests each option would need. Do not use online research or edit files.",
+      "expectedDeliverables": [
+        "A source-grounded behavior matrix for the listed CSV cases.",
+        "Two or three bounded hardening options with tradeoffs and a recommendation.",
+        "A regression-test outline for the recommended option."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/adapter/CsvManifestReader.java",
+            "range": {
+              "startLine": 15,
+              "endLine": 40
+            },
+            "symbol": "read",
+            "rationale": "The reader implements trimming, blank/header skipping, five-column validation, enum conversion, and I/O translation."
+          },
+          {
+            "path": "tests/com/blueprint/fixture/lockers/ConfigurationAndManifestTest.java",
+            "range": {
+              "startLine": 23,
+              "endLine": 32
+            },
+            "symbol": "main",
+            "rationale": "The existing test covers header, blank-line, whitespace, enum, and zone behavior."
+          },
+          {
+            "path": "docs/OPERATIONS.md",
+            "range": {
+              "startLine": 3,
+              "endLine": 12
+            },
+            "rationale": "The operations note defines the five-column row contract and fit-based import behavior."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "behavior",
+          "criterion": "Correctly accounts for every requested input case and the reader's actual exception behavior.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/adapter/CsvManifestReader.java",
+                "range": {
+                  "startLine": 18,
+                  "endLine": 40
+                },
+                "rationale": "These lines contain the relevant branches and conversions."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misstates a requested CSV branch or exception behavior.",
+            "1": "Correctly covers headers, blanks, column counts, whitespace, locker sizes, and the reader’s actual exception behavior.",
+            "0.5": "Covers several cases but misses one or confuses parse and I/O failures."
+          }
+        },
+        {
+          "id": "options",
+          "criterion": "Proposes two or three small dependency-free options with concrete tradeoffs.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "AGENTS.md",
+                "range": {
+                  "startLine": 3,
+                  "endLine": 8
+                },
+                "rationale": "Fixture guidance bounds changes to the standard library and focused service behavior."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Proposes a downloaded or nonstandard dependency despite fixture constraints.",
+            "1": "Offers two or three small standard-library options with concrete tradeoffs grounded in AGENTS.md.",
+            "0.5": "Lists options but gives no concrete tradeoffs or dependency-free fit."
+          }
+        },
+        {
+          "id": "recommendation",
+          "criterion": "Recommends one option that fits the documented five-column contract and current style.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "docs/OPERATIONS.md",
+                "range": {
+                  "startLine": 3,
+                  "endLine": 10
+                },
+                "rationale": "The documented row shape and optional header constrain a compatible recommendation."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Recommends a change that violates the five-column contract or current style.",
+            "1": "Chooses one dependency-free option that fits the five-column contract and existing conventions.",
+            "0.5": "Recommends an option but does not tie it to the documented row shape."
+          }
+        },
+        {
+          "id": "tests",
+          "criterion": "Maps the recommendation to focused regression cases distinct from existing coverage where needed.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/com/blueprint/fixture/lockers/ConfigurationAndManifestTest.java",
+                "range": {
+                  "startLine": 27,
+                  "endLine": 32
+                },
+                "rationale": "The current test style provides the local regression anchor."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Proposes no focused regression or tests unrelated behavior.",
+            "1": "Plans focused repeated-tracking-id coverage that remains distinct from existing no-fit and wrong-code cases.",
+            "0.5": "Adds a repeated-id test but does not distinguish it from no-fit or wrong-code cases."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The behavior matrix covers headers, blank lines, column count, whitespace, locker size, and I/O.",
+        "The recommendation is explicitly tied to source and operations documentation.",
+        "The proposed tests include at least one case not already asserted by the current test."
+      ],
+      "criticalErrors": [
+        "Claims malformed rows are silently ignored when the reader throws for wrong column counts.",
+        "Recommends adding a downloaded parser dependency despite the fixture constraints.",
+        "Omits the distinction between IllegalArgumentException for parsing and IllegalStateException for file I/O."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\""
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.ConfigurationAndManifestTest"
+        }
+      ]
+    },
+    {
+      "id": "java-service-confirm-planning",
+      "class": "planning",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Plan a small change that gives operators an observable cancellation event while preserving the current ready and collected notifications. Inspect the notification contract, application cancellation flow, console adapter, and tests. Describe the affected interfaces and ordering, compatibility considerations, and focused regression coverage. Do not edit files.",
+      "expectedDeliverables": [
+        "An ordered implementation plan naming affected interfaces, application code, adapter code, and tests.",
+        "The intended event timing relative to state persistence and locker release.",
+        "Compatibility risks and focused tests for cancellation behavior."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/NotificationPort.java",
+            "range": {
+              "startLine": 5,
+              "endLine": 8
+            },
+            "symbol": "NotificationPort",
+            "rationale": "The notification interface currently exposes only ready and collected callbacks."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+            "range": {
+              "startLine": 79,
+              "endLine": 90
+            },
+            "symbol": "cancel",
+            "rationale": "The cancellation flow releases the locker and persists the delivery without invoking a notification callback."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/adapter/ConsoleNotificationAdapter.java",
+            "range": {
+              "startLine": 6,
+              "endLine": 16
+            },
+            "symbol": "ConsoleNotificationAdapter",
+            "rationale": "The console adapter is the concrete notification implementation that would need the new event."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+            "range": {
+              "startLine": 29,
+              "endLine": 53
+            },
+            "symbol": "RecordingNotifications",
+            "rationale": "The test double records current notification events and can anchor the new coverage."
+          }
+        ],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "boundaries",
+          "criterion": "Names the notification interface, application service, adapter, and test double as affected boundaries.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/NotificationPort.java",
+                "range": {
+                  "startLine": 5,
+                  "endLine": 8
+                },
+                "rationale": "The interface is the contract boundary."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Omits the notification contract or proposes unrelated boundaries.",
+            "1": "Names NotificationPort, DeliveryApplicationService, ConsoleNotificationAdapter, and the recording test double.",
+            "0.5": "Names some affected code but misses the adapter or test double."
+          }
+        },
+        {
+          "id": "ordering",
+          "criterion": "States a safe cancellation event ordering relative to locker release and delivery persistence.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+                "range": {
+                  "startLine": 79,
+                  "endLine": 90
+                },
+                "rationale": "The current order is visible in the cancellation method."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Places cancellation notification before state updates or locker release.",
+            "1": "States that the cancellation event follows delivery and locker updates and their persistence.",
+            "0.5": "Mentions ordering but omits either locker release or persistence."
+          }
+        },
+        {
+          "id": "compatibility",
+          "criterion": "Addresses implementation compatibility for the existing adapter and test notification implementation.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/adapter/ConsoleNotificationAdapter.java",
+                "range": {
+                  "startLine": 6,
+                  "endLine": 16
+                },
+                "rationale": "The concrete adapter implements both existing callbacks."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Removes or changes ready/collected behavior or ignores adapter compatibility.",
+            "1": "Addresses the existing console adapter and test notification implementation while preserving ready and collected callbacks.",
+            "0.5": "Mentions the adapter but leaves one existing callback or test implementation unaddressed."
+          }
+        },
+        {
+          "id": "coverage",
+          "criterion": "Proposes focused tests for cancellation event content and preservation of ready/collected events.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+                "range": {
+                  "startLine": 42,
+                  "endLine": 53
+                },
+                "rationale": "Existing assertions establish the notification ordering style."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Proposes no useful cancellation coverage.",
+            "1": "Proposes focused tests for assigned cancellation, illegal post-collection cancellation, and observable state effects.",
+            "0.5": "Covers one cancellation path but omits illegal post-collection or observable effects."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The plan names all four affected code areas.",
+        "The plan makes event timing and payload expectations explicit.",
+        "The plan includes regression coverage for both the new event and existing events."
+      ],
+      "criticalErrors": [
+        "Plans to remove or rename existing ready or collected callbacks.",
+        "Places the event before the cancellation state and persistence decisions without discussing the consequence.",
+        "Omits the concrete notification adapter or the test double."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\""
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.DeliveryApplicationServiceTest"
+        }
+      ]
+    },
+    {
+      "id": "java-service-confirm-implementation",
+      "class": "implementation",
+      "scenario": "base",
+      "knownTarget": true,
+      "prompt": "Implement a cancellation notification for an assigned delivery in src/com/blueprint/fixture/lockers/application/NotificationPort.java, src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java, and src/com/blueprint/fixture/lockers/adapter/ConsoleNotificationAdapter.java. Emit the event only after the cancellation state and locker release have been persisted, preserve the existing ready and collected behavior, and add focused dependency-free regression coverage in tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java for the event and state ordering. Keep the change limited to the fixture's current source and tests.",
+      "expectedDeliverables": [
+        "The source and test changes implementing the cancellation event.",
+        "A regression test showing the event occurs for a valid cancellation and existing events remain intact.",
+        "A short report of the commands run and their results."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/NotificationPort.java",
+            "range": {
+              "startLine": 5,
+              "endLine": 8
+            },
+            "symbol": "NotificationPort",
+            "rationale": "The existing callback contract is the extension point."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+            "range": {
+              "startLine": 79,
+              "endLine": 90
+            },
+            "symbol": "cancel",
+            "rationale": "The implementation must preserve this cancellation and persistence sequence."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/adapter/ConsoleNotificationAdapter.java",
+            "range": {
+              "startLine": 6,
+              "endLine": 16
+            },
+            "symbol": "ConsoleNotificationAdapter",
+            "rationale": "The concrete adapter is responsible for rendering the new event."
+          },
+          {
+            "path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+            "range": {
+              "startLine": 108,
+              "endLine": 121
+            },
+            "symbol": "RecordingNotifications",
+            "rationale": "The existing test double records notification events for executable assertions."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "contract",
+          "criterion": "Adds a cancellation callback while preserving the existing ready and collected callbacks and their callers.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/NotificationPort.java",
+                "range": {
+                  "startLine": 5,
+                  "endLine": 8
+                },
+                "rationale": "The original interface behavior must remain available."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Removes or changes existing ready/collected callbacks.",
+            "1": "Adds a cancellation callback while preserving ready and collected callbacks and their callers.",
+            "0.5": "Adds a cancellation callback but leaves one existing caller or callback behavior unsupported."
+          }
+        },
+        {
+          "id": "ordering",
+          "criterion": "Emits cancellation only after delivery and locker state have been updated and saved.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+                "range": {
+                  "startLine": 79,
+                  "endLine": 90
+                },
+                "rationale": "The original state and persistence sequence defines the required ordering."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Places cancellation notification before state updates or locker release.",
+            "1": "States that the cancellation event follows delivery and locker updates and their persistence.",
+            "0.5": "Mentions ordering but omits either locker release or persistence."
+          }
+        },
+        {
+          "id": "adapter",
+          "criterion": "Concrete console output identifies cancellation without exposing pickup codes or breaking existing output paths.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/adapter/ConsoleNotificationAdapter.java",
+                "range": {
+                  "startLine": 8,
+                  "endLine": 16
+                },
+                "rationale": "Existing notifications expose tracking identifiers and omit pickup codes."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Exposes a pickup code or breaks existing adapter output paths.",
+            "1": "Adds identifiable cancellation output without pickup codes and preserves existing ready/collected output.",
+            "0.5": "Adds cancellation output but its payload or compatibility is incomplete."
+          }
+        },
+        {
+          "id": "tests",
+          "criterion": "Adds focused executable coverage for cancellation notification and preserves existing notification/state assertions.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+                "range": {
+                  "startLine": 39,
+                  "endLine": 53
+                },
+                "rationale": "Existing tests assert event order and state transitions in the same style."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Proposes no focused regression or tests unrelated behavior.",
+            "1": "Plans focused repeated-tracking-id coverage that remains distinct from existing no-fit and wrong-code cases.",
+            "0.5": "Adds a repeated-id test but does not distinguish it from no-fit or wrong-code cases."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The project compiles with the JDK-only command in the README.",
+        "A valid assigned cancellation records one cancellation event after release and persistence.",
+        "Existing ready, collected, wrong-code, and no-fit behavior remains covered and passing."
+      ],
+      "criticalErrors": [
+        "Emits cancellation before state persistence or locker release.",
+        "Removes or changes the meaning of existing ready or collected notifications.",
+        "Includes a pickup code in observable notification output."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\""
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.DeliveryApplicationServiceTest"
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.MainSmokeTest"
+        }
+      ]
+    },
+    {
+      "id": "java-service-confirm-review",
+      "class": "review",
+      "scenario": "base",
+      "knownTarget": false,
+      "prompt": "Review the configuration loader and service configuration record for correctness and failure handling. Look for concrete defects involving file reads, numeric parsing, defaults, blank zones, and non-positive pickup windows. Produce severity-ranked findings with precise source evidence and a short recommendation for tests. Do not edit files.",
+      "expectedDeliverables": [
+        "A severity-ranked review report with precise file and line references.",
+        "A distinction between confirmed defects, current intentional behavior, and questions.",
+        "A focused regression-test recommendation."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/config/PropertiesServiceConfigLoader.java",
+            "range": {
+              "startLine": 10,
+              "endLine": 27
+            },
+            "symbol": "load",
+            "rationale": "The loader handles file I/O, parsing, defaults, and record construction."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/config/ServiceConfig.java",
+            "range": {
+              "startLine": 6,
+              "endLine": 19
+            },
+            "symbol": "ServiceConfig",
+            "rationale": "The record applies null, blank, and positive-duration validation."
+          },
+          {
+            "path": "tests/com/blueprint/fixture/lockers/ConfigurationAndManifestTest.java",
+            "range": {
+              "startLine": 14,
+              "endLine": 22
+            },
+            "symbol": "main",
+            "rationale": "Existing tests establish the configuration test style and asserted behavior."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "correctness",
+          "criterion": "Findings accurately reflect file-read, integer-parse, default, and record-validation behavior.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/config/PropertiesServiceConfigLoader.java",
+                "range": {
+                  "startLine": 13,
+                  "endLine": 26
+                },
+                "rationale": "These lines contain the loader's error and default paths."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misstates loader exceptions, defaults, or ServiceConfig validation.",
+            "1": "Accurately reflects file-read, integer-parse, default, blank-zone, and record-validation behavior.",
+            "0.5": "Covers some loader behavior but misses a requested parse, default, or validation path."
+          }
+        },
+        {
+          "id": "severity",
+          "criterion": "Findings are prioritized by concrete impact and avoid unsupported style complaints.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/config/ServiceConfig.java",
+                "range": {
+                  "startLine": 8,
+                  "endLine": 19
+                },
+                "rationale": "Validation behavior determines the impact of configuration inputs."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Ranks style preferences as defects without concrete impact.",
+            "1": "Prioritizes findings by concrete impact and avoids unsupported style complaints.",
+            "0.5": "Provides severity but weakly connects it to configuration validation impact."
+          }
+        },
+        {
+          "id": "evidence",
+          "criterion": "Each finding includes an exact source span and distinguishes confirmed behavior from questions.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/config/PropertiesServiceConfigLoader.java",
+                "range": {
+                  "startLine": 18,
+                  "endLine": 26
+                },
+                "rationale": "The parsing and defaulting span supports review claims."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Uses no precise source references for configuration claims.",
+            "1": "Uses precise loader and configuration references for each claim in the note.",
+            "0.5": "Cites some loader lines but leaves record or default evidence vague."
+          }
+        },
+        {
+          "id": "tests",
+          "criterion": "Recommendations cover meaningful untested failure cases and fit the existing executable test style.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "tests/com/blueprint/fixture/lockers/ConfigurationAndManifestTest.java",
+                "range": {
+                  "startLine": 14,
+                  "endLine": 22
+                },
+                "rationale": "The current test demonstrates the fixture's direct main-method test style."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Proposes no focused regression or tests unrelated behavior.",
+            "1": "Plans focused repeated-tracking-id coverage that remains distinct from existing no-fit and wrong-code cases.",
+            "0.5": "Adds a repeated-id test but does not distinguish it from no-fit or wrong-code cases."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The report covers all five requested failure/edge areas.",
+        "Every finding has a severity and source span.",
+        "The test recommendation includes at least one malformed and one boundary-value case."
+      ],
+      "criticalErrors": [
+        "Claims NumberFormatException is silently swallowed.",
+        "Claims blank or non-positive values bypass ServiceConfig validation.",
+        "Reports a missing default as a bug without acknowledging the loader defaults."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\""
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.ConfigurationAndManifestTest"
+        }
+      ]
+    },
+    {
+      "id": "java-service-confirm-testing",
+      "class": "testing",
+      "scenario": "base",
+      "knownTarget": true,
+      "prompt": "Add focused regression coverage in tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java for cancelling an assigned delivery. The tests should demonstrate that cancellation returns the parcel, releases the correct locker, persists the cancelled delivery, and prevents a later collection. Follow the fixture's existing dependency-free executable test style, and keep existing behaviors covered.",
+      "expectedDeliverables": [
+        "Executable regression coverage for assigned-delivery cancellation and its state effects.",
+        "Assertions that a later collection attempt is rejected and locker ownership is cleared.",
+        "A short report of the baseline commands run and their results."
+      ],
+      "evidence": {
+        "required": [
+          {
+            "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+            "range": {
+              "startLine": 79,
+              "endLine": 90
+            },
+            "symbol": "cancel",
+            "rationale": "The application cancellation sequence is the behavior under test."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/domain/Parcel.java",
+            "range": {
+              "startLine": 40,
+              "endLine": 55
+            },
+            "symbol": "returnToDepot",
+            "rationale": "The parcel transition required by cancellation is implemented here."
+          },
+          {
+            "path": "src/com/blueprint/fixture/lockers/domain/Locker.java",
+            "range": {
+              "startLine": 45,
+              "endLine": 50
+            },
+            "symbol": "release",
+            "rationale": "The locker release operation defines the occupancy assertion."
+          },
+          {
+            "path": "tests/com/blueprint/fixture/lockers/DeliveryApplicationServiceTest.java",
+            "range": {
+              "startLine": 21,
+              "endLine": 106
+            },
+            "symbol": "DeliveryApplicationServiceTest",
+            "rationale": "The existing test class provides the executable scenario and assertion conventions."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "rubric": [
+        {
+          "id": "cancellation",
+          "criterion": "Test creates an assigned delivery and invokes the public cancellation flow with realistic collaborators.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/application/DeliveryApplicationService.java",
+                "range": {
+                  "startLine": 79,
+                  "endLine": 90
+                },
+                "rationale": "The public cancel flow is the required entry point."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Does not create an assigned delivery or bypasses the public cancellation flow.",
+            "1": "Creates an assigned delivery with realistic collaborators and invokes the public cancellation flow.",
+            "0.5": "Uses the service cancellation method but the fixture setup does not prove an assigned delivery."
+          }
+        },
+        {
+          "id": "state",
+          "criterion": "Assertions cover cancelled delivery status, returned parcel status, and persisted repository state.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/domain/Parcel.java",
+                "range": {
+                  "startLine": 50,
+                  "endLine": 55
+                },
+                "rationale": "The parcel's returned status is a required outcome."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Misstates the legal cancellation transition or state effects.",
+            "1": "Correctly traces legal cancellation through parcel return, locker release, and repository persistence.",
+            "0.5": "Covers some of parcel return, locker release, and persistence but misses one step."
+          }
+        },
+        {
+          "id": "locker",
+          "criterion": "Assertions prove the assigned locker is released and no longer contains the tracking id.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/domain/Locker.java",
+                "range": {
+                  "startLine": 45,
+                  "endLine": 50
+                },
+                "rationale": "The release operation clears the occupancy state."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Leaves the assigned locker occupied or checks the wrong locker.",
+            "1": "Proves the assigned locker is released and no longer contains the delivery tracking id.",
+            "0.5": "Checks release but does not prove the tracking id is absent from the assigned locker."
+          }
+        },
+        {
+          "id": "negative-path",
+          "criterion": "Test proves collection after cancellation is rejected and retains the cancelled state.",
+          "weight": 0.25,
+          "evidence": {
+            "required": [
+              {
+                "path": "src/com/blueprint/fixture/lockers/domain/Delivery.java",
+                "range": {
+                  "startLine": 51,
+                  "endLine": 66
+                },
+                "symbol": "collect",
+                "rationale": "Collection requires ASSIGNED status, while cancellation changes the delivery status."
+              }
+            ],
+            "supporting": [],
+            "alternatives": []
+          },
+          "scoreAnchors": {
+            "0": "Allows collection after cancellation or loses the cancelled state.",
+            "1": "Proves collection after cancellation is rejected and the delivery remains cancelled.",
+            "0.5": "Attempts collection after cancellation but does not assert the rejection and retained state."
+          }
+        }
+      ],
+      "completionCriteria": [
+        "The new test compiles and runs with the existing JDK-only baseline.",
+        "The test asserts delivery, parcel, locker, and repository outcomes.",
+        "The test asserts a post-cancellation collection rejection and existing tests still pass."
+      ],
+      "criticalErrors": [
+        "Only asserts that cancel returns without throwing and does not inspect state.",
+        "Fails to prove the locker was released or the cancelled delivery was persisted.",
+        "Uses external dependencies or changes production behavior while asked for test coverage."
+      ],
+      "baselineChecks": [
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\""
+        },
+        {
+          "cwd": "fixture",
+          "command": "set -euo pipefail; tmp_dir=$(mktemp -d); trap 'status=$?; rm -rf \"$tmp_dir\"; exit \"$status\"' EXIT; mkdir -p \"$tmp_dir/classes\"; find src tests -name '*.java' -print0 | xargs -0 javac -d \"$tmp_dir/classes\"; java -ea -cp \"$tmp_dir/classes\" com.blueprint.fixture.lockers.DeliveryApplicationServiceTest"
+        }
+      ]
+    }
+  ]
+}

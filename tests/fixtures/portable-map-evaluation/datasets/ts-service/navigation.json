@@ -1,0 +1,439 @@
+{
+  "schemaVersion": 1,
+  "corpus": "ts-service",
+  "sourceManifestSha256": "3dd4045412f65feebc7c95893da2502e81677f55e0b82244a3890fda7a7d4438",
+  "queries": [
+    {
+      "id": "ts-service-nav-01-exact-path",
+      "class": "exact-path",
+      "scenario": "base",
+      "text": "Inspect src/http/router.ts and explain how it dispatches a request and translates domain errors into HTTP responses.",
+      "knownTarget": true,
+      "targetPath": "src/http/router.ts",
+      "evidence": {
+        "required": [
+          {
+            "path": "src/http/router.ts",
+            "range": {"startLine": 7, "endLine": 17},
+            "symbol": "routeRequest",
+            "rationale": "The named file contains request dispatch, DomainError classification, status selection, and the internal-error fallback."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/domain/errors.ts",
+            "range": {"startLine": 1, "endLine": 26},
+            "symbol": "DomainError",
+            "rationale": "The router relies on the domain error hierarchy and its stable codes."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the explicitly named router file and describe its route delegation, domain-error status mapping, and fallback response.",
+      "rationale": "The path is explicitly named, so this is a direct known-target lookup grounded in the router implementation."
+    },
+    {
+      "id": "ts-service-nav-02-exact-function",
+      "class": "exact-function",
+      "scenario": "base",
+      "text": "Find assertReservationAllowed and list the checks that can reject a reservation before it is saved.",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {"startLine": 8, "endLine": 26},
+            "symbol": "assertReservationAllowed",
+            "rationale": "This function checks member status, tool condition, the open-reservation cap, and an overlapping reservation."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/application/reservation-service.ts",
+            "range": {"startLine": 39, "endLine": 45},
+            "symbol": "create",
+            "rationale": "The application service invokes the policy before saving the new reservation."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the named function and report all four rejection conditions in its source order.",
+      "rationale": "The function name is explicit and the policy body is the authoritative source for the requested checks."
+    },
+    {
+      "id": "ts-service-nav-03-domain-wording",
+      "class": "domain-wording",
+      "scenario": "base",
+      "text": "Where are the rules that stop a booking from starting in the past or lasting less than two hours expressed?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation.ts",
+            "range": {"startLine": 24, "endLine": 38},
+            "symbol": "Reservation.create",
+            "rationale": "The reservation factory validates timestamps, ordering, past starts, and the two-hour to seven-day duration window."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Find the domain reservation factory and identify the past-start and minimum-duration validation branches.",
+      "rationale": "The query uses the domain concept of a booking while the source calls the aggregate a reservation."
+    },
+    {
+      "id": "ts-service-nav-04-aliases",
+      "class": "aliases",
+      "scenario": "base",
+      "text": "Where does the booking workflow enforce that the borrower is active and the equipment is ready before a hold is accepted?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {"startLine": 14, "endLine": 18},
+            "symbol": "assertReservationAllowed",
+            "rationale": "The policy rejects suspended members and tools whose condition is not reservable."
+          },
+          {
+            "path": "src/domain/member.ts",
+            "range": {"startLine": 20, "endLine": 22},
+            "symbol": "canReserve",
+            "rationale": "Member readiness is defined by the active status check."
+          },
+          {
+            "path": "src/domain/tool.ts",
+            "range": {"startLine": 22, "endLine": 24},
+            "symbol": "canReserve",
+            "rationale": "Equipment readiness is defined by the ready condition check."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Map borrower/equipment/hold wording to the member/tool/reservation policy and report the active and ready checks.",
+      "rationale": "Borrower, equipment, and hold are source-grounded synonyms for member, tool, and reservation."
+    },
+    {
+      "id": "ts-service-nav-05-cross-module-flow",
+      "class": "cross-module-flow",
+      "scenario": "base",
+      "text": "Trace POST /reservations from the HTTP boundary through application policy to the repository save, naming the key modules involved.",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/http/reservation-routes.ts",
+            "range": {"startLine": 31, "endLine": 49},
+            "symbol": "handleReservationRoute",
+            "rationale": "The route handler validates the body and calls the application service for the create endpoint."
+          },
+          {
+            "path": "src/application/reservation-service.ts",
+            "range": {"startLine": 25, "endLine": 46},
+            "symbol": "create",
+            "rationale": "The service resolves member and tool, creates the domain reservation, applies policy, saves it, and returns a view."
+          },
+          {
+            "path": "src/persistence/in-memory-reservation-repository.ts",
+            "range": {"startLine": 22, "endLine": 24},
+            "symbol": "save",
+            "rationale": "The concrete repository stores the accepted reservation in its map."
+          },
+          {
+            "path": "src/server.ts",
+            "range": {"startLine": 17, "endLine": 24},
+            "symbol": "createService",
+            "rationale": "The server wiring supplies the in-memory repositories and adapters used by the service."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/http/request-parser.js",
+            "range": {"startLine": 5, "endLine": 14},
+            "symbol": "reservationRouteFromPath",
+            "rationale": "The route parser defines the accepted reservation path shapes used after the create branch."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Give a source-ordered trace from request validation through service policy and domain creation to repository persistence, including the service wiring.",
+      "rationale": "The question asks for a flow crossing HTTP, application, domain, and persistence boundaries."
+    },
+    {
+      "id": "ts-service-nav-06-code-to-test",
+      "class": "code-to-test",
+      "scenario": "base",
+      "text": "Which test demonstrates that cancelling a reservation releases its tool time window for a later reservation?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "tests/reservation-service.test.ts",
+            "range": {"startLine": 48, "endLine": 53},
+            "symbol": "cancellation releases a time window",
+            "rationale": "The test cancels an existing reservation and then successfully creates the same input again."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/domain/reservation.ts",
+            "range": {"startLine": 48, "endLine": 57},
+            "symbol": "cancel",
+            "rationale": "Cancellation changes status and overlap ignores cancelled reservations."
+          },
+          {
+            "path": "src/persistence/in-memory-reservation-repository.ts",
+            "range": {"startLine": 16, "endLine": 19},
+            "symbol": "findOverlapping",
+            "rationale": "The repository delegates overlap semantics to each reservation."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the cancellation test and connect its second create call to the cancelled status being ignored during overlap detection.",
+      "rationale": "The test name and assertion provide a direct code-to-test link, with domain and repository spans explaining why it passes."
+    },
+    {
+      "id": "ts-service-nav-07-trace-to-code",
+      "class": "trace-to-code",
+      "scenario": "base",
+      "text": "Starting from the test named router reports domain errors with stable status and code, where does the 404 response body come from?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "tests/router.test.ts",
+            "range": {"startLine": 23, "endLine": 30},
+            "symbol": "router reports domain errors with stable status and code",
+            "rationale": "The test sends a missing reservation request and asserts the 404 body."
+          },
+          {
+            "path": "src/http/router.ts",
+            "range": {"startLine": 7, "endLine": 16},
+            "symbol": "routeRequest",
+            "rationale": "The router catches DomainError, selects 404 for not_found, and serializes code and message."
+          },
+          {
+            "path": "src/domain/errors.ts",
+            "range": {"startLine": 16, "endLine": 19},
+            "symbol": "NotFoundError",
+            "rationale": "NotFoundError supplies the not_found code and reservation message used in the response."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/application/reservation-service.ts",
+            "range": {"startLine": 49, "endLine": 52},
+            "symbol": "get",
+            "rationale": "The service raises NotFoundError when the requested reservation is absent."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Trace the assertion to routeRequest's DomainError mapping and then to NotFoundError's code and message construction.",
+      "rationale": "The query starts at a concrete test and follows the runtime path back into service and domain code."
+    },
+    {
+      "id": "ts-service-nav-08-change-impact",
+      "class": "change-impact",
+      "scenario": "base",
+      "text": "If a new reservation status is added, which source declarations and persistence schema need to stay consistent?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/contracts/reservations.ts",
+            "range": {"startLine": 3, "endLine": 18},
+            "symbol": "ReservationStatus",
+            "rationale": "The public status union and reservation view expose the allowed status values."
+          },
+          {
+            "path": "src/domain/reservation.ts",
+            "range": {"startLine": 14, "endLine": 22},
+            "symbol": "Reservation",
+            "rationale": "The aggregate stores and defaults the status at construction."
+          },
+          {
+            "path": "src/persistence/reservations.sql",
+            "range": {"startLine": 3, "endLine": 10},
+            "rationale": "The reference schema constrains status values in its CHECK expression."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/ui/reservation-summary.jsx",
+            "range": {"startLine": 1, "endLine": 6},
+            "symbol": "ReservationSummary",
+            "rationale": "The UI derives a display label from reservation status and may need a new branch."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Identify the status union, aggregate status handling, SQL status constraint, and status-dependent UI behavior as change-impact sites.",
+      "rationale": "A status change crosses the public contract, domain representation, persistence documentation, and display logic."
+    },
+    {
+      "id": "ts-service-nav-09-unknown-feature",
+      "class": "unknown-feature",
+      "scenario": "base",
+      "text": "Where is the email notification scheduler for upcoming reservations implemented?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedAbsent": true,
+      "expectedBehavior": "Abstain conservatively because no scheduler implementation is present in the bounded source corpus; do not invent a file or function.",
+      "rationale": "The source includes reservation lifecycle and storage code but no notification or scheduling module. Bounded search supports abstention, not a proof of global absence."
+    },
+    {
+      "id": "ts-service-nav-10-unsupported-language",
+      "class": "unsupported-language",
+      "scenario": "base",
+      "text": "Find the Go package that owns reservation routing.",
+      "knownTarget": false,
+      "evidence": {
+        "required": [],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedAbsent": true,
+      "expectedBehavior": "Report that the requested Go package cannot be located in this TypeScript/JavaScript corpus and abstain from fabricating a target.",
+      "rationale": "The bounded corpus contains TypeScript, JavaScript, JSX, TSX, SQL, JSON, and Markdown files, with no Go source."
+    },
+    {
+      "id": "ts-service-nav-11-stale-limit",
+      "class": "domain-wording",
+      "scenario": "ts-service-scenario-stale-limit",
+      "text": "How many non-cancelled reservations may a member hold before a new reservation is rejected?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {"startLine": 6, "endLine": 6},
+            "symbol": "MAX_OPEN_RESERVATIONS",
+            "rationale": "The scenario-applied policy declares the current open-reservation threshold."
+          },
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {"startLine": 20, "endLine": 21},
+            "symbol": "assertReservationAllowed",
+            "rationale": "The policy counts non-cancelled member reservations and rejects at the declared threshold."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "On the scenario-applied source copy, report the updated open-reservation threshold and explain that cancelled records are excluded from the count.",
+      "rationale": "This held-out stale-source query checks whether a changed constant is refreshed from the current source copy."
+    },
+    {
+      "id": "ts-service-nav-12-renamed-summary",
+      "class": "exact-function",
+      "scenario": "ts-service-scenario-renamed-summary",
+      "text": "After the UI module rename, where is ReservationSummary exported?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/ui/reservation-status-summary.jsx",
+            "range": {"startLine": 1, "endLine": 8},
+            "symbol": "ReservationSummary",
+            "rationale": "The scenario-applied renamed file contains the exported summary component."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the exported component at its renamed path in the scenario-applied source copy.",
+      "rationale": "The function/component name is explicit while the file path must be rediscovered after the controlled rename."
+    },
+    {
+      "id": "ts-service-nav-13-new-window-helper",
+      "class": "exact-function",
+      "scenario": "ts-service-scenario-new-window-helper",
+      "text": "Where is the newly added isWithinReservationHorizon helper defined?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation-window.ts",
+            "range": {"startLine": 1, "endLine": 5},
+            "symbol": "isWithinReservationHorizon",
+            "rationale": "The scenario-created source file defines the new horizon predicate."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Find the newly created helper in the scenario-applied source copy and describe that it bounds a start timestamp between now and the horizon.",
+      "rationale": "This query measures discovery of a source file created after the frozen map was authored."
+    },
+    {
+      "id": "ts-service-nav-14-explicit-serialization",
+      "class": "exact-path",
+      "scenario": "base",
+      "text": "Inspect src/domain/reservation.ts and locate the code that serializes a reservation into its public view.",
+      "knownTarget": true,
+      "targetPath": "src/domain/reservation.ts",
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation.ts",
+            "range": {"startLine": 59, "endLine": 68},
+            "symbol": "toView",
+            "rationale": "The named file's toView method converts Date values to ISO strings and returns the public reservation shape."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/contracts/reservations.ts",
+            "range": {"startLine": 12, "endLine": 18},
+            "symbol": "ReservationView",
+            "rationale": "The contract defines the fields returned by the view."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Open the explicitly named domain file and identify toView as the serializer for the public contract.",
+      "rationale": "The file target is explicit and the evidence points to its public-view conversion method."
+    },
+    {
+      "id": "ts-service-nav-15-alias-open-holds",
+      "class": "aliases",
+      "scenario": "base",
+      "text": "Where does the loan workflow cap a member's active holds while disregarding cancelled ones?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {"startLine": 6, "endLine": 6},
+            "symbol": "MAX_OPEN_RESERVATIONS",
+            "rationale": "The policy's named constant defines the active-hold cap."
+          },
+          {
+            "path": "src/domain/reservation-policy.ts",
+            "range": {"startLine": 20, "endLine": 21},
+            "symbol": "assertReservationAllowed",
+            "rationale": "The policy filters out cancelled reservations before applying the cap."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "src/persistence/in-memory-reservation-repository.ts",
+            "range": {"startLine": 12, "endLine": 14},
+            "symbol": "findByMember",
+            "rationale": "The repository supplies the member's reservation collection to the policy."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Map loan/active-hold wording to the reservation policy and explain both the cap and cancelled-record filter.",
+      "rationale": "Loan and hold are source-grounded aliases for the reservation workflow and its open reservation count."
+    }
+  ]
+}

@@ -1117,7 +1117,7 @@ async function blueprintProjectInitUnlocked(
   const overwrite = args.overwrite ?? false;
   const bootstrapMode = args.bootstrapMode ?? "interactive";
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const initialBootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
+  const initialBootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot, inspection);
 
   assertBootstrapCanWrite({
     inspection,
@@ -1369,7 +1369,7 @@ export async function blueprintProjectStatus(
 ): Promise<ProjectStatusResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
+  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot, inspection);
   const bootstrap = buildBootstrapStatus(bootstrapDiagnostics);
   const initialized = inspection.readiness === "initialized";
 

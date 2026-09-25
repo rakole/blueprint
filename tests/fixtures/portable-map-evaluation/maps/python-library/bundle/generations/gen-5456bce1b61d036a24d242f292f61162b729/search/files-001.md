@@ -1,0 +1,32 @@
+# files search
+
+file | AGENTS.md | language: unknown | role: documentation | coverage: file | source: AGENTS.md:file | record: ../records/p-cdb4ee2aea69-001.md#file-file-a54ff182c7e8acf56acfd6e4b9c3ff41
+file | README.md | language: unknown | role: documentation | coverage: file | source: README.md:file | record: ../records/p-cdb4ee2aea69-001.md#file-file-b335630551682c19a781afebcf4d07bf
+file | config/default.toml | language: unknown | role: configuration | coverage: file | source: config/default.toml:file | record: ../records/p-b79606fb3afe-001.md#file-file-ed19ad1a3e569c1a64747d96043a460a
+file | config/test.toml | language: unknown | role: configuration | coverage: file | source: config/test.toml:file | record: ../records/p-b79606fb3afe-001.md#file-file-8d4cd1930d582e1ea4b46b036eb71111
+file | pyproject.toml | language: unknown | role: configuration | coverage: file | source: pyproject.toml:file | record: ../records/p-cdb4ee2aea69-001.md#file-file-50c86b7ed8ac2cf95bd48334961bf053
+file | src/harborlog/__init__.py | language: python | role: source | coverage: full | source: src/harborlog/__init__.py:1-51 | record: ../records/p-f1d93709752c-001.md#file-file-1a0b839aad2ff45e867b9bf82b03d732
+file | src/harborlog/__main__.py | language: python | role: source | coverage: full | source: src/harborlog/__main__.py:1-6 | record: ../records/p-f1d93709752c-001.md#file-file-9641d8f19e4b2f793ab996e691107c2d
+file | src/harborlog/cli.py | language: python | role: source | coverage: file | source: src/harborlog/cli.py:1-35 | record: ../records/p-f1d93709752c-001.md#file-file-671be134b7c88b9dc8569c90aaa485d4
+file | src/harborlog/clock.py | language: python | role: source | coverage: full | source: src/harborlog/clock.py:1-25 | record: ../records/p-f1d93709752c-001.md#file-file-81201e8ade0317c03e9cb56c4dd9ef8a
+file | src/harborlog/config.py | language: python | role: source | coverage: full | source: src/harborlog/config.py:1-38 | record: ../records/p-f1d93709752c-001.md#file-file-aea4e8f055c901c6134f3700b5c679f5
+file | src/harborlog/errors.py | language: python | role: source | coverage: full | source: src/harborlog/errors.py:1-18 | record: ../records/p-f1d93709752c-001.md#file-file-6d09a5fd98334ee8e81e18dfc3a8898c
+file | src/harborlog/filters.py | language: python | role: source | coverage: file | source: src/harborlog/filters.py:1-41 | record: ../records/p-f1d93709752c-001.md#file-file-2eda776dee724fefcf2c725f30cadab5
+file | src/harborlog/models.py | language: python | role: source | coverage: file | source: src/harborlog/models.py:1-82 | record: ../records/p-f1d93709752c-002.md#file-file-b34440e82fd4bbcf515760fa77c53992
+file | src/harborlog/normalization.py | language: python | role: source | coverage: full | source: src/harborlog/normalization.py:1-56 | record: ../records/p-f1d93709752c-002.md#file-file-bfdbdc7cc3850da281a7a199687990f8
+file | src/harborlog/ordering.py | language: python | role: source | coverage: file | source: src/harborlog/ordering.py:1-18 | record: ../records/p-f1d93709752c-002.md#file-file-b1f4a494215ec384d07338bb053bb0c8
+file | src/harborlog/policy.py | language: python | role: source | coverage: file | source: src/harborlog/policy.py:1-43 | record: ../records/p-f1d93709752c-001.md#file-file-241d7313c32df1ae01aab0dd20d57398
+file | src/harborlog/reporting.py | language: python | role: source | coverage: full | source: src/harborlog/reporting.py:1-22 | record: ../records/p-f1d93709752c-001.md#file-file-2095622342e6911185cafa8b17f72765
+file | src/harborlog/repository.py | language: python | role: source | coverage: file | source: src/harborlog/repository.py:1-33 | record: ../records/p-f1d93709752c-002.md#file-file-d78e20a8417c9ea9d04dbd60e154bc4b
+file | src/harborlog/scoring.py | language: python | role: source | coverage: full | source: src/harborlog/scoring.py:1-48 | record: ../records/p-f1d93709752c-001.md#file-file-9659a5a431ebf9fda8e6857645040f57
+file | src/harborlog/serialization.py | language: python | role: source | coverage: file | source: src/harborlog/serialization.py:1-56 | record: ../records/p-f1d93709752c-002.md#file-file-dcabf3ce43ae48a03d0176eda05d9596
+file | src/harborlog/service.py | language: python | role: source | coverage: file | source: src/harborlog/service.py:1-141 | record: ../records/p-f1d93709752c-002.md#file-file-fd729b34fb16cb9a762a2847a14a7952
+file | src/harborlog/storage.py | language: python | role: source | coverage: file | source: src/harborlog/storage.py:1-107 | record: ../records/p-f1d93709752c-001.md#file-file-0738c70b7771c581bf918b356c5ba100
+file | src/harborlog/validation.py | language: python | role: source | coverage: full | source: src/harborlog/validation.py:1-69 | record: ../records/p-f1d93709752c-002.md#file-file-cad7588c66013d17398ea4acdcb13dd7
+file | tests/__init__.py | language: python | role: test | coverage: full | source: tests/__init__.py:1-2 | record: ../records/p-59830ebc3a41-001.md#file-file-001e61d97d9dee27d0c5aa1f23ba6c19
+file | tests/test_cli.py | language: python | role: test | coverage: full | source: tests/test_cli.py:1-23 | record: ../records/p-59830ebc3a41-001.md#file-file-4e8715c7a425ee52e74b7df4d34efd32
+file | tests/test_models.py | language: python | role: test | coverage: full | source: tests/test_models.py:1-34 | record: ../records/p-59830ebc3a41-001.md#file-file-0adb667cd397bd56edce10eec11e1b10
+file | tests/test_reporting.py | language: python | role: test | coverage: full | source: tests/test_reporting.py:1-23 | record: ../records/p-59830ebc3a41-001.md#file-file-cc0fa62b43424890d666f41287ba373f
+file | tests/test_repository.py | language: python | role: test | coverage: full | source: tests/test_repository.py:1-45 | record: ../records/p-59830ebc3a41-001.md#file-file-ed4fdd46616101997cc333941694ea7e
+file | tests/test_service.py | language: python | role: test | coverage: full | source: tests/test_service.py:1-80 | record: ../records/p-59830ebc3a41-001.md#file-file-d7fb70d71c01e6c6a932249a22ad45e9
+file | tests/test_validation.py | language: python | role: test | coverage: full | source: tests/test_validation.py:1-47 | record: ../records/p-59830ebc3a41-001.md#file-file-f1dbe79adfb6e39e76ee4519368bc4b5

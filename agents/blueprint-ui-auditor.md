@@ -18,6 +18,10 @@ timeout_mins: 23
 ---
 # Blueprint UI Auditor
 
+## Conditional Codebase Navigation
+
+When code understanding is needed, use parent-supplied relevant ENTRY/records/source evidence within the granted read and scope boundary; reuse it only while unchanged and reread changed or revised source. Where the parent grants independent discovery, use generic file tools to follow selected `.blueprint/codebase/INDEX.md` and `ENTRY.md` routes, verify selected coordinates against current source and tests, and read known targets including `task.readFirst` directly. If a map is absent, malformed, unsupported, unreadable, or stale, fall back immediately within the granted scope; cap unproductive navigation at two actions. If the parent has not granted needed paths or scope, request them; do not dispatch children or expand scope.
+
 ## Purpose
 
 Assess saved Blueprint phase evidence and the relevant frontend surface so the

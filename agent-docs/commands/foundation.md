@@ -40,24 +40,43 @@ Do not:
 ## Mapping Boundary
 
 Map uses `blueprint_map_prepare` → read selected evidence and author →
-`blueprint_map_submit`. Prepare captures evidence and target freshness, readiness,
-effective config, existing bundle status, and the actual authoring schema/example.
-Select evidence paths before prepare and read their contents afterward; expand
-the prepared selection before using additional evidence. Submit compiles canonical
-titles/headings, validates the full new/reused bundle before writes, and preserves
-the seven `.blueprint/codebase/*.md` consumers. A valid complete map is reused
-without generation by default. Explicit refresh already authorizes overwrite;
-do not add manual-edit detection or a routine reuse/refresh question.
+`blueprint_map_submit`, with the same two tools serving ordinary compatibility
+output and explicit portable format v1. Prepare captures evidence and target
+freshness, readiness, effective config, existing bundle status, and the actual
+authoring schema/example. Select evidence paths before prepare and read their
+contents afterward; expand the prepared selection before using additional
+evidence. Ordinary valid maps are reused without generation by default. Portable
+mode requires an explicit `formatVersion: 1` request and does not silently upgrade
+legacy maps. Its prepare receipt carries an opaque operation id, bounded packet,
+and continuation cursor; the complete seven-document plus semantic model is
+submitted through the same parent-owned finalizer. Explicit refresh/upgrade/focus
+authority controls replacement; do not add manual-edit detection or a routine
+reuse/refresh question.
 
 The parent owns publication; optional mapper lanes are read-only and require
 effective subagent config plus an independent analysis benefit. No scaffold,
-digest, seven separate writes, or final validation call belongs in the normal
-path. Rejected content stays out of persistence and logs. Interrupted accepted
-publication uses a metadata-only marker and retries the same snapshot/model.
-If inputs changed or the model is unavailable, prepare with restart:true and
-submit a complete fresh bundle with overwrite:true. Rejection leaves canonical
-files intact. The owning tools scrub legacy mapping payloads from the failure
-log while preserving unrelated entries; no map draft session exists.
+digest, seven separate writes, multipart tool, or final validation call belongs in
+the normal path. The raw portable authored model is capped at 48 KiB; richer
+requests must be narrowed or reported unsupported, with no silent omissions.
+Rejected content stays out of persistence and logs. Interrupted accepted portable
+publication retries the exact operation/model and lets the owning tool finish
+committed cleanup; stale evidence or target requires reprepare, and unknown
+markers stop recovery. Portable `INDEX.md` generation validity and root-seven
+compatibility completeness are separate; root-seven views are not independently
+mutated while portable mode is active. If inputs changed or the model is
+unavailable, use the owning tool's fresh prepare/repair guidance and submit a
+complete model. Rejection leaves canonical files intact. The owning tools scrub
+legacy mapping payloads from the failure log while preserving unrelated entries;
+no map draft session exists.
+
+Portable transfer is `INDEX.md` plus its referenced complete immutable generation
+with relative paths; root-seven views are optional. Sessions, receipts, operation
+state, keys, and rejected diagnostics are excluded. Generic readers use ordinary
+file read/search, verify selected claims against live source, and treat the map as
+generated from a baseline with current-tree freshness unverified. Consumption never
+regenerates the map and administrative commands do not require map reads. Optional
+instruction linking is explicit, owning-tool-managed, hash/CAS guarded, byte and
+newline preserving, and symlink safe. Do not add consumer-skill pointers here.
 
 Missing summary/evidence, placeholders, unsafe content, invalid references,
 stale source/target hashes, and unauthorized replacement remain blocking.

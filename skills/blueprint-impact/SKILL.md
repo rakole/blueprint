@@ -23,6 +23,13 @@ input_bundles:
 Orchestrate `/blu-impact` so every report is evidence-backed, uncertainty-aware,
 and bounded to `.blueprint/impact/<impact-id>/` when writing is enabled.
 
+Resolve explicit changed-file scope and known live targets first, then reuse
+compact parent evidence. If impact discovery still needs repository structure,
+consult a verified portable `.blueprint/codebase/INDEX.md` through selected
+`ENTRY.md` routes only. Missing or unusable maps fall back to ordinary bounded
+source search; scope, routing, and report administration do not require map reads
+or regeneration.
+
 ## Shared Runtime Contract
 
 - Execution profile: `long-running-mutation`

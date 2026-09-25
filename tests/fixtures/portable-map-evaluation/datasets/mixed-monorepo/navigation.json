@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "corpus": "mixed-monorepo",
+  "sourceManifestSha256": "b790f6dc577221d1bd1fcc706093458e1c9814e88bbdddd5596e55872888f3ff",
+  "queries": [
+    {
+      "id": "mixed-monorepo-nav-exact-path-slot",
+      "class": "exact-path",
+      "scenario": "base",
+      "text": "Read apps/dispatch-console/src/domain/slot.ts and explain how its validation handles required identifiers, box counts, and route dates.",
+      "knownTarget": true,
+      "targetPath": "apps/dispatch-console/src/domain/slot.ts",
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/src/domain/slot.ts",
+            "range": {"startLine": 6, "endLine": 14},
+            "symbol": "validateSlotRequest",
+            "rationale": "The named validator checks identifiers, the one-to-twelve box range, and the YYYY-MM-DD route date before returning the request."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Route directly to the named file and summarize the validator's three rule groups from its live source.",
+      "rationale": "The query gives an explicit source path and asks for the declaration's concrete validation rules."
+    },
+    {
+      "id": "mixed-monorepo-nav-exact-function-build-plan",
+      "class": "exact-function",
+      "scenario": "base",
+      "text": "Locate the Python build_plan function in workers/route-planner/src/routeplanner/planner.py and explain how it filters dates, enforces capacity, and orders stops.",
+      "knownTarget": true,
+      "targetPath": "workers/route-planner/src/routeplanner/planner.py",
+      "evidence": {
+        "required": [
+          {
+            "path": "workers/route-planner/src/routeplanner/planner.py",
+            "range": {"startLine": 7, "endLine": 24},
+            "symbol": "build_plan",
+            "rationale": "The function selects requests for the requested date, checks the total against capacity, sorts them, and enumerates planned stops."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "workers/route-planner/src/routeplanner/scoring.py",
+            "range": {"startLine": 4, "endLine": 10},
+            "symbol": "priority_key",
+            "rationale": "The helper defines the priority depot, box-count, depot-code, and request-id ordering used by the function."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Find the named function and connect its filtering and capacity logic to the ordering helper it invokes.",
+      "rationale": "The declaration name is a direct target and the requested behavior spans its body and its source-owned sort key."
+    },
+    {
+      "id": "mixed-monorepo-nav-domain-slot-dispatch",
+      "class": "domain-wording",
+      "scenario": "base",
+      "text": "How does the dispatch console verify a pickup-slot request before it creates an assigned dispatch?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/src/domain/slot.ts",
+            "range": {"startLine": 6, "endLine": 14},
+            "symbol": "validateSlotRequest",
+            "rationale": "The domain validator establishes the request preconditions before application code can create a dispatch."
+          },
+          {
+            "path": "apps/dispatch-console/src/application/dispatch-service.ts",
+            "range": {"startLine": 13, "endLine": 24},
+            "symbol": "create",
+            "rationale": "The application service invokes validation and only then constructs and saves an assigned dispatch."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "apps/dispatch-console/README.md",
+            "range": {"startLine": 3, "endLine": 6},
+            "rationale": "The component documentation confirms that the console accepts pickup-slot requests and stores dispatches behind a repository."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Discover the domain and application steps that validate the request before persistence, without assuming a declaration name from the wording.",
+      "rationale": "Pickup-slot and assigned-dispatch language describes behavior while leaving the source target open."
+    },
+    {
+      "id": "mixed-monorepo-nav-alias-route-grouping",
+      "class": "aliases",
+      "scenario": "base",
+      "text": "What code groups delivery stops by depot and day, and how is the resulting order chosen?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/src/domain/route.ts",
+            "range": {"startLine": 3, "endLine": 19},
+            "symbol": "summarizeRoute",
+            "rationale": "The route helper groups dispatches by depot and route date and sorts the resulting summaries."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "apps/dispatch-console/src/types.ts",
+            "range": {"startLine": 29, "endLine": 34},
+            "symbol": "RouteSummary",
+            "rationale": "The summary type identifies the grouped depot, date, dispatch identifiers, and box count fields."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Treat delivery stops and day as source-grounded synonyms for dispatches and routeDate, then identify the grouping and sort implementation.",
+      "rationale": "The wording uses aliases rather than the exact source vocabulary; a miss for this synonym on an unseen frozen map is a valid held-out result."
+    },
+    {
+      "id": "mixed-monorepo-nav-cross-flow-request-event",
+      "class": "cross-module-flow",
+      "scenario": "base",
+      "text": "Trace a pickup-slot request from the console's HTTP endpoint to the assigned event returned to a caller.",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/src/http/dispatch-routes.ts",
+            "range": {"startLine": 6, "endLine": 17},
+            "symbol": "dispatchRouter",
+            "rationale": "The router translates the POST endpoint into a service create call and serializes the assigned event response."
+          },
+          {
+            "path": "apps/dispatch-console/src/application/dispatch-service.ts",
+            "range": {"startLine": 13, "endLine": 37},
+            "symbol": "DispatchService",
+            "rationale": "The service validates and saves the dispatch and constructs the assigned event consumed by the route."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "apps/dispatch-console/src/http/request.ts",
+            "range": {"startLine": 5, "endLine": 7},
+            "symbol": "readSlotRequest",
+            "rationale": "The request adapter enforces the method and path before passing the body to application code."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Follow the request adapter, HTTP route, service creation, and event conversion in execution order.",
+      "rationale": "The request describes a flow across modules and does not name a source declaration or path."
+    },
+    {
+      "id": "mixed-monorepo-nav-code-to-test-route-summary",
+      "class": "code-to-test",
+      "scenario": "base",
+      "text": "In apps/dispatch-console/src/application/dispatch-service.ts, which test exercises DispatchService.routeForDate, and what assertion proves the grouped box count?",
+      "knownTarget": true,
+      "targetPath": "apps/dispatch-console/src/application/dispatch-service.ts",
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/tests/dispatch-service.test.ts",
+            "range": {"startLine": 6, "endLine": 10},
+            "rationale": "The test creates a service, invokes routeForDate, and asserts the grouped box count."
+          },
+          {
+            "path": "apps/dispatch-console/src/application/dispatch-service.ts",
+            "range": {"startLine": 27, "endLine": 27},
+            "symbol": "routeForDate",
+            "rationale": "The declaration under test delegates the stored dispatches to route summarization."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "apps/dispatch-console/src/domain/route.ts",
+            "range": {"startLine": 3, "endLine": 15},
+            "symbol": "summarizeRoute",
+            "rationale": "The delegated helper accumulates boxCount for each depot and date group."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Connect the named service method to its focused test and quote the test's box-count assertion as the verification point.",
+      "rationale": "The named method is a direct target while the test path must be discovered from imports and assertions."
+    },
+    {
+      "id": "mixed-monorepo-nav-trace-event-validation",
+      "class": "trace-to-code",
+      "scenario": "base",
+      "text": "Starting with contracts/dispatch-event.example.json, where is an assigned event validated in the TypeScript, Python, and Java components?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "contracts/dispatch-event.example.json",
+            "range": {"startLine": 1, "endLine": 8},
+            "rationale": "The example supplies the shared event shape and assigned lifecycle values that the validators must accept."
+          },
+          {
+            "path": "apps/dispatch-console/src/application/contracts.ts",
+            "range": {"startLine": 3, "endLine": 13},
+            "symbol": "parseDispatchEvent",
+            "rationale": "The TypeScript boundary validates the event object, assigned type and status, and required strings."
+          },
+          {
+            "path": "workers/route-planner/src/routeplanner/contracts.py",
+            "range": {"startLine": 7, "endLine": 15},
+            "symbol": "validate_dispatch_event",
+            "rationale": "The Python boundary applies the corresponding assigned-event checks."
+          },
+          {
+            "path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java",
+            "range": {"startLine": 8, "endLine": 19},
+            "symbol": "ContractProbe",
+            "rationale": "The Java probe extracts and verifies eventType and status for the cross-language handoff."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "scripts/check-contracts.mjs",
+            "range": {"startLine": 11, "endLine": 31},
+            "rationale": "The root script feeds the shared example into the TypeScript, Python, and Java checks."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Start from the example payload and follow each runtime's validator or probe plus the script that wires them together.",
+      "rationale": "The example file is the trace origin and the query asks for multiple consumers without naming their declarations."
+    },
+    {
+      "id": "mixed-monorepo-nav-change-impact-event-contract",
+      "class": "change-impact",
+      "scenario": "base",
+      "text": "If the shared dispatch event fields change, which runtime validators and contract probe need to remain aligned?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "contracts/dispatch-event.schema.json",
+            "range": {"startLine": 5, "endLine": 14},
+            "rationale": "The schema defines required event fields, accepted event type, status values, and the closed payload shape."
+          },
+          {
+            "path": "apps/dispatch-console/src/application/contracts.ts",
+            "range": {"startLine": 3, "endLine": 13},
+            "symbol": "parseDispatchEvent",
+            "rationale": "The TypeScript parser duplicates the required-field and lifecycle constraints."
+          },
+          {
+            "path": "workers/route-planner/src/routeplanner/contracts.py",
+            "range": {"startLine": 7, "endLine": 15},
+            "symbol": "validate_dispatch_event",
+            "rationale": "The Python validator duplicates the event field and assigned-status boundary."
+          },
+          {
+            "path": "services/fulfillment/tests/com/marketroute/fulfillment/ContractProbe.java",
+            "range": {"startLine": 8, "endLine": 19},
+            "symbol": "ContractProbe",
+            "rationale": "The Java probe independently checks the event type and status values."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "contracts/field-notes.md",
+            "range": {"startLine": 3, "endLine": 6},
+            "rationale": "The field notes state the shared ownership of IDs, route dates, and fulfillment status."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Identify every source-owned validator and probe that encodes the changed event contract, with the schema as the shared reference.",
+      "rationale": "The query asks for downstream impact and leaves the affected declarations to be discovered from shared contract usage."
+    },
+    {
+      "id": "mixed-monorepo-nav-unknown-kafka",
+      "class": "unknown-feature",
+      "scenario": "base",
+      "text": "Does this repository contain a Kafka consumer for dispatch events? If not, identify the bounded event-processing surface.",
+      "knownTarget": false,
+      "expectedAbsent": true,
+      "evidence": {
+        "required": [],
+        "supporting": [
+          {
+            "path": "README.md",
+            "range": {"startLine": 9, "endLine": 12},
+            "rationale": "The repository documentation describes standard-library components with no network listener or external message broker."
+          },
+          {
+            "path": "scripts/check-contracts.mjs",
+            "range": {"startLine": 11, "endLine": 31},
+            "rationale": "The bounded event-processing surface is the in-process TypeScript parser plus Python and Java contract probes."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Conservatively abstain from claiming a Kafka consumer and report only the documented in-process contract checks; bounded search is not proof of global absence.",
+      "rationale": "Kafka is not a source-grounded component name in this fixture, so this is an absence query with explicit conservative-abstention handling."
+    },
+    {
+      "id": "mixed-monorepo-nav-unsupported-rust",
+      "class": "unsupported-language",
+      "scenario": "base",
+      "text": "Is there a Rust route planner in this source tree? If the answer is no, what component and runtime does the repository document for route planning?",
+      "knownTarget": false,
+      "expectedAbsent": true,
+      "evidence": {
+        "required": [],
+        "supporting": [
+          {
+            "path": "README.md",
+            "range": {"startLine": 3, "endLine": 7},
+            "rationale": "The root description identifies the Python worker as the route-planning component alongside TypeScript and Java components."
+          },
+          {
+            "path": "workers/route-planner/pyproject.toml",
+            "range": {"startLine": 1, "endLine": 6},
+            "rationale": "The worker metadata confirms a Python project with no external dependencies."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Conservatively report the documented Python route-planner component and avoid fabricating Rust evidence; bounded search cannot prove global absence.",
+      "rationale": "The unsupported-language wording tests abstention while the source documents the supported route-planning runtime."
+    },
+    {
+      "id": "mixed-monorepo-nav-stale-slot-limit",
+      "class": "exact-path",
+      "scenario": "mixed-monorepo-scenario-stale-slot-limit",
+      "text": "Read apps/dispatch-console/src/domain/slot.ts and report the box-count upper bound enforced by its current validator.",
+      "knownTarget": true,
+      "targetPath": "apps/dispatch-console/src/domain/slot.ts",
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/src/domain/slot.ts",
+            "range": {"startLine": 6, "endLine": 14},
+            "symbol": "validateSlotRequest",
+            "rationale": "After the stale scenario replacement, the validator's live comparison enforces a ten-box upper bound."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Read the disposable scenario source and report the current ten-box comparison even if a frozen map retained the former twelve-box value.",
+      "rationale": "The named path remains live while its rule changed after map freeze, making the old description stale."
+    },
+    {
+      "id": "mixed-monorepo-nav-renamed-status-badge",
+      "class": "exact-function",
+      "scenario": "mixed-monorepo-scenario-renamed-status-badge",
+      "text": "Find the StatusBadge function in apps/dispatch-console/src/ui/status-label.jsx and explain how it derives its CSS class from status.",
+      "knownTarget": true,
+      "targetPath": "apps/dispatch-console/src/ui/status-label.jsx",
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/src/ui/status-label.jsx",
+            "range": {"startLine": 1, "endLine": 2},
+            "symbol": "StatusBadge",
+            "rationale": "The renamed file retains the function and lowercases status when constructing the status-prefixed class name."
+          }
+        ],
+        "supporting": [],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the declaration under its new filename and explain the status-to-class transformation.",
+      "rationale": "The function declaration remains unchanged while its source path is renamed after map freeze."
+    },
+    {
+      "id": "mixed-monorepo-nav-new-status-schema",
+      "class": "exact-path",
+      "scenario": "mixed-monorepo-scenario-new-status-schema",
+      "text": "Read contracts/dispatch-status.schema.json and list the status values it accepts.",
+      "knownTarget": true,
+      "targetPath": "contracts/dispatch-status.schema.json",
+      "evidence": {
+        "required": [
+          {
+            "path": "contracts/dispatch-status.schema.json",
+            "range": {"startLine": 1, "endLine": 10},
+            "rationale": "The newly created schema requires status and enumerates ASSIGNED, READY, and COLLECTED."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "contracts/status-codes.conf",
+            "range": {"startLine": 1, "endLine": 3},
+            "rationale": "The existing status vocabulary provides source context for the new status-only contract."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Read the newly created file directly and return its three enumerated status values.",
+      "rationale": "The path is explicitly named in the query and exists only after the disposable new-file scenario is applied."
+    },
+    {
+      "id": "mixed-monorepo-nav-exact-function-event-parser",
+      "class": "exact-function",
+      "scenario": "base",
+      "text": "What does parseDispatchEvent in apps/dispatch-console/src/application/contracts.ts require before accepting an assigned event?",
+      "knownTarget": true,
+      "targetPath": "apps/dispatch-console/src/application/contracts.ts",
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/src/application/contracts.ts",
+            "range": {"startLine": 3, "endLine": 13},
+            "symbol": "parseDispatchEvent",
+            "rationale": "The parser requires an object, the dispatch.assigned event type, ASSIGNED status, and nonempty string fields."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "apps/dispatch-console/tests/contracts.test.ts",
+            "range": {"startLine": 5, "endLine": 11},
+            "rationale": "The tests demonstrate one accepted assigned event and rejection of another lifecycle value."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Locate the named parser and summarize its object, lifecycle, and required-field checks.",
+      "rationale": "The function name is a direct target and the query asks for its source-grounded preconditions."
+    },
+    {
+      "id": "mixed-monorepo-nav-domain-config-overrides",
+      "class": "domain-wording",
+      "scenario": "base",
+      "text": "How are the console's default depot and daily box limit configured, and where is an override demonstrated?",
+      "knownTarget": false,
+      "evidence": {
+        "required": [
+          {
+            "path": "apps/dispatch-console/src/config.ts",
+            "range": {"startLine": 6, "endLine": 14},
+            "symbol": "loadConfig",
+            "rationale": "The configuration loader reads environment overrides and applies the default depot and positive integer limit."
+          },
+          {
+            "path": "apps/dispatch-console/tests/domain.test.ts",
+            "range": {"startLine": 7, "endLine": 10},
+            "rationale": "The domain test demonstrates overriding both configuration values."
+          }
+        ],
+        "supporting": [
+          {
+            "path": "apps/dispatch-console/README.md",
+            "range": {"startLine": 8, "endLine": 10},
+            "rationale": "The component documentation identifies the local type-check and test entry points for the configuration code."
+          }
+        ],
+        "alternatives": []
+      },
+      "expectedBehavior": "Discover the environment-backed configuration loader and its test demonstration of explicit overrides.",
+      "rationale": "Default depot and daily limit are domain wording rather than a named target, so the relevant declaration must be found."
+    }
+  ]
+}

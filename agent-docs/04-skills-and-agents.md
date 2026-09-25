@@ -86,6 +86,10 @@ Do not:
 - Let agents decide command routing independently of the catalog.
 - Let agents widen a command's allowed tools.
 
+### Conditional Codebase Navigation
+
+When code understanding is needed and the parent packet lacks relevant evidence, an agent may check `.blueprint/codebase/INDEX.md` with its existing generic file tools if present, subject to the parent-granted read and scope boundary. `INDEX.md` and its referenced `ENTRY.md` remain the full navigation protocol; agents select only the smallest relevant route, record, or search page and verify mapped coordinates against current source and tests. Known targets, including plan `task.readFirst` paths, are read directly once. Parent-supplied relevant ENTRY/records/source evidence is reused only while unchanged, and parent commands distribute only relevant subsets to children. An absent, malformed, unsupported, unreadable, or stale map falls back immediately within that scope; cap unproductive navigation at two actions. Agents request missing paths or scope from the parent; they do not dispatch children, force lookup for unrelated work, auto-regenerate maps, infer runtime or performance/default claims, or require private receipts or generated input bundles.
+
 ## Discussion input boundary
 
 The phase-discovery shared skill loads only the active bundle. Discuss uses its

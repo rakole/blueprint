@@ -6,6 +6,13 @@ import { resolveLocatedPhaseForMutation } from "./phase-resolution.js";
 import { PHASE_TOPOLOGY_LOCK_NAME, phaseTopologyFingerprintFromLocation, type PhaseTopologyFingerprint } from "./phase-topology-lock.js";
 import { checkedResearchPayload, researchNumericPhase, researchRequestId } from "./research-session.js";
 import { readPlanPublicationStatus } from "./plan-publication.js";
+import {
+  portableProviderEvidenceBasisSchema,
+  portableProviderEvidenceNextSchema,
+  type PortableProviderEvidenceBasis,
+  type PortableProviderEvidenceNext
+} from "../codebase-index/provider-evidence.js";
+import { portableSelectionSchema, type PortableSelection } from "../codebase-index/resolver.js";
 
 export const planNumericPhase = researchNumericPhase;
 export const planRequestId = researchRequestId;
@@ -32,16 +39,32 @@ const journalSchema = z.object({
   removed: z.array(z.object({ path: z.string(), baselineHash: hash })),
   stages: stagesSchema, receipt: receiptSchema.optional(),
 });
+const portableSessionSchema = z.strictObject({
+  selections: z.array(portableSelectionSchema).max(60),
+  basis: portableProviderEvidenceBasisSchema,
+  next: portableProviderEvidenceNextSchema
+});
+const ordinaryDeliveryIdentitySchema = z.strictObject({path: z.string().min(1), hash});
+const ordinaryDeliverySchema = z.strictObject({
+  delivered: z.array(ordinaryDeliveryIdentitySchema).max(300),
+  registered: z.array(ordinaryDeliveryIdentitySchema).max(300)
+});
 const schema = z.object({
   version: z.literal(2), phase: z.string(), topology: topologySchema,
   revision: z.number().int().nonnegative(), prepared: z.boolean(), needsIntent: z.boolean().default(false), mode: z.enum(["add", "revise", "replace"]), targetPlanIds: z.array(z.string()),
   readSet: z.array(targetSchema).max(300), evidencePaths: z.array(z.string()), targets: z.array(targetSchema),
   existingPlans: z.array(z.object({ planId: z.string(), wave: z.number(), dependsOn: z.array(z.string()), requirements: z.array(z.string()) })),
   knownRequirements: z.array(z.string()), knownEvidenceArtifacts: z.array(z.string()), checkerRequired: z.boolean(),
+  portable: portableSessionSchema.optional(), delivery: ordinaryDeliverySchema.optional(),
   requests: z.record(planRequestId, z.object({ hash, modelHash: hash, revision: z.number().int(), receipt: receiptSchema.optional() })),
   legacyPublication: z.object({ markerToken: z.string() }).optional(), journal: journalSchema.optional(),
 });
-export type PlanSession = Omit<z.infer<typeof schema>, "topology"> & { topology: PhaseTopologyFingerprint };
+export type PlanPortableSession = { selections: PortableSelection[]; basis: PortableProviderEvidenceBasis; next: PortableProviderEvidenceNext };
+export type PlanSession = Omit<z.infer<typeof schema>, "topology" | "portable" | "delivery"> & {
+  topology: PhaseTopologyFingerprint;
+  portable?: PlanPortableSession;
+  delivery?: { delivered: Array<{path: string; hash: string}>; registered: Array<{path: string; hash: string}> };
+};
 export type PlanJournal = z.infer<typeof journalSchema>;
 export type PlanLocation = Awaited<ReturnType<typeof planLocation>>;
 
