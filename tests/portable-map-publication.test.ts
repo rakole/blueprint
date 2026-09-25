@@ -267,7 +267,7 @@ test("legacy CRLF views are exact-byte restored after a pre-commit failure", asy
     await writeFile(path.join(root, ".blueprint", "codebase", name), crlf);
   }
   const rendered = renderFixture("gen_legacy_upgrade");
-  const input = baseInput(root, "gen_legacy_upgrade", rendered);
+  const input = {...baseInput(root, "gen_legacy_upgrade", rendered), intent: "upgrade" as const};
   const preflight = await capturePortablePublicationPreflight(input);
   assert.ok("operationId" in preflight);
   portablePublicationTestHooks.beforeIndexCommit = () => { throw new Error("simulated pre-commit crash"); };

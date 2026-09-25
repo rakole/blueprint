@@ -24,6 +24,7 @@ import {
   type PortableSourceBasis,
   type PortableTargetHashes
 } from "./contracts.js";
+import {atomicDescriptorWrite, ensureDescriptorDirectory, unlinkDescriptorLeaf} from "./descriptor-mutation.js";
 
 /** The portable root is deliberately separate from the legacy artifact writer. */
 export const PORTABLE_CODEBASE_ROOT = ".blueprint/codebase";
@@ -66,6 +67,8 @@ export type PortablePublicationPreflight = {
   readonly previousTargetHashes: PortableTargetHashes;
   readonly observedMarkerHash: string | null;
   readonly legacyBackup: boolean;
+  /** The prepare-time replacement authority, retained by operation metadata. */
+  readonly intent: "new" | "upgrade" | "refresh" | "repair";
   /** True only when the owning runtime explicitly requested fresh repair. */
   readonly repair: boolean;
 };
@@ -122,6 +125,11 @@ export type CapturePortablePublicationInput = {
   readonly transactionId?: string;
   readonly generationId: string;
   readonly sourceBasis: PortableSourceBasis;
+  readonly intent?: PortablePublicationPreflight["intent"];
+  /** The stored prepare-time marker identity for an exact-operation retry. */
+  readonly observedMarkerHash?: string | null;
+  /** Internal only: exact prepared authority permitted to resume its own marker. */
+  readonly resumePreflight?: PortablePublicationPreflight;
   readonly verifyFreshness?: PortableFreshnessCheck;
   /**
    * Repair is an explicit authority. It binds the observed INDEX, target, and
@@ -252,15 +260,7 @@ function directoryFingerprint(snapshot: DirectorySnapshot): string {
 async function ensureCodebaseRoot(repositoryRoot: string): Promise<DirectorySnapshot | null> {
   const rootSnapshot = await literalDirectorySnapshot(repositoryRoot);
   if (!rootSnapshot) return null;
-  const blueprint = path.join(repositoryRoot, ".blueprint");
-  const codebase = path.join(repositoryRoot, PORTABLE_CODEBASE_ROOT);
-  // The parent may exist in an ordinary brownfield project; creation remains
-  // literal and is followed by a fresh complete snapshot.
-  for (const directory of [blueprint, codebase]) {
-    const current = await fs.lstat(directory).catch(() => null);
-    if (current?.isSymbolicLink() || (current && !current.isDirectory())) return null;
-    if (!current) await fs.mkdir(directory);
-  }
+  if (!(await ensureDescriptorDirectory(repositoryRoot, PORTABLE_CODEBASE_ROOT))) return null;
   return literalDirectorySnapshot(repositoryRoot);
 }
 
@@ -274,14 +274,8 @@ async function prepareMutationRoot(repositoryRoot: string): Promise<PreparedMuta
   // created by ensureCodebaseRoot inside the lock callback below.
   const directories = await literalDirectorySnapshot(repositoryRoot);
   if (!directories) return null;
-  const blueprint = path.join(repositoryRoot, ".blueprint");
-  const blueprintStat = await fs.lstat(blueprint).catch(() => null);
-  if (blueprintStat?.isSymbolicLink() || blueprintStat && !blueprintStat.isDirectory()) return null;
-  if (!blueprintStat) await fs.mkdir(blueprint);
+  if (!(await ensureDescriptorDirectory(repositoryRoot, ".blueprint/locks"))) return null;
   const locks = path.join(repositoryRoot, ".blueprint", "locks");
-  const existing = await fs.lstat(locks).catch(() => null);
-  if (existing?.isSymbolicLink() || existing && !existing.isDirectory()) return null;
-  if (!existing) await fs.mkdir(locks);
   const lockDirectories = await literalDirectorySnapshot(locks);
   if (!lockDirectories) return null;
   return {directories, lockDirectories};
@@ -305,32 +299,15 @@ async function readRegular(filePath: string): Promise<Uint8Array | null> {
   return bytes;
 }
 
-async function exactAtomicWrite(filePath: string, bytes: Uint8Array): Promise<void> {
-  const parent = path.dirname(filePath);
-  const parentSnapshot = await literalDirectorySnapshot(parent);
-  if (!parentSnapshot || !(await assertDirectorySnapshot(parentSnapshot))) throw new Error("unsafe-target");
-  const previous = await fs.lstat(filePath).catch(error => {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw error;
-  });
-  if (previous?.isSymbolicLink() || previous && !previous.isFile()) throw new Error("unsafe-target");
-  const temp = `${filePath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  try {
-    await fs.writeFile(temp, bytes);
-    if (previous) await fs.chmod(temp, previous.mode & 0o7777);
-    const current = await fs.lstat(filePath).catch(error => {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-      throw error;
-    });
-    if ((previous && (!current || current.isSymbolicLink() || !sameIdentity(identity(previous), identity(current)))) || (!previous && current)) throw new Error("stale-target");
-    if (!(await assertDirectorySnapshot(parentSnapshot))) throw new Error("unsafe-target");
-    await fs.rename(temp, filePath);
-    const after = await fs.lstat(filePath);
-    if (after.isSymbolicLink() || !after.isFile()) throw new Error("unsafe-target");
-    if (!(await assertDirectorySnapshot(parentSnapshot))) throw new Error("unsafe-target");
-  } finally {
-    await fs.rm(temp, {force: true}).catch(() => undefined);
-  }
+async function exactAtomicWrite(root: string, relative: string, bytes: Uint8Array): Promise<void> {
+  const result = await atomicDescriptorWrite({root, relative: `${PORTABLE_CODEBASE_ROOT}/${relative}`, bytes, overwrite: true});
+  if (result === "conflict") throw new Error("stale-target");
+  if (result !== "written") throw new Error("unsafe-target");
+}
+
+async function exactDescriptorUnlink(root: string, relative: string, expectedHash: string): Promise<void> {
+  const result = await unlinkDescriptorLeaf(root, `${PORTABLE_CODEBASE_ROOT}/${relative}`, {sha256: expectedHash});
+  if (result !== "removed") throw new Error(result === "conflict" ? "stale-target" : "unsafe-target");
 }
 
 function targetPath(root: string, id: CodebaseDocumentId): string {
@@ -374,22 +351,9 @@ async function artifactParentState(root: string, relative: string): Promise<Arti
 
 async function ensureArtifactParents(root: string, relative: string): Promise<void> {
   if (!safeRelative(relative)) throw new Error("invalid-generation");
-  const rootSnapshot = await literalDirectorySnapshot(root);
-  if (!rootSnapshot || !(await assertDirectorySnapshot(rootSnapshot))) throw new Error("unsafe-root");
   const directory = path.posix.dirname(relative);
-  const segments = [".blueprint", "codebase", ...directory.split("/").filter(Boolean)];
-  let current = root;
-  for (const segment of segments) {
-    current = path.join(current, segment);
-    const before = await fs.lstat(current).catch(() => null);
-    if (before) {
-      if (before.isSymbolicLink() || !before.isDirectory()) throw new Error("unsafe-target");
-      continue;
-    }
-    await fs.mkdir(current);
-    const after = await fs.lstat(current).catch(() => null);
-    if (!after || after.isSymbolicLink() || !after.isDirectory()) throw new Error("unsafe-target");
-  }
+  const target = [PORTABLE_CODEBASE_ROOT, ...directory.split("/").filter(Boolean)].join("/");
+  if (!(await ensureDescriptorDirectory(root, target))) throw new Error("unsafe-target");
 }
 
 async function readGeneratedRegular(root: string, relative: string): Promise<Uint8Array | null> {
@@ -446,6 +410,11 @@ function sameTargetHashes(left: PortableTargetHashes, right: PortableTargetHashe
 
 function markerIdentityMatches(marker: PortablePublicationMarker, input: {operationId: string; transactionId: string; generationId: string}): boolean {
   return marker.operationId === input.operationId && marker.transactionId === input.transactionId && marker.generationId === input.generationId;
+}
+
+function markerMatchesPreflight(marker: PortablePublicationMarker, preflight: PortablePublicationPreflight): boolean {
+  return markerIdentityMatches(marker, preflight) && marker.previousIndexHash === preflight.previousIndexHash &&
+    sameTargetHashes(marker.previousTargetHashes, preflight.previousTargetHashes) && sameBasis(marker.sourceBasis, preflight.sourceBasis);
 }
 
 async function verifyFreshness(input: PortableFreshnessCheck | undefined, context: PortableFreshnessContext, required = true): Promise<boolean> {
@@ -603,7 +572,7 @@ async function writeGeneration(root: string, rendered: PortableRenderSuccess, le
     const existing = await readRegular(absolute).catch(error => {throw error;});
     if (existing && digest(existing) === digest(bytes)) continue;
     if (existing) throw new Error("publication-conflict");
-    await exactAtomicWrite(absolute, bytes);
+    await exactAtomicWrite(root, relative, bytes);
     const after = await readRegular(absolute);
     if (!after || digest(after) !== digest(bytes)) throw new Error("invalid-generation");
   }
@@ -644,10 +613,29 @@ async function previousGenerationValid(root: string, state: State): Promise<bool
 async function buildPreflight(input: CapturePortablePublicationInput, root: string, directories: DirectorySnapshot, state: State): Promise<PortablePublicationPreflight | PortablePublicationResult> {
   const transactionId = input.transactionId ?? `${input.operationId}-tx`;
   if (!validId(input.operationId) || !validId(transactionId) || !validId(input.generationId) || !validBasis(input.sourceBasis)) return failure("invalid-input");
-  const repair = input.repair?.authorized === true;
+  const intent = input.intent ?? (input.repair?.authorized === true ? "repair" : "new");
+  const repair = intent === "repair" && input.repair?.authorized === true;
+  if ((intent === "repair") !== repair) return failure("invalid-input");
   if (!repair && !(await previousGenerationValid(root, state))) return failure("invalid-generation");
   const marker = await readMarker(root);
   if (marker.kind === "unknown") return failure("unknown-marker");
+  // A recognized marker is normally a hard stop. The one exception is an
+  // identical prepared operation resuming its own durable staging marker.
+  const resume = input.resumePreflight;
+  const resuming = marker.kind === "recognized" && Boolean(resume) && resume!.repositoryRoot === root &&
+    resume!.intent === intent && markerMatchesPreflight(marker.marker, resume!) && markerIdentityMatches(marker.marker, {
+      operationId: input.operationId,
+      transactionId,
+      generationId: input.generationId
+    });
+  const hasLegacyBundle = state.indexBytes === null && (await legacyBackup(root, state)) !== null;
+  const hasAnyLegacyTarget = CODEBASE_DOCUMENT_IDS.some(id => state.targetBytes[id] !== null);
+  // An exact retry may observe its own partially staged target views. Its
+  // marker and the stored preflight below bind those views to the original
+  // operation; fresh work must still pass the normal predecessor gates.
+  if (!resuming && intent === "new" && (state.indexBytes !== null || hasAnyLegacyTarget || marker.kind !== "absent")) return failure("publication-conflict", "conflict");
+  if (!resuming && intent === "upgrade" && (!hasLegacyBundle || marker.kind !== "absent")) return failure("publication-conflict", "conflict");
+  if (!resuming && intent === "refresh" && (!state.indexBytes || !state.indexDescriptor || !(await previousGenerationValid(root, state)) || marker.kind !== "absent")) return failure("publication-conflict", "conflict");
   if (marker.kind === "recognized" && !repair && !markerIdentityMatches(marker.marker, {operationId: input.operationId, transactionId, generationId: input.generationId})) return failure("publication-conflict");
   const context: PortableFreshnessContext = {
     phase: "capture", repositoryRoot: root, sourceBasis: input.sourceBasis,
@@ -656,6 +644,16 @@ async function buildPreflight(input: CapturePortablePublicationInput, root: stri
   };
   if (!(await verifyFreshness(input.verifyFreshness, context))) return failure("stale-source");
   if (!(await assertDirectorySnapshot(directories))) return failure("unsafe-root", "conflict");
+  if (resuming) {
+    const staged = marker.marker;
+    if (state.rootFingerprint !== resume!.rootFingerprint ||
+        (state.indexHash !== resume!.previousIndexHash && state.indexHash !== staged.nextIndexHash) ||
+        (state.indexHash === staged.nextIndexHash && state.indexDescriptor?.generationId !== staged.generationId) ||
+        CODEBASE_DOCUMENT_IDS.some(id => state.targetHashes[id] !== resume!.previousTargetHashes[id] && state.targetHashes[id] !== staged.nextTargetHashes[id])) {
+      return failure("stale-target", "conflict");
+    }
+    return resume!;
+  }
   return {
     repositoryRoot: root,
     operationId: input.operationId,
@@ -666,8 +664,9 @@ async function buildPreflight(input: CapturePortablePublicationInput, root: stri
     previousGenerationId: state.indexDescriptor?.generationId ?? null,
     previousIndexHash: state.indexHash,
     previousTargetHashes: state.targetHashes,
-    observedMarkerHash: marker.kind === "recognized" ? marker.hash : null,
+    observedMarkerHash: input.observedMarkerHash === undefined ? (marker.kind === "recognized" ? marker.hash : null) : input.observedMarkerHash,
     legacyBackup: (state.indexBytes === null || repair) && CODEBASE_DOCUMENT_IDS.every(id => state.targetBytes[id] !== null),
+    intent,
     repair
   };
 }
@@ -788,7 +787,7 @@ async function restorePrecommit(root: string, marker: PortablePublicationMarker)
     if (currentHash === previous) continue;
     if (currentHash !== next) { complete = false; continue; }
     if (previous === null) {
-      await fs.rm(targetPath(root, id), {force: true}).catch(() => {complete = false;});
+      await exactDescriptorUnlink(root, DOCUMENT_FILE(id), next).catch(() => {complete = false;});
       const after = await readRegular(targetPath(root, id)).catch(error => {
         if ((error as Error).message === "unsafe-target") throw error;
         return null;
@@ -798,7 +797,7 @@ async function restorePrecommit(root: string, marker: PortablePublicationMarker)
     }
     const bytes = await readRestoreBytes(root, marker, id);
     if (!bytes) { complete = false; continue; }
-    try { await exactAtomicWrite(targetPath(root, id), bytes); } catch { complete = false; continue; }
+    try { await exactAtomicWrite(root, DOCUMENT_FILE(id), bytes); } catch { complete = false; continue; }
     const after = await readRegular(targetPath(root, id)).catch(error => {
       if ((error as Error).message === "unsafe-target") throw error;
       return null;
@@ -811,7 +810,7 @@ async function restorePrecommit(root: string, marker: PortablePublicationMarker)
     // replace it with guessed content.
     return false;
   }
-  if (await markerStill(root, marker)) await fs.rm(markerPath(root), {force: true});
+  if (await markerStill(root, marker)) await exactDescriptorUnlink(root, ".publication.json", digest(markerBytes(marker)));
   return true;
 }
 
@@ -833,7 +832,7 @@ async function cleanupCommitted(root: string, marker: PortablePublicationMarker)
   // removing it so a concurrent/unknown marker is never reported as cleaned.
   if (current.kind !== "recognized" || !markerIdentityMatches(current.marker, marker)) return false;
   if (!(await markerStill(root, current.marker))) return false;
-  await fs.rm(markerPath(root), {force: true});
+  await exactDescriptorUnlink(root, ".publication.json", digest(markerBytes(current.marker)));
   return true;
 }
 
@@ -894,8 +893,7 @@ async function publishLocked(input: PublishPortableMapInput, root: string, direc
   if (!state) return failure("unsafe-root", "conflict", preflight);
   if (markerRead.kind === "absent" && !preflight.repair && !(await previousGenerationValid(root, state))) return failure("invalid-generation", "conflict", preflight);
   if (markerRead.kind === "recognized" && !preflight.repair) {
-    if (preflight.observedMarkerHash === null) return failure("publication-conflict", "conflict", preflight);
-    if (!markerIdentityMatches(markerRead.marker, preflight)) return failure("publication-conflict", "conflict", preflight);
+    if (!markerMatchesPreflight(markerRead.marker, preflight)) return failure("publication-conflict", "conflict", preflight);
     if (preflight.observedMarkerHash !== null && preflight.observedMarkerHash !== markerRead.hash) {
       return failure("publication-conflict", "conflict", preflight);
     }
@@ -936,7 +934,7 @@ async function publishLocked(input: PublishPortableMapInput, root: string, direc
       } else if (beforeReplace.kind !== "absent") {
         return failure(beforeReplace.kind === "unknown" ? "unknown-marker" : "publication-conflict", "conflict", preflight);
       }
-      await exactAtomicWrite(markerPath(root), markerBytes(marker));
+      await exactAtomicWrite(root, ".publication.json", markerBytes(marker));
       if (!(await markerStill(root, marker))) return failure("publication-failed", "partial", preflight);
       await portablePublicationTestHooks.afterMarkerWrite?.(marker);
     } catch (error) {
@@ -966,7 +964,7 @@ async function publishLocked(input: PublishPortableMapInput, root: string, direc
       if (currentHash === next) continue;
       if (currentHash !== previous) throw new Error("stale-target");
       await portablePublicationTestHooks.beforeCompatibilityWrite?.(id);
-      await exactAtomicWrite(targetPath(root, id), input.rendered.rootViewBytes[DOCUMENT_FILE(id) as keyof typeof input.rendered.rootViewBytes]!);
+      await exactAtomicWrite(root, DOCUMENT_FILE(id), input.rendered.rootViewBytes[DOCUMENT_FILE(id) as keyof typeof input.rendered.rootViewBytes]!);
       const after = await readRegular(targetPath(root, id));
       if (!after || digest(after) !== next) throw new Error("publication-failed");
     }
@@ -985,17 +983,17 @@ async function publishLocked(input: PublishPortableMapInput, root: string, direc
       previousIndexHash: marker.previousIndexHash, previousTargetHashes: marker.previousTargetHashes
     });
     if (currentIndexHash !== marker.nextIndexHash) {
-      await exactAtomicWrite(indexPath(root), input.rendered.rootIndexBytes);
+      await exactAtomicWrite(root, "INDEX.md", input.rendered.rootIndexBytes);
       await portablePublicationTestHooks.afterIndexCommit?.();
     }
   } catch (error) {
     if (await rootIndexMatches(root, marker.nextIndexHash) && await generationFilesFromManifest(root, marker.sealedGeneration, marker.nextIndexHash)) {
       const committedMarker = {...marker, stage: "index-committed" as const};
-      try { if (await markerStill(root, marker)) await exactAtomicWrite(markerPath(root), markerBytes(committedMarker)); } catch { /* recovery can infer the commit from INDEX */ }
+      try { if (await markerStill(root, marker)) await exactAtomicWrite(root, ".publication.json", markerBytes(committedMarker)); } catch { /* recovery can infer the commit from INDEX */ }
       try {
         if (!(await commitReceipt(input))) return resultAfter(root, "committed", true, [diagnostic("publication-failed")], preflight, true);
         const cleanupMarker = {...committedMarker, stage: "cleanup" as const};
-        if (await markerStill(root, committedMarker)) await exactAtomicWrite(markerPath(root), markerBytes(cleanupMarker));
+        if (await markerStill(root, committedMarker)) await exactAtomicWrite(root, ".publication.json", markerBytes(cleanupMarker));
         await portablePublicationTestHooks.beforeCleanup?.();
         const cleaned = await cleanupCommitted(root, cleanupMarker);
         return resultAfter(root, cleaned ? "committed" : "committed", true, cleaned ? [] : [diagnostic("publication-failed")], preflight, !cleaned);
@@ -1011,10 +1009,10 @@ async function publishLocked(input: PublishPortableMapInput, root: string, direc
   }
   try {
     const committedMarker = {...marker, stage: "index-committed" as const};
-    if (await markerStill(root, marker)) await exactAtomicWrite(markerPath(root), markerBytes(committedMarker));
+    if (await markerStill(root, marker)) await exactAtomicWrite(root, ".publication.json", markerBytes(committedMarker));
     if (!(await commitReceipt(input))) return resultAfter(root, "committed", true, [diagnostic("publication-failed")], preflight, true);
     const cleanupMarker = {...committedMarker, stage: "cleanup" as const};
-    if (await markerStill(root, committedMarker)) await exactAtomicWrite(markerPath(root), markerBytes(cleanupMarker));
+    if (await markerStill(root, committedMarker)) await exactAtomicWrite(root, ".publication.json", markerBytes(cleanupMarker));
     await portablePublicationTestHooks.beforeCleanup?.();
     const cleaned = await cleanupCommitted(root, cleanupMarker);
     return resultAfter(root, cleaned ? "published" : "committed", true, cleaned ? [] : [diagnostic("publication-failed")], preflight, !cleaned);
@@ -1068,7 +1066,7 @@ export async function publishPortableMap(input: PublishPortableMapInput): Promis
       if ("ok" in preflightValue) return preflightValue;
       if (preflightValue.repositoryRoot !== root) return failure("publication-conflict");
       const marker = await readMarker(root);
-      const sameOperation = marker.kind === "recognized" && markerIdentityMatches(marker.marker, preflightValue);
+      const sameOperation = marker.kind === "recognized" && markerMatchesPreflight(marker.marker, preflightValue);
       if (!sameOperation && (state.rootFingerprint !== preflightValue.rootFingerprint || state.indexHash !== preflightValue.previousIndexHash || !sameTargetHashes(state.targetHashes, preflightValue.previousTargetHashes))) return failure("stale-target", "conflict", preflightValue);
       return publishLocked(input, root, directories, preflightValue);
     } catch (error) {
@@ -1116,7 +1114,7 @@ async function recoverLocked(root: string, observedMarker?: PortablePublicationM
       if (currentHash !== marker.previousTargetHashes[id]) throw new Error("stale-target");
       const bytes = await readGeneratedRegular(root, `generations/${marker.generationId}/compatibility/${DOCUMENT_FILE(id)}`);
       if (!bytes || digest(bytes) !== marker.nextTargetHashes[id]) throw new Error("invalid-generation");
-      await exactAtomicWrite(targetPath(root, id), bytes);
+      await exactAtomicWrite(root, DOCUMENT_FILE(id), bytes);
     }
     const stagedIndex = await readGeneratedRegular(root, `generations/${marker.generationId}/${PORTABLE_GENERATION_INDEX_NAME}`);
     if (!stagedIndex || digest(stagedIndex) !== marker.nextIndexHash) throw new Error("invalid-generation");
@@ -1129,12 +1127,12 @@ async function recoverLocked(root: string, observedMarker?: PortablePublicationM
       operationId: marker.operationId, transactionId: marker.transactionId, generationId: marker.generationId,
       previousIndexHash: marker.previousIndexHash, previousTargetHashes: marker.previousTargetHashes
     });
-    if (finalIndexHash !== marker.nextIndexHash) await exactAtomicWrite(indexPath(root), stagedIndex);
+    if (finalIndexHash !== marker.nextIndexHash) await exactAtomicWrite(root, "INDEX.md", stagedIndex);
     if (!(await rootIndexMatches(root, marker.nextIndexHash))) throw new Error("publication-failed");
     const committedMarker = {...marker, stage: "index-committed" as const};
-    if (await markerStill(root, marker)) await exactAtomicWrite(markerPath(root), markerBytes(committedMarker));
+    if (await markerStill(root, marker)) await exactAtomicWrite(root, ".publication.json", markerBytes(committedMarker));
     const cleanupMarker = {...committedMarker, stage: "cleanup" as const};
-    if (await markerStill(root, committedMarker)) await exactAtomicWrite(markerPath(root), markerBytes(cleanupMarker));
+    if (await markerStill(root, committedMarker)) await exactAtomicWrite(root, ".publication.json", markerBytes(cleanupMarker));
     const cleaned = await cleanupCommitted(root, cleanupMarker);
     return resultAfter(root, "recovered", true, cleaned ? [] : [diagnostic("publication-failed")], undefined, !cleaned);
   } catch (error) {

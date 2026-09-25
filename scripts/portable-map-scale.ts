@@ -467,11 +467,12 @@ async function publishGeneration(
   operationId: string,
   transactionId: string,
   sourceBasis: PortableSourceBasis,
-  rendered: PortableRenderSuccess
+  rendered: PortableRenderSuccess,
+  intent: "new" | "refresh"
 ): Promise<{elapsedMs: number; result: PortablePublicationResult}> {
   const started = performance.now();
   const freshness = () => verifyFreshSource(root, sourceBasis);
-  const captured = await capturePortablePublicationPreflight({repositoryRoot: root, operationId, transactionId, generationId, sourceBasis, verifyFreshness: freshness});
+  const captured = await capturePortablePublicationPreflight({repositoryRoot: root, operationId, transactionId, generationId, sourceBasis, intent, verifyFreshness: freshness});
   if (!("operationId" in captured)) throw new Error(`Portable publication preflight failed: ${JSON.stringify(captured)}`);
   const preflight = captured as PortablePublicationPreflight;
   const result = await publishPortableMap({repositoryRoot: root, operationId, transactionId, generationId, sourceBasis, rendered, preflight, verifyFreshness: freshness});
@@ -620,7 +621,7 @@ export async function runPortableMapScale(root: string, fixture: ScaleFixtureMan
   rssSamples.push({stage: "render", rssMiB: rssMiB()});
   const rendering = renderSummary(firstRendered, performance.now() - renderStarted);
   const firstBasis = publicationBasis(firstExtraction);
-  const firstPublished = await publishGeneration(root, "gen-scale-001", "op-scale-001", "tx-scale-001", firstBasis, firstRendered);
+  const firstPublished = await publishGeneration(root, "gen-scale-001", "op-scale-001", "tx-scale-001", firstBasis, firstRendered, "new");
   const firstDisk = await treeSize(path.join(root, ".blueprint", "codebase", "generations"));
   const firstResolutionStarted = performance.now();
   const firstResolution = await resolveCodebaseNavigation(root);
@@ -642,7 +643,7 @@ export async function runPortableMapScale(root: string, fixture: ScaleFixtureMan
   if (!secondRenderedResult.ok) throw new Error(`Portable scale refresh render failed: ${JSON.stringify(secondRenderedResult.diagnostics)}`);
   const secondRendered = secondRenderedResult;
   const secondBasis = publicationBasis(secondExtraction);
-  const secondPublished = await publishGeneration(root, "gen-scale-002", "op-scale-002", "tx-scale-002", secondBasis, secondRendered);
+  const secondPublished = await publishGeneration(root, "gen-scale-002", "op-scale-002", "tx-scale-002", secondBasis, secondRendered, "refresh");
   const secondDisk = await treeSize(path.join(root, ".blueprint", "codebase", "generations"));
   const secondResolutionStarted = performance.now();
   const secondResolution = await resolveCodebaseNavigation(root);

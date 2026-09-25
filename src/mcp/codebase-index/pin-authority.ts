@@ -1,9 +1,9 @@
 import {createHash, createHmac, randomBytes, timingSafeEqual} from "node:crypto";
-import {constants as fsConstants} from "node:fs";
 import {promises as fs} from "node:fs";
 import path from "node:path";
 
 import {readHardenedLiteralFile} from "./literal-read.js";
+import {createDescriptorLeaf, ensureDescriptorDirectory} from "./descriptor-mutation.js";
 
 /** Operational state is deliberately outside the portable transfer bundle. */
 export const PORTABLE_PIN_AUTHORITY_ROOT = ".blueprint/codebase-operations/pin-authority";
@@ -14,6 +14,12 @@ export const PORTABLE_PIN_RECEIPT_VERSION = 1 as const;
 const SHA256 = /^[a-f0-9]{64}$/;
 const GENERATION_ID = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/;
 const KEY_BYTES = 32;
+
+/** Deterministic race seams for the descriptor-anchoring regression coverage. */
+export const portablePinAuthorityTestHooks: {
+  beforeOwnerKeyCreate?: () => Promise<void> | void;
+  beforeReceiptCreate?: () => Promise<void> | void;
+} = {};
 
 export type PortablePinAuthorityRootIdentity = {
   readonly path: string;
@@ -47,8 +53,6 @@ export type PortablePinAuthorityDirectoryIdentity = {
   readonly inode: number;
 };
 
-type OwnedLeafIdentity = {readonly device: number; readonly inode: number};
-type OpenHandle = Awaited<ReturnType<typeof fs.open>>;
 
 function safeRelative(value: string): boolean {
   return value.length > 0 && !value.startsWith("/") && !value.includes("\\") &&
@@ -74,66 +78,30 @@ export function samePortablePinAuthorityRootIdentity(
 async function captureRootIdentity(root: string): Promise<PortablePinAuthorityRootIdentity | null> {
   if (typeof root !== "string" || root.length === 0 || root.includes("\0")) return null;
   const absolute = path.resolve(root);
-  const parsed = path.parse(absolute);
+  const direct = await fs.lstat(absolute).catch(() => null);
+  if (!direct || direct.isSymbolicLink() || !direct.isDirectory()) return null;
+  const realPath = await fs.realpath(absolute).catch(() => null);
+  if (!realPath) return null;
+  const parsed = path.parse(realPath);
   const ancestors: Array<{readonly path: string; readonly device: number; readonly inode: number}> = [];
   let current = parsed.root;
-  for (const segment of absolute.slice(parsed.root.length).split(path.sep).filter(Boolean)) {
+  for (const segment of realPath.slice(parsed.root.length).split(path.sep).filter(Boolean)) {
     current = path.join(current, segment);
-    const stat = await fs.stat(current).catch(() => null);
-    if (!stat || !stat.isDirectory()) return null;
-    if (current !== absolute) {
+    const stat = await fs.lstat(current).catch(() => null);
+    if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) return null;
+    if (current !== realPath) {
       const canonical = await fs.realpath(current).catch(() => null);
       if (!canonical) return null;
       ancestors.push({path: canonical, device: stat.dev, inode: stat.ino});
     }
   }
-  const stat = await fs.lstat(absolute).catch(() => null);
+  const stat = await fs.lstat(realPath).catch(() => null);
   if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) return null;
-  const realPath = await fs.realpath(absolute).catch(() => null);
-  if (!realPath) return null;
   return {path: absolute, realPath, device: stat.dev, inode: stat.ino, ancestors};
 }
 
 async function ensureLiteralDirectory(root: string, relative: string): Promise<boolean> {
-  if (!safeRelative(relative)) return false;
-  const identity = await captureRootIdentity(root);
-  if (!identity) return false;
-  let current = identity.path;
-  for (const segment of relative.split("/")) {
-    current = path.join(current, segment);
-    const before = await fs.lstat(current).catch(() => null);
-    if (before) {
-      if (before.isSymbolicLink() || !before.isDirectory()) return false;
-      continue;
-    }
-    const parent = path.dirname(current);
-    const parentRelative = path.relative(identity.path, parent).split(path.sep).join("/");
-    const beforeRoot = await captureRootIdentity(root);
-    const beforeParent = await captureOwnedDirectoryChain(root, parentRelative);
-    if (!beforeRoot || !beforeParent || !sameIdentity(beforeRoot, identity)) return false;
-    let created: PortablePinAuthorityDirectoryIdentity | null = null;
-    try {
-      await fs.mkdir(current);
-      const made = await fs.lstat(current).catch(() => null);
-      if (made && !made.isSymbolicLink() && made.isDirectory()) created = {path: current, device: made.dev, inode: made.ino};
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") return false;
-    }
-    const afterRoot = await captureRootIdentity(root);
-    const afterParent = await captureOwnedDirectoryChain(root, parentRelative);
-    if (!afterRoot || !afterParent || !sameIdentity(afterRoot, beforeRoot) || !sameOwnedDirectoryChain(afterParent, beforeParent)) {
-      if (created) {
-        const currentMade = await fs.lstat(current).catch(() => null);
-        if (currentMade && !currentMade.isSymbolicLink() && currentMade.isDirectory() && currentMade.dev === created.device && currentMade.ino === created.inode) {
-          await fs.rmdir(current).catch(() => undefined);
-        }
-      }
-      return false;
-    }
-    const after = await fs.lstat(current).catch(() => null);
-    if (!after || after.isSymbolicLink() || !after.isDirectory()) return false;
-  }
-  return true;
+  return safeRelative(relative) && ensureDescriptorDirectory(root, relative);
 }
 
 async function captureOwnedDirectoryChain(root: string, relative: string): Promise<readonly PortablePinAuthorityDirectoryIdentity[] | null> {
@@ -156,23 +124,6 @@ function sameOwnedDirectoryChain(left: readonly PortablePinAuthorityDirectoryIde
     const other = right[index]!;
     return item.path === other.path && item.device === other.device && item.inode === other.inode;
   }));
-}
-
-function ownedLeafFromStat(stat: {readonly dev: number; readonly ino: number; readonly isFile: () => boolean; readonly isSymbolicLink: () => boolean}): OwnedLeafIdentity | null {
-  return stat.isFile() && !stat.isSymbolicLink() ? {device: stat.dev, inode: stat.ino} : null;
-}
-
-async function ownedLeafFromHandle(handle: OpenHandle): Promise<OwnedLeafIdentity | null> {
-  const stat = await handle.stat().catch(() => null);
-  return stat ? ownedLeafFromStat(stat) : null;
-}
-
-/** Unlink only the exact regular leaf created by this call. */
-async function unlinkOwnedLeaf(absolute: string, created: OwnedLeafIdentity | null): Promise<void> {
-  if (!created) return;
-  const current = await fs.lstat(absolute).catch(() => null);
-  if (!current || current.isSymbolicLink() || !current.isFile() || current.dev !== created.device || current.ino !== created.inode) return;
-  await fs.unlink(absolute).catch(() => undefined);
 }
 
 function canonicalPayload(receipt: Omit<PortablePinReceipt, "authentication">): string {
@@ -270,26 +221,13 @@ async function loadOwnerKey(
     const beforeRoot = await captureRootIdentity(root);
     const beforeChain = await captureOwnedDirectoryChain(root, PORTABLE_PIN_AUTHORITY_ROOT);
     if (!beforeRoot || !beforeChain) return null;
-    let created = false;
-    let createdLeaf: OwnedLeafIdentity | null = null;
-    try {
-      const handle = await fs.open(absolute, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | (fsConstants.O_NOFOLLOW ?? 0), 0o600);
-      created = true;
-      try {
-        createdLeaf = await ownedLeafFromHandle(handle);
-        if (!createdLeaf) throw new Error("owner-key-opened-leaf-invalid");
-        await handle.writeFile(randomBytes(KEY_BYTES));
-      } finally { await handle.close(); }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-        await unlinkOwnedLeaf(absolute, createdLeaf);
-        return null;
-      }
-    }
+    const creation = await createDescriptorLeaf(root, relative, randomBytes(KEY_BYTES), 0o600, {
+      beforeCreate: () => portablePinAuthorityTestHooks.beforeOwnerKeyCreate?.()
+    });
+    if (creation === "unsafe") return null;
     const afterRoot = await captureRootIdentity(root);
     const afterChain = await captureOwnedDirectoryChain(root, PORTABLE_PIN_AUTHORITY_ROOT);
     if (!afterRoot || !sameIdentity(afterRoot, beforeRoot) || !sameOwnedDirectoryChain(afterChain, beforeChain)) {
-      if (created) await unlinkOwnedLeaf(absolute, createdLeaf);
       return null;
     }
   }
@@ -330,41 +268,25 @@ export async function persistPortablePinReceipt(root: string, pin: PortablePinAu
   const beforeRoot = await captureRootIdentity(root);
   const beforeChain = await captureOwnedDirectoryChain(root, `${PORTABLE_PIN_AUTHORITY_ROOT}/${PORTABLE_PIN_AUTHORITY_RECEIPTS_ROOT}`);
   if (!beforeRoot || !sameIdentity(beforeRoot, owner.identity) || !beforeChain) return null;
-  let created = false;
-  let createdLeaf: OwnedLeafIdentity | null = null;
-  try {
-    const handle = await fs.open(absolute, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | (fsConstants.O_NOFOLLOW ?? 0), 0o600);
-    created = true;
-    try {
-      createdLeaf = await ownedLeafFromHandle(handle);
-      if (!createdLeaf) throw new Error("receipt-opened-leaf-invalid");
-      await handle.writeFile(bytes);
-    } finally { await handle.close(); }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-      await unlinkOwnedLeaf(absolute, createdLeaf);
-      return null;
-    }
-  }
+  const creation = await createDescriptorLeaf(root, relative, bytes, 0o600, {
+    beforeCreate: () => portablePinAuthorityTestHooks.beforeReceiptCreate?.()
+  });
+  if (creation === "unsafe") return null;
   const afterRoot = await captureRootIdentity(root);
   const afterChain = await captureOwnedDirectoryChain(root, `${PORTABLE_PIN_AUTHORITY_ROOT}/${PORTABLE_PIN_AUTHORITY_RECEIPTS_ROOT}`);
   if (!afterRoot || !sameIdentity(afterRoot, owner.identity) || !sameOwnedDirectoryChain(afterChain, beforeChain)) {
-    if (created) await unlinkOwnedLeaf(absolute, createdLeaf);
     return null;
   }
   const persisted = await readHardenedLiteralFile(root, relative, 16 * 1024);
   if (!persisted.ok) {
-    if (created) await unlinkOwnedLeaf(absolute, createdLeaf);
     return null;
   }
   let parsed: unknown;
   try { parsed = JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(persisted.bytes)); } catch {
-    if (created) await unlinkOwnedLeaf(absolute, createdLeaf);
     return null;
   }
   const stored = parseReceipt(parsed);
   if (!stored || JSON.stringify(stored) !== JSON.stringify(receipt)) {
-    if (created) await unlinkOwnedLeaf(absolute, createdLeaf);
     return null;
   }
   return stored;

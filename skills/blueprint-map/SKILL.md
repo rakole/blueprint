@@ -51,7 +51,10 @@ Never run `/blu-*` in the shell.
    `operationId`, deterministic bounded packets, and an opaque cursor. Continue with
    `{formatVersion: 1, operationId, cursor}` until no cursor remains. For `repair`,
    pass the exact returned basis `{authorized: true, previousIndexHash,
-   targetHashes, observedMarkerHash}`; never calculate or invent it.
+   targetHashes, observedMarkerHash}`; never calculate or invent it. `new` is only
+   for an absent portable and legacy map, `upgrade` only for a verified legacy
+   bundle, and `refresh` only for a valid current portable generation. Submit the
+   same intent that prepare recorded; it is not replacement authority by itself.
 4. Read packet-selected live source after portable prepare and author one complete
    model: `formatVersion: 1`, the prepared `generationId`, all seven `documents`,
    and `semantic` `capabilities`, `claims`, and `aliases`, with exact evidence and

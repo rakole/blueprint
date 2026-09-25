@@ -4,7 +4,7 @@ import { type JavaAdapterResult } from "./adapters/java.js";
 import { type JavaScriptAdapterResult } from "./adapters/javascript.js";
 import { type PythonAdapterResult } from "./adapters/python.js";
 import { type SourceInventory, type SourceInventoryFile } from "./inventory.js";
-import { getParserAssetManifest } from "./parser-runtime.js";
+import { getVerifiedParserAssetManifest } from "./parser-runtime.js";
 export declare const EXTRACTION_ADAPTER_RULE_VERSIONS: {
     readonly javascript: "javascript-declarations-v1/tree-sitter-0.27.0";
     readonly python: "python-declarations-v1/tree-sitter-0.27.0";
@@ -126,7 +126,7 @@ export type PortableStructuralRecords = {
 };
 type StructuralRecords = PortableStructuralRecords;
 export declare function makePortableStructuralShards(generationId: string, records: StructuralRecords): PortableStructuralInventory[];
-export declare function makePortableExtractionProvenance(manifest: Awaited<ReturnType<typeof getParserAssetManifest>>): ExtractionParserProvenance;
+export declare function makePortableExtractionProvenance(manifest: Awaited<ReturnType<typeof getVerifiedParserAssetManifest>>): ExtractionParserProvenance;
 export declare function capturePortableExtractionSnapshot(repositoryRoot: string, useGit?: boolean): Promise<PortableExtractionSnapshot | PortableExtractionFailure>;
 export declare function capturePortableSourceFreshness(repositoryRoot: string, useGit?: boolean): Promise<PortableSourceFreshness>;
 /**

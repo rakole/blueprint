@@ -1,10 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {constants as fsConstants} from "node:fs";
 import {promises as fs} from "node:fs";
 import {mkdir, mkdtemp, readFile, readdir, rm, writeFile} from "node:fs/promises";
-import {syncBuiltinESMExports} from "node:module";
 import os from "node:os";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
@@ -14,6 +12,7 @@ import {portableSourceCoordinateSchema, type PortableSourceCoordinate} from "../
 import {renderPortableMap} from "../src/mcp/codebase-index/render.js";
 import {validatePortableMapModel, type PortableAuthoritativeSourceBasis} from "../src/mcp/codebase-index/model-validation.js";
 import {resolveConsumerEvidence} from "../src/mcp/codebase-index/consumer-evidence.js";
+import {portablePinAuthorityTestHooks} from "../src/mcp/codebase-index/pin-authority.js";
 import {issuePortablePinReceipt, restorePortablePinReceipt, verifyPortablePinHandoff} from "../src/mcp/codebase-index/resolver.js";
 
 const digest = (value: string | Uint8Array): string => createHash("sha256").update(value).digest("hex");
@@ -344,20 +343,11 @@ test("pin receipt and owner-key writes reject parent swaps and clean raced files
       await writeFile(path.join(root, "src", "entry.ts"), source);
     };
     await install(keyRoot);
-    const originalOpen = fs.open;
-    let injected = false;
-    fs.open = async function(file: Parameters<typeof fs.open>[0], ...args: Parameters<typeof fs.open> extends [unknown, ...infer Rest] ? Rest : never) {
-      const flags = args[0];
-      const target = String(file);
-      if (!injected && typeof flags === "number" && (flags & fsConstants.O_CREAT) !== 0 && target.endsWith("/owner.key")) {
-        injected = true;
-        const parent = path.join(keyRoot, ".blueprint/codebase-operations/pin-authority");
-        await fs.rename(parent, `${parent}-original`);
-        await fs.symlink(keyOutside, parent);
-      }
-      return Reflect.apply(originalOpen, fs, [file, ...args] as Parameters<typeof fs.open>);
-    } as typeof fs.open;
-    syncBuiltinESMExports();
+    portablePinAuthorityTestHooks.beforeOwnerKeyCreate = async () => {
+      const parent = path.join(keyRoot, ".blueprint/codebase-operations/pin-authority");
+      await fs.rename(parent, `${parent}-original`);
+      await fs.symlink(keyOutside, parent);
+    };
     try {
       const result = await issuePortablePinReceipt(keyRoot, {
         generationId: fixture.rendered.sealedGeneration.generationId,
@@ -367,8 +357,7 @@ test("pin receipt and owner-key writes reject parent swaps and clean raced files
       assert.equal(result.status, "invalid");
       assert.deepEqual(await readdir(keyOutside), [], "a raced owner-key create must be cleaned outside the root");
     } finally {
-      fs.open = originalOpen;
-      syncBuiltinESMExports();
+      delete portablePinAuthorityTestHooks.beforeOwnerKeyCreate;
     }
 
     await install(receiptRoot);
@@ -378,26 +367,16 @@ test("pin receipt and owner-key writes reject parent swaps and clean raced files
       manifest: {path: fixture.rendered.sealedGeneration.manifest.path, sha256: fixture.rendered.sealedGeneration.manifest.checksum}
     });
     assert.equal(initial.status, "ok", JSON.stringify(initial));
-    const originalReceiptOpen = fs.open;
-    injected = false;
-    fs.open = async function(file: Parameters<typeof fs.open>[0], ...args: Parameters<typeof fs.open> extends [unknown, ...infer Rest] ? Rest : never) {
-      const flags = args[0];
-      const target = String(file);
-      if (!injected && typeof flags === "number" && (flags & fsConstants.O_CREAT) !== 0 && target.includes("/pin-authority/receipts/") && target.endsWith(".json")) {
-        injected = true;
-        const parent = path.join(receiptRoot, ".blueprint/codebase-operations/pin-authority/receipts");
-        await fs.rename(parent, `${parent}-original`);
-        await fs.symlink(receiptOutside, parent);
-      }
-      return Reflect.apply(originalReceiptOpen, fs, [file, ...args] as Parameters<typeof fs.open>);
-    } as typeof fs.open;
-    syncBuiltinESMExports();
+    portablePinAuthorityTestHooks.beforeReceiptCreate = async () => {
+      const parent = path.join(receiptRoot, ".blueprint/codebase-operations/pin-authority/receipts");
+      await fs.rename(parent, `${parent}-original`);
+      await fs.symlink(receiptOutside, parent);
+    };
     try {
       assert.equal((await issuePortablePinReceipt(receiptRoot, initial.status === "ok" ? initial.receipt.pin : {generationId: "missing", entry: {path: "generations/missing/ENTRY.md", sha256: "0".repeat(64)}, manifest: {path: "generations/missing/manifest.json", sha256: "0".repeat(64)}})).status, "invalid");
       assert.deepEqual(await readdir(receiptOutside), [], "a raced receipt create must be cleaned outside the root");
     } finally {
-      fs.open = originalReceiptOpen;
-      syncBuiltinESMExports();
+      delete portablePinAuthorityTestHooks.beforeReceiptCreate;
     }
 
     const emptyRoot = await temporaryRoot();

@@ -1427,6 +1427,13 @@ export declare const portableOperationStageSchema: z.ZodEnum<{
     prepared: "prepared";
 }>;
 export type PortableOperationStage = z.infer<typeof portableOperationStageSchema>;
+export declare const portableOperationIntentSchema: z.ZodEnum<{
+    new: "new";
+    upgrade: "upgrade";
+    refresh: "refresh";
+    repair: "repair";
+}>;
+export type PortableOperationIntent = z.infer<typeof portableOperationIntentSchema>;
 export declare const PORTABLE_MAP_PUBLICATION_STAGES: readonly ["publishing", "index-committed", "cleanup"];
 export declare const portablePublicationStageSchema: z.ZodEnum<{
     publishing: "publishing";
@@ -1448,6 +1455,12 @@ export declare const portableOperationMetadataSchema: z.ZodObject<{
     rootFingerprint: z.ZodOptional<z.ZodString>;
     observedMarkerHash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     packetBudgetBytes: z.ZodOptional<z.ZodNumber>;
+    intent: z.ZodOptional<z.ZodEnum<{
+        new: "new";
+        upgrade: "upgrade";
+        refresh: "refresh";
+        repair: "repair";
+    }>>;
     repair: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<false>, z.ZodObject<{
         authorized: z.ZodLiteral<true>;
         previousIndexHash: z.ZodNullable<z.ZodString>;
@@ -1476,6 +1489,12 @@ export declare const portablePreparedOperationMetadataSchema: z.ZodObject<{
     rootFingerprint: z.ZodOptional<z.ZodString>;
     observedMarkerHash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     packetBudgetBytes: z.ZodOptional<z.ZodNumber>;
+    intent: z.ZodOptional<z.ZodEnum<{
+        new: "new";
+        upgrade: "upgrade";
+        refresh: "refresh";
+        repair: "repair";
+    }>>;
     repair: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<false>, z.ZodObject<{
         authorized: z.ZodLiteral<true>;
         previousIndexHash: z.ZodNullable<z.ZodString>;

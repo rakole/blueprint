@@ -3,6 +3,11 @@ export declare const PORTABLE_PIN_AUTHORITY_ROOT = ".blueprint/codebase-operatio
 export declare const PORTABLE_PIN_AUTHORITY_KEY_FILE = "owner.key";
 export declare const PORTABLE_PIN_AUTHORITY_RECEIPTS_ROOT = "receipts";
 export declare const PORTABLE_PIN_RECEIPT_VERSION: 1;
+/** Deterministic race seams for the descriptor-anchoring regression coverage. */
+export declare const portablePinAuthorityTestHooks: {
+    beforeOwnerKeyCreate?: () => Promise<void> | void;
+    beforeReceiptCreate?: () => Promise<void> | void;
+};
 export type PortablePinAuthorityRootIdentity = {
     readonly path: string;
     readonly realPath: string;

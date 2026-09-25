@@ -31,6 +31,12 @@ For explicit portable output, call the same tool with `formatVersion: 1` and
 `intent: "new" | "upgrade" | "refresh" | "repair"`. Prepare returns an opaque
 `operationId`, a bounded deterministic packet, and a continuation object whose
 opaque `cursor` is passed back with the same operation id until `hasMore` is false.
+`new` requires no portable root, compatibility view, or pending marker; it never
+adopts or replaces existing output. `upgrade` requires a complete verified legacy
+seven-view bundle and no portable root. `refresh` requires the current portable
+INDEX and its sealed generation to verify. `repair` requires the exact returned
+repair basis and only resumes that captured state. Submit must echo the prepared
+intent exactly; a different intent is rejected.
 The prepare-time source/target basis is the portable prepared CAS. A repair must
 use the exact returned basis object: `authorized: true`, `previousIndexHash`, the
 seven `targetHashes`, and `observedMarkerHash`. Do not compute replacement hashes

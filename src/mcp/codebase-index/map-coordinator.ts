@@ -3,6 +3,7 @@ import * as z from "zod/v4";
 
 import {CODEBASE_DOCUMENT_IDS} from "../codebase-authoring.js";
 import {ensureRepoRoot, inspectBlueprintArtifacts, inspectBootstrapArtifacts} from "../tools/artifacts.js";
+import {scrubLegacyCodebaseFailureLog} from "../write-failure-log.js";
 import {
   PORTABLE_MAP_FORMAT_VERSION,
   generationLocalIdSchema,
@@ -246,6 +247,7 @@ export async function blueprintPortableMapPrepare(raw: unknown): Promise<PublicR
   if (!parsed.success) return fixedFailure();
   try {
     const root = await ensureRepoRoot(parsed.data.cwd);
+    await scrubLegacyCodebaseFailureLog(root);
     if (parsed.data.operationId) {
       const next = await readPortableOperationReceipt({repositoryRoot: root, operationId: parsed.data.operationId, ...(parsed.data.cursor === undefined ? {} : {cursor: parsed.data.cursor})});
       const output = receipt(next);
@@ -257,6 +259,7 @@ export async function blueprintPortableMapPrepare(raw: unknown): Promise<PublicR
     const prepared = await preparePortableOperation({
       repositoryRoot: root,
       packetBudgetBytes: PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES,
+      intent: parsed.data.intent,
       ...(parsed.data.intent === "repair" && parsed.data.repair ? {repair: parsed.data.repair} : {})
     });
     if (!prepared.ok) return {status: prepared.diagnostics[0]?.code === "unknown-marker" ? "conflict" : prepared.status, saved: false, committed: false, issues: diagnosticsFor(prepared.diagnostics), warnings: []};
@@ -304,6 +307,7 @@ export async function blueprintPortableMapSubmit(raw: unknown): Promise<PublicRe
   if (modelBytes(model) > MAX_PUBLIC_MODEL_BYTES) return fixedFailure("invalid", "model-too-large");
   try {
     const root = await ensureRepoRoot(input.cwd);
+    await scrubLegacyCodebaseFailureLog(root);
     const modelDigest = modelHash(model);
     // Read the durable operation identity before readiness gating. A known
     // exact committed operation is recovery work: it must be able to finish
@@ -331,6 +335,7 @@ export async function blueprintPortableMapSubmit(raw: unknown): Promise<PublicRe
     }
     const loaded = await loadPortableOperation({repositoryRoot: root, operationId: input.operationId});
     if (!loaded.ok) return {status: loaded.status, saved: false, committed: false, operationId: input.operationId, issues: diagnosticsFor(loaded.diagnostics), warnings: []};
+    if (input.intent !== loaded.metadata.intent) return {status: "conflict", saved: false, committed: false, operationId: input.operationId, generationId: loaded.metadata.generationId, issues: [{code: "publication-conflict", message: "The submitted intent does not match the prepared operation."}], warnings: []};
     const fresh = committedRetry
       ? {ok: true as const, status: "fresh" as const, metadata: loaded.metadata, extraction: loaded.extraction}
       : await revalidatePortableOperation({repositoryRoot: root, operationId: input.operationId});

@@ -90,5 +90,7 @@ export type ParserAssetManifest = {
 export declare function parseSource(language: ParserLanguageId, source: Uint8Array | string): Promise<SyntaxTreeView>;
 /** Parse and dispose deterministically, including when the adapter throws. */
 export declare function withParsedSource<T>(language: ParserLanguageId, source: Uint8Array | string, callback: (tree: SyntaxTreeView) => T | Promise<T>): Promise<T>;
-/** Return a copy of the verified pinned asset metadata for diagnostics/tests. */
+/** Return verified pinned metadata for every extraction freshness capture. */
+export declare function getVerifiedParserAssetManifest(): Promise<ParserAssetManifest>;
+/** Backwards-compatible diagnostics/test accessor with the same verification. */
 export declare function getParserAssetManifest(): Promise<ParserAssetManifest>;

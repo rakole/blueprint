@@ -718,6 +718,8 @@ function enforcePreviousGenerationSemantics(
 export const PORTABLE_MAP_OPERATION_STAGES = ["prepared"] as const;
 export const portableOperationStageSchema = z.enum(PORTABLE_MAP_OPERATION_STAGES);
 export type PortableOperationStage = z.infer<typeof portableOperationStageSchema>;
+export const portableOperationIntentSchema = z.enum(["new", "upgrade", "refresh", "repair"]);
+export type PortableOperationIntent = z.infer<typeof portableOperationIntentSchema>;
 
 export const PORTABLE_MAP_PUBLICATION_STAGES = [
   "publishing", "index-committed", "cleanup"
@@ -737,6 +739,7 @@ export const portableOperationMetadataSchema = z.strictObject({
   rootFingerprint: sha256Schema.optional(),
   observedMarkerHash: sha256Schema.nullable().optional(),
   packetBudgetBytes: safePositiveIntegerSchema.optional(),
+  intent: portableOperationIntentSchema.optional(),
   repair: z.union([z.literal(false), z.strictObject({
     authorized: z.literal(true),
     previousIndexHash: sha256Schema.nullable(),

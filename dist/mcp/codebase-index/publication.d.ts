@@ -35,6 +35,8 @@ export type PortablePublicationPreflight = {
     readonly previousTargetHashes: PortableTargetHashes;
     readonly observedMarkerHash: string | null;
     readonly legacyBackup: boolean;
+    /** The prepare-time replacement authority, retained by operation metadata. */
+    readonly intent: "new" | "upgrade" | "refresh" | "repair";
     /** True only when the owning runtime explicitly requested fresh repair. */
     readonly repair: boolean;
 };
@@ -62,6 +64,11 @@ export type CapturePortablePublicationInput = {
     readonly transactionId?: string;
     readonly generationId: string;
     readonly sourceBasis: PortableSourceBasis;
+    readonly intent?: PortablePublicationPreflight["intent"];
+    /** The stored prepare-time marker identity for an exact-operation retry. */
+    readonly observedMarkerHash?: string | null;
+    /** Internal only: exact prepared authority permitted to resume its own marker. */
+    readonly resumePreflight?: PortablePublicationPreflight;
     readonly verifyFreshness?: PortableFreshnessCheck;
     /**
      * Repair is an explicit authority. It binds the observed INDEX, target, and

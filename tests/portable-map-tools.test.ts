@@ -12,6 +12,7 @@ import {portablePublicationTestHooks} from "../src/mcp/codebase-index/publicatio
 import {CODEBASE_DOCUMENT_IDS} from "../src/mcp/codebase-authoring.js";
 import {createToolResponseContent} from "../src/mcp/public-response.js";
 import {sanitizeToolResultForPublicResponse} from "../src/mcp/response-sanitizer.js";
+import {MCP_WRITE_FAILURE_LOG_PATH} from "../src/mcp/write-failure-log.js";
 
 const execFile = promisify(execFileCallback);
 
@@ -82,12 +83,25 @@ test("portable prepare returns a bounded public receipt and reloadable continuat
 
 test("portable submit publishes, retries exactly, and rejects changed model identity", async t => {
   const root = await fixture(t, 12);
+  const logPath = path.join(root, MCP_WRITE_FAILURE_LOG_PATH);
+  const rejected = "PORTABLE_REJECTED_CONTENT_MUST_BE_SCRUBBED";
+  const unrelated = ' { "toolName" : "blueprint_state_update", "request" : { "content": "preserve exact spacing" } }\r\n';
+  const legacyRow = JSON.stringify({toolName: "blueprint_map_prepare", request: {content: rejected}, result: {issues: [rejected]}});
+  await mkdir(path.dirname(logPath), {recursive: true});
+  await writeFile(logPath, `${unrelated}${legacyRow}\r\n`);
   const prepared = await blueprintMapPrepare({cwd: root, formatVersion: 1});
   assert.equal(prepared.status, "ready", JSON.stringify(prepared));
+  const afterPrepare = await readFile(logPath, "utf8");
+  assert.equal(afterPrepare.includes(rejected), false, "portable prepare must migrate old rejected map content");
+  assert.equal(afterPrepare.startsWith(unrelated), true, "unrelated log bytes remain intact");
   const model = await completeModel(root, prepared.operationId, prepared.generationId);
+  await writeFile(logPath, `${unrelated}${JSON.stringify({toolName: "blueprint_map_submit", request: {content: rejected}})}\r\n`);
   const published = await blueprintMapSubmit({cwd: root, formatVersion: 1, operationId: prepared.operationId, model});
   assert.equal(published.status, "published", JSON.stringify(published));
   assert.equal(published.committed, true);
+  const afterSubmit = await readFile(logPath, "utf8");
+  assert.equal(afterSubmit.includes(rejected), false, "portable submit must migrate old rejected map content");
+  assert.equal(afterSubmit.startsWith(unrelated), true, "unrelated log bytes remain intact");
   assert.match(await readFile(path.join(root, ".blueprint", "codebase", "INDEX.md"), "utf8"), /blueprint:portable-root-descriptor/);
 
   const retry = await blueprintMapSubmit({cwd: root, formatVersion: 1, operationId: prepared.operationId, model});
@@ -97,6 +111,60 @@ test("portable submit publishes, retries exactly, and rejects changed model iden
     model: await completeModel(root, prepared.operationId, prepared.generationId, "Changed model identity.")});
   assert.equal(changed.status, "conflict", JSON.stringify(changed));
   assert.doesNotMatch(JSON.stringify(changed), /Changed model identity/);
+});
+
+test("portable operation intent is bound to a prepared state and controls predecessor authority", async t => {
+  const root = await fixture(t, 4);
+  const prepared = await blueprintMapPrepare({cwd: root, formatVersion: 1, intent: "new"});
+  assert.equal(prepared.status, "ready", JSON.stringify(prepared));
+  const model = await completeModel(root, prepared.operationId, prepared.generationId);
+  const mismatched = await blueprintMapSubmit({cwd: root, formatVersion: 1, operationId: prepared.operationId, intent: "refresh", model});
+  assert.equal(mismatched.status, "conflict", JSON.stringify(mismatched));
+  const published = await blueprintMapSubmit({cwd: root, formatVersion: 1, operationId: prepared.operationId, intent: "new", model});
+  assert.equal(published.status, "published", JSON.stringify(published));
+
+  const ambiguousNew = await blueprintMapPrepare({cwd: root, formatVersion: 1});
+  assert.equal(ambiguousNew.status, "conflict", JSON.stringify(ambiguousNew));
+  const refresh = await blueprintMapPrepare({cwd: root, formatVersion: 1, intent: "refresh"});
+  assert.equal(refresh.status, "ready", JSON.stringify(refresh));
+  const refreshed = await blueprintMapSubmit({
+    cwd: root,
+    formatVersion: 1,
+    operationId: refresh.operationId,
+    intent: "refresh",
+    model: await completeModel(root, refresh.operationId, refresh.generationId, "Refreshed portable map from fresh evidence.")
+  });
+  assert.equal(refreshed.status, "published", JSON.stringify(refreshed));
+
+  const legacyRoot = await fixture(t, 3);
+  await mkdir(path.join(legacyRoot, ".blueprint", "codebase"), {recursive: true});
+  await writeFile(path.join(legacyRoot, ".blueprint", "codebase", "STACK.md"), "# Legacy map\n");
+  const legacyNew = await blueprintMapPrepare({cwd: legacyRoot, formatVersion: 1});
+  assert.equal(legacyNew.status, "conflict", JSON.stringify(legacyNew));
+});
+
+test("an exact public portable submit resumes its own precommit marker", async t => {
+  const root = await fixture(t, 2);
+  const prepared = await blueprintMapPrepare({cwd: root, formatVersion: 1, intent: "new"});
+  assert.equal(prepared.status, "ready", JSON.stringify(prepared));
+  const model = await completeModel(root, prepared.operationId, prepared.generationId);
+  portablePublicationTestHooks.afterMarkerWrite = () => { throw new Error("leave exact-operation marker"); };
+  try {
+    const partial = await blueprintMapSubmit({cwd: root, formatVersion: 1, operationId: prepared.operationId, intent: "new", model});
+    assert.equal(partial.status, "partial", JSON.stringify(partial));
+    assert.equal(partial.committed, false);
+  } finally {
+    delete portablePublicationTestHooks.afterMarkerWrite;
+  }
+  // Simulate an interruption after one staged compatibility write. The exact
+  // retry may reconcile only this operation's marker and stored CAS basis.
+  const stagedStack = await readFile(path.join(root, ".blueprint", "codebase", "generations", prepared.generationId, "compatibility", "STACK.md"));
+  await writeFile(path.join(root, ".blueprint", "codebase", "STACK.md"), stagedStack);
+  const fresh = await revalidatePortableOperation({repositoryRoot: root, operationId: prepared.operationId});
+  assert.equal(fresh.ok, true, JSON.stringify(fresh));
+  const resumed = await blueprintMapSubmit({cwd: root, formatVersion: 1, operationId: prepared.operationId, intent: "new", model});
+  assert.equal(resumed.committed, true, JSON.stringify(resumed));
+  assert.ok(resumed.status === "published" || resumed.status === "committed" || resumed.status === "reused", JSON.stringify(resumed));
 });
 
 test("portable rejected input returns fixed diagnostics without echoing sentinels", async t => {

@@ -1,14 +1,12 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import {
-  chmod,
   lstat,
-  open,
-  rename,
-  unlink
+  open
 } from "node:fs/promises";
 import path from "node:path";
 import {capturePathSnapshot, samePathSnapshot, type PathSnapshot} from "./path-policy.js";
+import {atomicDescriptorWrite} from "./descriptor-mutation.js";
 
 /**
  * The text is intentionally small.  It is a pointer to the generated map,
@@ -592,8 +590,6 @@ async function atomicReplace(
   bytes: Buffer,
   expectedHash: string
 ): Promise<InstructionLinkFailure | null> {
-  const temporaryPath = `${target.absolutePath}.blueprint-link-${randomUUID()}.tmp`;
-  let handle: Awaited<ReturnType<typeof open>> | undefined;
   try {
     await instructionLinkTestHooks.beforeTempCreate?.(repositoryRoot, target.relativePath);
     const beforeCreate = await recheckTarget(repositoryRoot, target.relativePath, expectedHash);
@@ -606,35 +602,24 @@ async function atomicReplace(
         target.relativePath
       );
     }
-    handle = await open(temporaryPath, "wx", target.mode);
-    await handle.writeFile(bytes);
-    await handle.sync();
-    await handle.close();
-    handle = undefined;
-    await chmod(temporaryPath, target.mode);
-
-    // Recheck immediately before rename.  Hash and inode checks make a
-    // concurrent edit or replacement a visible conflict instead of a lost
-    // update.  The rename itself remains atomic within the target directory.
-    await instructionLinkTestHooks.beforeFinalRecheck?.(repositoryRoot, target.relativePath);
-    const current = await inspectSafeTarget(repositoryRoot, target.relativePath);
-    if ("status" in current) {
-      return current;
-    }
-    if (
-      current.hash !== expectedHash ||
-      current.device !== target.device ||
-      current.inode !== target.inode ||
-      !samePathSnapshot(current.snapshot, target.snapshot)
-    ) {
+    const result = await atomicDescriptorWrite({
+      root: repositoryRoot,
+      relative: target.relativePath,
+      bytes,
+      overwrite: true,
+      mode: target.mode,
+      preserveMode: true,
+      expected: {device: target.device, inode: target.inode, sha256: expectedHash},
+      hooks: {afterTempCreate: () => instructionLinkTestHooks.beforeFinalRecheck?.(repositoryRoot, target.relativePath)}
+    });
+    if (result !== "written") {
       return failure(
         "hash-conflict",
-        "The instruction file changed while the link was being prepared, so the pointer was not applied.",
+        "The instruction file or its repository ancestry changed while the link was being applied.",
         "Prepare the instruction link again and apply it with the newly captured expected hash.",
         target.relativePath
       );
     }
-    await rename(temporaryPath, target.absolutePath);
     return null;
   } catch {
     return failure(
@@ -643,11 +628,6 @@ async function atomicReplace(
       "Check that the existing instruction file and its parent directory are writable, then prepare and apply again.",
       target.relativePath
     );
-  } finally {
-    if (handle) {
-      await handle.close().catch(() => undefined);
-    }
-    await unlink(temporaryPath).catch(() => undefined);
   }
 }
 

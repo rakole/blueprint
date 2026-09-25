@@ -43,6 +43,10 @@ import {
   capturePortablePublicationPreflight,
   type PortablePublicationPreflight
 } from "./publication.js";
+import {
+  atomicDescriptorWrite,
+  ensureDescriptorDirectory
+} from "./descriptor-mutation.js";
 
 /** Operational state intentionally lives beside, but outside, the portable bundle. */
 export const PORTABLE_OPERATIONS_ROOT = ".blueprint/codebase-operations";
@@ -77,6 +81,8 @@ const boundedPath = z.string().min(1).max(4096).refine(value => !/[\0]/.test(val
 const opaqueSecret = z.string().regex(/^[a-f0-9]{64}$/);
 const timestamp = z.string().datetime({offset: true});
 const digest = portableSha256Schema;
+const portableIntentSchema = z.enum(["new", "upgrade", "refresh", "repair"]);
+export type PortableOperationIntent = z.infer<typeof portableIntentSchema>;
 
 const identitySchema = z.strictObject({
   path: boundedPath,
@@ -144,6 +150,7 @@ const publicationSchema = z.strictObject({
   previousTargetHashes: portableTargetHashesSchema,
   observedMarkerHash: digest.nullable(),
   legacyBackup: z.boolean(),
+  intent: portableIntentSchema,
   repair: z.union([
     z.literal(false),
     z.strictObject({
@@ -166,6 +173,7 @@ const metadataSchema = z.strictObject({
   previousIndexHash: digest.nullable(),
   rootFingerprint: digest,
   observedMarkerHash: digest.nullable(),
+  intent: portableIntentSchema,
   packetBudgetBytes: safePositiveInteger,
   repair: publicationSchema.shape.repair,
   sourceBasis: portableSourceBasisSchema,
@@ -237,6 +245,7 @@ const operationMarkerSchema = z.strictObject({
   transactionId: generationLocalIdSchema,
   previousGenerationId: generationLocalIdSchema.nullable(), previousIndexHash: digest.nullable(),
   rootFingerprint: digest, observedMarkerHash: digest.nullable(), packetBudgetBytes: safePositiveInteger, repair: publicationSchema.shape.repair,
+  intent: portableIntentSchema,
   sourceBasis: portableSourceBasisSchema, targetHashes: portableTargetHashesSchema, createdAt: timestamp
 });
 
@@ -434,22 +443,7 @@ async function captureLiteralRoot(repositoryRoot: string): Promise<RootIdentity 
 }
 
 async function ensureLiteralDirectory(repositoryRoot: string, relative: string): Promise<boolean> {
-  const root = await captureLiteralRoot(repositoryRoot);
-  if (!root) return false;
-  let current = repositoryRoot;
-  for (const segment of relative.split("/")) {
-    if (!segment || segment === "." || segment === ".." || segment.includes("\0")) return false;
-    current = path.join(current, segment);
-    const before = await fs.lstat(current).catch(() => null);
-    if (before) {
-      if (before.isSymbolicLink() || !before.isDirectory()) return false;
-      continue;
-    }
-    await fs.mkdir(current).catch(() => undefined);
-    const after = await fs.lstat(current).catch(() => null);
-    if (!after || after.isSymbolicLink() || !after.isDirectory()) return false;
-  }
-  return sameRoot(root, (await captureLiteralRoot(repositoryRoot))!);
+  return ensureDescriptorDirectory(repositoryRoot, relative);
 }
 
 async function assertLiteralRelativePath(repositoryRoot: string, relative: string, allowMissingLeaf = false): Promise<boolean> {
@@ -506,57 +500,19 @@ async function readLiteralFile(repositoryRoot: string, relative: string): Promis
 }
 
 async function atomicWriteLiteral(repositoryRoot: string, relative: string, bytes: Uint8Array, overwrite: boolean, mode = 0o666): Promise<void> {
-  if (!(await assertLiteralRelativePath(repositoryRoot, path.posix.dirname(relative), false))) throw new Error("unsafe");
-  if (!(await assertLiteralRelativePath(repositoryRoot, relative, true))) throw new Error("unsafe");
-  const absolute = path.join(repositoryRoot, relative);
-  const parent = path.dirname(absolute);
-  const parentRelative = path.posix.dirname(relative);
-  const chain = await captureDirectoryChain(repositoryRoot, parentRelative);
-  if (!chain) throw new Error("unsafe");
-  const parentStat = await fs.lstat(parent);
-  if (parentStat.isSymbolicLink() || !parentStat.isDirectory()) throw new Error("unsafe");
-  const parentHandle = await fs.open(parent, fsConstants.O_RDONLY | (fsConstants.O_DIRECTORY ?? 0) | (fsConstants.O_NOFOLLOW ?? 0)).catch(() => null);
-  if (!parentHandle) throw new Error("unsafe");
-  const anchored = (name: string): string => process.platform === "linux" ? `/proc/self/fd/${parentHandle.fd}/${name}` : path.join(parent, name);
-  const before = await fs.lstat(anchored(path.basename(relative))).catch(error => {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw error;
-  });
-  if (before?.isSymbolicLink() || before && !before.isFile()) throw new Error("unsafe");
-  if (before && !overwrite) throw new Error("conflict");
-  const tempName = `.${path.basename(relative)}.tmp-${process.pid}-${randomBytes(8).toString("hex")}`;
-  const temp = anchored(tempName);
-  let ownedTemp: ReturnType<typeof fileIdentity> | null = null;
-  try {
-    await portableOperationTestHooks.beforeAtomicWrite?.(relative);
-    if (!sameDirectoryChain(chain, await captureDirectoryChain(repositoryRoot, parentRelative))) throw new Error("unsafe");
-    await fs.writeFile(temp, bytes, {flag: "wx", mode});
-    const created = await fs.lstat(temp);
-    if (created.isSymbolicLink() || !created.isFile()) throw new Error("unsafe");
-    ownedTemp = fileIdentity(created);
-    await portableOperationTestHooks.afterTempWrite?.(relative);
-    if (!sameDirectoryChain(chain, await captureDirectoryChain(repositoryRoot, parentRelative))) throw new Error("unsafe");
-    const current = await fs.lstat(anchored(path.basename(relative))).catch(error => {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-      throw error;
-    });
-    if (before && (!current || !sameFileIdentity(fileIdentity(before), fileIdentity(current)))) throw new Error("conflict");
-    if (!before && current) throw new Error("conflict");
-    if (!sameDirectoryChain(chain, await captureDirectoryChain(repositoryRoot, parentRelative))) throw new Error("unsafe");
-    await fs.rename(temp, anchored(path.basename(relative)));
-    if (!sameDirectoryChain(chain, await captureDirectoryChain(repositoryRoot, parentRelative))) throw new Error("unsafe");
-    const after = await fs.lstat(anchored(path.basename(relative)));
-    if (after.isSymbolicLink() || !after.isFile()) throw new Error("unsafe");
-    if (sha256(await fs.readFile(anchored(path.basename(relative)))) !== sha256(bytes)) throw new Error("integrity");
-  } finally {
-    if (ownedTemp) {
-      const currentTemp = await fs.lstat(temp).catch(() => null);
-      if (currentTemp && currentTemp.isFile() && !currentTemp.isSymbolicLink() && sameFileIdentity(ownedTemp, fileIdentity(currentTemp))) {
-        await fs.rm(temp, {force: true}).catch(() => undefined);
-      }
+  const result = await atomicDescriptorWrite({
+    root: repositoryRoot,
+    relative,
+    bytes,
+    overwrite,
+    mode,
+    hooks: {
+      beforeWrite: () => portableOperationTestHooks.beforeAtomicWrite?.(relative),
+      afterTempCreate: () => portableOperationTestHooks.afterTempWrite?.(relative)
     }
-    await parentHandle.close().catch(() => undefined);
-  }
+  });
+  if (result === "conflict") throw new Error("conflict");
+  if (result !== "written") throw new Error("unsafe");
 }
 
 function refFor(file: string, bytes: Uint8Array) {
@@ -682,6 +638,7 @@ async function loadPortableOperationUnlocked(repositoryRoot: string, operationId
       marker.transactionId !== metadata.transactionId || marker.rootFingerprint !== metadata.rootFingerprint ||
       marker.packetBudgetBytes !== metadata.packetBudgetBytes ||
       marker.observedMarkerHash !== metadata.observedMarkerHash || JSON.stringify(marker.repair) !== JSON.stringify(metadata.repair) ||
+      marker.intent !== metadata.intent ||
       JSON.stringify(marker.sourceBasis) !== JSON.stringify(metadata.sourceBasis) ||
       JSON.stringify(marker.targetHashes) !== JSON.stringify(metadata.targetHashes) || marker.previousGenerationId !== metadata.previousGenerationId ||
       marker.previousIndexHash !== metadata.previousIndexHash) return fixedFailure("invalid-state", "integrity-failure", operationId, metadata.generationId);
@@ -692,7 +649,8 @@ async function loadPortableOperationUnlocked(repositoryRoot: string, operationId
       publication.rootFingerprint !== metadata.rootFingerprint || publication.previousGenerationId !== metadata.previousGenerationId ||
       publication.previousIndexHash !== metadata.previousIndexHash ||
       JSON.stringify(publication.previousTargetHashes) !== JSON.stringify(metadata.targetHashes) ||
-      publication.observedMarkerHash !== metadata.observedMarkerHash || JSON.stringify(publication.repair) !== JSON.stringify(metadata.repair)) {
+      publication.observedMarkerHash !== metadata.observedMarkerHash || publication.intent !== metadata.intent ||
+      JSON.stringify(publication.repair) !== JSON.stringify(metadata.repair)) {
     return fixedFailure("invalid-state", "integrity-failure", operationId, metadata.generationId);
   }
 
@@ -753,6 +711,7 @@ function publicationBasisFromPreflight(value: PortablePublicationPreflight, repa
     previousTargetHashes: value.previousTargetHashes,
     observedMarkerHash: value.observedMarkerHash,
     legacyBackup: value.legacyBackup,
+    intent: value.intent,
     repair: repair ? {
       authorized: true,
       previousIndexHash: repair.previousIndexHash,
@@ -777,6 +736,7 @@ export function portableOperationPublicationPreflight(metadata: PortablePrepared
     previousTargetHashes: publication.previousTargetHashes,
     observedMarkerHash: publication.observedMarkerHash,
     legacyBackup: publication.legacyBackup,
+    intent: publication.intent,
     repair: publication.repair !== false
   };
 }
@@ -821,6 +781,7 @@ function operationMarker(metadata: PortablePreparedOperationMetadata): PortableO
     observedMarkerHash: metadata.observedMarkerHash,
     packetBudgetBytes: metadata.packetBudgetBytes,
     repair: metadata.repair,
+    intent: metadata.intent,
     createdAt: metadata.createdAt
   };
 }
@@ -890,7 +851,7 @@ function comparePublication(left: StoredPublicationBasis, right: StoredPublicati
   if (left.repositoryRoot !== right.repositoryRoot || left.operationId !== right.operationId || left.transactionId !== right.transactionId ||
       left.generationId !== right.generationId || JSON.stringify(left.sourceBasis) !== JSON.stringify(right.sourceBasis) ||
       left.rootFingerprint !== right.rootFingerprint) return "stale-root";
-  if (left.previousIndexHash !== right.previousIndexHash || left.previousGenerationId !== right.previousGenerationId ||
+  if (left.intent !== right.intent || left.previousIndexHash !== right.previousIndexHash || left.previousGenerationId !== right.previousGenerationId ||
       left.observedMarkerHash !== right.observedMarkerHash ||
       JSON.stringify(left.repair) !== JSON.stringify(right.repair) ||
       CODEBASE_DOCUMENT_IDS.some(id => left.previousTargetHashes[id] !== right.previousTargetHashes[id])) return "stale-target";
@@ -921,6 +882,9 @@ async function revalidateLoaded(repositoryRoot: string, loaded: PortableOperatio
     transactionId: loaded.metadata.publication.transactionId,
     generationId: loaded.metadata.generationId,
     sourceBasis: loaded.metadata.sourceBasis,
+    intent: loaded.metadata.intent,
+    observedMarkerHash: loaded.metadata.observedMarkerHash,
+    resumePreflight: portableOperationPublicationPreflight(loaded.metadata),
     verifyFreshness: () => true,
     ...(repairBasis ? {repair: {authorized: true}} : {})
   });
@@ -951,6 +915,7 @@ async function touchMetadata(repositoryRoot: string, metadata: PortablePreparedO
 
 export async function preparePortableOperation(input: RepositoryInput & NowInput & {
   readonly repair?: PortableOperationRepairInput;
+  readonly intent?: PortableOperationIntent;
   /** Internal callers may reserve more room for their public response envelope. */
   readonly packetBudgetBytes?: number;
 } = {}): Promise<PortablePrepareOperationResult> {
@@ -961,6 +926,8 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
   const operationId = generatedOpaqueId("op");
   const generationId = generatedOpaqueId("gen");
   const transactionId = generatedOpaqueId("tx");
+  const intent = input.intent ?? (input.repair ? "repair" : "new");
+  if (!portableIntentSchema.safeParse(intent).success || (intent === "repair") !== Boolean(input.repair)) return fixedFailure("invalid", "invalid-input", operationId, generationId);
   // Create the lock parent before consulting the durable cache.  The cache is
   // an operational optimization; inability to read it must remain a safe cold
   // fallback and must never block a valid prepared operation.
@@ -978,6 +945,7 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
     transactionId,
     generationId,
     sourceBasis,
+    intent,
     verifyFreshness: () => true,
     ...(input.repair ? {repair: {authorized: true}} : {})
   });
@@ -1006,6 +974,7 @@ export async function preparePortableOperation(input: RepositoryInput & NowInput
     previousIndexHash: preflight.previousIndexHash,
     rootFingerprint: preflight.rootFingerprint,
     observedMarkerHash: preflight.observedMarkerHash,
+    intent,
     packetBudgetBytes,
     repair: publication.repair,
     sourceBasis,

@@ -28,6 +28,13 @@ export declare const portableOperationTestHooks: {
     beforeAtomicWrite?: (relativePath: string) => Promise<void> | void;
     afterTempWrite?: (relativePath: string) => Promise<void> | void;
 };
+declare const portableIntentSchema: z.ZodEnum<{
+    new: "new";
+    upgrade: "upgrade";
+    refresh: "refresh";
+    repair: "repair";
+}>;
+export type PortableOperationIntent = z.infer<typeof portableIntentSchema>;
 declare const metadataSchema: z.ZodObject<{
     version: z.ZodLiteral<2>;
     operationId: z.ZodString;
@@ -38,6 +45,12 @@ declare const metadataSchema: z.ZodObject<{
     previousIndexHash: z.ZodNullable<z.ZodString>;
     rootFingerprint: z.ZodString;
     observedMarkerHash: z.ZodNullable<z.ZodString>;
+    intent: z.ZodEnum<{
+        new: "new";
+        upgrade: "upgrade";
+        refresh: "refresh";
+        repair: "repair";
+    }>;
     packetBudgetBytes: z.ZodNumber;
     repair: z.ZodUnion<readonly [z.ZodLiteral<false>, z.ZodObject<{
         authorized: z.ZodLiteral<true>;
@@ -114,6 +127,12 @@ declare const metadataSchema: z.ZodObject<{
         previousTargetHashes: z.ZodObject<Record<"stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns", z.ZodNullable<z.ZodString>>, z.core.$strict>;
         observedMarkerHash: z.ZodNullable<z.ZodString>;
         legacyBackup: z.ZodBoolean;
+        intent: z.ZodEnum<{
+            new: "new";
+            upgrade: "upgrade";
+            refresh: "refresh";
+            repair: "repair";
+        }>;
         repair: z.ZodUnion<readonly [z.ZodLiteral<false>, z.ZodObject<{
             authorized: z.ZodLiteral<true>;
             previousIndexHash: z.ZodNullable<z.ZodString>;
@@ -258,6 +277,7 @@ export declare function writePortableIncrementalCache(input: RepositoryInput & {
 export declare function portableOperationPublicationPreflight(metadata: PortablePreparedOperationMetadata): PortablePublicationPreflight;
 export declare function preparePortableOperation(input?: RepositoryInput & NowInput & {
     readonly repair?: PortableOperationRepairInput;
+    readonly intent?: PortableOperationIntent;
     /** Internal callers may reserve more room for their public response envelope. */
     readonly packetBudgetBytes?: number;
 }): Promise<PortablePrepareOperationResult>;
@@ -329,6 +349,7 @@ export declare function readPortableOperationMetadata(input: RepositoryInput & {
         previousIndexHash: string | null;
         rootFingerprint: string;
         observedMarkerHash: string | null;
+        intent: "new" | "upgrade" | "refresh" | "repair";
         packetBudgetBytes: number;
         repair: false | {
             authorized: true;
@@ -429,6 +450,7 @@ export declare function readPortableOperationMetadata(input: RepositoryInput & {
             };
             observedMarkerHash: string | null;
             legacyBackup: boolean;
+            intent: "new" | "upgrade" | "refresh" | "repair";
             repair: false | {
                 authorized: true;
                 previousIndexHash: string | null;
@@ -489,6 +511,7 @@ export declare function readPortableOperationExtraction(input: RepositoryInput &
         previousIndexHash: string | null;
         rootFingerprint: string;
         observedMarkerHash: string | null;
+        intent: "new" | "upgrade" | "refresh" | "repair";
         packetBudgetBytes: number;
         repair: false | {
             authorized: true;
@@ -589,6 +612,7 @@ export declare function readPortableOperationExtraction(input: RepositoryInput &
             };
             observedMarkerHash: string | null;
             legacyBackup: boolean;
+            intent: "new" | "upgrade" | "refresh" | "repair";
             repair: false | {
                 authorized: true;
                 previousIndexHash: string | null;

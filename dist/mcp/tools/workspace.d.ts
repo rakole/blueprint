@@ -292,9 +292,9 @@ export declare const workspaceToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         operation: z.ZodEnum<{
             complete: "complete";
+            resume: "resume";
             create: "create";
             switch: "switch";
-            resume: "resume";
         }>;
         workstream: z.ZodString;
         confirmed: z.ZodOptional<z.ZodBoolean>;
@@ -332,8 +332,8 @@ export declare const workspaceToolDefinitions: ({
             }>>;
             outcome: z.ZodOptional<z.ZodEnum<{
                 blocked: "blocked";
-                applied: "applied";
                 conflict: "conflict";
+                applied: "applied";
                 recorded: "recorded";
             }>>;
             conflicts: z.ZodOptional<z.ZodArray<z.ZodString>>;
