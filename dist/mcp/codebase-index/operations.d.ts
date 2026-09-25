@@ -27,6 +27,8 @@ export declare const PORTABLE_INCREMENTAL_CACHE_KEY_FILE = "key.json";
 export declare const portableOperationTestHooks: {
     beforeAtomicWrite?: (relativePath: string) => Promise<void> | void;
     afterTempWrite?: (relativePath: string) => Promise<void> | void;
+    /** Runs after a successful owned-leaf publish, before the caller continues. */
+    afterAtomicWrite?: (relativePath: string) => Promise<void> | void;
 };
 declare const portableIntentSchema: z.ZodEnum<{
     new: "new";

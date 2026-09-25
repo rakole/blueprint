@@ -130,6 +130,8 @@ export type CapturePortablePublicationInput = {
   readonly observedMarkerHash?: string | null;
   /** Internal only: exact prepared authority permitted to resume its own marker. */
   readonly resumePreflight?: PortablePublicationPreflight;
+  /** Internal only: report drift from that stored exact preflight as stale. */
+  readonly revalidateExactPreflight?: boolean;
   readonly verifyFreshness?: PortableFreshnessCheck;
   /**
    * Repair is an explicit authority. It binds the observed INDEX, target, and
@@ -628,6 +630,10 @@ async function buildPreflight(input: CapturePortablePublicationInput, root: stri
       transactionId,
       generationId: input.generationId
     });
+  const exactPreflightDrifted = input.revalidateExactPreflight === true && Boolean(resume) && marker.kind === "absent" &&
+    (state.rootFingerprint !== resume!.rootFingerprint || state.indexHash !== resume!.previousIndexHash ||
+      CODEBASE_DOCUMENT_IDS.some(id => state.targetHashes[id] !== resume!.previousTargetHashes[id]));
+  if (exactPreflightDrifted) return failure("stale-target", "conflict");
   const hasLegacyBundle = state.indexBytes === null && (await legacyBackup(root, state)) !== null;
   const hasAnyLegacyTarget = CODEBASE_DOCUMENT_IDS.some(id => state.targetBytes[id] !== null);
   // An exact retry may observe its own partially staged target views. Its

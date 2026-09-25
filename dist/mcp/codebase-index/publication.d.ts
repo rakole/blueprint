@@ -69,6 +69,8 @@ export type CapturePortablePublicationInput = {
     readonly observedMarkerHash?: string | null;
     /** Internal only: exact prepared authority permitted to resume its own marker. */
     readonly resumePreflight?: PortablePublicationPreflight;
+    /** Internal only: report drift from that stored exact preflight as stale. */
+    readonly revalidateExactPreflight?: boolean;
     readonly verifyFreshness?: PortableFreshnessCheck;
     /**
      * Repair is an explicit authority. It binds the observed INDEX, target, and

@@ -73,6 +73,8 @@ export const PORTABLE_INCREMENTAL_CACHE_KEY_FILE = "key.json";
 export const portableOperationTestHooks: {
   beforeAtomicWrite?: (relativePath: string) => Promise<void> | void;
   afterTempWrite?: (relativePath: string) => Promise<void> | void;
+  /** Runs after a successful owned-leaf publish, before the caller continues. */
+  afterAtomicWrite?: (relativePath: string) => Promise<void> | void;
 } = {};
 
 const safeNonNegativeInteger = z.number().int().nonnegative().refine(Number.isSafeInteger, "Expected a safe integer.");
@@ -513,6 +515,7 @@ async function atomicWriteLiteral(repositoryRoot: string, relative: string, byte
   });
   if (result === "conflict") throw new Error("conflict");
   if (result !== "written") throw new Error("unsafe");
+  await portableOperationTestHooks.afterAtomicWrite?.(relative);
 }
 
 function refFor(file: string, bytes: Uint8Array) {
@@ -885,10 +888,15 @@ async function revalidateLoaded(repositoryRoot: string, loaded: PortableOperatio
     intent: loaded.metadata.intent,
     observedMarkerHash: loaded.metadata.observedMarkerHash,
     resumePreflight: portableOperationPublicationPreflight(loaded.metadata),
+    revalidateExactPreflight: true,
     verifyFreshness: () => true,
     ...(repairBasis ? {repair: {authorized: true}} : {})
   });
-  if (!("operationId" in target)) return fixedFailure(target.status === "conflict" ? "conflict" : "stale", target.diagnostics[0]?.code === "unknown-marker" ? "unknown-marker" : target.status === "conflict" ? "publication-conflict" : "stale-target", loaded.metadata.operationId, loaded.metadata.generationId);
+  if (!("operationId" in target)) {
+    const code = target.diagnostics[0]?.code;
+    if (code === "stale-target") return fixedFailure("stale", "stale-target", loaded.metadata.operationId, loaded.metadata.generationId);
+    return fixedFailure(target.status === "conflict" ? "conflict" : "stale", code === "unknown-marker" ? "unknown-marker" : target.status === "conflict" ? "publication-conflict" : "stale-target", loaded.metadata.operationId, loaded.metadata.generationId);
+  }
   const currentPublication = publicationBasisFromPreflight(target, repairBasis);
   const difference = comparePublication(loaded.metadata.publication, currentPublication);
   if (difference) return fixedFailure("stale", difference, loaded.metadata.operationId, loaded.metadata.generationId);

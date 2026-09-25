@@ -1,8 +1,6 @@
 import {execFile as execFileCallback} from "node:child_process";
 import {createHash} from "node:crypto";
-import {syncBuiltinESMExports} from "node:module";
-import {promises as fs} from "node:fs";
-import {mkdtemp, readFile, realpath, rm, stat, writeFile} from "node:fs/promises";
+import {mkdtemp, readFile, realpath, rm, stat, symlink, unlink, writeFile} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {promisify} from "node:util";
@@ -10,6 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {blueprintPortableMapPrepare} from "../src/mcp/codebase-index/map-coordinator.js";
+import {portableOperationTestHooks} from "../src/mcp/codebase-index/operations.js";
 
 const execFile = promisify(execFileCallback);
 const CACHE_FILE = ".blueprint/codebase-incremental/cache.json";
@@ -113,25 +112,23 @@ test("cache key replacement cannot chmod an outside file", async t => {
   t.after(async () => rm(outside, {recursive: true, force: true}));
   const target = path.join(outside, "untouched.txt");
   await writeFile(target, "outside mode must remain unchanged\n", {mode: 0o644});
-  const originalRename = fs.rename;
   let swapped = false;
-  fs.rename = async (from, to) => {
-    await originalRename(from, to);
-    if (!swapped && String(to).endsWith("/codebase-incremental/key.json")) {
+  portableOperationTestHooks.afterAtomicWrite = async relative => {
+    if (!swapped && relative.endsWith("/codebase-incremental/key.json")) {
       swapped = true;
-      await fs.unlink(to);
-      await fs.symlink(target, to);
+      const keyPath = path.join(root, relative);
+      await unlink(keyPath);
+      await symlink(target, keyPath);
     }
   };
-  syncBuiltinESMExports();
   try {
     const result = await blueprintPortableMapPrepare({cwd: root, formatVersion: 1});
     assert.equal(result.status, "ready", JSON.stringify(result));
     assert.equal(swapped, true);
     const outsideStat = await stat(target);
     assert.equal(outsideStat.mode & 0o777, 0o644);
+    assert.equal(await readFile(target, "utf8"), "outside mode must remain unchanged\n");
   } finally {
-    fs.rename = originalRename;
-    syncBuiltinESMExports();
+    delete portableOperationTestHooks.afterAtomicWrite;
   }
 });
