@@ -5,7 +5,7 @@ import { ensureRepoRoot, resolveBlueprintPath, withBlueprintRepoLock, writeTextF
 import { resolveLocatedPhaseForMutation } from "./phase-resolution.js";
 import { PHASE_TOPOLOGY_LOCK_NAME, phaseTopologyFingerprintFromLocation, type PhaseTopologyFingerprint } from "./phase-topology-lock.js";
 import { checkedResearchPayload, researchNumericPhase, researchRequestId } from "./research-session.js";
-import { readPlanPublicationStatus } from "./plan-publication.js";
+import { planSessionOwnsPublication, readPlanPublicationStatus } from "./plan-publication.js";
 import {
   portableProviderEvidenceBasisSchema,
   portableProviderEvidenceNextSchema,
@@ -51,7 +51,7 @@ const ordinaryDeliverySchema = z.strictObject({
 });
 const schema = z.object({
   version: z.literal(2), phase: z.string(), topology: topologySchema,
-  revision: z.number().int().nonnegative(), prepared: z.boolean(), needsIntent: z.boolean().default(false), mode: z.enum(["add", "revise", "replace"]), targetPlanIds: z.array(z.string()),
+  revision: z.number().int().nonnegative(), prepared: z.boolean(), needsIntent: z.boolean().default(false), publicationOwned: z.boolean().default(false), mode: z.enum(["add", "revise", "replace"]), targetPlanIds: z.array(z.string()),
   readSet: z.array(targetSchema).max(300), evidencePaths: z.array(z.string()), targets: z.array(targetSchema),
   existingPlans: z.array(z.object({ planId: z.string(), wave: z.number(), dependsOn: z.array(z.string()), requirements: z.array(z.string()) })),
   knownRequirements: z.array(z.string()), knownEvidenceArtifacts: z.array(z.string()), checkerRequired: z.boolean(),
@@ -80,9 +80,13 @@ export async function readPlanSession(loc: PlanLocation): Promise<PlanSession | 
   try { raw = safeJsonParseObject(await fs.readFile(resolveBlueprintPath(loc.projectRoot, loc.sessionPath), "utf8"), { label: loc.sessionPath, maxBytes: 32 * 1024 * 1024 }); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
   const migrate = raw.version === 1;
+  const migrateOwnership = raw.publicationOwned === undefined;
+  const inferredOwnership = planSessionOwnsPublication(raw);
   // Project only metadata. Legacy candidates, histories, rendered bodies,
   // backups and review prose disappear on the first owning runtime read.
-  const session = schema.parse(migrate ? { ...raw, version: 2, requests: {}, journal: undefined, legacyPublication: undefined } : raw);
+  const session = schema.parse(migrate
+    ? { ...raw, version: 2, publicationOwned: inferredOwnership, requests: {}, journal: undefined, legacyPublication: undefined }
+    : { ...raw, publicationOwned: raw.publicationOwned ?? inferredOwnership });
   if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Planning session identity mismatch.");
   const validPlanPath = (value: string) => value.startsWith(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`) && /^\d+-PLAN\.md$/.test(value.slice(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`.length));
   if (session.targets.some(item => !validPlanPath(item.path))) throw new Error("Invalid planning target path.");
@@ -90,10 +94,13 @@ export async function readPlanSession(loc: PlanLocation): Promise<PlanSession | 
     const j = session.journal, request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : undefined;
     if (!request || request.hash !== j.requestHash || request.modelHash !== j.modelHash || j.revision !== session.revision || j.files.some(file => !validPlanPath(file.path)) || j.removed.some(file => !validPlanPath(file.path)) || new Set(j.files.map(file => file.path)).size !== j.files.length) throw new Error("Planning publication journal integrity mismatch.");
   }
-  if (migrate) {
+  if (migrate || migrateOwnership) {
     const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-    if (marker.status === "pending" || marker.status === "invalid") session.legacyPublication = { markerToken: marker.token };
-    session.prepared = false; session.needsIntent = true; session.revision++;
+    session.publicationOwned ||= marker.status !== "absent";
+    if (migrate) {
+      if (marker.status === "pending" || marker.status === "invalid") session.legacyPublication = { markerToken: marker.token };
+      session.prepared = false; session.needsIntent = true; session.revision++;
+    }
     await savePlanSession(loc, session);
   }
   return session;
@@ -117,5 +124,5 @@ export async function withPlanSession<T>(args: { cwd?: string; phase?: string | 
   return withBlueprintRepoLock(root, "plan-session", async () => task(await planLocation({ ...args, cwd: root })));
 }
 export function initialPlanSession(loc: PlanLocation): PlanSession {
-  return { version: 2, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, needsIntent: false, mode: "add", targetPlanIds: [], readSet: [], evidencePaths: [], targets: [], existingPlans: [], knownRequirements: [], knownEvidenceArtifacts: [], checkerRequired: false, requests: {} };
+  return { version: 2, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, needsIntent: false, publicationOwned: false, mode: "add", targetPlanIds: [], readSet: [], evidencePaths: [], targets: [], existingPlans: [], knownRequirements: [], knownEvidenceArtifacts: [], checkerRequired: false, requests: {} };
 }

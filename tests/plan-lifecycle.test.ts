@@ -1,16 +1,18 @@
 import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
+import { promises as fs } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 import { validPhaseContextModel } from "./helpers/context-model.js";
 import { blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintPhaseArtifactWrite } from "../src/mcp/tools/phase-artifacts.js";
-import { blueprintPhasePlanIndex, blueprintPhasePlanRead, blueprintPhasePlanValidate } from "../src/mcp/tools/phase.js";
+import { blueprintPhaseExecutionTargets, blueprintPhasePlanIndex, blueprintPhasePlanRead, blueprintPhasePlanValidate, blueprintPhasePlanWrite } from "../src/mcp/tools/phase.js";
 import { blueprintPlanPrepare, blueprintPlanSubmit, blueprintPlanRead, planDependencies } from "../src/mcp/tools/plan.js";
 import { type PlanningCandidate } from "../src/mcp/tools/plan-model.js";
 import { researchDigest } from "../src/mcp/tools/research-evidence.js";
 import { blueprintResearchPrepare, blueprintResearchSubmit } from "../src/mcp/tools/research.js";
+import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 
 const phaseDir = ".blueprint/phases/01-planning";
 const firstPath = `${phaseDir}/01-01-PLAN.md`;
@@ -105,6 +107,248 @@ test("one model submission publishes the complete canonical plan set and one rep
   assert.equal("history" in restored.session!, false);
   const metadata = await sessionBytes(cwd);
   for (const phrase of ["Expose core behavior through the existing service.", "Add the core behavior", '"content":', '"backup":', '"review":']) assert.ok(!metadata.includes(phrase), phrase);
+});
+
+test("direct publication receipts reject legacy plan overwrites and continue to guard every reader", async t => {
+  const cwd = await fixture(t), published = await submit(cwd, await prepare(cwd));
+  const original = await readFile(path.join(cwd, firstPath), "utf8");
+  const replacement = original.replace("Implement core", "Mutate published core");
+  assert.notEqual(replacement, original);
+
+  const write = await blueprintPhasePlanWrite({
+    ...lookup(cwd),
+    planId: "01",
+    content: replacement,
+    overwrite: true,
+    validationMode: "warn"
+  });
+  assert.equal(write.status, "invalid", JSON.stringify(write));
+  assert.equal(write.written, false);
+  assert.match(write.validation.issues.join("\n"), /blueprint_plan_prepare.*blueprint_plan_submit/i);
+  assert.equal(await readFile(path.join(cwd, firstPath), "utf8"), original);
+
+  const lifecycle = await blueprintPlanRead(lookup(cwd));
+  const index = await blueprintPhasePlanIndex(lookup(cwd));
+  const validation = await blueprintPhasePlanValidate(lookup(cwd));
+  const execution = await blueprintPhaseExecutionTargets(lookup(cwd));
+  assert.equal(lifecycle.publication.status, "committed");
+  assert.match(lifecycle.published[0]?.content ?? "", /Implement core/);
+  assert.ok(index.plans.every(plan => plan.valid), JSON.stringify(index.warnings));
+  assert.equal(validation.status, "valid", JSON.stringify(validation.issues));
+  assert.equal(execution.blockers.executionBlocked, false, JSON.stringify(execution.blockers.reasons));
+  assert.equal(revision(lifecycle.session), revision(published));
+});
+
+test("direct publication ownership survives every later planning intent and reconciliation", async t => {
+  const scenarios = ["choice", "add", "revise", "replace", "reconcile"] as const;
+
+  for (const scenario of scenarios) {
+    await t.test(scenario, async subtest => {
+      const cwd = await fixture(subtest);
+      const published = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
+      let next;
+      if (scenario === "choice") {
+        next = await blueprintPlanPrepare(lookup(cwd));
+        assert.equal(next.status, "choice_required", JSON.stringify(next));
+      } else if (scenario === "reconcile") {
+        await writeFile(path.join(cwd, firstPath), (await readFile(path.join(cwd, firstPath), "utf8")) + "\nReviewed external note.\n");
+        const observed = await targets(cwd);
+        assert.equal((await blueprintPlanPrepare(lookup(cwd))).status, "reconciliation_required");
+        next = await blueprintPlanPrepare({
+          ...lookup(cwd), expectedRevision: revision(published), acknowledgeChangedInputs: true,
+          reconcile: { confirmed: true, targetHashes: observed }, mode: "add"
+        });
+        assert.equal(next.status, "prepared", JSON.stringify(next));
+      } else {
+        next = await blueprintPlanPrepare({
+          ...lookup(cwd), expectedRevision: revision(published), mode: scenario,
+          ...(scenario === "add" ? {} : { targetPlanIds: ["01"] })
+        });
+        assert.equal(next.status, "prepared", JSON.stringify(next));
+      }
+
+      const metadata = JSON.parse(await sessionBytes(cwd)) as {
+        publicationOwned?: boolean;
+        needsIntent?: boolean;
+        journal?: unknown;
+      };
+      assert.equal(metadata.publicationOwned, true);
+      if (scenario !== "choice") {
+        assert.equal(metadata.needsIntent, false);
+        assert.equal(metadata.journal, undefined);
+      }
+
+      await rm(path.join(cwd, markerPath));
+      const lifecycle = await blueprintPlanRead(lookup(cwd));
+      assert.equal(lifecycle.publication.status, "invalid");
+      assert.match(lifecycle.publication.reason ?? "", /marker is missing.*lifecycle-owned/i);
+      assert.ok(lifecycle.published.every(file => file.content === null));
+      const write = await blueprintPhasePlanWrite({
+        ...lookup(cwd), planId: "01", content: await readFile(path.join(cwd, firstPath), "utf8"),
+        overwrite: true, validationMode: "warn"
+      });
+      assert.equal(write.status, "invalid", JSON.stringify(write));
+      assert.equal(write.written, false);
+    });
+  }
+});
+
+test("existing published sessions migrate durable ownership through the projected schema", async t => {
+  const cwd = await fixture(t);
+  const published = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
+  const prepared = await blueprintPlanPrepare({ ...lookup(cwd), expectedRevision: revision(published), mode: "add" });
+  assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
+  const legacy = JSON.parse(await sessionBytes(cwd)) as Record<string, unknown>;
+  delete legacy.publicationOwned;
+  legacy.rejectedDraft = "private legacy prose must be projected away";
+  await writeFile(path.join(cwd, sessionPath), JSON.stringify(legacy));
+
+  assert.equal((await blueprintPlanRead(lookup(cwd))).publication.status, "committed");
+  const migratedText = await sessionBytes(cwd);
+  const migrated = JSON.parse(migratedText) as Record<string, unknown>;
+  assert.equal(migrated.publicationOwned, true);
+  assert.equal("rejectedDraft" in migrated, false);
+  assert.doesNotMatch(migratedText, /private legacy prose/);
+
+  await rm(path.join(cwd, markerPath));
+  const blocked = await blueprintPlanRead(lookup(cwd));
+  assert.equal(blocked.publication.status, "invalid");
+  assert.match(blocked.publication.reason ?? "", /marker is missing.*lifecycle-owned/i);
+});
+
+test("committed snapshot reads return not found for plan ids outside the receipt without a live read", async t => {
+  const cwd = await fixture(t);
+  await submit(cwd, await prepare(cwd));
+  const absentPath = path.join(cwd, phaseDir, "01-99-PLAN.md");
+  const originalReadFile = fs.readFile;
+  let absentReads = 0;
+  t.mock.method(fs, "readFile", async (...args: Parameters<typeof fs.readFile>) => {
+    if (String(args[0]) === absentPath) {
+      absentReads += 1;
+      throw new Error("unexpected live read of an absent committed plan id");
+    }
+    return originalReadFile(...args);
+  });
+
+  const result = await blueprintPhasePlanRead({ ...lookup(cwd), planId: "99" });
+  assert.equal(result.phaseFound, true);
+  assert.equal(result.found, false);
+  assert.equal(result.path, `${phaseDir}/01-99-PLAN.md`);
+  assert.equal(result.content, null);
+  assert.equal(result.validation, null);
+  assert.match(result.reason ?? "", /does not exist yet/i);
+  assert.equal(absentReads, 0);
+});
+
+test("deleting a lifecycle-owned publication marker fails closed across every plan consumer", async t => {
+  const cwd = await fixture(t);
+  await submit(cwd, await prepare(cwd));
+  const original = await readFile(path.join(cwd, firstPath), "utf8");
+  await rm(path.join(cwd, markerPath));
+
+  const lifecycle = await blueprintPlanRead(lookup(cwd));
+  const primitive = await blueprintPhasePlanRead({ ...lookup(cwd), planId: "01" });
+  const index = await blueprintPhasePlanIndex(lookup(cwd));
+  const validation = await blueprintPhasePlanValidate(lookup(cwd));
+  const state = await blueprintStateLoad({ cwd });
+  const execution = await blueprintPhaseExecutionTargets(lookup(cwd));
+
+  assert.equal(lifecycle.publication.status, "invalid");
+  assert.match(lifecycle.publication.reason ?? "", /marker is missing.*lifecycle-owned/i);
+  assert.ok(lifecycle.published.every(file => file.content === null));
+  assert.equal(primitive.validation?.valid, false);
+  assert.match(primitive.validation?.issues.join("\n") ?? "", /marker is missing.*lifecycle-owned/i);
+  assert.ok(index.plans.every(plan => !plan.valid));
+  assert.match(index.warnings.join("\n"), /marker is missing.*lifecycle-owned/i);
+  assert.equal(validation.status, "invalid");
+  assert.match(validation.issues.join("\n"), /marker is missing.*lifecycle-owned/i);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-execute-phase/);
+  assert.match(state.warnings?.join("\n") ?? "", /marker is missing.*lifecycle-owned/i);
+  assert.equal(execution.blockers.executionBlocked, true);
+  assert.match(execution.blockers.reasons.join("\n"), /marker is missing.*lifecycle-owned/i);
+
+  const replacement = original.replace("Implement core", "Unreviewed replacement");
+  const write = await blueprintPhasePlanWrite({
+    ...lookup(cwd), planId: "01", content: replacement, overwrite: true, validationMode: "warn"
+  });
+  assert.equal(write.status, "invalid", JSON.stringify(write));
+  assert.equal(write.written, false);
+  assert.match(write.validation.issues.join("\n"), /owned by blueprint_plan_prepare.*blueprint_plan_submit/i);
+  assert.equal(await readFile(path.join(cwd, firstPath), "utf8"), original);
+});
+
+test("all plan consumers reject bytes substituted between publication checks", async t => {
+  const consumers = ["lifecycle", "read", "index", "validate", "state", "execution"] as const;
+
+  for (const consumer of consumers) {
+    await t.test(consumer, async subtest => {
+      const cwd = await fixture(subtest);
+      await submit(cwd, await prepare(cwd));
+      const absolutePlan = path.join(cwd, firstPath);
+      const original = await readFile(absolutePlan, "utf8");
+      const alternate = original.replace("Implement core", "Substituted core");
+      assert.notEqual(alternate, original);
+      const originalReadFile = fs.readFile;
+      let planReads = 0;
+      subtest.mock.method(fs, "readFile", async (...args: Parameters<typeof fs.readFile>) => {
+        const content = await originalReadFile(...args);
+        if (String(args[0]) === absolutePlan) {
+          planReads += 1;
+          if (planReads === 2) {
+            return typeof content === "string" ? alternate : Buffer.from(alternate);
+          }
+        }
+        return content;
+      });
+
+      if (consumer === "lifecycle") {
+        const result = await blueprintPlanRead(lookup(cwd));
+        assert.equal(result.publication.status, "invalid");
+        assert.ok(result.published.every(file => file.content === null));
+      } else if (consumer === "read") {
+        const result = await blueprintPhasePlanRead({ ...lookup(cwd), planId: "01" });
+        assert.equal(result.validation?.valid, false);
+        assert.match(result.validation?.issues.join("\n") ?? "", /changed after publication|publication changed/i);
+      } else if (consumer === "index") {
+        const result = await blueprintPhasePlanIndex(lookup(cwd));
+        assert.ok(result.plans.every(plan => !plan.valid));
+        assert.match(result.warnings.join("\n"), /changed after publication|publication changed/i);
+      } else if (consumer === "validate") {
+        const result = await blueprintPhasePlanValidate(lookup(cwd));
+        assert.equal(result.status, "invalid");
+        assert.match(result.issues.join("\n"), /changed after publication|publication changed/i);
+      } else if (consumer === "state") {
+        const result = await blueprintStateLoad({ cwd });
+        assert.doesNotMatch(result.derivedStatus.nextAction, /\/blu-execute-phase/);
+        assert.match(result.warnings?.join("\n") ?? "", /changed after publication|publication changed/i);
+      } else {
+        const result = await blueprintPhaseExecutionTargets(lookup(cwd));
+        assert.equal(result.blockers.executionBlocked, true);
+        assert.match(JSON.stringify(result), /changed after publication|publication changed/i);
+      }
+      assert.ok(planReads >= 2, `${consumer} must verify the guarded plan generation twice.`);
+    });
+  }
+});
+
+test("committed publication receipts fail closed when canonical plan bytes are changed outside the owner", async t => {
+  const cwd = await fixture(t);
+  await submit(cwd, await prepare(cwd));
+  await writeFile(path.join(cwd, firstPath), "# Unreviewed replacement\n");
+
+  const lifecycle = await blueprintPlanRead(lookup(cwd));
+  const index = await blueprintPhasePlanIndex(lookup(cwd));
+  const validation = await blueprintPhasePlanValidate(lookup(cwd));
+  const execution = await blueprintPhaseExecutionTargets(lookup(cwd));
+  assert.equal(lifecycle.publication.status, "invalid");
+  assert.match(lifecycle.publication.reason ?? "", /changed after publication/i);
+  assert.ok(lifecycle.published.every(file => file.content === null));
+  assert.ok(index.plans.every(plan => !plan.valid));
+  assert.match(index.warnings.join("\n"), /changed after publication/i);
+  assert.equal(validation.status, "invalid");
+  assert.match(validation.issues.join("\n"), /changed after publication/i);
+  assert.equal(execution.blockers.executionBlocked, true);
+  assert.match(execution.blockers.reasons.join("\n"), /changed after publication/i);
 });
 
 test("invalid objects and malformed JSON are rejected without changing session or storing any draft", async t => {
@@ -310,6 +554,44 @@ test("legacy session migration deletes draft history and reconciles a pending re
   assert.equal(next.status, "prepared", JSON.stringify(next));
   assert.equal((await blueprintPlanRead(lookup(cwd))).publication.status, "committed");
   await submit(cwd, next);
+});
+
+test("legacy v1 delta receipts migrate only after explicit complete-target reconciliation", async t => {
+  const cwd = await fixture(t);
+  const published = await submit(cwd, await prepare(cwd), candidate(["core", "api"]));
+  const first = await readFile(path.join(cwd, firstPath), "utf8");
+  await writeFile(path.join(cwd, markerPath), JSON.stringify({
+    version: 1,
+    status: "committed",
+    requestId: "legacy-delta",
+    revision: revision(published),
+    files: [{ path: firstPath, hash: researchDigest(first) }],
+    removedPaths: []
+  }));
+
+  const blocked = await blueprintPlanRead(lookup(cwd));
+  assert.equal(blocked.publication.status, "invalid");
+  assert.match(blocked.publication.reason ?? "", /legacy v1.*explicitly reconcile.*complete observed target hashes/i);
+  assert.ok(blocked.published.every(file => file.content === null));
+  const observed = await targets(cwd);
+  assert.deepEqual(Object.keys(observed).sort(), [firstPath, secondPath]);
+  assert.equal((await blueprintPlanPrepare(lookup(cwd))).status, "reconciliation_required");
+
+  const next = await blueprintPlanPrepare({
+    ...lookup(cwd),
+    expectedRevision: revision(published),
+    acknowledgeChangedInputs: true,
+    reconcile: { confirmed: true, targetHashes: observed },
+    mode: "add"
+  });
+  assert.equal(next.status, "prepared", JSON.stringify(next));
+  const migrated = JSON.parse(await readFile(path.join(cwd, markerPath), "utf8")) as {
+    version: number;
+    files: Array<{ path: string }>;
+  };
+  assert.equal(migrated.version, 2);
+  assert.deepEqual(migrated.files.map(file => file.path).sort(), [firstPath, secondPath]);
+  assert.equal((await blueprintPlanRead(lookup(cwd))).publication.status, "committed");
 });
 
 test("completed publication requires new intent and cannot silently reuse its previous add mode", async t => {

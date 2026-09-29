@@ -17,10 +17,11 @@ const phaseDir = ".blueprint/phases/01-publication";
 const planPath = `${phaseDir}/01-01-PLAN.md`;
 const markerPath = `${phaseDir}/01-PLAN-PUBLICATION.json`;
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
+const planContent = "# Verified publication plan\n";
 function marker(overrides: Record<string, unknown> = {}) {
   return {
-    version: 1, status: "committed", requestId: "publish-1", revision: 1,
-    files: [{ path: planPath, hash: "a".repeat(64) }], removedPaths: [],
+    version: 2, status: "committed", requestId: "publish-1", revision: 1,
+    files: [{ path: planPath, hash: hash(planContent) }], removedPaths: [],
     ...overrides,
   };
 }
@@ -28,6 +29,7 @@ async function fixture(t: TestContext): Promise<string> {
   const cwd = await createGitRepo("blueprint-plan-publication-");
   t.after(() => rm(path.dirname(cwd), { recursive: true, force: true }));
   await mkdir(path.join(cwd, phaseDir), { recursive: true });
+  await writeFile(path.join(cwd, planPath), planContent);
   return cwd;
 }
 async function writeMarker(cwd: string, value: unknown): Promise<void> {
@@ -114,7 +116,7 @@ test("malformed JSON and invalid publication field types fail closed", async t =
   assert.equal(malformed.token, hash('{"version":1,'));
   for (const invalid of [
     null, [], 1, "pending", {},
-    marker({ version: 2 }), marker({ status: "finished" }), marker({ status: ["pending"] }),
+    marker({ version: 3 }), marker({ version: "2" }), marker({ status: "finished" }), marker({ status: ["pending"] }),
     marker({ status: ["committed"] }), marker({ requestId: "../publish" }), marker({ requestId: "" }),
     marker({ revision: -1 }), marker({ revision: 1.5 }), marker({ revision: "1" }),
     marker({ files: {} }), marker({ files: [null] }),
@@ -126,6 +128,14 @@ test("malformed JSON and invalid publication field types fail closed", async t =
     assert.equal(result.status, "invalid", JSON.stringify(invalid));
     assert.ok(result.reason, JSON.stringify(invalid));
   }
+});
+
+test("legacy v1 committed receipts require explicit reconciliation instead of being reinterpreted as complete", async t => {
+  const cwd = await fixture(t);
+  await writeMarker(cwd, marker({ version: 1 }));
+  const legacy = await readStatus(cwd);
+  assert.equal(legacy.status, "invalid");
+  assert.match(legacy.reason ?? "", /legacy v1.*explicitly reconcile.*complete observed target hashes/i);
 });
 
 test("publication files and removals must belong to the exact canonical phase scope", async t => {
@@ -196,6 +206,7 @@ test("state routes pending and invalid publications back to planning instead of 
 
 test("state rejects a publication generation change that happens while inventory is being captured", async t => {
   const cwd = await routingFixture(t);
+  const currentMarker = JSON.parse(await fs.readFile(path.join(cwd, markerPath), "utf8")) as Record<string, unknown>;
   const originalReaddir = fs.readdir;
   const originalReadFile = fs.readFile;
   let markerReads = 0;
@@ -214,7 +225,7 @@ test("state rejects a publication generation change that happens while inventory
     const stateInventory = /at (?:async )?listPhaseArtifacts[^\n]*\n\s+at (?:async )?inspectCurrentPhaseArtifacts\b/.test(stack);
     if (!changed && markerReads > 0 && stateInventory && String(args[0]) === path.join(cwd, phaseDir)) {
       changed = true;
-      await writeMarker(cwd, marker({ requestId: "publish-2", revision: 2 }));
+      await writeMarker(cwd, { ...currentMarker, requestId: "publish-2", revision: 2 });
     }
     return entries;
   });

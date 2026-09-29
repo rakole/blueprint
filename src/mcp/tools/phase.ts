@@ -38,7 +38,12 @@ import {
   writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
-import { readPlanPublicationStatus } from "./plan-publication.js";
+import {
+  planPublicationConsumptionIssue,
+  readPlanLifecycleOwnership,
+  readPlanPublicationSnapshot,
+  type PlanPublicationSnapshot
+} from "./plan-publication.js";
 import { researchInputHash, researchProvenancePath } from "./research-evidence.js";
 import { resolvePortableProviderEvidence } from "../codebase-index/provider-evidence.js";
 import { loadBlueprintState } from "./state.js";
@@ -973,8 +978,10 @@ function detectDependencyCycles(graph: ReadonlyMap<string, string[]>): string[][
 }
 
 function phasePlanPublicationIssue(
-  before: Awaited<ReturnType<typeof readPlanPublicationStatus>>,
-  after: Awaited<ReturnType<typeof readPlanPublicationStatus>>
+  before: PlanPublicationSnapshot,
+  after: PlanPublicationSnapshot,
+  consumed?: ReadonlyMap<string, string>,
+  complete = true
 ): string | null {
   if (before.status === "pending" || before.status === "invalid") {
     return before.reason ?? "Phase plan publication is incomplete; resume its publication before execution.";
@@ -982,9 +989,10 @@ function phasePlanPublicationIssue(
   if (after.status === "pending" || after.status === "invalid") {
     return after.reason ?? "Phase plan publication is incomplete; resume its publication before execution.";
   }
-  return before.token !== after.token
-    ? "Phase plan publication changed during this read; refresh the plan set before execution."
-    : null;
+  if (before.token !== after.token) {
+    return "Phase plan publication changed during this read; refresh the plan set before execution.";
+  }
+  return consumed ? planPublicationConsumptionIssue(before, consumed, { complete }) : null;
 }
 
 async function validatePhasePlanSet(
@@ -999,13 +1007,23 @@ async function validatePhasePlanSet(
   } = {}
 ): Promise<PhasePlanValidationResult> {
   const publicationBefore = options.ignorePublicationGuard ? null
-    : await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+    : await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const guardedContents = publicationBefore?.status === "committed"
+    ? publicationBefore.contents
+    : null;
+  const effectiveOverrides = new Map<string, string>([
+    ...(guardedContents ? [...guardedContents] : []),
+    ...(options.overrides ? [...options.overrides] : [])
+  ]);
+  const knownPlanPaths = publicationBefore?.status === "committed"
+    ? publicationBefore.files.map(file => file.path)
+    : options.knownPlanPaths;
   const coverageSeverity = options.roadmapCoverageSeverity ?? "issue";
   const { plans, nonCanonicalPlanPaths } = await collectPhasePlanArtifacts(
     projectRoot,
     resolved,
-    options.overrides,
-    options.knownPlanPaths
+    effectiveOverrides,
+    knownPlanPaths
   );
   const issues: string[] = [];
   const warnings: string[] = [];
@@ -1186,7 +1204,9 @@ async function validatePhasePlanSet(
 
   if (publicationBefore) {
     const issue = phasePlanPublicationIssue(publicationBefore,
-      await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix));
+      await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix),
+      new Map(plans.map(plan => [plan.path, plan.content])),
+      true);
     if (issue) issues.push(issue);
   }
 
@@ -4682,12 +4702,21 @@ async function buildPhasePlanIndexFromResolved(
 ): Promise<PhasePlanIndexResult> {
   const { projectRoot, resolved } = input;
   const publicationBefore = input.ignorePublicationGuard ? null
-    : await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+    : await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const guardedContents = publicationBefore?.status === "committed"
+    ? publicationBefore.contents
+    : null;
+  const planContents = input.planContents ?? guardedContents ?? undefined;
   // A resolved phase snapshot may predate a completed publication. Re-list
   // under the marker guard unless the caller supplies its own guarded bytes.
-  const artifacts = !input.ignorePublicationGuard && !input.planContents
-    ? await listPhaseArtifacts(resolveBlueprintPath(projectRoot, resolved.phaseDir), projectRoot)
-    : input.artifacts;
+  const artifacts = publicationBefore?.status === "committed"
+    ? [
+        ...input.artifacts.filter(artifact => !artifact.endsWith("-PLAN.md")),
+        ...publicationBefore.files.map(file => file.path)
+      ]
+    : !input.ignorePublicationGuard && !input.planContents
+      ? await listPhaseArtifacts(resolveBlueprintPath(projectRoot, resolved.phaseDir), projectRoot)
+      : input.artifacts;
   const planPaths = artifacts
     .filter((artifact) => artifact.endsWith("-PLAN.md"))
     .sort((left, right) => left.localeCompare(right));
@@ -4696,6 +4725,7 @@ async function buildPhasePlanIndexFromResolved(
   const warnings: string[] = [...(input.warnings ?? [])];
   const knownPlanIds = new Set<string>();
   const gapClosurePlans = new Set<string>();
+  const consumedPlanContents = new Map<string, string>();
 
   for (const planPath of planPaths) {
     const planId = parseCanonicalPlanArtifactPath(planPath, resolved);
@@ -4708,8 +4738,9 @@ async function buildPhasePlanIndexFromResolved(
     }
 
     knownPlanIds.add(planId);
-    const content = input.planContents?.get(planPath)
+    const content = planContents?.get(planPath)
       ?? await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    consumedPlanContents.set(planPath, content);
     const record = toPhasePlanRecord(planId, planPath, content, resolved.phaseNumber);
     const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record.dependsOn);
 
@@ -4731,7 +4762,9 @@ async function buildPhasePlanIndexFromResolved(
 
   if (publicationBefore) {
     const issue = phasePlanPublicationIssue(publicationBefore,
-      await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix));
+      await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix),
+      consumedPlanContents,
+      true);
     if (issue) {
       warnings.push(issue);
       gapClosurePlans.clear();
@@ -4849,33 +4882,40 @@ async function readPhasePlanFromResolved(args: {
   planId: string;
 }): Promise<PhasePlanReadResult> {
   const { projectRoot, resolved, planId } = args;
-  const publicationBefore = await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const publicationBefore = await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const pathValue = planPathFor(resolved, planId);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
-
-  if (!(await pathExists(absolutePath))) {
-    return {
-      phaseFound: true,
-      found: false,
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId,
-      path: pathValue,
-      content: null,
-      metadata: null,
-      validation: null,
-      reason: `${pathValue} does not exist yet.`
-    };
+  const missingResult = (): PhasePlanReadResult => ({
+    phaseFound: true,
+    found: false,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    planId,
+    path: pathValue,
+    content: null,
+    metadata: null,
+    validation: null,
+    reason: `${pathValue} does not exist yet.`
+  });
+  let content: string;
+  if (publicationBefore.status === "committed") {
+    const committedContent = publicationBefore.contents?.get(pathValue);
+    if (committedContent === undefined) return missingResult();
+    content = committedContent;
+  } else {
+    if (!(await pathExists(absolutePath))) return missingResult();
+    content = await fs.readFile(absolutePath, "utf8");
   }
 
-  const content = await fs.readFile(absolutePath, "utf8");
   const record = toPhasePlanRecord(planId, pathValue, content, resolved.phaseNumber);
   const dependencyIssues = collectInvalidPlanDependencyIssues(pathValue, record.dependsOn);
 
   const publicationIssue = phasePlanPublicationIssue(publicationBefore,
-    await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix));
+    await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix),
+    new Map([[pathValue, content]]),
+    false);
   if (publicationIssue) { record.valid = false; record.issues.push(publicationIssue); }
 
   return {
@@ -5719,6 +5759,36 @@ export async function blueprintPhasePlanWrite(
       : normalizePlanId(String(nextPlanNumber));
     const pathValue = planPathFor(resolved, planId);
     const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+
+    const [publication, lifecycleOwnership] = await Promise.all([
+      readPlanPublicationSnapshot(
+        projectRoot,
+        resolved.phaseDir,
+        resolved.phasePrefix
+      ),
+      readPlanLifecycleOwnership(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+    ]);
+    if (publication.status !== "absent" || lifecycleOwnership.hasSession) {
+      const issue = lifecycleOwnership.reason ?? (lifecycleOwnership.hasSession
+        ? "This phase is owned by blueprint_plan_prepare and blueprint_plan_submit. Continue through the owning lifecycle instead of writing an individual plan."
+        : publication.status === "committed"
+          ? "This phase plan set is owned by blueprint_plan_prepare and blueprint_plan_submit. Start a new planning revision instead of writing an individual published plan."
+          : publication.reason ?? "Phase plan publication state must be reconciled before any plan write.");
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: { valid: false, issues: [issue], warnings: [] },
+        warnings: []
+      };
+    }
 
     if (hasContent === hasModel) {
       return {
@@ -6714,26 +6784,34 @@ export async function blueprintPhaseExecutionTargets(
     };
   }
 
-  const publicationBefore = await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const publicationBefore = await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const requestedWave = args.wave ?? null;
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
   const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
-  const executionArtifacts = await listPhaseArtifacts(
+  const listedExecutionArtifacts = await listPhaseArtifacts(
     resolveBlueprintPath(projectRoot, resolved.phaseDir), projectRoot);
+  const executionArtifacts = publicationBefore.status === "committed"
+    ? [
+        ...listedExecutionArtifacts.filter(artifact => !artifact.endsWith("-PLAN.md")),
+        ...publicationBefore.files.map(file => file.path)
+      ]
+    : listedExecutionArtifacts;
   const planPaths = executionArtifacts.filter(
     (artifactPath) =>
       path.posix.dirname(artifactPath) === resolved.phaseDir &&
       artifactPath.endsWith("-PLAN.md")
   );
-  const planContents = new Map(
-    await Promise.all(
-      planPaths.map(async (planPath) => [
-        planPath,
-        await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8")
-      ] as const)
-    )
-  );
+  const planContents = publicationBefore.status === "committed" && publicationBefore.contents
+    ? new Map(publicationBefore.contents)
+    : new Map(
+        await Promise.all(
+          planPaths.map(async (planPath) => [
+            planPath,
+            await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8")
+          ] as const)
+        )
+      );
   const [summaryContext, effectiveConfig, planSetValidation] = await Promise.all([
     loadResolvedPhaseSummaryContext({
       projectRoot,
@@ -7053,7 +7131,9 @@ export async function blueprintPhaseExecutionTargets(
       ): summary is PhaseExecutionTargetsResult["existingSummaries"][number] => summary !== null
     );
   const publicationIssue = phasePlanPublicationIssue(publicationBefore,
-    await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix));
+    await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix),
+    planContents,
+    true);
   if (publicationIssue) {
     blockers.push(publicationIssue);
     planSetValidation.status = "invalid";

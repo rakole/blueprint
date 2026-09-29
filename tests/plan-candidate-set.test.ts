@@ -108,7 +108,7 @@ test("public plan readers block a pending publication while the internal candida
   const initial = await validatePhasePlanCandidateSet({ cwd, phase: "3", models });
   assert.equal(initial.valid, true, JSON.stringify(initial.diagnostics));
   for (const plan of initial.plans) await writeFile(path.join(cwd, plan.path), plan.content);
-  const marker = { version: 1, status: "pending", requestId: "publish-1", revision: 1,
+  const marker = { version: 2, status: "pending", requestId: "publish-1", revision: 1,
     files: initial.plans.map((plan) => ({ path: plan.path, hash: createHash("sha256").update(plan.content).digest("hex") })), removedPaths: [] };
   await writeFile(path.join(cwd, phaseDir, "03-PLAN-PUBLICATION.json"), JSON.stringify(marker));
   const [index, read, set, execution, candidate] = await Promise.all([
@@ -132,7 +132,7 @@ test("plan readers reject a committed publication token that changes during thei
   assert.equal(initial.valid, true, JSON.stringify(initial.diagnostics));
   for (const plan of initial.plans) await writeFile(path.join(cwd, plan.path), plan.content);
   const markerPath = path.join(cwd, phaseDir, "03-PLAN-PUBLICATION.json");
-  const marker = { version: 1, status: "committed", requestId: "publish-1", revision: 1,
+  const marker = { version: 2, status: "committed", requestId: "publish-1", revision: 1,
     files: initial.plans.map((plan) => ({ path: plan.path, hash: createHash("sha256").update(plan.content).digest("hex") })), removedPaths: [] };
   for (const kind of ["read", "index", "validate", "execution"] as const) {
     await t.test(kind, async (t) => {
@@ -175,7 +175,7 @@ test("plan readers refresh inventory when publication completes after phase reso
   const compiled = await validatePhasePlanCandidateSet({ cwd, phase: "3", models });
   assert.equal(compiled.valid, true, JSON.stringify(compiled.diagnostics));
   const markerPath = path.join(cwd, phaseDir, "03-PLAN-PUBLICATION.json");
-  const marker = { version: 1, status: "committed", requestId: "publish-1", revision: 1,
+  const marker = { version: 2, status: "committed", requestId: "publish-1", revision: 1,
     files: compiled.plans.map((plan) => ({ path: plan.path, hash: createHash("sha256").update(plan.content).digest("hex") })), removedPaths: [] };
   for (const kind of ["index", "execution"] as const) {
     await t.test(kind, async (t) => {

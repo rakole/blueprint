@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { readPlanPublicationStatus } from "./plan-publication.js";
+import { planPublicationConsumptionIssue, readPlanPublicationSnapshot } from "./plan-publication.js";
 
 import * as z from "zod/v4";
 
@@ -1454,6 +1454,7 @@ async function inspectPhasePlanRoutingReadiness(args: {
   projectRoot: string;
   currentPhase: string;
   planPaths: string[];
+  planContents?: ReadonlyMap<string, string>;
 }): Promise<PhasePlanRoutingReadiness> {
   const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   let roadmapRequirementIds: string[] = [];
@@ -1488,7 +1489,8 @@ async function inspectPhasePlanRoutingReadiness(args: {
 
   for (const planPath of args.planPaths) {
     try {
-      const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
+      const raw = args.planContents?.get(planPath)
+        ?? await fs.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, args.currentPhase);
       const planId = normalizeRoutingPlanId(validation.metadata.planId ?? "");
 
@@ -2403,9 +2405,15 @@ async function inspectCurrentPhaseArtifacts(
   const phaseDir = matchingPhaseDirs[0];
   const phasePrefix = formatPhasePrefix(normalizedPhase);
   const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir}`;
-  const publicationBefore = await readPlanPublicationStatus(projectRoot, phaseRoot, phasePrefix);
+  const publicationBefore = await readPlanPublicationSnapshot(projectRoot, phaseRoot, phasePrefix);
   // Inventory must be captured inside the publication token guard, too.
-  const phaseArtifacts = await listPhaseArtifacts(resolveBlueprintPath(projectRoot, phaseRoot), projectRoot);
+  const listedPhaseArtifacts = await listPhaseArtifacts(resolveBlueprintPath(projectRoot, phaseRoot), projectRoot);
+  const phaseArtifacts = publicationBefore.status === "committed"
+    ? [
+        ...listedPhaseArtifacts.filter(artifact => !artifact.endsWith("-PLAN.md")),
+        ...publicationBefore.files.map(file => file.path)
+      ]
+    : listedPhaseArtifacts;
   const contextPath = `${phaseRoot}/${phasePrefix}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix}-UI-SPEC.md`;
@@ -2431,6 +2439,9 @@ async function inspectCurrentPhaseArtifacts(
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
+  const planContents = publicationBefore.status === "committed" && publicationBefore.contents
+    ? new Map(publicationBefore.contents)
+    : undefined;
   const summaryArtifactPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "PLAN");
   const {
@@ -2463,7 +2474,8 @@ async function inspectCurrentPhaseArtifacts(
     ? await inspectPhasePlanRoutingReadiness({
         projectRoot,
         currentPhase: normalizedPhase,
-        planPaths
+        planPaths,
+        planContents
       })
     : { executionReady: false, warnings: [] };
   const hasLaterArtifacts = [...phaseArtifacts].some(
@@ -2540,7 +2552,8 @@ async function inspectCurrentPhaseArtifacts(
 
   for (const planPath of planPaths) {
     try {
-      const raw = await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+      const raw = planContents?.get(planPath)
+        ?? await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, normalizedPhase);
 
       for (const issue of validation.issues) {
@@ -2569,11 +2582,13 @@ async function inspectCurrentPhaseArtifacts(
   }
 
   warnings.push(...summaryWarnings, ...validationWarnings);
-  const publicationAfter = await readPlanPublicationStatus(projectRoot, phaseRoot, phasePrefix);
-  if (publicationBefore.reason || publicationAfter.reason || publicationBefore.token !== publicationAfter.token) {
+  const publicationAfter = await readPlanPublicationSnapshot(projectRoot, phaseRoot, phasePrefix);
+  const publicationIssue = publicationBefore.reason || publicationAfter.reason || publicationBefore.token !== publicationAfter.token
+    ? publicationAfter.reason ?? publicationBefore.reason ?? "Plan publication changed during state inspection; refresh planning before execution."
+    : planPublicationConsumptionIssue(publicationBefore, planContents ?? new Map(), { complete: true });
+  if (publicationIssue) {
     planRoutingReadiness.executionReady = false;
-    planRoutingReadiness.warnings.push(publicationAfter.reason ?? publicationBefore.reason ??
-      "Plan publication changed during state inspection; refresh planning before execution.");
+    planRoutingReadiness.warnings.push(publicationIssue);
   }
   warnings.push(...planRoutingReadiness.warnings);
   const qualityGateEvaluation = await evaluatePhaseQualityGates({

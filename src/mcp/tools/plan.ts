@@ -15,6 +15,7 @@ import { phaseTopologyFingerprintFromLocation, phaseTopologyFingerprintsMatch } 
 import { researchDigest, researchInputHash, stableResearchValue } from "./research-evidence.js";
 import { capturePlanEvidence, planBasisFreshness, planTargetFreshness, readPlanTargetHashes, shapePlanOrdinaryEvidence } from "./plan-evidence.js";
 import { checkedPlanPayload, initialPlanSession, planLocation, planLookup, planNumericPhase, planPublicationPath, planRequestId, readPlanPublicationStatus, readPlanSession, savePlanSession, withPlanSession, type PlanJournal, type PlanLocation, type PlanSession } from "./plan-session.js";
+import { planPublicationConsumptionIssue, readPlanPublicationSnapshot } from "./plan-publication.js";
 import {
   portableProviderEvidenceBasisSchema,
   portableProviderEvidenceModeSchema,
@@ -380,13 +381,31 @@ export async function blueprintPlanRead(raw: z.input<typeof lookupSchema>) {
   const args = lookupSchema.parse(raw);
   return withPlanSession(args, async loc => {
     const session = await readPlanSession(loc);
-    const before = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    const before = await readPlanPublicationSnapshot(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
     const current = await planLocation(args);
-    const published = await Promise.all((await readPlanTargetHashes(current)).map(async target => ({ ...target,
-      content: before.status === "pending" || before.status === "invalid" ? null : await fs.readFile(resolveBlueprintPath(loc.projectRoot, target.path), "utf8"),
+    const targets = before.status === "committed" && before.version === 2
+      ? before.files
+      : await readPlanTargetHashes(current);
+    const published = await Promise.all(targets.map(async target => ({ ...target,
+      content: before.status === "committed"
+        ? before.contents?.get(target.path) ?? null
+        : before.status === "absent"
+          ? await fs.readFile(resolveBlueprintPath(loc.projectRoot, target.path), "utf8")
+          : null,
     })));
-    const publication = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-    if (before.token !== publication.token) for (const file of published) file.content = null;
+    const after = await readPlanPublicationSnapshot(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    const consumed = new Map(published.flatMap(file => file.content === null ? [] : [[file.path, file.content] as const]));
+    const publicationIssue = before.token !== after.token
+      ? "Plan publication changed during this read; refresh before using the plan set."
+      : after.status === "pending" || after.status === "invalid"
+        ? after.reason
+        : planPublicationConsumptionIssue(before, consumed, { complete: before.status === "committed" });
+    if (publicationIssue) {
+      for (const file of published) file.content = null;
+    }
+    const publication = publicationIssue && after.status !== "pending" && after.status !== "invalid"
+      ? { status: "invalid" as const, token: after.token, reason: publicationIssue }
+      : { status: after.status, token: after.token, reason: after.reason };
     return { status: session || published.length ? "found" : "not_found", sessionPath: loc.sessionPath, session, published, publication,
       freshness: session ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : []) : null };
   });
@@ -394,8 +413,22 @@ export async function blueprintPlanRead(raw: z.input<typeof lookupSchema>) {
 
 // Owning operations are injectable so interruption tests cover every metadata stage.
 export const planDependencies = { compile: compilePlanCandidate, validate: validatePhasePlanCandidateSet, writeText: writeTextFile, remove: (path: string) => fs.unlink(path), stateUpdate: blueprintStateUpdate, stateLoad: blueprintStateLoad };
-function markerContent(session: PlanSession, journal: PlanJournal, status: "pending" | "committed") {
-  return JSON.stringify({ version: 1, status, requestId: journal.requestId, revision: session.revision, files: journal.files.map(({ path, hash }) => ({ path, hash })), removedPaths: journal.removed.map(file => file.path) }, null, 2) + "\n";
+function markerContent(session: PlanSession, journal: PlanJournal, status: "pending" | "committed", version: 1 | 2 = 2) {
+  const files = version === 1
+    ? new Map(journal.files.map(({ path, hash }) => [path, hash]))
+    : new Map(session.targets.map(({ path, hash }) => [path, hash]));
+  if (version === 2) {
+    for (const file of journal.files) files.set(file.path, file.hash);
+    for (const file of journal.removed) files.delete(file.path);
+  }
+  return JSON.stringify({
+    version,
+    status,
+    requestId: journal.requestId,
+    revision: session.revision,
+    files: [...files].sort(([left], [right]) => left.localeCompare(right)).map(([path, hash]) => ({ path, hash })),
+    removedPaths: journal.removed.map(file => file.path).sort((left, right) => left.localeCompare(right))
+  }, null, 2) + "\n";
 }
 async function verifyPublished(loc: PlanLocation, journal: PlanJournal, session: PlanSession) {
   for (const file of journal.files) if (await researchInputHash(loc.projectRoot, file.path) !== file.hash) throw new Error(`Published plan changed: ${file.path}.`);
@@ -421,8 +454,8 @@ async function reconcilePublication(loc: PlanLocation, session: PlanSession, rev
     if (observed.token !== markerToken) throw new Error("Publication marker changed during reconciliation; refresh before retrying.");
     // Change the marker before clearing intent. A failure here leaves recovery
     // metadata intact, while replay after a later failure remains idempotent.
-    if (observed.status !== "absent") await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), JSON.stringify({ version: 1, status: "committed", requestId: "reconciled", revision: session.revision, files: targets, removedPaths: [] }, null, 2) + "\n");
-    session.topology = topology; session.targets = targets; session.prepared = false; session.needsIntent = true; session.readSet = []; session.requests = {};
+    if (observed.status !== "absent") await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), JSON.stringify({ version: 2, status: "committed", requestId: "reconciled", revision: session.revision, files: targets, removedPaths: [] }, null, 2) + "\n");
+    session.topology = topology; session.targets = targets; session.prepared = false; session.needsIntent = true; session.publicationOwned = true; session.readSet = []; session.requests = {};
     delete session.journal; delete session.legacyPublication;
     await savePlanSession(loc, session, true);
   }));
@@ -521,9 +554,12 @@ export async function blueprintPlanSubmit(raw: z.input<typeof submitInput>) {
         }
         for (const target of session.targets) if (!desiredPaths.has(target.path) && !removedPaths.has(target.path) && await researchInputHash(loc.projectRoot, target.path) !== target.hash) throw new Error(`Unselected plan changed: ${target.path}.`);
         if (journal!.stages.commit !== "complete") {
-          const observedMarker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-          const pendingToken = researchDigest(markerContent(session, journal!, "pending")), committedToken = researchDigest(markerContent(session, journal!, "committed"));
-          if (![journal!.baselineMarkerToken, pendingToken, committedToken].includes(observedMarker.token)) throw new Error("Publication marker changed externally; refusing to overwrite it.");
+          const observedMarker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix, { allowOwnedMissing: true });
+          const pendingToken = researchDigest(markerContent(session, journal!, "pending"));
+          const committedToken = researchDigest(markerContent(session, journal!, "committed"));
+          const legacyPendingToken = researchDigest(markerContent(session, journal!, "pending", 1));
+          const legacyCommittedToken = researchDigest(markerContent(session, journal!, "committed", 1));
+          if (![journal!.baselineMarkerToken, pendingToken, committedToken, legacyPendingToken, legacyCommittedToken].includes(observedMarker.token)) throw new Error("Publication marker changed externally; refusing to overwrite it.");
           if (!journal!.stages.files) {
             for (const file of [...journal!.files, ...journal!.removed]) if (await researchInputHash(loc.projectRoot, file.path) !== file.baselineHash) throw new Error(`Plan target changed before publication: ${file.path}.`);
             journal!.stages.files = "intent"; await checkpoint();
@@ -546,10 +582,14 @@ export async function blueprintPlanSubmit(raw: z.input<typeof submitInput>) {
           await verifyPublished(loc, journal!, session); await assertFresh();
           journal!.stages.files = "complete"; journal!.stages.commit = "intent"; await checkpoint();
           await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), markerContent(session, journal!, "committed"));
-          journal!.stages.commit = "complete"; await checkpoint();
+          journal!.stages.commit = "complete"; session.publicationOwned = true; await checkpoint();
         } else {
-          if (await fs.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8") !== markerContent(session, journal!, "committed")) throw new Error("Committed publication marker changed externally.");
+          const observedMarker = await fs.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8");
+          const committedMarker = markerContent(session, journal!, "committed");
+          const legacyCommittedMarker = markerContent(session, journal!, "committed", 1);
+          if (observedMarker !== committedMarker && observedMarker !== legacyCommittedMarker) throw new Error("Committed publication marker changed externally.");
           await verifyPublished(loc, journal!, session);
+          if (observedMarker === legacyCommittedMarker) await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), committedMarker);
         }
       }));
       await assertFresh();
@@ -571,7 +611,7 @@ export async function blueprintPlanSubmit(raw: z.input<typeof submitInput>) {
         for (const file of journal!.removed) targets.delete(file.path);
         session.targets = [...targets].sort(([left], [right]) => left.localeCompare(right)).map(([path, hash]) => ({ path, hash }));
         session.existingPlans = index.plans.map(plan => ({ planId: plan.planId, wave: plan.wave ?? 1, dependsOn: plan.dependsOn, requirements: plan.requirements }));
-        journal!.stages.routing = "complete"; session.needsIntent = true;
+        journal!.stages.routing = "complete"; session.needsIntent = true; session.publicationOwned = true;
         journal!.receipt = { status: "published", saved: true, ready: true, ...responseBase(loc, session), paths: journal!.files.map(file => file.path), plans: journal!.files.map(({ planId, wave, taskCount, path }) => ({ planId, wave, taskCount, path })), removedPaths: journal!.removed.map(file => file.path), stages: { ...journal!.stages }, nextAction };
         session.requests[args.requestId].receipt = journal!.receipt;
         await savePlanSession(loc, session, true);
