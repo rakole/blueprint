@@ -1,18 +1,24 @@
 import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { createHmac } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 import { validPhaseContextModel } from "./helpers/context-model.js";
 import { blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintPhaseArtifactWrite } from "../src/mcp/tools/phase-artifacts.js";
 import { blueprintPhaseExecutionTargets, blueprintPhasePlanIndex, blueprintPhasePlanRead, blueprintPhasePlanValidate, blueprintPhasePlanWrite } from "../src/mcp/tools/phase.js";
 import { blueprintPlanPrepare, blueprintPlanSubmit, blueprintPlanRead, planDependencies } from "../src/mcp/tools/plan.js";
+import { loadPlanCursorAuthorityKey, sealPlanCursor } from "../src/mcp/tools/plan-cursor-authority.js";
 import { type PlanningCandidate } from "../src/mcp/tools/plan-model.js";
 import { researchDigest } from "../src/mcp/tools/research-evidence.js";
 import { blueprintResearchPrepare, blueprintResearchSubmit } from "../src/mcp/tools/research.js";
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
+import { createBlueprintServer, createToolResponseContent, MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, planMcpJsonRpcResponseBytes } from "../src/mcp/server.js";
 
 const phaseDir = ".blueprint/phases/01-planning";
 const firstPath = `${phaseDir}/01-01-PLAN.md`;
@@ -72,6 +78,88 @@ const sessionPath = `${phaseDir}/01-PLAN-SESSION.json`;
 const markerPath = `${phaseDir}/01-PLAN-PUBLICATION.json`;
 async function sessionBytes(cwd: string) { return readFile(path.join(cwd, sessionPath), "utf8"); }
 async function targets(cwd: string) { return Object.fromEntries((await blueprintPlanRead(lookup(cwd))).published.map(file => [file.path, file.hash])); }
+async function prepareInFreshProcess(input: unknown) {
+  const script = `
+    const { blueprintPlanPrepare } = await import("./src/mcp/tools/plan.ts");
+    const input = JSON.parse(process.env.BLUEPRINT_PLAN_CURSOR_INPUT);
+    process.stdout.write(JSON.stringify(await blueprintPlanPrepare(input)));
+  `;
+  return new Promise<any>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
+      cwd: process.cwd(),
+      env: { ...process.env, BLUEPRINT_PLAN_CURSOR_INPUT: JSON.stringify(input) },
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let stdout = "", stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", chunk => { stdout += chunk; });
+    child.stderr.on("data", chunk => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", code => {
+      if (code !== 0) reject(new Error(`Fresh planning process failed (${code}): ${stderr}`));
+      else resolve(JSON.parse(stdout));
+    });
+  });
+}
+
+async function authorityInFreshProcess(cwd: string, startAt: number): Promise<string> {
+  const script = `
+    const { loadPlanCursorAuthorityKey } = await import("./src/mcp/tools/plan-cursor-authority.ts");
+    const startAt = Number(process.env.BLUEPRINT_CURSOR_START_AT);
+    if (Date.now() < startAt) await new Promise(resolve => setTimeout(resolve, startAt - Date.now()));
+    const key = await loadPlanCursorAuthorityKey(process.env.BLUEPRINT_CURSOR_ROOT, true);
+    process.stdout.write(key ? Buffer.from(key).toString("hex") : "null");
+  `;
+  return new Promise<string>((resolve, reject) => {
+    const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        BLUEPRINT_CURSOR_ROOT: cwd,
+        BLUEPRINT_CURSOR_START_AT: String(startAt)
+      },
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let stdout = "", stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", chunk => { stdout += chunk; });
+    child.stderr.on("data", chunk => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", code => {
+      if (code !== 0) reject(new Error(`Fresh cursor-authority process failed (${code}): ${stderr}`));
+      else resolve(stdout);
+    });
+  });
+}
+
+async function gitCommand(cwd: string, args: readonly string[]): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn("git", [...args], { cwd, stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", chunk => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", code => code === 0 ? resolve() : reject(new Error(`git ${args.join(" ")} failed (${code}): ${stderr}`)));
+  });
+}
+
+async function bindTestCursorAuthority(cwd: string, rawKey: Uint8Array): Promise<Uint8Array> {
+  const rootReal = await fs.realpath(cwd);
+  const rootStat = await fs.lstat(cwd);
+  const gitReal = await fs.realpath(path.join(cwd, ".git"));
+  const gitStat = await fs.lstat(gitReal);
+  const repositoryBinding = JSON.stringify({
+    version: 1,
+    root: { path: rootReal, device: rootStat.dev, inode: rootStat.ino },
+    git: { path: gitReal, device: gitStat.dev, inode: gitStat.ino }
+  });
+  return createHmac("sha256", rawKey)
+    .update("blueprint-plan-cursor-repository-v1\0", "utf8")
+    .update(repositoryBinding, "utf8")
+    .digest();
+}
 
 test("one model submission publishes the complete canonical plan set and one replayable receipt", async t => {
   const cwd = await fixture(t), prepared = await prepare(cwd);
@@ -654,4 +742,439 @@ test("prepare exposes late saved constraints outside truncated evidence excerpts
   assert.ok("grounding" in prepared && JSON.stringify(prepared.grounding).includes(lateConstraint));
   assert.ok("evidence" in prepared && prepared.evidence.some(item => item.path.endsWith("CONTEXT.md") && item.truncated));
   assert.ok(!(await sessionBytes(cwd)).includes(lateConstraint), "Grounding is returned to the author but not duplicated in metadata.");
+});
+
+test("prepare bounds selected ordinary evidence and exposes byte continuations", async t => {
+  const cwd = await fixture(t);
+  const source = Array.from({ length: 20000 }, (_, index) => `export const value${index} = "é";`).join("\n");
+  await writeFile(path.join(cwd, "src/core.ts"), source);
+
+  const first: any = await blueprintPlanPrepare({ ...lookup(cwd), evidencePaths: ["src/core.ts"] });
+  assert.equal(first.status, "prepared", JSON.stringify(first));
+  const bodyBytes = first.evidence.reduce((total: number, item: { content?: string | null }) =>
+    total + (typeof item.content === "string" ? Buffer.byteLength(item.content, "utf8") : 0), 0);
+  assert.ok(bodyBytes <= 48 * 1024, String(bodyBytes));
+  assert.equal(first.evidenceBudget.ordinary.deliveredBodyBytes, bodyBytes);
+  assert.ok(first.evidenceBudget.aggregate.deliveredPayloadBytes <= first.evidenceBudget.aggregate.maxPayloadBytes);
+  const continuation = first.evidenceBudget.ordinary.continuations.find((item: { path: string }) => item.path === "src/core.ts");
+  assert.ok(continuation, JSON.stringify(first.evidenceBudget));
+  const delta: any = await blueprintPlanPrepare({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"], expectedRevision: first.revision,
+    evidenceDelivery: { mode: "delta" }
+  });
+  assert.equal(typeof delta.evidence.find((item: { path: string }) => item.path === "src/core.ts").content, "string",
+    "a truncated excerpt must not claim that the complete source was delivered");
+  const currentContinuation = delta.evidenceBudget.ordinary.continuations.find((item: { path: string }) => item.path === "src/core.ts");
+  assert.ok(currentContinuation, JSON.stringify(delta.evidenceBudget));
+
+  const next: any = await blueprintPlanPrepare({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"], expectedRevision: delta.revision,
+    evidenceDelivery: { mode: "full", continuations: [currentContinuation] }
+  });
+  assert.equal(next.status, "prepared", JSON.stringify(next));
+  const continued = next.evidence.find((item: { path: string }) => item.path === "src/core.ts");
+  assert.equal(continued.contentOffsetBytes, currentContinuation.offsetBytes);
+  assert.ok(typeof continued.content === "string" && continued.content.length > 0);
+
+  await writeFile(path.join(cwd, "src/core.ts"), source.replaceAll("value", "changed"));
+  const mixed: any = await blueprintPlanPrepare({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"], expectedRevision: next.revision,
+    acknowledgeChangedInputs: true,
+    evidenceDelivery: { mode: "full", continuations: [currentContinuation] }
+  });
+  assert.equal(mixed.status, "reread_required", JSON.stringify(mixed));
+  assert.equal(Object.hasOwn(mixed, "evidence"), false, "an A-prefix cursor must never expose a B-tail body");
+});
+
+test("first nonportable prepare continuation is immediately reusable unchanged", async t => {
+  const cwd = await fixture(t);
+  await writeFile(path.join(cwd, "src/core.ts"), "export const stable = \"ordinary\";\n".repeat(10000));
+
+  const first: any = await blueprintPlanPrepare({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"]
+  });
+  assert.equal(first.status, "prepared", JSON.stringify(first));
+  const continuation = first.evidenceBudget.ordinary.continuations.find((item: { path: string }) => item.path === "src/core.ts");
+  assert.ok(continuation, JSON.stringify(first.evidenceBudget));
+
+  const resumed: any = await blueprintPlanPrepare({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"], expectedRevision: first.revision,
+    evidenceDelivery: { mode: "full", continuations: [continuation] }
+  });
+  assert.equal(resumed.status, "prepared", JSON.stringify(resumed));
+  assert.equal(resumed.revision, first.revision);
+  assert.equal(resumed.evidence.find((item: { path: string }) => item.path === "src/core.ts").contentOffsetBytes, continuation.offsetBytes);
+
+  const restarted: any = await prepareInFreshProcess({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"], expectedRevision: first.revision,
+    evidenceDelivery: { mode: "full", continuations: [continuation] }
+  });
+  assert.equal(restarted.status, "prepared", JSON.stringify(restarted));
+  assert.equal(restarted.evidence.find((item: { path: string }) => item.path === "src/core.ts").contentOffsetBytes, continuation.offsetBytes);
+
+  const forged: any = await blueprintPlanPrepare({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"], expectedRevision: first.revision,
+    evidenceDelivery: { mode: "full", continuations: [{ ...continuation, offsetBytes: continuation.offsetBytes + 1 }] }
+  });
+  assert.equal(forged.status, "reread_required", JSON.stringify(forged));
+  assert.equal(Object.hasOwn(forged, "evidence"), false);
+});
+
+test("cursor authority is repository-bound, private, permission-repairing, and restart-stable", async t => {
+  const cwd = await fixture(t);
+  await writeFile(path.join(cwd, "src/core.ts"), "export const stable = \"repository bound\";\n".repeat(10000));
+  const first: any = await blueprintPlanPrepare({ ...lookup(cwd), evidencePaths: ["src/core.ts"] });
+  const continuation = first.evidenceBudget.ordinary.continuations.find((item: { path: string }) => item.path === "src/core.ts");
+  assert.ok(continuation, JSON.stringify(first.evidenceBudget));
+
+  const privateDirectory = path.join(cwd, ".git/blueprint");
+  const keyPath = path.join(privateDirectory, "plan-cursor.key");
+  const directoryStat = await fs.stat(privateDirectory);
+  const keyStat = await fs.stat(keyPath);
+  assert.equal(directoryStat.mode & 0o077, 0);
+  assert.equal(keyStat.mode & 0o077, 0);
+  const keyBytes = await readFile(keyPath);
+  assert.equal(keyBytes.byteLength, 32);
+  assert.doesNotMatch(JSON.stringify(first), new RegExp(keyBytes.toString("hex"), "i"));
+  assert.doesNotMatch(await sessionBytes(cwd), new RegExp(keyBytes.toString("hex"), "i"));
+
+  await fs.chmod(privateDirectory, 0o755);
+  await fs.chmod(keyPath, 0o644);
+  const repaired: any = await prepareInFreshProcess({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"], expectedRevision: first.revision,
+    evidenceDelivery: { mode: "full", continuations: [continuation] }
+  });
+  assert.equal(repaired.status, "prepared", JSON.stringify(repaired));
+  assert.equal((await fs.stat(privateDirectory)).mode & 0o077, 0);
+  assert.equal((await fs.stat(keyPath)).mode & 0o077, 0);
+
+  const copied = await fixture(t);
+  await writeFile(path.join(copied, "src/core.ts"), await readFile(path.join(cwd, "src/core.ts")));
+  await writeFile(path.join(copied, sessionPath), await readFile(path.join(cwd, sessionPath)));
+  const copiedPrivateDirectory = path.join(copied, ".git/blueprint");
+  await mkdir(copiedPrivateDirectory, { recursive: true, mode: 0o700 });
+  await writeFile(path.join(copiedPrivateDirectory, "plan-cursor.key"), keyBytes, { mode: 0o600 });
+  const replayed: any = await blueprintPlanPrepare({
+    ...lookup(copied), evidencePaths: ["src/core.ts"], expectedRevision: first.revision,
+    evidenceDelivery: { mode: "full", continuations: [continuation] }
+  });
+  assert.equal(replayed.status, "reread_required", JSON.stringify(replayed));
+  assert.equal(Object.hasOwn(replayed, "evidence"), false);
+});
+
+test("legacy cursor keys are discarded during atomic private-authority migration", async t => {
+  const legacyRelative = ".blueprint/plan-operations/cursor.key";
+  const payload = { version: 1, offsetBytes: 4096, sourceHash: "a".repeat(64) };
+
+  const cwd = await fixture(t);
+  const legacyKey = Buffer.alloc(32, 0x4c);
+  const legacyPath = path.join(cwd, legacyRelative);
+  await mkdir(path.dirname(legacyPath), { recursive: true });
+  await writeFile(legacyPath, legacyKey, { mode: 0o644 });
+  await fs.chmod(legacyPath, 0o644);
+  await gitCommand(cwd, ["add", "-f", legacyRelative]);
+
+  const authority = await loadPlanCursorAuthorityKey(cwd, true);
+  assert.ok(authority);
+  const privatePath = path.join(cwd, ".git/blueprint/plan-cursor.key");
+  const privateBytes = await readFile(privatePath);
+  assert.equal(privateBytes.byteLength, 32);
+  assert.notDeepEqual(privateBytes, legacyKey, "known legacy bytes must never seed the private authority");
+  const legacyAuthority = await bindTestCursorAuthority(cwd, legacyKey);
+  assert.notEqual(
+    sealPlanCursor(authority, "evidence", payload),
+    sealPlanCursor(legacyAuthority, "evidence", payload),
+    "a known legacy key must not reproduce new cursor seals"
+  );
+  await assert.rejects(() => fs.access(legacyPath));
+  assert.equal((await fs.stat(path.dirname(privatePath))).mode & 0o077, 0);
+  assert.equal((await fs.stat(privatePath)).mode & 0o077, 0);
+  assert.deepEqual(await loadPlanCursorAuthorityKey(cwd, false), authority, "the migrated private key must survive restart");
+
+  const installedBeforeCleanup = await fixture(t);
+  const installedKey = Buffer.alloc(32, 0x31);
+  const interruptedLegacyPath = path.join(installedBeforeCleanup, legacyRelative);
+  const installedPrivatePath = path.join(installedBeforeCleanup, ".git/blueprint/plan-cursor.key");
+  await mkdir(path.dirname(installedPrivatePath), { recursive: true, mode: 0o700 });
+  await writeFile(installedPrivatePath, installedKey, { mode: 0o600 });
+  await mkdir(path.dirname(interruptedLegacyPath), { recursive: true });
+  await writeFile(interruptedLegacyPath, Buffer.alloc(32, 0x32), { mode: 0o644 });
+
+  const recovered = await loadPlanCursorAuthorityKey(installedBeforeCleanup, true);
+  assert.ok(recovered);
+  assert.deepEqual(await readFile(installedPrivatePath), installedKey, "cleanup recovery must retain the installed private key");
+  assert.deepEqual(recovered, await bindTestCursorAuthority(installedBeforeCleanup, installedKey));
+  await assert.rejects(() => fs.access(interruptedLegacyPath));
+  assert.deepEqual(await loadPlanCursorAuthorityKey(installedBeforeCleanup, false), recovered);
+
+  const partialInstall = await fixture(t);
+  const partialLegacyKey = Buffer.alloc(32, 0x71);
+  const partialLegacyPath = path.join(partialInstall, legacyRelative);
+  const partialPrivatePath = path.join(partialInstall, ".git/blueprint/plan-cursor.key");
+  await mkdir(path.dirname(partialPrivatePath), { recursive: true, mode: 0o755 });
+  await writeFile(partialPrivatePath, Buffer.alloc(7, 0x70), { mode: 0o644 });
+  await mkdir(path.dirname(partialLegacyPath), { recursive: true });
+  await writeFile(partialLegacyPath, partialLegacyKey, { mode: 0o644 });
+
+  const repaired = await loadPlanCursorAuthorityKey(partialInstall, true);
+  assert.ok(repaired);
+  const repairedBytes = await readFile(partialPrivatePath);
+  assert.equal(repairedBytes.byteLength, 32);
+  assert.notDeepEqual(repairedBytes, partialLegacyKey);
+  assert.equal((await fs.stat(path.dirname(partialPrivatePath))).mode & 0o077, 0);
+  assert.equal((await fs.stat(partialPrivatePath)).mode & 0o077, 0);
+  await assert.rejects(() => fs.access(partialLegacyPath));
+  assert.deepEqual(await loadPlanCursorAuthorityKey(partialInstall, false), repaired);
+});
+
+test("concurrent processes atomically converge when repairing a truncated private cursor key", async t => {
+  const cwd = await fixture(t);
+  const privateDirectory = path.join(cwd, ".git/blueprint");
+  const privatePath = path.join(privateDirectory, "plan-cursor.key");
+  const legacyPath = path.join(cwd, ".blueprint/plan-operations/cursor.key");
+  await mkdir(privateDirectory, { recursive: true, mode: 0o755 });
+  await writeFile(privatePath, Buffer.alloc(7, 0x61), { mode: 0o644 });
+  await mkdir(path.dirname(legacyPath), { recursive: true });
+  await writeFile(legacyPath, Buffer.alloc(32, 0x62), { mode: 0o644 });
+
+  const startAt = Date.now() + 750;
+  const authorities = await Promise.all(
+    Array.from({ length: 8 }, () => authorityInFreshProcess(cwd, startAt))
+  );
+  assert.ok(authorities.every(value => value !== "null"), JSON.stringify(authorities));
+  assert.equal(new Set(authorities).size, 1, JSON.stringify(authorities));
+
+  const stored = await readFile(privatePath);
+  assert.equal(stored.byteLength, 32);
+  assert.equal(authorities[0], Buffer.from(await bindTestCursorAuthority(cwd, stored)).toString("hex"));
+  assert.equal((await fs.stat(privateDirectory)).mode & 0o077, 0);
+  assert.equal((await fs.stat(privatePath)).mode & 0o077, 0);
+  await assert.rejects(() => fs.access(legacyPath));
+  assert.deepEqual(await fs.readdir(privateDirectory), ["plan-cursor.key"], "repair lock and temporary files must be cleaned up");
+
+  const restarted = await authorityInFreshProcess(cwd, Date.now());
+  assert.equal(restarted, authorities[0]);
+  assert.deepEqual(await readFile(privatePath), stored);
+});
+
+test("prepare rejects private Blueprint operational state as selected evidence", async t => {
+  const cwd = await fixture(t);
+  const paths = [
+    ".git/blueprint/plan-cursor.key",
+    ".blueprint/plan-operations/cursor.key",
+    ".blueprint/codebase-operations/private.json",
+    ".blueprint/codebase-incremental/cache.json",
+    ".blueprint/locks/plan.lock",
+    ".blueprint/runs/private.json",
+    `${phaseDir}/01-AUX-SESSION.json`
+  ];
+  for (const relative of paths) {
+    await mkdir(path.dirname(path.join(cwd, relative)), { recursive: true });
+    await writeFile(path.join(cwd, relative), "private operational sentinel\n");
+    const rejected: any = await blueprintPlanPrepare({ ...lookup(cwd), evidencePaths: [relative] });
+    assert.equal(rejected.status, "blocked", `${relative}: ${JSON.stringify(rejected)}`);
+    assert.match(rejected.reason, /private Blueprint operational state/, relative);
+  }
+});
+
+test("prepare rejects aggregate read-time evidence before creating planning state", async t => {
+  const cwd = await fixture(t);
+  const oversized = "x".repeat(64 * 1024);
+  await assert.rejects(() => blueprintPlanPrepare({
+    ...lookup(cwd), evidencePaths: ["src/core.ts"],
+    evidenceDelivery: {
+      mode: "register",
+      readTimeEvidence: Array.from({ length: 33 }, () => ({ path: "src/core.ts", bytes: oversized }))
+    }
+  }), /aggregate limit/);
+  await assert.rejects(() => fs.access(path.join(cwd, sessionPath)));
+});
+
+test("plan read returns metadata or bounded resumable body pages", async t => {
+  const cwd = await fixture(t);
+  const largePlan = `# Plan 01\n\n${"évidence\n".repeat(12000)}`;
+  await writeFile(path.join(cwd, firstPath), largePlan);
+
+  const metadata: any = await blueprintPlanRead({ ...lookup(cwd), bodyMode: "metadata" });
+  assert.equal(metadata.published[0].content, null);
+  assert.equal(metadata.bodyPage.deliveredBytes, 0);
+
+  const first: any = await blueprintPlanRead({ ...lookup(cwd), bodyMode: "page", bodyByteLimit: 48 * 1024 });
+  assert.ok(Buffer.byteLength(first.published[0].content, "utf8") <= 48 * 1024);
+  assert.equal(first.published[0].contentOffsetBytes, 0);
+  assert.equal(first.published[0].contentComplete, false);
+  assert.ok(first.bodyPage.nextCursor);
+  await assert.rejects(() => blueprintPlanRead({
+    ...lookup(cwd), bodyMode: "page",
+    bodyCursor: { ...first.bodyPage.nextCursor, offsetBytes: first.bodyPage.nextCursor.offsetBytes + 1 }
+  }), /stale|cursor/);
+  const second: any = await blueprintPlanRead({ ...lookup(cwd), bodyMode: "page", bodyCursor: first.bodyPage.nextCursor });
+  assert.equal(second.published[0].contentOffsetBytes, first.bodyPage.nextCursor.offsetBytes);
+  assert.ok(second.published[0].content.length > 0);
+
+  await assert.rejects(() => blueprintPlanRead({
+    ...lookup(cwd), bodyMode: "page", planIds: ["01"], bodyCursor: first.bodyPage.nextCursor
+  }), /filters/);
+  await assert.rejects(() => blueprintPlanRead({
+    ...lookup(cwd), bodyMode: "page",
+    bodyCursor: { ...first.bodyPage.nextCursor, offsetBytes: first.bodyPage.nextCursor.totalBytes }
+  }), /stale|cursor|offset or total/);
+  await writeFile(path.join(cwd, firstPath), largePlan.replace("Plan 01", "Changed Plan 01"));
+  await assert.rejects(() => blueprintPlanRead({
+    ...lookup(cwd), bodyMode: "page", bodyCursor: first.bodyPage.nextCursor
+  }), /stale|publication/);
+});
+
+test("live plan read response stays bounded after text mirroring near the body limit", async t => {
+  const cwd = await fixture(t);
+  await writeFile(path.join(cwd, "src/core.ts"), "export const bounded = true;\n".repeat(20000));
+  const server = createBlueprintServer();
+  const client = new Client({ name: "plan-response-boundary", version: "1.0.0" }, { capabilities: {} });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  t.after(async () => Promise.all([client.close(), server.close()]));
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+  const prepared: any = await client.callTool({
+    name: "blueprint_plan_prepare",
+    arguments: { ...lookup(cwd), evidencePaths: ["src/core.ts"] }
+  });
+  const preparedText = prepared.content[0].text as string;
+  assert.equal(preparedText, JSON.stringify(prepared.structuredContent));
+  const preparedBytes = planMcpJsonRpcResponseBytes(prepared.structuredContent);
+  assert.ok(preparedBytes <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, String(preparedBytes));
+  assert.notEqual(prepared.structuredContent.status, "response_limit");
+  assert.ok(prepared.structuredContent.evidenceBudget.ordinary.continuations.length > 0);
+
+  await writeFile(path.join(cwd, firstPath), `# Plan 01\n\n${"bounded body\n".repeat(12000)}`);
+
+  const metadata: any = await client.callTool({
+    name: "blueprint_plan_read",
+    arguments: { ...lookup(cwd), bodyMode: "metadata" }
+  });
+  assert.ok(metadata.structuredContent.published.every((item: { content: unknown }) => item.content === null));
+  assert.doesNotMatch(metadata.content[0].text, /bounded body/);
+
+  const response: any = await client.callTool({
+    name: "blueprint_plan_read",
+    arguments: { ...lookup(cwd), bodyMode: "page", bodyByteLimit: 48 * 1024 }
+  });
+  const text = response.content[0].text as string;
+  assert.equal(text, JSON.stringify(response.structuredContent));
+  const responseBytes = planMcpJsonRpcResponseBytes(response.structuredContent);
+  assert.ok(responseBytes <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, String(responseBytes));
+  const actualJsonRpcBytes = Buffer.byteLength(JSON.stringify({ jsonrpc: "2.0", id: 1, result: response }), "utf8");
+  assert.ok(actualJsonRpcBytes <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, String(actualJsonRpcBytes));
+  assert.notEqual(response.structuredContent.status, "response_limit");
+  assert.ok(response.structuredContent.bodyPage.nextCursor);
+
+  const savedSessionPath = path.join(cwd, sessionPath);
+  const savedSession = JSON.parse(await readFile(savedSessionPath, "utf8"));
+  savedSession.knownEvidenceArtifacts = Array.from({ length: 120 }, (_, index) =>
+    `src/${index}-${"quoted-\\\"-path-".repeat(220)}.ts`);
+  await writeFile(savedSessionPath, JSON.stringify(savedSession, null, 2) + "\n");
+  const oversizedMetadata: any = await client.callTool({
+    name: "blueprint_plan_read",
+    arguments: { ...lookup(cwd), bodyMode: "metadata" }
+  });
+  assert.equal(oversizedMetadata.structuredContent.status, "found");
+  assert.equal(oversizedMetadata.structuredContent.session.revision, savedSession.revision);
+  assert.equal(oversizedMetadata.structuredContent.session.counts.knownEvidenceArtifacts, 120);
+  assert.deepEqual(oversizedMetadata.structuredContent.publication, { status: "absent", token: "missing", reason: null });
+  assert.doesNotMatch(oversizedMetadata.content[0].text, /quoted-\\\"-path/);
+  assert.ok(planMcpJsonRpcResponseBytes(oversizedMetadata.structuredContent) <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES);
+});
+
+test("planIds binds a large session projection and a single-plan metadata read remains bounded", async t => {
+  const cwd = await fixture(t);
+  await prepare(cwd);
+  const savedSessionPath = path.join(cwd, sessionPath);
+  const saved = JSON.parse(await readFile(savedSessionPath, "utf8"));
+  const planIds = Array.from({ length: 100 }, (_, index) => String(index + 1).padStart(2, "0"));
+  saved.targetPlanIds = planIds;
+  saved.existingPlans = planIds.map((planId, index) => ({
+    planId,
+    wave: index + 1,
+    dependsOn: index ? [planIds[index - 1]] : [],
+    requirements: [`R-${planId}-${"quoted-\\\"-metadata-".repeat(700)}`]
+  }));
+  const savedBytes = JSON.stringify(saved, null, 2) + "\n";
+  assert.ok(Buffer.byteLength(savedBytes, "utf8") > 1_200_000);
+  await writeFile(savedSessionPath, savedBytes);
+
+  const result: any = await blueprintPlanRead({ ...lookup(cwd), bodyMode: "metadata", planIds: ["01"] });
+  assert.deepEqual(result.session.targetPlanIds, ["01"]);
+  assert.deepEqual(result.session.existingPlans.map((plan: { planId: string }) => plan.planId), ["01"]);
+  assert.deepEqual(result.session.metadataScope.planIds, ["01"]);
+  assert.equal(result.session.metadataScope.filtered, true);
+  assert.equal(result.session.metadataScope.truncated, true);
+  assert.equal(result.session.counts.targetPlanIds, 100);
+  assert.equal(result.session.counts.scopedTargetPlanIds, 1);
+  assert.equal(result.session.counts.existingPlans, 100);
+  assert.equal(result.session.counts.scopedExistingPlans, 1);
+  assert.ok(planMcpJsonRpcResponseBytes(result) <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES);
+});
+
+test("public plan response guard replaces an oversized mirrored payload with recovery guidance", () => {
+  const evidenceContinuation = {
+    path: "src/large-\"quoted\\path.ts", offsetBytes: 1024, totalBytes: 4096,
+    hash: "a".repeat(64), revision: 7, basisHash: "b".repeat(64), seal: "f".repeat(64)
+  };
+  const content = createToolResponseContent("blueprint_plan_prepare", {
+    status: "prepared", revision: 7, session: { metadata: "\\\"".repeat(MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES) },
+    evidenceBudget: { ordinary: { continuations: [evidenceContinuation] } },
+    evidence: [{ path: evidenceContinuation.path, content: "\\\"".repeat(MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES) }]
+  });
+  const result = JSON.parse(content[0].text);
+  assert.equal(result.status, "response_limit");
+  assert.equal(result.originalStatus, "prepared");
+  assert.equal(result.revision, 7);
+  assert.deepEqual(result.evidenceContinuation, evidenceContinuation);
+  assert.match(result.nextAction, /evidenceContinuation/);
+  assert.ok(planMcpJsonRpcResponseBytes(result) <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES);
+
+  const bodyCursor = {
+    planId: "01", offsetBytes: 2048, totalBytes: 8192, planHash: "c".repeat(64),
+    publicationToken: "d".repeat(64), filterHash: "e".repeat(64), seal: "f".repeat(64)
+  };
+  const readResult = JSON.parse(createToolResponseContent("blueprint_plan_read", {
+    status: "found", session: { metadata: "\\\"".repeat(MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES) },
+    bodyPage: { nextCursor: bodyCursor }, publication: { status: "committed", token: bodyCursor.publicationToken }
+  })[0].text);
+  assert.equal(readResult.status, "response_limit");
+  assert.deepEqual(readResult.bodyCursor, bodyCursor);
+  assert.deepEqual(readResult.publication, { status: "committed", token: bodyCursor.publicationToken });
+  assert.match(readResult.nextAction, /same planIds filter/);
+  assert.ok(planMcpJsonRpcResponseBytes(readResult) <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES);
+
+  const metadataFallback = JSON.parse(createToolResponseContent("blueprint_plan_read", {
+    status: "found",
+    session: { metadata: "\\\"".repeat(MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES) },
+    published: Array.from({ length: 10 }, (_, index) => ({
+      path: `.blueprint/phases/01-planning/01-${String(index + 1).padStart(2, "0")}-PLAN.md`,
+      hash: "a".repeat(64), content: null
+    })),
+    publication: { status: "absent", token: "missing" }
+  })[0].text);
+  assert.equal(metadataFallback.status, "response_limit");
+  assert.deepEqual(metadataFallback.availablePlanIds, Array.from({ length: 10 }, (_, index) => String(index + 1).padStart(2, "0")));
+  assert.match(metadataFallback.nextAction, /smaller subset of availablePlanIds/);
+  assert.doesNotMatch(metadataFallback.nextAction, /same idempotent|bodyMode=metadata\.$/);
+
+  const singlePlanFallback = JSON.parse(createToolResponseContent("blueprint_plan_read", {
+    status: "found",
+    session: {
+      version: 2, phase: "1", revision: 9, prepared: true,
+      counts: { existingPlans: 1, targetPlanIds: 1 },
+      metadataScope: { filtered: true, planIds: ["01"], truncated: true },
+      existingPlans: [{ planId: "01", requirements: ["\\\"".repeat(MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES)] }]
+    },
+    published: [{ path: ".blueprint/phases/01-planning/01-01-PLAN.md", hash: "a".repeat(64), content: null }],
+    publication: { status: "absent", token: "missing" }
+  })[0].text);
+  assert.equal(singlePlanFallback.status, "response_limit");
+  assert.deepEqual(singlePlanFallback.availablePlanIds, ["01"]);
+  assert.equal(singlePlanFallback.metadataProjection.revision, 9);
+  assert.deepEqual(singlePlanFallback.metadataProjection.metadataScope.planIds, ["01"]);
+  assert.match(singlePlanFallback.nextAction, /metadataProjection|body page/);
+  assert.doesNotMatch(singlePlanFallback.nextAction, /smaller subset/);
 });

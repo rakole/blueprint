@@ -17,7 +17,9 @@ input_bundles:
 
 Load `references/plan-phase-runtime-contract.md` for the active planning contract.
 Use `blueprint_plan_prepare` -> author/review -> `blueprint_plan_submit`.
-Use `blueprint_plan_read` to view canonical plans and recovery metadata.
+Use `blueprint_plan_read` to view canonical plan metadata and bounded body pages;
+follow `bodyPage.nextCursor` unchanged when a plan body continues, and narrow an
+oversized metadata result with a subset of its returned `availablePlanIds`.
 
 Prepare supplies phase resolution, effective config, evidence fingerprints,
 readiness, saved-plan choices, compact schema, grounded example and validation

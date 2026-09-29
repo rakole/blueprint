@@ -4,8 +4,12 @@ import { writeTextFile } from "./artifacts.js";
 import { validatePhasePlanCandidateSet } from "./phase.js";
 import { compilePlanCandidate } from "./plan-model.js";
 import { blueprintStateLoad, blueprintStateUpdate } from "./state.js";
-import { type PlanSession } from "./plan-session.js";
 import { type PortableProviderEvidenceBasis } from "../codebase-index/provider-evidence.js";
+export declare const PLAN_ORDINARY_EVIDENCE_BODY_BYTES: number;
+export declare const PLAN_READ_BODY_PAGE_BYTES: number;
+export declare const PLAN_READ_TIME_EVIDENCE_BYTES: number;
+export declare const PLAN_READ_TIME_EVIDENCE_ITEM_BYTES: number;
+export declare const PLAN_READ_TIME_EVIDENCE_MAX_ITEMS = 33;
 declare const prepareInput: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
     phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
@@ -68,6 +72,15 @@ declare const prepareInput: z.ZodObject<{
             hash: z.ZodOptional<z.ZodString>;
             bytes: z.ZodOptional<z.ZodString>;
         }, z.core.$strict>>>;
+        continuations: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            path: z.ZodString;
+            offsetBytes: z.ZodNumber;
+            totalBytes: z.ZodNumber;
+            hash: z.ZodString;
+            revision: z.ZodNumber;
+            basisHash: z.ZodString;
+            seal: z.ZodString;
+        }, z.core.$strict>>>;
     }, z.core.$strict>>;
     reconcile: z.ZodOptional<z.ZodObject<{
         confirmed: z.ZodLiteral<true>;
@@ -90,6 +103,21 @@ declare const submitInput: z.ZodObject<{
     phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
 }, z.core.$strip>;
 declare const lookupSchema: z.ZodObject<{
+    bodyMode: z.ZodOptional<z.ZodEnum<{
+        metadata: "metadata";
+        page: "page";
+    }>>;
+    planIds: z.ZodOptional<z.ZodArray<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>>;
+    bodyCursor: z.ZodOptional<z.ZodObject<{
+        planId: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
+        offsetBytes: z.ZodNumber;
+        totalBytes: z.ZodNumber;
+        planHash: z.ZodString;
+        publicationToken: z.ZodString;
+        filterHash: z.ZodString;
+        seal: z.ZodString;
+    }, z.core.$strict>>;
+    bodyByteLimit: z.ZodOptional<z.ZodNumber>;
     cwd: z.ZodOptional<z.ZodString>;
     phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
 }, z.core.$strip>;
@@ -104,9 +132,10 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     status: string;
     saved?: undefined;
     ready?: undefined;
+    paths?: undefined;
+    reason?: undefined;
     counts?: undefined;
     scopeReduction?: undefined;
-    reason?: undefined;
 } | {
     reason: string;
     revision: number;
@@ -114,9 +143,19 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     status: string;
     saved?: undefined;
     ready?: undefined;
+    paths?: undefined;
+    nextAction?: undefined;
     counts?: undefined;
     scopeReduction?: undefined;
-    nextAction?: undefined;
+} | {
+    status: string;
+    saved: boolean;
+    ready: boolean;
+    paths: string[];
+    reason: string;
+    nextAction: string;
+    counts?: undefined;
+    scopeReduction?: undefined;
 } | {
     nextAction: string;
     scopeReduction?: {
@@ -152,6 +191,7 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     };
     reason: string;
     nextAction: string;
+    paths?: undefined;
 } | {
     freshness: {
         status: string;
@@ -164,152 +204,8 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     status: string;
     saved?: undefined;
     ready?: undefined;
-    counts?: undefined;
-    scopeReduction?: undefined;
+    paths?: undefined;
     reason?: undefined;
-} | {
-    status: "reread_required";
-    saved: boolean;
-    ready: boolean;
-    paths: string[];
-    reason: string;
-    nextAction: string;
-    phase: import("./phase-tool-types.js").PhaseSelectionResult;
-    gates: {
-        ready: boolean;
-        blockers: string[];
-        checkerRequired: boolean;
-    };
-    config: {
-        workflow: {
-            research: boolean;
-            plan_check: boolean;
-            secure_phase: boolean;
-            verifier: boolean;
-            nyquist_validation: boolean;
-            ui_phase: boolean;
-            ui_safety_gate: boolean;
-            no_uat: boolean;
-            code_review: boolean;
-            code_review_depth: string;
-            auto_advance: boolean;
-            research_before_questions: boolean;
-            discuss_mode: string;
-            use_worktrees: boolean;
-            subagents: boolean;
-            subagent_timeout: number;
-        };
-    };
-    requirements: {
-        found: boolean;
-        path: string | null;
-        canonicalRequirementIds: string[];
-        roadmapRequirementIds: string[];
-        traceabilityNotes: string[];
-        acceptanceNotes: string[];
-        deferredItems: string[];
-        summary: string;
-        warnings: string[];
-    } | undefined;
-    projectBrief: {
-        found: boolean;
-        path: string | null;
-        title: string | null;
-        summary: string;
-        vision: string[];
-        audience: string[];
-        constraints: string[];
-        currentMilestone: string | null;
-        nonGoals: string[];
-        warnings: string[];
-    } | undefined;
-    evidence: ({
-        content: string | null;
-        truncated: boolean;
-        path: string;
-        hash: string;
-    } | {
-        content: string | null;
-        truncated: boolean;
-        path: string;
-        hash: null;
-    })[];
-    grounding: {
-        lockedDecisions: string;
-        phaseBoundary: string;
-        dependencies: string;
-        discoveryGrounding: string;
-        projectConstraints: string[];
-    };
-    existingPlans: {
-        planId: string;
-        path: string;
-        title: string | null;
-        wave: number | null;
-        dependsOn: string[];
-        requirements: string[];
-        status: string | null;
-    }[];
-    targetHashes: {
-        [k: string]: string | null;
-    };
-    schema: Record<string, unknown>;
-    example: {
-        plans: {
-            title: string;
-            goal: string;
-            tasks: {
-                title: string;
-                filesModified: string[];
-                requirements: string[];
-                action: string[];
-                acceptanceCriteria: string[];
-                id?: string | undefined;
-                readFirst?: string[] | undefined;
-            }[];
-            key?: string | undefined;
-            scope?: string[] | undefined;
-            dependsOn?: string[] | undefined;
-            mustHaves?: string[] | undefined;
-            autonomous?: boolean | undefined;
-            gapClosure?: boolean | undefined;
-            externalServicePrerequisites?: {
-                service: string;
-                category: string;
-                purpose: string;
-                userSetup: string;
-                readinessCheck: string;
-                canAgentProceedWithoutIt: boolean;
-            }[] | undefined;
-            verification?: {
-                item: string;
-                method: "test" | "command" | "grep" | "file-read" | "artifact-validation";
-                evidence: string;
-            }[] | undefined;
-            evidence?: {
-                artifact: string;
-                rationale: string;
-            }[] | undefined;
-            unknownsAndDeferrals?: {
-                item: string;
-                disposition: "unknown" | "none" | "deferred" | "blocked";
-                rationale: string;
-                followUp: string;
-            }[] | undefined;
-        }[];
-        deferrals?: {
-            requirement: string;
-            rationale: string;
-            followUp: string;
-        }[] | undefined;
-    };
-    validationRules: {
-        reject: string[];
-        advisory: string[];
-        normalize: string[];
-    };
-    derivedFields: string[];
-    exampleNote: string;
     counts?: undefined;
     scopeReduction?: undefined;
 } | {
@@ -351,14 +247,32 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
         counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
         mode: "full" | "delta" | "register";
     } | undefined;
-    evidence: ({
-        readonly path: string;
-        readonly hash: string | null;
-        readonly content: string | null;
-    } | {
-        path: string;
-        hash: string;
-    })[];
+    evidence: {
+        [x: string]: unknown;
+    }[];
+    evidenceBudget: {
+        ordinary: {
+            continuations: {
+                seal: string;
+                path: string;
+                offsetBytes: number;
+                totalBytes: number;
+                hash: string;
+                revision: number;
+                basisHash: string;
+            }[];
+            maxBodyBytes: number;
+            deliveredBodyBytes: number;
+        };
+        portable: {
+            maxPacketBytes: number;
+            deliveredPacketBytes: number;
+        };
+        aggregate: {
+            maxPayloadBytes: number;
+            deliveredPayloadBytes: number;
+        };
+    };
     phase: import("./phase-tool-types.js").PhaseSelectionResult;
     gates: {
         ready: boolean;
@@ -486,9 +400,10 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     exampleNote: string;
     saved?: undefined;
     ready?: undefined;
+    paths?: undefined;
+    reason?: undefined;
     counts?: undefined;
     scopeReduction?: undefined;
-    reason?: undefined;
 } | {
     mode: "replace" | "add" | "revise";
     targetPlanIds: string[];
@@ -567,14 +482,32 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
         counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
         mode: "full" | "delta" | "register";
     } | undefined;
-    evidence: ({
-        readonly path: string;
-        readonly hash: string | null;
-        readonly content: string | null;
-    } | {
-        path: string;
-        hash: string;
-    })[];
+    evidence: {
+        [x: string]: unknown;
+    }[];
+    evidenceBudget: {
+        ordinary: {
+            continuations: {
+                seal: string;
+                path: string;
+                offsetBytes: number;
+                totalBytes: number;
+                hash: string;
+                revision: number;
+                basisHash: string;
+            }[];
+            maxBodyBytes: number;
+            deliveredBodyBytes: number;
+        };
+        portable: {
+            maxPacketBytes: number;
+            deliveredPacketBytes: number;
+        };
+        aggregate: {
+            maxPayloadBytes: number;
+            deliveredPayloadBytes: number;
+        };
+    };
     phase: import("./phase-tool-types.js").PhaseSelectionResult;
     gates: {
         ready: boolean;
@@ -701,9 +634,10 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     exampleNote: string;
     saved?: undefined;
     ready?: undefined;
+    paths?: undefined;
+    reason?: undefined;
     counts?: undefined;
     scopeReduction?: undefined;
-    reason?: undefined;
 } | {
     status: string;
     reason: string;
@@ -712,12 +646,79 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
 export declare function blueprintPlanRead(raw: z.input<typeof lookupSchema>): Promise<{
     status: string;
     sessionPath: string;
-    session: PlanSession | null;
+    session: {
+        legacyPublication?: {
+            markerToken: string;
+        } | undefined;
+        journal?: {
+            receipt?: {
+                status: "published";
+                saved: true;
+                ready: true;
+                revision: number;
+                pathCount: number;
+                planCount: number;
+                removedPathCount: number;
+            } | undefined;
+            requestId: string;
+            revision: number;
+            stages: Partial<Record<"files" | "state" | "routing" | "commit", "complete" | "intent">>;
+        } | undefined;
+        delivery?: {
+            deliveredCount: number;
+            registeredCount: number;
+        } | undefined;
+        portable?: {
+            selectionCount: number;
+            generationId: string;
+            bindingHash: string;
+        } | undefined;
+        version: 2;
+        phase: string;
+        revision: number;
+        prepared: boolean;
+        needsIntent: boolean;
+        publicationOwned: boolean;
+        mode: "replace" | "add" | "revise";
+        targetPlanIds: string[];
+        checkerRequired: boolean;
+        existingPlans: {
+            planId: string;
+            wave: number;
+            dependsOn: string[];
+            requirements: string[];
+            counts: {
+                dependsOn: number;
+                requirements: number;
+            };
+        }[];
+        metadataScope: {
+            filtered: boolean;
+            planIds: string[];
+            truncated: boolean;
+        };
+        counts: {
+            readSet: number;
+            evidencePaths: number;
+            targets: number;
+            knownRequirements: number;
+            knownEvidenceArtifacts: number;
+            requests: number;
+            targetPlanIds: number;
+            scopedTargetPlanIds: number;
+            existingPlans: number;
+            scopedExistingPlans: number;
+        };
+    } | null;
     published: ({
+        contentOffsetBytes?: number | undefined;
+        contentComplete?: boolean | undefined;
         content: string | null;
         path: string;
         hash: string;
     } | {
+        contentOffsetBytes?: number | undefined;
+        contentComplete?: boolean | undefined;
         content: string | null;
         path: string;
         hash: string | null;
@@ -727,10 +728,27 @@ export declare function blueprintPlanRead(raw: z.input<typeof lookupSchema>): Pr
         token: string;
         reason: string | null;
     };
+    bodyPage: {
+        mode: "metadata" | "page";
+        maxBytes: number;
+        deliveredBytes: number;
+        nextCursor: {
+            planId: string;
+            offsetBytes: number;
+            totalBytes: number;
+            planHash: string;
+            publicationToken: string;
+            filterHash: string;
+            seal: string;
+        } | null;
+    };
     freshness: {
         status: string;
         stalePaths: string[];
         unknownPaths: string[];
+        stalePathCount: number;
+        unknownPathCount: number;
+        truncated: boolean;
     } | null;
 }>;
 export declare const planDependencies: {

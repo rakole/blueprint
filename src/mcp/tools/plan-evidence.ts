@@ -15,6 +15,25 @@ function evidenceInventory(loc: PlanLocation) {
   return loc.artifacts.filter(p => !/-PLAN\.md$/.test(p) && !/-SESSION\.json$/.test(p) && !/-CHECKPOINT\.json$/.test(p) && !/-PLAN-PUBLICATION\.json$/.test(p)).sort();
 }
 
+function isPrivateBlueprintOperationalPath(pathValue: string): boolean {
+  if (pathValue === ".git" || pathValue.startsWith(".git/")) return true;
+  if (!pathValue.startsWith(".blueprint/")) return false;
+  const privateRoots = [
+    ".blueprint/locks/",
+    ".blueprint/plan-operations/",
+    ".blueprint/codebase-operations/",
+    ".blueprint/codebase-incremental/",
+    ".blueprint/executions/",
+    ".blueprint/runs/",
+    ".blueprint/workstreams/"
+  ];
+  const basename = pathValue.slice(pathValue.lastIndexOf("/") + 1);
+  return pathValue === ".blueprint/STATE.md" ||
+    privateRoots.some(root => pathValue === root.slice(0, -1) || pathValue.startsWith(root)) ||
+    /(?:^|[-.])(?:SESSION|CHECKPOINT|PUBLICATION|JOURNAL|RECEIPT)(?:[-.]|$)/i.test(basename) ||
+    /\.(?:key|lock)$/i.test(basename);
+}
+
 export async function planInputHash(root: string, relative: string, phase: string) {
   if (relative === "@plan/effective-config") {
     const config = await blueprintConfigGet({ cwd: root, scope: "effective" });
@@ -83,7 +102,9 @@ export type CapturePlanEvidenceOptions = { skipCodebaseArtifacts?: boolean };
 
 export async function capturePlanEvidence(loc: PlanLocation, selectedPaths: string[], options: CapturePlanEvidenceOptions = {}) {
   const evidencePaths = [...new Set(selectedPaths.map(p => canonicalResearchEvidencePath(loc.projectRoot, p)))];
-  if (evidencePaths.some(p => p === ".blueprint/STATE.md" || /-(?:PLAN|SESSION|CHECKPOINT|PLAN-PUBLICATION)\.(?:md|json)$/.test(p))) throw new Error("Select repository evidence, not mutable plans, state, sessions, or checkpoints.");
+  if (evidencePaths.some(p => /-PLAN\.md$/.test(p) || isPrivateBlueprintOperationalPath(p))) {
+    throw new Error("Select repository evidence, not plans or private Blueprint operational state.");
+  }
   const researchPath = artifactPathFor(loc.resolved, "research");
   const paths = [...new Set([
     ".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/config.json",
@@ -126,6 +147,7 @@ type PlanOrdinaryEvidenceInput = {
   readonly path: string;
   readonly hash: string | null;
   readonly content: string | null;
+  readonly truncated?: boolean;
 };
 
 export function shapePlanOrdinaryEvidence(
@@ -154,10 +176,9 @@ export function shapePlanOrdinaryEvidence(
     const registeredNow = readAtTime !== null && readAtTime !== undefined && readAtTime === item.hash;
     const omitBody = item.content !== null && ((mode === "delta" && unchanged) || (mode === "register" && (unchanged || registeredNow)));
     if (item.content !== null && item.hash) {
-      // Any emitted body proves delivery, including the first delta/register
-      // response.  Registration is reserved for an omitted body with a
-      // verified read-time hash.
-      if (!omitBody) delivered.set(item.path, item.hash);
+      // Only a complete emitted body proves delivery. Bounded excerpts remain
+      // continuable and must not make a later delta omit unread bytes.
+      if (!omitBody && item.truncated !== true) delivered.set(item.path, item.hash);
       if (registeredNow) registered.set(item.path, item.hash);
     }
     return omitBody ? { path: item.path, hash: item.hash } : item;

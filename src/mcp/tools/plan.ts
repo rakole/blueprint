@@ -26,22 +26,75 @@ import {
   type PortableProviderEvidenceResult
 } from "../codebase-index/provider-evidence.js";
 import { portableSelectionSchema, type PortableSelection } from "../codebase-index/resolver.js";
+import { PORTABLE_MAP_MAX_MODEL_PACKET_BYTES } from "../codebase-index/contracts.js";
+import { loadPlanCursorAuthorityKey, sealPlanCursor, verifyPlanCursorSeal } from "./plan-cursor-authority.js";
 
 const mode = z.enum(["add", "revise", "replace"]);
 const planId = z.string().regex(/^\d+$/).transform(value => value.padStart(2, "0"));
-const prepareInput = z.object({
+export const PLAN_ORDINARY_EVIDENCE_BODY_BYTES = 48 * 1024;
+export const PLAN_READ_BODY_PAGE_BYTES = 48 * 1024;
+export const PLAN_READ_TIME_EVIDENCE_BYTES = 2 * 1024 * 1024;
+export const PLAN_READ_TIME_EVIDENCE_ITEM_BYTES = 64 * 1024;
+export const PLAN_READ_TIME_EVIDENCE_MAX_ITEMS = 33;
+
+const evidenceContinuationSchema = z.strictObject({
+  path: z.string().min(1).max(4096),
+  offsetBytes: z.number().int().nonnegative().max(1024 * 1024),
+  totalBytes: z.number().int().positive().max(1024 * 1024),
+  hash: z.string().regex(/^[a-f0-9]{64}$/),
+  revision: z.number().int().nonnegative(),
+  basisHash: z.string().regex(/^[a-f0-9]{64}$/),
+  seal: z.string().regex(/^[a-f0-9]{64}$/)
+});
+const publicEvidenceDeliverySchema = z.strictObject({
+  mode: portableProviderEvidenceModeSchema,
+  readTimeEvidence: z.array(z.strictObject({
+    path: z.string().min(1).max(1024),
+    hash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    bytes: z.string().max(PLAN_READ_TIME_EVIDENCE_ITEM_BYTES).refine(value => Buffer.byteLength(value, "utf8") <= PLAN_READ_TIME_EVIDENCE_ITEM_BYTES, { message: `Read-time evidence bytes must not exceed ${PLAN_READ_TIME_EVIDENCE_ITEM_BYTES} UTF-8 bytes.` }).optional()
+  }).refine(item => item.hash !== undefined || item.bytes !== undefined, { message: "Read-time evidence requires hash or bytes." })).max(PLAN_READ_TIME_EVIDENCE_MAX_ITEMS).optional(),
+  continuations: z.array(evidenceContinuationSchema).max(60).optional()
+});
+const prepareInputShape = {
   cwd: z.string().optional(), phase: planNumericPhase.optional(), mode: mode.optional(), targetPlanIds: z.array(planId).max(100).optional(),
-  evidencePaths: z.array(z.string().min(1)).max(60).optional(), expectedRevision: z.number().int().nonnegative().optional(), acknowledgeChangedInputs: z.boolean().optional(),
+  evidencePaths: z.array(z.string().min(1).max(4096)).max(60).optional(), expectedRevision: z.number().int().nonnegative().optional(), acknowledgeChangedInputs: z.boolean().optional(),
   portableSelections: z.array(portableSelectionSchema).max(60).optional(),
-  evidenceDelivery: z.strictObject({
-    mode: portableProviderEvidenceModeSchema,
-    readTimeEvidence: z.array(z.strictObject({ path: z.string().min(1).max(4096), hash: z.string().regex(/^[a-f0-9]{64}$/).optional(), bytes: z.string().max(1024 * 1024).optional() }).refine(item => item.hash !== undefined || item.bytes !== undefined, { message: "Read-time evidence requires hash or bytes." })).max(300).optional()
-  }).optional(),
+  evidenceDelivery: publicEvidenceDeliverySchema.optional(),
   reconcile: z.object({ confirmed: z.literal(true), targetHashes: z.record(z.string(), z.string().nullable()) }).optional(),
+};
+const prepareInput = z.object(prepareInputShape).superRefine((value, context) => {
+  const readTimeBytes = (value.evidenceDelivery?.readTimeEvidence ?? [])
+    .reduce((total, item) => total + (item.bytes === undefined ? 0 : Buffer.byteLength(item.bytes, "utf8")), 0);
+  if (readTimeBytes > PLAN_READ_TIME_EVIDENCE_BYTES) context.addIssue({
+    code: "custom",
+    path: ["evidenceDelivery", "readTimeEvidence"],
+    message: `Read-time evidence exceeds the ${PLAN_READ_TIME_EVIDENCE_BYTES}-byte aggregate limit. Send hashes or smaller bounded excerpts.`
+  });
+  const paths = value.evidenceDelivery?.continuations?.map(item => item.path) ?? [];
+  if (new Set(paths).size !== paths.length) context.addIssue({
+    code: "custom",
+    path: ["evidenceDelivery", "continuations"],
+    message: "Evidence continuations must contain each path at most once."
+  });
 });
 const reviewInput = z.object({ verdict: z.enum(["accept", "revise"]), summary: z.string().min(1).max(20000) });
 const submitInput = z.object({ ...planLookup, requestId: planRequestId, expectedRevision: z.number().int().nonnegative(), model: z.unknown().optional(), overwrite: z.boolean().optional(), review: reviewInput.optional() });
-const lookupSchema = z.object(planLookup);
+const readInputShape = {
+  ...planLookup,
+  bodyMode: z.enum(["metadata", "page"]).optional(),
+  planIds: z.array(planId).max(20).optional(),
+  bodyCursor: z.strictObject({
+    planId,
+    offsetBytes: z.number().int().nonnegative().max(4 * 1024 * 1024),
+    totalBytes: z.number().int().nonnegative().max(4 * 1024 * 1024),
+    planHash: z.string().regex(/^[a-f0-9]{64}$/),
+    publicationToken: z.string().min(1).max(128),
+    filterHash: z.string().regex(/^[a-f0-9]{64}$/),
+    seal: z.string().regex(/^[a-f0-9]{64}$/)
+  }).optional(),
+  bodyByteLimit: z.number().int().min(1024).max(PLAN_READ_BODY_PAGE_BYTES).optional()
+};
+const lookupSchema = z.object(readInputShape);
 
 function requestHash(args: z.infer<typeof submitInput>) {
   return researchDigest(stableResearchValue({ phase: String(args.phase), requestId: args.requestId, expectedRevision: args.expectedRevision, overwrite: args.overwrite ?? false }));
@@ -69,7 +122,7 @@ async function readinessGates(loc: PlanLocation, readiness: Awaited<ReturnType<t
   return { ready: readiness.status === "ready" && blockers.length === 0, blockers: [...new Set(blockers)], checkerRequired: readiness.effectiveConfig.workflow.plan_check };
 }
 
-type PublicPortableDelivery = z.infer<NonNullable<typeof prepareInput.shape.evidenceDelivery>>;
+type PublicPortableDelivery = z.infer<typeof publicEvidenceDeliverySchema>;
 
 function canonicalPortableSelectionList(values: readonly PortableSelection[]): PortableSelection[] {
   const seen = new Set<string>();
@@ -239,15 +292,109 @@ function portableReadSetCount(basis: PortableProviderEvidenceBasis | undefined):
   ]).size;
 }
 
-function boundedEvidence(inputs: Awaited<ReturnType<typeof capturePlanEvidence>>["inputs"], preservePaths: readonly string[] = []) {
-  let remaining = 48000;
-  const preserve = new Set(preservePaths.filter(pathValue => !pathValue.startsWith(".blueprint/")));
+function utf8Slice(value: string, offsetBytes: number, maxBytes: number) {
+  const bytes = Buffer.from(value, "utf8");
+  if (offsetBytes > bytes.length || offsetBytes > 0 && (bytes[offsetBytes] & 0xc0) === 0x80) {
+    throw new Error("Evidence continuation offset is outside the file or splits a UTF-8 character.");
+  }
+  let end = Math.min(bytes.length, offsetBytes + maxBytes);
+  while (end > offsetBytes && end < bytes.length && (bytes[end] & 0xc0) === 0x80) end--;
+  return { content: bytes.subarray(offsetBytes, end).toString("utf8"), nextOffsetBytes: end < bytes.length ? end : null, totalBytes: bytes.length };
+}
+
+function boundedEvidence(inputs: Awaited<ReturnType<typeof capturePlanEvidence>>["inputs"], continuations: readonly z.infer<typeof evidenceContinuationSchema>[] = []) {
+  let remaining = PLAN_ORDINARY_EVIDENCE_BODY_BYTES;
+  const offsets = new Map(continuations.map(item => [item.path, item.offsetBytes]));
+  const continuationOrder = new Map(continuations.map((item, index) => [item.path, index]));
   const priority = (path: string) => /-CONTEXT\.md$/.test(path) ? 0 : /-RESEARCH\.md$/.test(path) ? 1 : /-(?:UI-)?SPEC\.md$/.test(path) ? 2 : /\/(?:PROJECT|REQUIREMENTS)\.md$/.test(path) ? 3 : 4;
-  return [...inputs].sort((left, right) => priority(left.path) - priority(right.path)).map(input => {
-    const content = input.content === null ? null : preserve.has(input.path) ? input.content : input.content.slice(0, Math.min(/-(?:CONTEXT|SPEC|UI-SPEC)\.md$/.test(input.path) ? 16000 : 6000, remaining));
-    remaining -= content?.length ?? 0;
-    return { ...input, content, truncated: (input.content?.length ?? 0) > (content?.length ?? 0) };
+  return [...inputs].sort((left, right) => {
+    const leftContinuation = continuationOrder.get(left.path);
+    const rightContinuation = continuationOrder.get(right.path);
+    if (leftContinuation !== undefined || rightContinuation !== undefined) {
+      if (leftContinuation === undefined) return 1;
+      if (rightContinuation === undefined) return -1;
+      return leftContinuation - rightContinuation;
+    }
+    return priority(left.path) - priority(right.path);
+  }).map(input => {
+    if (input.content === null) return { ...input, content: null, truncated: false };
+    const offsetBytes = offsets.get(input.path) ?? 0;
+    const perFileBytes = /-(?:CONTEXT|SPEC|UI-SPEC)\.md$/.test(input.path) ? 16 * 1024 : 6 * 1024;
+    const sliced = utf8Slice(input.content, offsetBytes, Math.min(perFileBytes, remaining));
+    const deliveredBytes = Buffer.byteLength(sliced.content, "utf8");
+    remaining -= deliveredBytes;
+    return {
+      ...input,
+      content: sliced.content,
+      truncated: offsetBytes > 0 || sliced.nextOffsetBytes !== null,
+      contentOffsetBytes: offsetBytes,
+      nextOffsetBytes: sliced.nextOffsetBytes,
+      totalBytes: sliced.totalBytes
+    };
   });
+}
+
+function ordinaryEvidenceBudget(evidence: readonly { path: string; content?: string | null; nextOffsetBytes?: number | null; totalBytes?: number }[]) {
+  const deliveredBodyBytes = evidence.reduce((total, item) => total + (typeof item.content === "string" ? Buffer.byteLength(item.content, "utf8") : 0), 0);
+  return {
+    maxBodyBytes: PLAN_ORDINARY_EVIDENCE_BODY_BYTES,
+    deliveredBodyBytes,
+    continuations: evidence.flatMap(item => item.nextOffsetBytes === null || item.nextOffsetBytes === undefined ? [] : [{ path: item.path, offsetBytes: item.nextOffsetBytes, totalBytes: item.totalBytes ?? item.nextOffsetBytes }])
+  };
+}
+
+function ordinaryEvidenceBasisHash(capture: Awaited<ReturnType<typeof capturePlanEvidence>>) {
+  return researchDigest(stableResearchValue({ readSet: capture.readSet, evidencePaths: capture.evidencePaths }));
+}
+
+function evidenceCursorPayload(cursor: Omit<z.infer<typeof evidenceContinuationSchema>, "seal">) {
+  return {
+    path: cursor.path,
+    offsetBytes: cursor.offsetBytes,
+    totalBytes: cursor.totalBytes,
+    hash: cursor.hash,
+    revision: cursor.revision,
+    basisHash: cursor.basisHash
+  };
+}
+
+type PlanBodyCursor = NonNullable<z.infer<typeof lookupSchema.shape.bodyCursor>>;
+
+function planBodyCursorPayload(cursor: Omit<PlanBodyCursor, "seal">) {
+  return {
+    planId: cursor.planId,
+    offsetBytes: cursor.offsetBytes,
+    totalBytes: cursor.totalBytes,
+    planHash: cursor.planHash,
+    publicationToken: cursor.publicationToken,
+    filterHash: cursor.filterHash
+  };
+}
+
+function publicOrdinaryEvidence(evidence: readonly Record<string, unknown>[]) {
+  return evidence.map(item => {
+    const { nextOffsetBytes: _nextOffsetBytes, totalBytes: _totalBytes, ...publicItem } = item;
+    return publicItem;
+  });
+}
+
+function boundOrdinaryEvidenceBudget(
+  evidence: readonly { path: string; hash?: string | null; content?: string | null; nextOffsetBytes?: number | null; totalBytes?: number }[],
+  revision: number,
+  basisHash: string,
+  cursorKey: Uint8Array
+) {
+  const budget = ordinaryEvidenceBudget(evidence);
+  const hashes = new Map(evidence.flatMap(item => typeof item.hash === "string" ? [[item.path, item.hash] as const] : []));
+  return {
+    ...budget,
+    continuations: budget.continuations.flatMap(item => {
+      const hash = hashes.get(item.path);
+      if (!hash) return [];
+      const payload = evidenceCursorPayload({ ...item, hash, revision, basisHash });
+      return [{ ...payload, seal: sealPlanCursor(cursorKey, "evidence", payload) }];
+    })
+  };
 }
 
 export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {}) {
@@ -277,7 +424,7 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
       const portableRequested = explicitPortable || defaultPortable?.status === "ok";
       const guardedPortableFallback = defaultPortable !== undefined && defaultPortable.status !== "ok" &&
         (defaultPortable.diagnostics ?? []).some(item => (item as {code?: string}).code !== "missing");
-      const directEvidenceOnly = (!portableRequested && args.evidenceDelivery !== undefined) || guardedPortableFallback;
+      const directEvidenceOnly = guardedPortableFallback;
       const selections = canonicalPortableSelections(session, args.portableSelections);
       const priorPortableBasis = !args.acknowledgeChangedInputs && session.portable && stableResearchValue(session.portable.selections) === stableResearchValue(selections)
         ? session.portable.basis
@@ -290,6 +437,25 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
       // failure that is handled by the ordinary fallback path.
       const selectedPaths = [...new Set([...session.evidencePaths, ...args.evidencePaths ?? []])];
       let capture = await capturePlanEvidence(loc, selectedPaths, { skipCodebaseArtifacts: portableRequested || directEvidenceOnly });
+      let evidenceBasisHash = ordinaryEvidenceBasisHash(capture);
+      const continuationKey = args.evidenceDelivery?.continuations?.length
+        ? await loadPlanCursorAuthorityKey(loc.projectRoot, false)
+        : null;
+      const invalidContinuations = (args.evidenceDelivery?.continuations ?? []).filter(item => {
+        const input = capture.inputs.find(candidate => candidate.path === item.path);
+        if (!input?.content || !input.hash) return true;
+        const totalBytes = Buffer.byteLength(input.content, "utf8");
+        const { seal, ...payload } = item;
+        return !continuationKey || !verifyPlanCursorSeal(continuationKey, "evidence", evidenceCursorPayload(payload), seal) ||
+          item.revision !== session.revision || item.basisHash !== evidenceBasisHash ||
+          item.hash !== input.hash || item.totalBytes !== totalBytes || item.offsetBytes >= totalBytes;
+      });
+      if (invalidContinuations.length) return {
+        status: "reread_required", saved: false, ready: false,
+        paths: invalidContinuations.map(item => item.path),
+        reason: "Evidence continuations must match the current prepared revision and immutable source basis.",
+        nextAction: "Retry blueprint_plan_prepare with a continuation returned by the current evidenceBudget."
+      };
       let inheritedBasis = provenancePortableBasis(capture.inputs, loc);
       const provider = portableRequested
         ? await preparePortableProviderEvidence({
@@ -303,6 +469,7 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
       const acknowledgedPortableFailure = args.acknowledgeChangedInputs && portableRequested && provider.status === "reread_required";
       if (acknowledgedPortableFailure && acknowledgedPortableSources.length) {
         capture = await capturePlanEvidence(loc, [...new Set([...selectedPaths, ...acknowledgedPortableSources])], { skipCodebaseArtifacts: true });
+        evidenceBasisHash = ordinaryEvidenceBasisHash(capture);
         inheritedBasis = provenancePortableBasis(capture.inputs, loc);
       }
       const providerFailure = !portableRequested || provider.status === "ok" || acknowledgedPortableFailure ? null : provider;
@@ -346,10 +513,11 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
       const gates = await readinessGates(loc, readiness, capture.inputs);
       const plans = readiness.planIndex?.plans ?? [];
       const contextContent = capture.inputs.find(input => input.path === artifactPathFor(loc.resolved, "context"))?.content ?? "";
+      const ordinaryPacketEvidence = boundedEvidence(capture.inputs, args.evidenceDelivery?.continuations);
       const packet = {
         phase: readiness.phaseSelection, gates, config: { workflow: readiness.effectiveConfig.workflow },
         requirements: readiness.context?.requirementsGrounding, projectBrief: readiness.context?.projectBrief,
-        evidence: boundedEvidence(capture.inputs, capture.evidencePaths),
+        evidence: publicOrdinaryEvidence(ordinaryPacketEvidence),
         grounding: {
           lockedDecisions: extractMarkdownSection(contextContent, "Implementation Decisions"),
           phaseBoundary: extractMarkdownSection(contextContent, "Phase Boundary"),
@@ -363,9 +531,32 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
         example: planningModelExample({ knownRequirements: readiness.authoringContext.knownRequirements, knownEvidenceArtifacts: readiness.authoringContext.knownEvidenceArtifacts }),
         validationRules: planningValidationRules, derivedFields: planningDerivedFields, exampleNote: "Example paths are illustrative; replace them with inspected repository files and cover every phase requirement across the complete plan set.",
       };
-      const ordinary = shapePlanOrdinaryEvidence(boundedEvidence(capture.inputs, capture.evidencePaths), args.evidenceDelivery, session.delivery);
+      const ordinary = shapePlanOrdinaryEvidence(ordinaryPacketEvidence, args.evidenceDelivery, session.delivery);
       if (ordinary.status !== "ok") return { ...packet, status: ordinary.status, saved: false, ready: false, paths: ordinary.paths, reason: "Read-time evidence does not match the selected repository source.", nextAction: "Read the selected source again and retry blueprint_plan_prepare with matching read-time evidence." };
-      const packetWithDelivery = { ...packet, evidence: ordinary.evidence, ...(portableResult ? { portable: { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet }, packet: portableResult.packet, binding: portableResult.binding, counts: portableResult.counts, mode: portableResult.mode } } : {}) };
+      const ordinaryBudget = ordinaryEvidenceBudget(ordinary.evidence);
+      const portableBodyBytes = portableResult?.counts.packetBytes ?? 0;
+      let responseCursorKey = continuationKey;
+      const packetWithDeliveryAt = async (revision: number) => {
+        if (ordinaryBudget.continuations.length && !responseCursorKey) {
+          responseCursorKey = await loadPlanCursorAuthorityKey(loc.projectRoot, true);
+          if (!responseCursorKey) throw new Error("Planning evidence continuation authority is unavailable.");
+        }
+        return ({
+        ...packet,
+        evidence: publicOrdinaryEvidence(ordinary.evidence),
+        evidenceBudget: {
+          ordinary: responseCursorKey
+            ? boundOrdinaryEvidenceBudget(ordinary.evidence, revision, evidenceBasisHash, responseCursorKey)
+            : { ...ordinaryBudget, continuations: [] },
+          portable: { maxPacketBytes: PORTABLE_MAP_MAX_MODEL_PACKET_BYTES, deliveredPacketBytes: portableBodyBytes },
+          aggregate: {
+            maxPayloadBytes: PLAN_ORDINARY_EVIDENCE_BODY_BYTES + PORTABLE_MAP_MAX_MODEL_PACKET_BYTES,
+            deliveredPayloadBytes: ordinaryBudget.deliveredBodyBytes + portableBodyBytes
+          }
+        },
+        ...(portableResult ? { portable: { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet }, packet: portableResult.packet, binding: portableResult.binding, counts: portableResult.counts, mode: portableResult.mode } } : {})
+        });
+      };
       const nextPortable: PlanPortableSession | undefined = portableResult
         ? { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet } }
         : acknowledgedPortableFailure
@@ -373,11 +564,11 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
           : session.portable;
       if (plans.length && !args.mode && (!session.readSet.length || session.journal?.receipt || session.needsIntent)) {
         await savePlanSession(loc, session);
-        return { ...packetWithDelivery, status: "choice_required", ...responseBase(loc, session), nextAction: "Choose add, revise selected plans, or replace selected plans; supply mode and targetPlanIds for revise/replace." };
+        return { ...await packetWithDeliveryAt(session.revision), status: "choice_required", ...responseBase(loc, session), nextAction: "Choose add, revise selected plans, or replace selected plans; supply mode and targetPlanIds for revise/replace." };
       }
       const nextMode = args.mode ?? (plans.length ? session.mode : "add");
       const targetPlanIds = [...new Set(args.targetPlanIds ?? (nextMode === "add" ? [] : nextMode === "replace" && args.mode ? plans.map(plan => plan.planId) : session.targetPlanIds))];
-      if (nextMode === "add" && targetPlanIds.length || nextMode !== "add" && !targetPlanIds.length || targetPlanIds.some(id => !plans.some(plan => plan.planId === id))) return { ...packetWithDelivery, status: "choice_required", ...responseBase(loc, session), reason: "Add accepts no targets; revise/replace require existing selected targetPlanIds." };
+      if (nextMode === "add" && targetPlanIds.length || nextMode !== "add" && !targetPlanIds.length || targetPlanIds.some(id => !plans.some(plan => plan.planId === id))) return { ...await packetWithDeliveryAt(session.revision), status: "choice_required", ...responseBase(loc, session), reason: "Add accepts no targets; revise/replace require existing selected targetPlanIds." };
       const changed = session.readSet.length ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : []) : null;
       const topologyChanged = !phaseTopologyFingerprintsMatch(session.topology, phaseTopologyFingerprintFromLocation(current.resolved, current.matchedPhase));
       const targetsChanged = session.readSet.length > 0 && stableResearchValue(targets) !== stableResearchValue(session.targets);
@@ -386,8 +577,8 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
       const portableSelectionChanged = session.readSet.length > 0 && stableResearchValue(selections) !== stableResearchValue(canonicalPortableSelectionList(session.portable?.selections ?? []));
       const portableIdentityChanged = session.readSet.length > 0 && stableResearchValue(portableSessionIdentity(nextPortable)) !== stableResearchValue(portableSessionIdentity(session.portable));
       const deliveryChanged = stableResearchValue(ordinary.delivery) !== stableResearchValue(session.delivery);
-      if ((targetsChanged || topologyChanged) && (!args.reconcile || args.expectedRevision !== session.revision || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(packet.targetHashes))) return { ...packetWithDelivery, status: "reconciliation_required", ...responseBase(loc, session), reason: "Review changed topology and publication targets, then prepare with expectedRevision and reconcile containing the observed targetHashes." };
-      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged || portableSelectionChanged || portableIdentityChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
+      if ((targetsChanged || topologyChanged) && (!args.reconcile || args.expectedRevision !== session.revision || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(packet.targetHashes))) return { ...await packetWithDeliveryAt(session.revision), status: "reconciliation_required", ...responseBase(loc, session), reason: "Review changed topology and publication targets, then prepare with expectedRevision and reconcile containing the observed targetHashes." };
+      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged || portableSelectionChanged || portableIdentityChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...await packetWithDeliveryAt(session.revision), status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
       const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && !portableSelectionChanged && !portableIdentityChanged && !deliveryChanged && changed?.status === "fresh";
       if (!unchanged) {
         delete session.journal;
@@ -408,7 +599,7 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
         await savePlanSession(loc, session);
       }
       return {
-        ...packetWithDelivery,
+        ...await packetWithDeliveryAt(session.revision),
         ...(portableResult && session.portable ? { portable: portablePreparedResponse(session.portable, portableResult) } : {}),
         schema: planningPreparedSchema(session), status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds,
         knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts,
@@ -452,6 +643,117 @@ function validationSummary(result: Awaited<ReturnType<typeof assess>>) {
   return { valid: result.valid, diagnostics, diagnosticCount: result.diagnostics.length, diagnosticsTruncated: result.diagnostics.length > diagnostics.length || budget.truncated, planSetValidation };
 }
 
+function publicPlanSession(session: PlanSession | null, requestedIds: ReadonlySet<string> | null = null) {
+  if (!session) return null;
+  const detailBudget = { remaining: 24 * 1024, truncated: false };
+  const boundedStrings = (values: readonly string[], maxItems: number) => {
+    const output: string[] = [];
+    for (const value of values.slice(0, maxItems)) {
+      const bounded = value.slice(0, 1024);
+      const bytes = Buffer.byteLength(JSON.stringify(bounded), "utf8");
+      if (bytes > detailBudget.remaining) { detailBudget.truncated = true; break; }
+      detailBudget.remaining -= bytes;
+      output.push(bounded);
+      if (bounded.length !== value.length) detailBudget.truncated = true;
+    }
+    if (values.length > output.length) detailBudget.truncated = true;
+    return output;
+  };
+  const scopedTargets = session.targetPlanIds.filter(id => !requestedIds || requestedIds.has(id));
+  const scopedExisting = session.existingPlans.filter(plan => !requestedIds || requestedIds.has(plan.planId));
+  const returnedExisting = scopedExisting.slice(0, requestedIds ? 20 : 100).map(plan => ({
+    planId: plan.planId.slice(0, 64),
+    wave: plan.wave,
+    dependsOn: boundedStrings(plan.dependsOn, 50),
+    requirements: boundedStrings(plan.requirements, 50),
+    counts: { dependsOn: plan.dependsOn.length, requirements: plan.requirements.length }
+  }));
+  if (returnedExisting.length !== scopedExisting.length) detailBudget.truncated = true;
+  return {
+    version: session.version,
+    phase: session.phase,
+    revision: session.revision,
+    prepared: session.prepared,
+    needsIntent: session.needsIntent,
+    publicationOwned: session.publicationOwned,
+    mode: session.mode,
+    targetPlanIds: boundedStrings(scopedTargets, requestedIds ? 20 : 100),
+    checkerRequired: session.checkerRequired,
+    existingPlans: returnedExisting,
+    metadataScope: {
+      filtered: Boolean(requestedIds),
+      planIds: requestedIds ? [...requestedIds] : [],
+      truncated: detailBudget.truncated
+    },
+    counts: {
+      readSet: session.readSet.length,
+      evidencePaths: session.evidencePaths.length,
+      targets: session.targets.length,
+      knownRequirements: session.knownRequirements.length,
+      knownEvidenceArtifacts: session.knownEvidenceArtifacts.length,
+      requests: Object.keys(session.requests).length,
+      targetPlanIds: session.targetPlanIds.length,
+      scopedTargetPlanIds: scopedTargets.length,
+      existingPlans: session.existingPlans.length,
+      scopedExistingPlans: scopedExisting.length
+    },
+    ...(session.portable ? {
+      portable: {
+        selectionCount: session.portable.selections.length,
+        generationId: session.portable.basis.generationId,
+        bindingHash: session.portable.next.bindingHash
+      }
+    } : {}),
+    ...(session.delivery ? {
+      delivery: {
+        deliveredCount: session.delivery.delivered.length,
+        registeredCount: session.delivery.registered.length
+      }
+    } : {}),
+    ...(session.journal ? {
+      journal: {
+        requestId: session.journal.requestId,
+        revision: session.journal.revision,
+        stages: session.journal.stages,
+        ...(session.journal.receipt ? {
+          receipt: {
+            status: session.journal.receipt.status,
+            saved: session.journal.receipt.saved,
+            ready: session.journal.receipt.ready,
+            revision: session.journal.receipt.revision,
+            pathCount: session.journal.receipt.paths.length,
+            planCount: session.journal.receipt.plans.length,
+            removedPathCount: session.journal.receipt.removedPaths.length
+          }
+        } : {})
+      }
+    } : {}),
+    ...(session.legacyPublication ? { legacyPublication: { markerToken: session.legacyPublication.markerToken.slice(0, 128) } } : {})
+  };
+}
+
+function boundedFreshness(freshness: Awaited<ReturnType<typeof planBasisFreshness>> | null) {
+  if (!freshness) return null;
+  let remaining = 32 * 1024;
+  let truncated = false;
+  const bounded = (values: readonly string[]) => values.flatMap(value => {
+    const bytes = Buffer.byteLength(value, "utf8");
+    if (bytes > remaining) { truncated = true; return []; }
+    remaining -= bytes;
+    return [value];
+  });
+  const stalePaths = bounded(freshness.stalePaths);
+  const unknownPaths = bounded(freshness.unknownPaths);
+  return {
+    status: freshness.status,
+    stalePaths,
+    unknownPaths,
+    stalePathCount: freshness.stalePaths.length,
+    unknownPathCount: freshness.unknownPaths.length,
+    truncated
+  };
+}
+
 export async function blueprintPlanRead(raw: z.input<typeof lookupSchema>) {
   const args = lookupSchema.parse(raw);
   return withPlanSession(args, async loc => {
@@ -461,28 +763,120 @@ export async function blueprintPlanRead(raw: z.input<typeof lookupSchema>) {
     const targets = before.status === "committed" && before.version === 2
       ? before.files
       : await readPlanTargetHashes(current);
-    const published = await Promise.all(targets.map(async target => ({ ...target,
-      content: before.status === "committed"
+    const requestedPlanIds = args.planIds?.length ? [...new Set(args.planIds)].sort() : [];
+    const requestedIds = requestedPlanIds.length ? new Set(requestedPlanIds) : null;
+    const bodyTargets = targets.filter(target => !requestedIds || requestedIds.has(target.path.match(/-(\d+)-PLAN\.md$/)?.[1] ?? ""));
+    const filterHash = researchDigest(stableResearchValue({
+      planIds: requestedPlanIds,
+      targets: bodyTargets.map(target => ({ path: target.path, hash: target.hash }))
+    }));
+    const bodyMode = args.bodyMode ?? "page";
+    const bodyLimit = args.bodyByteLimit ?? PLAN_READ_BODY_PAGE_BYTES;
+    let bodyRemaining = bodyMode === "page" ? bodyLimit : 0;
+    let startIndex = 0;
+    let startOffset = 0;
+    if (args.bodyCursor) {
+      const cursorKey = await loadPlanCursorAuthorityKey(loc.projectRoot, false);
+      const { seal, ...cursorPayload } = args.bodyCursor;
+      startIndex = bodyTargets.findIndex(target => target.path.endsWith(`-${args.bodyCursor!.planId}-PLAN.md`));
+      if (startIndex < 0) throw new Error("Plan body cursor does not match the selected plan set.");
+      const cursorTarget = bodyTargets[startIndex];
+      if (!cursorKey || !verifyPlanCursorSeal(cursorKey, "plan", planBodyCursorPayload(cursorPayload), seal) ||
+          bodyMode !== "page" || args.bodyCursor.filterHash !== filterHash ||
+          args.bodyCursor.publicationToken !== before.token || cursorTarget.hash === null || args.bodyCursor.planHash !== cursorTarget.hash ||
+          before.status !== "committed" && before.status !== "absent") {
+        throw new Error("Plan body cursor is stale or does not match the current publication and filters.");
+      }
+      startOffset = args.bodyCursor.offsetBytes;
+    }
+    const bodies = new Map<string, { content: string; contentOffsetBytes: number; contentComplete: boolean }>();
+    let nextCursor: PlanBodyCursor | null = null;
+    let bodyReadIssue: string | null = null;
+    const targetContent = async (target: { path: string; hash: string | null }) => {
+      if (target.hash === null) throw new Error(`Plan body has no canonical hash: ${target.path}.`);
+      const content = before.status === "committed"
         ? before.contents?.get(target.path) ?? null
-        : before.status === "absent"
-          ? await fs.readFile(resolveBlueprintPath(loc.projectRoot, target.path), "utf8")
-          : null,
-    })));
+        : await fs.readFile(resolveBlueprintPath(loc.projectRoot, target.path), "utf8");
+      if (content === null) throw new Error("Verified plan content is unavailable.");
+      if (before.status === "absent" && researchDigest(content) !== target.hash) throw new Error(`Plan changed during read: ${target.path}.`);
+      return content;
+    };
+    let responseCursorKey: Uint8Array | null = null;
+    const cursorFor = async (target: { path: string; hash: string | null }, offsetBytes: number, totalBytes: number) => {
+      if (target.hash === null) throw new Error(`Plan body has no canonical hash: ${target.path}.`);
+      responseCursorKey ??= await loadPlanCursorAuthorityKey(loc.projectRoot, true);
+      if (!responseCursorKey) throw new Error("Plan body continuation authority is unavailable.");
+      const payload = planBodyCursorPayload({
+        planId: target.path.match(/-(\d+)-PLAN\.md$/)?.[1] ?? "",
+        offsetBytes,
+        totalBytes,
+        planHash: target.hash,
+        publicationToken: before.token,
+        filterHash
+      });
+      return { ...payload, seal: sealPlanCursor(responseCursorKey, "plan", payload) };
+    };
+    if (bodyMode === "page" && (before.status === "committed" || before.status === "absent")) {
+      for (let index = startIndex; index < bodyTargets.length && bodyRemaining > 0; index++) {
+        const target = bodyTargets[index];
+        const content = await targetContent(target).catch(error => { bodyReadIssue = (error as Error).message; return null; });
+        if (content === null) break;
+        const totalBytes = Buffer.byteLength(content, "utf8");
+        const offsetBytes = index === startIndex ? startOffset : 0;
+        if (args.bodyCursor && index === startIndex &&
+            (args.bodyCursor.totalBytes !== totalBytes || offsetBytes >= totalBytes && totalBytes > 0 || offsetBytes !== 0 && totalBytes === 0)) {
+          throw new Error("Plan body cursor offset or total does not match the current canonical plan.");
+        }
+        const page = utf8Slice(content, offsetBytes, bodyRemaining);
+        const deliveredBytes = Buffer.byteLength(page.content, "utf8");
+        bodyRemaining -= deliveredBytes;
+        bodies.set(target.path, { content: page.content, contentOffsetBytes: offsetBytes, contentComplete: page.nextOffsetBytes === null });
+        if (page.nextOffsetBytes !== null) {
+          nextCursor = await cursorFor(target, page.nextOffsetBytes, totalBytes);
+          break;
+        }
+        if (bodyRemaining === 0 && index + 1 < bodyTargets.length) {
+          for (let nextIndex = index + 1; nextIndex < bodyTargets.length; nextIndex++) {
+            const nextTarget = bodyTargets[nextIndex];
+            const nextContent = await targetContent(nextTarget).catch(error => { bodyReadIssue = (error as Error).message; return null; });
+            if (nextContent === null) break;
+            const nextTotalBytes = Buffer.byteLength(nextContent, "utf8");
+            if (nextTotalBytes > 0) { nextCursor = await cursorFor(nextTarget, 0, nextTotalBytes); break; }
+          }
+        }
+      }
+    }
+    const published = bodyTargets.map(target => ({
+      ...target,
+      content: bodies.get(target.path)?.content ?? null,
+      ...(bodies.has(target.path) ? {
+        contentOffsetBytes: bodies.get(target.path)!.contentOffsetBytes,
+        contentComplete: bodies.get(target.path)!.contentComplete
+      } : {})
+    }));
     const after = await readPlanPublicationSnapshot(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-    const consumed = new Map(published.flatMap(file => file.content === null ? [] : [[file.path, file.content] as const]));
-    const publicationIssue = before.token !== after.token
+    const publicationIssue = bodyReadIssue ?? (before.token !== after.token
       ? "Plan publication changed during this read; refresh before using the plan set."
       : after.status === "pending" || after.status === "invalid"
         ? after.reason
-        : planPublicationConsumptionIssue(before, consumed, { complete: before.status === "committed" });
+        : before.status === "committed" && before.contents
+          ? planPublicationConsumptionIssue(before, before.contents, { complete: true })
+          : null);
     if (publicationIssue) {
       for (const file of published) file.content = null;
     }
     const publication = publicationIssue && after.status !== "pending" && after.status !== "invalid"
       ? { status: "invalid" as const, token: after.token, reason: publicationIssue }
       : { status: after.status, token: after.token, reason: after.reason };
-    return { status: session || published.length ? "found" : "not_found", sessionPath: loc.sessionPath, session, published, publication,
-      freshness: session ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : []) : null };
+    const freshness = session ? await planBasisFreshness(loc.projectRoot, session.phase, session.readSet, session.portable ? [session.portable.basis] : []) : null;
+    return { status: session || published.length ? "found" : "not_found", sessionPath: loc.sessionPath, session: publicPlanSession(session, requestedIds), published, publication,
+      bodyPage: {
+        mode: bodyMode,
+        maxBytes: bodyLimit,
+        deliveredBytes: bodyMode === "page" && !publicationIssue ? bodyLimit - bodyRemaining : 0,
+        nextCursor: publicationIssue ? null : nextCursor
+      },
+      freshness: boundedFreshness(freshness) };
   });
 }
 
@@ -700,7 +1094,7 @@ export async function blueprintPlanSubmit(raw: z.input<typeof submitInput>) {
 }
 
 export const planningToolDefinitions: ToolDefinition[] = [
-  { name: "blueprint_plan_prepare", description: "Prepare phase evidence, exact model schema/example, derivable fields and meaningful validation rules for first-attempt plan publication. Saves only preparation metadata. Existing plans require add/revise/replace intent.", inputSchema: prepareInput.shape, handler: args => blueprintPlanPrepare(args as z.input<typeof prepareInput>) },
+  { name: "blueprint_plan_prepare", description: "Prepare bounded phase evidence, exact model schema/example, derivable fields and meaningful validation rules for first-attempt plan publication. Saves only preparation metadata. Pass sealed evidenceBudget continuations back unchanged for truncated bodies. Existing plans require add/revise/replace intent.", inputSchema: prepareInputShape, handler: args => blueprintPlanPrepare(args as z.input<typeof prepareInput>) },
   { name: "blueprint_plan_submit", description: "Normalize and validate a model in memory, then publish the complete canonical plan set. Rejected drafts are never saved. An optional configured checker reviews the supplied model before this call. Retry interrupted publication with the same model until all canonical plans are saved.", inputSchema: submitInput.shape, handler: args => blueprintPlanSubmit(args as z.input<typeof submitInput>) },
-  { name: "blueprint_plan_read", description: "Read canonical plans, preparation metadata, publication stages and evidence freshness. No rejected drafts, document history or backups are retained.", inputSchema: planLookup, handler: args => blueprintPlanRead(args as z.input<typeof lookupSchema>) },
+  { name: "blueprint_plan_read", description: "Read bounded canonical plan metadata, body pages, preparation summary, publication stages and evidence freshness. planIds narrows metadata and bodies. Use bodyMode=metadata when no body is needed, or pass the sealed bodyPage.nextCursor back unchanged with the same planIds filter. No rejected drafts, document history or backups are retained.", inputSchema: readInputShape, handler: args => blueprintPlanRead(args as z.input<typeof lookupSchema>) },
 ];

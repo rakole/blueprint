@@ -18,7 +18,7 @@ Publish the model through `mcp_blueprint_blueprint_plan_submit`. It normalizes h
 Allowed MCP tools:
 - `mcp_blueprint_blueprint_plan_prepare`
 - `mcp_blueprint_blueprint_plan_submit`
-- `mcp_blueprint_blueprint_plan_read` (canonical plans and recovery metadata)
+- `mcp_blueprint_blueprint_plan_read` (bounded canonical metadata and body pages; follow sealed `bodyPage.nextCursor` unchanged or narrow metadata with returned plan IDs)
 
 No raw `.blueprint/` writes, canonical Markdown fallback, scaffold seeding, warn-mode publication, live web browsing, or installed-extension changes. The final response reports publication status and the Downstream Execution Handoff. Never claim completion without a published receipt.
 

@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {promises as fs} from "node:fs";
 import path from "node:path";
+import {Client} from "@modelcontextprotocol/sdk/client/index.js";
+import {InMemoryTransport} from "@modelcontextprotocol/sdk/inMemory.js";
 
 import {createGitRepo} from "./helpers/git-fixtures.js";
 import {validPhaseContextModel} from "./helpers/context-model.js";
@@ -22,6 +24,7 @@ import {
   providerPlanModel,
 } from "./helpers/portable-provider-fixture.js";
 import {blueprintResearchPrepare, blueprintResearchSubmit} from "../src/mcp/tools/research.js";
+import {createBlueprintServer, MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, planMcpJsonRpcResponseBytes} from "../src/mcp/server.js";
 
 const source = "export function entry() { return \"entry\"; }\n";
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
@@ -79,6 +82,8 @@ test("plan portable provider keeps ENTRY separate, supports delivery modes, and 
   try {
     const full: any = await blueprintPlanPrepare({...lookup(state.root), evidencePaths: ["src/entry.ts"], portableSelections: [state.selection]});
     assert.equal(full.status, "prepared", JSON.stringify(full));
+    assert.ok(full.evidenceBudget.aggregate.deliveredPayloadBytes <= full.evidenceBudget.aggregate.maxPayloadBytes, JSON.stringify(full.evidenceBudget));
+    assert.equal(full.evidenceBudget.aggregate.maxPayloadBytes, 96 * 1024);
     assert.equal(full.portable.packet.entries.filter((entry: any) => entry.content !== undefined && entry.path.endsWith("/ENTRY.md")).length, 1);
     assert.equal(full.evidence.some((entry: any) => entry.path.endsWith("/ENTRY.md")), false);
     const delta: any = await blueprintPlanPrepare({...lookup(state.root), evidencePaths: ["src/entry.ts"], portableSelections: [state.selection], expectedRevision: full.revision, evidenceDelivery: {mode: "delta"}});
@@ -96,6 +101,35 @@ test("plan portable provider keeps ENTRY separate, supports delivery modes, and 
     const published: any = await blueprintPlanSubmit({...lookup(state.root), requestId: "portable-plan", expectedRevision: registered.revision, model: planModel()});
     assert.equal(published.status, "published", JSON.stringify(published));
   } finally { await state.cleanup(); }
+});
+
+test("live combined ordinary and portable plan evidence stays within the escaped JSON-RPC envelope", async t => {
+  const state = await fixture();
+  const quotedPath = `src/${"long-segment-".repeat(12)}\"quoted-source.ts`;
+  try {
+    await fs.mkdir(path.dirname(path.join(state.root, quotedPath)), {recursive: true});
+    await fs.writeFile(path.join(state.root, quotedPath), `export const escaped = "\\\\\"value";\n`.repeat(10000));
+    const server = createBlueprintServer();
+    const client = new Client({name: "plan-combined-boundary", version: "1.0.0"}, {capabilities: {}});
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    t.after(async () => Promise.all([client.close(), server.close()]));
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+    const response: any = await client.callTool({
+      name: "blueprint_plan_prepare",
+      arguments: {...lookup(state.root), evidencePaths: [quotedPath], portableSelections: [state.selection]}
+    });
+    assert.equal(response.content[0].text, JSON.stringify(response.structuredContent));
+    assert.notEqual(response.structuredContent.status, "response_limit", JSON.stringify(response.structuredContent));
+    assert.ok(response.structuredContent.portable);
+    assert.ok(response.structuredContent.evidenceBudget.ordinary.deliveredBodyBytes > 0);
+    const conservativeBytes = planMcpJsonRpcResponseBytes(response.structuredContent);
+    const exactBytes = Buffer.byteLength(JSON.stringify({jsonrpc: "2.0", id: 1, result: response}), "utf8");
+    assert.ok(conservativeBytes <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, String(conservativeBytes));
+    assert.ok(exactBytes <= MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, String(exactBytes));
+  } finally {
+    await state.cleanup();
+  }
 });
 
 test("plan ordinary evidence delivery works without a map", async () => {

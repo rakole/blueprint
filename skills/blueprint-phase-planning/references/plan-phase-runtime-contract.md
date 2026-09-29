@@ -27,7 +27,15 @@ unresolved, use prepare's optional `portableSelections` and `evidenceDelivery`
 controls for selected portable evidence, without automatically loading all seven
 compatibility views to enrich a valid portable map. Missing or unusable maps keep the existing bounded source path. Read
 truncated evidence when needed and register additional relied-on paths through
-prepare. Changed evidence must be acknowledged and reconciled against affected
+prepare. Ordinary and portable bodies share `evidenceBudget`. Resume a truncated
+ordinary body by returning its complete continuation unchanged in
+`evidenceDelivery.continuations`. Its private repo-bound seal binds all fields, including the
+offset, source hash, byte length, evidence basis and prepared revision. It survives
+restart; copies or basis changes invalidate it. Legacy repository-visible cursor
+keys are discarded instead of imported, so their cursors expire. `readTimeEvidence` allows 33 bounded
+items and 2 MiB total; stdio rejects encoded JSON-RPC frames above 2304 KiB before
+dispatch, including escaped control characters. Prefer hashes to repeated bodies.
+Changed evidence must be acknowledged and reconciled against affected
 decisions. Follow returned paths and safe actions. Give a short Planning Investigation Trace: phase goal,
 locked constraints, evidence gaps, anticipated split and highest-risk decision.
 Keep material assumptions in the model rather than a separate planning report.
@@ -35,6 +43,16 @@ Use `full` for initial/unbound bodies, `delta` only for new or changed bodies
 relative to accepted delivery, and `register` only for an already-bound same
 hash or a hash computed from bytes read now. Without that proof, reread or
 request a bounded MCP excerpt; never treat an unknown earlier read as fresh.
+
+`blueprint_plan_read` returns a bounded body page by default; use
+`bodyMode=metadata` for bounded session counts, publication and freshness state.
+`planIds` narrows bodies and bounded session/plan metadata. Follow `bodyPage.nextCursor` unchanged
+with the same filter, lowering `bodyByteLimit` for smaller client limits. Its durable
+seal binds every field: offset, publication or plan hash, byte length, inventory and
+filter. Each chunk reports offset and completion. If metadata exceeds the public
+bound, retry with a subset of returned `availablePlanIds`. The final encoded
+JSON-RPC response is capped at 512 KiB, including actual bounded request id,
+newline framing and escaped text mirror. IDs above 16 KiB are rejected pre-dispatch.
 
 ## Author And Review
 

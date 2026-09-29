@@ -35,6 +35,7 @@ type PlanOrdinaryEvidenceInput = {
     readonly path: string;
     readonly hash: string | null;
     readonly content: string | null;
+    readonly truncated?: boolean;
 };
 export declare function shapePlanOrdinaryEvidence(inputs: readonly PlanOrdinaryEvidenceInput[], args: PlanOrdinaryDeliveryArgs | undefined, delivery: PlanSession["delivery"]): {
     status: "reread_required";
