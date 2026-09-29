@@ -30374,56 +30374,221 @@ var init_resolver = __esm({
 import { createHash as createHash6 } from "node:crypto";
 import { promises as fs4 } from "node:fs";
 import path12 from "node:path";
-async function readPlanPublicationStatus(projectRoot, phaseDir2, phasePrefix2) {
-  const invalid = (reason, token = "invalid") => ({
-    status: "invalid",
-    token,
-    reason
-  });
-  if (!/^\.blueprint\/phases\/[^/]+$/.test(phaseDir2) || phaseDir2.split("/").some((part) => part === "." || part === "..") || !/^\d+(?:\.\d+)*$/.test(phasePrefix2)) {
-    return invalid("Invalid plan publication scope.");
-  }
-  const marker = path12.join(projectRoot, phaseDir2, `${phasePrefix2}-PLAN-PUBLICATION.json`);
+function planSessionOwnsPublication(data) {
+  const migratedPlanInventoryOwnsPublication = data.publicationOwned === void 0 && data.version === 2 && Array.isArray(data.targets) && data.targets.length > 0 && Array.isArray(data.existingPlans) && data.existingPlans.length > 0;
+  const historyOwnsPublication = data.version === 1 && Array.isArray(data.history) && data.history.some((entry) => Boolean(entry && typeof entry === "object" && "journal" in entry && entry.journal && typeof entry.journal === "object"));
+  const requestsOwnPublication = data.requests && typeof data.requests === "object" && !Array.isArray(data.requests) && Object.values(data.requests).some((request) => Boolean(request && typeof request === "object" && "receipt" in request && request.receipt && typeof request.receipt === "object" && "status" in request.receipt && request.receipt.status === "published"));
+  return data.publicationOwned === true || Boolean(data.journal && typeof data.journal === "object") || Boolean(data.legacyPublication && typeof data.legacyPublication === "object") || data.needsIntent === true || migratedPlanInventoryOwnsPublication || historyOwnsPublication || Boolean(requestsOwnPublication);
+}
+function invalidSnapshot(reason, token = "invalid", details = {
+  version: null,
+  files: [],
+  removedPaths: []
+}) {
+  return { status: "invalid", token, reason, ...details, contents: null };
+}
+function scopeIsValid(phaseDir2, phasePrefix2) {
+  return /^\.blueprint\/phases\/[^/]+$/.test(phaseDir2) && !phaseDir2.split("/").some((part) => part === "." || part === "..") && /^\d+(?:\.\d+)*$/.test(phasePrefix2);
+}
+async function containedRegularFile(projectRoot, absolutePath, maxBytes) {
   try {
-    const stat = await fs4.lstat(marker);
-    if (!stat.isFile() || stat.size > 1024 * 1024) {
-      return invalid("Plan publication marker must be a bounded regular file.");
+    const stat = await fs4.lstat(absolutePath);
+    if (!stat.isFile() || stat.size > maxBytes) {
+      return { ok: false, missing: false, reason: "must be a bounded regular file" };
     }
     const [realParent, realRoot] = await Promise.all([
-      fs4.realpath(path12.dirname(marker)),
+      fs4.realpath(path12.dirname(absolutePath)),
       fs4.realpath(projectRoot)
     ]);
     const relative = path12.relative(realRoot, realParent);
     if (relative.startsWith(`..${path12.sep}`) || relative === ".." || path12.isAbsolute(relative)) {
-      return invalid("Plan publication marker escapes the repository.");
+      return { ok: false, missing: false, reason: "escapes the repository" };
     }
-    const raw = await fs4.readFile(marker, "utf8");
-    const token = createHash6("sha256").update(raw).digest("hex");
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      return invalid("Plan publication marker is malformed; resume planning before execution.", token);
-    }
-    const canonicalPlan = (value) => typeof value === "string" && path12.posix.dirname(value) === phaseDir2 && new RegExp(`^${phasePrefix2.replace(/\./g, "\\.")}-\\d+-PLAN\\.md$`).test(path12.posix.basename(value));
-    if (!data || typeof data !== "object" || data.version !== 1 || typeof data.status !== "string" || !["pending", "committed"].includes(data.status) || typeof data.requestId !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(data.requestId) || !Number.isSafeInteger(data.revision) || Number(data.revision) < 0 || !Array.isArray(data.files) || !data.files.every((file2) => file2 && typeof file2 === "object" && canonicalPlan(file2.path) && typeof file2.hash === "string" && /^[a-f0-9]{64}$/.test(file2.hash)) || !Array.isArray(data.removedPaths) || !data.removedPaths.every(canonicalPlan)) {
-      return invalid("Plan publication marker is invalid; resume planning before execution.", token);
-    }
-    return {
-      status: data.status,
-      token,
-      reason: data.status === "pending" ? "Plan publication is incomplete; resume /blu-plan-phase before execution." : null
-    };
+    return { ok: true };
   } catch (error2) {
     if (error2.code === "ENOENT") {
-      return { status: "absent", token: "missing", reason: null };
+      return { ok: false, missing: true, reason: "is missing" };
     }
-    return invalid(`Cannot read plan publication marker: ${error2.message}`);
+    return { ok: false, missing: false, reason: "cannot be inspected" };
   }
 }
+async function readPlanLifecycleOwnership(projectRoot, phaseDir2, phasePrefix2) {
+  if (!scopeIsValid(phaseDir2, phasePrefix2)) {
+    return { hasSession: true, ownsPublication: true, token: "invalid-scope", reason: "Invalid plan publication scope." };
+  }
+  const sessionPath2 = path12.join(projectRoot, phaseDir2, `${phasePrefix2}-PLAN-SESSION.json`);
+  const inspected = await containedRegularFile(projectRoot, sessionPath2, 32 * 1024 * 1024);
+  if (!inspected.ok) {
+    if (inspected.missing) return { hasSession: false, ownsPublication: false, token: "missing", reason: null };
+    return {
+      hasSession: true,
+      ownsPublication: true,
+      token: "invalid-session",
+      reason: `Plan lifecycle session ${inspected.reason}; resume planning before reading or writing plans.`
+    };
+  }
+  let raw;
+  try {
+    raw = await fs4.readFile(sessionPath2, "utf8");
+  } catch {
+    return { hasSession: true, ownsPublication: true, token: "unreadable-session", reason: "Cannot verify plan lifecycle session ownership; resume planning before reading or writing plans." };
+  }
+  const token = digest(raw);
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return { hasSession: true, ownsPublication: true, token, reason: "Plan lifecycle session is malformed; resume planning before reading or writing plans." };
+  }
+  if (!data || typeof data !== "object" || data.version !== 1 && data.version !== 2) {
+    return { hasSession: true, ownsPublication: true, token, reason: "Plan lifecycle session version is unsupported; resume planning before reading or writing plans." };
+  }
+  if (Object.hasOwn(data, "publicationOwned") && typeof data.publicationOwned !== "boolean") {
+    return { hasSession: true, ownsPublication: true, token, reason: "Plan lifecycle publication ownership metadata is malformed; resume planning before reading or writing plans." };
+  }
+  const ownsPublication = planSessionOwnsPublication(data);
+  return { hasSession: true, ownsPublication, token, reason: null };
+}
+async function verifyCommittedPublication(projectRoot, phaseDir2, canonicalPlan, files, removedPaths) {
+  const expectedPaths = new Set(files.map((file2) => file2.path));
+  const removed = new Set(removedPaths);
+  if (expectedPaths.size !== files.length || removed.size !== removedPaths.length || files.some((file2) => removed.has(file2.path))) {
+    return { issue: "Plan publication marker contains conflicting or duplicate targets.", contents: null };
+  }
+  const phasePath = path12.join(projectRoot, phaseDir2);
+  const actualPaths = (await fs4.readdir(phasePath, { withFileTypes: true })).map((entry) => `${phaseDir2}/${entry.name}`).filter(canonicalPlan);
+  if (actualPaths.length !== expectedPaths.size || actualPaths.some((planPath) => !expectedPaths.has(planPath))) {
+    return {
+      issue: "Committed plan publication receipt no longer matches the canonical plan inventory; resume planning and reconcile the observed targets.",
+      contents: null
+    };
+  }
+  const contents = /* @__PURE__ */ new Map();
+  for (const file2 of files) {
+    const absolutePath = path12.join(projectRoot, file2.path);
+    let stat;
+    try {
+      stat = await fs4.lstat(absolutePath);
+    } catch (error2) {
+      if (error2.code === "ENOENT") {
+        return { issue: "A committed plan is missing; resume planning and reconcile the observed targets.", contents: null };
+      }
+      throw error2;
+    }
+    if (!stat.isFile()) {
+      return { issue: "A committed plan is not a regular file; resume planning and reconcile the observed targets.", contents: null };
+    }
+    const bytes = await fs4.readFile(absolutePath);
+    if (digest(bytes) !== file2.hash) {
+      return { issue: "A committed plan changed after publication; resume planning and reconcile the observed targets.", contents: null };
+    }
+    contents.set(file2.path, bytes.toString("utf8"));
+  }
+  for (const removedPath of removedPaths) {
+    try {
+      await fs4.lstat(path12.join(projectRoot, removedPath));
+      return { issue: "A removed plan reappeared after publication; resume planning and reconcile the observed targets.", contents: null };
+    } catch (error2) {
+      if (error2.code !== "ENOENT") throw error2;
+    }
+  }
+  return { issue: null, contents };
+}
+async function readPlanPublicationSnapshot(projectRoot, phaseDir2, phasePrefix2, options = {}) {
+  if (!scopeIsValid(phaseDir2, phasePrefix2)) return invalidSnapshot("Invalid plan publication scope.");
+  const marker = path12.join(projectRoot, phaseDir2, `${phasePrefix2}-PLAN-PUBLICATION.json`);
+  const inspected = await containedRegularFile(projectRoot, marker, 1024 * 1024);
+  if (!inspected.ok) {
+    if (!inspected.missing) return invalidSnapshot(`Plan publication marker ${inspected.reason}.`);
+    if (options.allowOwnedMissing) {
+      return { status: "absent", token: "missing", reason: null, version: null, files: [], removedPaths: [], contents: null };
+    }
+    const ownership = await readPlanLifecycleOwnership(projectRoot, phaseDir2, phasePrefix2);
+    if (ownership.ownsPublication) {
+      return invalidSnapshot(
+        ownership.reason ?? "Plan publication marker is missing for a lifecycle-owned plan set; resume planning and reconcile the observed targets.",
+        `missing:${ownership.token}`
+      );
+    }
+    return { status: "absent", token: "missing", reason: null, version: null, files: [], removedPaths: [], contents: null };
+  }
+  let raw;
+  try {
+    raw = await fs4.readFile(marker, "utf8");
+  } catch {
+    return invalidSnapshot("Cannot read plan publication marker.");
+  }
+  const token = digest(raw);
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return invalidSnapshot("Plan publication marker is malformed; resume planning before execution.", token);
+  }
+  const canonicalPlan = (value) => typeof value === "string" && path12.posix.dirname(value) === phaseDir2 && new RegExp(`^${phasePrefix2.replace(/\./g, "\\.")}-\\d+-PLAN\\.md$`).test(path12.posix.basename(value));
+  if (!data || typeof data !== "object" || data.version !== 1 && data.version !== 2 || typeof data.status !== "string" || !["pending", "committed"].includes(data.status) || typeof data.requestId !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(data.requestId) || !Number.isSafeInteger(data.revision) || Number(data.revision) < 0 || !Array.isArray(data.files) || !data.files.every((file2) => file2 && typeof file2 === "object" && canonicalPlan(file2.path) && typeof file2.hash === "string" && /^[a-f0-9]{64}$/.test(file2.hash)) || !Array.isArray(data.removedPaths) || !data.removedPaths.every(canonicalPlan)) {
+    return invalidSnapshot("Plan publication marker is invalid; resume planning before execution.", token);
+  }
+  const version2 = data.version;
+  const files = data.files;
+  const removedPaths = data.removedPaths;
+  const details = { version: version2, files, removedPaths };
+  if (data.status === "pending") {
+    return {
+      status: "pending",
+      token,
+      reason: version2 === 1 ? "Legacy plan publication is incomplete; retry its owning submit or explicitly reconcile the observed targets." : "Plan publication is incomplete; resume /blu-plan-phase before execution.",
+      ...details,
+      contents: null
+    };
+  }
+  if (version2 === 1) {
+    return invalidSnapshot(
+      "Legacy v1 plan publication records only changed targets; explicitly reconcile the complete observed target hashes before execution.",
+      token,
+      details
+    );
+  }
+  try {
+    const verified = await verifyCommittedPublication(projectRoot, phaseDir2, canonicalPlan, files, removedPaths);
+    if (verified.issue) return invalidSnapshot(verified.issue, token, details);
+    const afterRaw = await fs4.readFile(marker, "utf8");
+    if (digest(afterRaw) !== token) {
+      return invalidSnapshot("Plan publication changed during capture of its committed bytes; refresh before execution.", token, details);
+    }
+    return { status: "committed", token, reason: null, ...details, contents: verified.contents };
+  } catch {
+    return invalidSnapshot("Cannot verify committed plan publication files; resume planning before execution.", token, details);
+  }
+}
+function planPublicationConsumptionIssue(snapshot3, consumed, options) {
+  if (snapshot3.status === "pending" || snapshot3.status === "invalid") {
+    return snapshot3.reason ?? "Phase plan publication is incomplete; resume planning before execution.";
+  }
+  if (snapshot3.status === "absent") return null;
+  if (snapshot3.version !== 2 || !snapshot3.contents) {
+    return "Committed plan publication bytes could not be verified; resume planning before execution.";
+  }
+  const expected = new Map(snapshot3.files.map((file2) => [file2.path, file2.hash]));
+  if (options.complete && consumed.size !== expected.size) {
+    return "The consumed plan inventory does not match the committed publication receipt.";
+  }
+  for (const [planPath, content] of consumed) {
+    if (digest(content) !== expected.get(planPath)) {
+      return `Consumed plan bytes do not match the committed publication receipt: ${planPath}.`;
+    }
+  }
+  return null;
+}
+async function readPlanPublicationStatus(projectRoot, phaseDir2, phasePrefix2, options = {}) {
+  const { status, token, reason } = await readPlanPublicationSnapshot(projectRoot, phaseDir2, phasePrefix2, options);
+  return { status, token, reason };
+}
+var digest;
 var init_plan_publication = __esm({
   "src/mcp/tools/plan-publication.ts"() {
     "use strict";
+    digest = (value) => createHash6("sha256").update(value).digest("hex");
   }
 });
 
@@ -34213,7 +34378,7 @@ async function inspectPhasePlanRoutingReadiness(args) {
   const planMetadata = /* @__PURE__ */ new Map();
   for (const planPath of args.planPaths) {
     try {
-      const raw = await fs8.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
+      const raw = args.planContents?.get(planPath) ?? await fs8.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, args.currentPhase);
       const planId3 = normalizeRoutingPlanId(validation.metadata.planId ?? "");
       for (const issue2 of validation.issues) {
@@ -34839,8 +35004,12 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const phaseDir2 = matchingPhaseDirs[0];
   const phasePrefix2 = formatPhasePrefix2(normalizedPhase);
   const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir2}`;
-  const publicationBefore = await readPlanPublicationStatus(projectRoot, phaseRoot, phasePrefix2);
-  const phaseArtifacts = await listPhaseArtifacts2(resolveBlueprintPath(projectRoot, phaseRoot), projectRoot);
+  const publicationBefore = await readPlanPublicationSnapshot(projectRoot, phaseRoot, phasePrefix2);
+  const listedPhaseArtifacts = await listPhaseArtifacts2(resolveBlueprintPath(projectRoot, phaseRoot), projectRoot);
+  const phaseArtifacts = publicationBefore.status === "committed" ? [
+    ...listedPhaseArtifacts.filter((artifact) => !artifact.endsWith("-PLAN.md")),
+    ...publicationBefore.files.map((file2) => file2.path)
+  ] : listedPhaseArtifacts;
   const contextPath = `${phaseRoot}/${phasePrefix2}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix2}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix2}-UI-SPEC.md`;
@@ -34866,6 +35035,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
+  const planContents = publicationBefore.status === "committed" && publicationBefore.contents ? new Map(publicationBefore.contents) : void 0;
   const summaryArtifactPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix2, "PLAN");
   const {
@@ -34897,7 +35067,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const planRoutingReadiness = hasPlans ? await inspectPhasePlanRoutingReadiness({
     projectRoot,
     currentPhase: normalizedPhase,
-    planPaths
+    planPaths,
+    planContents
   }) : { executionReady: false, warnings: [] };
   const hasLaterArtifacts = [...phaseArtifacts].some(
     (artifact) => artifact.endsWith(`${phasePrefix2}-DISCUSSION-LOG.md`) || artifact.endsWith(`${phasePrefix2}-DISCUSS-CHECKPOINT.json`) || artifact.endsWith(`${phasePrefix2}-RESEARCH.md`) || artifact.endsWith(`${phasePrefix2}-UI-SPEC.md`) || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`) || artifact.endsWith("-PLAN.md") || artifact.endsWith("-SUMMARY.md") || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`)
@@ -34954,7 +35125,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   }
   for (const planPath of planPaths) {
     try {
-      const raw = await fs8.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+      const raw = planContents?.get(planPath) ?? await fs8.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, normalizedPhase);
       for (const issue2 of validation.issues) {
         warnings.push(`${planPath}: ${issue2}`);
@@ -34980,10 +35151,11 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     );
   }
   warnings.push(...summaryWarnings, ...validationWarnings);
-  const publicationAfter = await readPlanPublicationStatus(projectRoot, phaseRoot, phasePrefix2);
-  if (publicationBefore.reason || publicationAfter.reason || publicationBefore.token !== publicationAfter.token) {
+  const publicationAfter = await readPlanPublicationSnapshot(projectRoot, phaseRoot, phasePrefix2);
+  const publicationIssue = publicationBefore.reason || publicationAfter.reason || publicationBefore.token !== publicationAfter.token ? publicationAfter.reason ?? publicationBefore.reason ?? "Plan publication changed during state inspection; refresh planning before execution." : planPublicationConsumptionIssue(publicationBefore, planContents ?? /* @__PURE__ */ new Map(), { complete: true });
+  if (publicationIssue) {
     planRoutingReadiness.executionReady = false;
-    planRoutingReadiness.warnings.push(publicationAfter.reason ?? publicationBefore.reason ?? "Plan publication changed during state inspection; refresh planning before execution.");
+    planRoutingReadiness.warnings.push(publicationIssue);
   }
   warnings.push(...planRoutingReadiness.warnings);
   const qualityGateEvaluation = await evaluatePhaseQualityGates({
@@ -38828,7 +39000,7 @@ async function readMappedCodebaseContext(projectRoot) {
   const artifacts = [];
   const missingArtifacts = [];
   const invalidArtifacts = new Set(inspection.codebase.invalid);
-  const digest9 = [];
+  const digest10 = [];
   for (const artifact of CODEBASE_ARTIFACTS) {
     if (invalidArtifacts.has(artifact)) {
       continue;
@@ -38838,7 +39010,7 @@ async function readMappedCodebaseContext(projectRoot) {
       const raw = await fs12.readFile(absolutePath, "utf8");
       const summary = summarizeSavedArtifact(raw);
       artifacts.push(artifact);
-      digest9.push({
+      digest10.push({
         artifact,
         title: summary.title,
         summary: summary.summary
@@ -38874,7 +39046,7 @@ async function readMappedCodebaseContext(projectRoot) {
     mapped,
     artifacts,
     missingArtifacts,
-    digest: digest9,
+    digest: digest10,
     warnings
   };
 }
@@ -43358,23 +43530,32 @@ function detectDependencyCycles(graph) {
   }
   return [...cycles].map((cycle) => cycle.split("->")).sort((left, right) => left.join("->").localeCompare(right.join("->")));
 }
-function phasePlanPublicationIssue(before, after) {
+function phasePlanPublicationIssue(before, after, consumed, complete = true) {
   if (before.status === "pending" || before.status === "invalid") {
     return before.reason ?? "Phase plan publication is incomplete; resume its publication before execution.";
   }
   if (after.status === "pending" || after.status === "invalid") {
     return after.reason ?? "Phase plan publication is incomplete; resume its publication before execution.";
   }
-  return before.token !== after.token ? "Phase plan publication changed during this read; refresh the plan set before execution." : null;
+  if (before.token !== after.token) {
+    return "Phase plan publication changed during this read; refresh the plan set before execution.";
+  }
+  return consumed ? planPublicationConsumptionIssue(before, consumed, { complete }) : null;
 }
 async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
-  const publicationBefore = options.ignorePublicationGuard ? null : await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const publicationBefore = options.ignorePublicationGuard ? null : await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const guardedContents = publicationBefore?.status === "committed" ? publicationBefore.contents : null;
+  const effectiveOverrides = new Map([
+    ...guardedContents ? [...guardedContents] : [],
+    ...options.overrides ? [...options.overrides] : []
+  ]);
+  const knownPlanPaths = publicationBefore?.status === "committed" ? publicationBefore.files.map((file2) => file2.path) : options.knownPlanPaths;
   const coverageSeverity = options.roadmapCoverageSeverity ?? "issue";
   const { plans, nonCanonicalPlanPaths } = await collectPhasePlanArtifacts(
     projectRoot,
     resolved,
-    options.overrides,
-    options.knownPlanPaths
+    effectiveOverrides,
+    knownPlanPaths
   );
   const issues = [];
   const warnings = [];
@@ -43505,7 +43686,9 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
   if (publicationBefore) {
     const issue2 = phasePlanPublicationIssue(
       publicationBefore,
-      await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+      await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix),
+      new Map(plans.map((plan) => [plan.path, plan.content])),
+      true
     );
     if (issue2) issues.push(issue2);
   }
@@ -46015,14 +46198,20 @@ async function blueprintPhaseValidationWrite2(args) {
 }
 async function buildPhasePlanIndexFromResolved(input) {
   const { projectRoot, resolved } = input;
-  const publicationBefore = input.ignorePublicationGuard ? null : await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
-  const artifacts = !input.ignorePublicationGuard && !input.planContents ? await listPhaseArtifacts2(resolveBlueprintPath(projectRoot, resolved.phaseDir), projectRoot) : input.artifacts;
+  const publicationBefore = input.ignorePublicationGuard ? null : await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const guardedContents = publicationBefore?.status === "committed" ? publicationBefore.contents : null;
+  const planContents = input.planContents ?? guardedContents ?? void 0;
+  const artifacts = publicationBefore?.status === "committed" ? [
+    ...input.artifacts.filter((artifact) => !artifact.endsWith("-PLAN.md")),
+    ...publicationBefore.files.map((file2) => file2.path)
+  ] : !input.ignorePublicationGuard && !input.planContents ? await listPhaseArtifacts2(resolveBlueprintPath(projectRoot, resolved.phaseDir), projectRoot) : input.artifacts;
   const planPaths = artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right));
   const plans = [];
   const waves = {};
   const warnings = [...input.warnings ?? []];
   const knownPlanIds = /* @__PURE__ */ new Set();
   const gapClosurePlans = /* @__PURE__ */ new Set();
+  const consumedPlanContents = /* @__PURE__ */ new Map();
   for (const planPath of planPaths) {
     const planId3 = parseCanonicalPlanArtifactPath(planPath, resolved);
     if (!planId3) {
@@ -46032,7 +46221,8 @@ async function buildPhasePlanIndexFromResolved(input) {
       continue;
     }
     knownPlanIds.add(planId3);
-    const content = input.planContents?.get(planPath) ?? await fs16.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = planContents?.get(planPath) ?? await fs16.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    consumedPlanContents.set(planPath, content);
     const record2 = toPhasePlanRecord(planId3, planPath, content, resolved.phaseNumber);
     const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record2.dependsOn);
     if (dependencyIssues.length > 0) {
@@ -46050,7 +46240,9 @@ async function buildPhasePlanIndexFromResolved(input) {
   if (publicationBefore) {
     const issue2 = phasePlanPublicationIssue(
       publicationBefore,
-      await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+      await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix),
+      consumedPlanContents,
+      true
     );
     if (issue2) {
       warnings.push(issue2);
@@ -46145,31 +46337,39 @@ async function blueprintPhasePlanRead(args) {
 }
 async function readPhasePlanFromResolved(args) {
   const { projectRoot, resolved, planId: planId3 } = args;
-  const publicationBefore = await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const publicationBefore = await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const pathValue = planPathFor(resolved, planId3);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
-  if (!await pathExists(absolutePath)) {
-    return {
-      phaseFound: true,
-      found: false,
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId: planId3,
-      path: pathValue,
-      content: null,
-      metadata: null,
-      validation: null,
-      reason: `${pathValue} does not exist yet.`
-    };
+  const missingResult = () => ({
+    phaseFound: true,
+    found: false,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    planId: planId3,
+    path: pathValue,
+    content: null,
+    metadata: null,
+    validation: null,
+    reason: `${pathValue} does not exist yet.`
+  });
+  let content;
+  if (publicationBefore.status === "committed") {
+    const committedContent = publicationBefore.contents?.get(pathValue);
+    if (committedContent === void 0) return missingResult();
+    content = committedContent;
+  } else {
+    if (!await pathExists(absolutePath)) return missingResult();
+    content = await fs16.readFile(absolutePath, "utf8");
   }
-  const content = await fs16.readFile(absolutePath, "utf8");
   const record2 = toPhasePlanRecord(planId3, pathValue, content, resolved.phaseNumber);
   const dependencyIssues = collectInvalidPlanDependencyIssues(pathValue, record2.dependsOn);
   const publicationIssue = phasePlanPublicationIssue(
     publicationBefore,
-    await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+    await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix),
+    /* @__PURE__ */ new Map([[pathValue, content]]),
+    false
   );
   if (publicationIssue) {
     record2.valid = false;
@@ -46950,6 +47150,31 @@ async function blueprintPhasePlanWrite(args) {
       const planId3 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
       const pathValue = planPathFor(resolved, planId3);
       const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+      const [publication, lifecycleOwnership] = await Promise.all([
+        readPlanPublicationSnapshot(
+          projectRoot,
+          resolved.phaseDir,
+          resolved.phasePrefix
+        ),
+        readPlanLifecycleOwnership(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+      ]);
+      if (publication.status !== "absent" || lifecycleOwnership.hasSession) {
+        const issue2 = lifecycleOwnership.reason ?? (lifecycleOwnership.hasSession ? "This phase is owned by blueprint_plan_prepare and blueprint_plan_submit. Continue through the owning lifecycle instead of writing an individual plan." : publication.status === "committed" ? "This phase plan set is owned by blueprint_plan_prepare and blueprint_plan_submit. Start a new planning revision instead of writing an individual published plan." : publication.reason ?? "Phase plan publication state must be reconciled before any plan write.");
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId: planId3,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          validation: { valid: false, issues: [issue2], warnings: [] },
+          warnings: []
+        };
+      }
       if (hasContent === hasModel) {
         return {
           phaseNumber: resolved.phaseNumber,
@@ -47805,19 +48030,23 @@ async function blueprintPhaseExecutionTargets(args = {}) {
       warnings: located.reason ? [located.reason] : []
     };
   }
-  const publicationBefore = await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix);
+  const publicationBefore = await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix);
   const requestedWave = args.wave ?? null;
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
   const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
-  const executionArtifacts = await listPhaseArtifacts2(
+  const listedExecutionArtifacts = await listPhaseArtifacts2(
     resolveBlueprintPath(projectRoot, resolved.phaseDir),
     projectRoot
   );
+  const executionArtifacts = publicationBefore.status === "committed" ? [
+    ...listedExecutionArtifacts.filter((artifact) => !artifact.endsWith("-PLAN.md")),
+    ...publicationBefore.files.map((file2) => file2.path)
+  ] : listedExecutionArtifacts;
   const planPaths = executionArtifacts.filter(
     (artifactPath2) => path19.posix.dirname(artifactPath2) === resolved.phaseDir && artifactPath2.endsWith("-PLAN.md")
   );
-  const planContents = new Map(
+  const planContents = publicationBefore.status === "committed" && publicationBefore.contents ? new Map(publicationBefore.contents) : new Map(
     await Promise.all(
       planPaths.map(async (planPath) => [
         planPath,
@@ -48060,7 +48289,9 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   );
   const publicationIssue = phasePlanPublicationIssue(
     publicationBefore,
-    await readPlanPublicationStatus(projectRoot, resolved.phaseDir, resolved.phasePrefix)
+    await readPlanPublicationSnapshot(projectRoot, resolved.phaseDir, resolved.phasePrefix),
+    planContents,
+    true
   );
   if (publicationIssue) {
     blockers.push(publicationIssue);
@@ -56112,20 +56343,20 @@ function buildRepoEvidenceDigestSections(args) {
   return sections;
 }
 async function buildArtifactDigestSections(projectRoot, artifactPaths) {
-  const digest9 = [];
+  const digest10 = [];
   for (const artifactPath2 of artifactPaths) {
     const absolutePath = resolveRepoRelativePath(projectRoot, artifactPath2);
     await assertCodebasePublicationComplete(projectRoot, artifactPath2);
     const raw = await fs17.readFile(absolutePath, "utf8");
     const summary = summarizeArtifactContent(raw);
-    digest9.push({
+    digest10.push({
       artifact: artifactPath2,
       title: summary.title.length > 0 ? summary.title : path20.basename(artifactPath2, path20.extname(artifactPath2)),
       summary: summary.summary,
       evidence: [artifactPath2]
     });
   }
-  return digest9;
+  return digest10;
 }
 async function blueprintArtifactSummaryDigest(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -56141,7 +56372,7 @@ async function blueprintArtifactSummaryDigest(args = {}) {
   const docFiles = normalizeInputPaths(projectRoot, args.docFiles);
   const trackedFiles = normalizeInputPaths(projectRoot, args.trackedFiles);
   if (artifactPaths.length > 0) {
-    const digest10 = await buildArtifactDigestSections(projectRoot, artifactPaths);
+    const digest11 = await buildArtifactDigestSections(projectRoot, artifactPaths);
     const repoEvidenceDigest = buildRepoEvidenceDigestSections({
       packageJsonPath,
       readmePath,
@@ -56151,7 +56382,7 @@ async function blueprintArtifactSummaryDigest(args = {}) {
       trackedFiles
     });
     return {
-      digest: [...digest10, ...repoEvidenceDigest],
+      digest: [...digest11, ...repoEvidenceDigest],
       inputsUsed: uniqueSorted([
         ...artifactPaths,
         packageJsonPath ?? "",
@@ -56174,7 +56405,7 @@ async function blueprintArtifactSummaryDigest(args = {}) {
       packageManifest = {};
     }
   }
-  const digest9 = buildCodebaseDigestSections({
+  const digest10 = buildCodebaseDigestSections({
     focusArea: args.focusArea,
     packageManifest,
     packageJsonPath,
@@ -56193,7 +56424,7 @@ async function blueprintArtifactSummaryDigest(args = {}) {
     ...trackedFiles
   ]).filter((value) => value.length > 0);
   return {
-    digest: digest9,
+    digest: digest10,
     inputsUsed
   };
 }
@@ -61750,11 +61981,11 @@ var init_parser_runtime = __esm({
 
 // src/mcp/codebase-index/adapters/java.ts
 import { createHash as createHash17 } from "node:crypto";
-function digest(value) {
+function digest2(value) {
   return createHash17("sha256").update(value).digest("hex");
 }
 function stableId(prefix, value) {
-  return `${prefix}${digest(value).slice(0, 32)}`;
+  return `${prefix}${digest2(value).slice(0, 32)}`;
 }
 function languageSupported(value) {
   return JAVA_ADAPTER_SUPPORTED_LANGUAGES.includes(value);
@@ -62129,12 +62360,12 @@ function addDetails(records, sourceRecordId, field, value) {
       segmentCount: pieces.length,
       text: text3,
       byteSize: Buffer.byteLength(text3, "utf8"),
-      contentHash: digest(text3),
+      contentHash: digest2(text3),
       previousSegmentId: index === 0 ? null : ids[index - 1],
       nextSegmentId: index === pieces.length - 1 ? null : ids[index + 1]
     });
   }
-  return { reference: { field, firstSegmentId: ids[0], segmentCount: pieces.length, byteSize: Buffer.byteLength(value, "utf8"), contentHash: digest(value) } };
+  return { reference: { field, firstSegmentId: ids[0], segmentCount: pieces.length, byteSize: Buffer.byteLength(value, "utf8"), contentHash: digest2(value) } };
 }
 function safeStructuralValue(value) {
   return inspectContentBoundaries(value).safe && !/[\u0000]/u.test(value);
@@ -62162,7 +62393,7 @@ function importResolution(file2, specifier, knownFiles, isStatic = false) {
   return { resolutionStatus: "unresolved", targetFileId: null, targetSymbolId: null, unresolvedReason: "external-dependency", certainty: "unknown" };
 }
 function recordContentHash(source, node) {
-  return digest(source.slice(node.coordinate.start.byte, node.coordinate.end.byte));
+  return digest2(source.slice(node.coordinate.start.byte, node.coordinate.end.byte));
 }
 function importRecord(source, file2, node, specifier, resolution, index) {
   return {
@@ -62329,7 +62560,7 @@ function validateRecords(records) {
 }
 async function adaptJavaFile(input) {
   const { file: file2, source, knownFiles = [] } = input;
-  if (source.byteLength !== file2.byteSize || digest(source) !== file2.contentHash) return emptyFailure(file2, "stale", [{ code: "source-mismatch", message: "Source bytes do not match the inventory record." }]);
+  if (source.byteLength !== file2.byteSize || digest2(source) !== file2.contentHash) return emptyFailure(file2, "stale", [{ code: "source-mismatch", message: "Source bytes do not match the inventory record." }]);
   if (!languageSupported(file2.language)) return emptyFailure(makeFile(file2, "unsupported", "file", "unsupported-language"), "unsupported", [{ code: "unsupported-language", message: "The Java adapter supports Java files only." }]);
   if (source.byteLength > JAVA_ADAPTER_MAX_FILE_BYTES) {
     return { ok: false, status: "invalid", file: makeFile(file2, "skipped", "file", "too-large"), symbols: [], imports: [], relationships: [], details: [], diagnostics: [{ code: "too-large", message: "Files above the default one MiB extraction limit retain file-level coverage only." }], ruleVersion: JAVA_ADAPTER_RULE_VERSION };
@@ -62373,11 +62604,11 @@ var init_java = __esm({
 // src/mcp/codebase-index/adapters/javascript.ts
 import { createHash as createHash18 } from "node:crypto";
 import path23 from "node:path";
-function digest2(value) {
+function digest3(value) {
   return createHash18("sha256").update(value).digest("hex");
 }
 function stableId2(prefix, value) {
-  return `${prefix}${digest2(value).slice(0, 32)}`;
+  return `${prefix}${digest3(value).slice(0, 32)}`;
 }
 function languageSupported2(value) {
   return JAVASCRIPT_ADAPTER_SUPPORTED_LANGUAGES.includes(value);
@@ -62754,7 +62985,7 @@ function addDetails2(records, sourceRecordId, field, value) {
       segmentCount: pieces.length,
       text: text3,
       byteSize: Buffer.byteLength(text3, "utf8"),
-      contentHash: digest2(text3),
+      contentHash: digest3(text3),
       previousSegmentId: index === 0 ? null : ids[index - 1],
       nextSegmentId: index === pieces.length - 1 ? null : ids[index + 1]
     });
@@ -62765,7 +62996,7 @@ function addDetails2(records, sourceRecordId, field, value) {
       firstSegmentId: ids[0],
       segmentCount: pieces.length,
       byteSize: Buffer.byteLength(value, "utf8"),
-      contentHash: digest2(value)
+      contentHash: digest3(value)
     }
   };
 }
@@ -62867,7 +63098,7 @@ function literalSpecifier(source, node) {
   return { value, supported: true };
 }
 function recordContentHash2(source, node) {
-  return digest2(source.slice(node.coordinate.start.byte, node.coordinate.end.byte));
+  return digest3(source.slice(node.coordinate.start.byte, node.coordinate.end.byte));
 }
 function importRecord2(source, file2, node, kind, specifier, resolution, index) {
   return {
@@ -63090,7 +63321,7 @@ function validateRecords2(records) {
 }
 async function adaptJavaScriptFile(input) {
   const { file: file2, source, knownFiles = [] } = input;
-  const actualHash = digest2(source);
+  const actualHash = digest3(source);
   if (source.byteLength !== file2.byteSize || actualHash !== file2.contentHash) {
     return emptyFailure2(file2, "stale", [{ code: "source-mismatch", message: "Source bytes do not match the inventory record." }]);
   }
@@ -63176,11 +63407,11 @@ var init_javascript = __esm({
 // src/mcp/codebase-index/adapters/python.ts
 import { createHash as createHash19 } from "node:crypto";
 import path24 from "node:path";
-function digest3(value) {
+function digest4(value) {
   return createHash19("sha256").update(value).digest("hex");
 }
 function stableId3(prefix, value) {
-  return `${prefix}${digest3(value).slice(0, 32)}`;
+  return `${prefix}${digest4(value).slice(0, 32)}`;
 }
 function languageSupported3(value) {
   return PYTHON_ADAPTER_SUPPORTED_LANGUAGES.includes(value);
@@ -63457,7 +63688,7 @@ function addDetails3(records, sourceRecordId, field, value) {
       segmentCount: pieces.length,
       text: text3,
       byteSize: Buffer.byteLength(text3, "utf8"),
-      contentHash: digest3(text3),
+      contentHash: digest4(text3),
       previousSegmentId: index === 0 ? null : ids[index - 1],
       nextSegmentId: index === pieces.length - 1 ? null : ids[index + 1]
     });
@@ -63468,7 +63699,7 @@ function addDetails3(records, sourceRecordId, field, value) {
       firstSegmentId: ids[0],
       segmentCount: pieces.length,
       byteSize: Buffer.byteLength(value, "utf8"),
-      contentHash: digest3(value)
+      contentHash: digest4(value)
     }
   };
 }
@@ -63545,7 +63776,7 @@ function importRecord3(source, file2, node, specifier, resolution, index) {
     sourcePath: file2.path,
     specifier,
     coordinate: node.coordinate,
-    contentHash: digest3(source.slice(node.coordinate.start.byte, node.coordinate.end.byte)),
+    contentHash: digest4(source.slice(node.coordinate.start.byte, node.coordinate.end.byte)),
     resolutionStatus: resolution.resolutionStatus,
     targetFileId: resolution.targetFileId,
     targetSymbolId: resolution.targetSymbolId,
@@ -63611,7 +63842,7 @@ function buildRecords3(source, file2, tree, knownFiles) {
       kind: candidate.kind,
       ...inlineSignature !== void 0 ? { signature: inlineSignature } : {},
       coordinate: candidate.node.coordinate,
-      contentHash: digest3(source.slice(candidate.node.coordinate.start.byte, candidate.node.coordinate.end.byte)),
+      contentHash: digest4(source.slice(candidate.node.coordinate.start.byte, candidate.node.coordinate.end.byte)),
       lexicalParentId: candidate.parent?.id ?? null,
       exported: candidate.exported,
       ...detailReferences.length > 0 ? { detailReferences } : {}
@@ -63700,7 +63931,7 @@ function validateRecords3(records) {
 }
 async function adaptPythonFile(input) {
   const { file: file2, source, knownFiles = [] } = input;
-  if (source.byteLength !== file2.byteSize || digest3(source) !== file2.contentHash) {
+  if (source.byteLength !== file2.byteSize || digest4(source) !== file2.contentHash) {
     return emptyFailure3(file2, "stale", [{ code: "source-mismatch", message: "Source bytes do not match the inventory record." }]);
   }
   if (!languageSupported3(file2.language)) {
@@ -64073,7 +64304,7 @@ async function withParserSource(repositoryRoot, basis, callback, options = {}) {
     }
     if (Number(opened.size) !== basis.byteSize) return failure3("size-mismatch");
     source = Buffer.allocUnsafe(basis.byteSize);
-    const digest9 = createHash21("sha256");
+    const digest10 = createHash21("sha256");
     let offset = 0;
     let chunkIndex = 0;
     while (offset < source.byteLength) {
@@ -64085,7 +64316,7 @@ async function withParserSource(repositoryRoot, basis, callback, options = {}) {
         return failure3("unreadable");
       }
       if (read.bytesRead === 0) return failure3("changed-during-read");
-      digest9.update(source.subarray(offset, offset + read.bytesRead));
+      digest10.update(source.subarray(offset, offset + read.bytesRead));
       offset += read.bytesRead;
       await parserSourceTestHooks.afterChunk?.(resolved.absolutePath, chunkIndex);
       chunkIndex += 1;
@@ -64099,7 +64330,7 @@ async function withParserSource(repositoryRoot, basis, callback, options = {}) {
     if (!finalSnapshot || !samePathSnapshot(resolved.snapshot, finalSnapshot)) {
       return failure3("changed-during-read");
     }
-    if (digest9.digest("hex") !== basis.contentHash) return failure3("hash-mismatch");
+    if (digest10.digest("hex") !== basis.contentHash) return failure3("hash-mismatch");
     if (source.includes(0)) return failure3("binary");
     try {
       new TextDecoder("utf-8", { fatal: true }).decode(source);
@@ -65209,7 +65440,7 @@ function canonical(value) {
   }
   return JSON.stringify(value) ?? "null";
 }
-function digest4(value) {
+function digest5(value) {
   return sha25610(canonical(value));
 }
 function provenanceProjection(provenance) {
@@ -65223,7 +65454,7 @@ function cachePayload(cache) {
   return cache;
 }
 function portableProvenanceHash(provenance) {
-  return digest4(provenanceProjection(provenance));
+  return digest5(provenanceProjection(provenance));
 }
 function validateCacheShape(input, requireAuthority) {
   if (!input || typeof input !== "object" || requireAuthority && input[CACHE_AUTHORITY] !== true) return null;
@@ -65233,7 +65464,7 @@ function validateCacheShape(input, requireAuthority) {
   try {
     if (cache.provenanceHash !== portableProvenanceHash(cache.provenance)) return null;
     const { cacheHash, ...payload } = cache;
-    if (cacheHash !== digest4(cachePayload(payload))) return null;
+    if (cacheHash !== digest5(cachePayload(payload))) return null;
     const fileRecords = cache.structuralShards.flatMap((shard) => shard.files);
     const sourceFiles = cache.sourceBasis.files;
     if (cache.structuralShards.some((shard) => shard.generationId !== cache.generationId) || cache.sourceBasis.generationId !== cache.generationId || new Set(fileRecords.map((file2) => file2.path)).size !== fileRecords.length || new Set(sourceFiles.map((file2) => file2.path)).size !== sourceFiles.length || fileRecords.length !== sourceFiles.length) return null;
@@ -65267,7 +65498,7 @@ function createPortableIncrementalCache(extraction, semantic) {
   if (!parsed.success || !portableAuthoritativeSourceBasisSchema.safeParse(payload.sourceBasis).success) {
     throw new Error("invalid portable incremental cache");
   }
-  const cache = { ...payload, cacheHash: digest4(cachePayload(payload)) };
+  const cache = { ...payload, cacheHash: digest5(cachePayload(payload)) };
   Object.defineProperty(cache, CACHE_AUTHORITY, { value: true, enumerable: false, configurable: false, writable: false });
   return cache;
 }
@@ -65628,7 +65859,7 @@ async function assertDirectorySnapshot(snapshot3) {
   return true;
 }
 function directoryFingerprint(snapshot3) {
-  return digest5(encoder.encode(JSON.stringify(snapshot3.map((entry) => ({
+  return digest6(encoder.encode(JSON.stringify(snapshot3.map((entry) => ({
     path: entry.path,
     device: entry.identity.device,
     inode: entry.identity.inode
@@ -65717,7 +65948,7 @@ async function captureState(root, directories) {
   const idx = await readRegular(indexPath(root));
   const targetEntries = await Promise.all(CODEBASE_DOCUMENT_IDS.map(async (id) => [id, await readRegular(targetPath(root, id))]));
   const targetBytes = Object.fromEntries(targetEntries);
-  const targetHashes2 = Object.fromEntries(CODEBASE_DOCUMENT_IDS.map((id) => [id, targetBytes[id] === null ? null : digest5(targetBytes[id])]));
+  const targetHashes2 = Object.fromEntries(CODEBASE_DOCUMENT_IDS.map((id) => [id, targetBytes[id] === null ? null : digest6(targetBytes[id])]));
   let indexDescriptor = null;
   if (idx !== null) {
     try {
@@ -65730,7 +65961,7 @@ async function captureState(root, directories) {
     rootFingerprint: directoryFingerprint(directories),
     directories,
     indexBytes: idx,
-    indexHash: idx === null ? null : digest5(idx),
+    indexHash: idx === null ? null : digest6(idx),
     indexDescriptor,
     targetBytes,
     targetHashes: targetHashes2
@@ -65739,7 +65970,7 @@ async function captureState(root, directories) {
 async function readMarker2(root) {
   const bytes = await readRegular(markerPath(root));
   if (bytes === null) return { kind: "absent" };
-  const markerHash = digest5(bytes);
+  const markerHash = digest6(bytes);
   try {
     const parsed = portablePublicationMarkerSchema.safeParse(JSON.parse(text(bytes)));
     return parsed.success ? { kind: "recognized", marker: parsed.data, hash: markerHash } : { kind: "unknown", hash: markerHash };
@@ -65782,7 +66013,7 @@ async function generationFilesFromManifest(root, sealed, expectedRootIndexHash) 
   if (!safeRelative3(sealed.generationId) || sealed.manifest.path !== `generations/${sealed.generationId}/manifest.json` || sealed.entry.path !== `generations/${sealed.generationId}/ENTRY.md`) return false;
   const manifestBytes = await readGeneratedRegular(root, sealed.manifest.path).catch(() => null);
   const entryBytes = await readGeneratedRegular(root, sealed.entry.path).catch(() => null);
-  if (!manifestBytes || !entryBytes || digest5(manifestBytes) !== sealed.manifest.checksum || digest5(entryBytes) !== sealed.entry.checksum) return false;
+  if (!manifestBytes || !entryBytes || digest6(manifestBytes) !== sealed.manifest.checksum || digest6(entryBytes) !== sealed.entry.checksum) return false;
   let manifest;
   try {
     manifest = portableGenerationManifestSchema.parse(JSON.parse(text(manifestBytes)));
@@ -65793,16 +66024,16 @@ async function generationFilesFromManifest(root, sealed, expectedRootIndexHash) 
   for (const page of manifest.checksums.pages) {
     if (!safeRelative3(page.path) || !page.path.startsWith(`generations/${sealed.generationId}/`)) return false;
     const bytes = await readGeneratedRegular(root, page.path).catch(() => null);
-    if (!bytes || digest5(bytes) !== page.checksum) return false;
+    if (!bytes || digest6(bytes) !== page.checksum) return false;
   }
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const relative = `generations/${sealed.generationId}/compatibility/${DOCUMENT_FILE(id)}`;
     const bytes = await readGeneratedRegular(root, relative).catch(() => null);
-    if (!bytes || digest5(bytes) !== manifest.checksums.compatibility[id]) return false;
+    if (!bytes || digest6(bytes) !== manifest.checksums.compatibility[id]) return false;
   }
   if (expectedRootIndexHash !== void 0) {
     const stagedIndex = await readGeneratedRegular(root, `generations/${sealed.generationId}/${PORTABLE_GENERATION_INDEX_NAME}`).catch(() => null);
-    if (!stagedIndex || digest5(stagedIndex) !== expectedRootIndexHash) return false;
+    if (!stagedIndex || digest6(stagedIndex) !== expectedRootIndexHash) return false;
   }
   return true;
 }
@@ -65814,23 +66045,23 @@ async function renderBundleValid(rendered4) {
   const generationPrefix = `generations/${rendered4.manifest.generationId}/`;
   const allowedRootFiles = /* @__PURE__ */ new Set(["INDEX.md", ...CODEBASE_DOCUMENT_IDS.map(DOCUMENT_FILE)]);
   if (paths.some((relative) => !allowedRootFiles.has(relative) && !relative.startsWith(generationPrefix))) return false;
-  if (digest5(files["INDEX.md"]) !== rendered4.rootIndexHash || digest5(rendered4.rootIndexBytes) !== rendered4.rootIndexHash) return false;
-  if (digest5(files[rendered4.sealedGeneration.entry.path]) !== rendered4.sealedGeneration.entry.checksum || digest5(files[rendered4.sealedGeneration.manifest.path]) !== rendered4.sealedGeneration.manifest.checksum) return false;
+  if (digest6(files["INDEX.md"]) !== rendered4.rootIndexHash || digest6(rendered4.rootIndexBytes) !== rendered4.rootIndexHash) return false;
+  if (digest6(files[rendered4.sealedGeneration.entry.path]) !== rendered4.sealedGeneration.entry.checksum || digest6(files[rendered4.sealedGeneration.manifest.path]) !== rendered4.sealedGeneration.manifest.checksum) return false;
   if (!portableSha256Schema.safeParse(rendered4.rootIndexHash).success) return false;
   for (const [relative, bytes] of Object.entries(files)) {
-    if (!safeRelative3(relative) || !(bytes instanceof Uint8Array) || rendered4.checksums[relative] !== digest5(bytes)) return false;
+    if (!safeRelative3(relative) || !(bytes instanceof Uint8Array) || rendered4.checksums[relative] !== digest6(bytes)) return false;
   }
   if (rendered4.sealedGeneration.generationId !== rendered4.manifest.generationId) return false;
   if (rendered4.manifest.checksums.entry !== rendered4.sealedGeneration.entry.checksum) return false;
   for (const page of rendered4.manifest.checksums.pages) {
-    if (!files[page.path] || digest5(files[page.path]) !== page.checksum) return false;
+    if (!files[page.path] || digest6(files[page.path]) !== page.checksum) return false;
   }
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const rootName = DOCUMENT_FILE(id);
     const generationName = `generations/${rendered4.manifest.generationId}/compatibility/${rootName}`;
     const bytes = rendered4.rootViewBytes[rootName];
-    if (!files[rootName] || !files[generationName] || !bytes || digest5(bytes) !== rendered4.manifest.checksums.compatibility[id] || digest5(files[rootName]) !== digest5(bytes)) return false;
-    if (digest5(files[generationName]) !== digest5(bytes)) return false;
+    if (!files[rootName] || !files[generationName] || !bytes || digest6(bytes) !== rendered4.manifest.checksums.compatibility[id] || digest6(files[rootName]) !== digest6(bytes)) return false;
+    if (digest6(files[generationName]) !== digest6(bytes)) return false;
   }
   try {
     const parsed = JSON.parse(text(files[rendered4.sealedGeneration.manifest.path]));
@@ -65843,7 +66074,7 @@ async function renderBundleValid(rendered4) {
 function renderedTargetHashes(rendered4) {
   return Object.fromEntries(CODEBASE_DOCUMENT_IDS.map((id) => {
     const bytes = rendered4.rootViewBytes[DOCUMENT_FILE(id)];
-    return [id, bytes ? digest5(bytes) : null];
+    return [id, bytes ? digest6(bytes) : null];
   }));
 }
 async function publishedGenerationIds(root) {
@@ -65914,11 +66145,11 @@ async function writeGeneration(root, rendered4, legacyBackup2) {
     const existing = await readRegular(absolute).catch((error2) => {
       throw error2;
     });
-    if (existing && digest5(existing) === digest5(bytes)) continue;
+    if (existing && digest6(existing) === digest6(bytes)) continue;
     if (existing) throw new Error("publication-conflict");
     await exactAtomicWrite(root, relative, bytes);
     const after = await readRegular(absolute);
-    if (!after || digest5(after) !== digest5(bytes)) throw new Error("invalid-generation");
+    if (!after || digest6(after) !== digest6(bytes)) throw new Error("invalid-generation");
   }
   if (!await generationFilesFromManifest(root, rendered4.sealedGeneration, rendered4.rootIndexHash)) throw new Error("invalid-generation");
 }
@@ -66056,14 +66287,14 @@ async function markerStill(root, expected) {
     if (error2.message === "unsafe-target") throw error2;
     return null;
   });
-  return bytes !== null && digest5(bytes) === digest5(markerBytes(expected));
+  return bytes !== null && digest6(bytes) === digest6(markerBytes(expected));
 }
 async function rootIndexMatches(root, hash5) {
   const bytes = await readRegular(indexPath(root)).catch((error2) => {
     if (error2.message === "unsafe-target") throw error2;
     return null;
   });
-  return bytes !== null && digest5(bytes) === hash5;
+  return bytes !== null && digest6(bytes) === hash5;
 }
 async function readRestoreBytes(root, marker, id) {
   const previous = marker.previousTargetHashes[id];
@@ -66071,7 +66302,7 @@ async function readRestoreBytes(root, marker, id) {
   let bytes = null;
   if (marker.v1BackupReference) bytes = await readGeneratedRegular(root, marker.v1BackupReference.compatibility[id].path).catch(() => null);
   if (!bytes && marker.previousGenerationId) bytes = await readGeneratedRegular(root, `generations/${marker.previousGenerationId}/compatibility/${DOCUMENT_FILE(id)}`).catch(() => null);
-  if (!bytes || digest5(bytes) !== previous) return null;
+  if (!bytes || digest6(bytes) !== previous) return null;
   return bytes;
 }
 async function previousGenerationIsRestorable(root, marker) {
@@ -66080,7 +66311,7 @@ async function previousGenerationIsRestorable(root, marker) {
       const reference2 = marker.v1BackupReference.compatibility[id];
       if (!safeRelative3(reference2.path)) return false;
       const bytes = await readGeneratedRegular(root, reference2.path).catch(() => null);
-      if (!bytes || digest5(bytes) !== reference2.checksum || digest5(bytes) !== marker.previousTargetHashes[id]) return false;
+      if (!bytes || digest6(bytes) !== reference2.checksum || digest6(bytes) !== marker.previousTargetHashes[id]) return false;
     }
   }
   if (!marker.previousGenerationId) return true;
@@ -66107,7 +66338,7 @@ async function restorePrecommit(root, marker) {
       if (error2.message === "unsafe-target") throw error2;
       return null;
     });
-    const currentHash = current === null ? null : digest5(current);
+    const currentHash = current === null ? null : digest6(current);
     const next = marker.nextTargetHashes[id];
     const previous = marker.previousTargetHashes[id];
     if (currentHash === previous) continue;
@@ -66141,13 +66372,13 @@ async function restorePrecommit(root, marker) {
       if (error2.message === "unsafe-target") throw error2;
       return null;
     });
-    if (!after || digest5(after) !== previous) complete = false;
+    if (!after || digest6(after) !== previous) complete = false;
   }
   if (!complete) return false;
   if (await rootIndexMatches(root, marker.nextIndexHash)) {
     return false;
   }
-  if (await markerStill(root, marker)) await exactDescriptorUnlink(root, ".publication.json", digest5(markerBytes(marker)));
+  if (await markerStill(root, marker)) await exactDescriptorUnlink(root, ".publication.json", digest6(markerBytes(marker)));
   return true;
 }
 async function cleanupCommitted(root, marker) {
@@ -66155,13 +66386,13 @@ async function cleanupCommitted(root, marker) {
   if (!await rootIndexMatches(root, marker.nextIndexHash)) return false;
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const bytes = await readRegular(targetPath(root, id));
-    const currentHash = bytes === null ? null : digest5(bytes);
+    const currentHash = bytes === null ? null : digest6(bytes);
     if (currentHash !== marker.nextTargetHashes[id]) return false;
   }
   const current = await readMarker2(root);
   if (current.kind !== "recognized" || !markerIdentityMatches(current.marker, marker)) return false;
   if (!await markerStill(root, current.marker)) return false;
-  await exactDescriptorUnlink(root, ".publication.json", digest5(markerBytes(current.marker)));
+  await exactDescriptorUnlink(root, ".publication.json", digest6(markerBytes(current.marker)));
   return true;
 }
 async function finalPrecommitValidation(root, directories, marker, freshnessCheck, freshnessContext) {
@@ -66169,12 +66400,12 @@ async function finalPrecommitValidation(root, directories, marker, freshnessChec
   if (!await assertDirectorySnapshot(directories)) throw new Error("unsafe-root");
   for (const id of CODEBASE_DOCUMENT_IDS) {
     const bytes = await readRegular(targetPath(root, id));
-    if (!bytes || digest5(bytes) !== marker.nextTargetHashes[id]) throw new Error("stale-target");
+    if (!bytes || digest6(bytes) !== marker.nextTargetHashes[id]) throw new Error("stale-target");
   }
   if (!await markerStill(root, marker)) throw new Error("publication-conflict");
   if (!await assertDirectorySnapshot(directories)) throw new Error("unsafe-root");
   const currentIndex = await readRegular(indexPath(root));
-  const currentIndexHash = currentIndex === null ? null : digest5(currentIndex);
+  const currentIndexHash = currentIndex === null ? null : digest6(currentIndex);
   if (currentIndexHash !== marker.previousIndexHash && currentIndexHash !== marker.nextIndexHash) throw new Error("stale-target");
   return currentIndexHash;
 }
@@ -66277,7 +66508,7 @@ async function publishLocked(input, root, directories, preflight) {
     if (!await generationFilesFromManifest(root, marker.sealedGeneration, marker.nextIndexHash)) throw new Error("invalid-generation");
     for (const id of CODEBASE_DOCUMENT_IDS) {
       const current = await readRegular(targetPath(root, id));
-      const currentHash = current === null ? null : digest5(current);
+      const currentHash = current === null ? null : digest6(current);
       const previous = marker.previousTargetHashes[id];
       const next = marker.nextTargetHashes[id];
       if (currentHash === next) continue;
@@ -66285,7 +66516,7 @@ async function publishLocked(input, root, directories, preflight) {
       await portablePublicationTestHooks.beforeCompatibilityWrite?.(id);
       await exactAtomicWrite(root, DOCUMENT_FILE(id), input.rendered.rootViewBytes[DOCUMENT_FILE(id)]);
       const after = await readRegular(targetPath(root, id));
-      if (!after || digest5(after) !== next) throw new Error("publication-failed");
+      if (!after || digest6(after) !== next) throw new Error("publication-failed");
     }
     if (!await verifyFreshness(input.verifyFreshness, {
       phase: "before-index",
@@ -66395,7 +66626,7 @@ async function publishPortableMap(input) {
     }
   });
 }
-var PORTABLE_CODEBASE_ROOT, PORTABLE_CODEBASE_INDEX, PORTABLE_PUBLICATION_MARKER, PORTABLE_PUBLICATION_LOCK, PORTABLE_GENERATION_INDEX_NAME, DOCUMENT_FILE, digest5, text, encoder, MESSAGES, portablePublicationTestHooks;
+var PORTABLE_CODEBASE_ROOT, PORTABLE_CODEBASE_INDEX, PORTABLE_PUBLICATION_MARKER, PORTABLE_PUBLICATION_LOCK, PORTABLE_GENERATION_INDEX_NAME, DOCUMENT_FILE, digest6, text, encoder, MESSAGES, portablePublicationTestHooks;
 var init_publication = __esm({
   "src/mcp/codebase-index/publication.ts"() {
     "use strict";
@@ -66410,7 +66641,7 @@ var init_publication = __esm({
     PORTABLE_PUBLICATION_LOCK = "codebase-publication";
     PORTABLE_GENERATION_INDEX_NAME = "INDEX.md";
     DOCUMENT_FILE = (id) => `${id.toUpperCase()}.md`;
-    digest5 = (bytes) => createHash25("sha256").update(bytes).digest("hex");
+    digest6 = (bytes) => createHash25("sha256").update(bytes).digest("hex");
     text = (bytes) => new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     encoder = new TextEncoder();
     MESSAGES = {
@@ -67045,7 +67276,7 @@ async function readPortableOperationAcceptance(input) {
 }
 async function recordPortableOperationAcceptance(input) {
   const repositoryRoot = resolveRepositoryRoot(input);
-  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success || !digest6.safeParse(input.modelHash).success || !digest6.safeParse(input.rootIndexHash).success) return false;
+  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success || !digest7.safeParse(input.modelHash).success || !digest7.safeParse(input.rootIndexHash).success) return false;
   const accepted = acceptedSubmissionSchema.safeParse({
     version: 1,
     operationId: input.operationId,
@@ -67078,7 +67309,7 @@ async function recordPortableOperationAcceptance(input) {
 }
 async function recordPortableOperationCommitUnlocked(input) {
   const repositoryRoot = resolveRepositoryRoot(input);
-  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success || !digest6.safeParse(input.modelHash).success || !digest6.safeParse(input.rootIndexHash).success || !digest6.safeParse(input.manifestHash).success || !digest6.safeParse(input.entryHash).success) return false;
+  if (!repositoryRoot || !operationIdSchema.safeParse(input.operationId).success || !generationLocalIdSchema.safeParse(input.generationId).success || !digest7.safeParse(input.modelHash).success || !digest7.safeParse(input.rootIndexHash).success || !digest7.safeParse(input.manifestHash).success || !digest7.safeParse(input.entryHash).success) return false;
   const committed = committedSubmissionSchema.safeParse({
     version: 1,
     operationId: input.operationId,
@@ -67110,7 +67341,7 @@ async function recordPortableOperationCommitUnderPublicationLock(input) {
   return recordPortableOperationCommitUnlocked(input);
 }
 async function verifySealedGeneration(repositoryRoot, generationId, manifestHash, entryHash) {
-  if (!generationLocalIdSchema.safeParse(generationId).success || !digest6.safeParse(manifestHash).success || !digest6.safeParse(entryHash).success) return false;
+  if (!generationLocalIdSchema.safeParse(generationId).success || !digest7.safeParse(manifestHash).success || !digest7.safeParse(entryHash).success) return false;
   const prefix = `.blueprint/codebase/generations/${generationId}`;
   const manifestBytes = await readLiteralFile(repositoryRoot, `${prefix}/manifest.json`).catch(() => null);
   const entryBytes = await readLiteralFile(repositoryRoot, `${prefix}/ENTRY.md`).catch(() => null);
@@ -67189,7 +67420,7 @@ async function readPortableOperationReceipt(input) {
   });
   return result;
 }
-var PORTABLE_OPERATIONS_ROOT, PORTABLE_OPERATION_METADATA_FILE, PORTABLE_OPERATION_MARKER_FILE, PORTABLE_OPERATION_STRUCTURAL_FILE, PORTABLE_OPERATION_AUTHORITY_FILE, PORTABLE_OPERATION_PROVENANCE_FILE, PORTABLE_OPERATION_PACKETS_FILE, PORTABLE_OPERATION_INACTIVITY_MS, PORTABLE_OPERATION_RECEIPT_ENVELOPE_RESERVE_BYTES, PORTABLE_OPERATION_PACKET_BUDGET_BYTES, PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES, PORTABLE_OPERATION_ACCEPTED_FILE, PORTABLE_OPERATION_COMMITTED_FILE, PORTABLE_INCREMENTAL_CACHE_ROOT, PORTABLE_INCREMENTAL_CACHE_FILE, PORTABLE_INCREMENTAL_CACHE_KEY_FILE, portableOperationTestHooks, safeNonNegativeInteger2, safePositiveInteger, boundedPath, opaqueSecret, timestamp, digest6, portableIntentSchema, identitySchema, provenanceSchema, coverageSchema2, fileRefSchema, publicationSchema, metadataSchema2, structuralStoreSchema, authorityStoreSchema, provenanceStoreSchema, packetStoreSchema, acceptedSubmissionSchema, committedSubmissionSchema, operationMarkerSchema, cursorSchema, operationIdSchema, incrementalCacheKeySchema, incrementalCacheEnvelopeSchema, DIAGNOSTICS;
+var PORTABLE_OPERATIONS_ROOT, PORTABLE_OPERATION_METADATA_FILE, PORTABLE_OPERATION_MARKER_FILE, PORTABLE_OPERATION_STRUCTURAL_FILE, PORTABLE_OPERATION_AUTHORITY_FILE, PORTABLE_OPERATION_PROVENANCE_FILE, PORTABLE_OPERATION_PACKETS_FILE, PORTABLE_OPERATION_INACTIVITY_MS, PORTABLE_OPERATION_RECEIPT_ENVELOPE_RESERVE_BYTES, PORTABLE_OPERATION_PACKET_BUDGET_BYTES, PORTABLE_OPERATION_PUBLIC_PACKET_BUDGET_BYTES, PORTABLE_OPERATION_ACCEPTED_FILE, PORTABLE_OPERATION_COMMITTED_FILE, PORTABLE_INCREMENTAL_CACHE_ROOT, PORTABLE_INCREMENTAL_CACHE_FILE, PORTABLE_INCREMENTAL_CACHE_KEY_FILE, portableOperationTestHooks, safeNonNegativeInteger2, safePositiveInteger, boundedPath, opaqueSecret, timestamp, digest7, portableIntentSchema, identitySchema, provenanceSchema, coverageSchema2, fileRefSchema, publicationSchema, metadataSchema2, structuralStoreSchema, authorityStoreSchema, provenanceStoreSchema, packetStoreSchema, acceptedSubmissionSchema, committedSubmissionSchema, operationMarkerSchema, cursorSchema, operationIdSchema, incrementalCacheKeySchema, incrementalCacheEnvelopeSchema, DIAGNOSTICS;
 var init_operations = __esm({
   "src/mcp/codebase-index/operations.ts"() {
     "use strict";
@@ -67224,7 +67455,7 @@ var init_operations = __esm({
     boundedPath = string2().min(1).max(4096).refine((value) => !/[\0]/.test(value), "Path contains a NUL byte.");
     opaqueSecret = string2().regex(/^[a-f0-9]{64}$/);
     timestamp = string2().datetime({ offset: true });
-    digest6 = portableSha256Schema;
+    digest7 = portableSha256Schema;
     portableIntentSchema = _enum(["new", "upgrade", "refresh", "repair"]);
     identitySchema = strictObject({
       path: boundedPath,
@@ -67241,20 +67472,20 @@ var init_operations = __esm({
       runtime: strictObject({
         package: string2().min(1).max(256),
         version: string2().min(1).max(128),
-        packageSha256: digest6,
+        packageSha256: digest7,
         module: string2().min(1).max(256),
-        moduleSha256: digest6,
+        moduleSha256: digest7,
         wasm: string2().min(1).max(256),
-        wasmSha256: digest6,
+        wasmSha256: digest7,
         languageVersion: safeNonNegativeInteger2,
         minimumCompatibleVersion: safeNonNegativeInteger2
       }),
       grammars: array(strictObject({
         package: string2().min(1).max(256),
         version: string2().min(1).max(128),
-        packageSha256: digest6,
+        packageSha256: digest7,
         asset: string2().min(1).max(256),
-        sha256: digest6,
+        sha256: digest7,
         abiVersion: safeNonNegativeInteger2
       })).max(128),
       adapters: array(strictObject({
@@ -67283,7 +67514,7 @@ var init_operations = __esm({
         PORTABLE_OPERATION_PROVENANCE_FILE,
         PORTABLE_OPERATION_PACKETS_FILE
       ]),
-      checksum: digest6,
+      checksum: digest7,
       byteSize: safeNonNegativeInteger2
     });
     publicationSchema = strictObject({
@@ -67292,20 +67523,20 @@ var init_operations = __esm({
       transactionId: generationLocalIdSchema,
       generationId: generationLocalIdSchema,
       sourceBasis: portableSourceBasisSchema,
-      rootFingerprint: digest6,
+      rootFingerprint: digest7,
       previousGenerationId: generationLocalIdSchema.nullable(),
-      previousIndexHash: digest6.nullable(),
+      previousIndexHash: digest7.nullable(),
       previousTargetHashes: portableTargetHashesSchema,
-      observedMarkerHash: digest6.nullable(),
+      observedMarkerHash: digest7.nullable(),
       legacyBackup: boolean2(),
       intent: portableIntentSchema,
       repair: union([
         literal(false),
         strictObject({
           authorized: literal(true),
-          previousIndexHash: digest6.nullable(),
+          previousIndexHash: digest7.nullable(),
           targetHashes: portableTargetHashesSchema,
-          observedMarkerHash: digest6.nullable()
+          observedMarkerHash: digest7.nullable()
         })
       ])
     });
@@ -67316,9 +67547,9 @@ var init_operations = __esm({
       generationId: generationLocalIdSchema,
       transactionId: generationLocalIdSchema,
       previousGenerationId: generationLocalIdSchema.nullable(),
-      previousIndexHash: digest6.nullable(),
-      rootFingerprint: digest6,
-      observedMarkerHash: digest6.nullable(),
+      previousIndexHash: digest7.nullable(),
+      rootFingerprint: digest7,
+      observedMarkerHash: digest7.nullable(),
       intent: portableIntentSchema,
       packetBudgetBytes: safePositiveInteger,
       repair: publicationSchema.shape.repair,
@@ -67331,9 +67562,9 @@ var init_operations = __esm({
       renderGeneratedAt: timestamp,
       predecessorProof: portablePredecessorPublicationProofSchema.nullable(),
       rootIdentity: identitySchema,
-      inventoryFingerprint: digest6,
+      inventoryFingerprint: digest7,
       coverage: coverageSchema2,
-      provenanceHash: digest6,
+      provenanceHash: digest7,
       publication: publicationSchema,
       files: strictObject({
         structural: fileRefSchema,
@@ -67341,7 +67572,7 @@ var init_operations = __esm({
         provenance: fileRefSchema,
         packets: fileRefSchema
       }),
-      cursor: strictObject({ basisHash: digest6, secret: opaqueSecret })
+      cursor: strictObject({ basisHash: digest7, secret: opaqueSecret })
     });
     structuralStoreSchema = strictObject({
       version: literal(1),
@@ -67360,7 +67591,7 @@ var init_operations = __esm({
       operationId: generationLocalIdSchema,
       generationId: generationLocalIdSchema,
       root: identitySchema,
-      inventoryFingerprint: digest6,
+      inventoryFingerprint: digest7,
       coverage: coverageSchema2,
       provenance: provenanceSchema
     });
@@ -67375,18 +67606,18 @@ var init_operations = __esm({
       version: literal(1),
       operationId: generationLocalIdSchema,
       generationId: generationLocalIdSchema,
-      modelHash: digest6,
-      rootIndexHash: digest6,
+      modelHash: digest7,
+      rootIndexHash: digest7,
       acceptedAt: timestamp
     });
     committedSubmissionSchema = strictObject({
       version: literal(1),
       operationId: generationLocalIdSchema,
       generationId: generationLocalIdSchema,
-      modelHash: digest6,
-      rootIndexHash: digest6,
-      manifestHash: digest6,
-      entryHash: digest6,
+      modelHash: digest7,
+      rootIndexHash: digest7,
+      manifestHash: digest7,
+      entryHash: digest7,
       committedAt: timestamp
     });
     operationMarkerSchema = strictObject({
@@ -67396,9 +67627,9 @@ var init_operations = __esm({
       generationId: generationLocalIdSchema,
       transactionId: generationLocalIdSchema,
       previousGenerationId: generationLocalIdSchema.nullable(),
-      previousIndexHash: digest6.nullable(),
-      rootFingerprint: digest6,
-      observedMarkerHash: digest6.nullable(),
+      previousIndexHash: digest7.nullable(),
+      rootFingerprint: digest7,
+      observedMarkerHash: digest7.nullable(),
       packetBudgetBytes: safePositiveInteger,
       repair: publicationSchema.shape.repair,
       intent: portableIntentSchema,
@@ -67435,7 +67666,7 @@ var init_operations = __esm({
 
 // src/mcp/codebase-index/map-coordinator.ts
 import { createHash as createHash27 } from "node:crypto";
-function digest7(value) {
+function digest8(value) {
   return createHash27("sha256").update(value).digest("hex");
 }
 function canonical2(value) {
@@ -67446,7 +67677,7 @@ function canonical2(value) {
   return JSON.stringify(value);
 }
 function modelHash(model) {
-  return digest7(`${canonical2(model)}
+  return digest8(`${canonical2(model)}
 `);
 }
 function modelBytes(model) {
@@ -67540,8 +67771,8 @@ function freshnessFor(repositoryRoot, extraction) {
     const fresh = await capturePortableSourceFreshness(repositoryRoot);
     if (!fresh.ok) return false;
     const root = extraction.root;
-    return fresh.root.path === root.path && fresh.root.realPath === root.realPath && fresh.root.device === root.device && fresh.root.inode === root.inode && fresh.inventoryFingerprint === extraction.inventoryFingerprint && digest7(`${canonical2(fresh.provenance)}
-`) === digest7(`${canonical2(extraction.provenance)}
+    return fresh.root.path === root.path && fresh.root.realPath === root.realPath && fresh.root.device === root.device && fresh.root.inode === root.inode && fresh.inventoryFingerprint === extraction.inventoryFingerprint && digest8(`${canonical2(fresh.provenance)}
+`) === digest8(`${canonical2(extraction.provenance)}
 `);
   };
 }
@@ -67740,8 +67971,8 @@ async function blueprintPortableMapSubmit(raw) {
         generationId: fresh.metadata.generationId,
         modelHash: modelDigest,
         rootIndexHash: rendered4.rootIndexHash,
-        manifestHash: digest7(rendered4.files[rendered4.sealedGeneration.manifest.path]),
-        entryHash: digest7(rendered4.files[rendered4.sealedGeneration.entry.path])
+        manifestHash: digest8(rendered4.files[rendered4.sealedGeneration.manifest.path]),
+        entryHash: digest8(rendered4.files[rendered4.sealedGeneration.entry.path])
       }),
       verifyFreshness: freshnessFor(root, fresh.extraction)
     });
@@ -68003,7 +68234,7 @@ async function blueprintMapSubmit(raw) {
       inputHashes(root, Object.keys(snapshot3.inputs)),
       coreHash(root)
     ]);
-    if (snapshot3.root !== hash2(await fs21.realpath(root)) || snapshot3.inventory !== hash2(JSON.stringify(files)) || snapshot3.core !== core || Object.keys(inputs).length !== Object.keys(snapshot3.inputs).length || Object.entries(inputs).some(([file2, digest9]) => snapshot3.inputs[file2] !== digest9)) {
+    if (snapshot3.root !== hash2(await fs21.realpath(root)) || snapshot3.inventory !== hash2(JSON.stringify(files)) || snapshot3.core !== core || Object.keys(inputs).length !== Object.keys(snapshot3.inputs).length || Object.entries(inputs).some(([file2, digest10]) => snapshot3.inputs[file2] !== digest10)) {
       return { status: "stale", saved: false, issues: ["Prepared source evidence, repository inventory, or project state changed. Review fresh evidence before generating again."], warnings: [] };
     }
     const warnings = [];
@@ -68073,7 +68304,7 @@ async function blueprintMapSubmit(raw) {
       const finalHashes = targetHashes(await targets(root));
       if (JSON.stringify(finalHashes) !== JSON.stringify(hashes)) throw new Error("Publication verification failed.");
       const finalInputs = await inputHashes(root, Object.keys(snapshot3.inputs));
-      if (Object.entries(finalInputs).some(([file2, digest9]) => snapshot3.inputs[file2] !== digest9) || await coreHash(root) !== snapshot3.core || hash2(JSON.stringify(await inventory(root))) !== snapshot3.inventory) {
+      if (Object.entries(finalInputs).some(([file2, digest10]) => snapshot3.inputs[file2] !== digest10) || await coreHash(root) !== snapshot3.core || hash2(JSON.stringify(await inventory(root))) !== snapshot3.inventory) {
         throw new Error("Evidence changed during publication.");
       }
       await fs21.unlink(resolveBlueprintPath(root, CODEBASE_PUBLICATION_PATH));
@@ -68667,7 +68898,7 @@ function discussEvidenceBudget2(readSet, evidencePaths, portableSelections) {
 }
 async function hashPath(root, relative) {
   try {
-    return digest8(
+    return digest9(
       await fs23.readFile(resolveRepoRelativeInputPathSync(root, relative))
     );
   } catch (error2) {
@@ -69034,7 +69265,7 @@ async function blueprintDiscussRecord(raw) {
   checkedPayload(args);
   return locked(args, async (loc) => {
     const session = await readSession(loc.projectRoot, loc.sessionPath) ?? await initial(loc);
-    const requestHash2 = digest8(stable(args));
+    const requestHash2 = digest9(stable(args));
     const replay = Object.hasOwn(session.requests, args.requestId) ? session.requests[args.requestId] : void 0;
     if (replay) {
       if (replay.hash !== requestHash2)
@@ -69142,7 +69373,7 @@ async function blueprintDiscussFinalize(raw) {
         nextAction: "Call blueprint_discuss_prepare."
       };
     const { model: inputModel, ...identity4 } = args;
-    const requestHash2 = digest8(stable(identity4));
+    const requestHash2 = digest9(stable(identity4));
     let journal = session.journal;
     let publicationModel = null;
     if (journal?.requestId === args.requestId && journal.revision !== session.revision) return { status: "stale", saved: false, outcome: "rejected-not-saved", reason: "Revision conflict" };
@@ -69226,7 +69457,7 @@ async function blueprintDiscussFinalize(raw) {
             resolveBlueprintPath(loc.projectRoot, target),
             "utf8"
           );
-          if (!isScaffoldGeneratedArtifact(existing) && digest8(kind === "context" ? content : log) !== observed)
+          if (!isScaffoldGeneratedArtifact(existing) && digest9(kind === "context" ? content : log) !== observed)
             return {
               status: "blocked",
               saved: false,
@@ -69250,16 +69481,16 @@ async function blueprintDiscussFinalize(raw) {
         revision: session.revision,
         context: {
           path: artifactPathFor(loc.resolved, "context"),
-          hash: digest8(content)
+          hash: digest9(content)
         },
         ...log ? {
           log: {
             path: artifactPathFor(loc.resolved, "discussion-log"),
-            hash: digest8(log)
+            hash: digest9(log)
           }
         } : {},
         stages: {},
-        modelHash: digest8(stable(inputModel))
+        modelHash: digest9(stable(inputModel))
       };
       publicationModel = assessment2.model;
       session.journal = journal;
@@ -69285,7 +69516,7 @@ async function blueprintDiscussFinalize(raw) {
     };
     try {
       await assertTopology();
-      if (inputModel !== void 0 && journal.modelHash && digest8(stable(inputModel)) !== journal.modelHash)
+      if (inputModel !== void 0 && journal.modelHash && digest9(stable(inputModel)) !== journal.modelHash)
         throw new Error("Request ID conflict: model differs from publication intent.");
       if (!publicationModel && await hashPath(loc.projectRoot, journal.context.path) !== journal.context.hash) {
         if (inputModel === void 0) throw new Error("Resubmit model with the same requestId; context was not committed.");
@@ -69299,7 +69530,7 @@ async function blueprintDiscussFinalize(raw) {
         });
         if (evidence.status !== "collected") throw new Error("Unable to refresh evidence.");
         const assessment2 = assess(session, loc.resolved, inputModel, discussAuthoring(evidence.packet, session.records).defaults);
-        if (!assessment2.ready || !assessment2.model || !assessment2.content || digest8(prepareTextForPersistence(assessment2.content).content.replace(/\r\n/g, "\n")) !== journal.context.hash)
+        if (!assessment2.ready || !assessment2.model || !assessment2.content || digest9(prepareTextForPersistence(assessment2.content).content.replace(/\r\n/g, "\n")) !== journal.context.hash)
           throw new Error("Resubmitted model does not match validated publication intent.");
         publicationModel = assessment2.model;
       }
@@ -69321,7 +69552,7 @@ async function blueprintDiscussFinalize(raw) {
           throw new Error(
             `Stale ${kind} baseline; preserve canonical content and reconcile through a new prepared session.`
           );
-        if (kind === "log" && digest8(prepareTextForPersistence(renderLog(session, loc.resolved.phasePrefix)).content.replace(/\r\n/g, "\n")) !== item.hash)
+        if (kind === "log" && digest9(prepareTextForPersistence(renderLog(session, loc.resolved.phasePrefix)).content.replace(/\r\n/g, "\n")) !== item.hash)
           throw new Error("Discussion log no longer matches stable note history; reconcile publication metadata.");
         journal.stages[kind] = "intent";
         await checkpoint();
@@ -69509,7 +69740,7 @@ function discussAuthoring(packet, records) {
     ]
   };
 }
-var recordSchema, numericPhase, lookupShape, publicPortableDeliverySchema, portableSessionSchema, idSchema, recordInput, finalizeInput, digest8, stable, sessionSchema, discussFinalizeDependencies, prepareInput, discussToolDefinitions;
+var recordSchema, numericPhase, lookupShape, publicPortableDeliverySchema, portableSessionSchema, idSchema, recordInput, finalizeInput, digest9, stable, sessionSchema, discussFinalizeDependencies, prepareInput, discussToolDefinitions;
 var init_discuss = __esm({
   "src/mcp/tools/discuss.ts"() {
     "use strict";
@@ -69567,7 +69798,7 @@ var init_discuss = __esm({
       overwrite: boolean2().optional(),
       includeLog: boolean2().optional()
     });
-    digest8 = (value) => createHash30("sha256").update(value).digest("hex");
+    digest9 = (value) => createHash30("sha256").update(value).digest("hex");
     stable = (value) => JSON.stringify(
       value,
       (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(
@@ -71319,7 +71550,9 @@ async function readPlanSession(loc) {
     throw error2;
   }
   const migrate = raw.version === 1;
-  const session = schema.parse(migrate ? { ...raw, version: 2, requests: {}, journal: void 0, legacyPublication: void 0 } : raw);
+  const migrateOwnership = raw.publicationOwned === void 0;
+  const inferredOwnership = planSessionOwnsPublication(raw);
+  const session = schema.parse(migrate ? { ...raw, version: 2, publicationOwned: inferredOwnership, requests: {}, journal: void 0, legacyPublication: void 0 } : { ...raw, publicationOwned: raw.publicationOwned ?? inferredOwnership });
   if (session.phase !== loc.resolved.phaseNumber || session.topology.phaseDir !== loc.resolved.phaseDir || session.topology.phasePrefix !== loc.resolved.phasePrefix) throw new Error("Planning session identity mismatch.");
   const validPlanPath = (value) => value.startsWith(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`) && /^\d+-PLAN\.md$/.test(value.slice(`${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-`.length));
   if (session.targets.some((item) => !validPlanPath(item.path))) throw new Error("Invalid planning target path.");
@@ -71327,12 +71560,15 @@ async function readPlanSession(loc) {
     const j = session.journal, request = Object.hasOwn(session.requests, j.requestId) ? session.requests[j.requestId] : void 0;
     if (!request || request.hash !== j.requestHash || request.modelHash !== j.modelHash || j.revision !== session.revision || j.files.some((file2) => !validPlanPath(file2.path)) || j.removed.some((file2) => !validPlanPath(file2.path)) || new Set(j.files.map((file2) => file2.path)).size !== j.files.length) throw new Error("Planning publication journal integrity mismatch.");
   }
-  if (migrate) {
+  if (migrate || migrateOwnership) {
     const marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-    if (marker.status === "pending" || marker.status === "invalid") session.legacyPublication = { markerToken: marker.token };
-    session.prepared = false;
-    session.needsIntent = true;
-    session.revision++;
+    session.publicationOwned ||= marker.status !== "absent";
+    if (migrate) {
+      if (marker.status === "pending" || marker.status === "invalid") session.legacyPublication = { markerToken: marker.token };
+      session.prepared = false;
+      session.needsIntent = true;
+      session.revision++;
+    }
     await savePlanSession(loc, session);
   }
   return session;
@@ -71353,7 +71589,7 @@ async function withPlanSession(args, task) {
   return withBlueprintRepoLock(root, "plan-session", async () => task(await planLocation({ ...args, cwd: root })));
 }
 function initialPlanSession(loc) {
-  return { version: 2, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, needsIntent: false, mode: "add", targetPlanIds: [], readSet: [], evidencePaths: [], targets: [], existingPlans: [], knownRequirements: [], knownEvidenceArtifacts: [], checkerRequired: false, requests: {} };
+  return { version: 2, phase: loc.resolved.phaseNumber, topology: phaseTopologyFingerprintFromLocation(loc.resolved, loc.matchedPhase), revision: 0, prepared: false, needsIntent: false, publicationOwned: false, mode: "add", targetPlanIds: [], readSet: [], evidencePaths: [], targets: [], existingPlans: [], knownRequirements: [], knownEvidenceArtifacts: [], checkerRequired: false, requests: {} };
 }
 var planNumericPhase, planRequestId, planLookup, checkedPlanPayload, hash4, targetSchema, topologySchema2, stagesSchema, publishedPlanSchema, receiptSchema2, journalSchema2, portableSessionSchema3, ordinaryDeliveryIdentitySchema2, ordinaryDeliverySchema2, schema;
 var init_plan_session = __esm({
@@ -71424,6 +71660,7 @@ var init_plan_session = __esm({
       revision: number2().int().nonnegative(),
       prepared: boolean2(),
       needsIntent: boolean2().default(false),
+      publicationOwned: boolean2().default(false),
       mode: _enum(["add", "revise", "replace"]),
       targetPlanIds: array(string2()),
       readSet: array(targetSchema).max(300),
@@ -71621,8 +71858,7 @@ async function readinessGates(loc, readiness, inputs) {
   if (spec?.content && !validatePhaseArtifactContent(spec.content, "spec").valid) blockers.push("The saved phase specification is invalid.");
   return { ready: readiness.status === "ready" && blockers.length === 0, blockers: [...new Set(blockers)], checkerRequired: readiness.effectiveConfig.workflow.plan_check };
 }
-function canonicalPortableSelections2(session, requested) {
-  const values = requested ?? session.portable?.selections ?? [];
+function canonicalPortableSelectionList(values) {
   const seen = /* @__PURE__ */ new Set();
   const selections = [];
   for (const value of values) {
@@ -71633,15 +71869,73 @@ function canonicalPortableSelections2(session, requested) {
       selections.push(parsed);
     }
   }
-  return selections;
+  return stablePortableList(selections);
+}
+function canonicalPortableSelections2(session, requested) {
+  return canonicalPortableSelectionList(requested ?? session.portable?.selections ?? []);
 }
 function portablePrior2(session, selections) {
   const previous = session.portable;
-  if (!previous || stableResearchValue(previous.selections) !== stableResearchValue(selections)) return void 0;
+  if (!previous || stableResearchValue(canonicalPortableSelectionList(previous.selections)) !== stableResearchValue(selections)) return void 0;
   return {
     binding: { pinnedGeneration: previous.basis.generationId, identities: previous.next.bound.map((item) => ({ path: item.path, hash: item.hash, generation: item.generation })), hash: previous.next.bindingHash },
     delivered: previous.next.delivered.map((item) => ({ path: item.path, hash: item.hash, generation: item.generation })),
     registered: previous.next.registered.map((item) => ({ path: item.path, hash: item.hash, generation: item.generation }))
+  };
+}
+function stablePortableList(values) {
+  return [...values].sort((left, right) => stableResearchValue(left).localeCompare(stableResearchValue(right)));
+}
+function portableReadSetIdentity(readSet, pins) {
+  const memberPath = (pathValue, generationId) => {
+    const mapPath = pathValue.startsWith(".blueprint/codebase/") ? pathValue.slice(".blueprint/codebase/".length) : pathValue;
+    const prefix = `generations/${generationId}/`;
+    return mapPath.startsWith(prefix) ? mapPath.slice(prefix.length) : mapPath;
+  };
+  const sourceAndPage = stablePortableList(readSet.sourceAndPage);
+  const coveredMembers = /* @__PURE__ */ new Set([
+    ...sourceAndPage.filter((item) => item.kind === "page").map((item) => `${item.generation}\0${memberPath(item.path, item.generation)}`),
+    ...pins.flatMap((pin) => [pin.entry, pin.manifest].map((item) => `${pin.generationId}\0${memberPath(item.path, pin.generationId)}`))
+  ]);
+  return {
+    sourceAndPage,
+    sealedMembers: stablePortableList(readSet.sealedMembers.filter((item) => !coveredMembers.has(`${item.generationId}\0${memberPath(item.path, item.generationId)}`)))
+  };
+}
+function portableSessionIdentity(portable) {
+  if (!portable) return null;
+  const pins = stablePortableList([...new Map(
+    [portable.basis.pin, ...portable.basis.trustedPins.map((item) => item.pin)].map((pin) => [stableResearchValue(pin), pin])
+  ).values()]);
+  return {
+    selections: canonicalPortableSelectionList(portable.selections),
+    basis: {
+      schemaVersion: portable.basis.schemaVersion,
+      generationId: portable.basis.generationId,
+      pin: portable.basis.pin,
+      entry: portable.basis.entry,
+      bound: stablePortableList(portable.basis.bound),
+      bindingHash: portable.basis.bindingHash,
+      readSet: portableReadSetIdentity(portable.basis.readSet, pins),
+      trustedPins: pins
+    },
+    binding: { bound: stablePortableList(portable.next.bound), bindingHash: portable.next.bindingHash },
+    readSet: portableReadSetIdentity(portable.next.readSet, pins)
+  };
+}
+function portablePreparedResponse(portable, result) {
+  return {
+    selections: portable.selections,
+    basis: portable.basis,
+    next: portable.next,
+    packet: result.packet,
+    binding: {
+      pinnedGeneration: portable.basis.generationId,
+      identities: portable.next.bound.map((item) => ({ path: item.path, hash: item.hash, generation: item.generation })),
+      hash: portable.next.bindingHash
+    },
+    counts: result.counts,
+    mode: result.mode
   };
 }
 function portableDelivery2(args, session, selections, ordinaryReadSetCount, ordinarySelectedCount, reusePinnedBasis) {
@@ -71747,6 +72041,7 @@ async function blueprintPlanPrepare(raw = {}) {
         loc = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
         marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
       }
+      if (args.expectedRevision !== void 0 && args.expectedRevision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
       const initialTargets = await readPlanTargetHashes(loc);
       const explicitPortable = args.portableSelections !== void 0 || Boolean(session.portable);
       const defaultPortable = !explicitPortable ? await resolvePortableProviderEvidence({ root: loc.projectRoot }) : void 0;
@@ -71834,7 +72129,7 @@ async function blueprintPlanPrepare(raw = {}) {
       const ordinary = shapePlanOrdinaryEvidence(boundedEvidence(capture.inputs, capture.evidencePaths), args.evidenceDelivery, session.delivery);
       if (ordinary.status !== "ok") return { ...packet, status: ordinary.status, saved: false, ready: false, paths: ordinary.paths, reason: "Read-time evidence does not match the selected repository source.", nextAction: "Read the selected source again and retry blueprint_plan_prepare with matching read-time evidence." };
       const packetWithDelivery = { ...packet, evidence: ordinary.evidence, ...portableResult ? { portable: { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet }, packet: portableResult.packet, binding: portableResult.binding, counts: portableResult.counts, mode: portableResult.mode } } : {} };
-      if (args.expectedRevision !== void 0 && args.expectedRevision !== session.revision) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
+      const nextPortable = portableResult ? { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet } } : acknowledgedPortableFailure ? void 0 : session.portable;
       if (plans.length && !args.mode && (!session.readSet.length || session.journal?.receipt || session.needsIntent)) {
         await savePlanSession(loc, session);
         return { ...packetWithDelivery, status: "choice_required", ...responseBase(loc, session), nextAction: "Choose add, revise selected plans, or replace selected plans; supply mode and targetPlanIds for revise/replace." };
@@ -71847,11 +72142,12 @@ async function blueprintPlanPrepare(raw = {}) {
       const targetsChanged = session.readSet.length > 0 && stableResearchValue(targets2) !== stableResearchValue(session.targets);
       const modeChanged = session.readSet.length > 0 && (nextMode !== session.mode || stableResearchValue(targetPlanIds) !== stableResearchValue(session.targetPlanIds));
       const selectedEvidenceChanged = session.readSet.length > 0 && stableResearchValue(capture.evidencePaths) !== stableResearchValue(session.evidencePaths);
-      const portableSelectionChanged = session.readSet.length > 0 && stableResearchValue(selections) !== stableResearchValue(session.portable?.selections ?? []);
+      const portableSelectionChanged = session.readSet.length > 0 && stableResearchValue(selections) !== stableResearchValue(canonicalPortableSelectionList(session.portable?.selections ?? []));
+      const portableIdentityChanged = session.readSet.length > 0 && stableResearchValue(portableSessionIdentity(nextPortable)) !== stableResearchValue(portableSessionIdentity(session.portable));
       const deliveryChanged = stableResearchValue(ordinary.delivery) !== stableResearchValue(session.delivery);
       if ((targetsChanged || topologyChanged) && (!args.reconcile || args.expectedRevision !== session.revision || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(packet.targetHashes))) return { ...packetWithDelivery, status: "reconciliation_required", ...responseBase(loc, session), reason: "Review changed topology and publication targets, then prepare with expectedRevision and reconcile containing the observed targetHashes." };
-      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged || portableSelectionChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
-      const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && !portableSelectionChanged && !deliveryChanged && changed?.status === "fresh";
+      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged || portableSelectionChanged || portableIdentityChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
+      const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && !portableSelectionChanged && !portableIdentityChanged && !deliveryChanged && changed?.status === "fresh";
       if (!unchanged) {
         delete session.journal;
         session.requests = {};
@@ -71868,13 +72164,24 @@ async function blueprintPlanPrepare(raw = {}) {
         const selectedPaths2 = new Set(targetPlanIds.map((id) => `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-${id}-PLAN.md`));
         session.knownEvidenceArtifacts = readiness.authoringContext.knownEvidenceArtifacts.filter((p) => !selectedPaths2.has(p));
         session.checkerRequired = gates.checkerRequired;
-        if (portableResult) session.portable = { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet } };
+        if (nextPortable) session.portable = nextPortable;
         else if (acknowledgedPortableFailure) delete session.portable;
         if (ordinary.delivery.delivered.length || ordinary.delivery.registered.length) session.delivery = ordinary.delivery;
         session.revision++;
         await savePlanSession(loc, session);
       }
-      return { ...packetWithDelivery, schema: planningPreparedSchema(session), status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds, knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, nextAction: gates.ready ? "Use schema, example and validationRules to author the model. If checkerRequired, review this model in memory, then call blueprint_plan_submit once with model and the review verdict. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction2(readiness.nextSafeAction) };
+      return {
+        ...packetWithDelivery,
+        ...portableResult && session.portable ? { portable: portablePreparedResponse(session.portable, portableResult) } : {},
+        schema: planningPreparedSchema(session),
+        status: gates.ready ? "prepared" : "blocked",
+        ...responseBase(loc, session),
+        mode: nextMode,
+        targetPlanIds,
+        knownRequirements: session.knownRequirements,
+        knownEvidenceArtifacts: session.knownEvidenceArtifacts,
+        nextAction: gates.ready ? "Use schema, example and validationRules to author the model. If checkerRequired, review this model in memory, then call blueprint_plan_submit once with model and the review verdict. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction2(readiness.nextSafeAction)
+      };
     });
   } catch (error2) {
     return { status: "blocked", reason: error2.message, nextAction: await safeNextAction2("Run /blu-progress to resolve planning preparation.") };
@@ -71919,14 +72226,20 @@ async function blueprintPlanRead(raw) {
   const args = lookupSchema.parse(raw);
   return withPlanSession(args, async (loc) => {
     const session = await readPlanSession(loc);
-    const before = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    const before = await readPlanPublicationSnapshot(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
     const current = await planLocation(args);
-    const published = await Promise.all((await readPlanTargetHashes(current)).map(async (target) => ({
+    const targets2 = before.status === "committed" && before.version === 2 ? before.files : await readPlanTargetHashes(current);
+    const published = await Promise.all(targets2.map(async (target) => ({
       ...target,
-      content: before.status === "pending" || before.status === "invalid" ? null : await fs27.readFile(resolveBlueprintPath(loc.projectRoot, target.path), "utf8")
+      content: before.status === "committed" ? before.contents?.get(target.path) ?? null : before.status === "absent" ? await fs27.readFile(resolveBlueprintPath(loc.projectRoot, target.path), "utf8") : null
     })));
-    const publication = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-    if (before.token !== publication.token) for (const file2 of published) file2.content = null;
+    const after = await readPlanPublicationSnapshot(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
+    const consumed = new Map(published.flatMap((file2) => file2.content === null ? [] : [[file2.path, file2.content]]));
+    const publicationIssue = before.token !== after.token ? "Plan publication changed during this read; refresh before using the plan set." : after.status === "pending" || after.status === "invalid" ? after.reason : planPublicationConsumptionIssue(before, consumed, { complete: before.status === "committed" });
+    if (publicationIssue) {
+      for (const file2 of published) file2.content = null;
+    }
+    const publication = publicationIssue && after.status !== "pending" && after.status !== "invalid" ? { status: "invalid", token: after.token, reason: publicationIssue } : { status: after.status, token: after.token, reason: after.reason };
     return {
       status: session || published.length ? "found" : "not_found",
       sessionPath: loc.sessionPath,
@@ -71937,8 +72250,20 @@ async function blueprintPlanRead(raw) {
     };
   });
 }
-function markerContent(session, journal, status) {
-  return JSON.stringify({ version: 1, status, requestId: journal.requestId, revision: session.revision, files: journal.files.map(({ path: path46, hash: hash5 }) => ({ path: path46, hash: hash5 })), removedPaths: journal.removed.map((file2) => file2.path) }, null, 2) + "\n";
+function markerContent(session, journal, status, version2 = 2) {
+  const files = version2 === 1 ? new Map(journal.files.map(({ path: path46, hash: hash5 }) => [path46, hash5])) : new Map(session.targets.map(({ path: path46, hash: hash5 }) => [path46, hash5]));
+  if (version2 === 2) {
+    for (const file2 of journal.files) files.set(file2.path, file2.hash);
+    for (const file2 of journal.removed) files.delete(file2.path);
+  }
+  return JSON.stringify({
+    version: version2,
+    status,
+    requestId: journal.requestId,
+    revision: session.revision,
+    files: [...files].sort(([left], [right]) => left.localeCompare(right)).map(([path46, hash5]) => ({ path: path46, hash: hash5 })),
+    removedPaths: journal.removed.map((file2) => file2.path).sort((left, right) => left.localeCompare(right))
+  }, null, 2) + "\n";
 }
 async function verifyPublished(loc, journal, session) {
   for (const file2 of journal.files) if (await researchInputHash(loc.projectRoot, file2.path) !== file2.hash) throw new Error(`Published plan changed: ${file2.path}.`);
@@ -71960,11 +72285,12 @@ async function reconcilePublication(loc, session, reviewedTargets, markerToken) 
     if (stableResearchValue(Object.fromEntries(targets2.map((item) => [item.path, item.hash]))) !== stableResearchValue(reviewedTargets)) throw new Error("Planning targets changed during reconciliation; review their new hashes before retrying.");
     const observed = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
     if (observed.token !== markerToken) throw new Error("Publication marker changed during reconciliation; refresh before retrying.");
-    if (observed.status !== "absent") await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), JSON.stringify({ version: 1, status: "committed", requestId: "reconciled", revision: session.revision, files: targets2, removedPaths: [] }, null, 2) + "\n");
+    if (observed.status !== "absent") await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, planPublicationPath(loc.resolved.phaseDir, loc.resolved.phasePrefix)), JSON.stringify({ version: 2, status: "committed", requestId: "reconciled", revision: session.revision, files: targets2, removedPaths: [] }, null, 2) + "\n");
     session.topology = topology;
     session.targets = targets2;
     session.prepared = false;
     session.needsIntent = true;
+    session.publicationOwned = true;
     session.readSet = [];
     session.requests = {};
     delete session.journal;
@@ -72066,9 +72392,12 @@ async function blueprintPlanSubmit(raw) {
         }
         for (const target of session.targets) if (!desiredPaths.has(target.path) && !removedPaths.has(target.path) && await researchInputHash(loc.projectRoot, target.path) !== target.hash) throw new Error(`Unselected plan changed: ${target.path}.`);
         if (journal.stages.commit !== "complete") {
-          const observedMarker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
-          const pendingToken = researchDigest(markerContent(session, journal, "pending")), committedToken = researchDigest(markerContent(session, journal, "committed"));
-          if (![journal.baselineMarkerToken, pendingToken, committedToken].includes(observedMarker.token)) throw new Error("Publication marker changed externally; refusing to overwrite it.");
+          const observedMarker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix, { allowOwnedMissing: true });
+          const pendingToken = researchDigest(markerContent(session, journal, "pending"));
+          const committedToken = researchDigest(markerContent(session, journal, "committed"));
+          const legacyPendingToken = researchDigest(markerContent(session, journal, "pending", 1));
+          const legacyCommittedToken = researchDigest(markerContent(session, journal, "committed", 1));
+          if (![journal.baselineMarkerToken, pendingToken, committedToken, legacyPendingToken, legacyCommittedToken].includes(observedMarker.token)) throw new Error("Publication marker changed externally; refusing to overwrite it.");
           if (!journal.stages.files) {
             for (const file2 of [...journal.files, ...journal.removed]) if (await researchInputHash(loc.projectRoot, file2.path) !== file2.baselineHash) throw new Error(`Plan target changed before publication: ${file2.path}.`);
             journal.stages.files = "intent";
@@ -72096,10 +72425,15 @@ async function blueprintPlanSubmit(raw) {
           await checkpoint();
           await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), markerContent(session, journal, "committed"));
           journal.stages.commit = "complete";
+          session.publicationOwned = true;
           await checkpoint();
         } else {
-          if (await fs27.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8") !== markerContent(session, journal, "committed")) throw new Error("Committed publication marker changed externally.");
+          const observedMarker = await fs27.readFile(resolveBlueprintPath(loc.projectRoot, publicationPath), "utf8");
+          const committedMarker = markerContent(session, journal, "committed");
+          const legacyCommittedMarker = markerContent(session, journal, "committed", 1);
+          if (observedMarker !== committedMarker && observedMarker !== legacyCommittedMarker) throw new Error("Committed publication marker changed externally.");
           await verifyPublished(loc, journal, session);
+          if (observedMarker === legacyCommittedMarker) await planDependencies.writeText(resolveBlueprintPath(loc.projectRoot, publicationPath), committedMarker);
         }
       }));
       await assertFresh();
@@ -72126,6 +72460,7 @@ async function blueprintPlanSubmit(raw) {
         session.existingPlans = index.plans.map((plan) => ({ planId: plan.planId, wave: plan.wave ?? 1, dependsOn: plan.dependsOn, requirements: plan.requirements }));
         journal.stages.routing = "complete";
         session.needsIntent = true;
+        session.publicationOwned = true;
         journal.receipt = { status: "published", saved: true, ready: true, ...responseBase(loc, session), paths: journal.files.map((file2) => file2.path), plans: journal.files.map(({ planId: planId3, wave, taskCount, path: path46 }) => ({ planId: planId3, wave, taskCount, path: path46 })), removedPaths: journal.removed.map((file2) => file2.path), stages: { ...journal.stages }, nextAction };
         session.requests[args.requestId].receipt = journal.receipt;
         await savePlanSession(loc, session, true);
@@ -72155,6 +72490,7 @@ var init_plan = __esm({
     init_research_evidence();
     init_plan_evidence();
     init_plan_session();
+    init_plan_publication();
     init_provider_evidence();
     init_resolver();
     mode = _enum(["add", "revise", "replace"]);
@@ -77927,14 +78263,14 @@ async function digestRepoBoundaryPath(args) {
 async function workingTreeDigests(projectRoot, canonicalRoot, porcelainV1Z) {
   const digests = [];
   for (const entry of porcelainEntries(porcelainV1Z)) {
-    const digest9 = await digestRepoBoundaryPath({
+    const digest10 = await digestRepoBoundaryPath({
       projectRoot,
       canonicalRoot,
       relativePath: entry.path,
       allowBlueprint: true,
       allowMissing: true
     });
-    digests.push({ ...digest9, status: entry.status });
+    digests.push({ ...digest10, status: entry.status });
   }
   return digests.sort(
     (left, right) => left.path.localeCompare(right.path) || left.status.localeCompare(right.status)
@@ -78227,7 +78563,7 @@ async function validateExecutingSessionAuthority(projectRoot, session, deps) {
   let stateMatchesPendingPostimage = false;
   if (pendingStateUpdate) {
     const observed = await observe(BLUEPRINT_STATE_PATH, true);
-    const matches = (digest9) => observed.sha256 === digest9.sha256 && observed.sizeBytes === digest9.sizeBytes && observed.mode === digest9.mode;
+    const matches = (digest10) => observed.sha256 === digest10.sha256 && observed.sizeBytes === digest10.sizeBytes && observed.mode === digest10.mode;
     stateMatchesPendingPostimage = matches(pendingStateUpdate.postimage);
     if (!matches(pendingStateUpdate.preimage) && !stateMatchesPendingPostimage) {
       blockers.push("Execute-phase pending STATE effect matches neither its trusted preimage nor prepared postimage.");
@@ -78418,8 +78754,8 @@ function asIndex(value) {
 }
 function isArtifactDigest(value) {
   if (!value || typeof value !== "object") return false;
-  const digest9 = value;
-  return typeof digest9.path === "string" && (digest9.sha256 === null || typeof digest9.sha256 === "string" && /^[0-9a-f]{64}$/.test(digest9.sha256)) && (digest9.sizeBytes === null || Number.isInteger(digest9.sizeBytes) && (digest9.sizeBytes ?? -1) >= 0) && (digest9.mode === null || Number.isInteger(digest9.mode));
+  const digest10 = value;
+  return typeof digest10.path === "string" && (digest10.sha256 === null || typeof digest10.sha256 === "string" && /^[0-9a-f]{64}$/.test(digest10.sha256)) && (digest10.sizeBytes === null || Number.isInteger(digest10.sizeBytes) && (digest10.sizeBytes ?? -1) >= 0) && (digest10.mode === null || Number.isInteger(digest10.mode));
 }
 function isVerificationOutputValid(receipt2, channel) {
   const text3 = receipt2[channel];
@@ -80329,7 +80665,7 @@ async function assertSessionAuthority(projectRoot, session) {
   let stateMatchesPendingPostimage = false;
   if (pendingStateUpdate) {
     const observed = await readRepoHash(projectRoot, ".blueprint/STATE.md");
-    const matches = (digest9) => observed.hash === digest9.sha256 && observed.bytes === digest9.sizeBytes && observed.mode === digest9.mode;
+    const matches = (digest10) => observed.hash === digest10.sha256 && observed.bytes === digest10.sizeBytes && observed.mode === digest10.mode;
     stateMatchesPendingPostimage = matches(pendingStateUpdate.postimage);
     if (!matches(pendingStateUpdate.preimage) && !stateMatchesPendingPostimage) {
       throw new Error(
@@ -80902,7 +81238,7 @@ async function blueprintPhaseExecutionFinalize(args, dependencyOverrides = {}) {
         await assertSessionAuthority(context.projectRoot, session);
         const effect = progress.pendingStateUpdate;
         const stateBeforeWrite = await readRepoHash(context.projectRoot, ".blueprint/STATE.md");
-        const matches = (digest9) => stateBeforeWrite.hash === digest9.sha256 && stateBeforeWrite.bytes === digest9.sizeBytes && stateBeforeWrite.mode === digest9.mode;
+        const matches = (digest10) => stateBeforeWrite.hash === digest10.sha256 && stateBeforeWrite.bytes === digest10.sizeBytes && stateBeforeWrite.mode === digest10.mode;
         if (matches(effect.preimage)) {
           await deps.stateWrite(effect.prepared);
         } else if (!matches(effect.postimage)) {
@@ -81291,14 +81627,14 @@ async function computeCleanupArchiveScope(projectRoot) {
     ...selectedEvidencePaths,
     ...await protectedArtifactPaths(projectRoot, protectedEntries)
   ]);
-  const digest9 = await blueprintArtifactSummaryDigest({
+  const digest10 = await blueprintArtifactSummaryDigest({
     cwd: projectRoot,
     artifactPaths: digestArtifactPaths
   });
   return {
     selectedPhaseDirs: uniqueSorted3(selectedPhaseDirs),
     protectedEntries,
-    digestInputs: digest9.inputsUsed,
+    digestInputs: digest10.inputsUsed,
     blockers,
     warnings
   };
@@ -81982,8 +82318,8 @@ function stripVisibleReviewTargetId2(value) {
   return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
 }
 function buildLegacyReviewTargetId(prefix, sourceSection, value) {
-  const digest9 = createHash35("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
-  return `${prefix}-LEGACY-${digest9}`;
+  const digest10 = createHash35("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
+  return `${prefix}-LEGACY-${digest10}`;
 }
 function sanitizeMarkdownScalar(value) {
   return value.replace(/\r\n|\r|\n/g, " ").replace(/\s+/g, " ").trim();

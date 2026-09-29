@@ -86,6 +86,7 @@ declare const schema: z.ZodObject<{
     revision: z.ZodNumber;
     prepared: z.ZodBoolean;
     needsIntent: z.ZodDefault<z.ZodBoolean>;
+    publicationOwned: z.ZodDefault<z.ZodBoolean>;
     mode: z.ZodEnum<{
         replace: "replace";
         add: "add";

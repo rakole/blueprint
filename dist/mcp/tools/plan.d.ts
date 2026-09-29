@@ -108,6 +108,16 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     scopeReduction?: undefined;
     reason?: undefined;
 } | {
+    reason: string;
+    revision: number;
+    sessionPath: string;
+    status: string;
+    saved?: undefined;
+    ready?: undefined;
+    counts?: undefined;
+    scopeReduction?: undefined;
+    nextAction?: undefined;
+} | {
     nextAction: string;
     scopeReduction?: {
         selectedCount: number;
@@ -302,183 +312,6 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
     exampleNote: string;
     counts?: undefined;
     scopeReduction?: undefined;
-} | {
-    reason: string;
-    revision: number;
-    sessionPath: string;
-    status: string;
-    portable?: {
-        selections: ({
-            kind: "page";
-            path: string;
-            mode: "discovery";
-        } | {
-            kind: "symbol" | "file" | "import" | "relationship" | "detail";
-            recordId: string;
-        } | {
-            kind: "alias" | "capability" | "claim";
-            recordId: string;
-        } | {
-            kind: "structural";
-            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
-            recordId: string;
-        } | {
-            kind: "semantic";
-            recordKind: "alias" | "capability" | "claim";
-            recordId: string;
-        })[];
-        basis: PortableProviderEvidenceBasis;
-        next: {
-            readSet: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceReadSet;
-            schemaVersion: 1;
-            bound: readonly import("../evidence-delivery.js").EvidenceIdentity[];
-            bindingHash: string;
-            delivered: readonly import("../evidence-delivery.js").EvidenceIdentity[];
-            registered: readonly import("../evidence-delivery.js").EvidenceIdentity[];
-        };
-        packet: import("../evidence-delivery.js").EvidencePacket;
-        binding: import("../evidence-delivery.js").PriorEvidenceBinding;
-        counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
-        mode: "full" | "delta" | "register";
-    } | undefined;
-    evidence: ({
-        readonly path: string;
-        readonly hash: string | null;
-        readonly content: string | null;
-    } | {
-        path: string;
-        hash: string;
-    })[];
-    phase: import("./phase-tool-types.js").PhaseSelectionResult;
-    gates: {
-        ready: boolean;
-        blockers: string[];
-        checkerRequired: boolean;
-    };
-    config: {
-        workflow: {
-            research: boolean;
-            plan_check: boolean;
-            secure_phase: boolean;
-            verifier: boolean;
-            nyquist_validation: boolean;
-            ui_phase: boolean;
-            ui_safety_gate: boolean;
-            no_uat: boolean;
-            code_review: boolean;
-            code_review_depth: string;
-            auto_advance: boolean;
-            research_before_questions: boolean;
-            discuss_mode: string;
-            use_worktrees: boolean;
-            subagents: boolean;
-            subagent_timeout: number;
-        };
-    };
-    requirements: {
-        found: boolean;
-        path: string | null;
-        canonicalRequirementIds: string[];
-        roadmapRequirementIds: string[];
-        traceabilityNotes: string[];
-        acceptanceNotes: string[];
-        deferredItems: string[];
-        summary: string;
-        warnings: string[];
-    } | undefined;
-    projectBrief: {
-        found: boolean;
-        path: string | null;
-        title: string | null;
-        summary: string;
-        vision: string[];
-        audience: string[];
-        constraints: string[];
-        currentMilestone: string | null;
-        nonGoals: string[];
-        warnings: string[];
-    } | undefined;
-    grounding: {
-        lockedDecisions: string;
-        phaseBoundary: string;
-        dependencies: string;
-        discoveryGrounding: string;
-        projectConstraints: string[];
-    };
-    existingPlans: {
-        planId: string;
-        path: string;
-        title: string | null;
-        wave: number | null;
-        dependsOn: string[];
-        requirements: string[];
-        status: string | null;
-    }[];
-    targetHashes: {
-        [k: string]: string | null;
-    };
-    schema: Record<string, unknown>;
-    example: {
-        plans: {
-            title: string;
-            goal: string;
-            tasks: {
-                title: string;
-                filesModified: string[];
-                requirements: string[];
-                action: string[];
-                acceptanceCriteria: string[];
-                id?: string | undefined;
-                readFirst?: string[] | undefined;
-            }[];
-            key?: string | undefined;
-            scope?: string[] | undefined;
-            dependsOn?: string[] | undefined;
-            mustHaves?: string[] | undefined;
-            autonomous?: boolean | undefined;
-            gapClosure?: boolean | undefined;
-            externalServicePrerequisites?: {
-                service: string;
-                category: string;
-                purpose: string;
-                userSetup: string;
-                readinessCheck: string;
-                canAgentProceedWithoutIt: boolean;
-            }[] | undefined;
-            verification?: {
-                item: string;
-                method: "test" | "command" | "grep" | "file-read" | "artifact-validation";
-                evidence: string;
-            }[] | undefined;
-            evidence?: {
-                artifact: string;
-                rationale: string;
-            }[] | undefined;
-            unknownsAndDeferrals?: {
-                item: string;
-                disposition: "unknown" | "none" | "deferred" | "blocked";
-                rationale: string;
-                followUp: string;
-            }[] | undefined;
-        }[];
-        deferrals?: {
-            requirement: string;
-            rationale: string;
-            followUp: string;
-        }[] | undefined;
-    };
-    validationRules: {
-        reject: string[];
-        advisory: string[];
-        normalize: string[];
-    };
-    derivedFields: string[];
-    exampleNote: string;
-    saved?: undefined;
-    ready?: undefined;
-    counts?: undefined;
-    scopeReduction?: undefined;
-    nextAction?: undefined;
 } | {
     nextAction: string;
     revision: number;
@@ -687,6 +520,40 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
             recordId: string;
         })[];
         basis: PortableProviderEvidenceBasis;
+        next: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceNext;
+        packet: import("../evidence-delivery.js").EvidencePacket;
+        binding: {
+            pinnedGeneration: string;
+            identities: {
+                path: string;
+                hash: string;
+                generation: string;
+            }[];
+            hash: string;
+        };
+        counts: import("../evidence-delivery.js").EvidenceDeliveryCounts;
+        mode: "full" | "delta" | "register";
+    } | {
+        selections: ({
+            kind: "page";
+            path: string;
+            mode: "discovery";
+        } | {
+            kind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "alias" | "capability" | "claim";
+            recordId: string;
+        } | {
+            kind: "structural";
+            recordKind: "symbol" | "file" | "import" | "relationship" | "detail";
+            recordId: string;
+        } | {
+            kind: "semantic";
+            recordKind: "alias" | "capability" | "claim";
+            recordId: string;
+        })[];
+        basis: PortableProviderEvidenceBasis;
         next: {
             readSet: import("../codebase-index/provider-evidence.js").PortableProviderEvidenceReadSet;
             schemaVersion: 1;
@@ -846,12 +713,20 @@ export declare function blueprintPlanRead(raw: z.input<typeof lookupSchema>): Pr
     status: string;
     sessionPath: string;
     session: PlanSession | null;
-    published: {
+    published: ({
+        content: string | null;
+        path: string;
+        hash: string;
+    } | {
         content: string | null;
         path: string;
         hash: string | null;
-    }[];
-    publication: import("./plan-publication.js").PlanPublicationStatus;
+    })[];
+    publication: {
+        status: "invalid" | "absent" | "pending" | "committed";
+        token: string;
+        reason: string | null;
+    };
     freshness: {
         status: string;
         stalePaths: string[];

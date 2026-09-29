@@ -139,6 +139,94 @@ test("acknowledged portable source change has a usable live-source refresh path"
   } finally { await state.cleanup(); }
 });
 
+test("acknowledged same-selection successor refresh persists the returned portable basis", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  try {
+    const first: any = await blueprintPlanPrepare({...providerLookup(state.root), portableSelections: [state.selectionServiceFile]});
+    assert.equal(first.status, "prepared", JSON.stringify(first));
+    assert.equal(first.portable.basis.generationId, "provider-original");
+
+    await installProviderSuccessor(state.root, state.map, "same-selection-successor", true);
+    const sessionPath = path.join(state.root, ".blueprint/phases/01-service/01-PLAN-SESSION.json");
+    const wrongRevision: any = await blueprintPlanPrepare({
+      ...providerLookup(state.root), portableSelections: [state.selectionServiceFile],
+      expectedRevision: first.revision + 1, acknowledgeChangedInputs: true,
+    });
+    assert.equal(wrongRevision.status, "stale", JSON.stringify(wrongRevision));
+    assert.equal(Object.hasOwn(wrongRevision, "portable"), false);
+    assert.equal(Object.hasOwn(wrongRevision, "evidence"), false);
+    const beforeRefresh = JSON.parse(await fs.readFile(sessionPath, "utf8"));
+    assert.equal(beforeRefresh.revision, first.revision);
+    assert.equal(beforeRefresh.portable.basis.generationId, "provider-original");
+    const mixedSubmit: any = await blueprintPlanSubmit({
+      ...providerLookup(state.root), requestId: "unsaved-successor-plan",
+      expectedRevision: wrongRevision.revision, model: providerPlanModel(),
+    });
+    assert.notEqual(mixedSubmit.status, "published", JSON.stringify(mixedSubmit));
+    assert.notEqual(mixedSubmit.freshness?.status, "fresh", JSON.stringify(mixedSubmit));
+
+    const refreshed: any = await blueprintPlanPrepare({
+      ...providerLookup(state.root), portableSelections: [state.selectionServiceFile],
+      expectedRevision: first.revision, acknowledgeChangedInputs: true,
+    });
+    assert.equal(refreshed.status, "prepared", JSON.stringify(refreshed));
+    assert.equal(refreshed.revision, first.revision + 1);
+    assert.equal(refreshed.portable.basis.generationId, "same-selection-successor");
+    const saved = JSON.parse(await fs.readFile(sessionPath, "utf8"));
+    assert.equal(saved.revision, refreshed.revision);
+    assert.deepEqual(refreshed.portable.selections, saved.portable.selections);
+    assert.deepEqual(refreshed.portable.basis, saved.portable.basis);
+    assert.deepEqual(refreshed.portable.next, saved.portable.next);
+    assert.equal(refreshed.portable.binding.pinnedGeneration, saved.portable.basis.generationId);
+    assert.deepEqual(refreshed.portable.binding.identities, saved.portable.next.bound);
+    assert.equal(refreshed.portable.binding.hash, saved.portable.next.bindingHash);
+
+    const unchanged: any = await blueprintPlanPrepare({
+      ...providerLookup(state.root), portableSelections: [state.selectionServiceFile],
+      expectedRevision: refreshed.revision, acknowledgeChangedInputs: true,
+    });
+    assert.equal(unchanged.status, "prepared", JSON.stringify(unchanged));
+    assert.equal(unchanged.revision, refreshed.revision);
+    assert.deepEqual(unchanged.portable.basis, saved.portable.basis);
+    assert.deepEqual(unchanged.portable.next, saved.portable.next);
+
+    await fs.appendFile(path.join(state.root, "src/service.ts"), "// changed after successor prepare\n");
+    const submitted: any = await blueprintPlanSubmit({
+      ...providerLookup(state.root), requestId: "same-selection-successor-plan",
+      expectedRevision: refreshed.revision, model: providerPlanModel(),
+    });
+    assert.notEqual(submitted.status, "published", JSON.stringify(submitted));
+    assert.notEqual(submitted.freshness?.status, "fresh", JSON.stringify(submitted));
+  } finally {
+    await state.cleanup();
+  }
+});
+
+test("portable selections have order-independent set semantics", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  try {
+    const first: any = await blueprintPlanPrepare({
+      ...providerLookup(state.root),
+      portableSelections: [state.selectionPythonFile, state.selectionServiceFile],
+    });
+    assert.equal(first.status, "prepared", JSON.stringify(first));
+    assert.deepEqual(first.portable.selections.map((item: any) => item.recordId), ["file-0", "file-2"]);
+    const sessionPath = path.join(state.root, ".blueprint/phases/01-service/01-PLAN-SESSION.json");
+    const before = await fs.readFile(sessionPath, "utf8");
+
+    const reordered: any = await blueprintPlanPrepare({
+      ...providerLookup(state.root), expectedRevision: first.revision,
+      portableSelections: [state.selectionServiceFile, state.selectionPythonFile],
+    });
+    assert.equal(reordered.status, "prepared", JSON.stringify(reordered));
+    assert.equal(reordered.revision, first.revision);
+    assert.deepEqual(reordered.portable.selections, first.portable.selections);
+    assert.equal(await fs.readFile(sessionPath, "utf8"), before);
+  } finally {
+    await state.cleanup();
+  }
+});
+
 test("plan records first-ever delta and register delivery without repeating the body", async () => {
   for (const mode of ["delta", "register"] as const) {
     const state = await createProviderFixture({portableOnly: true});

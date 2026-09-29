@@ -14,7 +14,7 @@ import { withFreshPhaseTopologyForMutation } from "./phase-resolution.js";
 import { phaseTopologyFingerprintFromLocation, phaseTopologyFingerprintsMatch } from "./phase-topology-lock.js";
 import { researchDigest, researchInputHash, stableResearchValue } from "./research-evidence.js";
 import { capturePlanEvidence, planBasisFreshness, planTargetFreshness, readPlanTargetHashes, shapePlanOrdinaryEvidence } from "./plan-evidence.js";
-import { checkedPlanPayload, initialPlanSession, planLocation, planLookup, planNumericPhase, planPublicationPath, planRequestId, readPlanPublicationStatus, readPlanSession, savePlanSession, withPlanSession, type PlanJournal, type PlanLocation, type PlanSession } from "./plan-session.js";
+import { checkedPlanPayload, initialPlanSession, planLocation, planLookup, planNumericPhase, planPublicationPath, planRequestId, readPlanPublicationStatus, readPlanSession, savePlanSession, withPlanSession, type PlanJournal, type PlanLocation, type PlanPortableSession, type PlanSession } from "./plan-session.js";
 import { planPublicationConsumptionIssue, readPlanPublicationSnapshot } from "./plan-publication.js";
 import {
   portableProviderEvidenceBasisSchema,
@@ -71,8 +71,7 @@ async function readinessGates(loc: PlanLocation, readiness: Awaited<ReturnType<t
 
 type PublicPortableDelivery = z.infer<NonNullable<typeof prepareInput.shape.evidenceDelivery>>;
 
-function canonicalPortableSelections(session: PlanSession, requested?: readonly PortableSelection[]): PortableSelection[] {
-  const values = requested ?? session.portable?.selections ?? [];
+function canonicalPortableSelectionList(values: readonly PortableSelection[]): PortableSelection[] {
   const seen = new Set<string>();
   const selections: PortableSelection[] = [];
   for (const value of values) {
@@ -80,16 +79,80 @@ function canonicalPortableSelections(session: PlanSession, requested?: readonly 
     const key = JSON.stringify(parsed);
     if (!seen.has(key)) { seen.add(key); selections.push(parsed); }
   }
-  return selections;
+  return stablePortableList(selections);
+}
+
+function canonicalPortableSelections(session: PlanSession, requested?: readonly PortableSelection[]): PortableSelection[] {
+  return canonicalPortableSelectionList(requested ?? session.portable?.selections ?? []);
 }
 
 function portablePrior(session: PlanSession, selections: readonly PortableSelection[]) {
   const previous = session.portable;
-  if (!previous || stableResearchValue(previous.selections) !== stableResearchValue(selections)) return undefined;
+  if (!previous || stableResearchValue(canonicalPortableSelectionList(previous.selections)) !== stableResearchValue(selections)) return undefined;
   return {
     binding: { pinnedGeneration: previous.basis.generationId, identities: previous.next.bound.map(item => ({ path: item.path, hash: item.hash, generation: item.generation })), hash: previous.next.bindingHash },
     delivered: previous.next.delivered.map(item => ({ path: item.path, hash: item.hash, generation: item.generation })),
     registered: previous.next.registered.map(item => ({ path: item.path, hash: item.hash, generation: item.generation }))
+  };
+}
+
+function stablePortableList<T>(values: readonly T[]): T[] {
+  return [...values].sort((left, right) => stableResearchValue(left).localeCompare(stableResearchValue(right)));
+}
+
+function portableReadSetIdentity(readSet: PortableProviderEvidenceBasis["readSet"], pins: readonly PortableProviderEvidenceBasis["pin"][]) {
+  const memberPath = (pathValue: string, generationId: string) => {
+    const mapPath = pathValue.startsWith(".blueprint/codebase/") ? pathValue.slice(".blueprint/codebase/".length) : pathValue;
+    const prefix = `generations/${generationId}/`;
+    return mapPath.startsWith(prefix) ? mapPath.slice(prefix.length) : mapPath;
+  };
+  const sourceAndPage = stablePortableList(readSet.sourceAndPage);
+  const coveredMembers = new Set([
+    ...sourceAndPage.filter(item => item.kind === "page").map(item => `${item.generation}\u0000${memberPath(item.path, item.generation)}`),
+    ...pins.flatMap(pin => [pin.entry, pin.manifest].map(item => `${pin.generationId}\u0000${memberPath(item.path, pin.generationId)}`)),
+  ]);
+  return {
+    sourceAndPage,
+    sealedMembers: stablePortableList(readSet.sealedMembers.filter(item => !coveredMembers.has(`${item.generationId}\u0000${memberPath(item.path, item.generationId)}`))),
+  };
+}
+
+function portableSessionIdentity(portable: PlanPortableSession | undefined) {
+  if (!portable) return null;
+  const pins = stablePortableList([...new Map(
+    [portable.basis.pin, ...portable.basis.trustedPins.map(item => item.pin)]
+      .map(pin => [stableResearchValue(pin), pin] as const),
+  ).values()]);
+  return {
+    selections: canonicalPortableSelectionList(portable.selections),
+    basis: {
+      schemaVersion: portable.basis.schemaVersion,
+      generationId: portable.basis.generationId,
+      pin: portable.basis.pin,
+      entry: portable.basis.entry,
+      bound: stablePortableList(portable.basis.bound),
+      bindingHash: portable.basis.bindingHash,
+      readSet: portableReadSetIdentity(portable.basis.readSet, pins),
+      trustedPins: pins,
+    },
+    binding: { bound: stablePortableList(portable.next.bound), bindingHash: portable.next.bindingHash },
+    readSet: portableReadSetIdentity(portable.next.readSet, pins),
+  };
+}
+
+function portablePreparedResponse(portable: PlanPortableSession, result: Extract<PortableProviderEvidenceResult, {status: "ok"}>) {
+  return {
+    selections: portable.selections,
+    basis: portable.basis,
+    next: portable.next,
+    packet: result.packet,
+    binding: {
+      pinnedGeneration: portable.basis.generationId,
+      identities: portable.next.bound.map(item => ({ path: item.path, hash: item.hash, generation: item.generation })),
+      hash: portable.next.bindingHash,
+    },
+    counts: result.counts,
+    mode: result.mode,
   };
 }
 
@@ -203,6 +266,7 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
         loc = await planLocation({ cwd: loc.projectRoot, phase: session.phase });
         marker = await readPlanPublicationStatus(loc.projectRoot, loc.resolved.phaseDir, loc.resolved.phasePrefix);
       }
+      if (args.expectedRevision !== undefined && args.expectedRevision !== session.revision) return { status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
       const initialTargets = await readPlanTargetHashes(loc);
       const explicitPortable = args.portableSelections !== undefined || Boolean(session.portable);
       const defaultPortable = !explicitPortable
@@ -302,7 +366,11 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
       const ordinary = shapePlanOrdinaryEvidence(boundedEvidence(capture.inputs, capture.evidencePaths), args.evidenceDelivery, session.delivery);
       if (ordinary.status !== "ok") return { ...packet, status: ordinary.status, saved: false, ready: false, paths: ordinary.paths, reason: "Read-time evidence does not match the selected repository source.", nextAction: "Read the selected source again and retry blueprint_plan_prepare with matching read-time evidence." };
       const packetWithDelivery = { ...packet, evidence: ordinary.evidence, ...(portableResult ? { portable: { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet }, packet: portableResult.packet, binding: portableResult.binding, counts: portableResult.counts, mode: portableResult.mode } } : {}) };
-      if (args.expectedRevision !== undefined && args.expectedRevision !== session.revision) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), reason: "Revision conflict" };
+      const nextPortable: PlanPortableSession | undefined = portableResult
+        ? { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet } }
+        : acknowledgedPortableFailure
+          ? undefined
+          : session.portable;
       if (plans.length && !args.mode && (!session.readSet.length || session.journal?.receipt || session.needsIntent)) {
         await savePlanSession(loc, session);
         return { ...packetWithDelivery, status: "choice_required", ...responseBase(loc, session), nextAction: "Choose add, revise selected plans, or replace selected plans; supply mode and targetPlanIds for revise/replace." };
@@ -315,11 +383,12 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
       const targetsChanged = session.readSet.length > 0 && stableResearchValue(targets) !== stableResearchValue(session.targets);
       const modeChanged = session.readSet.length > 0 && (nextMode !== session.mode || stableResearchValue(targetPlanIds) !== stableResearchValue(session.targetPlanIds));
       const selectedEvidenceChanged = session.readSet.length > 0 && stableResearchValue(capture.evidencePaths) !== stableResearchValue(session.evidencePaths);
-      const portableSelectionChanged = session.readSet.length > 0 && stableResearchValue(selections) !== stableResearchValue(session.portable?.selections ?? []);
+      const portableSelectionChanged = session.readSet.length > 0 && stableResearchValue(selections) !== stableResearchValue(canonicalPortableSelectionList(session.portable?.selections ?? []));
+      const portableIdentityChanged = session.readSet.length > 0 && stableResearchValue(portableSessionIdentity(nextPortable)) !== stableResearchValue(portableSessionIdentity(session.portable));
       const deliveryChanged = stableResearchValue(ordinary.delivery) !== stableResearchValue(session.delivery);
       if ((targetsChanged || topologyChanged) && (!args.reconcile || args.expectedRevision !== session.revision || stableResearchValue(args.reconcile.targetHashes) !== stableResearchValue(packet.targetHashes))) return { ...packetWithDelivery, status: "reconciliation_required", ...responseBase(loc, session), reason: "Review changed topology and publication targets, then prepare with expectedRevision and reconcile containing the observed targetHashes." };
-      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged || portableSelectionChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
-      const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && !portableSelectionChanged && !deliveryChanged && changed?.status === "fresh";
+      if ((changed && changed.status !== "fresh" || modeChanged && !session.needsIntent || selectedEvidenceChanged || portableSelectionChanged || portableIdentityChanged) && (!args.acknowledgeChangedInputs || args.expectedRevision !== session.revision)) return { ...packetWithDelivery, status: "stale", ...responseBase(loc, session), freshness: changed, nextAction: "Review the changed evidence or scope, then prepare with expectedRevision and acknowledgeChangedInputs=true. No document draft is stored; use the refreshed packet to author the model." };
+      const unchanged = !session.needsIntent && !session.journal?.receipt && session.prepared === gates.ready && session.readSet.length && !topologyChanged && !targetsChanged && !modeChanged && !selectedEvidenceChanged && !portableSelectionChanged && !portableIdentityChanged && !deliveryChanged && changed?.status === "fresh";
       if (!unchanged) {
         delete session.journal;
         session.requests = {};
@@ -332,13 +401,19 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
         const selectedPaths = new Set(targetPlanIds.map(id => `${loc.resolved.phaseDir}/${loc.resolved.phasePrefix}-${id}-PLAN.md`));
         session.knownEvidenceArtifacts = readiness.authoringContext.knownEvidenceArtifacts.filter(p => !selectedPaths.has(p));
         session.checkerRequired = gates.checkerRequired;
-        if (portableResult) session.portable = { selections, basis: portableBasis ?? portableResult.basis, next: { ...portableResult.next, readSet: (portableBasis ?? portableResult.basis).readSet } };
+        if (nextPortable) session.portable = nextPortable;
         else if (acknowledgedPortableFailure) delete session.portable;
         if (ordinary.delivery.delivered.length || ordinary.delivery.registered.length) session.delivery = ordinary.delivery;
         session.revision++;
         await savePlanSession(loc, session);
       }
-      return { ...packetWithDelivery, schema: planningPreparedSchema(session), status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds, knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts, nextAction: gates.ready ? "Use schema, example and validationRules to author the model. If checkerRequired, review this model in memory, then call blueprint_plan_submit once with model and the review verdict. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction(readiness.nextSafeAction) };
+      return {
+        ...packetWithDelivery,
+        ...(portableResult && session.portable ? { portable: portablePreparedResponse(session.portable, portableResult) } : {}),
+        schema: planningPreparedSchema(session), status: gates.ready ? "prepared" : "blocked", ...responseBase(loc, session), mode: nextMode, targetPlanIds,
+        knownRequirements: session.knownRequirements, knownEvidenceArtifacts: session.knownEvidenceArtifacts,
+        nextAction: gates.ready ? "Use schema, example and validationRules to author the model. If checkerRequired, review this model in memory, then call blueprint_plan_submit once with model and the review verdict. Read any truncated required evidence before relying on it. Planning performs no live external research." : await safeNextAction(readiness.nextSafeAction),
+      };
     });
   } catch (error) {
     return { status: "blocked", reason: (error as Error).message, nextAction: await safeNextAction("Run /blu-progress to resolve planning preparation.") };
