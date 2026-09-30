@@ -16,7 +16,9 @@ import {blueprintPhaseArtifactWrite} from "../src/mcp/tools/phase-artifacts.js";
 import {blueprintPlanPrepare, blueprintPlanRead, blueprintPlanSubmit, planningToolDefinitions} from "../src/mcp/tools/plan.js";
 import {
   countPublicString,
+  createProviderMap,
   createProviderFixture,
+  installProviderMap,
   installProviderSuccessor,
   installSqlPortableMap,
   projectCitationResearchModel,
@@ -211,15 +213,167 @@ test("plan keeps portable range dependencies private until an ordinary file is s
 test("acknowledged portable source change has a usable live-source refresh path", async () => {
   const state = await fixture();
   try {
-    const full: any = await blueprintPlanPrepare({...lookup(state.root), evidencePaths: ["src/entry.ts"], portableSelections: [state.selection]});
+    const full: any = await blueprintPlanPrepare({...lookup(state.root), portableSelections: [state.selection]});
     assert.equal(full.status, "prepared", JSON.stringify(full));
+    const sessionPath = path.join(state.root, phaseDir, "01-PLAN-SESSION.json");
+    const priorSession = await fs.readFile(sessionPath, "utf8");
     await fs.appendFile(path.join(state.root, "src", "entry.ts"), "// changed\n");
-    const stale: any = await blueprintPlanPrepare({...lookup(state.root), evidencePaths: ["src/entry.ts"], portableSelections: [state.selection], expectedRevision: full.revision, evidenceDelivery: {mode: "delta"}});
+    const stale: any = await blueprintPlanPrepare({...lookup(state.root), portableSelections: [state.selection], expectedRevision: full.revision, evidenceDelivery: {mode: "delta"}});
     assert.notEqual(stale.status, "prepared", JSON.stringify(stale));
-    const refreshed: any = await blueprintPlanPrepare({...lookup(state.root), evidencePaths: ["src/entry.ts"], portableSelections: [state.selection], expectedRevision: full.revision, acknowledgeChangedInputs: true, evidenceDelivery: {mode: "full"}});
+    assert.equal(await fs.readFile(sessionPath, "utf8"), priorSession);
+    const refreshed: any = await blueprintPlanPrepare({...lookup(state.root), portableSelections: [state.selection], expectedRevision: full.revision, acknowledgeChangedInputs: true, evidenceDelivery: {mode: "full"}});
     assert.equal(refreshed.status, "prepared", JSON.stringify(refreshed));
+    assert.equal(refreshed.revision, full.revision + 1);
+    assert.equal(Object.hasOwn(refreshed, "portable"), false);
+    assert.match(refreshed.evidence.find((item: any) => item.path === "src/entry.ts")?.content ?? "", /changed/);
+    const saved = JSON.parse(await fs.readFile(sessionPath, "utf8"));
+    assert.equal(saved.portable, undefined);
+    assert.deepEqual(saved.evidencePaths, ["src/entry.ts"]);
     assert.equal((await blueprintPlanRead(lookup(state.root))).freshness?.status, "fresh");
   } finally { await state.cleanup(); }
+});
+
+test("selection change preserves A on stale B, then replaces it atomically when B is complete", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  const sessionPath = path.join(state.root, ".blueprint/phases/01-service/01-PLAN-SESSION.json");
+  const pythonPath = "python/library.py";
+  const changedBody = "STALE_SELECTION_B_PRIVATE_BODY";
+  try {
+    const first: any = await blueprintPlanPrepare({...providerLookup(state.root), portableSelections: [state.selectionServiceFile]});
+    assert.equal(first.status, "prepared", JSON.stringify(first));
+    const originalPython = await fs.readFile(path.join(state.root, pythonPath), "utf8");
+    const priorSession = await fs.readFile(sessionPath, "utf8");
+    await fs.appendFile(path.join(state.root, pythonPath), `# ${changedBody}\n`);
+
+    const failed: any = await executeToolHandlerWithFailureLogging(planPrepareDefinition, {
+      ...providerLookup(state.root), portableSelections: [state.selectionPythonFile],
+      expectedRevision: first.revision, acknowledgeChangedInputs: true,
+    });
+    assert.equal(failed.status, "reread_required", JSON.stringify(failed));
+    assert.equal(failed.code, "source_tampered");
+    assert.deepEqual(failed.paths, [pythonPath]);
+    assert.equal(failed.saved, false);
+    assert.equal(failed.ready, false);
+    assert.equal(await fs.readFile(sessionPath, "utf8"), priorSession);
+    const afterFailure: any = await blueprintPlanRead(providerLookup(state.root));
+    assert.equal(afterFailure.session.revision, first.revision);
+    assert.equal(afterFailure.session.portable.generationId, "provider-original");
+    await assertLoggedProviderFailure(state.root, "reread_required", failed, [changedBody, "privatePythonPayload", pythonPath]);
+
+    await fs.writeFile(path.join(state.root, pythonPath), originalPython);
+    const replacement: any = await blueprintPlanPrepare({
+      ...providerLookup(state.root), portableSelections: [state.selectionPythonFile],
+      expectedRevision: first.revision, acknowledgeChangedInputs: true,
+    });
+    assert.equal(replacement.status, "prepared", JSON.stringify(replacement));
+    assert.equal(replacement.revision, first.revision + 1);
+    assert.deepEqual(replacement.portable.selections, [state.selectionPythonFile]);
+    const saved = JSON.parse(await fs.readFile(sessionPath, "utf8"));
+    assert.equal(saved.revision, replacement.revision);
+    assert.deepEqual(saved.portable.selections, [state.selectionPythonFile]);
+    assert.ok(saved.portable.next.readSet.sourceAndPage.some((item: any) => item.path === pythonPath && item.kind === "source"));
+    assert.equal(saved.portable.next.readSet.sourceAndPage.some((item: any) => item.path === "src/service.ts" && item.kind === "source"), false);
+
+    const staleRevision: any = await blueprintPlanSubmit({
+      ...providerLookup(state.root), requestId: "selection-b-stale-revision",
+      expectedRevision: first.revision, model: providerPlanModel(),
+    });
+    assert.notEqual(staleRevision.status, "published", JSON.stringify(staleRevision));
+    const request: any = {
+      ...providerLookup(state.root), requestId: "selection-b-plan",
+      expectedRevision: replacement.revision, model: providerPlanModel(),
+    };
+    const published: any = await blueprintPlanSubmit(request);
+    assert.equal(published.status, "published", JSON.stringify(published));
+    await fs.appendFile(path.join(state.root, pythonPath), "# changed after B publication\n");
+    const staleRead: any = await blueprintPlanRead(providerLookup(state.root));
+    assert.notEqual(staleRead.freshness?.status, "fresh", JSON.stringify(staleRead));
+    const staleSubmit: any = await blueprintPlanSubmit(request);
+    assert.notEqual(staleSubmit.status, "published", JSON.stringify(staleSubmit));
+  } finally {
+    await state.cleanup();
+  }
+});
+
+test("same generation id with replacement sealed bytes cannot reuse the prior fallback closure", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  const sessionPath = path.join(state.root, ".blueprint/phases/01-service/01-PLAN-SESSION.json");
+  try {
+    const first: any = await blueprintPlanPrepare({...providerLookup(state.root), portableSelections: [state.selectionServiceFile]});
+    assert.equal(first.status, "prepared", JSON.stringify(first));
+    const priorSession = await fs.readFile(sessionPath, "utf8");
+    const prior = JSON.parse(priorSession);
+
+    const replacement = await createProviderMap("provider-original", {changedService: true});
+    await installProviderMap(state.root, replacement.rendered, true);
+    const failed: any = await executeToolHandlerWithFailureLogging(planPrepareDefinition, {
+      ...providerLookup(state.root), portableSelections: [state.selectionServiceFile],
+      expectedRevision: first.revision, acknowledgeChangedInputs: true,
+    });
+    assert.equal(failed.status, "reread_required", JSON.stringify(failed));
+    assert.equal(failed.code, "source_tampered");
+    assert.deepEqual(failed.paths, ["src/service.ts"]);
+    assert.equal(failed.saved, false);
+    assert.equal(failed.ready, false);
+    assert.equal(await fs.readFile(sessionPath, "utf8"), priorSession);
+    const after = JSON.parse(await fs.readFile(sessionPath, "utf8"));
+    assert.equal(after.revision, first.revision);
+    assert.deepEqual(after.portable.basis.pin, prior.portable.basis.pin);
+    assert.deepEqual(after.portable.selections, prior.portable.selections);
+    await assertLoggedProviderFailure(state.root, "reread_required", failed, ["privateBodyPayload", "refreshedPayload", "src/service.ts"]);
+  } finally {
+    await state.cleanup();
+  }
+});
+
+test("explicit empty selection removes prior source bindings with a new revision", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  try {
+    const first: any = await blueprintPlanPrepare({...providerLookup(state.root), portableSelections: [state.selectionServiceFile]});
+    assert.equal(first.status, "prepared", JSON.stringify(first));
+    const removed: any = await blueprintPlanPrepare({
+      ...providerLookup(state.root), portableSelections: [],
+      expectedRevision: first.revision, acknowledgeChangedInputs: true,
+    });
+    assert.equal(removed.status, "prepared", JSON.stringify(removed));
+    assert.equal(removed.revision, first.revision + 1);
+    assert.deepEqual(removed.portable.selections, []);
+    const session = JSON.parse(await fs.readFile(path.join(state.root, ".blueprint/phases/01-service/01-PLAN-SESSION.json"), "utf8"));
+    assert.deepEqual(session.portable.selections, []);
+    assert.equal(session.portable.next.readSet.sourceAndPage.some((item: any) => item.path === "src/service.ts"), false);
+    await fs.appendFile(path.join(state.root, "src/service.ts"), "// removed selection changed\n");
+    const read: any = await blueprintPlanRead(providerLookup(state.root));
+    assert.equal(read.freshness?.status, "fresh", JSON.stringify(read));
+  } finally {
+    await state.cleanup();
+  }
+});
+
+test("automatic portable adoption and ordinary fallback keep stable revision semantics", async () => {
+  const mapped = await createProviderFixture({portableOnly: true});
+  try {
+    const adopted: any = await blueprintPlanPrepare(providerLookup(mapped.root));
+    assert.equal(adopted.status, "prepared", JSON.stringify(adopted));
+    assert.deepEqual(adopted.portable.selections, []);
+    const repeated: any = await blueprintPlanPrepare({...providerLookup(mapped.root), expectedRevision: adopted.revision});
+    assert.equal(repeated.status, "prepared", JSON.stringify(repeated));
+    assert.equal(repeated.revision, adopted.revision);
+  } finally {
+    await mapped.cleanup();
+  }
+
+  const ordinary = await createProviderFixture({portableOnly: true});
+  try {
+    await fs.rm(path.join(ordinary.root, ".blueprint/codebase"), {recursive: true, force: true});
+    const fallback: any = await blueprintPlanPrepare(providerLookup(ordinary.root));
+    assert.equal(fallback.status, "prepared", JSON.stringify(fallback));
+    assert.equal(Object.hasOwn(fallback, "portable"), false);
+    const repeated: any = await blueprintPlanPrepare({...providerLookup(ordinary.root), expectedRevision: fallback.revision});
+    assert.equal(repeated.status, "prepared", JSON.stringify(repeated));
+    assert.equal(repeated.revision, fallback.revision);
+  } finally {
+    await ordinary.cleanup();
+  }
 });
 
 test("acknowledged same-selection successor refresh persists the returned portable basis", async () => {

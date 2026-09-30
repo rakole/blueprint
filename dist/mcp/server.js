@@ -72167,6 +72167,14 @@ function portableSessionIdentity(portable) {
     readSet: portableReadSetIdentity(portable.next.readSet, pins)
   };
 }
+function portableGenerationIdentity(basis) {
+  return {
+    schemaVersion: basis.schemaVersion,
+    generationId: basis.generationId,
+    pin: basis.pin,
+    entry: basis.entry
+  };
+}
 function portablePreparedResponse(portable, result) {
   return {
     selections: portable.selections,
@@ -72373,8 +72381,9 @@ async function blueprintPlanPrepare(raw = {}) {
       const guardedPortableFallback = defaultPortable !== void 0 && defaultPortable.status !== "ok" && (defaultPortable.diagnostics ?? []).some((item) => item.code !== "missing");
       const directEvidenceOnly = guardedPortableFallback;
       const selections = canonicalPortableSelections2(session, args.portableSelections);
+      const sessionPortableSelections = canonicalPortableSelectionList(session.portable?.selections ?? []);
+      const samePortableSelection = Boolean(session.portable) && stableResearchValue(selections) === stableResearchValue(sessionPortableSelections);
       const priorPortableBasis = !args.acknowledgeChangedInputs && session.portable && stableResearchValue(session.portable.selections) === stableResearchValue(selections) ? session.portable.basis : void 0;
-      const acknowledgedPortableSources = args.acknowledgeChangedInputs ? (session.portable?.next.readSet.sourceAndPage ?? []).filter((item) => item.kind === "source" && !item.path.startsWith("@")).map((item) => item.path) : [];
       const selectedPaths = [.../* @__PURE__ */ new Set([...session.evidencePaths, ...args.evidencePaths ?? []])];
       let capture = await capturePlanEvidence(loc, selectedPaths, { skipCodebaseArtifacts: portableRequested || directEvidenceOnly });
       let evidenceBasisHash = ordinaryEvidenceBasisHash(capture);
@@ -72402,11 +72411,27 @@ async function blueprintPlanPrepare(raw = {}) {
         ...session.portable && !args.acknowledgeChangedInputs && stableResearchValue(session.portable.selections) === stableResearchValue(selections) && session.portable.basis.pinReceipt ? { pinReceipt: session.portable.basis.pinReceipt } : {},
         ...inheritedBasis ?? priorPortableBasis ? { pinnedMemberSets: portablePinnedMemberSets(inheritedBasis ?? priorPortableBasis) } : {}
       }) : { status: "fallback", code: "portable_not_requested", reason: "Portable evidence was not requested.", paths: [] };
-      const acknowledgedPortableFailure = args.acknowledgeChangedInputs && portableRequested && provider.status === "reread_required";
-      if (acknowledgedPortableFailure && acknowledgedPortableSources.length) {
-        capture = await capturePlanEvidence(loc, [.../* @__PURE__ */ new Set([...selectedPaths, ...acknowledgedPortableSources])], { skipCodebaseArtifacts: true });
-        evidenceBasisHash = ordinaryEvidenceBasisHash(capture);
-        inheritedBasis = provenancePortableBasis(capture.inputs, loc);
+      let acknowledgedPortableFailure = false;
+      if (args.acknowledgeChangedInputs && portableRequested && provider.status === "reread_required" && samePortableSelection && session.portable) {
+        const currentPortable = await resolvePortableProviderEvidence({ root: loc.projectRoot });
+        const priorSourceEntries = session.portable.next.readSet.sourceAndPage.filter((item) => item.kind === "source" && !item.path.startsWith("@"));
+        const priorSourcePaths = [...new Set(priorSourceEntries.map((item) => item.path))];
+        const coveredFailurePaths = new Set(priorSourceEntries.flatMap((item) => [item.path, ...item.deliveryPath ? [item.deliveryPath] : []]));
+        const canCaptureCompleteFallback = currentPortable.status === "ok" && stableResearchValue(portableGenerationIdentity(currentPortable.basis)) === stableResearchValue(portableGenerationIdentity(session.portable.basis)) && (selections.length === 0 || priorSourcePaths.length > 0) && provider.paths.length > 0 && provider.paths.every((item) => coveredFailurePaths.has(item));
+        if (canCaptureCompleteFallback) {
+          const fallbackCapture = await capturePlanEvidence(loc, [.../* @__PURE__ */ new Set([...selectedPaths, ...priorSourcePaths])], { skipCodebaseArtifacts: true });
+          const capturedByPath = new Map(fallbackCapture.inputs.map((item) => [item.path, item]));
+          const capturedEverySource = priorSourcePaths.every((item) => {
+            const captured = capturedByPath.get(item);
+            return Boolean(captured && captured.content !== null && captured.hash !== null);
+          });
+          if (capturedEverySource) {
+            capture = fallbackCapture;
+            evidenceBasisHash = ordinaryEvidenceBasisHash(capture);
+            inheritedBasis = provenancePortableBasis(capture.inputs, loc);
+            acknowledgedPortableFailure = true;
+          }
+        }
       }
       const providerFailure = !portableRequested || provider.status === "ok" || acknowledgedPortableFailure ? null : provider;
       if (providerFailure) return {

@@ -193,6 +193,15 @@ function portableSessionIdentity(portable: PlanPortableSession | undefined) {
   };
 }
 
+function portableGenerationIdentity(basis: PortableProviderEvidenceBasis) {
+  return {
+    schemaVersion: basis.schemaVersion,
+    generationId: basis.generationId,
+    pin: basis.pin,
+    entry: basis.entry,
+  };
+}
+
 function portablePreparedResponse(portable: PlanPortableSession, result: Extract<PortableProviderEvidenceResult, {status: "ok"}>) {
   return {
     selections: portable.selections,
@@ -426,12 +435,12 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
         (defaultPortable.diagnostics ?? []).some(item => (item as {code?: string}).code !== "missing");
       const directEvidenceOnly = guardedPortableFallback;
       const selections = canonicalPortableSelections(session, args.portableSelections);
+      const sessionPortableSelections = canonicalPortableSelectionList(session.portable?.selections ?? []);
+      const samePortableSelection = Boolean(session.portable) &&
+        stableResearchValue(selections) === stableResearchValue(sessionPortableSelections);
       const priorPortableBasis = !args.acknowledgeChangedInputs && session.portable && stableResearchValue(session.portable.selections) === stableResearchValue(selections)
         ? session.portable.basis
         : undefined;
-      const acknowledgedPortableSources = args.acknowledgeChangedInputs
-        ? (session.portable?.next.readSet.sourceAndPage ?? []).filter(item => item.kind === "source" && !item.path.startsWith("@")).map(item => item.path)
-        : [];
       // A successful portable refresh keeps selected declaration dependencies
       // private.  Re-capture their whole files only for an actual portable
       // failure that is handled by the ordinary fallback path.
@@ -466,11 +475,35 @@ export async function blueprintPlanPrepare(raw: z.input<typeof prepareInput> = {
             ...((inheritedBasis ?? priorPortableBasis) ? { pinnedMemberSets: portablePinnedMemberSets(inheritedBasis ?? priorPortableBasis!) } : {})
           })
         : ({ status: "fallback", code: "portable_not_requested", reason: "Portable evidence was not requested.", paths: [] } satisfies PortableProviderEvidenceResult);
-      const acknowledgedPortableFailure = args.acknowledgeChangedInputs && portableRequested && provider.status === "reread_required";
-      if (acknowledgedPortableFailure && acknowledgedPortableSources.length) {
-        capture = await capturePlanEvidence(loc, [...new Set([...selectedPaths, ...acknowledgedPortableSources])], { skipCodebaseArtifacts: true });
-        evidenceBasisHash = ordinaryEvidenceBasisHash(capture);
-        inheritedBasis = provenancePortableBasis(capture.inputs, loc);
+      let acknowledgedPortableFailure = false;
+      if (args.acknowledgeChangedInputs && portableRequested && provider.status === "reread_required" && samePortableSelection && session.portable) {
+        const currentPortable = await resolvePortableProviderEvidence({root: loc.projectRoot});
+        const priorSourceEntries = session.portable.next.readSet.sourceAndPage.filter(item => item.kind === "source" && !item.path.startsWith("@"));
+        const priorSourcePaths = [...new Set(priorSourceEntries.map(item => item.path))];
+        const coveredFailurePaths = new Set(priorSourceEntries.flatMap(item => [item.path, ...(item.deliveryPath ? [item.deliveryPath] : [])]));
+        // A prior closure proves a complete ordinary fallback only for the
+        // exact same selection and sealed generation identity.  Generation IDs
+        // are labels, so comparing them alone could accept a replacement map
+        // whose ENTRY or manifest bytes bind a different dependency closure.
+        const canCaptureCompleteFallback = currentPortable.status === "ok" &&
+          stableResearchValue(portableGenerationIdentity(currentPortable.basis)) ===
+            stableResearchValue(portableGenerationIdentity(session.portable.basis)) &&
+          (selections.length === 0 || priorSourcePaths.length > 0) &&
+          provider.paths.length > 0 && provider.paths.every(item => coveredFailurePaths.has(item));
+        if (canCaptureCompleteFallback) {
+          const fallbackCapture = await capturePlanEvidence(loc, [...new Set([...selectedPaths, ...priorSourcePaths])], { skipCodebaseArtifacts: true });
+          const capturedByPath = new Map(fallbackCapture.inputs.map(item => [item.path, item]));
+          const capturedEverySource = priorSourcePaths.every(item => {
+            const captured = capturedByPath.get(item);
+            return Boolean(captured && captured.content !== null && captured.hash !== null);
+          });
+          if (capturedEverySource) {
+            capture = fallbackCapture;
+            evidenceBasisHash = ordinaryEvidenceBasisHash(capture);
+            inheritedBasis = provenancePortableBasis(capture.inputs, loc);
+            acknowledgedPortableFailure = true;
+          }
+        }
       }
       const providerFailure = !portableRequested || provider.status === "ok" || acknowledgedPortableFailure ? null : provider;
       if (providerFailure) return {
