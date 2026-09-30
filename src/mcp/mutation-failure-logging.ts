@@ -1,6 +1,10 @@
 import type { ToolDefinition, ToolResult } from "./tool-types.js";
 import { getArrayCount, getBoolean, getString } from "./tool-result-utils.js";
 import {
+  isNonSuccessToolStatus,
+  NON_SUCCESS_TOOL_STATUSES
+} from "./tool-result-status.js";
+import {
   logRejectedMutationResult,
   logThrownMutationError
 } from "./write-failure-log.js";
@@ -68,21 +72,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
 ]);
 // These statuses mean a mutating tool either rejected a write attempt or stopped
 // before side effects because its write preconditions were not satisfied.
-export const MUTATION_FAILURE_STATUSES = new Set([
-  "reconciliation_required",
-  "needs_revision",
-  "invalid",
-  "project_missing",
-  "not_found",
-  "blocked",
-  "rejected",
-  "stale",
-  "refused",
-  "partial",
-  "failed",
-  "error",
-  "outcome-unknown"
-]);
+export const MUTATION_FAILURE_STATUSES = NON_SUCCESS_TOOL_STATUSES;
 
 export function isMutationTool(toolName: string): boolean {
   return BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName);
@@ -171,7 +161,7 @@ export function shouldLogMutationFailure(
 
   const status = getString(result, "status");
 
-  if (status && MUTATION_FAILURE_STATUSES.has(status)) {
+  if (isNonSuccessToolStatus(status)) {
     return true;
   }
 

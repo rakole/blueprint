@@ -60809,6 +60809,39 @@ var init_artifacts = __esm({
   }
 });
 
+// src/mcp/tool-result-status.ts
+function isNonSuccessToolStatus(value) {
+  return typeof value === "string" && NON_SUCCESS_TOOL_STATUSES.has(value);
+}
+var NON_SUCCESS_STATUS_VALUES, NON_SUCCESS_TOOL_STATUSES;
+var init_tool_result_status = __esm({
+  "src/mcp/tool-result-status.ts"() {
+    "use strict";
+    NON_SUCCESS_STATUS_VALUES = [
+      "reconciliation_required",
+      "needs_revision",
+      "reread_required",
+      "evidence_limit",
+      "fallback",
+      "invalid",
+      "project_missing",
+      "not_found",
+      "not-found",
+      "blocked",
+      "rejected",
+      "stale",
+      "refused",
+      "partial",
+      "failed",
+      "error",
+      "outcome-unknown"
+    ];
+    NON_SUCCESS_TOOL_STATUSES = new Set(
+      NON_SUCCESS_STATUS_VALUES
+    );
+  }
+});
+
 // src/mcp/write-failure-log.ts
 import { promises as fs18 } from "node:fs";
 import { randomUUID as randomUUID2 } from "node:crypto";
@@ -60818,8 +60851,7 @@ function metadataOnlyInvocation(toolName, args) {
 }
 function failureMetadata(value, depth = 0) {
   const metadata = {};
-  const statuses = /* @__PURE__ */ new Set(["invalid", "blocked", "rejected", "stale", "partial", "failed", "error", "reconciliation_required", "not_found", "project_missing", "needs_revision", "refused", "outcome-unknown"]);
-  if (typeof value.status === "string" && statuses.has(value.status)) metadata.status = value.status;
+  if (isNonSuccessToolStatus(value.status)) metadata.status = value.status;
   if (["rejected-not-saved", "saved-but-state-incomplete", "complete"].includes(value.outcome)) metadata.outcome = value.outcome;
   const knownCodes = /* @__PURE__ */ new Set([
     "schema.missing",
@@ -60858,6 +60890,7 @@ function failureMetadata(value, depth = 0) {
     "valid",
     "written",
     "saved",
+    "ready",
     "overwrite",
     "includeLog",
     "contentLength",
@@ -61054,6 +61087,7 @@ var init_write_failure_log = __esm({
   "src/mcp/write-failure-log.ts"() {
     "use strict";
     init_artifacts();
+    init_tool_result_status();
     BLUEPRINT_DIR2 = ".blueprint";
     MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
     LOG_SCHEMA_VERSION = 1;
@@ -118281,6 +118315,7 @@ var blueprintToolNames = TOOL_DEFINITIONS.map(
 );
 
 // src/mcp/mutation-failure-logging.ts
+init_tool_result_status();
 init_write_failure_log();
 var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_project_init",
@@ -118343,21 +118378,6 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_patch_record",
   "blueprint_patch_reapply"
 ]);
-var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
-  "reconciliation_required",
-  "needs_revision",
-  "invalid",
-  "project_missing",
-  "not_found",
-  "blocked",
-  "rejected",
-  "stale",
-  "refused",
-  "partial",
-  "failed",
-  "error",
-  "outcome-unknown"
-]);
 function isMutationTool(toolName) {
   return BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName);
 }
@@ -118405,7 +118425,7 @@ function shouldLogMutationFailure(toolName, result, args = {}) {
     return true;
   }
   const status = getString(result, "status");
-  if (status && MUTATION_FAILURE_STATUSES.has(status)) {
+  if (isNonSuccessToolStatus(status)) {
     return true;
   }
   if (toolName.endsWith("_delete")) {
@@ -118457,6 +118477,7 @@ async function startServer() {
 }
 
 // src/mcp/tool-result-summary.ts
+init_tool_result_status();
 var SUMMARY_PATH_KEYS = [
   "path",
   "reportPath",
@@ -118507,7 +118528,6 @@ var SUMMARY_COUNT_KEYS = [
 ];
 var DIAGNOSTIC_SUMMARY_LIMIT = 3;
 var MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1500;
-var NON_SUCCESS_SUMMARY_STATUSES = new Set(MUTATION_FAILURE_STATUSES);
 function findSummaryPath(result) {
   for (const key2 of SUMMARY_PATH_KEYS) {
     const value = getString(result, key2);
@@ -118571,7 +118591,7 @@ function collectResultDiagnostics(result) {
   return messages;
 }
 function buildDiagnosticSuffix(status, result) {
-  if (!status || !MUTATION_FAILURE_STATUSES.has(status)) {
+  if (!isNonSuccessToolStatus(status)) {
     return "";
   }
   const diagnostics = collectResultDiagnostics(result);
@@ -118720,6 +118740,7 @@ function getNonSuccessSummaryVerb(status, preferredVerb) {
     case "project_missing":
       return "Project missing";
     case "not_found":
+    case "not-found":
       return "Not found";
     case "blocked":
       return "Blocked";
@@ -118727,6 +118748,12 @@ function getNonSuccessSummaryVerb(status, preferredVerb) {
       return "Refused";
     case "rejected":
       return "Rejected";
+    case "reread_required":
+      return "Reread required for";
+    case "evidence_limit":
+      return "Evidence limit reached for";
+    case "fallback":
+      return "Fallback required for";
     case "failed":
     case "error":
       return "Failed";
@@ -118739,6 +118766,7 @@ function getNonSuccessSummaryVerb(status, preferredVerb) {
 }
 function buildNonSuccessStatusSummary(toolName, subject, status, result, preferredVerb) {
   const reason = getString(result, "reason");
+  const nextAction = getNextAction(result);
   const waitingState = getString(result, "waitingState");
   const path47 = findSummaryPath(result);
   const content = getString(result, "content");
@@ -118766,7 +118794,8 @@ function buildNonSuccessStatusSummary(toolName, subject, status, result, preferr
   }
   const detailSuffix = details.length > 0 ? ` ${details.join(" ")}` : "";
   const diagnosticSuffix = buildDiagnosticSuffix(status, result);
-  return `${getNonSuccessSummaryVerb(status, preferredVerb)} ${subject}${detailSuffix}.${diagnosticSuffix}`;
+  const actionSuffix = nextAction ? ` Next action: ${cleanSentenceFragment(nextAction)}.` : "";
+  return `${getNonSuccessSummaryVerb(status, preferredVerb)} ${subject}${detailSuffix}.${diagnosticSuffix}${actionSuffix}`;
 }
 function buildStateNoopSummary(toolName, result) {
   const updated = getBoolean(result, "updated");
@@ -118886,7 +118915,7 @@ function summarizeToolResult(toolName, result) {
     const notSavedSuffix = notSavedDetails.length > 0 ? `; ${notSavedDetails.join(" ")}` : "";
     return `Did not save ${subject}${notSavedSuffix}.`;
   }
-  if (status && NON_SUCCESS_SUMMARY_STATUSES.has(status)) {
+  if (isNonSuccessToolStatus(status)) {
     return buildNonSuccessStatusSummary(toolName, subject, status, result, mutationOutcomeVerb);
   }
   if (toolName === "blueprint_cleanup_archive" && getString(result, "mode") === "commit" && getString(result, "reportPath") && getBoolean(result, "reportWritten") === false) {

@@ -1,5 +1,5 @@
 import type { ToolResult } from "./tool-types.js";
-import { MUTATION_FAILURE_STATUSES } from "./mutation-failure-logging.js";
+import { isNonSuccessToolStatus } from "./tool-result-status.js";
 import {
   asRecord,
   getArrayCount,
@@ -60,7 +60,6 @@ const SUMMARY_COUNT_KEYS = [
 
 const DIAGNOSTIC_SUMMARY_LIMIT = 3;
 const MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1500;
-const NON_SUCCESS_SUMMARY_STATUSES = new Set(MUTATION_FAILURE_STATUSES);
 
 function findSummaryPath(result: ToolResult): string | null {
   for (const key of SUMMARY_PATH_KEYS) {
@@ -145,7 +144,7 @@ function collectResultDiagnostics(result: ToolResult): string[] {
 }
 
 function buildDiagnosticSuffix(status: string | null, result: ToolResult): string {
-  if (!status || !MUTATION_FAILURE_STATUSES.has(status)) {
+  if (!isNonSuccessToolStatus(status)) {
     return "";
   }
 
@@ -336,6 +335,7 @@ function getNonSuccessSummaryVerb(status: string, preferredVerb?: string | null)
     case "project_missing":
       return "Project missing";
     case "not_found":
+    case "not-found":
       return "Not found";
     case "blocked":
       return "Blocked";
@@ -343,6 +343,12 @@ function getNonSuccessSummaryVerb(status: string, preferredVerb?: string | null)
       return "Refused";
     case "rejected":
       return "Rejected";
+    case "reread_required":
+      return "Reread required for";
+    case "evidence_limit":
+      return "Evidence limit reached for";
+    case "fallback":
+      return "Fallback required for";
     case "failed":
     case "error":
       return "Failed";
@@ -362,6 +368,7 @@ function buildNonSuccessStatusSummary(
   preferredVerb?: string | null
 ): string {
   const reason = getString(result, "reason");
+  const nextAction = getNextAction(result);
   const waitingState = getString(result, "waitingState");
   const path = findSummaryPath(result);
   const content = getString(result, "content");
@@ -397,8 +404,11 @@ function buildNonSuccessStatusSummary(
 
   const detailSuffix = details.length > 0 ? ` ${details.join(" ")}` : "";
   const diagnosticSuffix = buildDiagnosticSuffix(status, result);
+  const actionSuffix = nextAction
+    ? ` Next action: ${cleanSentenceFragment(nextAction)}.`
+    : "";
 
-  return `${getNonSuccessSummaryVerb(status, preferredVerb)} ${subject}${detailSuffix}.${diagnosticSuffix}`;
+  return `${getNonSuccessSummaryVerb(status, preferredVerb)} ${subject}${detailSuffix}.${diagnosticSuffix}${actionSuffix}`;
 }
 
 function buildStateNoopSummary(toolName: string, result: ToolResult): string | null {
@@ -564,7 +574,7 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
     return `Did not save ${subject}${notSavedSuffix}.`;
   }
 
-  if (status && NON_SUCCESS_SUMMARY_STATUSES.has(status)) {
+  if (isNonSuccessToolStatus(status)) {
     return buildNonSuccessStatusSummary(toolName, subject, status, result, mutationOutcomeVerb);
   }
 

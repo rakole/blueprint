@@ -13,7 +13,7 @@ import {validatePortableMapModel, type PortableAuthoritativeSourceBasis} from ".
 import {renderPortableMap} from "../src/mcp/codebase-index/render.js";
 import {blueprintConfigSet} from "../src/mcp/tools/config.js";
 import {blueprintPhaseArtifactWrite} from "../src/mcp/tools/phase-artifacts.js";
-import {blueprintPlanPrepare, blueprintPlanRead, blueprintPlanSubmit} from "../src/mcp/tools/plan.js";
+import {blueprintPlanPrepare, blueprintPlanRead, blueprintPlanSubmit, planningToolDefinitions} from "../src/mcp/tools/plan.js";
 import {
   countPublicString,
   createProviderFixture,
@@ -24,12 +24,61 @@ import {
   providerPlanModel,
 } from "./helpers/portable-provider-fixture.js";
 import {blueprintResearchPrepare, blueprintResearchSubmit} from "../src/mcp/tools/research.js";
-import {createBlueprintServer, MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, planMcpJsonRpcResponseBytes} from "../src/mcp/server.js";
+import {createBlueprintServer, executeToolHandlerWithFailureLogging, MAX_PLAN_MCP_JSON_RPC_RESPONSE_BYTES, planMcpJsonRpcResponseBytes, summarizeToolResult} from "../src/mcp/server.js";
+import {MCP_WRITE_FAILURE_LOG_PATH} from "../src/mcp/write-failure-log.js";
 
 const source = "export function entry() { return \"entry\"; }\n";
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 const phaseDir = ".blueprint/phases/01-plan";
 const lookup = (cwd: string) => ({cwd, phase: "1"});
+const planPrepareDefinition = planningToolDefinitions.find(tool => tool.name === "blueprint_plan_prepare")!;
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+async function assertLoggedProviderFailure(
+  root: string,
+  expectedStatus: "reread_required" | "evidence_limit" | "fallback" | "not-found",
+  result: Record<string, unknown>,
+  bodySentinels: readonly string[]
+) {
+  assert.equal(result.status, expectedStatus, JSON.stringify(result));
+  assert.equal(result.saved, false);
+  assert.equal(result.ready, false);
+  assert.equal(typeof result.reason, "string");
+  assert.equal(typeof result.nextAction, "string");
+
+  const logText = await fs.readFile(path.join(root, MCP_WRITE_FAILURE_LOG_PATH), "utf8");
+  const entries = logText.trim().split("\n").map(line => JSON.parse(line));
+  const entry = entries.at(-1);
+  assert.equal(entry.toolName, "blueprint_plan_prepare");
+  assert.equal(entry.failureKind, "rejected");
+  assert.equal(entry.result.status, expectedStatus);
+  assert.equal(entry.result.saved, false);
+  assert.equal(entry.result.ready, false);
+  assert.equal(entry.result.reason, undefined);
+  assert.equal(entry.result.nextAction, undefined);
+  for (const sentinel of bodySentinels) assert.equal(logText.includes(sentinel), false, `failure log retained ${sentinel}`);
+
+  const summary = summarizeToolResult("blueprint_plan_prepare", result);
+  assert.doesNotMatch(summary, /^Completed\b/);
+  assert.match(summary, new RegExp(`status: ${expectedStatus}`));
+  assert.match(summary, new RegExp(`reason: ${escapeRegExp(String(result.reason).replace(/[.!\s]+$/u, ""))}`));
+  assert.match(summary, /Next action:/);
+  assert.match(summary, new RegExp(escapeRegExp(String(result.nextAction).replace(/[.!\s]+$/u, ""))));
+}
+
+function assertMetadataOnlyProviderLog(entry: Record<string, unknown>, logText: string, sentinels: readonly string[]) {
+  const sensitiveKeys = new Set(["evidence", "paths", "reason", "nextAction", "receipt", "pinReceipt", "portableSelections"]);
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) return value.forEach(visit);
+    if (!value || typeof value !== "object") return;
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      assert.equal(sensitiveKeys.has(key), false, `failure log retained ${key}`);
+      visit(child);
+    }
+  };
+  visit(entry);
+  for (const sentinel of sentinels) assert.equal(logText.includes(sentinel), false, `failure log retained ${sentinel}`);
+}
 
 function mapFixture() {
   const bytes = new TextEncoder().encode(source);
@@ -367,6 +416,107 @@ test("plan rejects inherited research and successor source closure before mutati
     assert.equal(limited.status, "evidence_limit", JSON.stringify(limited));
     assert.ok((limited.counts?.sourceCount ?? 0) >= 61);
     assert.equal(await fs.readFile(sessionPath, "utf8"), prior);
+  } finally {
+    await state.cleanup();
+  }
+});
+
+test("plan provider fallback is logged privately and summarized as a recovery outcome", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  try {
+    await fs.rm(path.join(state.root, ".blueprint/codebase"), {recursive: true, force: true});
+    const result = await executeToolHandlerWithFailureLogging(planPrepareDefinition, {
+      ...providerLookup(state.root),
+      portableSelections: [state.selectionServiceFile]
+    });
+    await assertLoggedProviderFailure(state.root, "fallback", result, [
+      "privateBodyPayload",
+      "export class Service"
+    ]);
+  } finally {
+    await state.cleanup();
+  }
+});
+
+test("plan provider missing selection is logged privately and summarized as not found", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  const missingRecordId = "private-missing-plan-record";
+  try {
+    const result = await executeToolHandlerWithFailureLogging(planPrepareDefinition, {
+      ...providerLookup(state.root),
+      portableSelections: [{kind: "file", recordId: missingRecordId}]
+    });
+    assert.equal(result.status, "not-found", JSON.stringify(result));
+    assert.equal(result.saved, false);
+    assert.equal(result.ready, false);
+    assert.equal(typeof result.reason, "string");
+    assert.equal(typeof result.nextAction, "string");
+
+    const logText = await fs.readFile(path.join(state.root, MCP_WRITE_FAILURE_LOG_PATH), "utf8");
+    const entry = JSON.parse(logText.trim().split("\n").at(-1)!);
+    assert.equal(entry.toolName, "blueprint_plan_prepare");
+    assert.equal(entry.failureKind, "rejected");
+    assert.deepEqual(entry.request, {});
+    assert.equal(entry.result.status, "not-found");
+    assert.equal(entry.result.saved, false);
+    assert.equal(entry.result.ready, false);
+    assertMetadataOnlyProviderLog(entry, logText, [missingRecordId, "privateBodyPayload", "src/service.ts"]);
+
+    const summary = summarizeToolResult("blueprint_plan_prepare", result);
+    assert.doesNotMatch(summary, /^Completed\b/);
+    assert.match(summary, /^Not found plan prepare/);
+    assert.match(summary, /status: not-found/);
+    assert.match(summary, /reason: The selected portable map evidence could not be proved/);
+    assert.match(summary, /Next action:/);
+  } finally {
+    await state.cleanup();
+  }
+});
+
+test("plan provider reread requirement is logged privately and summarized with its retry action", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  const changedBody = "PROVIDER_CHANGED_SOURCE_BODY";
+  try {
+    const prepared: any = await blueprintPlanPrepare({
+      ...providerLookup(state.root),
+      portableSelections: [state.selectionServiceFile]
+    });
+    assert.equal(prepared.status, "prepared", JSON.stringify(prepared));
+    await fs.appendFile(path.join(state.root, "src/service.ts"), `// ${changedBody}\n`);
+    const result = await executeToolHandlerWithFailureLogging(planPrepareDefinition, {
+      ...providerLookup(state.root),
+      portableSelections: [state.selectionServiceFile],
+      expectedRevision: prepared.revision,
+      evidenceDelivery: {mode: "delta"}
+    });
+    await assertLoggedProviderFailure(state.root, "reread_required", result, [
+      "privateBodyPayload",
+      "export class Service",
+      changedBody
+    ]);
+  } finally {
+    await state.cleanup();
+  }
+});
+
+test("plan provider evidence limit is logged privately and summarized with scope reduction guidance", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  const privateBody = "EVIDENCE_LIMIT_PRIVATE_BODY";
+  try {
+    const evidencePaths = Array.from({length: 60}, (_, index) => `evidence/limit-${index}.txt`);
+    await fs.mkdir(path.join(state.root, "evidence"), {recursive: true});
+    await Promise.all(evidencePaths.map((evidencePath, index) =>
+      fs.writeFile(path.join(state.root, evidencePath), `${privateBody}_${index}\n`)
+    ));
+    const result = await executeToolHandlerWithFailureLogging(planPrepareDefinition, {
+      ...providerLookup(state.root),
+      evidencePaths,
+      portableSelections: [state.selectionServiceFile]
+    });
+    await assertLoggedProviderFailure(state.root, "evidence_limit", result, [
+      privateBody,
+      "privateBodyPayload"
+    ]);
   } finally {
     await state.cleanup();
   }

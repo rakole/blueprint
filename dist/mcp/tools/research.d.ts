@@ -91,7 +91,7 @@ export declare function blueprintResearchPrepare(raw?: z.input<typeof prepareInp
     counts?: import("../evidence-delivery.js").EvidenceDeliveryCounts | undefined;
     diagnostics?: readonly unknown[] | undefined;
     code?: string | undefined;
-    status: "invalid" | "not-found" | "fallback" | "reread_required" | "evidence_limit";
+    status: "reread_required" | "evidence_limit" | "fallback" | "invalid" | "not-found";
     saved: boolean;
     ready: boolean;
     reason: string;

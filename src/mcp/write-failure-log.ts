@@ -8,6 +8,7 @@ import {
   toRepoRelativePath,
   withBlueprintRepoLock
 } from "./tools/artifacts.js";
+import { isNonSuccessToolStatus } from "./tool-result-status.js";
 
 const BLUEPRINT_DIR = ".blueprint";
 export const MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR}/mcp-write-failures.ndjson`;
@@ -53,8 +54,7 @@ function metadataOnlyInvocation(toolName: string, args: Record<string, unknown>)
 
 function failureMetadata(value: Record<string, unknown>, depth = 0): Record<string, unknown> {
   const metadata: Record<string, unknown> = {};
-  const statuses = new Set(["invalid", "blocked", "rejected", "stale", "partial", "failed", "error", "reconciliation_required", "not_found", "project_missing", "needs_revision", "refused", "outcome-unknown"]);
-  if (typeof value.status === "string" && statuses.has(value.status)) metadata.status = value.status;
+  if (isNonSuccessToolStatus(value.status)) metadata.status = value.status;
   if (["rejected-not-saved", "saved-but-state-incomplete", "complete"].includes(value.outcome as string)) metadata.outcome = value.outcome;
   const knownCodes = new Set([
     "schema.missing", "schema.type", "schema.required", "schema.additionalProperties",
@@ -71,7 +71,7 @@ function failureMetadata(value: Record<string, unknown>, depth = 0): Record<stri
       : (value.diagnosticCodes as unknown[]).slice(0, MAX_ARRAY_ITEMS);
     metadata.diagnosticCodes = [...new Set(codes.filter((code): code is string => typeof code === "string" && knownCodes.has(code)))];
   }
-  for (const key of ["revision", "expectedRevision", "recordCount", "valid", "written", "saved", "overwrite", "includeLog",
+  for (const key of ["revision", "expectedRevision", "recordCount", "valid", "written", "saved", "ready", "overwrite", "includeLog",
     "contentLength", "recordsCount", "issuesCount", "warningsCount", "diagnosticsCount", "modelSupplied", "candidateSupplied"]) {
     if (typeof value[key] === "boolean" || (typeof value[key] === "number" && Number.isFinite(value[key]))) metadata[key] = value[key];
   }

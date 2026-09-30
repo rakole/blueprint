@@ -13,12 +13,29 @@ import {renderPortableMap} from "../src/mcp/codebase-index/render.js";
 import {blueprintConfigSet} from "../src/mcp/tools/config.js";
 import {blueprintPhaseArtifactWrite} from "../src/mcp/tools/phase-artifacts.js";
 import {blueprintResearchPrepare, blueprintResearchRead, blueprintResearchSubmit, researchToolDefinitions} from "../src/mcp/tools/research.js";
+import {executeToolHandlerWithFailureLogging, summarizeToolResult} from "../src/mcp/server.js";
+import {MCP_WRITE_FAILURE_LOG_PATH} from "../src/mcp/write-failure-log.js";
 import {countPublicString, createProviderFixture, installSqlPortableMap, providerLookup} from "./helpers/portable-provider-fixture.js";
 
 const source = "export function entry() { return \"entry\"; }\n";
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 const phaseDir = ".blueprint/phases/01-research";
 const lookup = (cwd: string) => ({cwd, phase: "1"});
+const researchPrepareDefinition = researchToolDefinitions.find(tool => tool.name === "blueprint_research_prepare")!;
+
+function assertMetadataOnlyProviderLog(entry: Record<string, unknown>, logText: string, sentinels: readonly string[]) {
+  const sensitiveKeys = new Set(["evidence", "paths", "reason", "nextAction", "receipt", "pinReceipt", "portableSelections"]);
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) return value.forEach(visit);
+    if (!value || typeof value !== "object") return;
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      assert.equal(sensitiveKeys.has(key), false, `failure log retained ${key}`);
+      visit(child);
+    }
+  };
+  visit(entry);
+  for (const sentinel of sentinels) assert.equal(logText.includes(sentinel), false, `failure log retained ${sentinel}`);
+}
 
 function mapFixture() {
   const bytes = new TextEncoder().encode(source);
@@ -111,6 +128,41 @@ test("research portable provider retains one packet, durable metadata and delive
     const acknowledged: any = await blueprintResearchPrepare({...lookup(state.root), evidencePaths: ["src/entry.ts"], portableSelections: [selection], expectedRevision: published.revision + 1, acknowledgeChangedInputs: true, evidenceDelivery: {mode: "full"}});
     assert.equal(acknowledged.status, "prepared", JSON.stringify(acknowledged));
   } finally { await state.cleanup(); }
+});
+
+test("research provider missing selection is logged privately and summarized as not found", async () => {
+  const state = await createProviderFixture({portableOnly: true});
+  const missingRecordId = "private-missing-research-record";
+  try {
+    const result = await executeToolHandlerWithFailureLogging(researchPrepareDefinition, {
+      ...providerLookup(state.root),
+      portableSelections: [{kind: "file", recordId: missingRecordId}]
+    });
+    assert.equal(result.status, "not-found", JSON.stringify(result));
+    assert.equal(result.saved, false);
+    assert.equal(result.ready, false);
+    assert.equal(typeof result.reason, "string");
+    assert.equal(typeof result.nextAction, "string");
+
+    const logText = await fs.readFile(path.join(state.root, MCP_WRITE_FAILURE_LOG_PATH), "utf8");
+    const entry = JSON.parse(logText.trim().split("\n").at(-1)!);
+    assert.equal(entry.toolName, "blueprint_research_prepare");
+    assert.equal(entry.failureKind, "rejected");
+    assert.deepEqual(entry.request, {});
+    assert.equal(entry.result.status, "not-found");
+    assert.equal(entry.result.saved, false);
+    assert.equal(entry.result.ready, false);
+    assertMetadataOnlyProviderLog(entry, logText, [missingRecordId, "privateBodyPayload", "src/service.ts"]);
+
+    const summary = summarizeToolResult("blueprint_research_prepare", result);
+    assert.doesNotMatch(summary, /^Completed\b/);
+    assert.match(summary, /^Not found research prepare/);
+    assert.match(summary, /status: not-found/);
+    assert.match(summary, /reason: The selected portable map evidence could not be proved/);
+    assert.match(summary, /Next action:/);
+  } finally {
+    await state.cleanup();
+  }
 });
 
 test("research ordinary source delivery works without a map and enforces combined limits", async () => {
