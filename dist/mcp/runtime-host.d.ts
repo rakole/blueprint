@@ -1,9 +1,9 @@
-export type BlueprintRuntimeHostId = "gemini" | "tabnine";
+export type BlueprintRuntimeHostId = "opencode" | "gemini" | "tabnine";
 export type BlueprintRuntimeHost = {
     host: BlueprintRuntimeHostId;
-    cliHomeDirName: ".gemini" | ".tabnine";
-    contextFileName: "GEMINI.md" | "TABNINE.md";
-    manifestFileName: "gemini-extension.json" | "tabnine-extension.json";
+    cliHomeDirName: ".config/opencode";
+    contextFileName: "AGENTS.md";
+    manifestFileName: "package.json";
     extensionPath: string | null;
     globalBlueprintDir: string;
     defaultsPath: string;

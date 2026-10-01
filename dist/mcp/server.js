@@ -25723,7 +25723,10 @@ function normalizeHostId(value) {
   if (!normalized) {
     return null;
   }
-  return BLUEPRINT_HOST_IDS.includes(normalized) ? normalized : null;
+  if (normalized !== "opencode") {
+    throw new Error(`Unsupported BLUEPRINT_HOST ${JSON.stringify(value)}; expected opencode.`);
+  }
+  return "opencode";
 }
 function trimTrailingSeparators(value) {
   return value.replace(/[\\/]+$/, "");
@@ -25745,24 +25748,12 @@ function inferHostFromExtensionPath(extensionPath) {
   if (!normalizedPath) {
     return null;
   }
-  if (normalizedPath.includes(`${path4.sep}.tabnine${path4.sep}`)) {
-    return "tabnine";
-  }
-  if (normalizedPath.includes(`${path4.sep}.gemini${path4.sep}`)) {
-    return "gemini";
-  }
-  const slashNormalizedPath = normalizedPath.replaceAll("\\", "/");
-  if (slashNormalizedPath.includes("/.tabnine/")) {
-    return "tabnine";
-  }
-  if (slashNormalizedPath.includes("/.gemini/")) {
-    return "gemini";
-  }
-  return null;
+  return "opencode";
 }
-function buildDefaultGlobalBlueprintDir(host) {
-  const cliHomeDirName = host === "tabnine" ? ".tabnine" : ".gemini";
-  return path4.join(os.homedir(), cliHomeDirName, "blueprint");
+function buildDefaultGlobalBlueprintDir(host, env2) {
+  void host;
+  const dataRoot = env2.XDG_DATA_HOME?.trim() || path4.join(os.homedir(), ".local", "share");
+  return path4.join(dataRoot, "opencode", "blueprint");
 }
 function normalizeGlobalBlueprintDir(value) {
   return trimTrailingSeparators(path4.resolve(expandHomePath(value)));
@@ -25771,19 +25762,20 @@ function buildRuntimeHostCacheKey(env2) {
   return JSON.stringify({
     host: env2.BLUEPRINT_HOST ?? null,
     extensionPath: env2.BLUEPRINT_EXTENSION_PATH ?? null,
-    globalHome: env2.BLUEPRINT_GLOBAL_HOME ?? null
+    globalHome: env2.BLUEPRINT_GLOBAL_HOME ?? null,
+    xdgDataHome: env2.XDG_DATA_HOME ?? null
   });
 }
 function buildRuntimeHost(env2 = process.env) {
   const explicitHost = normalizeHostId(env2.BLUEPRINT_HOST);
   const extensionPath = env2.BLUEPRINT_EXTENSION_PATH?.trim() || null;
   const inferredHost = inferHostFromExtensionPath(extensionPath ?? void 0);
-  const host = explicitHost ?? inferredHost ?? "gemini";
-  const cliHomeDirName = host === "tabnine" ? ".tabnine" : ".gemini";
-  const contextFileName = host === "tabnine" ? "TABNINE.md" : "GEMINI.md";
-  const manifestFileName = host === "tabnine" ? "tabnine-extension.json" : "gemini-extension.json";
+  const host = explicitHost ?? inferredHost ?? "opencode";
+  const cliHomeDirName = ".config/opencode";
+  const contextFileName = "AGENTS.md";
+  const manifestFileName = "package.json";
   const globalBlueprintDir = normalizeGlobalBlueprintDir(
-    env2.BLUEPRINT_GLOBAL_HOME?.trim() || buildDefaultGlobalBlueprintDir(host)
+    env2.BLUEPRINT_GLOBAL_HOME?.trim() || buildDefaultGlobalBlueprintDir(host, env2)
   );
   return {
     host,
@@ -25809,11 +25801,10 @@ function getBlueprintRuntimeHost() {
   }
   return cachedRuntimeHost;
 }
-var BLUEPRINT_HOST_IDS, cachedRuntimeHost, cachedRuntimeHostKey;
+var cachedRuntimeHost, cachedRuntimeHostKey;
 var init_runtime_host = __esm({
   "src/mcp/runtime-host.ts"() {
     "use strict";
-    BLUEPRINT_HOST_IDS = ["gemini", "tabnine"];
     cachedRuntimeHost = null;
     cachedRuntimeHostKey = null;
   }
