@@ -11,7 +11,7 @@ Fresh worktree:
 npm ci
 ```
 
-Canonical local verification (build first, then every non-fixture `*.test.ts`
+Canonical offline/source verification (build first, then every non-fixture `*.test.ts`
 entrypoint exactly once):
 
 ```bash
@@ -19,10 +19,8 @@ npm test
 ```
 
 The package-owned Node runner discovers files without shell glob expansion,
-excludes `tests/fixtures/**`, and runs the two built-asset checks after
-the parallel suite to isolate their shared `dist/` surface. Keep
-container-dependent extension installation coverage in
-the separate `npm run test:integration:extension` command.
+excludes `tests/fixtures/**`, and runs built-asset checks after the parallel
+suite to isolate their shared `dist/` surface.
 
 Production dependency security (requires advisory-network access):
 
@@ -101,6 +99,8 @@ npx tsx --test tests/*-metadata.test.ts
 npx tsx --test tests/skill-metadata.test.ts
 npx tsx --test tests/agent-schema.test.ts
 npx tsx --test tests/optional-agent-validity.test.ts
+npx tsx --test tests/opencode-command-catalog.test.ts
+npx tsx --test tests/opencode-package.test.ts
 ```
 
 Choose the matching command-family tests rather than running every metadata
@@ -121,30 +121,26 @@ Use focused tests for the touched domain:
 
 Add `npm test` when the contract affects multiple command families.
 
-## Build, Dist, Hook, Or Host Changes
+## Build, Package, Or Host Changes
 
 Run:
 
 ```bash
 npm run build
-npx tsx --test tests/built-assets-smoke.test.ts
+npm run test:focused -- tests/opencode-package.test.ts tests/runtime-host.test.ts
 ```
 
-For host behavior:
+Actual OpenCode launch is opt-in and separate from `npm test`:
 
 ```bash
-npm run smoke:gemini-clean-home
+BLUEPRINT_OPENCODE_BIN=/absolute/path/to/opencode \
+BLUEPRINT_OPENCODE_SOURCE=/absolute/path/to/opencode-source \
+npm run test:focused -- tests/opencode-registration.integration.ts
 ```
 
-For install bundle behavior when Docker is available:
-
-```bash
-npm run test:integration:extension
-```
-
-The install integration test stages shipped extension paths and intentionally
-excludes source-only and local development paths such as `src`, `node_modules`,
-`.planning`, and `.git`.
+This installs the exact local tarball into a disposable prefix and loads the
+installed `file://` entry in isolated roots. A skipped probe means host behavior
+is unqualified; it is neither a package failure nor a readiness success.
 
 ## Workspace And Maintenance Changes
 
@@ -167,3 +163,4 @@ Always report:
 - Pass or fail result.
 - Skipped checks and why.
 - Any unrelated baseline warning, such as existing audit findings.
+- Evidence class: source/offline, package, or actual host.

@@ -1,6 +1,6 @@
 # Product And Runtime Model
 
-Blueprint is a Gemini and Tabnine CLI extension for structured, artifact-backed
+Blueprint is an OpenCode plugin for structured, artifact-backed
 product work inside a repository. It is inspired by a retained workflow, but its
 runtime, command contracts, skills, agents, and MCP server are Blueprint-native.
 
@@ -9,9 +9,12 @@ runtime, command contracts, skills, agents, and MCP server are Blueprint-native.
 - Root router: `/blu`
 - Direct commands: `/blu-<command>`
 - Project-local state: `.blueprint/`
-- Host-global operational state: `~/.gemini/blueprint/` or
-  `~/.tabnine/blueprint/`, depending on host.
-- Extension install model: host manifest launches `dist/mcp/server.js`.
+- OpenCode data root: `$XDG_DATA_HOME/opencode` or its platform default.
+- Host-global state: `$BLUEPRINT_GLOBAL_HOME`, projected beneath that root.
+- Package entry: `dist/opencode/plugin.js`; MCP entry: `dist/mcp/server.js`.
+
+The installed package root is distinct from the customer repository used as
+the MCP server `cwd`.
 
 Commands are host slash commands. They are not shell commands.
 
@@ -19,7 +22,7 @@ Commands are host slash commands. They are not shell commands.
 
 Commands:
 
-- Live in `commands/*.toml`.
+- Live in `commands/*.md` with strict native YAML frontmatter.
 - Stay thin and user-facing.
 - Name the active skill and allowed MCP tool FQNs.
 - Explain visible progress, confirmation gates, and response shape.
@@ -65,7 +68,7 @@ Build and packaging:
 
 Do:
 
-- Keep Blueprint Gemini-native.
+- Keep Blueprint OpenCode-native.
 - Keep commands thin.
 - Keep persistence in MCP tools.
 - Keep hooks advisory.
@@ -78,3 +81,7 @@ Do not:
 - Treat a documented or README-listed command as runnable unless the runtime
   catalog says it is implemented.
 - Recommend planned, blocked, or repairing commands as executable next steps.
+
+Required command, primary-agent, skill, reference, containment, or hash failures
+fail closed. Invalid optional specialists are excluded with diagnostics and an
+inline workflow fallback. Static catalog/manifest validity is not host readiness.

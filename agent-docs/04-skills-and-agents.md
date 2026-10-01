@@ -4,7 +4,8 @@ Skills and agents are runtime guidance, not persistence layers.
 
 ## Skills
 
-Skills live at `skills/<skill>/SKILL.md`. A skill usually includes:
+Blueprint has 17 exact native skills at `skills/<skill>/SKILL.md`. Each has
+strict YAML frontmatter including:
 
 - Frontmatter with `name`, `description`, `status`, `commands`, and
   `input_bundles`.
@@ -13,8 +14,9 @@ Skills live at `skills/<skill>/SKILL.md`. A skill usually includes:
 - Optional agent rules.
 - Response and completion checks.
 
-Use only the active command's input bundle. Do not load sibling command
-references just because they share a skill.
+Load the primary skill exactly once. Then read only the manifest-resolved
+effective inputs: these exclude the supplied active command and inactive sibling
+bundles. The package manifest still hashes the full shipped reference closure.
 
 Do:
 
@@ -32,11 +34,22 @@ Do not:
 
 ## Agents
 
-Agents live in `agents/*.md`. Each agent has frontmatter with name, kind, tools,
-turn limits, and timeout, followed by a bounded contract.
+`agents/blueprint.md` is the required primary. Fifteen optional specialists use
+`mode: subagent`, positive native `steps`, and static `permission` maps. Invalid
+optional agents are omitted with diagnostics and an inline workflow fallback.
 
-Most Blueprint agents are read-only. The executor is the write-capable agent in
-the metadata allowlist.
+Fourteen specialists are read-only. The executor adds semantic `edit: allow`
+and narrowly approval-controlled `bash: ask`; control-plane and nested-task
+routes stay denied. Native `steps` is a step limit, not a wall-clock deadline.
+Static permissions are not a per-assignment filesystem sandbox, so every packet
+still defines exact scope, paths, evidence, output, and stop conditions.
+
+The primary receives a narrow `external_directory` mapping for validated
+installed skill directories and effective-reference parent directories only,
+expressed as `<absolute-dir>/*` with the wildcard default denied. Caller
+ask/deny restrictions are intersected afterward and can remove these grants.
+Specialists retain the canonical external-directory denial; arbitrary sibling
+or customer-external roots are never granted.
 
 Parent commands own:
 
@@ -85,6 +98,10 @@ Do not:
 - Let agents persist `.blueprint/` state by hand.
 - Let agents decide command routing independently of the catalog.
 - Let agents widen a command's allowed tools.
+
+Direct skill aliases are blocked before activity. The private review helper also
+requires an exact eligible review command, standalone `--feels-like-god`, and
+same-session correlation; this gate does not promise discovery invisibility.
 
 ### Conditional Codebase Navigation
 

@@ -5,8 +5,8 @@ Use these recipes to keep related surfaces aligned.
 ## Add Or Repair A Command
 
 1. Identify the command family and primary skill.
-2. Update or create `commands/blu-<command>.toml`.
-3. Update the primary skill's `commands` list and `input_bundles`.
+2. Update or create native `commands/blu-<command>.md`.
+3. Update the primary skill's command bundle and effective references.
 4. Add or update a command-specific runtime reference when behavior is too rich
    for the manifest.
 5. Update runtime-owned command metadata when that command is source-owned.
@@ -43,7 +43,8 @@ separate architecture decision.
 
 1. Identify the active command bundle.
 2. Keep shared skill rules separate from command-specific runtime details.
-3. Update `input_bundles` for the command.
+3. Update the declared bundle; exclude the supplied command and inactive sibling
+   bundles from effective inputs.
 4. Update optional agent rules only when the command contract allows them.
 5. Add metadata or bundle tests when input resolution changes.
 
@@ -66,9 +67,9 @@ separate architecture decision.
 
 ## Change Host Packaging
 
-1. Update both host manifests when behavior should match.
-2. Update runtime host resolution only through `src/mcp/runtime-host.ts`.
-3. Build before smoke or install checks.
-4. Run the clean-home smoke test for host startup and global-state changes.
-5. Run the integration install test when bundle/install behavior changes and
-   Docker is available.
+1. Keep package-root resolution separate from customer `cwd`.
+2. Update `src/opencode`, package/build source, and package tests together.
+3. Regenerate native hashes/closure before package checks.
+4. Use an exact local tarball in a disposable prefix for host qualification.
+5. Run actual OpenCode launch only as a separate opt-in gate; never publish or
+   globally install merely to qualify a checkout.
