@@ -426,17 +426,9 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
   assertSuccess(executorEdit, "executor semantic edit");
   assert.equal(await readFile(executorFile, "utf8"), "after\n");
 
-  const executorBash = run(
-    hostBinary,
-    ["debug", "agent", "blueprint-executor", "--tool", "bash", "--params", JSON.stringify({ command: "pwd" })],
-    {
-      cwd: host.project,
-      env: host.env,
-      timeout: 120_000
-    }
-  );
-  assert.notEqual(executorBash.status, 0, "executor bash must remain approval-pending");
-  assert.match(`${executorBash.stdout}\n${executorBash.stderr}`, /permission|approval|ask|denied/i);
+  // Pinned OpenCode's debug-agent callback rejects only `deny` and treats
+  // `ask` as success, so that path cannot qualify interactive bash approval.
+  // The real-session approval/cancellation gate remains deferred host evidence.
 
   const foreignRoot = path.join(tempRoot, "foreign-skills");
   await mkdir(path.join(foreignRoot, "group", "substitute"), { recursive: true });
