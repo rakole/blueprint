@@ -43,9 +43,13 @@ parent; it does not change the agent's read-only boundary.
 
 The parent supplies the repository root, exact snapshot- or operation-selected
 evidence paths, bounded packet pages/cursor when portable mode is active, assigned
-document keys, prepare's schema/example, requested focus, and stop conditions.
-Read `skills/blueprint-map/references/map-runtime-contract.md` for useful content
-guidance. Parent-owned effective `workflow.subagents=true` and an independent
+document keys, prepare's schema/example, requested focus, stop conditions, and
+the authoritative excerpt needed from
+`skills/blueprint-map/references/map-runtime-contract.md`. Treat that canonical
+path as a provenance label; do not read it from the customer checkout. If the
+excerpt is absent or insufficient, report the exact evidence gap and stop rather
+than guessing or attempting an external-directory read. Parent-owned effective
+`workflow.subagents=true` and an independent
 analysis benefit are prerequisites for this optional lane.
 
 Possible assignments are tech (`stack`, `integrations`), architecture

@@ -104,7 +104,7 @@ open-ended repo context. The packet must stay read-only and include:
    phase structure.
 2. Use external references only when the parent explicitly supplied or approved
    them, and label them as outside context instead of roadmap truth.
-3. If sequencing advice depends on uncertain Gemini-specific or runtime
+3. If sequencing advice depends on uncertain OpenCode host/tool or runtime
    behavior, stop and tell the parent which parent-supplied runtime contract
    excerpt, parent-approved host/tool semantics clarification packet, or
    runtime-owned metadata/resource fact is missing, and return

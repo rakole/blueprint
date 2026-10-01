@@ -43,6 +43,9 @@ For qualification, build and pack the exact checkout, install the tarball into
 a disposable private prefix, resolve its exported entry to a `file://` URL, and
 place that URL in an isolated OpenCode config. Isolate HOME, XDG roots, customer
 project, config, and `BLUEPRINT_GLOBAL_HOME`. Do not publish or install globally.
+The supported opt-in route is `npm run test:integration:opencode`; it builds,
+checks the private package, and runs registration only when the pinned host
+environment is supplied.
 
 ## Build Output
 

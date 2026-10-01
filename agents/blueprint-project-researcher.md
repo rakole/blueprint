@@ -71,7 +71,7 @@ Gather repo and product context during bootstrap or milestone-definition work.
    decisions.
 2. Use outside references only when the parent explicitly supplied or approved
    them, and keep that external context separate from repo evidence.
-3. If Gemini-specific or bootstrap-contract behavior is uncertain, stop and
+3. If OpenCode host/tool or bootstrap-contract behavior is uncertain, stop and
    tell the parent which parent-supplied runtime contract excerpt,
    parent-approved host/tool semantics clarification packet, or
    runtime-owned metadata/resource fact is missing, and return

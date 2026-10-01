@@ -77,7 +77,7 @@ discovery flows.
 2. Use external design references only when the parent explicitly supplied or
    approved them, and label them as outside inspiration or validation rather
    than repo truth.
-3. If UI guidance depends on uncertain Gemini-specific or artifact-contract
+3. If UI guidance depends on uncertain OpenCode host/tool or artifact-contract
    behavior, stop and tell the parent which parent-supplied runtime contract
    excerpt, parent-approved host/tool semantics clarification packet, or
    runtime-owned metadata/resource fact is missing, and return

@@ -135,7 +135,7 @@ Actual OpenCode launch is opt-in and separate from `npm test`:
 ```bash
 BLUEPRINT_OPENCODE_BIN=/absolute/path/to/opencode \
 BLUEPRINT_OPENCODE_SOURCE=/absolute/path/to/opencode-source \
-npm run test:focused -- tests/opencode-registration.integration.ts
+npm run test:integration:opencode
 ```
 
 This installs the exact local tarball into a disposable prefix and loads the

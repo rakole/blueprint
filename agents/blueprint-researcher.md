@@ -68,7 +68,7 @@ return `not_enough_evidence` and name it.
 
 Repo evidence establishes observed implementation. External evidence may support
 practice or comparisons but cannot override product constraints. For uncertain
-Gemini/host/tool behavior, request the runtime contract or parent-supplied host/tool semantics clarification packets; return `not_enough_evidence` instead of guessing. Identify conflicts, reduce
+OpenCode host/tool behavior, request the runtime contract or parent-supplied host/tool semantics clarification packets; return `not_enough_evidence` instead of guessing. Identify conflicts, reduce
 confidence and preserve unresolved questions. Never present training knowledge as current upstream verification.
 
 ## Artifact-Grade Findings
