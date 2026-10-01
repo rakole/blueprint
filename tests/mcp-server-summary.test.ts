@@ -122,12 +122,9 @@ async function withEnvOverrides<T>(
 }
 
 async function createInstalledExtensionFixture(
-  tempRoot: string,
-  host: "gemini" | "tabnine" = "gemini"
+  tempRoot: string
 ): Promise<string> {
   const extensionPath = path.join(tempRoot, "installed-extension");
-  const manifestFileName = host === "gemini" ? "gemini-extension.json" : "tabnine-extension.json";
-  const contextFileName = host === "gemini" ? "GEMINI.md" : "TABNINE.md";
 
   await mkdir(extensionPath, { recursive: true });
   await writeFile(
@@ -142,20 +139,6 @@ async function createInstalledExtensionFixture(
     ),
     "utf8"
   );
-  await writeFile(
-    path.join(extensionPath, manifestFileName),
-    JSON.stringify(
-      {
-        name: "blueprint",
-        version: "0.1.0",
-        contextFileName
-      },
-      null,
-      2
-    ),
-    "utf8"
-  );
-
   return extensionPath;
 }
 
@@ -10334,7 +10317,7 @@ test("public patch reapply live MCP response trims registryPath", async () => {
 test("public update plan live MCP response preserves non-empty warnings while omitting extension manifest path and redundant top-level metadata path", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-update-plan-public-"));
   const globalHome = path.join(tempRoot, "global-home");
-  const extensionPath = await createInstalledExtensionFixture(tempRoot, "tabnine");
+  const extensionPath = await createInstalledExtensionFixture(tempRoot);
   const server = createBlueprintServer();
   const client = new Client(
     { name: "blueprint-update-plan-public-test-client", version: "1.0.0" },
@@ -10347,7 +10330,7 @@ test("public update plan live MCP response preserves non-empty warnings while om
   try {
     await withEnvOverrides(
       {
-        BLUEPRINT_HOST: "tabnine",
+        BLUEPRINT_HOST: "opencode",
         BLUEPRINT_GLOBAL_HOME: globalHome,
         BLUEPRINT_EXTENSION_PATH: extensionPath
       },
@@ -10407,7 +10390,7 @@ test("public update plan live MCP response preserves failed persistence fields a
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-update-plan-public-failure-"));
   const originalCwd = process.cwd();
   const globalHome = path.join(tempRoot, "global-home");
-  const extensionPath = await createInstalledExtensionFixture(tempRoot, "tabnine");
+  const extensionPath = await createInstalledExtensionFixture(tempRoot);
   const metadataPath = path.join(globalHome, "updates", "update-plan-latest.json");
   const checklistPath = path.join(globalHome, "updates", "update-plan-latest.md");
   const server = createBlueprintServer();
@@ -10441,7 +10424,7 @@ test("public update plan live MCP response preserves failed persistence fields a
     process.chdir(tempRoot);
     await withEnvOverrides(
       {
-        BLUEPRINT_HOST: "tabnine",
+        BLUEPRINT_HOST: "opencode",
         BLUEPRINT_GLOBAL_HOME: globalHome,
         BLUEPRINT_EXTENSION_PATH: extensionPath
       },
@@ -10488,7 +10471,7 @@ test("public update plan live MCP response preserves failed persistence fields a
 test("public update plan live MCP response omits empty top-level warnings while preserving steps, notes, and update fields", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-update-plan-public-empty-warnings-"));
   const globalHome = path.join(tempRoot, "global-home");
-  const extensionPath = await createInstalledExtensionFixture(tempRoot, "tabnine");
+  const extensionPath = await createInstalledExtensionFixture(tempRoot);
   const gitShimDir = await createGitShim(tempRoot);
   const server = createBlueprintServer();
   const client = new Client(
@@ -10516,7 +10499,7 @@ test("public update plan live MCP response omits empty top-level warnings while 
       async () => {
         await withEnvOverrides(
           {
-            BLUEPRINT_HOST: "tabnine",
+            BLUEPRINT_HOST: "opencode",
             BLUEPRINT_GLOBAL_HOME: globalHome,
             BLUEPRINT_EXTENSION_PATH: extensionPath,
             PATH: `${gitShimDir}${path.delimiter}${process.env.PATH ?? ""}`
@@ -11247,7 +11230,7 @@ test("public update check live MCP response preserves non-empty warnings while t
 
   await withEnvOverrides(
     {
-      BLUEPRINT_HOST: "gemini",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_EXTENSION_PATH: extensionPath
     },
     async () => {
@@ -11258,7 +11241,7 @@ test("public update check live MCP response preserves non-empty warnings while t
   try {
     const response = await withEnvOverrides(
       {
-        BLUEPRINT_HOST: "gemini",
+        BLUEPRINT_HOST: "opencode",
         BLUEPRINT_EXTENSION_PATH: extensionPath
       },
       async () =>
@@ -11319,7 +11302,7 @@ test("public update check live MCP response omits empty top-level warnings while
 
   await withEnvOverrides(
     {
-      BLUEPRINT_HOST: "gemini",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_EXTENSION_PATH: extensionPath,
       PATH: `${gitShimDir}${path.delimiter}${process.env.PATH ?? ""}`
     },
@@ -11345,7 +11328,7 @@ test("public update check live MCP response omits empty top-level warnings while
       async () => {
         const response = await withEnvOverrides(
           {
-            BLUEPRINT_HOST: "gemini",
+            BLUEPRINT_HOST: "opencode",
             BLUEPRINT_EXTENSION_PATH: extensionPath,
             PATH: `${gitShimDir}${path.delimiter}${process.env.PATH ?? ""}`
           },
