@@ -1,4 +1,4 @@
-export type BlueprintRuntimeHostId = "opencode" | "gemini" | "tabnine";
+export type BlueprintRuntimeHostId = "opencode";
 export type BlueprintRuntimeHost = {
     host: BlueprintRuntimeHostId;
     cliHomeDirName: ".config/opencode";

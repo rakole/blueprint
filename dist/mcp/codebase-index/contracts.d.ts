@@ -185,6 +185,7 @@ export type PortableFileRecord = z.infer<typeof portableFileRecordSchema>;
 export declare const PORTABLE_MAP_SYMBOL_KINDS: readonly ["module", "class", "interface", "type", "enum", "function", "method", "constructor", "variable", "constant", "property", "field", "unknown"];
 export declare const portableSymbolKindSchema: z.ZodEnum<{
     function: "function";
+    constructor: "constructor";
     unknown: "unknown";
     enum: "enum";
     type: "type";
@@ -192,7 +193,6 @@ export declare const portableSymbolKindSchema: z.ZodEnum<{
     class: "class";
     interface: "interface";
     method: "method";
-    constructor: "constructor";
     variable: "variable";
     constant: "constant";
     property: "property";
@@ -262,6 +262,7 @@ export declare const portableSymbolRecordSchema: z.ZodObject<{
     qualifiedName: z.ZodOptional<z.ZodString>;
     kind: z.ZodEnum<{
         function: "function";
+        constructor: "constructor";
         unknown: "unknown";
         enum: "enum";
         type: "type";
@@ -269,7 +270,6 @@ export declare const portableSymbolRecordSchema: z.ZodObject<{
         class: "class";
         interface: "interface";
         method: "method";
-        constructor: "constructor";
         variable: "variable";
         constant: "constant";
         property: "property";
@@ -567,6 +567,7 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
         qualifiedName: z.ZodOptional<z.ZodString>;
         kind: z.ZodEnum<{
             function: "function";
+            constructor: "constructor";
             unknown: "unknown";
             enum: "enum";
             type: "type";
@@ -574,7 +575,6 @@ export declare const portableStructuralInventorySchema: z.ZodObject<{
             class: "class";
             interface: "interface";
             method: "method";
-            constructor: "constructor";
             variable: "variable";
             constant: "constant";
             property: "property";
@@ -1629,6 +1629,7 @@ export declare const portableModelPacketSchema: z.ZodObject<{
         qualifiedName: z.ZodOptional<z.ZodString>;
         kind: z.ZodEnum<{
             function: "function";
+            constructor: "constructor";
             unknown: "unknown";
             enum: "enum";
             type: "type";
@@ -1636,7 +1637,6 @@ export declare const portableModelPacketSchema: z.ZodObject<{
             class: "class";
             interface: "interface";
             method: "method";
-            constructor: "constructor";
             variable: "variable";
             constant: "constant";
             property: "property";
@@ -1871,6 +1871,7 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
         qualifiedName: z.ZodOptional<z.ZodString>;
         kind: z.ZodEnum<{
             function: "function";
+            constructor: "constructor";
             unknown: "unknown";
             enum: "enum";
             type: "type";
@@ -1878,7 +1879,6 @@ export declare const portableModelEvidencePacketSchema: z.ZodObject<{
             class: "class";
             interface: "interface";
             method: "method";
-            constructor: "constructor";
             variable: "variable";
             constant: "constant";
             property: "property";

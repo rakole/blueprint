@@ -35,66 +35,66 @@ This chooser is generated from `generated/command-catalog.json`. 55 direct comma
 <!-- command-registry:readme-runtime-layout:start -->
 The active command map is generated from `src/mcp/command-runtime-metadata.ts` into `generated/command-catalog.json`. Runtime availability still comes from the live `blueprint_command_catalog` check, so missing manifests, skills, MCP tools, or required runtime inputs downgrade commands before they can be recommended.
 
-- Root router manifest: `commands/blu.toml`
+- Root router manifest: `commands/blu.md`
 - Runnable direct command manifests: 55
 - Non-runnable retained command: 1
 
 Runnable command manifests:
-- `commands/blu-add-backlog.toml`
-- `commands/blu-add-phase.toml`
-- `commands/blu-add-tests.toml`
-- `commands/blu-add-todo.toml`
-- `commands/blu-audit-fix.toml`
-- `commands/blu-audit-milestone.toml`
-- `commands/blu-check-todos.toml`
-- `commands/blu-cleanup.toml`
-- `commands/blu-code-review-fix.toml`
-- `commands/blu-code-review.toml`
-- `commands/blu-complete-milestone.toml`
-- `commands/blu-debug.toml`
-- `commands/blu-discuss-phase.toml`
-- `commands/blu-docs-update.toml`
-- `commands/blu-execute-phase.toml`
-- `commands/blu-explore.toml`
-- `commands/blu-fast.toml`
-- `commands/blu-health.toml`
-- `commands/blu-help.toml`
-- `commands/blu-impact.toml`
-- `commands/blu-insert-phase.toml`
-- `commands/blu-list-phase-assumptions.toml`
-- `commands/blu-map-codebase.toml`
-- `commands/blu-milestone-summary.toml`
-- `commands/blu-new-milestone.toml`
-- `commands/blu-new-project.toml`
-- `commands/blu-new-workspace.toml`
-- `commands/blu-next.toml`
-- `commands/blu-note.toml`
-- `commands/blu-pause-work.toml`
-- `commands/blu-plan-milestone-gaps.toml`
-- `commands/blu-plan-phase.toml`
-- `commands/blu-pr-branch.toml`
-- `commands/blu-progress.toml`
-- `commands/blu-quick.toml`
-- `commands/blu-reapply-patches.toml`
-- `commands/blu-remove-phase.toml`
-- `commands/blu-remove-workspace.toml`
-- `commands/blu-research-phase.toml`
-- `commands/blu-resume-work.toml`
-- `commands/blu-review-backlog.toml`
-- `commands/blu-review.toml`
-- `commands/blu-run-plan.toml`
-- `commands/blu-secure-phase.toml`
-- `commands/blu-set-profile.toml`
-- `commands/blu-settings.toml`
-- `commands/blu-ship.toml`
-- `commands/blu-spec-phase.toml`
-- `commands/blu-ui-phase.toml`
-- `commands/blu-ui-review.toml`
-- `commands/blu-undo.toml`
-- `commands/blu-update.toml`
-- `commands/blu-validate-phase.toml`
-- `commands/blu-verify-work.toml`
-- `commands/blu-workstreams.toml`
+- `commands/blu-add-backlog.md`
+- `commands/blu-add-phase.md`
+- `commands/blu-add-tests.md`
+- `commands/blu-add-todo.md`
+- `commands/blu-audit-fix.md`
+- `commands/blu-audit-milestone.md`
+- `commands/blu-check-todos.md`
+- `commands/blu-cleanup.md`
+- `commands/blu-code-review-fix.md`
+- `commands/blu-code-review.md`
+- `commands/blu-complete-milestone.md`
+- `commands/blu-debug.md`
+- `commands/blu-discuss-phase.md`
+- `commands/blu-docs-update.md`
+- `commands/blu-execute-phase.md`
+- `commands/blu-explore.md`
+- `commands/blu-fast.md`
+- `commands/blu-health.md`
+- `commands/blu-help.md`
+- `commands/blu-impact.md`
+- `commands/blu-insert-phase.md`
+- `commands/blu-list-phase-assumptions.md`
+- `commands/blu-map-codebase.md`
+- `commands/blu-milestone-summary.md`
+- `commands/blu-new-milestone.md`
+- `commands/blu-new-project.md`
+- `commands/blu-new-workspace.md`
+- `commands/blu-next.md`
+- `commands/blu-note.md`
+- `commands/blu-pause-work.md`
+- `commands/blu-plan-milestone-gaps.md`
+- `commands/blu-plan-phase.md`
+- `commands/blu-pr-branch.md`
+- `commands/blu-progress.md`
+- `commands/blu-quick.md`
+- `commands/blu-reapply-patches.md`
+- `commands/blu-remove-phase.md`
+- `commands/blu-remove-workspace.md`
+- `commands/blu-research-phase.md`
+- `commands/blu-resume-work.md`
+- `commands/blu-review-backlog.md`
+- `commands/blu-review.md`
+- `commands/blu-run-plan.md`
+- `commands/blu-secure-phase.md`
+- `commands/blu-set-profile.md`
+- `commands/blu-settings.md`
+- `commands/blu-ship.md`
+- `commands/blu-spec-phase.md`
+- `commands/blu-ui-phase.md`
+- `commands/blu-ui-review.md`
+- `commands/blu-undo.md`
+- `commands/blu-update.md`
+- `commands/blu-validate-phase.md`
+- `commands/blu-verify-work.md`
+- `commands/blu-workstreams.md`
 
 Runtime skill bundles used by runnable commands:
 - `skills/blueprint-bootstrap/SKILL.md`
@@ -363,7 +363,7 @@ Blueprint is opinionated about safety:
 <!-- command-registry:readme-non-public:start -->
 The retained entries below are not public runnable commands in the current runtime. `/blu`, `/blu-help`, `/blu-progress`, and `/blu-next` must not advertise them until the live catalog marks them `implemented`.
 
-- `do`: runtime status `repairing`, declared `planned`. Blocked by: Missing command manifest: commands/blu-do.toml.
+- `do`: runtime status `repairing`, declared `planned`. Blocked by: Missing command file: commands/blu-do.md.
 <!-- command-registry:readme-non-public:end -->
 
 ## Troubleshooting

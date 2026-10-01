@@ -1,3 +1,4 @@
+import { createRequire as __blueprintCreateRequire } from "node:module"; const require = __blueprintCreateRequire(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -107,17 +108,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path3) {
-      const ctrl = callVisitor(key, node, visitor, path3);
+    function visit_(key, node, visitor, path6) {
+      const ctrl = callVisitor(key, node, visitor, path6);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path3, ctrl);
-        return visit_(key, ctrl, visitor, path3);
+        replaceNode(key, path6, ctrl);
+        return visit_(key, ctrl, visitor, path6);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path3 = Object.freeze(path3.concat(node));
+          path6 = Object.freeze(path6.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path3);
+            const ci = visit_(i, node.items[i], visitor, path6);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -128,13 +129,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path3 = Object.freeze(path3.concat(node));
-          const ck = visit_("key", node.key, visitor, path3);
+          path6 = Object.freeze(path6.concat(node));
+          const ck = visit_("key", node.key, visitor, path6);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path3);
+          const cv = visit_("value", node.value, visitor, path6);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -155,17 +156,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path3) {
-      const ctrl = await callVisitor(key, node, visitor, path3);
+    async function visitAsync_(key, node, visitor, path6) {
+      const ctrl = await callVisitor(key, node, visitor, path6);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path3, ctrl);
-        return visitAsync_(key, ctrl, visitor, path3);
+        replaceNode(key, path6, ctrl);
+        return visitAsync_(key, ctrl, visitor, path6);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path3 = Object.freeze(path3.concat(node));
+          path6 = Object.freeze(path6.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path3);
+            const ci = await visitAsync_(i, node.items[i], visitor, path6);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -176,13 +177,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path3 = Object.freeze(path3.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path3);
+          path6 = Object.freeze(path6.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path6);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path3);
+          const cv = await visitAsync_("value", node.value, visitor, path6);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -209,23 +210,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path3) {
+    function callVisitor(key, node, visitor, path6) {
       if (typeof visitor === "function")
-        return visitor(key, node, path3);
+        return visitor(key, node, path6);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path3);
+        return visitor.Map?.(key, node, path6);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path3);
+        return visitor.Seq?.(key, node, path6);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path3);
+        return visitor.Pair?.(key, node, path6);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path3);
+        return visitor.Scalar?.(key, node, path6);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path3);
+        return visitor.Alias?.(key, node, path6);
       return void 0;
     }
-    function replaceNode(key, path3, node) {
-      const parent = path3[path3.length - 1];
+    function replaceNode(key, path6, node) {
+      const parent = path6[path6.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -837,10 +838,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path3, value) {
+    function collectionFromPath(schema, path6, value) {
       let v = value;
-      for (let i = path3.length - 1; i >= 0; --i) {
-        const k = path3[i];
+      for (let i = path6.length - 1; i >= 0; --i) {
+        const k = path6[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -859,7 +860,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path3) => path3 == null || typeof path3 === "object" && !!path3[Symbol.iterator]().next().done;
+    var isEmptyPath = (path6) => path6 == null || typeof path6 === "object" && !!path6[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -889,11 +890,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path3, value) {
-        if (isEmptyPath(path3))
+      addIn(path6, value) {
+        if (isEmptyPath(path6))
           this.add(value);
         else {
-          const [key, ...rest] = path3;
+          const [key, ...rest] = path6;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -907,8 +908,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path3) {
-        const [key, ...rest] = path3;
+      deleteIn(path6) {
+        const [key, ...rest] = path6;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -922,8 +923,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path3, keepScalar) {
-        const [key, ...rest] = path3;
+      getIn(path6, keepScalar) {
+        const [key, ...rest] = path6;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -941,8 +942,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path3) {
-        const [key, ...rest] = path3;
+      hasIn(path6) {
+        const [key, ...rest] = path6;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -952,8 +953,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path3, value) {
-        const [key, ...rest] = path3;
+      setIn(path6, value) {
+        const [key, ...rest] = path6;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -3468,9 +3469,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path3, value) {
+      addIn(path6, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path3, value);
+          this.contents.addIn(path6, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3545,14 +3546,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path3) {
-        if (Collection.isEmptyPath(path3)) {
+      deleteIn(path6) {
+        if (Collection.isEmptyPath(path6)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path3) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path6) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3567,10 +3568,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path3, keepScalar) {
-        if (Collection.isEmptyPath(path3))
+      getIn(path6, keepScalar) {
+        if (Collection.isEmptyPath(path6))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path3, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path6, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3581,10 +3582,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path3) {
-        if (Collection.isEmptyPath(path3))
+      hasIn(path6) {
+        if (Collection.isEmptyPath(path6))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path3) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path6) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3601,13 +3602,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path3, value) {
-        if (Collection.isEmptyPath(path3)) {
+      setIn(path6, value) {
+        if (Collection.isEmptyPath(path6)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path3), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path6), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path3, value);
+          this.contents.setIn(path6, value);
         }
       }
       /**
@@ -5568,9 +5569,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path3) => {
+    visit.itemAtPath = (cst, path6) => {
       let item = cst;
-      for (const [field, index] of path3) {
+      for (const [field, index] of path6) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5579,23 +5580,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path3) => {
-      const parent = visit.itemAtPath(cst, path3.slice(0, -1));
-      const field = path3[path3.length - 1][0];
+    visit.parentCollection = (cst, path6) => {
+      const parent = visit.itemAtPath(cst, path6.slice(0, -1));
+      const field = path6[path6.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path3, item, visitor) {
-      let ctrl = visitor(item, path3);
+    function _visit(path6, item, visitor) {
+      let ctrl = visitor(item, path6);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path3.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path6.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5606,10 +5607,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path3);
+            ctrl = ctrl(item, path6);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path3) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path6) : ctrl;
     }
     exports.visit = visit;
   }
@@ -7361,9 +7362,9 @@ var require_dist = __commonJS({
 });
 
 // src/opencode/plugin.ts
-import path2 from "node:path";
+import path5 from "node:path";
 import os2 from "node:os";
-import { access, readdir as readdir2, readFile as readFile2, realpath as realpath2, stat } from "node:fs/promises";
+import { access, readdir as readdir2, readFile as readFile3, realpath as realpath3, stat } from "node:fs/promises";
 
 // src/opencode/activation.ts
 import { createHash } from "node:crypto";
@@ -7397,7 +7398,8 @@ function eventSessionId(event) {
   }
   return void 0;
 }
-function createBlueprintActivationHooks(skillAliases) {
+function createBlueprintActivationHooks(skillAliases, options = {}) {
+  const privateHelperQualified = options.privateHelperQualified === true;
   const pending = /* @__PURE__ */ new Map();
   const grants = /* @__PURE__ */ new Map();
   const clear = (sessionID) => {
@@ -7438,6 +7440,11 @@ function createBlueprintActivationHooks(skillAliases) {
     },
     "tool.execute.before": async (input, output) => {
       if (input.tool !== "skill" || output.args?.name !== GOD_REVIEW_SKILL) return;
+      if (!privateHelperQualified) {
+        throw new Error(
+          `${GOD_REVIEW_SKILL} is blocked because its native OpenCode activation lifecycle has not been qualified on the actual host.`
+        );
+      }
       if (!grants.has(input.sessionID)) {
         throw new Error(
           `${GOD_REVIEW_SKILL} requires /blu-code-review or /blu-code-review-fix with the standalone --feels-like-god flag in the same active user dispatch.`
@@ -7459,34 +7466,33 @@ function createBlueprintActivationHooks(skillAliases) {
 }
 
 // src/opencode/assets.ts
-import { lstat, readFile, readdir, realpath } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import { lstat as lstat2, readFile as readFile2, readdir, realpath as realpath2 } from "node:fs/promises";
+import path3 from "node:path";
 import { fileURLToPath } from "node:url";
 
 // src/shared/native-frontmatter.ts
 var import_yaml = __toESM(require_dist(), 1);
 var UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-function assertPlainValue(value, source, path3) {
+function assertPlainValue(value, source, path6) {
   if (value === null || ["string", "number", "boolean"].includes(typeof value)) {
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((item, index) => assertPlainValue(item, source, `${path3}[${index}]`));
+    value.forEach((item, index) => assertPlainValue(item, source, `${path6}[${index}]`));
     return;
   }
   if (typeof value !== "object") {
-    throw new Error(`${source}: unsupported YAML value at ${path3}`);
+    throw new Error(`${source}: unsupported YAML value at ${path6}`);
   }
   const prototype = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) {
-    throw new Error(`${source}: non-plain YAML object at ${path3}`);
+    throw new Error(`${source}: non-plain YAML object at ${path6}`);
   }
   for (const [key, item] of Object.entries(value)) {
     if (UNSAFE_KEYS.has(key)) {
-      throw new Error(`${source}: unsafe YAML key ${JSON.stringify(key)} at ${path3}`);
+      throw new Error(`${source}: unsafe YAML key ${JSON.stringify(key)} at ${path6}`);
     }
-    assertPlainValue(item, source, `${path3}.${key}`);
+    assertPlainValue(item, source, `${path6}.${key}`);
   }
 }
 function parseNativeMarkdown(content, source = "native Markdown") {
@@ -7527,9 +7533,266 @@ function parseNativeMarkdown(content, source = "native Markdown") {
   };
 }
 
+// src/mcp/skill-metadata.ts
+import path from "node:path";
+
+// src/mcp/runtime-vocabulary.ts
+var BLUEPRINT_SKILLS_DIRECTORY = "skills";
+var BLUEPRINT_SKILL_ENTRY_FILE = "SKILL.md";
+function blueprintDiscoverableSkillPath(skillName) {
+  return `${BLUEPRINT_SKILLS_DIRECTORY}/${skillName}/${BLUEPRINT_SKILL_ENTRY_FILE}`;
+}
+
+// src/mcp/skill-metadata.ts
+var BLUEPRINT_METADATA_KEYS = /* @__PURE__ */ new Set([
+  "name",
+  "description",
+  "status",
+  "commands",
+  "input_bundles"
+]);
+function expectString(value, source, key) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${source}: ${key} must be a non-empty string`);
+  }
+  return value.trim();
+}
+function expectStringArray(value, source, key) {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(`${source}: ${key} must be an array of strings`);
+  }
+  const normalized = value.map((item) => item.trim());
+  if (normalized.some((item) => item.length === 0)) {
+    throw new Error(`${source}: ${key} must not contain empty values`);
+  }
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error(`${source}: ${key} must not contain duplicates`);
+  }
+  return normalized;
+}
+function expectObject(value, source, key) {
+  if (value === null || Array.isArray(value) || typeof value !== "object") {
+    throw new Error(`${source}: ${key} must be a mapping`);
+  }
+  return value;
+}
+function assertPackageRelativePath(value, source, key) {
+  if (path.posix.isAbsolute(value) || value.includes("\\") || value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") || !value.startsWith("commands/") && !value.startsWith("skills/")) {
+    throw new Error(`${source}: ${key} must stay within packaged commands/ or skills/: ${JSON.stringify(value)}`);
+  }
+}
+function parseBlueprintSkillMetadata(skillName, content) {
+  const source = `skill ${skillName}`;
+  const { frontmatter } = parseNativeMarkdown(content, source);
+  for (const key of Object.keys(frontmatter)) {
+    if (!BLUEPRINT_METADATA_KEYS.has(key)) {
+      throw new Error(`${source}: unsupported frontmatter key ${JSON.stringify(key)}`);
+    }
+  }
+  const name = expectString(frontmatter.name, source, "name");
+  if (name !== skillName) {
+    throw new Error(`${source}: frontmatter name must equal ${JSON.stringify(skillName)}`);
+  }
+  const description = expectString(frontmatter.description, source, "description");
+  const status = frontmatter.status === void 0 ? void 0 : expectString(frontmatter.status, source, "status");
+  if (status !== void 0 && status !== "implemented") {
+    throw new Error(`${source}: status must be "implemented" when present`);
+  }
+  const commands = frontmatter.commands === void 0 ? [] : expectStringArray(frontmatter.commands, source, "commands");
+  for (const command of commands) {
+    if (command !== "/blu" && !/^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(command)) {
+      throw new Error(`${source}: commands contains an invalid Blueprint command ${JSON.stringify(command)}`);
+    }
+  }
+  if (frontmatter.input_bundles === void 0) {
+    return { name, description, status, commands, shared: [], commandBundles: {} };
+  }
+  const bundles = expectObject(frontmatter.input_bundles, source, "input_bundles");
+  for (const key of Object.keys(bundles)) {
+    if (key !== "shared" && key !== "commands") {
+      throw new Error(`${source}: unsupported input_bundles key ${JSON.stringify(key)}`);
+    }
+  }
+  const shared = expectStringArray(bundles.shared ?? [], source, "input_bundles.shared");
+  const rawCommandBundles = expectObject(
+    bundles.commands ?? {},
+    source,
+    "input_bundles.commands"
+  );
+  const commandBundles = {};
+  for (const [command, value] of Object.entries(rawCommandBundles)) {
+    if (!commands.includes(command)) {
+      throw new Error(`${source}: input_bundles.commands has unrecognized command key ${JSON.stringify(command)}`);
+    }
+    commandBundles[command] = expectStringArray(
+      value,
+      source,
+      `input_bundles.commands[${JSON.stringify(command)}]`
+    );
+  }
+  for (const [key, values] of [["input_bundles.shared", shared], ...Object.entries(commandBundles)]) {
+    for (const value of values) {
+      assertPackageRelativePath(value, source, key);
+    }
+  }
+  return { name, description, status, commands, shared, commandBundles };
+}
+function unique(values) {
+  return [...new Set(values)];
+}
+function activeCommandAsset(commandPath) {
+  if (commandPath === "/blu") {
+    return "commands/blu.md";
+  }
+  if (/^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(commandPath)) {
+    return `commands/${commandPath.slice(1)}.md`;
+  }
+  return null;
+}
+function resolveBlueprintSkillInputsFromContent(skillName, commandPath, content) {
+  const metadata = parseBlueprintSkillMetadata(skillName, content);
+  const shared = metadata.shared;
+  const commandSpecific = metadata.commandBundles[commandPath] ?? [];
+  const suppliedCommand = activeCommandAsset(commandPath);
+  return {
+    skill: skillName,
+    shared,
+    commandSpecific,
+    effective: unique([...shared, ...commandSpecific]).filter((input) => input !== suppliedCommand)
+  };
+}
+async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath, preferredPath) {
+  const canonicalPath = preferredPath ?? blueprintDiscoverableSkillPath(skillName);
+  assertPackageRelativePath(canonicalPath, `skill ${skillName}`, "skill path");
+  const content = await readRelativePath(canonicalPath);
+  if (content === null) {
+    return { skill: skillName, shared: [], commandSpecific: [], effective: [] };
+  }
+  const resolved = resolveBlueprintSkillInputsFromContent(skillName, commandPath, content);
+  for (const input of unique([...resolved.shared, ...resolved.commandSpecific])) {
+    if (await readRelativePath(input) === null) {
+      throw new Error(`skill ${skillName}: input bundle path is missing: ${input}`);
+    }
+  }
+  return resolved;
+}
+
+// src/opencode/asset-manifest.ts
+import { createHash as createHash2 } from "node:crypto";
+import { lstat, readFile, realpath } from "node:fs/promises";
+import path2 from "node:path";
+var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
+  "schemaVersion",
+  "generatedBy",
+  "assets",
+  "commands",
+  "agents",
+  "skillAliases",
+  "referenceClosure"
+]);
+var COMMAND_KEYS = /* @__PURE__ */ new Set(["path", "primarySkill", "effectiveInputs"]);
+var AGENT_KEYS = /* @__PURE__ */ new Set(["path"]);
+var SHA256 = /^[a-f0-9]{64}$/;
+function object(value, label) {
+  if (value === null || Array.isArray(value) || typeof value !== "object") {
+    throw new Error(`OpenCode asset manifest ${label} must be an object`);
+  }
+  return value;
+}
+function exactKeys(value, keys, label) {
+  const unknown = Object.keys(value).filter((key) => !keys.has(key));
+  const missing = [...keys].filter((key) => !(key in value));
+  if (unknown.length || missing.length) {
+    throw new Error(`OpenCode asset manifest ${label} has invalid keys (missing: ${missing.join(", ") || "none"}; unknown: ${unknown.join(", ") || "none"})`);
+  }
+}
+function relativePath(value, label) {
+  if (typeof value !== "string" || value.length === 0 || path2.posix.isAbsolute(value) || value.includes("\\") || value.split("/").some((part) => !part || part === "." || part === "..")) {
+    throw new Error(`OpenCode asset manifest ${label} must be a normalized package-relative path`);
+  }
+  return value;
+}
+function stringArray(value, label, paths = false, sorted = true) {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.length === 0)) {
+    throw new Error(`OpenCode asset manifest ${label} must be an array of non-empty strings`);
+  }
+  const result = paths ? value.map((item) => relativePath(item, label)) : [...value];
+  if (new Set(result).size !== result.length || sorted && [...result].sort().some((item, index) => item !== result[index])) {
+    throw new Error(`OpenCode asset manifest ${label} must be unique${sorted ? " and sorted" : ""}`);
+  }
+  return result;
+}
+function parseOpenCodeAssetManifest(value) {
+  const root = object(value, "root");
+  exactKeys(root, TOP_LEVEL_KEYS, "root");
+  if (root.schemaVersion !== 1 || root.generatedBy !== "scripts/generate-opencode-assets.ts") {
+    throw new Error("OpenCode asset manifest has an unsupported schemaVersion or generatedBy value");
+  }
+  const rawAssets = object(root.assets, "assets");
+  const assets = {};
+  for (const key of Object.keys(rawAssets).sort()) {
+    const assetPath = relativePath(key, `assets.${key}`);
+    const hash = rawAssets[key];
+    if (typeof hash !== "string" || !SHA256.test(hash)) throw new Error(`OpenCode asset manifest assets.${key} must be a SHA-256 digest`);
+    assets[assetPath] = hash;
+  }
+  const commands = {};
+  for (const key of Object.keys(object(root.commands, "commands")).sort()) {
+    if (!/^blu(?:-[a-z0-9]+)*$/.test(key)) throw new Error(`OpenCode asset manifest has invalid command identity ${key}`);
+    const entry = object(root.commands[key], `commands.${key}`);
+    exactKeys(entry, COMMAND_KEYS, `commands.${key}`);
+    if (typeof entry.primarySkill !== "string" || !/^blueprint-[a-z0-9-]+$/.test(entry.primarySkill)) throw new Error(`OpenCode asset manifest commands.${key}.primarySkill is invalid`);
+    commands[key] = { path: relativePath(entry.path, `commands.${key}.path`), primarySkill: entry.primarySkill, effectiveInputs: stringArray(entry.effectiveInputs, `commands.${key}.effectiveInputs`, true, false) };
+  }
+  const agents = {};
+  for (const key of Object.keys(object(root.agents, "agents")).sort()) {
+    if (!/^blueprint(?:-[a-z0-9]+)*$/.test(key)) throw new Error(`OpenCode asset manifest has invalid agent identity ${key}`);
+    const entry = object(root.agents[key], `agents.${key}`);
+    exactKeys(entry, AGENT_KEYS, `agents.${key}`);
+    agents[key] = { path: relativePath(entry.path, `agents.${key}.path`) };
+  }
+  const skillAliases = stringArray(root.skillAliases, "skillAliases");
+  const referenceClosure = stringArray(root.referenceClosure, "referenceClosure", true);
+  for (const [name, command] of Object.entries(commands)) {
+    for (const required of [command.path, `skills/${command.primarySkill}/SKILL.md`, ...command.effectiveInputs]) {
+      if (!(required in assets)) throw new Error(`OpenCode asset manifest command ${name} references unhashed asset ${required}`);
+    }
+    if (!skillAliases.includes(command.primarySkill)) throw new Error(`OpenCode asset manifest command ${name} references unknown primary skill ${command.primarySkill}`);
+  }
+  for (const [name, agent] of Object.entries(agents)) {
+    if (!(agent.path in assets)) throw new Error(`OpenCode asset manifest agent ${name} references unhashed asset ${agent.path}`);
+  }
+  for (const reference of referenceClosure) {
+    if (!(reference in assets)) throw new Error(`OpenCode asset manifest referenceClosure contains unhashed asset ${reference}`);
+  }
+  return { schemaVersion: 1, generatedBy: "scripts/generate-opencode-assets.ts", assets, commands, agents, skillAliases, referenceClosure };
+}
+function assertContained(root, candidate) {
+  const relative = path2.relative(root, candidate);
+  if (relative.startsWith("..") || path2.isAbsolute(relative)) throw new Error(`OpenCode packaged asset escapes package root: ${candidate}`);
+}
+async function validateManifestAsset(packageRoot, relative, expectedHash) {
+  const canonicalRoot = await realpath(packageRoot);
+  const candidate = path2.join(canonicalRoot, relative);
+  const stat2 = await lstat(candidate);
+  if (!stat2.isFile() || stat2.isSymbolicLink()) throw new Error(`OpenCode packaged asset must be a literal regular file: ${relative}`);
+  assertContained(canonicalRoot, await realpath(candidate));
+  const actual = createHash2("sha256").update(await readFile(candidate)).digest("hex");
+  if (actual !== expectedHash) throw new Error(`OpenCode packaged asset hash mismatch: ${relative}`);
+  return candidate;
+}
+async function loadOpenCodeAssetManifest(packageRoot) {
+  const canonicalRoot = await realpath(packageRoot);
+  const manifestPath = path2.join(canonicalRoot, "generated", "opencode-assets.json");
+  const stat2 = await lstat(manifestPath);
+  if (!stat2.isFile() || stat2.isSymbolicLink()) throw new Error("generated/opencode-assets.json must be a literal regular file");
+  assertContained(canonicalRoot, await realpath(manifestPath));
+  return parseOpenCodeAssetManifest(JSON.parse(await readFile(manifestPath, "utf8")));
+}
+
 // src/opencode/assets.ts
-var COMMAND_KEYS = /* @__PURE__ */ new Set(["description", "agent", "subtask"]);
-var AGENT_KEYS = /* @__PURE__ */ new Set(["description", "mode", "steps", "permission"]);
+var COMMAND_KEYS2 = /* @__PURE__ */ new Set(["description", "agent", "subtask"]);
+var AGENT_KEYS2 = /* @__PURE__ */ new Set(["description", "mode", "steps", "permission"]);
 var PERMISSION_ACTIONS = /* @__PURE__ */ new Set(["allow", "ask", "deny"]);
 function assertExactKeys(value, allowed, source) {
   const unknown = Object.keys(value).filter((key) => !allowed.has(key));
@@ -7569,43 +7832,54 @@ function validatePermission(value, source) {
   }
   return result;
 }
-function assertContained(packageRoot, candidate) {
-  const relative = path.relative(packageRoot, candidate);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+function assertContained2(packageRoot, candidate) {
+  const relative = path3.relative(packageRoot, candidate);
+  if (relative.startsWith("..") || path3.isAbsolute(relative)) {
     throw new Error(`Native asset escapes the package root: ${candidate}`);
   }
 }
 async function assertLiteralDirectory(packageRoot, directory) {
-  const stat2 = await lstat(directory);
+  const stat2 = await lstat2(directory);
   if (!stat2.isDirectory() || stat2.isSymbolicLink()) {
     throw new Error(`Native asset directory must be a literal directory: ${directory}`);
   }
-  assertContained(packageRoot, await realpath(directory));
+  assertContained2(packageRoot, await realpath2(directory));
 }
 async function assertRegularFile(packageRoot, file) {
-  const stat2 = await lstat(file);
+  const stat2 = await lstat2(file);
   if (!stat2.isFile() || stat2.isSymbolicLink()) {
     throw new Error(`Native asset must be a literal regular file: ${file}`);
   }
-  assertContained(packageRoot, await realpath(file));
+  assertContained2(packageRoot, await realpath2(file));
 }
 async function markdownFiles(packageRoot, directory) {
   await assertLiteralDirectory(packageRoot, directory);
   const entries = await readdir(directory, { withFileTypes: true });
   const linkedMarkdown = entries.find((entry) => entry.isSymbolicLink() && entry.name.endsWith(".md"));
   if (linkedMarkdown) {
-    throw new Error(`Native asset must not be a symbolic link: ${path.join(directory, linkedMarkdown.name)}`);
+    throw new Error(`Native asset must not be a symbolic link: ${path3.join(directory, linkedMarkdown.name)}`);
   }
-  return entries.filter((entry) => entry.isFile() && !entry.isSymbolicLink() && entry.name.endsWith(".md")).map((entry) => path.join(directory, entry.name)).sort();
+  return entries.filter((entry) => entry.isFile() && !entry.isSymbolicLink() && entry.name.endsWith(".md")).map((entry) => path3.join(directory, entry.name)).sort();
 }
-async function loadCommands(packageRoot) {
+function commandPacket(primarySkill, effectiveInputs) {
+  const inputs = effectiveInputs.length > 0 ? effectiveInputs.map((input) => `- ${input}`).join("\n") : "- none";
+  return [
+    "",
+    "Blueprint native loading contract:",
+    `1. Load the \`${primarySkill}\` skill exactly once with the native skill tool.`,
+    "2. Read only these already-resolved active package inputs (absolute paths):",
+    inputs,
+    "Do not rediscover skill metadata, load sibling bundles, or reread this active command."
+  ].join("\n");
+}
+async function loadCommands(packageRoot, manifest) {
   const result = {};
-  for (const file of await markdownFiles(packageRoot, path.join(packageRoot, "commands"))) {
+  for (const file of await markdownFiles(packageRoot, path3.join(packageRoot, "commands"))) {
     await assertRegularFile(packageRoot, file);
-    const source = path.relative(packageRoot, file);
-    const parsed = parseNativeMarkdown(await readFile(file, "utf8"), source);
-    assertExactKeys(parsed.frontmatter, COMMAND_KEYS, source);
-    const name = path.basename(file, ".md");
+    const source = path3.relative(packageRoot, file);
+    const parsed = parseNativeMarkdown(await readFile2(file, "utf8"), source);
+    assertExactKeys(parsed.frontmatter, COMMAND_KEYS2, source);
+    const name = path3.basename(file, ".md");
     if (name in result) throw new Error(`${source}: duplicate native command ${name}`);
     if (parsed.frontmatter.agent !== "blueprint") {
       throw new Error(`${source}: native command agent must be blueprint`);
@@ -7615,64 +7889,88 @@ async function loadCommands(packageRoot) {
     }
     const description = requiredString(parsed.frontmatter.description, "description", source);
     if (parsed.body.trim().length === 0) throw new Error(`${source}: command body must not be empty`);
+    const manifestEntry = manifest.commands[name];
+    if (!manifestEntry || manifestEntry.path !== source) throw new Error(`${source}: command is missing or mismatched in generated/opencode-assets.json`);
     result[name] = {
       description,
       agent: "blueprint",
       subtask: false,
-      template: parsed.body.trim()
+      template: `${parsed.body.trim()}${commandPacket(
+        manifestEntry.primarySkill,
+        manifestEntry.effectiveInputs.map((input) => path3.join(packageRoot, input))
+      )}`
     };
   }
   if (!("blu" in result)) throw new Error("commands/blu.md: required root command is missing");
+  const actual = Object.keys(result).sort();
+  const expected = Object.keys(manifest.commands).sort();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error("Native command files do not exactly match generated/opencode-assets.json");
   return result;
 }
-async function loadAgents(packageRoot) {
+async function loadAgents(packageRoot, manifest) {
   const result = {};
-  for (const file of await markdownFiles(packageRoot, path.join(packageRoot, "agents"))) {
-    await assertRegularFile(packageRoot, file);
-    const source = path.relative(packageRoot, file);
-    const parsed = parseNativeMarkdown(await readFile(file, "utf8"), source);
-    assertExactKeys(parsed.frontmatter, AGENT_KEYS, source);
-    const name = path.basename(file, ".md");
-    if (name in result) throw new Error(`${source}: duplicate native agent ${name}`);
-    const description = requiredString(parsed.frontmatter.description, "description", source);
-    const mode = parsed.frontmatter.mode;
-    if (mode !== "primary" && mode !== "subagent") {
-      throw new Error(`${source}: mode must be primary or subagent`);
+  const diagnostics = [];
+  const packagedAgentFiles = (await markdownFiles(packageRoot, path3.join(packageRoot, "agents"))).map((file) => path3.relative(packageRoot, file)).sort();
+  const declaredAgentFiles = Object.values(manifest.agents).map((entry) => entry.path).sort();
+  const unlistedAgentFiles = packagedAgentFiles.filter((file) => !declaredAgentFiles.includes(file));
+  if (unlistedAgentFiles.length > 0) throw new Error(`Native agent files are absent from generated/opencode-assets.json: ${unlistedAgentFiles.join(", ")}`);
+  for (const [name, entry] of Object.entries(manifest.agents)) {
+    const source = entry.path;
+    try {
+      await validateManifestAsset(packageRoot, source, manifest.assets[source]);
+    } catch (error) {
+      if (name === "blueprint") throw error;
+      diagnostics.push(`Optional agent ${name} unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
     }
-    if (name === "blueprint" ? mode !== "primary" : mode !== "subagent") {
-      throw new Error(`${source}: ${name} has the wrong native mode`);
+    const file = path3.join(packageRoot, source);
+    try {
+      const parsed = parseNativeMarkdown(await readFile2(file, "utf8"), source);
+      assertExactKeys(parsed.frontmatter, AGENT_KEYS2, source);
+      if (name in result) throw new Error(`${source}: duplicate native agent ${name}`);
+      const description = requiredString(parsed.frontmatter.description, "description", source);
+      const mode = parsed.frontmatter.mode;
+      if (mode !== "primary" && mode !== "subagent") {
+        throw new Error(`${source}: mode must be primary or subagent`);
+      }
+      if (name === "blueprint" ? mode !== "primary" : mode !== "subagent") {
+        throw new Error(`${source}: ${name} has the wrong native mode`);
+      }
+      const steps = parsed.frontmatter.steps;
+      if (typeof steps !== "number" || !Number.isInteger(steps) || steps <= 0) {
+        throw new Error(`${source}: steps must be a positive integer`);
+      }
+      const permission = validatePermission(parsed.frontmatter.permission, source);
+      if (parsed.body.trim().length === 0) throw new Error(`${source}: agent body must not be empty`);
+      result[name] = {
+        description,
+        mode,
+        steps,
+        permission,
+        prompt: parsed.body.trim()
+      };
+    } catch (error) {
+      if (name === "blueprint") throw error;
+      diagnostics.push(`Optional agent ${name} unavailable: ${error instanceof Error ? error.message : String(error)}`);
     }
-    const steps = parsed.frontmatter.steps;
-    if (typeof steps !== "number" || !Number.isInteger(steps) || steps <= 0) {
-      throw new Error(`${source}: steps must be a positive integer`);
-    }
-    const permission = validatePermission(parsed.frontmatter.permission, source);
-    if (parsed.body.trim().length === 0) throw new Error(`${source}: agent body must not be empty`);
-    result[name] = {
-      description,
-      mode,
-      steps,
-      permission,
-      prompt: parsed.body.trim()
-    };
   }
   if (!("blueprint" in result)) throw new Error("agents/blueprint.md: required primary agent is missing");
-  return result;
+  return { agents: result, diagnostics };
 }
 async function loadSkillAliases(packageRoot) {
-  const root = path.join(packageRoot, "skills");
+  const root = path3.join(packageRoot, "skills");
   await assertLiteralDirectory(packageRoot, root);
   const aliases = /* @__PURE__ */ new Set();
   for (const entry of await readdir(root, { withFileTypes: true })) {
     if (entry.isSymbolicLink()) {
-      throw new Error(`Native skill directory must not be a symbolic link: ${path.join(root, entry.name)}`);
+      throw new Error(`Native skill directory must not be a symbolic link: ${path3.join(root, entry.name)}`);
     }
     if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
-    const file = path.join(root, entry.name, "SKILL.md");
-    await assertLiteralDirectory(packageRoot, path.join(root, entry.name));
+    const file = path3.join(root, entry.name, "SKILL.md");
+    await assertLiteralDirectory(packageRoot, path3.join(root, entry.name));
     await assertRegularFile(packageRoot, file);
-    const source = path.relative(packageRoot, file);
-    const parsed = parseNativeMarkdown(await readFile(file, "utf8"), source);
+    const source = path3.relative(packageRoot, file);
+    const parsed = parseNativeMarkdown(await readFile2(file, "utf8"), source);
     const name = requiredString(parsed.frontmatter.name, "name", source);
     requiredString(parsed.frontmatter.description, "description", source);
     if (name !== entry.name) throw new Error(`${source}: skill name must match its directory`);
@@ -7683,35 +7981,135 @@ async function loadSkillAliases(packageRoot) {
   return { root, aliases };
 }
 function resolveBlueprintPackageRoot(moduleUrl = import.meta.url) {
-  return path.resolve(path.dirname(fileURLToPath(moduleUrl)), "..", "..");
-}
-function resolveOpenCodeDataRoot(env = process.env) {
-  const xdgData = env.XDG_DATA_HOME?.trim() || path.join(os.homedir(), ".local", "share");
-  return path.resolve(xdgData, "opencode");
+  return path3.resolve(path3.dirname(fileURLToPath(moduleUrl)), "..", "..");
 }
 async function loadBlueprintNativeAssets(packageRoot = resolveBlueprintPackageRoot()) {
-  const resolvedRoot = await realpath(path.resolve(packageRoot));
-  const [command, agent, skills] = await Promise.all([
-    loadCommands(resolvedRoot),
-    loadAgents(resolvedRoot),
+  const resolvedRoot = await realpath2(path3.resolve(packageRoot));
+  const manifest = await loadOpenCodeAssetManifest(resolvedRoot);
+  const optionalAgentPaths = new Set(Object.entries(manifest.agents).filter(([name]) => name !== "blueprint").map(([, entry]) => entry.path));
+  for (const [relative, hash] of Object.entries(manifest.assets)) {
+    if (!optionalAgentPaths.has(relative)) await validateManifestAsset(resolvedRoot, relative, hash);
+  }
+  const readPackagedPath = async (relative) => {
+    try {
+      return await readFile2(path3.join(resolvedRoot, relative), "utf8");
+    } catch {
+      return null;
+    }
+  };
+  for (const [commandId, entry] of Object.entries(manifest.commands)) {
+    const commandPath = commandId === "blu" ? "/blu" : `/${commandId}`;
+    const resolved = await loadBlueprintSkillInputs(
+      entry.primarySkill,
+      commandPath,
+      readPackagedPath,
+      `skills/${entry.primarySkill}/SKILL.md`
+    );
+    if (JSON.stringify(resolved.effective) !== JSON.stringify(entry.effectiveInputs)) {
+      throw new Error(`OpenCode asset manifest has stale effectiveInputs for ${commandId}`);
+    }
+  }
+  const [command, loadedAgents, skills] = await Promise.all([
+    loadCommands(resolvedRoot, manifest),
+    loadAgents(resolvedRoot, manifest),
     loadSkillAliases(resolvedRoot)
   ]);
-  const mcpServerEntry = path.join(resolvedRoot, "dist", "mcp", "server.js");
-  await assertLiteralDirectory(resolvedRoot, path.join(resolvedRoot, "dist"));
-  await assertLiteralDirectory(resolvedRoot, path.join(resolvedRoot, "dist", "mcp"));
-  await assertLiteralDirectory(resolvedRoot, path.join(resolvedRoot, "dist", "opencode"));
+  if (JSON.stringify([...skills.aliases].sort()) !== JSON.stringify(manifest.skillAliases)) throw new Error("Native skill aliases do not exactly match generated/opencode-assets.json");
+  const mcpServerEntry = path3.join(resolvedRoot, "dist", "mcp", "server.js");
+  await assertLiteralDirectory(resolvedRoot, path3.join(resolvedRoot, "dist"));
+  await assertLiteralDirectory(resolvedRoot, path3.join(resolvedRoot, "dist", "mcp"));
+  await assertLiteralDirectory(resolvedRoot, path3.join(resolvedRoot, "dist", "opencode"));
   await assertRegularFile(resolvedRoot, mcpServerEntry);
   return {
     packageRoot: resolvedRoot,
     command,
-    agent,
+    agent: loadedAgents.agents,
     skillRoot: skills.root,
     skillAliases: skills.aliases,
-    mcpServerEntry
+    mcpServerEntry,
+    diagnostics: loadedAgents.diagnostics,
+    packageReadDirectories: [.../* @__PURE__ */ new Set([
+      ...manifest.skillAliases.map((skill) => path3.join(resolvedRoot, "skills", skill)),
+      ...Object.values(manifest.commands).flatMap(
+        (entry) => entry.effectiveInputs.map((input) => path3.dirname(path3.join(resolvedRoot, input)))
+      )
+    ])].sort()
   };
 }
 
+// src/mcp/runtime-host.ts
+import os from "node:os";
+import path4 from "node:path";
+function normalizeHostId(value) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized !== "opencode") {
+    throw new Error(`Unsupported BLUEPRINT_HOST ${JSON.stringify(value)}; expected opencode.`);
+  }
+  return "opencode";
+}
+function trimTrailingSeparators(value) {
+  return value.replace(/[\\/]+$/, "");
+}
+function expandHomePath(value) {
+  if (value === "~") {
+    return os.homedir();
+  }
+  if (value.startsWith("~/") || value.startsWith("~\\")) {
+    return path4.join(os.homedir(), value.slice(2));
+  }
+  if (value.startsWith("~")) {
+    throw new Error("BLUEPRINT_GLOBAL_HOME must use ~ or ~/ when using a home-relative path.");
+  }
+  return value;
+}
+function inferHostFromExtensionPath(extensionPath) {
+  const normalizedPath = extensionPath?.trim();
+  if (!normalizedPath) {
+    return null;
+  }
+  return "opencode";
+}
+function buildDefaultGlobalBlueprintDir(host, env) {
+  void host;
+  const dataRoot = env.XDG_DATA_HOME?.trim() || path4.join(os.homedir(), ".local", "share");
+  return path4.join(dataRoot, "opencode", "blueprint");
+}
+function normalizeGlobalBlueprintDir(value) {
+  return trimTrailingSeparators(path4.resolve(expandHomePath(value)));
+}
+function buildRuntimeHost(env = process.env) {
+  const explicitHost = normalizeHostId(env.BLUEPRINT_HOST);
+  const extensionPath = env.BLUEPRINT_EXTENSION_PATH?.trim() || null;
+  const inferredHost = inferHostFromExtensionPath(extensionPath ?? void 0);
+  const host = explicitHost ?? inferredHost ?? "opencode";
+  const cliHomeDirName = ".config/opencode";
+  const contextFileName = "AGENTS.md";
+  const manifestFileName = "package.json";
+  const globalBlueprintDir = normalizeGlobalBlueprintDir(
+    env.BLUEPRINT_GLOBAL_HOME?.trim() || buildDefaultGlobalBlueprintDir(host, env)
+  );
+  return {
+    host,
+    cliHomeDirName,
+    contextFileName,
+    manifestFileName,
+    extensionPath,
+    globalBlueprintDir,
+    defaultsPath: path4.join(globalBlueprintDir, "defaults.json"),
+    patchRegistryPath: path4.join(globalBlueprintDir, "patches"),
+    workspaceRegistryPath: path4.join(globalBlueprintDir, "workspaces.json"),
+    updatesDir: path4.join(globalBlueprintDir, "updates")
+  };
+}
+function resolveBlueprintRuntimeHost(env = process.env) {
+  return buildRuntimeHost(env);
+}
+
 // src/opencode/plugin.ts
+var PRIVATE_HELPER_ACTIVATION_QUALIFIED = false;
 function callerRestrictions(permission) {
   if (permission === "deny" || permission === "ask") return { "*": permission };
   if (!permission || typeof permission !== "object") return {};
@@ -7802,6 +8200,22 @@ function mergePermissionWithCallerRestrictions(permission, userPermission) {
   }
   return merged;
 }
+function allowBlueprintPackageReads(permission, directories) {
+  return {
+    ...permission,
+    external_directory: Object.fromEntries([
+      ["*", "deny"],
+      ...directories.map((directory) => [`${directory}${path5.sep}*`, "allow"])
+    ])
+  };
+}
+function resolveBlueprintPluginGlobalHome(packageRoot, env = process.env) {
+  return resolveBlueprintRuntimeHost({
+    ...env,
+    BLUEPRINT_HOST: "opencode",
+    BLUEPRINT_EXTENSION_PATH: packageRoot
+  }).globalBlueprintDir;
+}
 async function pathExists(candidate) {
   return access(candidate).then(
     () => true,
@@ -7815,18 +8229,18 @@ async function discoveredSkillNames(root) {
   const visited = /* @__PURE__ */ new Set();
   while (pending.length > 0) {
     const directory = pending.pop();
-    const canonical = await realpath2(directory);
+    const canonical = await realpath3(directory);
     if (visited.has(canonical)) continue;
     visited.add(canonical);
     for (const entry of await readdir2(directory, { withFileTypes: true })) {
-      const candidate = path2.join(directory, entry.name);
+      const candidate = path5.join(directory, entry.name);
       const candidateStat = entry.isSymbolicLink() ? await stat(candidate) : void 0;
       if (entry.isDirectory() || candidateStat?.isDirectory()) {
         pending.push(candidate);
         continue;
       }
       if (entry.name !== "SKILL.md" || !entry.isFile() && !candidateStat?.isFile()) continue;
-      const parsed = parseNativeMarkdown(await readFile2(candidate, "utf8"), candidate);
+      const parsed = parseNativeMarkdown(await readFile3(candidate, "utf8"), candidate);
       if (typeof parsed.frontmatter.name === "string") names.add(parsed.frontmatter.name);
     }
   }
@@ -7834,30 +8248,30 @@ async function discoveredSkillNames(root) {
 }
 function discoveryRoots(config, directory, worktree) {
   const configured = (config.skills?.paths ?? []).map((root) => {
-    const expanded = root.startsWith("~/") ? path2.join(os2.homedir(), root.slice(2)) : root;
-    return path2.isAbsolute(expanded) ? expanded : path2.resolve(directory, expanded);
+    const expanded = root.startsWith("~/") ? path5.join(os2.homedir(), root.slice(2)) : root;
+    return path5.isAbsolute(expanded) ? expanded : path5.resolve(directory, expanded);
   });
   const roots = new Set(configured);
-  const stop = path2.resolve(worktree);
-  let current = path2.resolve(directory);
+  const stop = path5.resolve(worktree);
+  let current = path5.resolve(directory);
   while (true) {
     for (const family of [".opencode", ".agents", ".claude"]) {
-      roots.add(path2.join(current, family, "skills"));
-      roots.add(path2.join(current, family, "skill"));
+      roots.add(path5.join(current, family, "skills"));
+      roots.add(path5.join(current, family, "skill"));
     }
-    if (current === stop || current === path2.dirname(current)) break;
-    current = path2.dirname(current);
+    if (current === stop || current === path5.dirname(current)) break;
+    current = path5.dirname(current);
   }
-  const configRoot = process.env.XDG_CONFIG_HOME?.trim() || path2.join(os2.homedir(), ".config");
-  roots.add(path2.join(configRoot, "opencode", "skills"));
-  roots.add(path2.join(configRoot, "opencode", "skill"));
+  const configRoot = process.env.XDG_CONFIG_HOME?.trim() || path5.join(os2.homedir(), ".config");
+  roots.add(path5.join(configRoot, "opencode", "skills"));
+  roots.add(path5.join(configRoot, "opencode", "skill"));
   const customConfigRoot = process.env.OPENCODE_CONFIG_DIR?.trim();
   if (customConfigRoot) {
-    roots.add(path2.join(customConfigRoot, "skills"));
-    roots.add(path2.join(customConfigRoot, "skill"));
+    roots.add(path5.join(customConfigRoot, "skills"));
+    roots.add(path5.join(customConfigRoot, "skill"));
   }
-  roots.add(path2.join(os2.homedir(), ".agents", "skills"));
-  roots.add(path2.join(os2.homedir(), ".claude", "skills"));
+  roots.add(path5.join(os2.homedir(), ".agents", "skills"));
+  roots.add(path5.join(os2.homedir(), ".claude", "skills"));
   return [...roots];
 }
 async function assertNoForeignSkillCollisions(config, assets, directory, worktree) {
@@ -7868,7 +8282,7 @@ async function assertNoForeignSkillCollisions(config, assets, directory, worktre
   }
   const collisions = /* @__PURE__ */ new Set();
   for (const root of discoveryRoots(config, directory, worktree)) {
-    if (path2.resolve(root) === assets.skillRoot) continue;
+    if (path5.resolve(root) === assets.skillRoot) continue;
     for (const name of await discoveredSkillNames(root)) {
       if (assets.skillAliases.has(name)) collisions.add(name);
     }
@@ -7897,7 +8311,12 @@ function assertNoCollisions(config, assets) {
 var BlueprintPlugin = async ({ directory, worktree }) => {
   const packageRoot = resolveBlueprintPackageRoot();
   const assets = await loadBlueprintNativeAssets(packageRoot);
-  const activation = createBlueprintActivationHooks(assets.skillAliases);
+  for (const diagnostic of assets.diagnostics) {
+    process.emitWarning(diagnostic, { code: "BLUEPRINT_OPTIONAL_AGENT_UNAVAILABLE" });
+  }
+  const activation = createBlueprintActivationHooks(assets.skillAliases, {
+    privateHelperQualified: PRIVATE_HELPER_ACTIVATION_QUALIFIED
+  });
   return {
     ...activation,
     config: async (config) => {
@@ -7909,11 +8328,14 @@ var BlueprintPlugin = async ({ directory, worktree }) => {
           name,
           {
             ...agent,
-            permission: mergePermissionWithCallerRestrictions(agent.permission, target.permission)
+            permission: mergePermissionWithCallerRestrictions(
+              name === "blueprint" ? allowBlueprintPackageReads(agent.permission, assets.packageReadDirectories) : agent.permission,
+              target.permission
+            )
           }
         ])
       );
-      const stateRoot = path2.join(resolveOpenCodeDataRoot(), "blueprint");
+      const stateRoot = resolveBlueprintPluginGlobalHome(assets.packageRoot);
       target.command = { ...target.command ?? {}, ...assets.command };
       target.agent = { ...target.agent ?? {}, ...agents };
       target.skills = {
@@ -7940,7 +8362,9 @@ var BlueprintPlugin = async ({ directory, worktree }) => {
 var plugin_default = BlueprintPlugin;
 export {
   BlueprintPlugin,
+  allowBlueprintPackageReads,
   plugin_default as default,
-  mergePermissionWithCallerRestrictions
+  mergePermissionWithCallerRestrictions,
+  resolveBlueprintPluginGlobalHome
 };
 //# sourceMappingURL=plugin.js.map

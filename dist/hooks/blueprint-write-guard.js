@@ -1,3 +1,5 @@
+import { createRequire as __blueprintCreateRequire } from "node:module"; const require = __blueprintCreateRequire(import.meta.url);
+
 // src/hooks/shared.ts
 import path2 from "node:path";
 

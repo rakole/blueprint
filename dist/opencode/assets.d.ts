@@ -20,6 +20,8 @@ export type BlueprintNativeAssets = {
     skillRoot: string;
     skillAliases: ReadonlySet<string>;
     mcpServerEntry: string;
+    diagnostics: string[];
+    packageReadDirectories: string[];
 };
 export declare function resolveBlueprintPackageRoot(moduleUrl?: string): string;
 export declare function resolveOpenCodeDataRoot(env?: NodeJS.ProcessEnv): string;
