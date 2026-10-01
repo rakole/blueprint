@@ -972,6 +972,7 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
   ]);
   assert.deepEqual(surfaceFor(analysis, "commands/blu-impact.md").surfaces, [
     "command-manifest",
+    "docs",
     "config"
   ]);
   assert.deepEqual(surfaceFor(analysis, "docs/overview.md").surfaces, ["docs"]);
