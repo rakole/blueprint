@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 
-export type BlueprintRuntimeHostId = "opencode" | "gemini" | "tabnine";
+export type BlueprintRuntimeHostId = "opencode";
 
 export type BlueprintRuntimeHost = {
   host: BlueprintRuntimeHostId;

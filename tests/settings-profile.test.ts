@@ -176,26 +176,24 @@ async function writeInitializedBlueprintArtifacts(repoPath: string): Promise<voi
 }
 
 test("runtime host resolves built-in and override global paths to absolute filesystem paths", () => {
-  const geminiHost = resolveBlueprintRuntimeHost({
-    BLUEPRINT_HOST: "gemini"
-  });
-  const tabnineHost = resolveBlueprintRuntimeHost({
-    BLUEPRINT_HOST: "tabnine"
+  const opencodeHost = resolveBlueprintRuntimeHost({
+    BLUEPRINT_HOST: "opencode",
+    XDG_DATA_HOME: "/tmp/blueprint-opencode-data"
   });
   const overrideHost = resolveBlueprintRuntimeHost({
-    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_HOST: "opencode",
     BLUEPRINT_GLOBAL_HOME: "~/blueprint-test-global"
   });
 
-  assert.equal(geminiHost.globalBlueprintDir, path.join(os.homedir(), ".gemini", "blueprint"));
-  assert.equal(geminiHost.defaultsPath, path.join(os.homedir(), ".gemini", "blueprint", "defaults.json"));
-  assert.equal(tabnineHost.globalBlueprintDir, path.join(os.homedir(), ".tabnine", "blueprint"));
+  assert.equal(opencodeHost.globalBlueprintDir, path.resolve("/tmp/blueprint-opencode-data/opencode/blueprint"));
+  assert.equal(opencodeHost.defaultsPath, path.resolve("/tmp/blueprint-opencode-data/opencode/blueprint/defaults.json"));
   assert.equal(overrideHost.globalBlueprintDir, path.join(os.homedir(), "blueprint-test-global"));
-  assert.ok(path.isAbsolute(geminiHost.patchRegistryPath));
-  assert.ok(path.isAbsolute(geminiHost.workspaceRegistryPath));
-  assert.ok(path.isAbsolute(geminiHost.updatesDir));
-  assert.doesNotMatch(geminiHost.defaultsPath, /^~/);
+  assert.ok(path.isAbsolute(opencodeHost.patchRegistryPath));
+  assert.ok(path.isAbsolute(opencodeHost.workspaceRegistryPath));
+  assert.ok(path.isAbsolute(opencodeHost.updatesDir));
+  assert.doesNotMatch(opencodeHost.defaultsPath, /^~/);
   assert.doesNotMatch(overrideHost.defaultsPath, /^~/);
+  assert.throws(() => resolveBlueprintRuntimeHost({ BLUEPRINT_HOST: "gemini" }), /expected opencode/);
 });
 
 test("defaults-scope writes use the resolved host-global defaults path", async (t) => {

@@ -9,6 +9,15 @@ import process from "node:process";
 const repoRoot = process.cwd();
 const distDir = path.join(repoRoot, "dist");
 const tscEntrypoint = path.join(repoRoot, "node_modules", "typescript", "bin", "tsc");
+const tsxEntrypoint = path.join(repoRoot, "node_modules", "tsx", "dist", "cli.mjs");
+
+function generateOpenCodeAssets() {
+  const result = spawnSync(process.execPath, [tsxEntrypoint, "scripts/generate-opencode-assets.ts"], {
+    cwd: repoRoot,
+    stdio: "inherit"
+  });
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
 
 async function loadEsbuild() {
   try {
@@ -44,6 +53,7 @@ function runTscEmitDeclarations() {
 
 await rm(distDir, { recursive: true, force: true });
 
+generateOpenCodeAssets();
 runTscEmitDeclarations();
 
 const { build } = await loadEsbuild();

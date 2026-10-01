@@ -11,6 +11,8 @@
     "agents",
     "commands",
     "dist",
+    "generated/command-catalog.json",
+    "generated/opencode-assets.json",
     "skills"
   ],
   "engines": {
@@ -20,6 +22,7 @@
     "build": "node scripts/build.mjs",
     "audit:production": "npm audit --omit=dev --audit-level=moderate",
     "generate:commands": "tsx scripts/generate-command-registry.ts",
+    "generate:opencode-assets": "tsx scripts/generate-opencode-assets.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node scripts/run-tests.mjs",
     "test:focused": "tsx --test",

@@ -4,6 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseNativeMarkdown } from "../shared/native-frontmatter.js";
+import { loadBlueprintSkillInputs } from "../mcp/skill-metadata.js";
+import {
+  loadOpenCodeAssetManifest,
+  validateManifestAsset,
+  type OpenCodeAssetManifest
+} from "./asset-manifest.js";
 
 export type NativePermissionAction = "allow" | "ask" | "deny";
 export type NativePermission = Record<
@@ -31,6 +37,8 @@ export type BlueprintNativeAssets = {
   skillRoot: string;
   skillAliases: ReadonlySet<string>;
   mcpServerEntry: string;
+  diagnostics: string[];
+  packageReadDirectories: string[];
 };
 
 const COMMAND_KEYS = new Set(["description", "agent", "subtask"]);
@@ -119,7 +127,21 @@ async function markdownFiles(packageRoot: string, directory: string): Promise<st
     .sort();
 }
 
-async function loadCommands(packageRoot: string): Promise<Record<string, NativeCommand>> {
+function commandPacket(primarySkill: string, effectiveInputs: string[]): string {
+  const inputs = effectiveInputs.length > 0
+    ? effectiveInputs.map((input) => `- ${input}`).join("\n")
+    : "- none";
+  return [
+    "",
+    "Blueprint native loading contract:",
+    `1. Load the \`${primarySkill}\` skill exactly once with the native skill tool.`,
+    "2. Read only these already-resolved active package inputs (absolute paths):",
+    inputs,
+    "Do not rediscover skill metadata, load sibling bundles, or reread this active command."
+  ].join("\n");
+}
+
+async function loadCommands(packageRoot: string, manifest: OpenCodeAssetManifest): Promise<Record<string, NativeCommand>> {
   const result: Record<string, NativeCommand> = {};
   for (const file of await markdownFiles(packageRoot, path.join(packageRoot, "commands"))) {
     await assertRegularFile(packageRoot, file);
@@ -136,25 +158,47 @@ async function loadCommands(packageRoot: string): Promise<Record<string, NativeC
     }
     const description = requiredString(parsed.frontmatter.description, "description", source);
     if (parsed.body.trim().length === 0) throw new Error(`${source}: command body must not be empty`);
+    const manifestEntry = manifest.commands[name];
+    if (!manifestEntry || manifestEntry.path !== source) throw new Error(`${source}: command is missing or mismatched in generated/opencode-assets.json`);
     result[name] = {
       description,
       agent: "blueprint",
       subtask: false,
-      template: parsed.body.trim()
+      template: `${parsed.body.trim()}${commandPacket(
+        manifestEntry.primarySkill,
+        manifestEntry.effectiveInputs.map((input) => path.join(packageRoot, input))
+      )}`
     };
   }
   if (!("blu" in result)) throw new Error("commands/blu.md: required root command is missing");
+  const actual = Object.keys(result).sort();
+  const expected = Object.keys(manifest.commands).sort();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error("Native command files do not exactly match generated/opencode-assets.json");
   return result;
 }
 
-async function loadAgents(packageRoot: string): Promise<Record<string, NativeAgent>> {
+async function loadAgents(packageRoot: string, manifest: OpenCodeAssetManifest): Promise<{ agents: Record<string, NativeAgent>; diagnostics: string[] }> {
   const result: Record<string, NativeAgent> = {};
-  for (const file of await markdownFiles(packageRoot, path.join(packageRoot, "agents"))) {
-    await assertRegularFile(packageRoot, file);
-    const source = path.relative(packageRoot, file);
+  const diagnostics: string[] = [];
+  const packagedAgentFiles = (await markdownFiles(packageRoot, path.join(packageRoot, "agents")))
+    .map((file) => path.relative(packageRoot, file))
+    .sort();
+  const declaredAgentFiles = Object.values(manifest.agents).map((entry) => entry.path).sort();
+  const unlistedAgentFiles = packagedAgentFiles.filter((file) => !declaredAgentFiles.includes(file));
+  if (unlistedAgentFiles.length > 0) throw new Error(`Native agent files are absent from generated/opencode-assets.json: ${unlistedAgentFiles.join(", ")}`);
+  for (const [name, entry] of Object.entries(manifest.agents)) {
+    const source = entry.path;
+    try {
+      await validateManifestAsset(packageRoot, source, manifest.assets[source]!);
+    } catch (error) {
+      if (name === "blueprint") throw error;
+      diagnostics.push(`Optional agent ${name} unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    const file = path.join(packageRoot, source);
+    try {
     const parsed = parseNativeMarkdown(await readFile(file, "utf8"), source);
     assertExactKeys(parsed.frontmatter, AGENT_KEYS, source);
-    const name = path.basename(file, ".md");
     if (name in result) throw new Error(`${source}: duplicate native agent ${name}`);
     const description = requiredString(parsed.frontmatter.description, "description", source);
     const mode = parsed.frontmatter.mode;
@@ -177,9 +221,13 @@ async function loadAgents(packageRoot: string): Promise<Record<string, NativeAge
       permission,
       prompt: parsed.body.trim()
     };
+    } catch (error) {
+      if (name === "blueprint") throw error;
+      diagnostics.push(`Optional agent ${name} unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   if (!("blueprint" in result)) throw new Error("agents/blueprint.md: required primary agent is missing");
-  return result;
+  return { agents: result, diagnostics };
 }
 
 async function loadSkillAliases(packageRoot: string): Promise<{ root: string; aliases: Set<string> }> {
@@ -219,11 +267,32 @@ export async function loadBlueprintNativeAssets(
   packageRoot = resolveBlueprintPackageRoot()
 ): Promise<BlueprintNativeAssets> {
   const resolvedRoot = await realpath(path.resolve(packageRoot));
-  const [command, agent, skills] = await Promise.all([
-    loadCommands(resolvedRoot),
-    loadAgents(resolvedRoot),
+  const manifest = await loadOpenCodeAssetManifest(resolvedRoot);
+  const optionalAgentPaths = new Set(Object.entries(manifest.agents).filter(([name]) => name !== "blueprint").map(([, entry]) => entry.path));
+  for (const [relative, hash] of Object.entries(manifest.assets)) {
+    if (!optionalAgentPaths.has(relative)) await validateManifestAsset(resolvedRoot, relative, hash);
+  }
+  const readPackagedPath = async (relative: string): Promise<string | null> => {
+    try { return await readFile(path.join(resolvedRoot, relative), "utf8"); } catch { return null; }
+  };
+  for (const [commandId, entry] of Object.entries(manifest.commands)) {
+    const commandPath = commandId === "blu" ? "/blu" : `/${commandId}`;
+    const resolved = await loadBlueprintSkillInputs(
+      entry.primarySkill,
+      commandPath,
+      readPackagedPath,
+      `skills/${entry.primarySkill}/SKILL.md`
+    );
+    if (JSON.stringify(resolved.effective) !== JSON.stringify(entry.effectiveInputs)) {
+      throw new Error(`OpenCode asset manifest has stale effectiveInputs for ${commandId}`);
+    }
+  }
+  const [command, loadedAgents, skills] = await Promise.all([
+    loadCommands(resolvedRoot, manifest),
+    loadAgents(resolvedRoot, manifest),
     loadSkillAliases(resolvedRoot)
   ]);
+  if (JSON.stringify([...skills.aliases].sort()) !== JSON.stringify(manifest.skillAliases)) throw new Error("Native skill aliases do not exactly match generated/opencode-assets.json");
   const mcpServerEntry = path.join(resolvedRoot, "dist", "mcp", "server.js");
   await assertLiteralDirectory(resolvedRoot, path.join(resolvedRoot, "dist"));
   await assertLiteralDirectory(resolvedRoot, path.join(resolvedRoot, "dist", "mcp"));
@@ -232,9 +301,16 @@ export async function loadBlueprintNativeAssets(
   return {
     packageRoot: resolvedRoot,
     command,
-    agent,
+    agent: loadedAgents.agents,
     skillRoot: skills.root,
     skillAliases: skills.aliases,
-    mcpServerEntry
+    mcpServerEntry,
+    diagnostics: loadedAgents.diagnostics,
+    packageReadDirectories: [...new Set([
+      ...manifest.skillAliases.map((skill) => path.join(resolvedRoot, "skills", skill)),
+      ...Object.values(manifest.commands).flatMap((entry) =>
+        entry.effectiveInputs.map((input) => path.dirname(path.join(resolvedRoot, input)))
+      )
+    ])].sort()
   };
 }

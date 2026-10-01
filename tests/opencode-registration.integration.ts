@@ -9,7 +9,10 @@ import test from "node:test";
 
 import { createBlueprintActivationHooks } from "../src/opencode/activation.js";
 import { loadBlueprintNativeAssets } from "../src/opencode/assets.js";
-import { mergePermissionWithCallerRestrictions } from "../src/opencode/plugin.js";
+import {
+  allowBlueprintPackageReads,
+  mergePermissionWithCallerRestrictions
+} from "../src/opencode/plugin.js";
 import { parseNativeMarkdown } from "../src/shared/native-frontmatter.js";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -143,6 +146,24 @@ test("caller wildcard and specific restrictions keep final permission precedence
   );
 });
 
+test("primary projection grants only validated installed asset directories", () => {
+  const packageRoot = path.resolve("/opt/blueprint");
+  const skillDir = path.join(packageRoot, "skills", "blueprint-router");
+  const projected = allowBlueprintPackageReads(
+    { "*": "deny", external_directory: "deny", read: { "*": "allow" } },
+    [skillDir]
+  );
+  assert.deepEqual(projected.external_directory, {
+    "*": "deny",
+    [`${skillDir}${path.sep}*`]: "allow"
+  });
+  const callerDenied = mergePermissionWithCallerRestrictions(projected, {
+    external_directory: "deny"
+  });
+  assert.equal(callerDenied.external_directory, "deny");
+  assert.equal((projected.external_directory as Record<string, string>)[`${path.dirname(packageRoot)}${path.sep}*`], undefined);
+});
+
 test("native asset loading rejects a symlinked package directory", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-opencode-symlink-"));
   const packageRoot = path.join(tempRoot, "package");
@@ -155,7 +176,7 @@ test("native asset loading rejects a symlinked package directory", async () => {
     cp(path.join(fixtureRoot, "registration", "commands"), outside, { recursive: true })
   ]);
   await symlink(outside, path.join(packageRoot, "commands"));
-  await assert.rejects(loadBlueprintNativeAssets(packageRoot), /literal directory|escapes the package root/);
+  await assert.rejects(loadBlueprintNativeAssets(packageRoot), /literal directory|escapes the package root|opencode-assets\.json/);
 });
 
 test("private helper activation is exact, correlated, revocable, and session isolated", async () => {

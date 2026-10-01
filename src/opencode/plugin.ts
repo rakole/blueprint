@@ -124,6 +124,19 @@ export function mergePermissionWithCallerRestrictions(
   return merged as NativePermission;
 }
 
+export function allowBlueprintPackageReads(
+  permission: NativePermission,
+  directories: readonly string[]
+): NativePermission {
+  return {
+    ...permission,
+    external_directory: Object.fromEntries([
+      ["*", "deny"],
+      ...directories.map((directory) => [`${directory}${path.sep}*`, "allow"] as const)
+    ])
+  };
+}
+
 async function pathExists(candidate: string): Promise<boolean> {
   return access(candidate).then(
     () => true,
@@ -234,6 +247,9 @@ function assertNoCollisions(
 export const BlueprintPlugin: Plugin = async ({ directory, worktree }) => {
   const packageRoot = resolveBlueprintPackageRoot();
   const assets = await loadBlueprintNativeAssets(packageRoot);
+  for (const diagnostic of assets.diagnostics) {
+    process.emitWarning(diagnostic, { code: "BLUEPRINT_OPTIONAL_AGENT_UNAVAILABLE" });
+  }
   const activation = createBlueprintActivationHooks(assets.skillAliases);
 
   return {
@@ -247,7 +263,12 @@ export const BlueprintPlugin: Plugin = async ({ directory, worktree }) => {
           name,
           {
             ...agent,
-            permission: mergePermissionWithCallerRestrictions(agent.permission, target.permission)
+            permission: mergePermissionWithCallerRestrictions(
+              name === "blueprint"
+                ? allowBlueprintPackageReads(agent.permission, assets.packageReadDirectories)
+                : agent.permission,
+              target.permission
+            )
           }
         ])
       );

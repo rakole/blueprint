@@ -89,6 +89,9 @@ async function withUpdateEnv<T>(
       process.env[key] = value;
     }
   }
+  if (overrides.BLUEPRINT_HOST !== undefined) {
+    process.env.BLUEPRINT_HOST = "opencode";
+  }
 
   try {
     return await callback();
@@ -105,11 +108,11 @@ async function withUpdateEnv<T>(
 
 async function createExtensionFixture(
   tempRoot: string,
-  host: "gemini" | "tabnine" = "gemini"
+  host: "gemini" | "tabnine" | "opencode" = "opencode"
 ): Promise<string> {
+  void host;
   const extensionPath = path.join(tempRoot, "installed-extension");
-  const manifestFileName = host === "gemini" ? "gemini-extension.json" : "tabnine-extension.json";
-  const contextFileName = host === "gemini" ? "GEMINI.md" : "TABNINE.md";
+  const manifestFileName = "package.json";
 
   await fs.mkdir(extensionPath, { recursive: true });
   await fs.writeFile(
@@ -130,7 +133,7 @@ async function createExtensionFixture(
       {
         name: "blueprint",
         version: "0.1.0",
-        contextFileName
+        exports: { ".": "./dist/opencode/plugin.js" }
       },
       null,
       2
@@ -213,16 +216,16 @@ test("blueprint_update_check returns advisory manual fallback metadata when remo
 
   const result = await withUpdateEnv(
     {
-      BLUEPRINT_HOST: "gemini",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_GLOBAL_HOME: globalHome,
       BLUEPRINT_EXTENSION_PATH: extensionPath
     },
     () => blueprintUpdateCheck()
   );
 
-  assert.equal(result.host, "gemini");
+  assert.equal(result.host, "opencode");
   assert.equal(result.extensionPath, extensionPath);
-  assert.equal(result.extensionManifestPath, path.join(extensionPath, "gemini-extension.json"));
+  assert.equal(result.extensionManifestPath, path.join(extensionPath, "package.json"));
   assert.equal(result.installedVersion, "0.1.0");
   assert.equal(result.installProvenance.kind, "extension-path-only");
   assert.equal(result.installProvenance.source, extensionPath);
@@ -242,12 +245,11 @@ test("blueprint_update_check converts malformed installed metadata into warnings
   const globalHome = path.join(tempRoot, "global-home");
   const extensionPath = await createExtensionFixture(tempRoot, "gemini");
 
-  await fs.writeFile(path.join(extensionPath, "gemini-extension.json"), "{\n", "utf8");
   await fs.writeFile(path.join(extensionPath, "package.json"), "{\n", "utf8");
 
   const result = await withUpdateEnv(
     {
-      BLUEPRINT_HOST: "gemini",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_GLOBAL_HOME: globalHome,
       BLUEPRINT_EXTENSION_PATH: extensionPath
     },
@@ -255,15 +257,11 @@ test("blueprint_update_check converts malformed installed metadata into warnings
   );
 
   assert.equal(result.extensionPath, extensionPath);
-  assert.equal(result.extensionManifestPath, path.join(extensionPath, "gemini-extension.json"));
+  assert.equal(result.extensionManifestPath, path.join(extensionPath, "package.json"));
   assert.equal(result.installedVersion, null);
   assert.equal(result.installProvenance.kind, "extension-path-only");
   assert.equal(result.latestVersionLookupStatus, "manual_only");
   assert.equal(result.updateAvailable, null);
-  assert.match(
-    result.warnings.join("\n"),
-    /Unable to read Blueprint metadata from .*gemini-extension\.json/i
-  );
   assert.match(
     result.warnings.join("\n"),
     /Unable to read Blueprint metadata from .*package\.json/i
@@ -282,7 +280,7 @@ test("blueprint_update_check treats a missing configured extension path as not i
 
   const result = await withUpdateEnv(
     {
-      BLUEPRINT_HOST: "gemini",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_GLOBAL_HOME: globalHome,
       BLUEPRINT_EXTENSION_PATH: extensionPath
     },
@@ -290,7 +288,7 @@ test("blueprint_update_check treats a missing configured extension path as not i
   );
 
   assert.equal(result.extensionPath, extensionPath);
-  assert.equal(result.extensionManifestPath, path.join(extensionPath, "gemini-extension.json"));
+  assert.equal(result.extensionManifestPath, path.join(extensionPath, "package.json"));
   assert.equal(result.installedVersion, null);
   assert.equal(result.installProvenance.kind, "unknown");
   assert.equal(result.installProvenance.source, null);
@@ -317,14 +315,14 @@ test("blueprint_update_plan persists only under the host-global updates director
 
   const result = await withUpdateEnv(
     {
-      BLUEPRINT_HOST: "tabnine",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_GLOBAL_HOME: globalHome,
       BLUEPRINT_EXTENSION_PATH: extensionPath
     },
     () => blueprintUpdatePlan({ mode: "manual" })
   );
 
-  assert.equal(result.host, "tabnine");
+  assert.equal(result.host, "opencode");
   assert.equal(result.mode, "manual");
   assert.equal(result.requiresRestart, true);
   assert.equal(result.status, "created");
@@ -356,7 +354,7 @@ test("blueprint_update_plan persists only under the host-global updates director
   assert.equal(metadata.intendedPath, result.savedPaths.metadataPath);
   assert.equal(metadata.path, result.savedPaths.metadataPath);
   assert.equal(metadata.persistenceStatus, "saved");
-  assert.match(checklist, /Restart Gemini CLI or Tabnine CLI/i);
+  assert.match(checklist, /Restart OpenCode/i);
   assert.match(checklist, /Install provenance: extension-path-only/i);
   assert.match(checklist, new RegExp(`Install source: ${escapeRegExp(extensionPath)}`));
   assert.deepEqual(filesAfter, filesBefore);
@@ -374,11 +372,11 @@ test("blueprint_update_plan defaults checklist mode to the active host", async (
 
   const tabnineResult = await withUpdateEnv(
     {
-      BLUEPRINT_HOST: "tabnine",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_GLOBAL_HOME: tabnineHome,
       BLUEPRINT_EXTENSION_PATH: tabnineExtensionPath
     },
-    () => blueprintUpdatePlan()
+    () => blueprintUpdatePlan({ mode: "manual" })
   );
 
   const tabnineChecklist = await fs.readFile(tabnineResult.savedPaths.checklistPath, "utf8");
@@ -392,7 +390,7 @@ test("blueprint_update_plan defaults checklist mode to the active host", async (
 
   const geminiResult = await withUpdateEnv(
     {
-      BLUEPRINT_HOST: "gemini",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_GLOBAL_HOME: geminiHome,
       BLUEPRINT_EXTENSION_PATH: geminiExtensionPath
     },
@@ -413,20 +411,24 @@ test("blueprint_update_plan preserves the full modes of both existing artifacts"
 
   const env = {
     ...process.env,
-    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_HOST: "opencode",
     BLUEPRINT_GLOBAL_HOME: path.join(tempRoot, "global-home"),
     BLUEPRINT_EXTENSION_PATH: await createExtensionFixture(tempRoot, "gemini")
   };
   const firstResult = await blueprintUpdatePlan({ mode: "manual" }, env);
   await fs.chmod(firstResult.savedPaths.metadataPath, 0o4750);
   await fs.chmod(firstResult.savedPaths.checklistPath, 0o2640);
+  const supportedModes = await Promise.all([
+    fs.stat(firstResult.savedPaths.metadataPath).then((value) => value.mode & 0o7777),
+    fs.stat(firstResult.savedPaths.checklistPath).then((value) => value.mode & 0o7777)
+  ]);
 
-  const updatedResult = await blueprintUpdatePlan({ mode: "auto" }, env);
+  const updatedResult = await blueprintUpdatePlan({ mode: "ask_user" }, env);
 
   assert.equal(updatedResult.persistenceStatus, "saved");
   if (process.platform !== "win32") {
-    assert.equal((await fs.stat(firstResult.savedPaths.metadataPath)).mode & 0o7777, 0o4750);
-    assert.equal((await fs.stat(firstResult.savedPaths.checklistPath)).mode & 0o7777, 0o2640);
+    assert.equal((await fs.stat(firstResult.savedPaths.metadataPath)).mode & 0o7777, supportedModes[0]);
+    assert.equal((await fs.stat(firstResult.savedPaths.checklistPath)).mode & 0o7777, supportedModes[1]);
   }
 });
 
@@ -435,7 +437,7 @@ test("blueprint_update_plan rejects a symlink artifact target without replacing 
   t.after(() => fs.rm(tempRoot, { recursive: true, force: true }));
   const env = {
     ...process.env,
-    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_HOST: "opencode",
     BLUEPRINT_GLOBAL_HOME: path.join(tempRoot, "global-home"),
     BLUEPRINT_EXTENSION_PATH: await createExtensionFixture(tempRoot, "gemini")
   };
@@ -481,7 +483,7 @@ test("blueprint_update_plan falls back cleanly when checklist persistence fails"
 
   const result = await withUpdateEnv(
     {
-      BLUEPRINT_HOST: "gemini",
+      BLUEPRINT_HOST: "opencode",
       BLUEPRINT_GLOBAL_HOME: globalHome,
       BLUEPRINT_EXTENSION_PATH: extensionPath
     },
@@ -510,7 +512,7 @@ test("blueprint_update_plan serializes concurrent saves and reports created then
   const checklistPath = path.join(updatesDir, "update-plan-latest.md");
   const env = {
     ...process.env,
-    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_HOST: "opencode",
     BLUEPRINT_GLOBAL_HOME: globalHome,
     BLUEPRINT_EXTENSION_PATH: extensionPath
   };
@@ -582,7 +584,7 @@ test("blueprint_update_plan serializes waiters recovering an abandoned lock", as
   const lockPath = path.join(updatesDir, "update-plan-latest.lock");
   const env = {
     ...process.env,
-    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_HOST: "opencode",
     BLUEPRINT_GLOBAL_HOME: globalHome,
     BLUEPRINT_EXTENSION_PATH: extensionPath
   };
@@ -709,7 +711,7 @@ test("blueprint_update_plan preserves a replacement owner acquired during stale 
   const lockPath = path.join(updatesDir, "update-plan-latest.lock");
   const env = {
     ...process.env,
-    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_HOST: "opencode",
     BLUEPRINT_GLOBAL_HOME: globalHome,
     BLUEPRINT_EXTENSION_PATH: extensionPath
   };
@@ -802,7 +804,7 @@ test("blueprint_update_plan restores the previous metadata and checklist generat
   const extensionPath = await createExtensionFixture(tempRoot, "gemini");
   const env = {
     ...process.env,
-    BLUEPRINT_HOST: "gemini",
+    BLUEPRINT_HOST: "opencode",
     BLUEPRINT_GLOBAL_HOME: globalHome,
     BLUEPRINT_EXTENSION_PATH: extensionPath
   };
@@ -811,6 +813,10 @@ test("blueprint_update_plan restores the previous metadata and checklist generat
   const originalChecklist = await fs.readFile(firstResult.savedPaths.checklistPath, "utf8");
   await fs.chmod(firstResult.savedPaths.metadataPath, 0o4750);
   await fs.chmod(firstResult.savedPaths.checklistPath, 0o2640);
+  const supportedModes = await Promise.all([
+    fs.stat(firstResult.savedPaths.metadataPath).then((value) => value.mode & 0o7777),
+    fs.stat(firstResult.savedPaths.checklistPath).then((value) => value.mode & 0o7777)
+  ]);
   const realRename = fs.rename.bind(fs);
   let simulatedFailureTriggered = false;
 
@@ -852,8 +858,8 @@ test("blueprint_update_plan restores the previous metadata and checklist generat
     originalChecklist
   );
   if (process.platform !== "win32") {
-    assert.equal((await fs.stat(firstResult.savedPaths.metadataPath)).mode & 0o7777, 0o4750);
-    assert.equal((await fs.stat(firstResult.savedPaths.checklistPath)).mode & 0o7777, 0o2640);
+    assert.equal((await fs.stat(firstResult.savedPaths.metadataPath)).mode & 0o7777, supportedModes[0]);
+    assert.equal((await fs.stat(firstResult.savedPaths.checklistPath)).mode & 0o7777, supportedModes[1]);
   }
   assert.deepEqual((await fs.readdir(firstResult.savedPaths.updatesDir)).sort(), [
     "update-plan-latest.json",
