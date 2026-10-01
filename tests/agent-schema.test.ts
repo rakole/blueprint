@@ -3,354 +3,100 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import { validateBlueprintAgentDefinitionContent } from "../src/mcp/agent-definition.js";
+import { BLUEPRINT_AGENT_TOOL_NAMES, BLUEPRINT_PRIMARY_AGENT_NAME } from "../src/mcp/agent-metadata.js";
+import { parseNativeMarkdown } from "../src/shared/native-frontmatter.js";
+
 const repoRoot = process.cwd();
-const agentsDir = path.join(repoRoot, "agents");
-
-const EXPECTED_AGENTS = {
-  "blueprint-checker": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 15,
-    timeoutMins: 15
-  },
-  "blueprint-doc-verifier": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 24,
-    timeoutMins: 23
-  },
-  "blueprint-debugger": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 27,
-    timeoutMins: 30
-  },
-  "blueprint-doc-writer": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 24,
-    timeoutMins: 23
-  },
-  "blueprint-executor": {
-    tools: [
-      "read",
-      "glob",
-      "grep",
-      "apply_patch",
-      "edit",
-      "write",
-      "bash"
-    ],
-    maxTurns: 30,
-    timeoutMins: 30
-  },
-  "blueprint-mapper": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 24,
-    timeoutMins: 23
-  },
-  "blueprint-planner": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 24,
-    timeoutMins: 18
-  },
-  "blueprint-project-researcher": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 18,
-    timeoutMins: 15
-  },
-  "blueprint-reviewer": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 24,
-    timeoutMins: 23
-  },
-  "blueprint-researcher": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 27,
-    timeoutMins: 23
-  },
-  "blueprint-roadmapper": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 18,
-    timeoutMins: 15
-  },
-  "blueprint-security-auditor": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 24,
-    timeoutMins: 23
-  },
-  "blueprint-ui-designer": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 21,
-    timeoutMins: 18
-  },
-  "blueprint-ui-auditor": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 24,
-    timeoutMins: 23
-  },
-  "blueprint-verifier": {
-    tools: ["read", "glob", "grep"],
-    maxTurns: 24,
-    timeoutMins: 23
-  }
+const expectedSteps = {
+  "blueprint-checker": 15, "blueprint-debugger": 27,
+  "blueprint-doc-verifier": 24, "blueprint-doc-writer": 24,
+  "blueprint-executor": 30, "blueprint-mapper": 24,
+  "blueprint-planner": 24, "blueprint-project-researcher": 18,
+  "blueprint-researcher": 27, "blueprint-reviewer": 24,
+  "blueprint-roadmapper": 18, "blueprint-security-auditor": 24,
+  "blueprint-ui-auditor": 24, "blueprint-ui-designer": 21,
+  "blueprint-verifier": 24
 } as const;
+const removedKeys = ["name", "kind", "tools", "display_name", "max_turns", "timeout_mins", "model"] as const;
+const expectedSkills = [
+  "blueprint-bootstrap", "blueprint-capture", "blueprint-debug", "blueprint-docs",
+  "blueprint-god-review", "blueprint-governance", "blueprint-impact",
+  "blueprint-maintenance", "blueprint-map", "blueprint-phase-discovery",
+  "blueprint-phase-execution", "blueprint-phase-planning",
+  "blueprint-phase-validation", "blueprint-plan-run", "blueprint-review",
+  "blueprint-roadmap-admin", "blueprint-router"
+].sort();
 
-type AgentName = keyof typeof EXPECTED_AGENTS;
-
-type FrontmatterValue = string | string[];
-
-const VALID_BUILTIN_TOOLS = new Set([
-  "apply_patch",
-  "read",
-  "write",
-  "glob",
-  "grep",
-  "edit",
-  "bash"
-]);
-
-function extractFrontmatterBlock(content: string): { frontmatter: string; body: string } {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-
-  assert.ok(match, "Agent file must start with YAML frontmatter fenced by ---");
-
-  return {
-    frontmatter: match[1],
-    body: match[2]
-  };
+async function load(agentName: string) {
+  const relativePath = `agents/${agentName}.md`;
+  const content = await readFile(path.join(repoRoot, relativePath), "utf8");
+  const validation = validateBlueprintAgentDefinitionContent(agentName, content, relativePath);
+  const parsed = parseNativeMarkdown(content, relativePath);
+  return { validation, ...parsed };
 }
 
-function parseFrontmatter(frontmatter: string): Record<string, FrontmatterValue> {
-  const result: Record<string, FrontmatterValue> = {};
-  const lines = frontmatter.split("\n");
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-
-    if (!line.trim()) {
-      continue;
-    }
-
-    const match = line.match(/^([a-zA-Z_]+):\s*(.*)$/);
-
-    assert.ok(match, `Unsupported frontmatter line: ${line}`);
-
-    const [, key, rawValue] = match;
-
-    if (rawValue === ">" || rawValue === "|") {
-      const blockLines: string[] = [];
-
-      for (index += 1; index < lines.length; index += 1) {
-        const blockLine = lines[index];
-
-        if (blockLine.startsWith("  ")) {
-          blockLines.push(blockLine.slice(2).trim());
-          continue;
-        }
-
-        index -= 1;
-        break;
-      }
-
-      result[key] = blockLines.join(" ").trim();
-      continue;
-    }
-
-    if (!rawValue) {
-      const items: string[] = [];
-
-      for (index += 1; index < lines.length; index += 1) {
-        const itemLine = lines[index];
-        const itemMatch = itemLine.match(/^  - (.+)$/);
-
-        if (!itemMatch) {
-          index -= 1;
-          break;
-        }
-
-        items.push(itemMatch[1].trim());
-      }
-
-      result[key] = items;
-      continue;
-    }
-
-    result[key] = rawValue.trim();
-  }
-
-  return result;
-}
-
-function isValidToolName(toolName: string): boolean {
-  return (
-    VALID_BUILTIN_TOOLS.has(toolName) ||
-    toolName === "*" ||
-    toolName === "mcp_*" ||
-    /^mcp_[a-z0-9-]+_\*$/.test(toolName)
-  );
-}
-
-async function loadAgent(agentName: AgentName) {
-  const content = await readFile(path.join(agentsDir, `${agentName}.md`), "utf8");
-  const { frontmatter, body } = extractFrontmatterBlock(content);
-
-  return {
-    content,
-    body,
-    frontmatter: parseFrontmatter(frontmatter)
-  };
-}
-
-async function loadCatalogOptionalAgentsFromSource(): Promise<Set<string>> {
-  const source = await readFile(path.join(repoRoot, "src/mcp/tools/project.ts"), "utf8");
-  const matches = source.matchAll(/availableOptionalAgents:\s*\[([^\]]*)\]/g);
-  const agentNames = new Set<string>();
-
-  for (const match of matches) {
-    const arrayBody = match[1] ?? "";
-
-    for (const nameMatch of arrayBody.matchAll(/"([^"]+)"/g)) {
-      agentNames.add(nameMatch[1]);
-    }
-  }
-
-  return agentNames;
-}
-
-test("shipped Blueprint agents match the expected workstream-1 file set", async () => {
-  const files = (await readdir(agentsDir))
-    .filter((entry) => entry.endsWith(".md"))
-    .sort();
-
-  assert.deepEqual(
-    files,
-    Object.keys(EXPECTED_AGENTS)
-      .map((agentName) => `${agentName}.md`)
-      .sort()
-  );
+test("shipped native agents contain the required primary plus 15 optional specialists", async () => {
+  const files = (await readdir(path.join(repoRoot, "agents"))).filter((entry) => entry.endsWith(".md")).sort();
+  assert.deepEqual(files, [`${BLUEPRINT_PRIMARY_AGENT_NAME}.md`, ...BLUEPRINT_AGENT_TOOL_NAMES.map((name) => `${name}.md`)].sort());
 });
 
-test("expected OpenCode agent tool arrays are deduplicated", () => {
-  for (const [agentName, metadata] of Object.entries(EXPECTED_AGENTS)) {
-    assert.equal(
-      new Set(metadata.tools).size,
-      metadata.tools.length,
-      `${agentName} must not contain duplicate mapped tools`
-    );
-  }
-});
-
-test("every shipped Blueprint agent is a valid Gemini subagent definition with conservative routing metadata", async () => {
-  for (const [agentName, expected] of Object.entries(EXPECTED_AGENTS) as Array<
-    [AgentName, (typeof EXPECTED_AGENTS)[AgentName]]
-  >) {
-    const { body, frontmatter } = await loadAgent(agentName);
-
-    assert.equal(frontmatter.name, agentName);
-    assert.equal(frontmatter.kind, "local");
-    assert.equal(typeof frontmatter.description, "string");
-    assert.match(frontmatter.description as string, /Use this agent when/i);
-    assert.match(frontmatter.description as string, /Example scenarios:/i);
-    assert.ok((frontmatter.description as string).length >= 120);
-
-    if (agentName === "blueprint-planner") {
-      assert.match(frontmatter.description as string, /execution-ready plan drafts/i);
-      assert.match(frontmatter.description as string, /drafting compact plan-set candidates/i);
-      assert.match(frontmatter.description as string, /compiled by MCP into `XX-YY-PLAN\.md`/i);
-    }
-
-    if (agentName === "blueprint-checker") {
-      assert.match(frontmatter.description as string, /Plan-quality review specialist/i);
-      assert.match(frontmatter.description as string, /reviewing new `XX-YY-PLAN\.md` drafts/i);
-    }
-
-    assert.deepEqual(frontmatter.tools, expected.tools);
-    assert.equal(frontmatter.max_turns, String(expected.maxTurns));
-    assert.equal(frontmatter.timeout_mins, String(expected.timeoutMins));
-    assert.ok(!("model" in frontmatter), `${agentName} should inherit the session model`);
-    assert.ok(
-      !("temperature" in frontmatter),
-      `${agentName} should not override temperature without a strong reason`
-    );
-    assert.ok(body.startsWith("# "), `${agentName} body should remain markdown after frontmatter`);
+test("specialists use filename identity, native mode, preserved steps, and strict permissions", async () => {
+  for (const agentName of BLUEPRINT_AGENT_TOOL_NAMES) {
+    const { body, frontmatter, validation } = await load(agentName);
+    assert.equal(validation.valid, true, validation.issues.join("\n"));
+    assert.equal(frontmatter.mode, "subagent");
+    assert.equal(frontmatter.steps, expectedSteps[agentName]);
+    assert.ok(typeof frontmatter.description === "string" && frontmatter.description.length >= 80);
+    assert.ok(body.startsWith("# "));
     assert.match(body, /## Purpose/);
-
-    for (const toolName of frontmatter.tools as string[]) {
-      assert.ok(isValidToolName(toolName), `${agentName} declares an unknown tool: ${toolName}`);
-      assert.notEqual(toolName, "*", `${agentName} should not use the all-tools wildcard`);
-      assert.notEqual(toolName, "mcp_*", `${agentName} should not use the all-MCP wildcard`);
+    for (const key of removedKeys) assert.equal(key in frontmatter, false, `${agentName}: ${key}`);
+    const permission = frontmatter.permission as Record<string, unknown>;
+    const read = permission.read as Record<string, unknown>;
+    assert.equal(permission["*"], "deny");
+    assert.equal(read["*"], "allow");
+    assert.equal(read["*.env"], "deny");
+    assert.equal(read["*.env.*"], "deny");
+    assert.equal(read["*.env.example"], "allow");
+    assert.equal(read["mcp:*"], "deny");
+    assert.equal(permission.glob, "allow");
+    assert.equal(permission.grep, "allow");
+    for (const key of ["external_directory", "task", "question", "todowrite", "skill", "blueprint_*", "list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]) {
+      assert.equal(permission[key], "deny", `${agentName}: ${key}`);
     }
-
     if (agentName === "blueprint-executor") {
-      assert.ok(
-        (frontmatter.tools as string[]).includes("edit"),
-        "blueprint-executor must be able to edit existing files"
-      );
-      assert.ok(
-        (frontmatter.tools as string[]).includes("write"),
-        "blueprint-executor must be able to create files when a plan requires it"
-      );
-      assert.match(body, /## Parent-Owned Responsibilities/);
-      assert.match(body, /user-facing orchestration and coordination/i);
-      assert.match(body, /visible progress prose,[\s\S]*`todowrite`, and `question`/i);
-      assert.match(body, /## Progress Checkpoint Contract/);
-      assert.match(body, /when scope is resolved/i);
-      assert.match(body, /after each assigned plan or major task group/i);
-      assert.match(body, /when a blocker or deviation appears/i);
-      assert.match(body, /after verification finishes/i);
-      assert.match(
-        body,
-        /resolved scope,\s+active stage,\s+pending gate,\s+execution mode,\s+and next safe action/i
-      );
-      assert.match(body, /## Shell Isolation/);
-      assert.match(
-        body,
-        /Shell must not own Blueprint persistence,[\s\S]*MCP writes,[\s\S]*approvals,[\s\S]*routing,[\s\S]*phase-level orchestration/i
-      );
-      continue;
+      assert.equal(permission.edit, "allow");
+      assert.equal(permission.bash, "ask");
+    } else {
+      for (const key of ["edit", "write", "apply_patch", "bash"]) assert.equal(permission[key], "deny", `${agentName}: ${key}`);
     }
-
-    if (
-      agentName === "blueprint-reviewer" ||
-      agentName === "blueprint-verifier" ||
-      agentName === "blueprint-security-auditor" ||
-      agentName === "blueprint-ui-auditor" ||
-      agentName === "blueprint-doc-writer" ||
-      agentName === "blueprint-doc-verifier"
-    ) {
-      assert.match(body, /## Parent-Owned Responsibilities/);
-      assert.match(body, /visible progress prose, `todowrite`, and `question`/);
-      assert.match(body, /MCP-backed persistence step|MCP persistence|report persistence/i);
-      assert.match(body, /final routing/i);
-      assert.match(body, /read-only/i);
-    }
-
-    assert.ok(
-      !(frontmatter.tools as string[]).includes("edit"),
-      `${agentName} should remain read-only at the tool layer`
-    );
-    assert.ok(
-      !(frontmatter.tools as string[]).includes("write"),
-      `${agentName} should remain read-only at the tool layer`
-    );
-    assert.ok(
-      !(frontmatter.tools as string[]).includes("bash"),
-      `${agentName} should stay off shell access unless the role truly executes work`
-    );
   }
 });
 
-test("command-catalog optional agents always point at valid Gemini subagent files", async () => {
-  const availableAgents = await loadCatalogOptionalAgentsFromSource();
-
-  for (const agentName of availableAgents) {
-    assert.ok(
-      agentName in EXPECTED_AGENTS,
-      `Command catalog exposes optional agent without a schema contract: ${agentName}`
-    );
-
-    const { frontmatter } = await loadAgent(agentName as AgentName);
-
-    assert.equal(frontmatter.name, agentName);
-    assert.equal(frontmatter.kind, "local");
-    assert.equal(Array.isArray(frontmatter.tools), true);
-    assert.ok((frontmatter.tools as string[]).length > 0);
-  }
+test("required primary owns only the locked task, skill, interaction, source, and Blueprint MCP surface", async () => {
+  const { body, frontmatter, validation } = await load(BLUEPRINT_PRIMARY_AGENT_NAME);
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.equal(frontmatter.mode, "primary");
+  assert.equal(frontmatter.steps, 40);
+  const permission = frontmatter.permission as Record<string, unknown>;
+  const read = permission.read as Record<string, unknown>;
+  const tasks = permission.task as Record<string, unknown>;
+  const skills = permission.skill as Record<string, unknown>;
+  assert.equal(permission["*"], "deny");
+  assert.equal(permission.edit, "allow");
+  assert.equal(permission.bash, "ask");
+  assert.equal(permission.question, "allow");
+  assert.equal(permission.todowrite, "allow");
+  assert.equal(permission["blueprint_*"], "allow");
+  assert.equal(read["mcp:*"], "deny");
+  assert.equal(read["mcp:blueprint:*"], "allow");
+  assert.deepEqual(Object.keys(tasks).sort(), [...BLUEPRINT_AGENT_TOOL_NAMES]);
+  assert.ok(Object.values(tasks).every((value) => value === "allow"));
+  assert.deepEqual(Object.keys(skills).sort(), expectedSkills);
+  assert.ok(Object.values(skills).every((value) => value === "allow"));
+  assert.match(body, /self-contained packet/i);
+  assert.match(body, /returned `task_id`/);
+  assert.match(body, /Do not assume intermediate child narration/i);
+  assert.match(body, /steps.*wall-clock deadline/i);
+  assert.match(body, /must never dispatch `blueprint-executor`/i);
 });

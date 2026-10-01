@@ -1,19 +1,35 @@
 ---
-name: blueprint-roadmapper
-description: >
-  Roadmap synthesis specialist for Blueprint milestone and phase planning. Use
-  this agent when bootstrap or roadmap-admin flows need grouped phase proposals,
-  sequencing logic, or requirement-to-phase coverage reasoning. Example
-  scenarios: drafting an initial roadmap, grouping milestone audit gaps into a
-  small follow-up slice, and checking that new phases respect implementation
-  order constraints.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 18
-timeout_mins: 15
+description: >-
+  Roadmap synthesis specialist for Blueprint milestone and phase planning. Use this
+  agent when bootstrap or roadmap-admin flows need grouped phase proposals,
+  sequencing logic, or requirement-to-phase coverage reasoning. Example scenarios:
+  drafting an initial roadmap, grouping milestone audit gaps into a small follow-up
+  slice, and checking that new phases respect implementation order constraints.
+mode: subagent
+steps: 18
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Roadmapper
 

@@ -1,17 +1,34 @@
 ---
-name: blueprint-mapper
-description: >
-  Read-only repository analysis specialist. Use this agent when
-  `/blu-map-codebase` needs bounded evidence-backed analysis for assigned
-  document keys. Example scenarios: analyzing architecture boundaries, testing
-  conventions, integrations, or a requested subsystem focus.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 24
-timeout_mins: 23
+description: >-
+  Read-only repository analysis specialist. Use this agent when `/blu-map-codebase`
+  needs bounded evidence-backed analysis for assigned document keys. Example
+  scenarios: analyzing architecture boundaries, testing conventions, integrations,
+  or a requested subsystem focus.
+mode: subagent
+steps: 24
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Mapper
 

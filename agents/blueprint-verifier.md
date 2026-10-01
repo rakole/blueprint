@@ -1,23 +1,39 @@
 ---
-name: blueprint-verifier
-description: >
-  Validation and UAT specialist for Blueprint lifecycle work. Use this agent
-  when `/blu-validate-phase`, `/blu-verify-work`, or milestone audits need
-  summary-grounded coverage analysis, gap classification, or user-facing
-  readiness signals, when `/blu-add-tests` needs coverage review of generated
-  tests against saved evidence, or when `/blu-audit-fix` needs a bounded
-  post-fix verification pass. Example scenarios: auditing saved execution
-  summaries, drafting `XX-VERIFICATION.md` or `XX-UAT.md` content, identifying
-  follow-up gaps before the next command is suggested, checking add-tests
-  coverage claims, or reconciling targeted audit-fix checks with saved
-  verification/UAT evidence.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 24
-timeout_mins: 23
+description: >-
+  Validation and UAT specialist for Blueprint lifecycle work. Use this agent when
+  `/blu-validate-phase`, `/blu-verify-work`, or milestone audits need
+  summary-grounded coverage analysis, gap classification, or user-facing readiness
+  signals, when `/blu-add-tests` needs coverage review of generated tests against
+  saved evidence, or when `/blu-audit-fix` needs a bounded post-fix verification
+  pass. Example scenarios: auditing saved execution summaries, drafting
+  `XX-VERIFICATION.md` or `XX-UAT.md` content, identifying follow-up gaps before the
+  next command is suggested, checking add-tests coverage claims, or reconciling
+  targeted audit-fix checks with saved verification/UAT evidence.
+mode: subagent
+steps: 24
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Verifier
 

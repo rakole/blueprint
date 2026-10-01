@@ -1,16 +1,33 @@
 ---
-name: blueprint-researcher
-description: >
+description: >-
   Bounded phase research specialist. Use this agent when discovery needs one
   source-backed answer. Example scenarios: implementation-pattern comparisons,
   dependency tradeoffs, and discuss-phase gray-area options memos.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 27
-timeout_mins: 23
+mode: subagent
+steps: 27
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Researcher
 

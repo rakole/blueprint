@@ -1,20 +1,36 @@
 ---
-name: blueprint-doc-writer
-description: >
-  Documentation drafting specialist for Blueprint docs-update runs. Use this
-  agent when `/blu-docs-update` needs scoped markdown revisions grounded in repo
-  evidence and saved Blueprint artifacts rather than a loose prose rewrite.
-  Example scenarios: refreshing `README.md` after shipped command changes,
-  tightening architecture docs to match current MCP/runtime boundaries, and
-  proposing bounded updates for a small set of user-facing docs without
-  widening into unrelated files.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 24
-timeout_mins: 23
+description: >-
+  Documentation drafting specialist for Blueprint docs-update runs. Use this agent
+  when `/blu-docs-update` needs scoped markdown revisions grounded in repo evidence
+  and saved Blueprint artifacts rather than a loose prose rewrite. Example
+  scenarios: refreshing `README.md` after shipped command changes, tightening
+  architecture docs to match current MCP/runtime boundaries, and proposing bounded
+  updates for a small set of user-facing docs without widening into unrelated files.
+mode: subagent
+steps: 24
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Doc Writer
 

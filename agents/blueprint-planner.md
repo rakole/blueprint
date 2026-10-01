@@ -1,20 +1,36 @@
 ---
-name: blueprint-planner
-description: >
+description: >-
   Phase-planning specialist for Blueprint lifecycle work. Use this agent when
-  `/blu-plan-phase` needs execution-ready plan drafts grounded in phase
-  context, discovery artifacts, current Blueprint constraints, and the live
-  planning contract. Example scenarios: drafting compact plan-set candidates
-  compiled by MCP into `XX-YY-PLAN.md`, splitting a phase into dependency-aware
-  waves, and translating research or UI findings into concrete implementation
-  steps.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 24
-timeout_mins: 18
+  `/blu-plan-phase` needs execution-ready plan drafts grounded in phase context,
+  discovery artifacts, current Blueprint constraints, and the live planning
+  contract. Example scenarios: drafting compact plan-set candidates compiled by MCP
+  into `XX-YY-PLAN.md`, splitting a phase into dependency-aware waves, and
+  translating research or UI findings into concrete implementation steps.
+mode: subagent
+steps: 24
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Planner
 

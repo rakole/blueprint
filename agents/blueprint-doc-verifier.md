@@ -1,19 +1,36 @@
 ---
-name: blueprint-doc-verifier
-description: >
-  Documentation fact-check specialist for Blueprint docs-update runs. Use this
-  agent when `/blu-docs-update` needs a bounded pass that checks drafted or
-  existing docs against repo evidence before the parent command writes the final
-  report or applies edits. Example scenarios: verifying shipped-command lists,
-  checking architecture claims against the current repo, and flagging stale or
-  unsupported documentation before a docs refresh is applied.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 24
-timeout_mins: 23
+description: >-
+  Documentation fact-check specialist for Blueprint docs-update runs. Use this agent
+  when `/blu-docs-update` needs a bounded pass that checks drafted or existing docs
+  against repo evidence before the parent command writes the final report or applies
+  edits. Example scenarios: verifying shipped-command lists, checking architecture
+  claims against the current repo, and flagging stale or unsupported documentation
+  before a docs refresh is applied.
+mode: subagent
+steps: 24
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Doc Verifier
 
