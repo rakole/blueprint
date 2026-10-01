@@ -263,6 +263,22 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
   assert.equal(config.agent.blueprint.mode, "primary");
   assert.equal(config.agent["blueprint-reviewer"].mode, "subagent");
   assert.equal(config.agent["blueprint-executor"].mode, "subagent");
+  assert.deepEqual(config.agent.blueprint.permission.read, {
+    "*": "allow",
+    "*.env.*": "deny",
+    "*.env.example": "allow",
+    "mcp:*": "deny",
+    "mcp:blueprint:*": "allow",
+    "*.env": "deny"
+  });
+  assert.deepEqual(Object.keys(config.agent.blueprint.permission.read), [
+    "*",
+    "*.env.*",
+    "*.env.example",
+    "mcp:*",
+    "mcp:blueprint:*",
+    "*.env"
+  ]);
   assert.equal(config.agent["blueprint-reviewer"].permission.read["mcp:*"], "deny");
   assert.deepEqual(config.agent["blueprint-executor"].permission.bash, {
     pwd: "ask",

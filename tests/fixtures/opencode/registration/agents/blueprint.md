@@ -4,7 +4,13 @@ mode: primary
 steps: 40
 permission:
   "*": deny
-  read: allow
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+    "mcp:blueprint:*": allow
   glob: allow
   grep: allow
   question: allow
