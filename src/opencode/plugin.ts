@@ -22,6 +22,11 @@ type MutableOpenCodeConfig = {
   permission?: unknown;
 };
 
+// Remains false until the exact pinned-host lifecycle proof required by the
+// migration contract is completed and reviewed. This is package-owned and is
+// deliberately not configurable by environment, model output, or callers.
+const PRIVATE_HELPER_ACTIVATION_QUALIFIED = false;
+
 function callerRestrictions(permission: unknown): Record<string, unknown> {
   if (permission === "deny" || permission === "ask") return { "*": permission };
   if (!permission || typeof permission !== "object") return {};
@@ -250,7 +255,9 @@ export const BlueprintPlugin: Plugin = async ({ directory, worktree }) => {
   for (const diagnostic of assets.diagnostics) {
     process.emitWarning(diagnostic, { code: "BLUEPRINT_OPTIONAL_AGENT_UNAVAILABLE" });
   }
-  const activation = createBlueprintActivationHooks(assets.skillAliases);
+  const activation = createBlueprintActivationHooks(assets.skillAliases, {
+    privateHelperQualified: PRIVATE_HELPER_ACTIVATION_QUALIFIED
+  });
 
   return {
     ...activation,

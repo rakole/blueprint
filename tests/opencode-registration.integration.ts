@@ -180,7 +180,10 @@ test("native asset loading rejects a symlinked package directory", async () => {
 });
 
 test("private helper activation is exact, correlated, revocable, and session isolated", async () => {
-  const hooks = createBlueprintActivationHooks(new Set(["blueprint-project", "blueprint-god-review"]));
+  const hooks = createBlueprintActivationHooks(
+    new Set(["blueprint-project", "blueprint-god-review"]),
+    { privateHelperQualified: true }
+  );
   const parts = [{ type: "text", text: "review packet" }] as never[];
   const command = hooks["command.execute.before"]!;
   const message = hooks["chat.message"]!;
@@ -244,6 +247,28 @@ test("private helper activation is exact, correlated, revocable, and session iso
   await assert.rejects(
     tool({ tool: "skill", sessionID: "overlap", callID: "c5" }, { args: { name: "blueprint-god-review" } }),
     /same active user dispatch/
+  );
+});
+
+test("private helper stays blocked by default even for an otherwise eligible dispatch", async () => {
+  const hooks = createBlueprintActivationHooks(
+    new Set(["blueprint-project", "blueprint-god-review"])
+  );
+  const parts = [{ type: "text", text: "review packet" }] as never[];
+  await hooks["command.execute.before"]!(
+    { command: "blu-code-review", sessionID: "unqualified", arguments: "--feels-like-god" },
+    { parts }
+  );
+  await hooks["chat.message"]!(
+    { sessionID: "unqualified", messageID: "m1" },
+    { message: {} as never, parts }
+  );
+  await assert.rejects(
+    hooks["tool.execute.before"]!(
+      { tool: "skill", sessionID: "unqualified", callID: "c1" },
+      { args: { name: "blueprint-god-review" } }
+    ),
+    /has not been qualified on the actual host/
   );
 });
 

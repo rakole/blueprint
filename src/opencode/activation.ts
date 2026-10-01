@@ -12,6 +12,10 @@ type PendingActivation = {
   fingerprint: string;
 };
 
+export type BlueprintActivationOptions = {
+  privateHelperQualified?: boolean;
+};
+
 function semanticPart(part: unknown): unknown {
   if (part === null || typeof part !== "object") return part;
   const value = part as Record<string, unknown>;
@@ -44,7 +48,11 @@ function eventSessionId(event: { properties?: unknown }): string | undefined {
   return undefined;
 }
 
-export function createBlueprintActivationHooks(skillAliases: ReadonlySet<string>): Hooks {
+export function createBlueprintActivationHooks(
+  skillAliases: ReadonlySet<string>,
+  options: BlueprintActivationOptions = {}
+): Hooks {
+  const privateHelperQualified = options.privateHelperQualified === true;
   const pending = new Map<string, PendingActivation>();
   const grants = new Map<string, { command: string; messageID?: string }>();
 
@@ -91,6 +99,11 @@ export function createBlueprintActivationHooks(skillAliases: ReadonlySet<string>
 
     "tool.execute.before": async (input, output) => {
       if (input.tool !== "skill" || output.args?.name !== GOD_REVIEW_SKILL) return;
+      if (!privateHelperQualified) {
+        throw new Error(
+          `${GOD_REVIEW_SKILL} is blocked because its native OpenCode activation lifecycle has not been qualified on the actual host.`
+        );
+      }
       if (!grants.has(input.sessionID)) {
         throw new Error(
           `${GOD_REVIEW_SKILL} requires /blu-code-review or /blu-code-review-fix with the standalone --feels-like-god flag in the same active user dispatch.`
