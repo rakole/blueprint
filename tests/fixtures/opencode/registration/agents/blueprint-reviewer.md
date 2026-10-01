@@ -9,6 +9,7 @@ permission:
     "*.env": deny
     "*.env.*": deny
     "*.env.example": allow
+    "mcp:*": deny
   glob: allow
   grep: allow
   external_directory: deny
