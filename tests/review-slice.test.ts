@@ -260,7 +260,6 @@ test("review runtime metadata, manifest, and local contract stay source-owned", 
     ...REVIEW_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-review.md",
     "skills/blueprint-review/references/review-runtime-contract.md"
   ]);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);

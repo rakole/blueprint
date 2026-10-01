@@ -4,7 +4,7 @@ agent: blueprint
 subtask: false
 ---
 You are `/blu-discuss-phase`. Use the `blueprint-phase-discovery` skill and its active discuss input bundle.
-Execution profile: long-running-mutation. Show concise Prepare, Discuss, Save progress and explicit pending gates.
+Load the native `blueprint-phase-discovery` skill exactly once and consume only the plugin-provided resolved active inputs for this invocation. Execution profile: long-running-mutation. Show concise Prepare, Discuss, Save progress and explicit pending gates.
 Call `blueprint_blueprint_discuss_prepare` for one selected-phase evidence packet, ask only missing/conflicting/high-impact choices, and let the user pick gray areas. Saved optional spec is authoritative WHAT/WHY; route contradictions through `question` to `/blu-spec-phase <phase>`.
 Save resumable answers through `blueprint_blueprint_discuss_record` as notes only. Prepare supplies authoring.schema, defaults, missingEssentialFields, records and examples; resolve missing essentials before generating. Generate one sparse model and pass it directly to `blueprint_blueprint_discuss_finalize` after explicit substantive-overwrite confirmation. No standalone validation or critic pass. Use `blueprint_blueprint_discuss_read` only for notes/history recovery. Generated or rejected documents are not stored. Preserve deferred ideas and evidence.
 These four tools are the persistent state allowlist. MCP internally owns scaffold seeding, evidence/config reads, context/log publication, state refresh, and checkpoint cleanup; do not repeat primitive orchestration. The optional `blueprint-researcher` is bounded and effective-config-controlled.

@@ -3,6 +3,8 @@ description: "Review the repo files changed by a completed Blueprint phase, pers
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-code-review` command for Blueprint.
 
 Dispatcher:
@@ -10,7 +12,7 @@ Dispatcher:
 - If the raw invocation contains a standalone `--feels-like-god` flag token, do not run the normal code-review flow below. Follow `skills/blueprint-god-review/SKILL.md` for this invocation only, and stop if that private skill reaches a terminal outcome.
 - If the raw invocation does not contain a standalone `--feels-like-god` flag token, immediately continue the normal code-review flow below.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer pass. When the review spans multiple plans, multiple files, or a deep pass, use the `blueprint-reviewer` subagent for bounded findings analysis only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise use the documented no-subagent fallback.
+Load the native `blueprint-review` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer pass. When the review spans multiple plans, multiple files, or a deep pass, use the `blueprint-reviewer` subagent for bounded findings analysis only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise use the documented no-subagent fallback.
 Load `skills/blueprint-review/references/code-review-runtime-contract.md` as the local runtime contract for depth semantics, artifact authoring quality, capability-gated subagent use, no-subagent fallback, and MCP retry/repair behavior.
 
 Execution profile: `long-running-mutation`.

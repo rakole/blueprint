@@ -3,6 +3,8 @@ description: "Apply bounded fixes from a saved Blueprint phase code review, pers
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-code-review-fix` command for Blueprint.
 
 Dispatcher:
@@ -10,7 +12,7 @@ Dispatcher:
 - If the raw invocation contains a standalone `--feels-like-god` flag token, do not run the normal review-fix flow below. Follow `skills/blueprint-god-review/SKILL.md` for this invocation only, and stop if that private skill reaches a terminal outcome.
 - If the raw invocation does not contain a standalone `--feels-like-god` flag token, immediately continue the normal review-fix flow below.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer pass. Use the `blueprint-reviewer` subagent for bounded reclassification only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the remediation decisions inline.
+Load the native `blueprint-review` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer pass. Use the `blueprint-reviewer` subagent for bounded reclassification only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the remediation decisions inline.
 Load `skills/blueprint-review/references/code-review-fix-runtime-contract.md` through the `blueprint-review` skill before deciding the fix path. That reference is the local runtime contract for saved-findings remediation, schema-first model authoring, subagent capability gates, no-subagent fallback, retry/repair behavior, and output quality.
 
 Execution profile: `long-running-mutation`.

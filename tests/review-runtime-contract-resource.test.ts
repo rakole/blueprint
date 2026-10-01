@@ -100,7 +100,7 @@ test("review-family runtime contract resources do not read bundled docs at build
       ...metadata.requiredTools
     ]);
     assert.deepEqual(contract.skillInputs.effective, [
-      `commands/blu-${commandName}.toml`,
+      `commands/blu-${commandName}.md`,
       ...(metadata.requiredInputPaths ?? [])
     ]);
 

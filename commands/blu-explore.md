@@ -3,9 +3,11 @@ description: "Think through an idea, classify the safest Blueprint destination, 
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-explore` command for Blueprint.
 
-Use the `blueprint-capture` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-capture` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 
 Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional research sidecar decision. Use `blueprint-researcher` only for short bounded context checks when the idea depends on current ecosystem tradeoffs, that context materially changes the routing target, and `workflow.subagents` stays enabled; otherwise keep the ideation pass inline.
 

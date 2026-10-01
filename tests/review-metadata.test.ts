@@ -48,7 +48,6 @@ test("review runtime metadata is source-owned and docs-free", async () => {
       "skills/blueprint-review/references/review-runtime-contract.md"
     ],
     effective: [
-      "commands/blu-review.md",
       "skills/blueprint-review/references/review-runtime-contract.md"
     ]
   });
@@ -58,7 +57,7 @@ test("review runtime metadata is source-owned and docs-free", async () => {
 test("review manifest references plan-backed peer-review tools and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-review.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-review` skill/);
+  assert.match(commandFile, /Load the native `blueprint-review` skill exactly once/);
   assert.match(
     commandFile,
     /Load `skills\/blueprint-review\/references\/review-runtime-contract\.md`/

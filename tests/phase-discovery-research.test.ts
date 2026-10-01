@@ -31,6 +31,7 @@ import {
 } from "../src/mcp/tools/state.js";
 import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
+import { parseNativeMarkdown } from "../src/shared/native-frontmatter.js";
 
 const repoRoot = process.cwd();
 
@@ -77,9 +78,8 @@ async function readResearchSurfaceSizes(): Promise<ResearchSurfaceSizes> {
 
   const inventoryOnly: Record<string, number> = {};
   for (const filePath of ["agents/blueprint-researcher.md"]) {
-    inventoryOnly[filePath] = byteLength(
-      await readFile(path.join(repoRoot, filePath), "utf8")
-    );
+    const source = await readFile(path.join(repoRoot, filePath), "utf8");
+    inventoryOnly[filePath] = byteLength(parseNativeMarkdown(source, filePath).body);
   }
 
   return { active, inventoryOnly };

@@ -3,9 +3,11 @@ description: "Investigate a repo issue with a structured debugging flow, persist
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-debug` command for Blueprint.
 
-Use the `blueprint-debug` skill as the primary orchestration contract when that runtime skill is available. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional debugger pass. Use the `blueprint-debugger` subagent for bounded investigation work when the issue needs deeper reproduction, log analysis, or hypothesis testing before a safe next step is clear only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the investigation inline.
+Load the native `blueprint-debug` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional debugger pass. Use the `blueprint-debugger` subagent for bounded investigation work when the issue needs deeper reproduction, log analysis, or hypothesis testing before a safe next step is clear only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the investigation inline.
 
 Execution profile: start in `interactive-read` for lightweight evidence-backed investigations that can stay concise, and escalate to `long-running-mutation` only when the investigation becomes non-trivial and needs visible stage, gate, and follow-up reporting.
 

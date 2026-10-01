@@ -3,9 +3,11 @@ description: "Run cross-CLI peer review over a saved Blueprint phase plan set, p
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-review` command for Blueprint.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-review` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 Load `skills/blueprint-review/references/review-runtime-contract.md` as the local runtime contract for peer-review prompt depth, artifact authoring richness, capability-gated review-packet analysis, no-subagent fallback, and MCP retry/repair behavior. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer pass. When the saved phase plan set is broad, has multiple plan artifacts, includes meaningful context/research evidence, or needs a synthesis quality check before persistence, use the `blueprint-reviewer` subagent only for read-only packet and consensus/disagreement analysis when the runtime contract allows it and `workflow.subagents` is enabled. The subagent must not replace external reviewer CLIs, invent reviewer coverage, run browser/web/search-only analysis, persist artifacts, or route the command.
 
 Execution profile: `long-running-mutation`.

@@ -3,9 +3,11 @@ description: "Surface the agent's current assumptions about a phase before plann
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-list-phase-assumptions` command for Blueprint.
 
-Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional research sidecar decision. When a clearer evidence-backed technical read would materially improve the assumptions summary, you may use the `blueprint-researcher` subagent only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the assumptions pass inline.
+Load the native `blueprint-phase-discovery` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional research sidecar decision. When a clearer evidence-backed technical read would materially improve the assumptions summary, you may use the `blueprint-researcher` subagent only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the assumptions pass inline.
 
 Follow this flow exactly:
 

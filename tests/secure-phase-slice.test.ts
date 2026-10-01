@@ -611,7 +611,6 @@ test("secure-phase runtime metadata, manifest, and skill contract stay aligned",
     ...SECURE_PHASE_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-secure-phase.md",
     "skills/blueprint-review/references/secure-phase-runtime-contract.md"
   ]);
   assert.match(commandFile, /review\.security/);

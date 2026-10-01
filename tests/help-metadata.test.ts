@@ -97,7 +97,7 @@ test("help runtime contract is source-owned and uses only the command manifest a
     skill: "blueprint-router",
     shared: [],
     commandSpecific: ["commands/blu-help.md"],
-    effective: ["commands/blu-help.md"]
+    effective: []
   });
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
@@ -131,5 +131,5 @@ test("help remains implemented when docs-backed command specs are unavailable", 
   assert.equal(catalog.commands.help.implemented, true);
   assert.equal(catalog.commands.help.specPath, HELP_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec?.path, HELP_RUNTIME_METADATA.sourceId);
-  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-help.md"]);
+  assert.deepEqual(contract.skillInputs.effective, []);
 });

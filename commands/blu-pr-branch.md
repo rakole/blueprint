@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-pr-branch` command for Blueprint.
 
-Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available. Load `skills/blueprint-maintenance/references/pr-branch-runtime-contract.md` as the detailed runtime contract for commit classification, replay verification, report authoring, and recovery behavior.
+Load the native `blueprint-maintenance` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Load `skills/blueprint-maintenance/references/pr-branch-runtime-contract.md` as the detailed runtime contract for commit classification, replay verification, report authoring, and recovery behavior.
 
 Follow this flow exactly:
 

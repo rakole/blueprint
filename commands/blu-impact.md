@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-impact` command for Blueprint.
 
-Use the `blueprint-impact` skill as the primary orchestration contract when that runtime skill is available. Load `skills/blueprint-impact/references/impact-runtime-contract.md` for the detailed Resolve/Read/Decide/Execute/Persist/Validate/Route contract, uncertainty rules, report-quality checks, no-write rendering path, and self-check behavior.
+Load the native `blueprint-impact` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Load `skills/blueprint-impact/references/impact-runtime-contract.md` for the detailed Resolve/Read/Decide/Execute/Persist/Validate/Route contract, uncertainty rules, report-quality checks, no-write rendering path, and self-check behavior.
 
 Execution profile:
 - `long-running-mutation`

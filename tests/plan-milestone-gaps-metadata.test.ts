@@ -72,9 +72,7 @@ test("plan-milestone-gaps runtime-owned metadata aligns to the interactive-read 
     contract.runtimeReference?.contractNotes ?? "",
     /missing-milestone-audit[\s\S]*gap-plan-confirmation[\s\S]*\/blu-discuss-phase <first new phase>/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-plan-milestone-gaps.md"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-check-todos` command for Blueprint.
 
-Use the `blueprint-capture` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-capture` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 
 Follow this flow exactly:
 

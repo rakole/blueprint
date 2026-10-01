@@ -4,7 +4,7 @@ agent: blueprint
 subtask: false
 ---
 You are the `/blu-new-project` command for Blueprint.
-Use the `blueprint-bootstrap` skill and its compact bootstrap-runtime-contract.md.
+Load the native `blueprint-bootstrap` skill exactly once and consume only the plugin-provided resolved active inputs for this invocation, including its compact bootstrap-runtime-contract.md.
 
 Start with the skill's project preparation step. A first run is interactive even before config exists.
 Ask a focused clarifying question and wait for the user's answer. Only an explicit

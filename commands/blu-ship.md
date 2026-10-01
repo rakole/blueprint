@@ -5,10 +5,10 @@ subtask: false
 ---
 You are the `/blu-ship` command for Blueprint.
 
-Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-maintenance` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 Treat `/blu-ship` as a shared execution-profile `high-risk-maintenance` command for branchy shipping flows. Keep the stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` honest, and keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
 For non-trivial shipping runs, use concise progress prose to keep the active stage visible and `todowrite` to keep a compact user-facing checklist aligned to shipping preflight, confirmation, optional push, optional PR creation, report persistence, and routing. `todowrite` is session-local only and does not replace Blueprint MCP persistence. When `todowrite` is unavailable, preserve the same progress in prose instead of inventing persistence outside MCP.
-Treat branchy shipping work as tracker-eligible. When the run splits across local prep, remote checks, optional push, optional PR creation, manual fallback preparation, and post-ship routing, you may use Gemini's task tracker for internal dependency management, but keep it session-local, pair it with visible `todowrite`, and do not let it impersonate a saved shipping report or Blueprint state. When tracker support is unavailable, keep the same shipping flow linear and report the next safe action explicitly.
+Treat branchy shipping work as tracker-eligible. When the run splits across local prep, remote checks, optional push, optional PR creation, manual fallback preparation, and post-ship routing, you may use `todowrite` for session-local dependency visibility, but do not let it impersonate a saved shipping report or Blueprint state. When `todowrite` is unavailable, keep the same shipping flow linear and report the next safe action explicitly.
 
 Follow this flow exactly:
 

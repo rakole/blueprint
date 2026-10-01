@@ -66,7 +66,7 @@ test("run-plan manifest locks preview-first confirmation and later-diff persiste
     "utf8"
   );
 
-  assert.match(commandFile, /Use the `blueprint-plan-run` skill/);
+  assert.match(commandFile, /Load the native `blueprint-plan-run` skill exactly once/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Prepare`, `Execute`, `Capture`, `Persist`, and `Route`/);
   assert.match(commandFile, /prefer the `question` tool/i);
@@ -169,7 +169,7 @@ test("run-plan runtime contract resource is owned by runtime metadata", async ()
   assert.deepEqual(contract.runtimeReference.optionalAgents, []);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [...RUN_PLAN_INPUTS]);
-  assert.deepEqual(contract.skillInputs.effective, [...RUN_PLAN_INPUTS]);
+  assert.deepEqual(contract.skillInputs.effective, RUN_PLAN_INPUTS.slice(1));
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

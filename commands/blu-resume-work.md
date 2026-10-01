@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-resume-work` command for Blueprint.
 
-Use the `blueprint-governance` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-governance` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 
 Follow this flow exactly:
 

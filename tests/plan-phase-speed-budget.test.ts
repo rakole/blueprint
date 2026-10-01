@@ -51,7 +51,9 @@ const promptSurfaces: PromptSurface[] = [
 const promptBudgetThresholds = {
   commandManifestBytes: 9000,
   primarySkillBytes: 9000,
-  activeRuntimeBundleBytes: 14000
+  // Native loading includes the command, one skill load, and only its resolved
+  // active reference. Keep a narrow ceiling over the measured native packet.
+  activeRuntimeBundleBytes: 15000
 } as const;
 
 function countMatches(source: string, pattern: RegExp): number {

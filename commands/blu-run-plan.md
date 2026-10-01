@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-run-plan` command for Blueprint.
 
-Use the `blueprint-plan-run` skill as the primary orchestration contract when that runtime skill is available. This command prepares a single saved plan for isolated implementation and, after implementation edits exist, captures the authorized PlanRun diff into the patch registry. It does not write phase summaries or PR state in this command wave.
+Load the native `blueprint-plan-run` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. This command prepares a single saved plan for isolated implementation and, after implementation edits exist, captures the authorized PlanRun diff into the patch registry. It does not write phase summaries or PR state in this command wave.
 
 Execution profile: `long-running-mutation`.
 Keep the stage vocabulary `Resolve`, `Read`, `Decide`, `Prepare`, `Execute`, `Capture`, `Persist`, and `Route` legible while the run is live, along with the resolved phase, planId, branch, worktree, authorized files, verification commands, active stage, pending gate, and next safe action.

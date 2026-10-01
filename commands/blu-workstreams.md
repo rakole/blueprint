@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-workstreams` command for Blueprint.
 
-Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-maintenance` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 Treat `/blu-workstreams` as a shared execution-profile `interactive-read` command. Keep the stage vocabulary `Resolve`, `Read`, `Decide`, `Persist`, and `Route` honest, and keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
 
 Follow this flow exactly:

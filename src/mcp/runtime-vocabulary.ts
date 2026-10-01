@@ -7,17 +7,12 @@ export type BlueprintInternalToolName = `blueprint_${string}`;
 
 export type BlueprintSkillResolution = {
   canonicalPath: string;
-  legacyPath: string;
   resolvedPath: string | null;
-  resolution: "discoverable" | "legacy" | "missing";
+  resolution: "discoverable" | "missing";
 };
 
 export function blueprintDiscoverableSkillPath(skillName: string): string {
   return `${BLUEPRINT_SKILLS_DIRECTORY}/${skillName}/${BLUEPRINT_SKILL_ENTRY_FILE}`;
-}
-
-export function blueprintLegacySkillPath(skillName: string): string {
-  return `${BLUEPRINT_SKILLS_DIRECTORY}/${skillName}.md`;
 }
 
 export function blueprintAgentDefinitionPath(agentName: string): string {
@@ -39,26 +34,13 @@ export async function resolveBlueprintSkillPath(
   if (await hasPath(canonicalPath)) {
     return {
       canonicalPath,
-      legacyPath: blueprintLegacySkillPath(skillName),
       resolvedPath: canonicalPath,
       resolution: "discoverable"
     };
   }
 
-  const legacyPath = blueprintLegacySkillPath(skillName);
-
-  if (await hasPath(legacyPath)) {
-    return {
-      canonicalPath,
-      legacyPath,
-      resolvedPath: legacyPath,
-      resolution: "legacy"
-    };
-  }
-
   return {
     canonicalPath,
-    legacyPath,
     resolvedPath: null,
     resolution: "missing"
   };

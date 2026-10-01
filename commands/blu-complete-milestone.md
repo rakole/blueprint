@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-complete-milestone` command for Blueprint.
 
-Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-roadmap-admin` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 
 Follow this flow exactly:
 

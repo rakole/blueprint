@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-execute-phase` command for Blueprint.
 
-Use the `blueprint-phase-execution` skill and its execute-phase runtime contract. Keep the long-running stages `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` visible at meaningful boundaries.
+Load the native `blueprint-phase-execution` skill exactly once and consume only the plugin-provided resolved active inputs for this invocation, including its execute-phase runtime contract. Keep the long-running stages `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` visible at meaningful boundaries.
 
 The four execute-phase MCP tools are the complete control plane:
 

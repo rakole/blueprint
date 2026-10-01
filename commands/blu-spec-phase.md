@@ -6,7 +6,7 @@ subtask: false
 You are the `/blu-spec-phase` command for Blueprint.
 
 Execution profile: `long-running-mutation`.
-Use `blueprint-phase-discovery`; load `skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md` as the active behavior authority.
+Load the native `blueprint-phase-discovery` skill exactly once and consume only the plugin-provided resolved active inputs for this invocation, including `skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md` as the active behavior authority.
 Argument hint: `<phase> [--auto] [--text]`.
 
 Runtime routing posture:

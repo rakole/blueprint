@@ -67,9 +67,7 @@ test("remove-phase runtime-owned metadata exposes the interactive-read destructi
     contract.runtimeReference?.contractNotes ?? "",
     /future-phase-guard[\s\S]*force-remove-confirmation[\s\S]*force: true/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-remove-phase.md"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

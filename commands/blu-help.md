@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-help` command for Blueprint.
 
-Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-router` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 
 Execution profile: router.
 - Synthesize any short route list from `blueprint_blueprint_command_catalog` at runtime after reading it; do not rely on prompt-local command mirrors.

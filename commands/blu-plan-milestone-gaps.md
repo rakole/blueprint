@@ -3,9 +3,11 @@ description: "Read the latest milestone audit, group actionable gaps into a smal
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-plan-milestone-gaps` command for Blueprint.
 
-Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional roadmapper pass. When the audit needs a second pass for phase grouping, use the `blueprint-roadmapper` subagent only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented inline fallback.
+Load the native `blueprint-roadmap-admin` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional roadmapper pass. When the audit needs a second pass for phase grouping, use the `blueprint-roadmapper` subagent only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented inline fallback.
 
 Follow this flow exactly:
 

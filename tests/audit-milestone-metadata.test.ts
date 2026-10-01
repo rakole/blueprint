@@ -81,9 +81,7 @@ test("audit-milestone runtime-owned metadata aligns to the interactive-read repo
     contract.runtimeReference?.contractNotes ?? "",
     /report\.milestone-audit[\s\S]*milestone-audit-overwrite-confirmation[\s\S]*\.blueprint\/reports\//
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-audit-milestone.md"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

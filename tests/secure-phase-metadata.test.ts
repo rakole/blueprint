@@ -70,7 +70,6 @@ test("secure-phase runtime metadata is source-owned and docs-free", async () => 
       "skills/blueprint-review/references/secure-phase-runtime-contract.md"
     ],
     effective: [
-      "commands/blu-secure-phase.md",
       "skills/blueprint-review/references/secure-phase-runtime-contract.md"
     ]
   });
@@ -80,7 +79,7 @@ test("secure-phase runtime metadata is source-owned and docs-free", async () => 
 test("secure-phase manifest references the review tools, agent, and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-secure-phase.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-review` skill/);
+  assert.match(commandFile, /Load the native `blueprint-review` skill exactly once/);
   assert.match(
     commandFile,
     /skills\/blueprint-review\/references\/secure-phase-runtime-contract\.md/

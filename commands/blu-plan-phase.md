@@ -4,7 +4,7 @@ agent: blueprint
 subtask: false
 ---
 You are the `/blu-plan-phase` command for Blueprint.
-Use the `blueprint-phase-planning` skill and its `plan-phase-runtime-contract.md`.
+Load the native `blueprint-phase-planning` skill exactly once and consume only the plugin-provided resolved active inputs for this invocation, including `plan-phase-runtime-contract.md`.
 Execution profile: `long-running-mutation`.
 
 Keep resolved scope, active stage, pending gate, execution mode, and next safe action visible through short boundary updates. Stages: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.

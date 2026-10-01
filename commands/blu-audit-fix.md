@@ -3,9 +3,11 @@ description: "Run a bounded audit-to-fix loop for a completed Blueprint phase, p
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-audit-fix` command for Blueprint.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available, and load `skills/blueprint-review/references/audit-fix-runtime-contract.md` for the detailed audit-to-fix runtime contract. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer or verifier pass. Use the `blueprint-reviewer` subagent for bounded findings analysis when saved evidence is broad, and the `blueprint-verifier` subagent for bounded post-fix verification when targeted checks need a second pass, but only when the runtime contract allows them and `workflow.subagents` is enabled. Treat `blueprint-fixer` as planned-only inventory; do not require or assume it exists in shipped runtime flows.
+Load the native `blueprint-review` skill exactly once and consume only the plugin-provided resolved active inputs for this invocation, including `skills/blueprint-review/references/audit-fix-runtime-contract.md` for the detailed audit-to-fix runtime contract. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer or verifier pass. Use the `blueprint-reviewer` subagent for bounded findings analysis when saved evidence is broad, and the `blueprint-verifier` subagent for bounded post-fix verification when targeted checks need a second pass, but only when the runtime contract allows them and `workflow.subagents` is enabled. Treat `blueprint-fixer` as planned-only inventory; do not require or assume it exists in shipped runtime flows.
 
 Execution profile: `long-running-mutation`. Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` visible for the stages this run actually reaches. Keep resolved scope, active stage, pending gate, execution mode, and next safe action explicit throughout the run.
 

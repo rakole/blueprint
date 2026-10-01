@@ -90,9 +90,7 @@ test("complete-milestone runtime-owned metadata exposes the interactive-read wai
     contract.runtimeReference?.contractNotes ?? "",
     /missing-milestone-audit[\s\S]*milestone-not-ready[\s\S]*milestone-complete-overwrite-confirmation/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-complete-milestone.md"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

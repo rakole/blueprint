@@ -5,7 +5,7 @@ subtask: false
 ---
 You are the `/blu-update` command for Blueprint.
 
-Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available.
+Load the native `blueprint-maintenance` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
 Treat `/blu-update` as a shared execution-profile `interactive-read` command for advisory maintenance planning. Keep the stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` honest, and keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
 
 Follow this flow exactly:

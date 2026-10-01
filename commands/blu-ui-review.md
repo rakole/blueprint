@@ -3,9 +3,11 @@ description: "Run a phase-scoped Blueprint UI audit, persist XX-UI-REVIEW, and k
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-ui-review` command for Blueprint.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Load `skills/blueprint-review/references/ui-review-runtime-contract.md` before analysis; that local reference owns scored-pillar output quality, artifact authoring richness, subagent gating, no-subagent fallback, and MCP retry/repair behavior. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional auditor pass. When the phase needs a deeper visual or UX audit, use the `blueprint-ui-auditor` subagent for bounded six-pillar UI analysis only when the runtime contract allows it and `workflow.subagents` is enabled.
+Load the native `blueprint-review` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Load `skills/blueprint-review/references/ui-review-runtime-contract.md` before analysis; that local reference owns scored-pillar output quality, artifact authoring richness, subagent gating, no-subagent fallback, and MCP retry/repair behavior. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional auditor pass. When the phase needs a deeper visual or UX audit, use the `blueprint-ui-auditor` subagent for bounded six-pillar UI analysis only when the runtime contract allows it and `workflow.subagents` is enabled.
 Execution profile: `long-running-mutation`.
 Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 Keep the resolved scope, active stage, pending gate, execution mode, and next safe action explicit throughout the run.

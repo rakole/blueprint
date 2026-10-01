@@ -1,19 +1,18 @@
 ---
-description: "Investigate implementation decisions and publish canonical phase research through MCP."
+description: "Publish phase research through MCP."
 agent: blueprint
 subtask: false
 ---
-Command: `/blu-research-phase`. Execution profile: `long-running-mutation`.
-Use the `blueprint-phase-discovery` skill; load `research-phase-runtime-contract.md`.
+Execution profile: `long-running-mutation`.
+Load the native `blueprint-phase-discovery` skill exactly once. Use only resolved active inputs, including `research-phase-runtime-contract.md`.
 
 Normal flow: prepare → investigate → submit.
-- Use prepare's schema/example/grounding/validationRules for one model. Treat phase context as read-only; route unusable context to `/blu-discuss-phase`. Optional spec is read-only; missing spec is nonblocking. Use optional `blueprint-researcher` only when enabled, available and useful.
-- Honor `research.external_sources` off/ask/auto.
-- Submit directly; MCP renders canonical RESEARCH.md. Omit irrelevant fields; report open questions. Publication and planning readiness are separate.
-- Reuse verified-fresh research; review unknown legacy first. Replacement requires explicit overwrite authorization.
-- Rejected models are not saved: repair in conversation at same revision. Read returns canonical research/metadata. No separate state/catalog/checkpoint calls.
+- Author one model from prepare's schema, example, grounding, and validationRules. Context/spec are read-only; missing spec is nonblocking. Unusable context routes to `/blu-discuss-phase`. Use `blueprint-researcher` only when enabled and useful.
+- Honor `research.external_sources`; submit directly. Publication and planning readiness are separate.
+- Reuse verified-fresh research. Replacement requires explicit overwrite authorization.
+- Rejected models are not saved; repair at the same revision. No separate state/catalog/checkpoint calls.
 
 Use only these Blueprint MCP tools: `blueprint_blueprint_research_prepare`, `blueprint_blueprint_research_submit`, `blueprint_blueprint_research_read`.
-Explicit phase arguments are numeric references; writes stay MCP-owned in `.blueprint/phases/<phase>/` and `.blueprint/STATE.md`. Report outcome, path, evidence limits, blockers and safe nextAction; recommend only implemented commands.
+Writes stay MCP-owned. Report blockers and safe nextAction; recommend only implemented commands.
 
 $ARGUMENTS

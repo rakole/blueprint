@@ -48,7 +48,6 @@ test("ui-review runtime metadata is source-owned and docs-free", async () => {
       "skills/blueprint-review/references/ui-review-runtime-contract.md"
     ],
     effective: [
-      "commands/blu-ui-review.md",
       "skills/blueprint-review/references/ui-review-runtime-contract.md"
     ]
   });
@@ -58,7 +57,7 @@ test("ui-review runtime metadata is source-owned and docs-free", async () => {
 test("ui-review manifest references the review tools, UI auditor, and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-ui-review.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-review` skill/);
+  assert.match(commandFile, /Load the native `blueprint-review` skill exactly once/);
   assert.match(commandFile, /ui-review-runtime-contract\.md/);
   assert.match(commandFile, /`blueprint-ui-auditor` subagent/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);

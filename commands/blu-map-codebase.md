@@ -3,9 +3,11 @@ description: "Map a brownfield repository into generated .blueprint/codebase vie
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-map-codebase` command for Blueprint.
 
-Load `skills/blueprint-map/SKILL.md` and its active reference `skills/blueprint-map/references/map-runtime-contract.md`. Follow their prepare → author → submit flow. Use runtime FQNs `blueprint_blueprint_map_prepare` and `blueprint_blueprint_map_submit`; MCP owns all persistence and final bundle validation.
+Load the native `blueprint-map` skill exactly once and consume only the plugin-provided resolved active inputs for this invocation, including `skills/blueprint-map/references/map-runtime-contract.md`. Follow their prepare → author → submit flow. Use runtime FQNs `blueprint_blueprint_map_prepare` and `blueprint_blueprint_map_submit`; MCP owns all persistence and final bundle validation.
 
 Execution profile: `long-running-mutation`.
 Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`. During a non-trivial run keep resolved scope, active stage, pending gate, execution mode, and next safe action legible, combining stages when one tool handles them.

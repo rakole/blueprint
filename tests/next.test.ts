@@ -143,7 +143,7 @@ test("next runtime contract is source-owned and uses only the command manifest a
     skill: "blueprint-router",
     shared: [],
     commandSpecific: ["commands/blu-next.md"],
-    effective: ["commands/blu-next.md"]
+    effective: []
   });
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
@@ -177,5 +177,5 @@ test("next remains implemented when docs-backed command specs are unavailable", 
   assert.equal(catalog.commands.next.implemented, true);
   assert.equal(catalog.commands.next.specPath, NEXT_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec?.path, NEXT_RUNTIME_METADATA.sourceId);
-  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-next.md"]);
+  assert.deepEqual(contract.skillInputs.effective, []);
 });

@@ -123,7 +123,7 @@ test("router pilot runtime-owned metadata keeps the waiting-state contract align
   assert.deepEqual(helpMetadata.requiredInputPaths, [
     "commands/blu-help.md"
   ]);
-  assert.deepEqual(helpContract.skillInputs.effective, ["commands/blu-help.md"]);
+  assert.deepEqual(helpContract.skillInputs.effective, []);
   assert.equal(helpContract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
 
   assert.ok(progressMetadata);
@@ -144,7 +144,7 @@ test("router pilot runtime-owned metadata keeps the waiting-state contract align
   assert.deepEqual(progressMetadata.requiredInputPaths, [
     "commands/blu-progress.md"
   ]);
-  assert.deepEqual(progressContract.skillInputs.effective, ["commands/blu-progress.md"]);
+  assert.deepEqual(progressContract.skillInputs.effective, []);
   assert.equal(
     progressContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
@@ -168,6 +168,6 @@ test("router pilot runtime-owned metadata keeps the waiting-state contract align
   assert.deepEqual(nextMetadata.requiredInputPaths, [
     "commands/blu-next.md"
   ]);
-  assert.deepEqual(nextContract.skillInputs.effective, ["commands/blu-next.md"]);
+  assert.deepEqual(nextContract.skillInputs.effective, []);
   assert.equal(nextContract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
 });

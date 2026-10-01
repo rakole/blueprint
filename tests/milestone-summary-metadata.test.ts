@@ -75,9 +75,7 @@ test("milestone-summary runtime-owned metadata aligns to the interactive-read su
     contract.runtimeReference?.contractNotes ?? "",
     /missing-milestone-audit[\s\S]*missing-milestone-complete[\s\S]*milestone-summary-overwrite-confirmation/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-milestone-summary.md"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

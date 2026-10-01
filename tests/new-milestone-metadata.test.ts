@@ -164,9 +164,7 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
     contract.runtimeReference?.contractNotes ?? "",
     /blueprint_config_get[\s\S]*Roadmapper Packet[\s\S]*parentOwnedResponsibilities[\s\S]*roadmapperMode[\s\S]*missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation[\s\S]*firstPhaseNumber/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-new-milestone.md"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

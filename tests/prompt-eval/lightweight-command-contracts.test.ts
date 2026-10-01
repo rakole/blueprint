@@ -92,7 +92,7 @@ test("lightweight prompt-eval packets only load active command inputs and never 
   for (const command of LIGHTWEIGHT_COMMANDS) {
     const packet = await buildLightweightCommandPacket(command);
     const siblingManifest =
-      command === "fast" ? "commands/blu-quick.toml" : "commands/blu-fast.toml";
+      command === "fast" ? "commands/blu-quick.md" : "commands/blu-fast.md";
     const siblingRuntimeContract =
       command === "fast"
         ? "skills/blueprint-phase-execution/references/quick-runtime-contract.md"
@@ -101,7 +101,7 @@ test("lightweight prompt-eval packets only load active command inputs and never 
     assert.equal(packet.skillInputBundles.shared.length, 0);
     assert.equal(packet.skillInputBundles.commandSpecific.length > 0, true);
     assert.equal(
-      packet.inputBundlePaths.includes("commands/blu-execute-phase.toml"),
+      packet.inputBundlePaths.includes("commands/blu-execute-phase.md"),
       false
     );
     assert.equal(

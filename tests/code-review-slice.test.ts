@@ -441,7 +441,6 @@ test("code-review catalog, runtime contract, and next-action validation survive 
   );
   assert.equal(contract.runtimeReference?.path, "src/mcp/command-runtime-metadata.ts#code-review");
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-code-review.md",
     "skills/blueprint-review/references/code-review-runtime-contract.md"
   ]);
 
@@ -838,7 +837,6 @@ test("code-review runtime metadata, manifest, and skill contract stay aligned", 
     ...CODE_REVIEW_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-code-review.md",
     "skills/blueprint-review/references/code-review-runtime-contract.md"
   ]);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);

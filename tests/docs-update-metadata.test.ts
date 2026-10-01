@@ -119,7 +119,6 @@ test("docs-update runtime metadata and local reference describe the docs spine",
     "needs-behavior-audit"
   ]);
   assert.deepEqual(runtimeContract.skillInputs.effective, [
-    "commands/blu-docs-update.md",
     "skills/blueprint-docs/references/docs-update-runtime-contract.md"
   ]);
   assert.equal(

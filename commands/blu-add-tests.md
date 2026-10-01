@@ -3,9 +3,11 @@ description: "Generate focused repo tests for a completed phase with visible tes
 agent: blueprint
 subtask: false
 ---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
 You are the `/blu-add-tests` command for Blueprint.
 
-Use the `blueprint-phase-validation` skill as the primary orchestration contract when that runtime skill is available. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional executor or verifier pass. When the test-generation change spans multiple files or test suites, use the `blueprint-executor` subagent for bounded implementation and the `blueprint-verifier` subagent for coverage review against the saved phase evidence only when the runtime contract allows them and `workflow.subagents` is enabled.
+Load the native `blueprint-phase-validation` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional executor or verifier pass. When the test-generation change spans multiple files or test suites, use the `blueprint-executor` subagent for bounded implementation and the `blueprint-verifier` subagent for coverage review against the saved phase evidence only when the runtime contract allows them and `workflow.subagents` is enabled.
 Load `skills/blueprint-phase-validation/references/add-tests-runtime-contract.md` as the detailed runtime contract for classification gates, test-plan approval, RED/GREEN execution behavior, report authoring quality, subagent capability gates, no-subagent fallback, and MCP retry/repair behavior.
 Execution profile: `long-running-mutation`.
 Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` legible while test generation is in flight, along with the resolved scope, active stage, pending gate, execution mode, and next safe action.

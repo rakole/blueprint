@@ -135,7 +135,7 @@ function extractTripleQuotedTomlValue(content: string, key: string): string {
 }
 
 function commandManifestPath(command: LightweightCommandName): string {
-  return `commands/blu-${command}.toml`;
+  return `commands/blu-${command}.md`;
 }
 
 function commandSpecificRuntimeReferencePath(
@@ -166,11 +166,11 @@ function siblingCommandInputLeaks(
     candidate === command
       ? []
       : [
-          `commands/blu-${candidate}.toml`,
+          `commands/blu-${candidate}.md`,
           `skills/blueprint-phase-execution/references/${candidate}-runtime-contract.md`
         ]
   ).concat([
-    "commands/blu-execute-phase.toml",
+    "commands/blu-execute-phase.md",
     "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md"
   ]);
 
