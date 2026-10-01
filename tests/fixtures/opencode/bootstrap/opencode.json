@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["__BLUEPRINT_PLUGIN_URL__"],
+  "permission": {
+    "bash": "ask",
+    "read": {
+      "*": "allow",
+      "*.env": "deny"
+    }
+  }
+}

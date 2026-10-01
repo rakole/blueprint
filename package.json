@@ -2,8 +2,17 @@
   "name": "blueprint",
   "version": "0.1.0",
   "private": true,
-  "description": "Blueprint Gemini and Tabnine CLI extension scaffold",
+  "description": "Blueprint OpenCode plugin and MCP workflow engine",
   "type": "module",
+  "exports": {
+    ".": "./dist/opencode/plugin.js"
+  },
+  "files": [
+    "agents",
+    "commands",
+    "dist",
+    "skills"
+  ],
   "engines": {
     "node": ">=20"
   },
@@ -20,9 +29,11 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.20.0",
+    "yaml": "^2.8.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@opencode-ai/plugin": "1.18.34",
     "@types/node": "^25.6.0",
     "esbuild": "^0.28.0",
     "testcontainers": "^11.14.0",

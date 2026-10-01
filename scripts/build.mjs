@@ -54,7 +54,8 @@ await build({
     "hooks/blueprint-write-guard": "src/hooks/blueprint-write-guard.ts",
     "hooks/read-before-edit": "src/hooks/read-before-edit.ts",
     "hooks/workflow-advisory": "src/hooks/workflow-advisory.ts",
-    "mcp/server": "src/mcp/server.ts"
+    "mcp/server": "src/mcp/server.ts",
+    "opencode/plugin": "src/opencode/plugin.ts"
   },
   format: "esm",
   logLevel: "info",
