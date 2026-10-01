@@ -3,7 +3,7 @@
 This reference is the command-local contract for preparing one saved Blueprint
 phase plan for isolated execution and capturing its authorized implementation
 diff into the patch registry. It is loaded with
-`commands/blu-run-plan.toml` through the `blueprint-plan-run` skill's structured
+`commands/blu-run-plan.md` through the `blueprint-plan-run` skill's structured
 `input_bundles` frontmatter.
 
 ## Scope

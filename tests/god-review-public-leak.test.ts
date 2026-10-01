@@ -57,10 +57,10 @@ const PUBLIC_DOCUMENT_PATHS = [
 ] as const;
 
 const PUBLIC_ROUTER_GUIDANCE_PATHS = [
-  "commands/blu.toml",
-  "commands/blu-help.toml",
-  "commands/blu-progress.toml",
-  "commands/blu-next.toml"
+  "commands/blu.md",
+  "commands/blu-help.md",
+  "commands/blu-progress.md",
+  "commands/blu-next.md"
 ] as const;
 
 async function readRelativePath(relativePath: string): Promise<string> {

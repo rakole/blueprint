@@ -25,9 +25,9 @@ function assertMatchesAll(content: string, patterns: RegExp[]): void {
 }
 
 test("execute-phase manifest stays thin while keeping the core execution invariants explicit", async () => {
-  const commandFile = await readRepoFile("commands/blu-execute-phase.toml");
+  const commandFile = await readRepoFile("commands/blu-execute-phase.md");
 
-  assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
+  assert.match(commandFile, /Load the native `blueprint-phase-execution` skill exactly once/);
   assert.match(commandFile, /long-running stages/);
   assert.match(commandFile, /`Resolve`[\s\S]*`Read`[\s\S]*`Route`/);
   assert.match(commandFile, /session id, selected\/current plan, apply and verification attempt/i);
@@ -190,7 +190,7 @@ test("execute-phase runtime contract resource is owned by runtime metadata, not 
   ]);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "commands/blu-execute-phase.toml",
+    "commands/blu-execute-phase.md",
     "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
     "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
   ]);

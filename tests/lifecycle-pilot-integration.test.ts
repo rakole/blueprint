@@ -1661,7 +1661,7 @@ test("quick-run v2 validation enforces residual policy and honest failure render
       taskSummary: ["Completed a focused quick run."],
       changedSurfaces: [
         {
-          surface: "commands/blu-quick.toml",
+          surface: "commands/blu-quick.md",
           change: "Confirmed quick-run reporting behavior.",
           rationale: "The lifecycle pilot exercised the quick report gate."
         }

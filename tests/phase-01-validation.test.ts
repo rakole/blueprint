@@ -155,7 +155,7 @@ function countStateFrontmatterDelimiters(content: string): number {
 }
 
 test("root router and shipped host contexts stay aligned with the Phase 1 routing contract", async () => {
-  const routerFile = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
+  const routerFile = await readFile(path.join(repoRoot, "commands/blu.md"), "utf8");
   const requiredRouterTools = [
     "blueprint_project_status",
     "blueprint_command_catalog",

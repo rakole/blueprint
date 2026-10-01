@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("review-backlog manifest references preview, promotion, backlog updates, and discuss routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-review-backlog.toml"),
+    path.join(repoRoot, "commands/blu-review-backlog.md"),
     "utf8"
   );
 
@@ -87,6 +87,6 @@ test("review-backlog runtime contract is owned by command runtime metadata", asy
   );
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /Docless manifest\+skill-owned runtime/
+    /Native command\+skill-owned runtime/
   );
 });

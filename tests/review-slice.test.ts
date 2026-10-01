@@ -103,7 +103,7 @@ objective: "Finalize the saved plan set before execution."
 depends_on: []
 requirements: ["REV-01"]
 files_modified: ["src/mcp/tools/project.ts"]
-read_first: ["commands/blu-plan-phase.toml"]
+read_first: ["commands/blu-plan-phase.md"]
 acceptance_criteria: ["npm test -- tests/review-slice.test.ts exits 0"]
 autonomous: true
 ---
@@ -124,7 +124,7 @@ Capture cross-CLI peer review for the saved plan.
 
 #### Read First
 
-- commands/blu-review.toml
+- commands/blu-review.md
 
 #### Action
 
@@ -154,7 +154,7 @@ ${noExternalServicesSection}
 
 | Artifact | Status | Rationale |
 |----------|--------|-----------|
-| commands/blu-review.toml | used | The command manifest defines the peer review persistence route. |
+| commands/blu-review.md | used | The command manifest defines the peer review persistence route. |
 
 ## File / Surface Coverage
 
@@ -241,7 +241,7 @@ test("review runtime metadata, manifest, and local contract stay source-owned", 
   const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
     blueprintCommandCatalog(),
     buildBlueprintCommandRuntimeContractResource("review"),
-    readFile(path.join(repoRoot, "commands/blu-review.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-review.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-review/references/review-runtime-contract.md"),
@@ -260,7 +260,6 @@ test("review runtime metadata, manifest, and local contract stay source-owned", 
     ...REVIEW_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-review.toml",
     "skills/blueprint-review/references/review-runtime-contract.md"
   ]);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
@@ -947,7 +946,7 @@ test("review is exposed as an implemented peer-review command with the registere
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-review.toml");
+  assert.equal(entry.manifestPath, "commands/blu-review.md");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_artifact_list",

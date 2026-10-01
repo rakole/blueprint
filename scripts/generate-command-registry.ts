@@ -5,6 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { validateBundledBlueprintCommandDefinition } from "../src/mcp/command-definition.js";
+import { validateBundledBlueprintAgentDefinition } from "../src/mcp/agent-definition.js";
+import { loadBlueprintSkillInputs } from "../src/mcp/skill-metadata.js";
 import {
   getRuntimeOwnedCommandMetadata,
   listRuntimeOwnedCommandMetadata
@@ -73,7 +76,7 @@ export type GeneratedCommandRegistry = {
   };
   rootRouter: {
     command: "/blu";
-    manifestPath: "commands/blu.toml";
+    manifestPath: "commands/blu.md";
     primarySkill: "blueprint-router";
     requiredTools: string[];
     contractNotes: string;
@@ -104,7 +107,7 @@ const README_PATH = "README.md";
 const USER_DOCS_QUICKSTART_PATH = "user-docs/quickstart.md";
 const USER_DOCS_LIFECYCLE_PATH = "user-docs/lifecycle.md";
 const USER_DOCS_COMMAND_REFERENCE_PATH = "user-docs/reference/commands.md";
-const ROOT_ROUTER_PATH = "commands/blu.toml";
+const ROOT_ROUTER_PATH = "commands/blu.md";
 const GENERATED_BY =
   "scripts/generate-command-registry.ts";
 const SOURCE_METADATA =
@@ -327,7 +330,22 @@ async function buildGeneratedCommand(
   return commandWithMetadata(commandName, entry, contract);
 }
 
-export async function buildGeneratedCommandRegistry(): Promise<GeneratedCommandRegistry> {
+export async function buildGeneratedCommandRegistry(
+  readRootAsset: (relativePath: string) => Promise<string | null> = readRepoFileIfExists
+): Promise<GeneratedCommandRegistry> {
+  // The root router is not a direct catalog row, so validate its required
+  // native assets before emitting a registry that advertises it.
+  const [root, primary, rootSkill] = await Promise.all([
+    validateBundledBlueprintCommandDefinition("blu", readRootAsset),
+    validateBundledBlueprintAgentDefinition("blueprint", readRootAsset),
+    readRootAsset("skills/blueprint-router/SKILL.md")
+  ]);
+  const issues = [...root.issues, ...primary.issues];
+  if (rootSkill === null) issues.push("Missing required blueprint-router skill");
+  if (!root.valid || !primary.valid || rootSkill === null) {
+    throw new Error(`Invalid root router assets: ${issues.join("; ")}`);
+  }
+  await loadBlueprintSkillInputs("blueprint-router", "/blu", readRootAsset);
   const catalog = await blueprintCommandCatalog();
   const commands = await Promise.all(
     Object.entries(catalog.commands)
@@ -408,7 +426,7 @@ export function renderReadmeRuntimeLayout(registry: GeneratedCommandRegistry): s
     README_RUNTIME_LAYOUT_START,
     `The active command map is generated from ${inlineCode(SOURCE_METADATA)} into ${inlineCode(REGISTRY_PATH)}. Runtime availability still comes from the live ${inlineCode("blueprint_command_catalog")} check, so missing manifests, skills, MCP tools, or required runtime inputs downgrade commands before they can be recommended.`,
     "",
-    "- Root router manifest: `commands/blu.toml`",
+    "- Root router manifest: `commands/blu.md`",
     `- Runnable direct command manifests: ${implemented.length}`,
     `- Non-runnable retained ${plural(registry.counts.nonRunnable, "command")}: ${registry.counts.nonRunnable}`,
     "",

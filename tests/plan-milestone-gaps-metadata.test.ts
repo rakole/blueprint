@@ -10,7 +10,7 @@ const repoRoot = process.cwd();
 
 test("plan-milestone-gaps manifest references the audit-first gap-planning tools and confirmation gate", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-plan-milestone-gaps.toml"),
+    path.join(repoRoot, "commands/blu-plan-milestone-gaps.md"),
     "utf8"
   );
 
@@ -72,9 +72,7 @@ test("plan-milestone-gaps runtime-owned metadata aligns to the interactive-read 
     contract.runtimeReference?.contractNotes ?? "",
     /missing-milestone-audit[\s\S]*gap-plan-confirmation[\s\S]*\/blu-discuss-phase <first new phase>/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-plan-milestone-gaps.toml"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

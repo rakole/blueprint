@@ -46,11 +46,11 @@ test("add-tests runtime metadata is source-owned and docs-free", async () => {
 
 test("add-tests manifest references visibility, validation/report tools, bounded agents, and safe follow-up routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-add-tests.toml"),
+    path.join(repoRoot, "commands/blu-add-tests.md"),
     "utf8"
   );
 
-  assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
+  assert.match(commandFile, /Load the native `blueprint-phase-validation` skill exactly once/);
   assert.match(
     commandFile,
     /skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md/

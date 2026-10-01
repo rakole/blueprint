@@ -51,7 +51,7 @@ test("router pilot surfaces remain implemented-only in the live command catalog"
 });
 
 test("/blu root router manifest keeps implemented-only routing and waiting-state reporting explicit", async () => {
-  const rootRouter = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
+  const rootRouter = await readFile(path.join(repoRoot, "commands/blu.md"), "utf8");
 
   assert.match(rootRouter, /Only recommend or route commands whose `blueprint_blueprint_command_catalog` entry is `implemented: true`/);
   assert.match(rootRouter, /surface the waiting state explicitly: missing artifact, approval gate, verification debt, or blocked substrate/i);
@@ -60,9 +60,9 @@ test("/blu root router manifest keeps implemented-only routing and waiting-state
 test("router pilot manifests and docs keep waiting-state reporting explicit", async () => {
   const [helpToml, progressToml, nextToml, routerSkill] =
     await Promise.all([
-      readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8"),
-      readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8"),
-      readFile(path.join(repoRoot, "commands/blu-next.toml"), "utf8"),
+      readFile(path.join(repoRoot, "commands/blu-help.md"), "utf8"),
+      readFile(path.join(repoRoot, "commands/blu-progress.md"), "utf8"),
+      readFile(path.join(repoRoot, "commands/blu-next.md"), "utf8"),
       readFile(path.join(repoRoot, "skills/blueprint-router/SKILL.md"), "utf8")
     ]);
 
@@ -74,9 +74,9 @@ test("router pilot manifests and docs keep waiting-state reporting explicit", as
   assert.match(nextToml, /waiting state is present, keep the pending gate explicit and prefer the safest implemented follow-up command/i);
 
   assert.match(routerSkill, /input_bundles:/);
-  assert.match(routerSkill, /commands\/blu-help\.toml/);
-  assert.match(routerSkill, /commands\/blu-progress\.toml/);
-  assert.match(routerSkill, /commands\/blu-next\.toml/);
+  assert.match(routerSkill, /commands\/blu-help\.md/);
+  assert.match(routerSkill, /commands\/blu-progress\.md/);
+  assert.match(routerSkill, /commands\/blu-next\.md/);
   assert.match(routerSkill, /\/blu-next[\s\S]*blueprint_blueprint_config_get/);
   assert.match(
     routerSkill,
@@ -121,9 +121,9 @@ test("router pilot runtime-owned metadata keeps the waiting-state contract align
   );
   assert.match(helpMetadata.runtimeReference.contractNotes, /never present planned or blocked commands as runnable/i);
   assert.deepEqual(helpMetadata.requiredInputPaths, [
-    "commands/blu-help.toml"
+    "commands/blu-help.md"
   ]);
-  assert.deepEqual(helpContract.skillInputs.effective, ["commands/blu-help.toml"]);
+  assert.deepEqual(helpContract.skillInputs.effective, []);
   assert.equal(helpContract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
 
   assert.ok(progressMetadata);
@@ -142,9 +142,9 @@ test("router pilot runtime-owned metadata keeps the waiting-state contract align
   );
   assert.match(progressMetadata.runtimeReference.contractNotes, /pending gates/i);
   assert.deepEqual(progressMetadata.requiredInputPaths, [
-    "commands/blu-progress.toml"
+    "commands/blu-progress.md"
   ]);
-  assert.deepEqual(progressContract.skillInputs.effective, ["commands/blu-progress.toml"]);
+  assert.deepEqual(progressContract.skillInputs.effective, []);
   assert.equal(
     progressContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
@@ -166,8 +166,8 @@ test("router pilot runtime-owned metadata keeps the waiting-state contract align
   );
   assert.match(nextMetadata.runtimeReference.contractNotes, /never hide destructive behavior behind implicit routing/i);
   assert.deepEqual(nextMetadata.requiredInputPaths, [
-    "commands/blu-next.toml"
+    "commands/blu-next.md"
   ]);
-  assert.deepEqual(nextContract.skillInputs.effective, ["commands/blu-next.toml"]);
+  assert.deepEqual(nextContract.skillInputs.effective, []);
   assert.equal(nextContract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
 });

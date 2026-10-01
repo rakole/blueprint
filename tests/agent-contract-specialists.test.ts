@@ -120,6 +120,10 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(mapper, /Always read-only: never persist artifacts/);
   assert.match(mapper, /parent owns user decisions, prepare\/submit, validation, publication/);
   assert.match(mapper, /prepare an expanded snapshot before it is read/);
+  assert.match(mapper, /authoritative excerpt needed from/);
+  assert.match(mapper, /canonical\s+path as a provenance label/i);
+  assert.match(mapper, /do not read it from the customer checkout/i);
+  assert.match(mapper, /report the exact evidence gap and stop/i);
 
   for (const pattern of [
     /## Read And Investigate/,

@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("add-todo manifest uses runtime skill and capture MCP identities", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-add-todo.toml"),
+    path.join(repoRoot, "commands/blu-add-todo.md"),
     "utf8"
   );
 
@@ -82,6 +82,6 @@ test("add-todo runtime contract is owned by command runtime metadata", async () 
   );
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /Docless manifest\+skill-owned runtime/
+    /Native command\+skill-owned runtime/
   );
 });

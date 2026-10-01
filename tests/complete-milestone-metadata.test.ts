@@ -10,7 +10,7 @@ const repoRoot = process.cwd();
 
 test("complete-milestone manifest references report-driven closeout tools and summary routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-complete-milestone.toml"),
+    path.join(repoRoot, "commands/blu-complete-milestone.md"),
     "utf8"
   );
 
@@ -90,9 +90,7 @@ test("complete-milestone runtime-owned metadata exposes the interactive-read wai
     contract.runtimeReference?.contractNotes ?? "",
     /missing-milestone-audit[\s\S]*milestone-not-ready[\s\S]*milestone-complete-overwrite-confirmation/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-complete-milestone.toml"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

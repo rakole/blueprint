@@ -21,26 +21,22 @@ about what Blueprint can and cannot do at runtime.
 - Do not promise GSD shell choreography.
 - Do not generate project instruction files such as `CLAUDE.md` or `AGENTS.md`.
 
-## Gemini-Native Coordination Helpers
+## OpenCode-Native Coordination Helpers
 
 - Prefer  `question` tool for structured clarification,
   saved-default selection, workflow-preference capture, overwrite confirmation,
   and the bootstrap approval gate.
 - Before using `question` for approval, render the project brief and roadmap
-  preview directly in the main Gemini CLI conversation. The user must be able
+  preview directly in the main OpenCode conversation. The user must be able
   to review the proposal without expanding tool, shell, or subagent panes.
 - Use concise progress prose to keep the current bootstrap stage visible during long
   runs.
 - Use `todowrite` to maintain a compact visible checklist for multi-stage
   bootstrap work.
-- When bootstrap work develops real internal dependencies, use task-tracking
-  helpers such as `tracker_create_task`, `tracker_add_dependency`,
-  `tracker_update_task`, `tracker_get_task`, `tracker_list_tasks`, and
-  `tracker_visualize`.
-- Treat Gemini-native helpers as session-local coordination aids only; they do
+- Treat OpenCode-native helpers as session-local coordination aids only; they do
   not replace Blueprint MCP persistence, `.blueprint/STATE.md`, or authored
   bootstrap artifacts.
-- If you are unsure whether a Gemini-native helper exists or how it behaves,
+- If you are unsure whether an OpenCode-native helper exists or how it behaves,
   rely only on parent-supplied runtime contract excerpts, parent-approved
   host/tool semantics clarification packets, or runtime-owned
   metadata/resource facts. If none settle it, return
@@ -48,7 +44,7 @@ about what Blueprint can and cannot do at runtime.
 
 ## Honest Fallback Posture
 
-- Prefer Gemini-native helpers when available, but do not pretend they ran if
+- Prefer OpenCode-native helpers when available, but do not pretend they ran if
   the current host does not expose them.
 - When a helper is unavailable, continue with plain conversational progress
   recaps and explicit status summaries instead of inventing hidden capability.

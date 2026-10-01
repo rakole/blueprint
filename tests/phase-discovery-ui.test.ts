@@ -154,7 +154,7 @@ await blueprintStateUpdate({ base: "synced", patch: { activeCommand: "/blu-ui-ph
 }
 
 test("ui-phase command references registered tools and single-artifact UI handling", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-ui-phase.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-ui-phase.md"), "utf8");
   const skillFile = (await readFile(
     path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"), "utf8"
   )) + "\n" + await readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8");
@@ -192,7 +192,7 @@ test("ui-phase command references registered tools and single-artifact UI handli
     assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
 
-  assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
+  assert.match(commandFile, /Load the native `blueprint-phase-discovery` skill exactly once/);
   assert.match(commandFile, /`blueprint-ui-designer` subagent/);
   assert.match(commandFile, /`blueprint-checker` subagent/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`\./);

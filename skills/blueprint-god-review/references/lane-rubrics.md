@@ -182,5 +182,5 @@ False-positive traps:
 
 Finding examples:
 - `GOD-OPS-001`: Hidden fix mode creates a PR without explicit user request.
-- `GOD-OPS-002`: Runtime host path assumptions fail under Tabnine extension
+- `GOD-OPS-002`: Runtime host path assumptions fail under OpenCode plugin
   launch.

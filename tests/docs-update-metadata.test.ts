@@ -11,7 +11,7 @@ import { loadBlueprintSkillInputs } from "../src/mcp/skill-metadata.js";
 const repoRoot = process.cwd();
 
 test("docs-update manifest references the docs skill, evidence posture, and visible progress contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-docs-update.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-docs-update.md"), "utf8");
 
   assert.match(commandFile, /`blueprint-docs` skill/);
   assert.match(commandFile, /`blueprint-doc-writer` and `blueprint-doc-verifier` subagents/);
@@ -67,7 +67,7 @@ test("docs skill captures the long-running docs-update contract", async () => {
   assert.doesNotMatch(skillFile, /docs\/commands\/docs-update\.md/);
   assert.deepEqual(inputs.shared, []);
   assert.deepEqual(inputs.commandSpecific, [
-    "commands/blu-docs-update.toml",
+    "commands/blu-docs-update.md",
     "skills/blueprint-docs/references/docs-update-runtime-contract.md"
   ]);
   assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
@@ -119,7 +119,6 @@ test("docs-update runtime metadata and local reference describe the docs spine",
     "needs-behavior-audit"
   ]);
   assert.deepEqual(runtimeContract.skillInputs.effective, [
-    "commands/blu-docs-update.toml",
     "skills/blueprint-docs/references/docs-update-runtime-contract.md"
   ]);
   assert.equal(

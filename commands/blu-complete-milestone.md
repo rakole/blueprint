@@ -1,0 +1,35 @@
+---
+description: "Close a milestone only after the saved audit is READY_TO_CLOSE with no actionable gaps or blockers, then write a durable completion report and route to the archival summary step."
+agent: blueprint
+subtask: false
+---
+You are the `/blu-complete-milestone` command for Blueprint.
+
+Load the native `blueprint-roadmap-admin` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
+
+Follow this flow exactly:
+
+1. Resolve the target milestone with `blueprint_blueprint_roadmap_read`. If the user did not pass a milestone identifier, infer it from the active Blueprint state or roadmap.
+2. Read `blueprint_blueprint_roadmap_read` and `blueprint_blueprint_artifact_list` so you know the active milestone, the current phase inventory, and whether `.blueprint/reports/milestone-audit-<milestone>.md` or `.blueprint/reports/milestone-complete-<milestone>.md` already exist.
+3. Read `blueprint_blueprint_state_load` so you can inspect `derivedStatus.milestoneAudit` and `derivedStatus.nextAction`. Fail fast unless `derivedStatus.milestoneAudit.readyForCompletion` is true and `derivedStatus.nextAction` routes to `/blu-complete-milestone <milestone>` for the resolved target milestone. Do not treat report-local readiness alone as sufficient. If the audit report is missing, stop with concise guidance to run `/blu-audit-milestone` first. If the audit exists but is not ready, or if `derivedStatus.nextAction` points somewhere other than `/blu-complete-milestone <milestone>`, route to `derivedStatus.milestoneAudit.nextSafeAction` when present and safe, otherwise to `derivedStatus.nextAction` when it is an implemented non-closeout command, otherwise to `/blu-plan-milestone-gaps` when actionable gaps or blockers remain, and only fall back to `/blu-progress` when the report is malformed or undecidable.
+4. Read `blueprint_blueprint_artifact_contract_read` with `artifactId: "report.milestone-complete"` before drafting the closeout report. Use the returned `contract.authoringTemplate` as the baseline when shaping the completion text.
+5. Build the closeout digest through `blueprint_blueprint_artifact_summary_digest` using explicit repo-relative `artifactPaths` that include `.blueprint/ROADMAP.md` and the matching milestone audit report. Treat the returned `inputsUsed` list as the authoritative digest scope and surface the audit readiness and evidence trail, not just a terse summary.
+6. If a milestone completion report already exists and the user has not clearly asked to replace it, require explicit overwrite confirmation with `question` before any write.
+7. Persist the completion report through `blueprint_blueprint_artifact_report_write` with the bare report name `milestone-complete-<milestone>`. Use the exact `blueprint_blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_blueprint_artifact_report_write` own normalization. Do not pass a `.blueprint/reports/...` path; use the returned `path` as the authoritative saved report location.
+8. Call `blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-complete-milestone` as the active command, keeps the resolved milestone and current phase synchronized, and points the next safe implemented follow-up to `/blu-milestone-summary <milestone>`.
+9. Return a concise completion summary covering the milestone resolved, the audit readiness and evidence used, whether the completion report was created or replaced, any warnings, and the next safe Blueprint action. Do not loop back into `/blu-audit-milestone` when the saved audit already points at a safer follow-up.
+
+Response requirements:
+- Use only `blueprint_blueprint_roadmap_read`, `blueprint_blueprint_artifact_list`, `blueprint_blueprint_artifact_contract_read`, `blueprint_blueprint_artifact_summary_digest`, `blueprint_blueprint_artifact_report_write`, and `blueprint_blueprint_state_update` for persistent state work.
+- Use `blueprint_blueprint_state_load` to inspect `derivedStatus.milestoneAudit` before drafting the closeout report.
+- Execution profile: `interactive-read`.
+- Keep persistent writes inside `.blueprint/reports/` and `.blueprint/STATE.md`.
+- Treat overwrite as an explicit overwrite confirmation path, not the default.
+- Prefer `question` for overwrite confirmation or any other high-risk confirmation gate.
+- Keep the waiting state explicit as `missing-milestone-audit`, `milestone-not-ready`, or `milestone-complete-overwrite-confirmation` when the command is blocked before writing.
+- Do not use `todowrite` or task tracker tools for `/blu-complete-milestone`.
+- Do not turn `/blu-complete-milestone` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
+- Do not rewrite `.blueprint/ROADMAP.md`, delete or rename phase directories, or invent a new milestone-closeout MCP tool path.
+- Keep the closeout flow report-driven and state-driven. If the next step is unavailable, fall back to `/blu-progress` instead of suggesting a blocked command.
+
+$ARGUMENTS

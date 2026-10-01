@@ -602,7 +602,7 @@ test("map-codebase scaffold rejects guessed artifact formats with corrective gui
 
 test("map-codebase guidance uses the compact parent-owned prepare and submit flow", async () => {
   const [commandFile, skillFile, agentFile, reference] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-map-codebase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-map-codebase.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-map/SKILL.md"), "utf8"),
     readFile(path.join(repoRoot, "agents/blueprint-mapper.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-map/references/map-runtime-contract.md"), "utf8")

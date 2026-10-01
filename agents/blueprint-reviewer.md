@@ -1,20 +1,37 @@
 ---
-name: blueprint-reviewer
-description: >
-  Code-review specialist for Blueprint. Use this agent when `/blu-code-review`
-  needs a bounded pass over a resolved repo-file scope to surface concrete bugs,
+description: >-
+  Code-review specialist for Blueprint. Use this agent when `/blu-code-review` needs
+  a bounded pass over a resolved repo-file scope to surface concrete bugs,
   regressions, security issues, or missing-test risks before a durable
-  `XX-REVIEW.md` artifact is persisted.
-  Example scenarios: auditing multiple executed plan slices together, reviewing a
-  deeper changed-file set after validation evidence exists, or comparing a prior
-  review artifact against the current repo surface.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 24
-timeout_mins: 23
+  `XX-REVIEW.md` artifact is persisted. Example scenarios: auditing multiple
+  executed plan slices together, reviewing a deeper changed-file set after
+  validation evidence exists, or comparing a prior review artifact against the
+  current repo surface.
+mode: subagent
+steps: 24
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Reviewer
 

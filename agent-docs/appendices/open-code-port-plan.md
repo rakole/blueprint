@@ -1,6 +1,6 @@
 # OpenCode Port: Tool Inventory And Conversion Plan
 
-Status: proposed implementation plan; no port runtime changes implemented.
+Status: historical plan with current implemented-design addendum.
 Date: 2026-10-01. Blueprint baseline: `4409333e47c196f362fdb85be5c0000e6fe3dab6`.
 
 ## Branch Boundary
@@ -10,6 +10,31 @@ uses a fresh feature-branch worktree based on `origin/open_code`; every PR targe
 and merges only into `open_code`. Never merge or cherry-pick port work into
 `main` or `origin/main`. Keep the integration branch when cleaning up features.
 The planning/policy change follows the same PR path.
+
+## Current Implemented Design (2026-10-02)
+
+Live native source supersedes the proposed sequence below. Blueprint has 56
+canonical Markdown commands, one required primary plus 15 optional specialists,
+and 17 exact native skills. Each command loads its primary skill once and gets
+only ordered active effective references; the package manifest hashes the full
+reference closure.
+
+Native `steps` is not elapsed-time enforcement. Static agent permissions are not
+per-assignment filesystem sandboxes. Required corruption fails closed; invalid
+optional specialists are omitted with diagnostics and inline fallback. Direct
+skill aliases are blocked. The private helper requires exact command/flag/session
+correlation but makes no discovery-invisibility promise.
+
+The private package export, explicit OpenCode data root, and projected
+`BLUEPRINT_GLOBAL_HOME` separate installed assets from customer cwd and other
+hosts' state. Qualification installs the exact local tarball into a disposable
+prefix and configures its installed `file://` export; no registry publication or
+host-global install is required.
+
+Manifest hashes/closure and the static command catalog prove package consistency,
+not host readiness. Evidence remains layered: source/offline, package, separately
+opted-in actual-host, then provider/model qualification. The remaining sections
+are historical planning context, not current implementation instructions.
 
 ## Target And Recommendation
 

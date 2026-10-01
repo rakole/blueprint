@@ -45,12 +45,12 @@ function assertAppearsBefore(text: string, first: string, second: string, label:
 }
 
 test("code-review manifest keeps the hidden dispatcher tiny and defers orchestration to the private skill", async () => {
-  const manifest = await readRelativePath("commands/blu-code-review.toml");
+  const manifest = await readRelativePath("commands/blu-code-review.md");
 
   assertAppearsBefore(
     manifest,
     "Dispatcher:",
-    "Use the `blueprint-review` skill as the primary orchestration contract",
+    "Load the native `blueprint-review` skill exactly once",
     "code-review manifest"
   );
   assert.match(manifest, /raw invocation contains a standalone `--feels-like-god` flag token/);
@@ -68,12 +68,12 @@ test("code-review manifest keeps the hidden dispatcher tiny and defers orchestra
 });
 
 test("code-review-fix manifest keeps the hidden dispatcher tiny and defers orchestration to the private skill", async () => {
-  const manifest = await readRelativePath("commands/blu-code-review-fix.toml");
+  const manifest = await readRelativePath("commands/blu-code-review-fix.md");
 
   assertAppearsBefore(
     manifest,
     "Dispatcher:",
-    "Use the `blueprint-review` skill as the primary orchestration contract",
+    "Load the native `blueprint-review` skill exactly once",
     "code-review-fix manifest"
   );
   assert.match(manifest, /raw invocation contains a standalone `--feels-like-god` flag token/);

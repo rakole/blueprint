@@ -417,8 +417,8 @@ export declare const projectToolDefinitions: ({
                 phase: z.ZodString;
                 title: z.ZodString;
                 status: z.ZodOptional<z.ZodEnum<{
-                    done: "done";
                     planned: "planned";
+                    done: "done";
                     in_progress: "in_progress";
                 }>>;
                 objective: z.ZodString;

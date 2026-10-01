@@ -17,7 +17,7 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("workstreams manifest references the maintenance skill, workstream MCP tools, and ask_user confirmation gates", async () => {
-  const commandFile = await readRepoFile("commands/blu-workstreams.toml");
+  const commandFile = await readRepoFile("commands/blu-workstreams.md");
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
@@ -109,7 +109,7 @@ test("repo-facing status docs treat workstreams as a shipped Wave 5 command", as
   assert.equal(metadata.catalog.declaredStatus, "implemented");
   assert.equal(metadata.spec.executionProfile, "interactive-read");
   assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
-  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Native command\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /workstreams-runtime-contract\.md/);
   assert.match(
     metadata.runtimeReference.contractNotes,

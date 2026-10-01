@@ -107,7 +107,7 @@ const IMPLEMENTED_COMMANDS = [
 ] as const;
 
 const PLANNED_COMMANDS = ["do"] as const;
-const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu-list-phase-assumptions.toml";
+const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu-list-phase-assumptions.md";
 const CAPTURE_RUNTIME_METADATA_COMMANDS = [
   "note",
   "add-todo",
@@ -286,7 +286,7 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     );
     assert.match(
       listPhaseAssumptions.blockedBy.join("\n"),
-      /Missing command manifest: commands\/blu-list-phase-assumptions\.toml/
+      /Missing command manifest: commands\/blu-list-phase-assumptions\.md/
     );
   }
 });
@@ -354,8 +354,8 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.deepEqual(contract.skillInputs, {
     skill: "blueprint-router",
     shared: [],
-    commandSpecific: ["commands/blu-help.toml"],
-    effective: ["commands/blu-help.toml"]
+    commandSpecific: ["commands/blu-help.md"],
+    effective: []
   });
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
@@ -436,9 +436,7 @@ test("router commands resolve catalog and runtime contract truth from runtime me
     assert.deepEqual(contract.skillInputs.commandSpecific, [
       blueprintPrimaryManifestPath(commandName)
     ]);
-    assert.deepEqual(contract.skillInputs.effective, [
-      blueprintPrimaryManifestPath(commandName)
-    ]);
+    assert.deepEqual(contract.skillInputs.effective, []);
     assert.equal(
       contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
       false
@@ -501,7 +499,7 @@ test("review commands resolve catalog and runtime contract truth from runtime me
       manifestPath,
       runtimeContractPath
     ]);
-    assert.deepEqual(contract.skillInputs.effective, [manifestPath, runtimeContractPath]);
+    assert.deepEqual(contract.skillInputs.effective, [runtimeContractPath]);
     assert.equal(
       contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
       false
@@ -546,7 +544,7 @@ test("maintenance commands resolve catalog and runtime contract truth from runti
       manifestPath,
       runtimeContractPath
     ]);
-    assert.deepEqual(contract.skillInputs.effective, [manifestPath, runtimeContractPath]);
+    assert.deepEqual(contract.skillInputs.effective, [runtimeContractPath]);
     assert.equal(
       contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
       false
@@ -585,9 +583,7 @@ test("capture commands resolve catalog and runtime contract truth from runtime m
     assert.deepEqual(contract.skillInputs.commandSpecific, [
       blueprintPrimaryManifestPath(commandName)
     ]);
-    assert.deepEqual(contract.skillInputs.effective, [
-      blueprintPrimaryManifestPath(commandName)
-    ]);
+    assert.deepEqual(contract.skillInputs.effective, []);
     assert.equal(
       contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
       false
@@ -679,7 +675,7 @@ test("spec-phase is implemented and runtime-contract discoverable only after its
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-spec-phase.toml");
+  assert.equal(entry.manifestPath, "commands/blu-spec-phase.md");
   assert.equal(
     entry.skillPath,
     await expectedDiscoverableSkillPath("blueprint-phase-discovery")
@@ -815,7 +811,7 @@ test("command path helpers centralize canonical, alias, and manifest forms", () 
   assert.equal(blueprintDirectCommand("help"), "/blu-help");
   assert.equal(blueprintRouterCommand("help"), "/blu help");
   assert.deepEqual(blueprintDirectCommandAliases("help"), ["/blu help"]);
-  assert.equal(blueprintPrimaryManifestPath("help"), "commands/blu-help.toml");
+  assert.equal(blueprintPrimaryManifestPath("help"), "commands/blu-help.md");
 });
 
 test("implemented direct commands expose only router-style aliases", async () => {
@@ -1208,7 +1204,7 @@ test("map-codebase is implemented once the brownfield mapping contract and tools
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-map-codebase.toml");
+  assert.equal(entry.manifestPath, "commands/blu-map-codebase.md");
   assert.ok(entry.skillPath);
   assert.equal(entry.specPath, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
   assert.deepEqual(entry.requiredTools, [...MAP_CODEBASE_RUNTIME_METADATA.requiredTools]);
@@ -1255,11 +1251,10 @@ test("map-codebase runtime contract builds from metadata when docs are unavailab
   assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-mapper"]);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "commands/blu-map-codebase.toml",
+    "commands/blu-map-codebase.md",
     "skills/blueprint-map/references/map-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-map-codebase.toml",
     "skills/blueprint-map/references/map-runtime-contract.md"
   ]);
   assert.equal(
@@ -1280,7 +1275,7 @@ test("research-phase is implemented once manifest, skill, and external-policy-aw
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-research-phase.toml");
+  assert.equal(entry.manifestPath, "commands/blu-research-phase.md");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.requiredTools, [
@@ -1321,7 +1316,7 @@ test("planned commands stay non-routable until their dedicated manifest exists",
     assert.ok(entry.blockedBy.length > 0);
     assert.match(
       entry.blockedBy.join("\n"),
-      /Missing command manifest: commands\/blu-do\.toml/
+      /Missing command file: commands\/blu-do\.md/
     );
   }
 });
@@ -1375,7 +1370,7 @@ test("docless fallback preserves planned do without exposing a runtime contract"
   assert.equal(entry.specPath, null);
   assert.match(
     entry.blockedBy.join("\n"),
-    /Missing command manifest: commands\/blu-do\.toml/
+    /Missing command file: commands\/blu-do\.md/
   );
   assert.equal(
     docsTouches.some((touch) => /^.+docs\/.+\.md$/.test(touch)),
@@ -1453,7 +1448,7 @@ test("impact is implemented once its additive command substrate is complete", as
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-impact.toml");
+  assert.equal(entry.manifestPath, "commands/blu-impact.md");
   assert.equal(entry.skillPath, "skills/blueprint-impact/SKILL.md");
   assert.equal(entry.specPath, IMPACT_RUNTIME_METADATA.sourceId);
   assert.equal(entry.risk, IMPACT_RUNTIME_METADATA.catalog.risk);
@@ -1510,7 +1505,7 @@ test("plan-phase is implemented once manifest, skill, and plan MCP tools exist",
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-plan-phase.toml");
+  assert.equal(entry.manifestPath, "commands/blu-plan-phase.md");
   assert.equal(entry.skillPath, "skills/blueprint-phase-planning/SKILL.md");
   assert.equal(entry.specPath, "src/mcp/command-runtime-metadata.ts#plan-phase");
   assert.equal(entry.specPath, PLAN_PHASE_RUNTIME_METADATA.sourceId);
@@ -1636,7 +1631,7 @@ test("resume-work is implemented once the governance manifest and handoff MCP to
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-resume-work.toml");
+  assert.equal(entry.manifestPath, "commands/blu-resume-work.md");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.availableOptionalAgents, []);
@@ -1651,7 +1646,7 @@ test("secure-phase is implemented once manifest, review skill, and review MCP to
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-secure-phase.toml");
+  assert.equal(entry.manifestPath, "commands/blu-secure-phase.md");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
@@ -1680,7 +1675,7 @@ test("ui-review is implemented once manifest, review skill, and review MCP tools
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-ui-review.toml");
+  assert.equal(entry.manifestPath, "commands/blu-ui-review.md");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
@@ -1704,7 +1699,7 @@ test("code-review is implemented once manifest, review skill, and review MCP too
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-code-review.toml");
+  assert.equal(entry.manifestPath, "commands/blu-code-review.md");
   assert.ok(entry.skillPath);
   assert.equal(
     entry.specPath,
@@ -1798,7 +1793,7 @@ test("review is implemented once manifest, review skill, and plan-backed peer-re
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-review.toml");
+  assert.equal(entry.manifestPath, "commands/blu-review.md");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.requiredTools, [
@@ -1827,7 +1822,7 @@ test("code-review-fix is implemented once manifest, review skill, and findings t
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-code-review-fix.toml");
+  assert.equal(entry.manifestPath, "commands/blu-code-review-fix.md");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
@@ -1858,11 +1853,9 @@ test("review-fix runtime resources stay aligned with live metadata and local con
   assert.ok(reviewFixRuntimeContract);
   assert.ok(auditFixRuntimeContract);
   assert.deepEqual(codeReviewFixContract.skillInputs.effective, [
-    "commands/blu-code-review-fix.toml",
     "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
   ]);
   assert.deepEqual(auditFixContract.skillInputs.effective, [
-    "commands/blu-audit-fix.toml",
     "skills/blueprint-review/references/audit-fix-runtime-contract.md"
   ]);
   assert.equal(
@@ -1901,7 +1894,7 @@ test("audit-fix is implemented once manifest, review skill, and remediation MCP 
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-audit-fix.toml");
+  assert.equal(entry.manifestPath, "commands/blu-audit-fix.md");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
@@ -1931,7 +1924,7 @@ test("add-tests is implemented once manifest, validation skill, and test-generat
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-add-tests.toml");
+  assert.equal(entry.manifestPath, "commands/blu-add-tests.md");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.requiredTools, [
@@ -2162,11 +2155,10 @@ test("docs-update runtime contract builds from metadata and local skill inputs w
   ]);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "commands/blu-docs-update.toml",
+    "commands/blu-docs-update.md",
     "skills/blueprint-docs/references/docs-update-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-docs-update.toml",
     "skills/blueprint-docs/references/docs-update-runtime-contract.md"
   ]);
   assert.equal(
@@ -2461,11 +2453,10 @@ test("debug is implemented once manifest, skill, and report-backed debug MCP too
   assert.equal(contract.runtimeReference.path, DEBUG_RUNTIME_METADATA.sourceId);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "commands/blu-debug.toml",
+    "commands/blu-debug.md",
     "skills/blueprint-debug/references/debug-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-debug.toml",
     "skills/blueprint-debug/references/debug-runtime-contract.md"
   ]);
   assert.equal(
@@ -2501,7 +2492,6 @@ test("debug runtime contract resource survives missing repository docs", async (
     ...DEBUG_RUNTIME_METADATA.runtimeReference.exactMcpDestination
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-debug.toml",
     "skills/blueprint-debug/references/debug-runtime-contract.md"
   ]);
   assert.equal(

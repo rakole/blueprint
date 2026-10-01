@@ -10,9 +10,9 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 const repoRoot = process.cwd();
 
 test("debug manifest references the debug skill, debugger agent, and report-backed MCP tools", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-debug.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-debug.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-debug` skill/);
+  assert.match(commandFile, /Load the native `blueprint-debug` skill exactly once/);
   assert.match(commandFile, /`blueprint-debugger` subagent/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-debug\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-debugger\.md/);
@@ -77,7 +77,7 @@ test("debug runtime-owned metadata, runtime-contract resource, skill, and local 
     "blueprint-debugger"
   ]);
   assert.deepEqual([...(DEBUG_RUNTIME_METADATA.requiredInputPaths ?? [])], [
-    "commands/blu-debug.toml",
+    "commands/blu-debug.md",
     "skills/blueprint-debug/references/debug-runtime-contract.md"
   ]);
   assert.equal(contract.catalog.specPath, DEBUG_RUNTIME_METADATA.sourceId);
@@ -89,7 +89,7 @@ test("debug runtime-owned metadata, runtime-contract resource, skill, and local 
   );
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "commands/blu-debug.toml",
+    "commands/blu-debug.md",
     "skills/blueprint-debug/references/debug-runtime-contract.md"
   ]);
   assert.equal(
@@ -98,7 +98,7 @@ test("debug runtime-owned metadata, runtime-contract resource, skill, and local 
   );
 
   assert.match(skillFile, /input_bundles:/);
-  assert.match(skillFile, /commands\/blu-debug\.toml/);
+  assert.match(skillFile, /commands\/blu-debug\.md/);
   assert.match(skillFile, /skills\/blueprint-debug\/references\/debug-runtime-contract\.md/);
   assert.doesNotMatch(skillFile, /## Required Inputs/);
   assert.doesNotMatch(skillFile, /docs\/commands\/debug\.md/);

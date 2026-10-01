@@ -17,7 +17,7 @@ function assertContainsAll(text: string, snippets: string[]) {
 
 test("insert-phase manifest references roadmap insertion tools, confirmation gate, and discuss-phase routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-insert-phase.toml"),
+    path.join(repoRoot, "commands/blu-insert-phase.md"),
     "utf8"
   );
 
@@ -200,7 +200,7 @@ test("insert-phase runtime-owned metadata uses numeric after anchors and phasePr
 
 test("insert-phase manifest and runtime contract keep requirement traceability in the declared write surface", async () => {
   const [commandFile, contract] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-insert-phase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-insert-phase.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,

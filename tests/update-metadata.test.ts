@@ -17,7 +17,7 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("update manifest references the maintenance skill, update MCP tools, and the question gate", async () => {
-  const commandFile = await readRepoFile("commands/blu-update.toml");
+  const commandFile = await readRepoFile("commands/blu-update.md");
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);
@@ -113,7 +113,7 @@ test("repo-facing status docs treat update as a shipped Wave 5 command", async (
   assert.equal(metadata.catalog.declaredStatus, "implemented");
   assert.equal(metadata.spec.executionProfile, "interactive-read");
   assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
-  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Native command\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /update-runtime-contract\.md/);
   assert.match(
     metadata.runtimeReference.contractNotes,

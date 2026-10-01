@@ -386,7 +386,7 @@ test("ui-review runtime metadata, manifest, and local contract stay source-owned
   const [catalog, contract, commandFile, referenceFile] = await Promise.all([
     blueprintCommandCatalog(),
     buildBlueprintCommandRuntimeContractResource("ui-review"),
-    readFile(path.join(repoRoot, "commands/blu-ui-review.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-ui-review.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-review/references/ui-review-runtime-contract.md"),
       "utf8"
@@ -404,7 +404,6 @@ test("ui-review runtime metadata, manifest, and local contract stay source-owned
     ...UI_REVIEW_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-ui-review.toml",
     "skills/blueprint-review/references/ui-review-runtime-contract.md"
   ]);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
@@ -1192,7 +1191,7 @@ test("ui-review is exposed as an implemented review command with the registered 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-ui-review.toml");
+  assert.equal(entry.manifestPath, "commands/blu-ui-review.md");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_artifact_list",

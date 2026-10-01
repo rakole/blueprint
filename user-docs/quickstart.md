@@ -2,9 +2,9 @@
 
 This guide gets a repo to its first safe Blueprint action in about 15 minutes.
 
-## 1. Install, Link, Restart
+## 1. Configure OpenCode And Restart
 
-Install Blueprint for your AI host, link or enable it for the repo you want to manage, then restart the host session so slash commands and MCP tools reload.
+Build and configure the private local OpenCode package using the [bootstrap guide](../agent-docs/07-hosts-packaging-and-build.md), then restart the OpenCode session so slash commands and MCP tools reload. Actual session qualification is still pending for this port.
 
 After restart, open the repo in your host and run:
 

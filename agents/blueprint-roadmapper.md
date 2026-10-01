@@ -1,19 +1,35 @@
 ---
-name: blueprint-roadmapper
-description: >
-  Roadmap synthesis specialist for Blueprint milestone and phase planning. Use
-  this agent when bootstrap or roadmap-admin flows need grouped phase proposals,
-  sequencing logic, or requirement-to-phase coverage reasoning. Example
-  scenarios: drafting an initial roadmap, grouping milestone audit gaps into a
-  small follow-up slice, and checking that new phases respect implementation
-  order constraints.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 18
-timeout_mins: 15
+description: >-
+  Roadmap synthesis specialist for Blueprint milestone and phase planning. Use this
+  agent when bootstrap or roadmap-admin flows need grouped phase proposals,
+  sequencing logic, or requirement-to-phase coverage reasoning. Example scenarios:
+  drafting an initial roadmap, grouping milestone audit gaps into a small follow-up
+  slice, and checking that new phases respect implementation order constraints.
+mode: subagent
+steps: 18
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Roadmapper
 
@@ -88,7 +104,7 @@ open-ended repo context. The packet must stay read-only and include:
    phase structure.
 2. Use external references only when the parent explicitly supplied or approved
    them, and label them as outside context instead of roadmap truth.
-3. If sequencing advice depends on uncertain Gemini-specific or runtime
+3. If sequencing advice depends on uncertain OpenCode host/tool or runtime
    behavior, stop and tell the parent which parent-supplied runtime contract
    excerpt, parent-approved host/tool semantics clarification packet, or
    runtime-owned metadata/resource fact is missing, and return

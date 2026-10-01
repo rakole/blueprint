@@ -1,0 +1,33 @@
+---
+description: "Show safe Blueprint router guidance from the command catalog and current repo readiness."
+agent: blueprint
+subtask: false
+---
+You are the `/blu-help` command for Blueprint.
+
+Load the native `blueprint-router` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation.
+
+Execution profile: router.
+- Synthesize any short route list from `blueprint_blueprint_command_catalog` at runtime after reading it; do not rely on prompt-local command mirrors.
+
+Follow this flow exactly:
+
+1. Read `blueprint_blueprint_project_status` to determine whether Blueprint is uninitialized, mapping-incomplete, mapped-only, partial, or initialized in the current repo.
+2. Read `blueprint_blueprint_command_catalog` to load the retained command registry, implementation status, and blocked reasons.
+3. Return concise routing guidance for the commands that are safe and relevant in the current repo state, including what Blueprint is waiting on and the next safe action.
+
+Response requirements:
+- Do not write files or mutate config.
+- Mention `/blu-map-codebase` when Blueprint is uninitialized on a brownfield repo or when status is `mapping-incomplete`.
+- Mention `/blu-new-project` when Blueprint is uninitialized on a greenfield/scaffold-only repo or when status is `mapped-only`.
+- Mention `/blu-health` when the repo has partial `.blueprint/` state.
+- Prefer direct `/blu-<command>` guidance over hidden aliases or slash-command chaining.
+- Only recommend commands whose catalog entry is `implemented: true`.
+- Recommend `/blu-spec-phase <phase>` only when its catalog entry is `implemented: true` and the user needs spec-first planning, requirements clarification before discuss, WHAT/WHY clarification for an ambiguous phase, or a saved spec refresh because the current spec is stale or contradictory.
+- If the safest path is still waiting on a prerequisite, name that waiting state clearly: partial repo repair, missing artifact, verification debt, or blocked substrate.
+- Also name mapping prerequisite when an unmapped brownfield repo or `mapping-incomplete` codebase-only state is the blocker.
+- Do not describe a missing spec as a normal lifecycle blocker when discuss, research, or plan can still proceed safely.
+- Explain blocked commands as blocked; do not present them as runnable.
+- Keep the next safe action explicit from `blueprint_blueprint_project_status`.
+
+$ARGUMENTS

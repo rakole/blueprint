@@ -11,7 +11,7 @@ const repoRoot = process.cwd();
 
 test("add-phase manifest uses runtime skill and MCP identities for roadmap append flow", async () => {
   const commandFile = await fs.readFile(
-    path.join(repoRoot, "commands/blu-add-phase.toml"),
+    path.join(repoRoot, "commands/blu-add-phase.md"),
     "utf8"
   );
 
@@ -178,7 +178,7 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
 
 test("add-phase manifest and local runtime contract keep plain append validation distinct from audit-backed repair", async () => {
   const [commandFile, addPhaseContract] = await Promise.all([
-    fs.readFile(path.join(repoRoot, "commands/blu-add-phase.toml"), "utf8"),
+    fs.readFile(path.join(repoRoot, "commands/blu-add-phase.md"), "utf8"),
     fs.readFile(
       path.join(
         repoRoot,

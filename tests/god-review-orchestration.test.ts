@@ -41,7 +41,7 @@ async function readRelative(repoPath: string, relativePath: string): Promise<str
 }
 
 test("hidden code-review dispatcher defers start next and append orchestration to private skill", async () => {
-  const manifest = await readRepoFile("commands/blu-code-review.toml");
+  const manifest = await readRepoFile("commands/blu-code-review.md");
   const publicSkill = await readRepoFile("skills/blueprint-review/SKILL.md");
   const privateSkill = await readRepoFile("skills/blueprint-god-review/SKILL.md");
 

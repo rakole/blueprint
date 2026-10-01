@@ -781,8 +781,8 @@ test("phase validation runtime metadata and skill wiring promote validate-phase 
 
 test("validate-phase and verify-work manifests reference registered validation tools and safe routing text", async () => {
   const [validateManifest, verifyManifest, skillFile] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-validate-phase.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-verify-work.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8")
   ]);
 
@@ -808,8 +808,8 @@ test("validate-phase and verify-work manifests reference registered validation t
   assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_validate_model")));
   assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_render")));
 
-  assert.match(validateManifest, /Use the `blueprint-phase-validation` skill/);
-  assert.match(verifyManifest, /Use the `blueprint-phase-validation` skill/);
+  assert.match(validateManifest, /Load the native `blueprint-phase-validation` skill exactly once/);
+  assert.match(verifyManifest, /Load the native `blueprint-phase-validation` skill exactly once/);
   assert.match(validateManifest, /`blueprint-verifier` subagent/);
   assert.match(verifyManifest, /`blueprint-verifier` subagent/);
   assert.match(validateManifest, /artifact: "verification"/);
@@ -1575,8 +1575,8 @@ test("validate-phase and verify-work runtime-owned sources keep the validation s
     validateContract,
     verifyContract
   ] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-validate-phase.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-verify-work.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,

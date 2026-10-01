@@ -11,11 +11,15 @@ input_bundles:
   shared: []
   commands:
     /blu-map-codebase:
-      - commands/blu-map-codebase.toml
+      - commands/blu-map-codebase.md
       - skills/blueprint-map/references/map-runtime-contract.md
 ---
 
 # Blueprint Map Skill
+
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
 
 ## Ownership
 

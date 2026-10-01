@@ -1,7 +1,7 @@
 # Debug Runtime Contract
 
 This is the command-local runtime contract for `/blu-debug`. It is loaded with
-`commands/blu-debug.toml` through the `blueprint-debug` skill's structured
+`commands/blu-debug.md` through the `blueprint-debug` skill's structured
 `input_bundles` frontmatter. Repository docs may describe history, but they are
 not active runtime inputs for this command.
 

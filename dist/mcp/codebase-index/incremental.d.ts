@@ -161,6 +161,7 @@ export declare const portableIncrementalCacheSchema: z.ZodObject<{
             qualifiedName: z.ZodOptional<z.ZodString>;
             kind: z.ZodEnum<{
                 function: "function";
+                constructor: "constructor";
                 unknown: "unknown";
                 enum: "enum";
                 type: "type";
@@ -168,7 +169,6 @@ export declare const portableIncrementalCacheSchema: z.ZodObject<{
                 class: "class";
                 interface: "interface";
                 method: "method";
-                constructor: "constructor";
                 variable: "variable";
                 constant: "constant";
                 property: "property";

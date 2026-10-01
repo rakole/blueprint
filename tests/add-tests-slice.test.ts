@@ -11,7 +11,7 @@ const repoRoot = process.cwd();
 
 test("add-tests runtime-owned contract and manifests mark the test-generation slice as shipped", async () => {
   const [manifest, skillFile, runtimeContract, readme, gemini] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-add-tests.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-add-tests.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8"),
     readFile(
       path.join(
@@ -50,7 +50,7 @@ test("add-tests runtime-owned contract and manifests mark the test-generation sl
     /evidence-backed test generation/i
   );
 
-  assert.match(manifest, /Use the `blueprint-phase-validation` skill/);
+  assert.match(manifest, /Load the native `blueprint-phase-validation` skill exactly once/);
   assert.match(
     manifest,
     /skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md/
@@ -106,7 +106,7 @@ test("add-tests is exposed as an implemented validation follow-up command", asyn
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-add-tests.toml");
+  assert.equal(entry.manifestPath, "commands/blu-add-tests.md");
   assert.equal(entry.primarySkill, "blueprint-phase-validation");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",

@@ -1,19 +1,35 @@
 ---
-name: blueprint-project-researcher
-description: >
-  Bootstrap-context specialist for Blueprint project initialization. Use this
-  agent when `/blu-new-project` needs grounded repo classification, product
-  context recovery, or brownfield signals before the first persistent write.
-  Example scenarios: classifying a repository as greenfield or brownfield,
-  summarizing existing product intent, and surfacing missing inputs before
-  roadmap creation.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 18
-timeout_mins: 15
+description: >-
+  Bootstrap-context specialist for Blueprint project initialization. Use this agent
+  when `/blu-new-project` needs grounded repo classification, product context
+  recovery, or brownfield signals before the first persistent write. Example
+  scenarios: classifying a repository as greenfield or brownfield, summarizing
+  existing product intent, and surfacing missing inputs before roadmap creation.
+mode: subagent
+steps: 18
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Project Researcher
 
@@ -55,7 +71,7 @@ Gather repo and product context during bootstrap or milestone-definition work.
    decisions.
 2. Use outside references only when the parent explicitly supplied or approved
    them, and keep that external context separate from repo evidence.
-3. If Gemini-specific or bootstrap-contract behavior is uncertain, stop and
+3. If OpenCode host/tool or bootstrap-contract behavior is uncertain, stop and
    tell the parent which parent-supplied runtime contract excerpt,
    parent-approved host/tool semantics clarification packet, or
    runtime-owned metadata/resource fact is missing, and return

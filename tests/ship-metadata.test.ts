@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("ship manifest references the maintenance skill, runtime-owned executor, and explicit remote confirmation guards", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-ship.toml"),
+    path.join(repoRoot, "commands/blu-ship.md"),
     "utf8"
   );
 
@@ -46,8 +46,8 @@ test("ship manifest references the maintenance skill, runtime-owned executor, an
   assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, /tracker-eligible/i);
   assert.match(commandFile, /`todowrite` is session-local/i);
-  assert.match(commandFile, /pair it with visible `todowrite`/i);
-  assert.match(commandFile, /When tracker support is unavailable, keep the same shipping flow linear/i);
+  assert.match(commandFile, /`todowrite` is session-local only and does not replace Blueprint MCP persistence/i);
+  assert.match(commandFile, /When `todowrite` is unavailable, keep the same shipping flow linear/i);
   assert.match(commandFile, /ship-latest/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /draft versus ready PR mode/i);

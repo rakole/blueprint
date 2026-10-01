@@ -17,12 +17,12 @@ const ROADMAP_ADMIN_COMMAND_INPUTS = {
   "insert-phase": [
     "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"
   ],
-  "remove-phase": ["commands/blu-remove-phase.toml"],
-  "plan-milestone-gaps": ["commands/blu-plan-milestone-gaps.toml"],
-  "audit-milestone": ["commands/blu-audit-milestone.toml"],
-  "complete-milestone": ["commands/blu-complete-milestone.toml"],
-  "milestone-summary": ["commands/blu-milestone-summary.toml"],
-  "new-milestone": ["commands/blu-new-milestone.toml"]
+  "remove-phase": ["commands/blu-remove-phase.md"],
+  "plan-milestone-gaps": ["commands/blu-plan-milestone-gaps.md"],
+  "audit-milestone": ["commands/blu-audit-milestone.md"],
+  "complete-milestone": ["commands/blu-complete-milestone.md"],
+  "milestone-summary": ["commands/blu-milestone-summary.md"],
+  "new-milestone": ["commands/blu-new-milestone.md"]
 } as const;
 
 test("roadmap-admin implemented commands stay docless when docs are unavailable", async (t) => {
@@ -77,7 +77,10 @@ test("roadmap-admin implemented commands stay docless when docs are unavailable"
     ]);
     assert.deepEqual(contract.skillInputs.shared, []);
     assert.deepEqual(contract.skillInputs.commandSpecific, [...expectedInputs]);
-    assert.deepEqual(contract.skillInputs.effective, [...expectedInputs]);
+    assert.deepEqual(
+      contract.skillInputs.effective,
+      expectedInputs.filter((input) => input !== blueprintPrimaryManifestPath(commandName))
+    );
     assert.equal(
       contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
       false
@@ -93,7 +96,7 @@ test("new-milestone runtime resource keeps config-gated roadmapper inputs docles
   const contract = await buildBlueprintCommandRuntimeContractResource("new-milestone");
 
   assert.ok(metadata);
-  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-new-milestone.toml"]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.ok(contract.spec?.reads.some((read) => read.includes("blueprint_config_get")));
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
     ...metadata.requiredTools

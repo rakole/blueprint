@@ -14,19 +14,23 @@ input_bundles:
   shared: []
   commands:
     "/blu-execute-phase":
-      - commands/blu-execute-phase.toml
+      - commands/blu-execute-phase.md
       - skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md
       - skills/blueprint-phase-execution/references/long-running-execution-profile.md
     "/blu-quick":
-      - commands/blu-quick.toml
+      - commands/blu-quick.md
       - skills/blueprint-phase-execution/references/quick-runtime-contract.md
       - skills/blueprint-phase-execution/references/long-running-execution-profile.md
     "/blu-fast":
-      - commands/blu-fast.toml
+      - commands/blu-fast.md
       - skills/blueprint-phase-execution/references/fast-runtime-contract.md
 ---
 
 # Blueprint Phase Execution Skill
+
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
 
 ## Purpose
 

@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("add-backlog manifest uses runtime skill and capture MCP identities", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-add-backlog.toml"),
+    path.join(repoRoot, "commands/blu-add-backlog.md"),
     "utf8"
   );
 
@@ -82,6 +82,6 @@ test("add-backlog runtime contract is owned by command runtime metadata", async 
   );
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /Docless manifest\+skill-owned runtime/
+    /Native command\+skill-owned runtime/
   );
 });

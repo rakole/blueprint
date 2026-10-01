@@ -16,7 +16,7 @@ function assertContainsAll(text: string, snippets: string[]) {
 
 test("new-milestone manifest references carry-forward seed generation and discuss-phase routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-new-milestone.toml"),
+    path.join(repoRoot, "commands/blu-new-milestone.md"),
     "utf8"
   );
 
@@ -164,9 +164,7 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
     contract.runtimeReference?.contractNotes ?? "",
     /blueprint_config_get[\s\S]*Roadmapper Packet[\s\S]*parentOwnedResponsibilities[\s\S]*roadmapperMode[\s\S]*missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation[\s\S]*firstPhaseNumber/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-new-milestone.toml"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
@@ -179,7 +177,7 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
 
 test("new-milestone manifest and roadmap-admin skill keep requirementTransitions as starter-seed evidence only", async () => {
   const [commandFile, skillFile] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-new-milestone.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-new-milestone.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-roadmap-admin/SKILL.md"), "utf8")
   ]);
 
@@ -235,7 +233,7 @@ test("new-milestone manifest and roadmap-admin skill keep requirementTransitions
 
 test("new-milestone runtime metadata exposes scaffold first-phase receipt fields", async () => {
   const [commandFile, skillFile, contract] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-new-milestone.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-new-milestone.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-roadmap-admin/SKILL.md"), "utf8"),
     buildBlueprintCommandRuntimeContractResource("new-milestone")
   ]);

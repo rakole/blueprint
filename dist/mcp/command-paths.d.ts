@@ -1,5 +1,5 @@
 export declare const BLUEPRINT_ROOT_COMMAND: "/blu";
-export declare const BLUEPRINT_ROOT_COMMAND_MANIFEST: "commands/blu.toml";
+export declare const BLUEPRINT_ROOT_COMMAND_DEFINITION: "commands/blu.md";
 export declare const BLUEPRINT_DIRECT_COMMAND_PREFIX: "/blu-";
 export declare const BLUEPRINT_ROUTER_COMMAND_SEPARATOR: " ";
 export declare function blueprintRootCommand(): typeof BLUEPRINT_ROOT_COMMAND;
@@ -7,5 +7,7 @@ export declare function blueprintDirectCommand(commandName: string): `/blu-${str
 export declare function blueprintRouterCommand(commandName?: string): string;
 export declare function blueprintRunCommand(command: string, args?: string | null): string;
 export declare function blueprintRunDirectCommand(commandName: string, args?: string | null): string;
+export declare function blueprintCommandDefinitionPath(commandName: string): string;
+/** @deprecated Use blueprintCommandDefinitionPath. */
 export declare function blueprintPrimaryManifestPath(commandName: string): string;
 export declare function blueprintDirectCommandAliases(commandName: string): string[];

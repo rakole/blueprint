@@ -10,9 +10,9 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 const repoRoot = process.cwd();
 
 test("fast manifest references the execution skill and trivial inline MCP tools without subagents", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-fast.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-fast.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
+  assert.match(commandFile, /Load the native `blueprint-phase-execution` skill exactly once/);
   assert.doesNotMatch(
     commandFile,
     /`blueprint-(researcher|planner|executor|verifier)`/,
@@ -107,7 +107,7 @@ test("fast runtime contract resource is owned by runtime metadata, not docs", as
   assert.deepEqual(contract.runtimeReference.optionalAgents, []);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "commands/blu-fast.toml",
+    "commands/blu-fast.md",
     "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
   ]);
   assert.equal(

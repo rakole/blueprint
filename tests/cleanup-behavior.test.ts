@@ -314,7 +314,7 @@ function escapeRegExp(value: string): string {
 
 async function loadCleanupContractFiles(): Promise<CleanupContractFiles> {
   const [command, skill] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-cleanup.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-cleanup.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-maintenance/SKILL.md"), "utf8")
   ]);
 

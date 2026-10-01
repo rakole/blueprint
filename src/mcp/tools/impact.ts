@@ -1164,9 +1164,9 @@ function classifyImpactFile(filePath: string): ImpactSurfaceRecord {
     addSurfaceRule(rules, "env-config", "Environment file path matched .env*.");
   }
 
-  if (/^commands\/[^/]+\.toml$/u.test(normalizedPath)) {
-    addSurfaceRule(rules, "command-manifest", "Command manifest TOML changed.");
-    addSurfaceRule(rules, "config", "Command manifests are TOML configuration.");
+  if (/^commands\/[^/]+\.md$/u.test(normalizedPath)) {
+    addSurfaceRule(rules, "command-manifest", "Native command Markdown changed.");
+    addSurfaceRule(rules, "config", "Native command frontmatter and prompt are runtime configuration.");
   }
 
   if (normalizedPath === "src/mcp/command-runtime-metadata.ts") {
@@ -4051,7 +4051,7 @@ function pathFromBlockedBy(blockedBy: string[], prefix: string): string | null {
 }
 
 function expectedCommandManifestPath(commandName: string): string {
-  return commandName === "blu" ? "commands/blu.toml" : `commands/blu-${commandName}.toml`;
+  return commandName === "blu" ? "commands/blu.md" : `commands/blu-${commandName}.md`;
 }
 
 function expectedSkillPath(entry: CommandCatalogEntryLike): string | null {
@@ -4285,7 +4285,7 @@ function nonImplementedCommandsFromContext(
 
 function isRouterHelpProgressNextSurface(filePath: string): boolean {
   return (
-    /^(?:commands\/blu(?:-(?:help|progress|next))?\.toml)$/u.test(filePath) ||
+    /^(?:commands\/blu(?:-(?:help|progress|next))?\.md)$/u.test(filePath) ||
     filePath === "src/mcp/command-resources.ts" ||
     filePath === "src/mcp/tools/project.ts"
   );

@@ -181,7 +181,7 @@ ${noExternalServicesSection}
 
 test("resume-work spec metadata references the governance handoff contract and registered tools", async () => {
   const [manifestDoc, referenceDoc, catalog, runtimeContract] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-resume-work.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-resume-work.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,
@@ -262,7 +262,7 @@ test("pause and resume state flow surfaces /blu-resume-work while the handoff is
     decisions: ["Keep the handoff as the single source of pause context."],
     blockers: ["Waiting for the next implementation session to continue."],
     humanActionsPending: ["Choose when to resume the saved session."],
-    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-resume-work.toml"],
+    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-resume-work.md"],
     contextNotes: "The next session should restore the pause handoff first, then continue from the saved phase context.",
     nextAction: "Start by restoring the saved handoff and then continue with /blu-resume-work."
   });

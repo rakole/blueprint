@@ -145,7 +145,7 @@ const CONTRACT_EXPECTATION_CHECKS: Record<ContractExpectation, (packet: Lightwei
     "session-local-tracker": (packet) => {
       assert.match(packet.promptSurfaceText, /tracker-eligible/i);
       assert.match(packet.promptSurfaceText, /do not use tracker as a saved plan/i);
-      assert.match(packet.promptSurfaceText, /do not use tracker or subagents to widen scope/i);
+      assert.match(packet.promptSurfaceText, /Do not use session tasks or subagents to widen scope/i);
     },
     "no-generic-substitutes": (packet) => {
       assert.match(

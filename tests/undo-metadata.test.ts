@@ -15,7 +15,7 @@ const repoRoot = process.cwd();
 
 test("undo manifest references the maintenance skill, high-risk maintenance profile, and explicit revert confirmation guards", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-undo.toml"),
+    path.join(repoRoot, "commands/blu-undo.md"),
     "utf8"
   );
 
@@ -347,7 +347,7 @@ test("repo-facing status docs treat undo as a shipped command", async () => {
   assert.equal(metadata.catalog.declaredStatus, "implemented");
   assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
   assert.equal(metadata.runtimeReference.waveTitle, "Quality And Shipping");
-  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Native command\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /undo-runtime-contract\.md/);
   assert.match(metadata.runtimeReference.contractNotes, /hard-stop on dirty or unsafe git state/i);
   assert.equal(entry.status, "implemented");

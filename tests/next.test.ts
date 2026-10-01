@@ -12,7 +12,7 @@ import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 const repoRoot = process.cwd();
 
 test("next command manifest references only registered read-oriented router tools", async () => {
-  const raw = await readFile(path.join(repoRoot, "commands/blu-next.toml"), "utf8");
+  const raw = await readFile(path.join(repoRoot, "commands/blu-next.md"), "utf8");
   const expectedTools = [
     "blueprint_project_status",
     "blueprint_config_get",
@@ -30,7 +30,7 @@ test("next command manifest references only registered read-oriented router tool
 });
 
 test("next command manifest preserves safe fallback and routing guarantees", async () => {
-  const raw = await readFile(path.join(repoRoot, "commands/blu-next.toml"), "utf8");
+  const raw = await readFile(path.join(repoRoot, "commands/blu-next.md"), "utf8");
 
   assert.match(raw, /\/blu-new-project/);
   assert.match(raw, /\/blu-health/);
@@ -99,7 +99,7 @@ test("next is exposed as an implemented router command with no blockers", async 
   assert.equal(entry.status, "implemented");
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-next.toml");
+  assert.equal(entry.manifestPath, "commands/blu-next.md");
   assert.equal(entry.specPath, NEXT_RUNTIME_METADATA.sourceId);
   assert.deepEqual(entry.blockedBy, []);
 });
@@ -142,8 +142,8 @@ test("next runtime contract is source-owned and uses only the command manifest a
   assert.deepEqual(contract.skillInputs, {
     skill: "blueprint-router",
     shared: [],
-    commandSpecific: ["commands/blu-next.toml"],
-    effective: ["commands/blu-next.toml"]
+    commandSpecific: ["commands/blu-next.md"],
+    effective: []
   });
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
@@ -177,5 +177,5 @@ test("next remains implemented when docs-backed command specs are unavailable", 
   assert.equal(catalog.commands.next.implemented, true);
   assert.equal(catalog.commands.next.specPath, NEXT_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec?.path, NEXT_RUNTIME_METADATA.sourceId);
-  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-next.toml"]);
+  assert.deepEqual(contract.skillInputs.effective, []);
 });

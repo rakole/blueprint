@@ -11,7 +11,7 @@ import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 const RUN_PLAN_INPUTS = [
-  "commands/blu-run-plan.toml",
+  "commands/blu-run-plan.md",
   "skills/blueprint-plan-run/references/run-plan-runtime-contract.md"
 ] as const;
 
@@ -31,7 +31,7 @@ test("run-plan is implemented once manifest, skill, and PlanRun MCP tools are re
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-run-plan.toml");
+  assert.equal(entry.manifestPath, "commands/blu-run-plan.md");
   assert.equal(entry.skillPath, "skills/blueprint-plan-run/SKILL.md");
   assert.equal(entry.specPath, RUN_PLAN_RUNTIME_METADATA.sourceId);
   assert.equal(entry.primarySkill, "blueprint-plan-run");
@@ -62,11 +62,11 @@ test("run-plan is implemented once manifest, skill, and PlanRun MCP tools are re
 
 test("run-plan manifest locks preview-first confirmation and later-diff persistence gates", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-run-plan.toml"),
+    path.join(repoRoot, "commands/blu-run-plan.md"),
     "utf8"
   );
 
-  assert.match(commandFile, /Use the `blueprint-plan-run` skill/);
+  assert.match(commandFile, /Load the native `blueprint-plan-run` skill exactly once/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Prepare`, `Execute`, `Capture`, `Persist`, and `Route`/);
   assert.match(commandFile, /prefer the `question` tool/i);
@@ -169,7 +169,7 @@ test("run-plan runtime contract resource is owned by runtime metadata", async ()
   assert.deepEqual(contract.runtimeReference.optionalAgents, []);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [...RUN_PLAN_INPUTS]);
-  assert.deepEqual(contract.skillInputs.effective, [...RUN_PLAN_INPUTS]);
+  assert.deepEqual(contract.skillInputs.effective, RUN_PLAN_INPUTS.slice(1));
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
