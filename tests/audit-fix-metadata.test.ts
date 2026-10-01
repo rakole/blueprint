@@ -44,11 +44,11 @@ test("audit-fix runtime metadata is source-owned and docs-free", async () => {
     skill: "blueprint-review",
     shared: [],
     commandSpecific: [
-      "commands/blu-audit-fix.toml",
+      "commands/blu-audit-fix.md",
       "skills/blueprint-review/references/audit-fix-runtime-contract.md"
     ],
     effective: [
-      "commands/blu-audit-fix.toml",
+      "commands/blu-audit-fix.md",
       "skills/blueprint-review/references/audit-fix-runtime-contract.md"
     ]
   });
@@ -56,7 +56,7 @@ test("audit-fix runtime metadata is source-owned and docs-free", async () => {
 });
 
 test("audit-fix manifest references the remediation tools, agents, and safe routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-audit-fix.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-audit-fix.md"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-review` skill/);
   assert.match(

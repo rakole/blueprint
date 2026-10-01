@@ -46,7 +46,7 @@ test("add-tests runtime metadata is source-owned and docs-free", async () => {
 
 test("add-tests manifest references visibility, validation/report tools, bounded agents, and safe follow-up routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-add-tests.toml"),
+    path.join(repoRoot, "commands/blu-add-tests.md"),
     "utf8"
   );
 

@@ -13,7 +13,7 @@ import {
 } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
-const manifestPath = path.join(repoRoot, "commands/blu-list-phase-assumptions.toml");
+const manifestPath = path.join(repoRoot, "commands/blu-list-phase-assumptions.md");
 const discoverableSkillPath = path.join(
   repoRoot,
   "skills/blueprint-phase-discovery/SKILL.md"
@@ -137,7 +137,7 @@ test("list-phase-assumptions remains implemented in the live command catalog", a
   const [catalog, manifestExists, skillExists, skillResolution] =
     await Promise.all([
     blueprintCommandCatalog(),
-    pathExists("commands/blu-list-phase-assumptions.toml"),
+    pathExists("commands/blu-list-phase-assumptions.md"),
     pathExists("skills/blueprint-phase-discovery/SKILL.md"),
     resolveBlueprintSkillPath("blueprint-phase-discovery", pathExists)
   ]);
@@ -148,7 +148,7 @@ test("list-phase-assumptions remains implemented in the live command catalog", a
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-list-phase-assumptions.toml");
+  assert.equal(entry.manifestPath, "commands/blu-list-phase-assumptions.md");
   assert.equal(skillResolution.resolution, "discoverable");
   assert.equal(entry.skillPath, skillResolution.canonicalPath);
   assert.equal(

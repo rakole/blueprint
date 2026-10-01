@@ -289,7 +289,7 @@ test("hidden god-review fix stale scope prevents edit-ready selection without re
 });
 
 test("hidden code-review-fix dispatcher defers private findings selection before edits", async () => {
-  const manifest = await readRepoFile("commands/blu-code-review-fix.toml");
+  const manifest = await readRepoFile("commands/blu-code-review-fix.md");
   const publicSkill = await readRepoFile("skills/blueprint-review/SKILL.md");
   const privateSkill = await readRepoFile("skills/blueprint-god-review/SKILL.md");
 

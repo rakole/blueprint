@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("check-todos manifest uses runtime skill and todo-status MCP identities", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-check-todos.toml"),
+    path.join(repoRoot, "commands/blu-check-todos.md"),
     "utf8"
   );
 

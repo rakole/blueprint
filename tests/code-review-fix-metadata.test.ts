@@ -44,11 +44,11 @@ test("code-review-fix runtime metadata is source-owned and docs-free", async () 
     skill: "blueprint-review",
     shared: [],
     commandSpecific: [
-      "commands/blu-code-review-fix.toml",
+      "commands/blu-code-review-fix.md",
       "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
     ],
     effective: [
-      "commands/blu-code-review-fix.toml",
+      "commands/blu-code-review-fix.md",
       "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
     ]
   });
@@ -57,7 +57,7 @@ test("code-review-fix runtime metadata is source-owned and docs-free", async () 
 
 test("code-review-fix manifest references findings tools, canonical contracts, and safe follow-up routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-code-review-fix.toml"),
+    path.join(repoRoot, "commands/blu-code-review-fix.md"),
     "utf8"
   );
 

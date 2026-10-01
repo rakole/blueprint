@@ -19,7 +19,7 @@ function headingSection(markdown: string, heading: string): string {
 }
 
 test("verify-work manifest stays thin while advertising tool-owned writes and routing surfaces", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-verify-work.md"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
   assert.match(commandFile, /`blueprint-verifier` subagent/);

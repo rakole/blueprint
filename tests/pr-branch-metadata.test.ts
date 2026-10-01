@@ -18,7 +18,7 @@ const repoRoot = process.cwd();
 
 test("pr-branch manifest references the maintenance skill, report tool, and git confirmation guards", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-pr-branch.toml"),
+    path.join(repoRoot, "commands/blu-pr-branch.md"),
     "utf8"
   );
 

@@ -19,7 +19,7 @@ function headingSection(markdown: string, heading: string): string {
 }
 
 test("validate-phase manifest stays thin while referencing the validation tools and routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-validate-phase.md"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
   assert.match(

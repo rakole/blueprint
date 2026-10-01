@@ -264,7 +264,7 @@ ${noExternalServicesSection}
 }
 
 test("pause-work manifest references the handoff tools, overwrite gate, and safe follow-up routing", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-pause-work.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-pause-work.md"), "utf8");
   const requiredTools = [
     "blueprint_state_load",
     "blueprint_artifact_list",
@@ -304,7 +304,7 @@ test("pause handoff tools create, reuse, update, and influence routed state whil
     decisions: ["Keep the handoff as a single canonical report in .blueprint/reports/."],
     blockers: ["Waiting for the next implementation session to continue execution work."],
     humanActionsPending: ["Decide when to resume execution for Phase 3."],
-    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-pause-work.toml"],
+    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-pause-work.md"],
     contextNotes: "Resume by reviewing the handoff first, then continue with the queued execution step.",
     nextAction: "Start by reading .blueprint/reports/pause-work-latest.md and then run /blu-resume-work."
   });
@@ -333,7 +333,7 @@ test("pause handoff tools create, reuse, update, and influence routed state whil
     decisions: ["Keep the handoff as a single canonical report in .blueprint/reports/."],
     blockers: ["Waiting for the next implementation session to continue execution work."],
     humanActionsPending: ["Decide when to resume execution for Phase 3."],
-    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-pause-work.toml"],
+    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-pause-work.md"],
     contextNotes: "Resume by reviewing the handoff first, then continue with the queued execution step.",
     nextAction: "Start by reading .blueprint/reports/pause-work-latest.md and then run /blu-resume-work."
   });
@@ -345,7 +345,7 @@ test("pause handoff tools create, reuse, update, and influence routed state whil
     decisions: ["Keep the handoff as a single canonical report in .blueprint/reports/."],
     blockers: ["Waiting for the next implementation session to continue execution work."],
     humanActionsPending: ["Decide when to resume execution for Phase 3."],
-    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-pause-work.toml"],
+    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-pause-work.md"],
     contextNotes: "The next session can jump straight to execution after reviewing this updated note.",
     nextAction: "Start by reading .blueprint/reports/pause-work-latest.md and then run /blu-resume-work.",
     overwrite: true
@@ -365,12 +365,12 @@ test("pause handoff tools create, reuse, update, and influence routed state whil
   assert.equal(created.path, ".blueprint/reports/pause-work-latest.md");
   assert.match(reportBody, /# Pause Work Handoff/);
   assert.match(reportBody, /## Completed Work/);
-  assert.match(reportBody, /commands\/blu-pause-work\.toml/);
+  assert.match(reportBody, /commands\/blu-pause-work\.md/);
   assert.equal(afterCreate.found, true);
   assert.equal(afterCreate.handoff?.currentPhase, "3");
   assert.deepEqual(afterCreate.handoff?.modifiedFiles, [
     "src/mcp/tools/state.ts",
-    "commands/blu-pause-work.toml"
+    "commands/blu-pause-work.md"
   ]);
   assert.equal(pausedState.state.activeCommand, "/blu-pause-work");
   assert.match(pausedState.derivedStatus.nextAction, /\/blu-resume-work/);

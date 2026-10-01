@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("ship manifest references the maintenance skill, runtime-owned executor, and explicit remote confirmation guards", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-ship.toml"),
+    path.join(repoRoot, "commands/blu-ship.md"),
     "utf8"
   );
 

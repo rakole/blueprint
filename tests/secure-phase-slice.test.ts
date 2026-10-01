@@ -593,7 +593,7 @@ test("secure-phase runtime metadata, manifest, and skill contract stay aligned",
   const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
     blueprintCommandCatalog(),
     buildBlueprintCommandRuntimeContractResource("secure-phase"),
-    readFile(path.join(repoRoot, "commands/blu-secure-phase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-secure-phase.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-review/references/secure-phase-runtime-contract.md"),
@@ -611,7 +611,7 @@ test("secure-phase runtime metadata, manifest, and skill contract stay aligned",
     ...SECURE_PHASE_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-secure-phase.toml",
+    "commands/blu-secure-phase.md",
     "skills/blueprint-review/references/secure-phase-runtime-contract.md"
   ]);
   assert.match(commandFile, /review\.security/);
@@ -1856,7 +1856,7 @@ test("secure-phase is exposed as an implemented review command with the register
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-secure-phase.toml");
+  assert.equal(entry.manifestPath, "commands/blu-secure-phase.md");
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",

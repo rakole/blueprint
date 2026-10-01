@@ -18,7 +18,7 @@ type PromptSurface = {
 const promptSurfaces: PromptSurface[] = [
   {
     id: "command-manifest",
-    filePath: "commands/blu-plan-phase.toml",
+    filePath: "commands/blu-plan-phase.md",
     baselineBytes: 12887,
     activeRuntime: true
   },

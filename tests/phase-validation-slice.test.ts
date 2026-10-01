@@ -781,8 +781,8 @@ test("phase validation runtime metadata and skill wiring promote validate-phase 
 
 test("validate-phase and verify-work manifests reference registered validation tools and safe routing text", async () => {
   const [validateManifest, verifyManifest, skillFile] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-validate-phase.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-verify-work.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8")
   ]);
 
@@ -1575,8 +1575,8 @@ test("validate-phase and verify-work runtime-owned sources keep the validation s
     validateContract,
     verifyContract
   ] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-validate-phase.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-verify-work.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,

@@ -15,7 +15,7 @@ const repoRoot = process.cwd();
 
 test("undo manifest references the maintenance skill, high-risk maintenance profile, and explicit revert confirmation guards", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-undo.toml"),
+    path.join(repoRoot, "commands/blu-undo.md"),
     "utf8"
   );
 

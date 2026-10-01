@@ -10,7 +10,7 @@ const repoRoot = process.cwd();
 
 test("remove-phase manifest references roadmap removal tools, confirmation gate, and safe routing contract", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-remove-phase.toml"),
+    path.join(repoRoot, "commands/blu-remove-phase.md"),
     "utf8"
   );
 
@@ -68,7 +68,7 @@ test("remove-phase runtime-owned metadata exposes the interactive-read destructi
     /future-phase-guard[\s\S]*force-remove-confirmation[\s\S]*force: true/
   );
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-remove-phase.toml"
+    "commands/blu-remove-phase.md"
   ]);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),

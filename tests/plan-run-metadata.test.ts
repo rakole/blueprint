@@ -11,7 +11,7 @@ import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 const RUN_PLAN_INPUTS = [
-  "commands/blu-run-plan.toml",
+  "commands/blu-run-plan.md",
   "skills/blueprint-plan-run/references/run-plan-runtime-contract.md"
 ] as const;
 
@@ -31,7 +31,7 @@ test("run-plan is implemented once manifest, skill, and PlanRun MCP tools are re
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu-run-plan.toml");
+  assert.equal(entry.manifestPath, "commands/blu-run-plan.md");
   assert.equal(entry.skillPath, "skills/blueprint-plan-run/SKILL.md");
   assert.equal(entry.specPath, RUN_PLAN_RUNTIME_METADATA.sourceId);
   assert.equal(entry.primarySkill, "blueprint-plan-run");
@@ -62,7 +62,7 @@ test("run-plan is implemented once manifest, skill, and PlanRun MCP tools are re
 
 test("run-plan manifest locks preview-first confirmation and later-diff persistence gates", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-run-plan.toml"),
+    path.join(repoRoot, "commands/blu-run-plan.md"),
     "utf8"
   );
 

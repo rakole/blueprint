@@ -14,7 +14,7 @@ test("audit-fix runtime metadata, manifest, and local contract stay source-owned
   const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
     blueprintCommandCatalog(),
     buildBlueprintCommandRuntimeContractResource("audit-fix"),
-    readFile(path.join(repoRoot, "commands/blu-audit-fix.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-audit-fix.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-review/references/audit-fix-runtime-contract.md"),
@@ -33,7 +33,7 @@ test("audit-fix runtime metadata, manifest, and local contract stay source-owned
     ...AUDIT_FIX_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-audit-fix.toml",
+    "commands/blu-audit-fix.md",
     "skills/blueprint-review/references/audit-fix-runtime-contract.md"
   ]);
   assert.match(commandFile, /--source <review\|security\|verification\|uat\|all>/);
@@ -93,7 +93,7 @@ test("audit-fix is exposed as an implemented remediation command with the regist
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-audit-fix.toml");
+  assert.equal(entry.manifestPath, "commands/blu-audit-fix.md");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_artifact_list",

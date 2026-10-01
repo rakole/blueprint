@@ -1346,11 +1346,11 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
 
 test("settings and set-profile command contracts reference the registered MCP tools", async () => {
   const settingsCommand = await readFile(
-    path.join(repoRoot, "commands/blu-settings.toml"),
+    path.join(repoRoot, "commands/blu-settings.md"),
     "utf8"
   );
   const setProfileCommand = await readFile(
-    path.join(repoRoot, "commands/blu-set-profile.toml"),
+    path.join(repoRoot, "commands/blu-set-profile.md"),
     "utf8"
   );
   const settingsTools = [

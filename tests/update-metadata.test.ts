@@ -17,7 +17,7 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("update manifest references the maintenance skill, update MCP tools, and the question gate", async () => {
-  const commandFile = await readRepoFile("commands/blu-update.toml");
+  const commandFile = await readRepoFile("commands/blu-update.md");
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);

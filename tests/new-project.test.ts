@@ -2137,7 +2137,7 @@ test("new-project runtime summaries surface the live next action for fresh and b
 
 test("command contract references the same Phase 1 tool names as the MCP server", async () => {
   const [commandFile, runtimeContract, skillFile, contractRef, guardrailsRef] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-new-project.md"), "utf8"),
     buildBlueprintCommandRuntimeContractResource("new-project"),
     readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
     readFile(
@@ -2197,9 +2197,9 @@ test("manifest, command files, and build output line up for installation", async
   const mcpEntrypoint = mcpArgs[0] ?? "";
 
   assert.equal(manifest.contextFileName, "GEMINI.md");
-  assert.equal(await pathExists(path.join(repoRoot, "commands/blu.toml")), true);
+  assert.equal(await pathExists(path.join(repoRoot, "commands/blu.md")), true);
   assert.equal(
-    await pathExists(path.join(repoRoot, "commands/blu-new-project.toml")),
+    await pathExists(path.join(repoRoot, "commands/blu-new-project.md")),
     true
   );
   assert.match(mcpEntrypoint, /dist\/mcp\/server\.js$/);

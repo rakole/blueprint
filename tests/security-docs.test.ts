@@ -46,7 +46,7 @@ test("maintenance and security runtime assets reflect the tightened hardening gu
     await Promise.all([
       readRepoFile("skills/blueprint-maintenance/SKILL.md"),
       readRepoFile("skills/blueprint-review/SKILL.md"),
-      readRepoFile("commands/blu-secure-phase.toml"),
+      readRepoFile("commands/blu-secure-phase.md"),
       readRepoFile("skills/blueprint-maintenance/references/ship-runtime-contract.md"),
       readRepoFile("skills/blueprint-maintenance/references/cleanup-runtime-contract.md")
     ]);

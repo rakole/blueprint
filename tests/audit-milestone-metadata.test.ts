@@ -10,7 +10,7 @@ const repoRoot = process.cwd();
 
 test("audit-milestone manifest references the roadmap audit tools, overwrite gate, and safe routing contract", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-audit-milestone.toml"),
+    path.join(repoRoot, "commands/blu-audit-milestone.md"),
     "utf8"
   );
 
@@ -82,7 +82,7 @@ test("audit-milestone runtime-owned metadata aligns to the interactive-read repo
     /report\.milestone-audit[\s\S]*milestone-audit-overwrite-confirmation[\s\S]*\.blueprint\/reports\//
   );
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-audit-milestone.toml"
+    "commands/blu-audit-milestone.md"
   ]);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),

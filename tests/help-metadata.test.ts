@@ -11,7 +11,7 @@ import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 const repoRoot = process.cwd();
 
 test("help manifest and runtime reference stay aligned on router profile and waiting-state guidance", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-help.md"), "utf8");
   const runtimeContract = await buildBlueprintCommandRuntimeContractResource("help");
   const manifestTools = [
     ...new Set(
@@ -96,8 +96,8 @@ test("help runtime contract is source-owned and uses only the command manifest a
   assert.deepEqual(contract.skillInputs, {
     skill: "blueprint-router",
     shared: [],
-    commandSpecific: ["commands/blu-help.toml"],
-    effective: ["commands/blu-help.toml"]
+    commandSpecific: ["commands/blu-help.md"],
+    effective: ["commands/blu-help.md"]
   });
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
@@ -131,5 +131,5 @@ test("help remains implemented when docs-backed command specs are unavailable", 
   assert.equal(catalog.commands.help.implemented, true);
   assert.equal(catalog.commands.help.specPath, HELP_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec?.path, HELP_RUNTIME_METADATA.sourceId);
-  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-help.toml"]);
+  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-help.md"]);
 });

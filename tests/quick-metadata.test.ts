@@ -11,7 +11,7 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 const repoRoot = process.cwd();
 
 test("quick manifest references the execution skill, bounded depth agents, and report-backed MCP tools", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-quick.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-quick.md"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
   assert.match(
@@ -256,7 +256,7 @@ test("quick runtime contract resource is owned by runtime metadata, not docs", a
   ]);
   assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "commands/blu-quick.toml",
+    "commands/blu-quick.md",
     "skills/blueprint-phase-execution/references/quick-runtime-contract.md",
     "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
   ]);

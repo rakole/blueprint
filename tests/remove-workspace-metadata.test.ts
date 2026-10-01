@@ -17,7 +17,7 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("remove-workspace manifest references the maintenance skill, workspace MCP tools, and explicit teardown confirmation guards", async () => {
-  const commandFile = await readRepoFile("commands/blu-remove-workspace.toml");
+  const commandFile = await readRepoFile("commands/blu-remove-workspace.md");
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.match(commandFile, /Execution profile: `high-risk-maintenance`/);

@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("add-todo manifest uses runtime skill and capture MCP identities", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-add-todo.toml"),
+    path.join(repoRoot, "commands/blu-add-todo.md"),
     "utf8"
   );
 

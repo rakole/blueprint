@@ -18,15 +18,15 @@ async function readRepoFiles(paths: string[]): Promise<Record<string, string>> {
 
 test("review-family contracts keep overwrite and scope boundaries explicit", async () => {
   const files = await readRepoFiles([
-    "commands/blu-code-review.toml",
-    "commands/blu-review.toml",
-    "commands/blu-secure-phase.toml",
-    "commands/blu-ui-review.toml",
+    "commands/blu-code-review.md",
+    "commands/blu-review.md",
+    "commands/blu-secure-phase.md",
+    "commands/blu-ui-review.md",
     "skills/blueprint-review/SKILL.md",
     "skills/blueprint-review/references/review-runtime-contract.md"
   ]);
 
-  const codeReview = files["commands/blu-code-review.toml"];
+  const codeReview = files["commands/blu-code-review.md"];
   assert.match(
     codeReview,
     /runtime contract's shared review posture/i
@@ -48,7 +48,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
     /require explicit overwrite confirmation before changing it/i
   );
 
-  const review = files["commands/blu-review.toml"];
+  const review = files["commands/blu-review.md"];
   assert.match(
     review,
     /Review only the selected phase plans plus directly related saved evidence/i
@@ -96,7 +96,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
     /Browser-only, web-search-only, shell-only, or generic helpers are not\s+acceptable substitutes/i
   );
 
-  const securePhase = files["commands/blu-secure-phase.toml"];
+  const securePhase = files["commands/blu-secure-phase.md"];
   assert.match(
     securePhase,
     /saved phase threat model from the executed plan evidence and build the bounded threat register from the declared scope/i
@@ -106,7 +106,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
     /Use `question` for overwrite confirmation and any structured verify-versus-accept decision/i
   );
 
-  const uiReview = files["commands/blu-ui-review.toml"];
+  const uiReview = files["commands/blu-ui-review.md"];
   assert.match(
     uiReview,
     /next logical implemented Blueprint action/i
@@ -133,12 +133,12 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
 
 test("review remediation contracts stay bounded to saved evidence and approved selection", async () => {
   const files = await readRepoFiles([
-    "commands/blu-code-review-fix.toml",
-    "commands/blu-audit-fix.toml",
+    "commands/blu-code-review-fix.md",
+    "commands/blu-audit-fix.md",
     "skills/blueprint-review/SKILL.md"
   ]);
 
-  const codeReviewFix = files["commands/blu-code-review-fix.toml"];
+  const codeReviewFix = files["commands/blu-code-review-fix.md"];
   assert.match(
     codeReviewFix,
     /Read `blueprint_blueprint_review_load_findings`[\s\S]*load the saved `XX-REVIEW\.md` findings/i
@@ -164,7 +164,7 @@ test("review remediation contracts stay bounded to saved evidence and approved s
     /Keep pending gates limited to overwrite confirmation or finding-selection confirmation/i
   );
 
-  const auditFix = files["commands/blu-audit-fix.toml"];
+  const auditFix = files["commands/blu-audit-fix.md"];
   assert.match(
     auditFix,
     /Classify candidate issues only from selected saved evidence/i

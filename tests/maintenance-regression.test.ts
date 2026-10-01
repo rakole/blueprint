@@ -15,15 +15,15 @@ async function readRepoFile(relativePath: string): Promise<string> {
 
 test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runtime-owned report gates explicit", async () => {
   const [newWorkspace, removeWorkspace, workstreams, updateCommand, prBranch, ship, undo, cleanup, reapplyPatches] = await Promise.all([
-    readRepoFile("commands/blu-new-workspace.toml"),
-    readRepoFile("commands/blu-remove-workspace.toml"),
-    readRepoFile("commands/blu-workstreams.toml"),
-    readRepoFile("commands/blu-update.toml"),
-    readRepoFile("commands/blu-pr-branch.toml"),
-    readRepoFile("commands/blu-ship.toml"),
-    readRepoFile("commands/blu-undo.toml"),
-    readRepoFile("commands/blu-cleanup.toml"),
-    readRepoFile("commands/blu-reapply-patches.toml")
+    readRepoFile("commands/blu-new-workspace.md"),
+    readRepoFile("commands/blu-remove-workspace.md"),
+    readRepoFile("commands/blu-workstreams.md"),
+    readRepoFile("commands/blu-update.md"),
+    readRepoFile("commands/blu-pr-branch.md"),
+    readRepoFile("commands/blu-ship.md"),
+    readRepoFile("commands/blu-undo.md"),
+    readRepoFile("commands/blu-cleanup.md"),
+    readRepoFile("commands/blu-reapply-patches.md")
   ]);
 
   assert.match(newWorkspace, /maintenance\.workspace_root/);

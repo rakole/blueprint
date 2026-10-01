@@ -18,8 +18,8 @@ function assertOrderedIncludes(content: string, orderedSnippets: string[], messa
 
 test("/blu and /blu-help synthesize route guidance from the live command catalog instead of prompt-local chooser mirrors", async () => {
   const [rootRouter, helpCommand] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8")
+    readFile(path.join(repoRoot, "commands/blu.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-help.md"), "utf8")
   ]);
 
   for (const [label, content] of [

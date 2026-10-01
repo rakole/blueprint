@@ -35,7 +35,7 @@ test("plan-phase catalog and live runtime expose the direct publication lifecycl
 });
 
 test("thin command and skill keep persistence, readiness and completion ownership in MCP", async () => {
-  const [manifest, skill] = await Promise.all([read("commands/blu-plan-phase.toml"), read("skills/blueprint-phase-planning/SKILL.md")]);
+  const [manifest, skill] = await Promise.all([read("commands/blu-plan-phase.md"), read("skills/blueprint-phase-planning/SKILL.md")]);
   assert.ok(Buffer.byteLength(manifest) < 4000);
   assert.ok(Buffer.byteLength(skill) < 4000);
   for (const name of tools) {

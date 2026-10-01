@@ -398,7 +398,7 @@ test("code-review-fix runtime metadata, manifest, and skill contract stay aligne
   const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
     blueprintCommandCatalog(),
     buildBlueprintCommandRuntimeContractResource("code-review-fix"),
-    readFile(path.join(repoRoot, "commands/blu-code-review-fix.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-code-review-fix.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-review/references/code-review-fix-runtime-contract.md"),
@@ -416,7 +416,7 @@ test("code-review-fix runtime metadata, manifest, and skill contract stay aligne
     ...CODE_REVIEW_FIX_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-code-review-fix.toml",
+    "commands/blu-code-review-fix.md",
     "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
   ]);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
@@ -1793,7 +1793,7 @@ test("code-review-fix is exposed as an implemented remediation command with the 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-code-review-fix.toml");
+  assert.equal(entry.manifestPath, "commands/blu-code-review-fix.md");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_config_get",

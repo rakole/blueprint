@@ -13,7 +13,7 @@ async function readRepoFile(relativePath: string): Promise<string> {
 
 test("lightweight execution keeps quick as the only long-running visible-progress path", async () => {
   const [quickToml, executionSkill, quickRuntimeContract] = await Promise.all([
-    readRepoFile("commands/blu-quick.toml"),
+    readRepoFile("commands/blu-quick.md"),
     readRepoFile("skills/blueprint-phase-execution/SKILL.md"),
     readRepoFile("skills/blueprint-phase-execution/references/quick-runtime-contract.md")
   ]);
@@ -240,7 +240,7 @@ test("lightweight execution keeps quick as the only long-running visible-progres
 
 test("lightweight execution keeps fast on the trivial inline path instead of merging quick's progress layer", async () => {
   const [fastToml, executionSkill, fastRuntimeContract] = await Promise.all([
-    readRepoFile("commands/blu-fast.toml"),
+    readRepoFile("commands/blu-fast.md"),
     readRepoFile("skills/blueprint-phase-execution/SKILL.md"),
     readRepoFile("skills/blueprint-phase-execution/references/fast-runtime-contract.md")
   ]);
@@ -305,7 +305,7 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
 
 test("lightweight execution keeps debug investigative with its own report and follow-up gate", async () => {
   const [debugToml, debugSkill, debugRuntimeContract] = await Promise.all([
-    readRepoFile("commands/blu-debug.toml"),
+    readRepoFile("commands/blu-debug.md"),
     readRepoFile("skills/blueprint-debug/SKILL.md"),
     readRepoFile("skills/blueprint-debug/references/debug-runtime-contract.md")
   ]);
@@ -328,7 +328,7 @@ test("lightweight execution keeps debug investigative with its own report and fo
   assert.doesNotMatch(debugToml, /quick-run-latest/);
 
   assert.match(debugSkill, /input_bundles:/);
-  assert.match(debugSkill, /commands\/blu-debug\.toml/);
+  assert.match(debugSkill, /commands\/blu-debug\.md/);
   assert.match(debugSkill, /references\/debug-runtime-contract\.md/);
   assert.doesNotMatch(debugSkill, /## Required Inputs/);
   assert.match(

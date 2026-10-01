@@ -28,7 +28,7 @@ import { createGitRepo } from "./helpers/git-fixtures.js";
 const repoRoot = process.cwd();
 const discussRuntimeContractPath =
   "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md";
-const discussCommandPath = "commands/blu-discuss-phase.toml";
+const discussCommandPath = "commands/blu-discuss-phase.md";
 const discussSkillPath = "skills/blueprint-phase-discovery/SKILL.md";
 function readRepoText(relativePath: string): string { return readFileSync(path.join(repoRoot, relativePath), "utf8"); }
 

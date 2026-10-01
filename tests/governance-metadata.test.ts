@@ -12,7 +12,7 @@ const repoRoot = process.cwd();
 const governanceExpectations = {
   settings: {
     commandPath: "/blu-settings",
-    manifestPath: "commands/blu-settings.toml",
+    manifestPath: "commands/blu-settings.md",
     referencePath:
       "skills/blueprint-governance/references/settings-runtime-contract.md",
     tools: [
@@ -35,7 +35,7 @@ const governanceExpectations = {
   },
   "set-profile": {
     commandPath: "/blu-set-profile",
-    manifestPath: "commands/blu-set-profile.toml",
+    manifestPath: "commands/blu-set-profile.md",
     referencePath:
       "skills/blueprint-governance/references/set-profile-runtime-contract.md",
     tools: ["blueprint_config_get", "blueprint_config_set_profile"],
@@ -54,7 +54,7 @@ const governanceExpectations = {
   },
   health: {
     commandPath: "/blu-health",
-    manifestPath: "commands/blu-health.toml",
+    manifestPath: "commands/blu-health.md",
     referencePath:
       "skills/blueprint-governance/references/health-runtime-contract.md",
     tools: [
@@ -80,7 +80,7 @@ const governanceExpectations = {
   },
   "pause-work": {
     commandPath: "/blu-pause-work",
-    manifestPath: "commands/blu-pause-work.toml",
+    manifestPath: "commands/blu-pause-work.md",
     referencePath:
       "skills/blueprint-governance/references/pause-work-runtime-contract.md",
     tools: [
@@ -104,7 +104,7 @@ const governanceExpectations = {
   },
   "resume-work": {
     commandPath: "/blu-resume-work",
-    manifestPath: "commands/blu-resume-work.toml",
+    manifestPath: "commands/blu-resume-work.md",
     referencePath:
       "skills/blueprint-governance/references/resume-work-runtime-contract.md",
     tools: [

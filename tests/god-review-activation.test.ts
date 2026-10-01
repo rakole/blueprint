@@ -45,7 +45,7 @@ function assertAppearsBefore(text: string, first: string, second: string, label:
 }
 
 test("code-review manifest keeps the hidden dispatcher tiny and defers orchestration to the private skill", async () => {
-  const manifest = await readRelativePath("commands/blu-code-review.toml");
+  const manifest = await readRelativePath("commands/blu-code-review.md");
 
   assertAppearsBefore(
     manifest,
@@ -68,7 +68,7 @@ test("code-review manifest keeps the hidden dispatcher tiny and defers orchestra
 });
 
 test("code-review-fix manifest keeps the hidden dispatcher tiny and defers orchestration to the private skill", async () => {
-  const manifest = await readRelativePath("commands/blu-code-review-fix.toml");
+  const manifest = await readRelativePath("commands/blu-code-review-fix.md");
 
   assertAppearsBefore(
     manifest,

@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("add-backlog manifest uses runtime skill and capture MCP identities", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-add-backlog.toml"),
+    path.join(repoRoot, "commands/blu-add-backlog.md"),
     "utf8"
   );
 

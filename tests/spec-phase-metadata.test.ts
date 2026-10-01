@@ -122,7 +122,7 @@ test("spec-phase runtime contract resource is advertised only after implemented 
 });
 
 test("spec-phase manifest exposes only the allowed Blueprint MCP runtime FQNs", async () => {
-  const manifest = await readRepoFile("commands/blu-spec-phase.toml");
+  const manifest = await readRepoFile("commands/blu-spec-phase.md");
   const manifestToolMatches = manifest.match(/blueprint_blueprint_[a-z0-9_]+/g) ?? [];
   const manifestTools = [...new Set(manifestToolMatches)].sort();
 

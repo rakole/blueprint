@@ -17,7 +17,7 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("new-workspace manifest references the maintenance skill, workspace MCP tools, and explicit preview gates", async () => {
-  const commandFile = await readRepoFile("commands/blu-new-workspace.toml");
+  const commandFile = await readRepoFile("commands/blu-new-workspace.md");
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);

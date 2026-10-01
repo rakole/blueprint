@@ -12,7 +12,7 @@ import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 const repoRoot = process.cwd();
 
 test("code-review manifest references the review tools, canonical contract, and safe routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-code-review.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-code-review.md"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-review` skill/);
   assert.match(
@@ -77,7 +77,7 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
   assert.match(skillFile, /\/blu-code-review/);
   assert.match(skillFile, /input_bundles:/);
   assert.match(skillFile, /"\/blu-code-review":/);
-  assert.match(skillFile, /commands\/blu-code-review\.toml/);
+  assert.match(skillFile, /commands\/blu-code-review\.md/);
   assert.match(skillFile, /Execution profile for `code-review`: `long-running-mutation`/);
   assert.match(
     skillFile,
@@ -264,11 +264,11 @@ test("code-review runtime metadata is source-owned and docs-free", async () => {
     skill: "blueprint-review",
     shared: [],
     commandSpecific: [
-      "commands/blu-code-review.toml",
+      "commands/blu-code-review.md",
       "skills/blueprint-review/references/code-review-runtime-contract.md"
     ],
     effective: [
-      "commands/blu-code-review.toml",
+      "commands/blu-code-review.md",
       "skills/blueprint-review/references/code-review-runtime-contract.md"
     ]
   });

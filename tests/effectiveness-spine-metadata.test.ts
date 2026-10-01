@@ -56,26 +56,26 @@ type RoutedCommandFixture = {
 };
 
 const routedCommandFixtures: RoutedCommandFixture[] = [
-  { command: "note", manifestPath: "commands/blu-note.toml" },
-  { command: "add-todo", manifestPath: "commands/blu-add-todo.toml" },
-  { command: "check-todos", manifestPath: "commands/blu-check-todos.toml" },
-  { command: "add-backlog", manifestPath: "commands/blu-add-backlog.toml" },
-  { command: "review-backlog", manifestPath: "commands/blu-review-backlog.toml" },
-  { command: "explore", manifestPath: "commands/blu-explore.toml" },
-  { command: "add-phase", manifestPath: "commands/blu-add-phase.toml" },
-  { command: "insert-phase", manifestPath: "commands/blu-insert-phase.toml" },
-  { command: "remove-phase", manifestPath: "commands/blu-remove-phase.toml" },
+  { command: "note", manifestPath: "commands/blu-note.md" },
+  { command: "add-todo", manifestPath: "commands/blu-add-todo.md" },
+  { command: "check-todos", manifestPath: "commands/blu-check-todos.md" },
+  { command: "add-backlog", manifestPath: "commands/blu-add-backlog.md" },
+  { command: "review-backlog", manifestPath: "commands/blu-review-backlog.md" },
+  { command: "explore", manifestPath: "commands/blu-explore.md" },
+  { command: "add-phase", manifestPath: "commands/blu-add-phase.md" },
+  { command: "insert-phase", manifestPath: "commands/blu-insert-phase.md" },
+  { command: "remove-phase", manifestPath: "commands/blu-remove-phase.md" },
   {
     command: "plan-milestone-gaps",
-    manifestPath: "commands/blu-plan-milestone-gaps.toml"
+    manifestPath: "commands/blu-plan-milestone-gaps.md"
   },
-  { command: "audit-milestone", manifestPath: "commands/blu-audit-milestone.toml" },
-  { command: "complete-milestone", manifestPath: "commands/blu-complete-milestone.toml" },
+  { command: "audit-milestone", manifestPath: "commands/blu-audit-milestone.md" },
+  { command: "complete-milestone", manifestPath: "commands/blu-complete-milestone.md" },
   {
     command: "milestone-summary",
-    manifestPath: "commands/blu-milestone-summary.toml"
+    manifestPath: "commands/blu-milestone-summary.md"
   },
-  { command: "new-milestone", manifestPath: "commands/blu-new-milestone.toml" }
+  { command: "new-milestone", manifestPath: "commands/blu-new-milestone.md" }
 ];
 
 function extractDistinctFollowUpCommands(markdown: string, command: string): string[] {
@@ -109,7 +109,7 @@ test("shared effectiveness-spine metadata stays aligned across runtime-owned com
       ),
       "utf8"
     ),
-    readFile(path.join(repoRoot, "commands/blu-execute-phase.toml"), "utf8")
+    readFile(path.join(repoRoot, "commands/blu-execute-phase.md"), "utf8")
   ]);
 
   const runtimeProfiles = [
@@ -150,10 +150,10 @@ test("shared effectiveness-spine metadata stays aligned across runtime-owned com
 
 test("capture confirmation gates stay explicit across the shipped capture family", async () => {
   const [checkTodos, addBacklog, reviewBacklog, explore] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-check-todos.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-add-backlog.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-review-backlog.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu-explore.toml"), "utf8")
+    readFile(path.join(repoRoot, "commands/blu-check-todos.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-add-backlog.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-review-backlog.md"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-explore.md"), "utf8")
   ]);
 
   assert.match(

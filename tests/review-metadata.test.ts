@@ -44,11 +44,11 @@ test("review runtime metadata is source-owned and docs-free", async () => {
     skill: "blueprint-review",
     shared: [],
     commandSpecific: [
-      "commands/blu-review.toml",
+      "commands/blu-review.md",
       "skills/blueprint-review/references/review-runtime-contract.md"
     ],
     effective: [
-      "commands/blu-review.toml",
+      "commands/blu-review.md",
       "skills/blueprint-review/references/review-runtime-contract.md"
     ]
   });
@@ -56,7 +56,7 @@ test("review runtime metadata is source-owned and docs-free", async () => {
 });
 
 test("review manifest references plan-backed peer-review tools and safe routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-review.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-review.md"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-review` skill/);
   assert.match(
@@ -171,7 +171,7 @@ test("blueprint-review skill captures MCP-owned peer-review rules", async () => 
 
 test("review manifest and runtime resource describe the long-running peer-review spine", async () => {
   const [commandFile, contract] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-review.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-review.md"), "utf8"),
     buildBlueprintCommandRuntimeContractResource("review")
   ]);
 
