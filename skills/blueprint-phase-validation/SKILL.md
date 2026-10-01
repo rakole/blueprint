@@ -28,7 +28,7 @@ Orchestrate Blueprint's post-execution validation, conversational UAT, and evide
 
 ## Runtime Call Rules
 
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
@@ -58,8 +58,8 @@ require map reads or regeneration.
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - For `add-tests`, keep the selected test scope, targeted test command or result, verification status, report status, and next safe action explicit while bounded repo mutation is in flight.
-- For structured interactive choices, confirmations, validation feedback, per-test UAT prompts, review/skip/stop branching, or short clarifications, prefer  `ask_user` tool over plain assistant prose.
-- When a validation-family run is non-trivial, keep those status fields visible with `update_topic`, `write_todos`, or an honest prose fallback rather than inventing persistence outside MCP.
+- For structured interactive choices, confirmations, validation feedback, per-test UAT prompts, review/skip/stop branching, or short clarifications, prefer  `question` tool over plain assistant prose.
+- When a validation-family run is non-trivial, keep those status fields visible with `todowrite` or an honest prose fallback rather than inventing persistence outside MCP.
 - Keep validation saved-summary-first: the `Execute` stage is bounded verifier analysis grounded in saved summaries and existing validation artifacts, not direct repo mutation or prompt-memory reconstruction. For `add-tests`, bounded repo mutation stays grounded in saved summaries plus validation evidence, and the resulting verification plus report status must come from MCP returns.
 
 ## Required Inputs
@@ -139,7 +139,7 @@ Runtime input resolution is structured and command-scoped:
 5. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
 6. Load `references/verify-work-runtime-contract.md` and follow it for UAT test queue construction, response classification, artifact authoring, verifier use, no-subagent fallback, retry behavior, and output quality.
 7. Build a concrete user-observable test queue from saved summaries and ready verification evidence before asking the user anything. Include expected behavior, saved evidence, current result, and notes for each test. Prepend a cold-start smoke test when saved summary evidence touches startup, server or CLI entrypoints, database, seed, migration, Docker, or first-run surfaces.
-8. Present one expected behavior at a time, using `ask_user` for the per-test result when the host supports interactive questioning. Treat an empty or cancelled answer as no answer, restate the current test once, and ask again instead of recording a pass. Classify non-empty user responses as `pass`, `skipped`, `blocked`, or `issue`; infer issue severity from the user's words; preserve verbatim issue text; keep blocked prerequisites separate from code gaps; and append structured gap rows for issues.
+8. Present one expected behavior at a time, using `question` for the per-test result when the host supports interactive questioning. Treat an empty or cancelled answer as no answer, restate the current test once, and ask again instead of recording a pass. Classify non-empty user responses as `pass`, `skipped`, `blocked`, or `issue`; infer issue severity from the user's words; preserve verbatim issue text; keep blocked prerequisites separate from code gaps; and append structured gap rows for issues.
 9. Use `blueprint-verifier` only for summary-grounded UAT preparation when a suitable Blueprint verifier is available and `workflow.verifier=true`: test rows, expected behaviors, evidence notes, response-ready prompts, saved-evidence-only gap hypotheses, and optional follow-up fix notes. The parent command, not the verifier, owns observed behavior, live result counts, and the final UAT artifact after user responses are collected.
 10. When the verifier is unavailable or disabled, use the no-subagent fallback from the runtime contract: read one completed summary at a time, compress carry-forward test rows, build the queue, run one UAT prompt at a time, classify responses, and draft from the final queue, counts, gaps, and checkpoint state.
 11. Never substitute browser, web-search-only, shell-only, or generic agents for codebase or workflow UAT analysis.
@@ -162,10 +162,10 @@ Runtime input resolution is structured and command-scoped:
 5. Keep repo mutation narrow: honor explicit user scope first, otherwise derive a focused test scope from completed summaries, saved gaps, and existing repo test conventions.
 6. Build a file-by-file classification table before writing. Read each candidate file and classify it as `Unit / TDD`, `Integration / API`, `E2E / UI`, or `Skip` with concrete reasons; do not classify from filename alone.
 7. Discover existing test structure, naming conventions, nearby coverage, and narrow test commands before presenting the test plan. Stop instead of inventing a framework when no convention is discoverable.
-8. Use `ask_user` for structured classification, scope, test-plan, or breadth decisions instead of burying those gates in prose. Re-present adjusted classifications or plans before mutation.
+8. Use `question` for structured classification, scope, test-plan, or breadth decisions instead of burying those gates in prose. Re-present adjusted classifications or plans before mutation.
 9. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, selected test scope, classification status, test-plan status, pending gate, execution mode, targeted test command or result, verification status, report status, and next safe action legible throughout the run.
 10. Treat broad test-scope confirmation, classification approval, test-plan approval, any broader-suite request, unclear repo test conventions, and verification or report persistence outcomes as explicit pending gates rather than post-hoc notes.
-11. For non-trivial add-tests runs, prefer update_topic plus `write_todos` so evidence review, classification, scope confirmation, bounded implementation, targeted test execution, verification-note persistence, report persistence, post-write validation, and routing stay visible without becoming persistence.
+11. For non-trivial add-tests runs, prefer concise progress prose plus `todowrite` so evidence review, classification, scope confirmation, bounded implementation, targeted test execution, verification-note persistence, report persistence, post-write validation, and routing stay visible without becoming persistence.
 12. Use `blueprint-executor` for bounded multi-file test implementation when the harness or write scope is non-trivial.
 13. Use `blueprint-verifier` to review whether the generated tests cover the saved execution behavior and any explicit validation or UAT gaps.
 14. When suitable subagents are unavailable or unnecessary, use the no-subagent fallback from the runtime contract: process one summary and candidate area at a time, compress carry-forward classification and execution rows, then draft from the final table.

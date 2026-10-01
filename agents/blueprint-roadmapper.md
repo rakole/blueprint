@@ -9,10 +9,9 @@ description: >
   order constraints.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
+  - grep
 max_turns: 18
 timeout_mins: 15
 ---
@@ -58,9 +57,9 @@ open-ended repo context. The packet must stay read-only and include:
 ## Parent-Owned Responsibilities
 
 - The parent command owns digest reads, evidence-scope construction,
-  orchestration, visible stage narration, and any Gemini-native
-  `update_topic`, `write_todos`, and `ask_user` gates.
-- The parent command owns any external-research approval, any Gemini-native
+  orchestration, visible stage narration, and any host-level
+  concise progress prose, `todowrite`, and `question` gates.
+- The parent command owns any external-research approval, any host-level
   host/tool semantics clarification packet, any runtime-owned metadata/resource
   fact needed to settle host behavior, and final routing.
 - The parent command owns final milestone naming, final phase numbering and

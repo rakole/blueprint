@@ -95,11 +95,11 @@ test("secure-phase manifest references the review tools, agent, and safe routing
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(commandFile, /`update_topic` tool/);
-  assert.match(commandFile, /`write_todos`/);
-  assert.match(commandFile, /session-local progress tools only/i);
-  assert.match(commandFile, /`ask_user`/);
-  assert.match(commandFile, /one focused question per `ask_user` call/i);
+  assert.match(commandFile, /concise progress prose/);
+  assert.match(commandFile, /`todowrite`/);
+  assert.match(commandFile, /`todowrite` as (?:a )?session-local/i);
+  assert.match(commandFile, /`question`/);
+  assert.match(commandFile, /one focused question per `question` call/i);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
@@ -174,7 +174,7 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
     /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
   assert.match(skillFile, /blueprint_artifact_contract_read/);
-  assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /question/);
   assert.match(skillFile, /blueprint_phase_plan_index/);
   assert.match(skillFile, /blueprint_phase_plan_read/);
   assert.match(skillFile, /blueprint_phase_summary_index/);
@@ -189,7 +189,7 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /build a threat\s+register/i);
   assert.match(skillFile, /summary threat-flag\s+incorporation/i);
   assert.match(skillFile, /saved plan\s+evidence only/i);
-  assert.match(skillFile, /update_topic plus `write_todos`/i);
+  assert.match(skillFile, /concise progress prose plus `todowrite`/i);
   assert.match(skillFile, /verify open threats or explicitly accept\s+them/i);
   assert.match(skillFile, /pending-open-threat\s+status/i);
   assert.match(skillFile, /verify-versus-accept decision/i);
@@ -230,9 +230,9 @@ test("secure-phase manifest and runtime resource describe the long-running secur
   );
   assert.match(commandFile, /saved phase threat model/i);
   assert.match(commandFile, /saved plan evidence only/i);
-  assert.match(commandFile, /`update_topic` tool/);
-  assert.match(commandFile, /`write_todos`/i);
-  assert.match(commandFile, /session-local progress tools only/i);
+  assert.match(commandFile, /concise progress prose/);
+  assert.match(commandFile, /`todowrite`/i);
+  assert.match(commandFile, /`todowrite` as (?:a )?session-local/i);
   assert.match(commandFile, /`pending-open-threat`/i);
   assert.match(commandFile, /pending-open-threat status/i);
   assert.match(commandFile, /do not emit next-step routing when any threat remains open/i);
@@ -260,7 +260,7 @@ test("secure-phase manifest and runtime resource describe the long-running secur
   );
   assert.match(
     referenceFile,
-    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, auditor authority,\s+threat-register authority, risk-acceptance authority, validation authority, or\s+routing authority/i
+    /OpenCode progress guidance are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, auditor authority,\s+threat-register authority, risk-acceptance authority, validation authority, or\s+routing authority/i
   );
   assert.match(
     referenceFile,
@@ -286,17 +286,17 @@ test("secure-phase local runtime contract locks retained threat verification beh
   );
 
   for (const tool of [
-    "mcp_blueprint_blueprint_phase_locate",
-    "mcp_blueprint_blueprint_artifact_list",
-    "mcp_blueprint_blueprint_phase_plan_index",
-    "mcp_blueprint_blueprint_phase_plan_read",
-    "mcp_blueprint_blueprint_phase_summary_index",
-    "mcp_blueprint_blueprint_phase_summary_read",
-    "mcp_blueprint_blueprint_phase_execution_targets",
-    "mcp_blueprint_blueprint_artifact_contract_read",
-    "mcp_blueprint_blueprint_review_authoring_context",
-    "mcp_blueprint_blueprint_review_validate_model",
-    "mcp_blueprint_blueprint_review_record"
+    "blueprint_blueprint_phase_locate",
+    "blueprint_blueprint_artifact_list",
+    "blueprint_blueprint_phase_plan_index",
+    "blueprint_blueprint_phase_plan_read",
+    "blueprint_blueprint_phase_summary_index",
+    "blueprint_blueprint_phase_summary_read",
+    "blueprint_blueprint_phase_execution_targets",
+    "blueprint_blueprint_artifact_contract_read",
+    "blueprint_blueprint_review_authoring_context",
+    "blueprint_blueprint_review_validate_model",
+    "blueprint_blueprint_review_record"
   ]) {
     assert.match(runtimeContract, new RegExp(tool));
   }

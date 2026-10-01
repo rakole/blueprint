@@ -16,13 +16,13 @@ async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("update manifest references the maintenance skill, update MCP tools, and the ask_user mode gate", async () => {
+test("update manifest references the maintenance skill, update MCP tools, and the question gate", async () => {
   const commandFile = await readRepoFile("commands/blu-update.toml");
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_update_check/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_update_plan/);
+  assert.match(commandFile, /blueprint_blueprint_update_check/);
+  assert.match(commandFile, /blueprint_blueprint_update_plan/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(
     commandFile,
@@ -32,7 +32,8 @@ test("update manifest references the maintenance skill, update MCP tools, and th
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(commandFile, /`ask_user` mode gate/i);
+  assert.match(commandFile, /`question` mode gate/i);
+  assert.match(commandFile, /mode = "ask_user"/);
   assert.match(commandFile, /update-mode-gate/);
   assert.match(commandFile, /manual fallback/i);
   assert.match(commandFile, /~\/.<host>\/blueprint\/updates\//);
@@ -51,8 +52,8 @@ test("update local runtime contract, maintenance skill, and runtime resource ali
   ]);
 
   assert.match(runtimeReference, /Stage Mapping/);
-  assert.match(runtimeReference, /`mcp_blueprint_blueprint_update_check`/);
-  assert.match(runtimeReference, /`mcp_blueprint_blueprint_update_plan`/);
+  assert.match(runtimeReference, /`blueprint_blueprint_update_check`/);
+  assert.match(runtimeReference, /`blueprint_blueprint_update_plan`/);
   assert.match(runtimeReference, /update-mode-gate/);
   assert.match(runtimeReference, /manual fallback/i);
   assert.match(runtimeReference, /persistenceStatus === "saved"/);

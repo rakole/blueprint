@@ -13,7 +13,7 @@ mapping and retry behavior instead of restating the full flow.
 ## Visible Validation Progress
 
 For non-trivial runs, keep progress visible through short boundary updates.
-Gemini-native progress helpers are presentation mirrors only. They do not
+OpenCode progress guidance are presentation mirrors only. They do not
 expand the MCP tool allowlist, persistence authority, verifier authority,
 coverage authority, validation authority, state-sync authority, routing
 authority, or user confirmation authority defined by this contract.
@@ -85,7 +85,7 @@ Keep `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` 
   not reached executable validation state.
 
 When validation needs human confirmation around manual-only coverage, UAT
-readiness, or another structured gate, use Gemini-native `ask_user` instead of
+readiness, or another structured gate, use OpenCode `question` instead of
 plain assistant prose.
 
 ## Evidence And Gap Analysis

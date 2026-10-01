@@ -49,10 +49,10 @@ test("verify-work manifest stays thin while advertising tool-owned writes and ro
   assert.match(commandFile, /\.blueprint\/ROADMAP\.md/);
   assert.match(commandFile, /completion evidence closes or reopens the phase/);
   assert.match(commandFile, /\.blueprint\/STATE\.md/);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /initial `view` \/ `resume` \/ `update` UAT choice/i);
   assert.match(commandFile, /per-test UAT feedback prompt/i);
-  assert.match(commandFile, /Use `ask_user` for the initial view\/resume\/update choice, per-test UAT feedback/i);
+  assert.match(commandFile, /Use `question` for the initial view\/resume\/update choice, per-test UAT feedback/i);
   assert.match(commandFile, /next safe action on `\/blu-verify-work <phase>`/i);
   assert.match(commandFile, /modelContract` as the structured payload schema authority/);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/);
@@ -143,9 +143,9 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(skillFile, /when both toggles are `true`, route to `\/blu-code-review <phase>` first and require `\/blu-secure-phase <phase>` only after review evidence exists/i);
   assert.match(skillFile, /Keep `\/blu-secure-phase` manually runnable even when config-gated post-UAT routing prefers another implemented next step\./i);
   assert.match(skillFile, /blueprint_artifact_validate/);
-  assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /question/);
   assert.match(skillFile, /per-test UAT prompts/i);
-  assert.match(skillFile, /using `ask_user` for the per-test result when the host supports interactive questioning/i);
+  assert.match(skillFile, /using `question` for the per-test result when the host supports interactive questioning/i);
   assert.match(skillFile, /next safe action on `\/blu-verify-work <phase>`/i);
   assert.match(skillFile, /follow-up-fix capture/i);
   assert.match(requiredInputs, /Runtime input resolution is structured and command-scoped/i);
@@ -164,7 +164,7 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   );
   assert.match(
     runtimeContractFile,
-    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, verifier authority,\s+UAT-result authority, checkpoint authority, state-sync authority, routing\s+authority, or user confirmation authority/i
+    /OpenCode progress guidance are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, verifier authority,\s+UAT-result authority, checkpoint authority, state-sync authority, routing\s+authority, or user confirmation authority/i
   );
   assert.match(
     runtimeContractFile,
@@ -172,7 +172,7 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   );
   assert.match(runtimeContractFile, /Build a concrete UAT queue before asking the user anything/i);
   assert.match(runtimeContractFile, /Present one test at a time/i);
-  assert.match(runtimeContractFile, /use `ask_user` for the first-pass result on each test/i);
+  assert.match(runtimeContractFile, /use `question` for the first-pass result on each test/i);
   assert.match(runtimeContractFile, /structured `modelContract` authority/);
   assert.match(runtimeContractFile, /phase\.uat\.modelContract/);
   assert.match(runtimeContractFile, /Do not expect a public `contract\.authoringTemplate`/);

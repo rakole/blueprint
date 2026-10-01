@@ -847,12 +847,12 @@ test("code-review runtime metadata, manifest, and skill contract stay aligned", 
     /resolved phase, scope source, file count, selected review depth, pending gate, execution mode/i
   );
   assert.match(commandFile, /skills\/blueprint-review\/references\/code-review-runtime-contract\.md/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_review_scope/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_review_validate_model/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_review_record/);
-  assert.match(commandFile, /`update_topic` tool/);
-  assert.match(commandFile, /`write_todos`/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /blueprint_blueprint_review_scope/);
+  assert.match(commandFile, /blueprint_blueprint_review_validate_model/);
+  assert.match(commandFile, /blueprint_blueprint_review_record/);
+  assert.match(commandFile, /concise progress prose/);
+  assert.match(commandFile, /`todowrite`/);
   assert.match(skillFile, /Execution profile for `code-review`: `long-running-mutation`/);
   assert.match(commandFile, /`quick`, `standard`, and `deep` depth semantics/i);
   assert.match(commandFile, /code-review-fix` visible as the secondary queued follow-up/i);

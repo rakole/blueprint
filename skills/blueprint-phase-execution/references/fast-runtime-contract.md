@@ -27,13 +27,15 @@ result belong in the variable suffix.
   `/blu-plan-phase`.
 - `fast` is the no-subagent execution path.
 
+When editing inline within the bounded task, choose tools from the pinned OpenCode v1.18.34 registry by the current executing model ID: if it includes `gpt-` and contains neither `oss` nor `gpt-4`, use `apply_patch` for file creation and modification; otherwise use `edit` for targeted replacement and `write` for file creation or full replacement. Do not inspect or discover the exposed tool set.
+
 ## State And Persistence
 
-- Start from `mcp_blueprint_blueprint_lightweight_preflight` with `mode:
+- Start from `blueprint_blueprint_lightweight_preflight` with `mode:
   "fast"` so deterministic scope classification, initialization, health, and
   implemented-only next action are known before any Blueprint-owned write.
-- Common path tool budget: `mcp_blueprint_blueprint_lightweight_preflight`
-  first, then `mcp_blueprint_blueprint_state_update` only after a successful
+- Common path tool budget: `blueprint_blueprint_lightweight_preflight`
+  first, then `blueprint_blueprint_state_update` only after a successful
   initialized + healthy run. Do not add redundant primitive MCP reads on the
   common path when preflight already surfaced classification, project health,
   and next action.
@@ -42,7 +44,7 @@ result belong in the variable suffix.
 - If Blueprint is uninitialized, the task may still complete inline, but stay
   in safe suggestion mode for Blueprint persistence.
 - Inside an initialized Blueprint project, refresh `STATE.md` only through
-  `mcp_blueprint_blueprint_state_update`.
+  `blueprint_blueprint_state_update`.
 - Do not create quick-run reports, phase summaries, phase artifacts, or any
   other durable execution evidence as side effects of `fast`.
 - Never write a report from `/blu-fast`.
@@ -59,7 +61,7 @@ result belong in the variable suffix.
   - phase artifacts: 0
   - Blueprint-owned writes: state update only, initialized + healthy only
   - final response: concise inline summary, max 8 lines
-- Do not use `update_topic`, `write_todos`, or tracker tools.
+- Do not use `todowrite` or tracker tools.
 - Do not turn `/blu-fast` into a long-running progress flow. Finish inline or
   reroute quickly.
 

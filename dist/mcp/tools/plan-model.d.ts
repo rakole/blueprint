@@ -30,9 +30,9 @@ declare const authoringSchema: z.ZodObject<{
         verification: z.ZodOptional<z.ZodArray<z.ZodObject<{
             item: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
             method: z.ZodEnum<{
+                grep: "grep";
                 test: "test";
                 command: "command";
-                grep: "grep";
                 "file-read": "file-read";
                 "artifact-validation": "artifact-validation";
             }>;

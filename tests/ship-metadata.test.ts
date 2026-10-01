@@ -19,19 +19,19 @@ test("ship manifest references the maintenance skill, runtime-owned executor, an
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_phase_locate/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_config_get/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /blueprint_blueprint_project_status/);
+  assert.match(commandFile, /blueprint_blueprint_phase_locate/);
+  assert.match(commandFile, /blueprint_blueprint_config_get/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_contract_read/);
   assert.match(
     commandFile,
-    /executor owns the underlying `mcp_blueprint_blueprint_artifact_report_write` and `mcp_blueprint_blueprint_state_update` calls/
+    /executor owns the underlying `blueprint_blueprint_artifact_report_write` and `blueprint_blueprint_state_update` calls/
   );
-  assert.match(commandFile, /mcp_blueprint_blueprint_ship_preview/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_ship_execute/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_ship_persist/);
+  assert.match(commandFile, /blueprint_blueprint_ship_preview/);
+  assert.match(commandFile, /blueprint_blueprint_ship_execute/);
+  assert.match(commandFile, /blueprint_blueprint_ship_persist/);
   assert.match(commandFile, /Never run model-authored git or `gh` mutation commands/);
   assert.match(commandFile, /`workflow\.secure_phase` defaults to `false`/);
   assert.match(commandFile, /`\/blu-secure-phase` remains manually runnable and implemented/i);
@@ -43,10 +43,10 @@ test("ship manifest references the maintenance skill, runtime-owned executor, an
   assert.match(commandFile, /Execution profile: `high-risk-maintenance`/);
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, /tracker-eligible/i);
-  assert.match(commandFile, /session-local progress tools only/i);
-  assert.match(commandFile, /pair it with visible `write_todos`/i);
+  assert.match(commandFile, /`todowrite` is session-local/i);
+  assert.match(commandFile, /pair it with visible `todowrite`/i);
   assert.match(commandFile, /When tracker support is unavailable, keep the same shipping flow linear/i);
   assert.match(commandFile, /ship-latest/);
   assert.match(commandFile, /explicit confirmation/i);
@@ -77,9 +77,9 @@ test("ship local runtime contract, maintenance skill, and runtime resource captu
   assert.match(runtimeReference, /require code-review evidence first and secure-phase or security evidence after that before ready shipping/);
   assert.match(runtimeReference, /Missing config-required review or security evidence blocks ready shipping/i);
   assert.match(runtimeReference, /next safe action/i);
-  assert.match(runtimeReference, /`update_topic`, `write_todos`, and tracker state are session-local only/);
+  assert.match(runtimeReference, /`todowrite` and tracker state are session-local only/);
   assert.match(runtimeReference, /If `gh` is missing, unauthenticated, or declined, skip PR creation and preserve manual fallback guidance/);
-  assert.match(runtimeReference, /`mcp_blueprint_blueprint_artifact_contract_read`/);
+  assert.match(runtimeReference, /`blueprint_blueprint_artifact_contract_read`/);
   assert.match(runtimeReference, /report\.ship/);
 
   assert.match(skillFile, /status: implemented/);
@@ -95,8 +95,8 @@ test("ship local runtime contract, maintenance skill, and runtime resource captu
   assert.match(skillFile, /blueprint_ship_execute/);
   assert.match(skillFile, /blueprint_ship_persist/);
   assert.match(skillFile, /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/i);
-  assert.match(skillFile, /`update_topic` tool/i);
-  assert.match(skillFile, /`write_todos`/);
+  assert.match(skillFile, /concise progress prose/i);
+  assert.match(skillFile, /`todowrite`/);
   assert.match(skillFile, /tracker-eligible/i);
   assert.match(skillFile, /session-local coordination only/i);
   assert.match(skillFile, /dirty working tree/i);

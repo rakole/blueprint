@@ -19,21 +19,21 @@ test("audit-milestone manifest references the roadmap audit tools, overwrite gat
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-verifier\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_read/);
   assert.match(
     commandFile,
-    /Use the exact `mcp_blueprint_blueprint_roadmap_read\.milestone` value as `<milestone>` and let `mcp_blueprint_blueprint_artifact_report_write` own normalization\./
+    /Use the exact `blueprint_blueprint_roadmap_read\.milestone` value as `<milestone>` and let `blueprint_blueprint_artifact_report_write` own normalization\./
   );
-  assert.match(commandFile, /mcp_blueprint_blueprint_phase_summary_index/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /blueprint_blueprint_phase_summary_index/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /milestone-audit-overwrite-confirmation/);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools/);
   assert.match(commandFile, /grouped requirement, integration, flow, and optional gap sections/i);
   assert.match(commandFile, /traceability notes/i);
   assert.match(commandFile, /\.blueprint\/reports\//);
@@ -60,9 +60,9 @@ test("audit-milestone skill captures milestone-evidence digest rules and report 
   assert.match(skillFile, /blueprint-verifier/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /explicit overwrite confirmation/i);
-  assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /question/);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
-  assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(skillFile, /Do not use `todowrite` or tracker tools/i);
   assert.match(skillFile, /traceability repair/i);
 });
 

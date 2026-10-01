@@ -6,22 +6,22 @@ Review and update normalized project-local Blueprint settings, with an optional 
 
 ## Required MCP Call Order
 
-1. Call `mcp_blueprint_blueprint_project_status` first.
+1. Call `blueprint_blueprint_project_status` first.
 2. Stop unless the repository is initialized for Blueprint. Route uninitialized state to `/blu-new-project`; route partial or unhealthy state to `/blu-health` when status guidance indicates repair is needed.
-3. Call `mcp_blueprint_blueprint_config_get` with `scope: "project"` before asking for changes. Surface returned migration or normalization warnings.
-4. Call `mcp_blueprint_blueprint_config_get` with `scope: "defaults"` only when the user asks to compare, inspect, or save host-global defaults.
-5. Apply project-local changes only with `mcp_blueprint_blueprint_config_set` using `scope: "project"` and a JSON-object `patch`.
-6. After project-local changes, call `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` only when the user explicitly opts in to saving the resolved settings as defaults.
+3. Call `blueprint_blueprint_config_get` with `scope: "project"` before asking for changes. Surface returned migration or normalization warnings.
+4. Call `blueprint_blueprint_config_get` with `scope: "defaults"` only when the user asks to compare, inspect, or save host-global defaults.
+5. Apply project-local changes only with `blueprint_blueprint_config_set` using `scope: "project"` and a JSON-object `patch`.
+6. After project-local changes, call `blueprint_blueprint_config_set` with `scope: "defaults"` only when the user explicitly opts in to saving the resolved settings as defaults.
 
 ## Confirmation Gates
 
-- Broad resets require confirmation before `mcp_blueprint_blueprint_config_set`.
+- Broad resets require confirmation before `blueprint_blueprint_config_set`.
 - Saved-defaults writes require explicit opt-in after the user sees that the write is host-global.
 
 ## Write Boundaries
 
-- Project settings writes go only through `mcp_blueprint_blueprint_config_set` with `scope: "project"`.
-- Saved defaults writes go only through `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` after explicit opt-in.
+- Project settings writes go only through `blueprint_blueprint_config_set` with `scope: "project"`.
+- Saved defaults writes go only through `blueprint_blueprint_config_set` with `scope: "defaults"` after explicit opt-in.
 - Treat returned `configPath` values as authoritative.
 - Patches must be JSON objects, not arrays, strings, or raw config file content.
 - `workflow.subagents` persists at `workflow.subagents` in `.blueprint/config.json` and, after explicit opt-in, in `~/.<host>/blueprint/defaults.json`.
@@ -41,7 +41,7 @@ The settings runtime preserves these effectiveness-spine keys:
 - `orchestration.task_tracker`: `off | auto`
 - `research.external_sources`: `off | ask | auto`
 
-When omitted from a project config, these keys inherit from saved defaults when present, otherwise from hardcoded defaults. Keep the common settings pass stable; do not force these keys into the first settings pass. When the user explicitly asks to change them, write them through the normal `mcp_blueprint_blueprint_config_set` JSON-object `patch` path, not through direct file edits or a separate persistence flow.
+When omitted from a project config, these keys inherit from saved defaults when present, otherwise from hardcoded defaults. Keep the common settings pass stable; do not force these keys into the first settings pass. When the user explicitly asks to change them, write them through the normal `blueprint_blueprint_config_set` JSON-object `patch` path, not through direct file edits or a separate persistence flow.
 
 ## Routing And Completion Criteria
 

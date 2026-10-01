@@ -20,7 +20,7 @@ function escapeRegExp(value: string): string {
 }
 
 function stripRuntimeToolFqns(markdown: string): string {
-  return markdown.replace(/`mcp_blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
+  return markdown.replace(/`blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
 }
 
 test("run-plan is implemented once manifest, skill, and PlanRun MCP tools are registered", async () => {
@@ -69,7 +69,7 @@ test("run-plan manifest locks preview-first confirmation and later-diff persiste
   assert.match(commandFile, /Use the `blueprint-plan-run` skill/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Prepare`, `Execute`, `Capture`, `Persist`, and `Route`/);
-  assert.match(commandFile, /prefer the `ask_user` tool/i);
+  assert.match(commandFile, /prefer the `question` tool/i);
   assert.match(commandFile, /mode: "preview"[\s\S]*before any mutation/i);
   assert.match(commandFile, /mode: "prepare"/i);
   assert.match(commandFile, /plan-run-prepare-confirmation/);
@@ -81,11 +81,11 @@ test("run-plan manifest locks preview-first confirmation and later-diff persiste
   assert.doesNotMatch(commandFile, /planRunPath/);
   assert.doesNotMatch(commandFile, /authorized surfaces/i);
   assert.match(commandFile, /does not implement the plan/i);
-  assert.match(commandFile, /Before patch capture, call `mcp_blueprint_blueprint_plan_run_diff`/i);
-  assert.match(commandFile, /If `unauthorizedChangedFiles` is non-empty[\s\S]*do not call `mcp_blueprint_blueprint_patch_record`/i);
-  assert.match(commandFile, /call `mcp_blueprint_blueprint_plan_run_patch_record`/i);
+  assert.match(commandFile, /Before patch capture, call `blueprint_blueprint_plan_run_diff`/i);
+  assert.match(commandFile, /If `unauthorizedChangedFiles` is non-empty[\s\S]*do not call `blueprint_blueprint_patch_record`/i);
+  assert.match(commandFile, /call `blueprint_blueprint_plan_run_patch_record`/i);
   assert.match(commandFile, /patch id `plan-run-<phase>-<planId>-<runId>`/i);
-  assert.match(commandFile, /Do not call `mcp_blueprint_blueprint_phase_summary_write` or `mcp_blueprint_blueprint_state_update` in this wave/i);
+  assert.match(commandFile, /Do not call `blueprint_blueprint_phase_summary_write` or `blueprint_blueprint_state_update` in this wave/i);
 
   for (const toolName of RUN_PLAN_RUNTIME_METADATA.requiredTools) {
     assert.match(
@@ -116,7 +116,7 @@ test("run-plan skill and local contract stay docs-free and capture-bounded", asy
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-run-plan/);
   assert.match(skillFile, /## Runtime Call Rules/);
-  assert.match(skillFile, /`mcp_blueprint_blueprint_project_status`/);
+  assert.match(skillFile, /`blueprint_blueprint_project_status`/);
   assert.match(skillFile, /Translate any shorthand tool ids like `blueprint_project_status`/);
   assert.match(skillFile, /Treat Blueprint skills as loaded guidance, not callable tools\./);
   assert.match(skillFile, /Never run `\/blu-\*` in the shell\./);
@@ -125,7 +125,7 @@ test("run-plan skill and local contract stay docs-free and capture-bounded", asy
     /skills\/blueprint-plan-run\/references\/run-plan-runtime-contract\.md/
   );
   assert.match(skillFile, /Stop after PREPARED state unless implementation edits already exist/i);
-  assert.match(skillFile, /mcp_blueprint_blueprint_plan_run_patch_record/);
+  assert.match(skillFile, /blueprint_blueprint_plan_run_patch_record/);
   assert.match(skillFile, /records deterministic patch id `plan-run-<phase>-<planId>-<runId>`/i);
   assert.doesNotMatch(skillFile, /authorized surfaces/i);
   assert.doesNotMatch(skillFile, /docs\//);
@@ -134,8 +134,8 @@ test("run-plan skill and local contract stay docs-free and capture-bounded", asy
   assert.match(referenceFile, /Wave 6 capture behavior records authorized implementation diffs only/i);
   assert.match(referenceFile, /plan-run-prepare-confirmation/);
   assert.match(referenceFile, /planned workspacePath/i);
-  assert.match(referenceFile, /`mcp_blueprint_blueprint_plan_run_diff` must precede patch capture/i);
-  assert.match(referenceFile, /`mcp_blueprint_blueprint_plan_run_patch_record` owns normal patch capture/i);
+  assert.match(referenceFile, /`blueprint_blueprint_plan_run_diff` must precede patch capture/i);
+  assert.match(referenceFile, /`blueprint_blueprint_plan_run_patch_record` owns normal patch capture/i);
   assert.match(referenceFile, /must block without writing a\s+patch registry entry when `unauthorizedChangedFiles` is non-empty/i);
   assert.match(referenceFile, /Do not hand-write `.blueprint\/runs\/`/i);
   assert.doesNotMatch(referenceFile, /authorized surfaces/i);

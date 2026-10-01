@@ -31,7 +31,7 @@ Treat saved `XX-SPEC.md` Goal, Requirements, Boundaries, Constraints and Accepta
 Criteria as authoritative WHAT/WHY, including locked numbered requirements.
 Ask only missing, conflicting, uncertain, or high-impact choices. If the spec
 already answers deliverable shape, focus on approach, reuse, tradeoffs, sequencing,
-safety and handoffs. If it is wrong, use `ask_user` to route to
+safety and handoffs. If it is wrong, use `question` to route to
 `/blu-spec-phase <phase>`; never silently override contradicted intent in context.
 
 Cite the packet's sources. For an evidence-backed default, inspect the narrow live
@@ -48,7 +48,7 @@ STATE and canonical publication baselines remain separate.
 ## Discuss adaptively and save incrementally
 
 Present a small set of evidence-grounded gray areas and let the user pick areas.
-Prefer host `ask_user` structured choices where useful. Offer a recommended default
+Prefer host `question` structured choices where useful. Offer a recommended default
 with its source and tradeoff, then ask one focused question at a time. Follow up
 only when the answer changes scope, safety, dependencies or implementation.
 Let the user choose another area or finish; avoid a fixed checklist interview.

@@ -6,13 +6,13 @@ Create or replace the durable Blueprint pause handoff and update project state s
 
 ## Required MCP Call Order
 
-1. Call `mcp_blueprint_blueprint_state_load` first.
-2. Call `mcp_blueprint_blueprint_artifact_list`.
-3. Call `mcp_blueprint_blueprint_pause_handoff_get`.
+1. Call `blueprint_blueprint_state_load` first.
+2. Call `blueprint_blueprint_artifact_list`.
+3. Call `blueprint_blueprint_pause_handoff_get`.
 4. If an active handoff exists and the user has not clearly requested replacement, stop and require explicit overwrite confirmation.
 5. Build a handoff with current state, stopping point, completed work, remaining work, decisions, blockers, pending human actions, modified files, context notes, and first resume action when known.
-6. Persist the handoff only with `mcp_blueprint_blueprint_pause_handoff_write`. Include `currentState`; list fields may be omitted for tool normalization. Omit `nextAction` when the safest action should be derived.
-7. After the handoff write succeeds, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-pause-work` and points the next safe implemented follow-up to `/blu-resume-work`.
+6. Persist the handoff only with `blueprint_blueprint_pause_handoff_write`. Include `currentState`; list fields may be omitted for tool normalization. Omit `nextAction` when the safest action should be derived.
+7. After the handoff write succeeds, call `blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-pause-work` and points the next safe implemented follow-up to `/blu-resume-work`.
 
 ## Confirmation Gates
 
@@ -20,8 +20,8 @@ Create or replace the durable Blueprint pause handoff and update project state s
 
 ## Write Boundaries
 
-- `mcp_blueprint_blueprint_pause_handoff_write` owns `.blueprint/reports/` report persistence.
-- `mcp_blueprint_blueprint_state_update` owns `.blueprint/STATE.md`.
+- `blueprint_blueprint_pause_handoff_write` owns `.blueprint/reports/` report persistence.
+- `blueprint_blueprint_state_update` owns `.blueprint/STATE.md`.
 - Persistent writes are limited to `.blueprint/reports/` and `.blueprint/STATE.md`.
 
 ## Routing And Completion Criteria

@@ -72,11 +72,11 @@ test("review manifest references plan-backed peer-review tools and safe routing 
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(commandFile, /`update_topic` tool/);
-  assert.match(commandFile, /`write_todos`/);
-  assert.match(commandFile, /session-local progress tools only/i);
-  assert.match(commandFile, /`ask_user`/);
-  assert.match(commandFile, /one focused question per `ask_user` call/i);
+  assert.match(commandFile, /concise progress prose/);
+  assert.match(commandFile, /`todowrite`/);
+  assert.match(commandFile, /`todowrite` as (?:a )?session-local/i);
+  assert.match(commandFile, /`question`/);
+  assert.match(commandFile, /one focused question per `question` call/i);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
@@ -138,8 +138,8 @@ test("blueprint-review skill captures MCP-owned peer-review rules", async () => 
   assert.match(skillFile, /no-subagent\s+fallback/i);
   assert.match(skillFile, /Reject browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /XX-REVIEWS\.md/);
-  assert.match(skillFile, /ask_user/);
-  assert.match(skillFile, /update_topic plus `write_todos`/i);
+  assert.match(skillFile, /question/);
+  assert.match(skillFile, /concise progress prose plus `todowrite`/i);
   assert.match(skillFile, /reviewer disagreement status/i);
   assert.match(skillFile, /reviewer-availability/i);
   assert.match(skillFile, /next safe action on\s+`\/blu-review <phase>`/i);
@@ -149,9 +149,9 @@ test("blueprint-review skill captures MCP-owned peer-review rules", async () => 
 
   assert.match(runtimeContract, /## Stage Mapping/);
   assert.match(runtimeContract, /## Required MCP Calls/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_authoring_context/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_validate_model/);
+  assert.match(runtimeContract, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(runtimeContract, /blueprint_blueprint_review_authoring_context/);
+  assert.match(runtimeContract, /blueprint_blueprint_review_validate_model/);
   assert.match(runtimeContract, /review\.peer-review/);
   assert.match(runtimeContract, /contract\.modelContract/);
   assert.match(runtimeContract, /## Artifact Authoring Rules/);
@@ -195,8 +195,8 @@ test("review manifest and runtime resource describe the long-running peer-review
   assert.match(commandFile, /requested reviewers/i);
   assert.match(commandFile, /reviewer availability/i);
   assert.match(commandFile, /disagreement/i);
-  assert.match(commandFile, /`update_topic` tool/);
-  assert.match(commandFile, /`write_todos`/i);
+  assert.match(commandFile, /concise progress prose/);
+  assert.match(commandFile, /`todowrite`/i);
   assert.match(commandFile, /session-local visibility only/i);
   assert.match(commandFile, /reviewer-availability/i);
   assert.match(commandFile, /next safe action on `\/blu-review <phase>`/i);

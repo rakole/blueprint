@@ -269,8 +269,8 @@ test("review runtime metadata, manifest, and local contract stay source-owned", 
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
   assert.match(commandFile, /reviewer availability/i);
-  assert.match(commandFile, /`update_topic` tool/);
-  assert.match(commandFile, /`write_todos`/);
+  assert.match(commandFile, /concise progress prose/);
+  assert.match(commandFile, /`todowrite`/);
   assert.match(commandFile, /`reviewer-availability`/i);
   assert.match(commandFile, /partial fan-out results/i);
   assert.match(skillFile, /Execution profile for `review`: `long-running-mutation`/);

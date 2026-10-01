@@ -16,7 +16,7 @@ const PRIVATE_TOOL_IDS = [
   "blueprint_god_review_cleanup"
 ] as const;
 
-const PRIVATE_RUNTIME_TOOL_IDS = PRIVATE_TOOL_IDS.map((toolId) => `mcp_blueprint_${toolId}`);
+const PRIVATE_RUNTIME_TOOL_IDS = PRIVATE_TOOL_IDS.map((toolId) => `blueprint_${toolId}`);
 const PRIVATE_LANE_REFERENCE_PATHS = [
   "skills/blueprint-god-review/references/review-method.md",
   "skills/blueprint-god-review/references/lane-rubrics.md",
@@ -112,7 +112,7 @@ test("private blueprint-god-review skill contains the hidden guard, refusal text
   assertAppearsBefore(
     skill,
     "Hidden God-Review Activation Guard",
-    "mcp_blueprint_blueprint_project_status",
+    "blueprint_blueprint_project_status",
     "blueprint-god-review skill"
   );
   assert.match(skill, /active command\s+is `\/blu-code-review` or `\/blu-code-review-fix`/i);
@@ -164,12 +164,12 @@ test("private blueprint-god-review skill contains the hidden guard, refusal text
     skill,
     /load\s+`finding-examples\.md` only when classifying duplicate, weak, or no-edit\s+outcomes/i
   );
-  assert.match(skill, /mcp_blueprint_blueprint_god_review_start/);
-  assert.match(skill, /mcp_blueprint_blueprint_god_review_next/);
-  assert.match(skill, /mcp_blueprint_blueprint_god_review_append/);
-  assert.match(skill, /mcp_blueprint_blueprint_god_review_load_findings/);
-  assert.match(skill, /mcp_blueprint_blueprint_god_review_record_fix/);
-  assert.match(skill, /mcp_blueprint_blueprint_god_review_cleanup/);
+  assert.match(skill, /blueprint_blueprint_god_review_start/);
+  assert.match(skill, /blueprint_blueprint_god_review_next/);
+  assert.match(skill, /blueprint_blueprint_god_review_append/);
+  assert.match(skill, /blueprint_blueprint_god_review_load_findings/);
+  assert.match(skill, /blueprint_blueprint_god_review_record_fix/);
+  assert.match(skill, /blueprint_blueprint_god_review_cleanup/);
   assert.match(skill, /Review exactly one returned pending group per invocation/i);
   assert.match(
     skill,

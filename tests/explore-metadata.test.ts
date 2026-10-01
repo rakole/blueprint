@@ -19,14 +19,14 @@ test("explore manifest references capture skill, ideation-routing tools, and con
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_add_phase/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
+  assert.match(commandFile, /blueprint_blueprint_project_status/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_add_phase/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_scaffold/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /route to `\/blu-quick` or `\/blu-plan-phase`/);
   assert.match(commandFile, /require explicit confirmation before writing anything/i);
-  assert.match(commandFile, /Prefer Gemini CLI's built-in `ask_user` tool for the final routing confirmation/);
+  assert.match(commandFile, /Prefer OpenCode `question` tool for the final routing confirmation/);
   assert.match(commandFile, /\/blu-new-project/);
   assert.match(commandFile, /\/blu-health/);
   assert.match(commandFile, /\/blu-check-todos/);
@@ -49,7 +49,7 @@ test("blueprint-capture skill captures explore classification and confirmation b
   assert.match(skillFile, /blueprint_artifact_scaffold/);
   assert.match(skillFile, /`note`, `todo`, `backlog`, `roadmap`, or `no-write`/);
   assert.match(skillFile, /Confirm the final routing target and normalized text before any write/);
-  assert.match(skillFile, /Gemini's `ask_user` tool is preferred when a structured confirmation helps/);
+  assert.match(skillFile, /OpenCode `question` is preferred when a structured confirmation helps/);
   assert.match(skillFile, /\/blu-check-todos/);
   assert.match(skillFile, /\/blu-review-backlog/);
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);

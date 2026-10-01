@@ -47,9 +47,9 @@ test("hidden code-review dispatcher defers start next and append orchestration t
 
   assert.match(manifest, /Follow `skills\/blueprint-god-review\/SKILL\.md`/);
   for (const privateTool of [
-    /mcp_blueprint_blueprint_god_review_start/,
-    /mcp_blueprint_blueprint_god_review_next/,
-    /mcp_blueprint_blueprint_god_review_append/
+    /blueprint_blueprint_god_review_start/,
+    /blueprint_blueprint_god_review_next/,
+    /blueprint_blueprint_god_review_append/
   ]) {
     assert.doesNotMatch(manifest, privateTool);
     assert.doesNotMatch(publicSkill, privateTool);
@@ -59,7 +59,7 @@ test("hidden code-review dispatcher defers start next and append orchestration t
   assert.match(privateSkill, /one-group-at-a-time/);
   assert.match(privateSkill, /Review exactly one returned pending group per invocation/);
   assert.match(privateSkill, /terminal review status/);
-  assert.match(manifest, /mcp_blueprint_blueprint_review_record/);
+  assert.match(manifest, /blueprint_blueprint_review_record/);
   assert.match(manifest, /XX-REVIEW\.md/);
 });
 

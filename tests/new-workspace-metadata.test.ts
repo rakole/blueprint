@@ -30,9 +30,9 @@ test("new-workspace manifest references the maintenance skill, workspace MCP too
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(commandFile, /mcp_blueprint_blueprint_config_get/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_workspace_registry_get/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_workspace_create/);
+  assert.match(commandFile, /blueprint_blueprint_config_get/);
+  assert.match(commandFile, /blueprint_blueprint_workspace_registry_get/);
+  assert.match(commandFile, /blueprint_blueprint_workspace_create/);
   assert.match(commandFile, /maintenance\.workspace_root/);
   assert.match(commandFile, /~\/blueprint-workspaces/);
   assert.match(

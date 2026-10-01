@@ -17,7 +17,7 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 
 ### Read
 
-- Call `mcp_blueprint_blueprint_roadmap_read` before any mutation.
+- Call `blueprint_blueprint_roadmap_read` before any mutation.
 - Use the returned `milestone`, `phases`, `warnings`, and `recovery` as the
   live roadmap baseline.
 - If the roadmap read returns warnings or recovery guidance that means the
@@ -39,7 +39,7 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 - Preview the exact computed phase number together with the exact description.
 - Preview the durable requirement IDs, objective, and success criteria that will
   ground the new phase.
-- Use Gemini CLI `ask_user` for the confirmation gate before any mutation.
+- Use OpenCode `question` for the confirmation gate before any mutation.
 - Keep the waiting state explicit as `phase-number-confirmation`.
 - The confirmation question must ask whether to append that exact phase number
   and description with the selected requirement IDs, objective, and success
@@ -48,7 +48,7 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 
 ### Execute
 
-- Call `mcp_blueprint_blueprint_roadmap_add_phase` only after confirmation,
+- Call `blueprint_blueprint_roadmap_add_phase` only after confirmation,
   with `confirmed: true` bound to the approved `phase-number-confirmation`
   receipt.
 - Pass the confirmed description and the confirmed phase number in
@@ -69,12 +69,12 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 ### Persist
 
 - Scaffold exactly `${phaseDir}/${phasePrefix}-CONTEXT.md` through
-  `mcp_blueprint_blueprint_artifact_scaffold`.
+  `blueprint_blueprint_artifact_scaffold`.
 - Treat `createdFiles`, `reusedFiles`, and scaffold warnings as authoritative.
 - Scaffold text is starter material only. Do not present it as finished phase
   context, and do not bypass `/blu-discuss-phase` by filling the context from
   the add-phase prompt.
-- Update state through `mcp_blueprint_blueprint_state_update` after the roadmap
+- Update state through `blueprint_blueprint_state_update` after the roadmap
   append and scaffold are settled. Set the new phase as current, set
   `/blu-add-phase` as the active command, and set the next safe implemented
   action to `/blu-discuss-phase <phase>`.
@@ -108,15 +108,15 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 
 ## Required MCP Calls
 
-- `mcp_blueprint_blueprint_roadmap_read`: controls roadmap availability, active
+- `blueprint_blueprint_roadmap_read`: controls roadmap availability, active
   milestone, current phase inventory, recovery guidance, and the next integer
   preview.
-- `mcp_blueprint_blueprint_roadmap_add_phase`: controls the append mutation,
+- `blueprint_blueprint_roadmap_add_phase`: controls the append mutation,
   stale-confirmation guard, canonical phase metadata, roadmap path, and roadmap
   warnings.
-- `mcp_blueprint_blueprint_artifact_scaffold`: controls creation or reuse of the
+- `blueprint_blueprint_artifact_scaffold`: controls creation or reuse of the
   initial `${phaseDir}/${phasePrefix}-CONTEXT.md` scaffold.
-- `mcp_blueprint_blueprint_state_update`: controls the final current phase,
+- `blueprint_blueprint_state_update`: controls the final current phase,
   active command, roadmap-evolution memory when included, and next implemented
   route.
 
@@ -138,7 +138,7 @@ Use `expectedPhaseNumber` as the stale-confirmation guard. If
 matches the confirmed number, report `stale-phase-number`, re-read the roadmap,
 show the new computed number, and ask for confirmation again before retrying.
 If it rejects because `confirmed: true` is missing, return to the preview and
-`ask_user` gate before retrying; do not append or repair audit-backed state from
+`question` gate before retrying; do not append or repair audit-backed state from
 an unconfirmed receipt.
 Do not silently continue with the new number.
 
@@ -195,19 +195,19 @@ confirmation gate, and the parent command must still own all MCP calls.
 
 ## Completion Criteria
 
-- `mcp_blueprint_blueprint_roadmap_read` completed and the next integer was
+- `blueprint_blueprint_roadmap_read` completed and the next integer was
   previewed from its result.
-- The exact phase number and description were confirmed with `ask_user`.
+- The exact phase number and description were confirmed with `question`.
 - The requirement IDs were confirmed as declared `.blueprint/REQUIREMENTS.md`
   rows and passed as `requirementIds` for plain add-phase, or the audit-backed
   repair path was used through `auditBackedDetails.repairRequirementIds`.
 - The objective and 2-5 success criteria were confirmed and passed as `goal`
   and `successCriteria`.
-- `mcp_blueprint_blueprint_roadmap_add_phase` succeeded with
+- `blueprint_blueprint_roadmap_add_phase` succeeded with
   `confirmed: true` and `expectedPhaseNumber`.
 - `${phaseDir}/${phasePrefix}-CONTEXT.md` was created or reused through
-  `mcp_blueprint_blueprint_artifact_scaffold`.
-- `mcp_blueprint_blueprint_state_update` routed the repo to
+  `blueprint_blueprint_artifact_scaffold`.
+- `blueprint_blueprint_state_update` routed the repo to
   `/blu-discuss-phase <phase>`.
 - No public command surface, catalog status semantics, hook ownership,
   installed-extension files, or `.planning/` runtime dependency changed.

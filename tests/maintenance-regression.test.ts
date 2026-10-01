@@ -34,8 +34,8 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runt
   assert.match(newWorkspace, /do not silently switch to `clone`/i);
   assert.match(newWorkspace, /next safe action/i);
 
-  assert.match(removeWorkspace, /mcp_blueprint_blueprint_workspace_registry_get/);
-  assert.match(removeWorkspace, /mcp_blueprint_blueprint_workspace_remove/);
+  assert.match(removeWorkspace, /blueprint_blueprint_workspace_registry_get/);
+  assert.match(removeWorkspace, /blueprint_blueprint_workspace_remove/);
   assert.match(removeWorkspace, /workspace-not-found/);
   assert.match(removeWorkspace, /workspace-path-ambiguity/);
   assert.match(removeWorkspace, /registry-drift/);
@@ -43,11 +43,11 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runt
   assert.match(removeWorkspace, /repo members with their strategies/i);
   assert.match(removeWorkspace, /next safe action/i);
 
-  assert.match(workstreams, /mcp_blueprint_blueprint_workstream_list/);
-  assert.match(workstreams, /mcp_blueprint_blueprint_workstream_mutate/);
-  assert.doesNotMatch(workstreams, /mcp_blueprint_blueprint_state_update/);
+  assert.match(workstreams, /blueprint_blueprint_workstream_list/);
+  assert.match(workstreams, /blueprint_blueprint_workstream_mutate/);
+  assert.doesNotMatch(workstreams, /blueprint_blueprint_state_update/);
   assert.match(workstreams, /statePatch.*already applied/i);
-  assert.match(workstreams, /ask_user/);
+  assert.match(workstreams, /question/);
   assert.match(workstreams, /workstream-switch-confirmation/);
   assert.match(workstreams, /workstream-archive-confirmation/);
   assert.match(workstreams, /missing-resume-snapshot/);
@@ -55,8 +55,8 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runt
   assert.match(workstreams, /corrupt-workstream-index/);
   assert.match(workstreams, /next safe action/i);
 
-  assert.match(updateCommand, /mcp_blueprint_blueprint_update_check/);
-  assert.match(updateCommand, /mcp_blueprint_blueprint_update_plan/);
+  assert.match(updateCommand, /blueprint_blueprint_update_check/);
+  assert.match(updateCommand, /blueprint_blueprint_update_plan/);
   assert.match(updateCommand, /update-mode-gate/);
   assert.match(updateCommand, /manual fallback/i);
   assert.match(updateCommand, /~\/.<host>\/blueprint\/updates\//);
@@ -66,16 +66,16 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runt
   assert.match(prBranch, /If the repo has uncommitted changes, stop/i);
   assert.match(prBranch, /pending gate `clean-working-tree`/);
   assert.match(prBranch, /pr-branch-runtime-contract\.md/);
-  assert.match(prBranch, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(prBranch, /blueprint_blueprint_artifact_contract_read/);
   assert.match(prBranch, /commit classification ledger/i);
   assert.match(prBranch, /Summarize the runtime packet and require explicit confirmation of its exact operation id and fingerprint/i);
-  assert.match(prBranch, /mcp_blueprint_blueprint_pr_branch_execute/);
+  assert.match(prBranch, /blueprint_blueprint_pr_branch_execute/);
   assert.match(prBranch, /validates actual content, preserves the source ref/i);
   assert.match(prBranch, /report-overwrite-confirmation/);
   assert.match(prBranch, /next safe action/i);
 
   assert.match(ship, /A dirty working tree or missing base branch is a hard stop for shipping/i);
-  assert.match(ship, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(ship, /blueprint_blueprint_artifact_contract_read/);
   assert.match(ship, /contract\.authoringTemplate/);
   assert.match(ship, /`workflow\.secure_phase` defaults to `false`/);
   assert.match(ship, /`\/blu-secure-phase` remains manually runnable and implemented/i);
@@ -91,7 +91,7 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runt
   assert.match(ship, /next safe action/i);
 
   assert.match(undo, /A dirty working tree, detached HEAD, merge\/rebase\/cherry-pick\/revert\/sequencer state[\s\S]*is a hard stop/i);
-  assert.match(undo, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(undo, /blueprint_blueprint_artifact_contract_read/);
   assert.match(undo, /contract\.authoringTemplate/);
   assert.match(
     undo,
@@ -103,21 +103,21 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and runt
   assert.match(undo, /next safe action/i);
 
   assert.match(cleanup, /A dirty working tree, missing phase directory root, or obviously inconsistent phase layout is a hard stop for cleanup/i);
-  assert.match(cleanup, /Use Gemini-native `ask_user` for the destructive cleanup confirmation/i);
-  assert.match(cleanup, /use Gemini-native `ask_user` for that approval when available/i);
-  assert.match(cleanup, /If `ask_user` is unavailable for any confirmation, stop honestly with the named pending gate still visible/i);
+  assert.match(cleanup, /Use OpenCode `question` for the destructive cleanup confirmation/i);
+  assert.match(cleanup, /use OpenCode `question` for that approval when available/i);
+  assert.match(cleanup, /If `question` is unavailable for any confirmation, stop honestly with the named pending gate still visible/i);
   assert.match(cleanup, /Keep the destructive approval gate visible as `cleanup-confirmation`/i);
   assert.match(cleanup, /keep the waiting state visible as `archive-destination-confirmation`/i);
   assert.match(cleanup, /keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i);
-  assert.match(cleanup, /require explicit overwrite confirmation through Gemini-native `ask_user`/i);
-  assert.match(cleanup, /mcp_blueprint_blueprint_cleanup_archive` in `mode: "preview"`/i);
-  assert.match(cleanup, /mcp_blueprint_blueprint_cleanup_archive` in `mode: "commit"`/i);
+  assert.match(cleanup, /require explicit overwrite confirmation through OpenCode `question`/i);
+  assert.match(cleanup, /blueprint_blueprint_cleanup_archive` in `mode: "preview"`/i);
+  assert.match(cleanup, /blueprint_blueprint_cleanup_archive` in `mode: "commit"`/i);
   assert.match(cleanup, /write `cleanup-latest` only from the actual archive outcome/i);
   assert.match(cleanup, /next safe action/i);
 
-  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_list/);
-  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_reapply/);
-  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_record/);
+  assert.match(reapplyPatches, /blueprint_blueprint_patch_list/);
+  assert.match(reapplyPatches, /blueprint_blueprint_patch_reapply/);
+  assert.match(reapplyPatches, /blueprint_blueprint_patch_record/);
   assert.match(reapplyPatches, /dirty working tree, malformed patch registry, missing patch target, compatibility mismatch, or installed-extension target is a hard stop/i);
   assert.match(reapplyPatches, /reapply-patches-confirmation/);
   assert.match(reapplyPatches, /preflight -> preview -> confirm -> replay -> record/i);
@@ -150,7 +150,7 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and runtime-o
   assert.match(skill, /pr-branch-runtime-contract\.md/);
   assert.match(skill, /commit classification/i);
   assert.match(skill, /canonical authoring template/i);
-  assert.match(skill, /`update_topic` tool and keep a compact shipping checklist with `write_todos`/i);
+  assert.match(skill, /concise progress prose and keep a compact shipping checklist with `todowrite`/i);
   assert.match(skill, /tracker-eligible only for session-local coordination/i);
   assert.match(skill, /`workflow\.secure_phase` defaults to `false`/);
   assert.match(skill, /`\/blu-secure-phase` remains manually runnable and implemented/i);
@@ -167,8 +167,8 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and runtime-o
   assert.match(skill, /Keep the protected scope explicit throughout the run/i);
   assert.match(skill, /`cleanup-confirmation`/);
   assert.match(skill, /`archive-destination-confirmation`/);
-  assert.match(skill, /Use Gemini-native `ask_user` for the destructive cleanup confirmation, archive-destination creation approval, and report overwrite approval/i);
-  assert.match(skill, /if `ask_user` is unavailable stop honestly with the named pending gate still visible/i);
+  assert.match(skill, /Use OpenCode `question` for the destructive cleanup confirmation, archive-destination creation approval, and report overwrite approval/i);
+  assert.match(skill, /if `question` is unavailable stop honestly with the named pending gate still visible/i);
   assert.match(skill, /keep `report-overwrite-confirmation` visible until overwrite is explicitly approved/i);
   assert.match(skill, /cleanup-latest` is runtime-written only from the actual archive outcome/i);
   assert.match(skill, /\/blu-reapply-patches/);

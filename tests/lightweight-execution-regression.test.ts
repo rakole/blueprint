@@ -25,7 +25,7 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(quickToml, /Preserve a cache-friendly prompt layout/i);
   assert.match(quickToml, /Use no subagents by default/i);
   assert.match(quickToml, /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i);
-  assert.match(quickToml, /`update_topic` to keep the active stage visible and `write_todos`/);
+  assert.match(quickToml, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(quickToml, /tracker-eligible/i);
   assert.match(quickToml, /Show progress only at meaningful stage or gate transitions/i);
   assert.match(quickToml, /Do not spam stage narration or emit in-flight updates between transitions/i);
@@ -94,7 +94,7 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   );
   assert.match(quickRuntimeContract, /Show progress only at meaningful stage or gate transitions/i);
   assert.match(quickRuntimeContract, /Do not spam stage narration or emit in-flight updates between transitions/i);
-  assert.match(quickRuntimeContract, /When helpers are unavailable, use concise prose/i);
+  assert.match(quickRuntimeContract, /When `todowrite` is unavailable, preserve the same status in concise prose/i);
   assert.match(quickRuntimeContract, /Do not use tracker as a saved plan, and do not use subagents to widen scope/i);
   assert.match(quickRuntimeContract, /"quickTask": ""/);
   assert.match(quickRuntimeContract, /"nextBoundedUnit": ""/);
@@ -109,7 +109,7 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(quickRuntimeContract, /When validation is needed, finish validation before[\s\S]*artifact_report_write/i);
   assert.match(
     quickRuntimeContract,
-    /For `\/blu-quick`, treat\s+the shared `Validate` stage as pre-report verification[\s\S]*before `mcp_blueprint_blueprint_artifact_report_write`/i
+    /For `\/blu-quick`, treat\s+the shared `Validate` stage as pre-report verification[\s\S]*before `blueprint_blueprint_artifact_report_write`/i
   );
   assert.doesNotMatch(quickRuntimeContract, /post-write checks/i);
   assert.doesNotMatch(quickRuntimeContract, /after persistence[\s\S]*quick-run report/i);
@@ -255,7 +255,7 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   assert.match(fastToml, /Do not add redundant primitive MCP reads on the common path/i);
   assert.match(fastToml, /Latency budget: lightweight preflight only/);
   assert.match(fastToml, /Final response budget: max 8 lines/i);
-  assert.match(fastToml, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
+  assert.match(fastToml, /Do not use `todowrite` or task tracker tools for `\/blu-fast`\./);
   assert.match(fastToml, /Do not turn `\/blu-fast` into a long-running progress flow/i);
   assert.match(fastToml, /Do not create quick-run reports, phase artifacts, or other ad hoc persistence as side effects of `fast`\./);
   assert.match(fastToml, /Do not use subagents\./);
@@ -269,7 +269,7 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   assert.match(fastRuntimeContract, /Common path tool budget:[\s\S]*lightweight_preflight[\s\S]*state_update/i);
   assert.match(fastRuntimeContract, /\/blu-fast` latency budget/i);
   assert.match(fastRuntimeContract, /final response:\s+concise inline summary, max 8 lines/i);
-  assert.match(fastRuntimeContract, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(fastRuntimeContract, /Do not use `todowrite` or tracker tools/i);
   assert.match(fastRuntimeContract, /Do not create quick-run reports, phase summaries, phase artifacts/i);
   assert.match(fastRuntimeContract, /no-subagent execution path/i);
   assert.equal(fastMetadata.spec.executionProfile, "interactive-read");
@@ -291,7 +291,7 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   );
   assert.match(
     fastMetadata.runtimeReference.contractNotes,
-    /explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility/i
+    /explicitly exclude tracker-backed branching plus todowrite long-running visibility/i
   );
   assert.match(
     fastMetadata.runtimeReference.contractNotes,

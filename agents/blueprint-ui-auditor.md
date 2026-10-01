@@ -9,10 +9,9 @@ description: >
   phase against an earlier UI audit.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
+  - grep
 max_turns: 24
 timeout_mins: 23
 ---
@@ -31,7 +30,7 @@ guessing what was actually shipped.
 ## Parent-Owned Responsibilities
 
 - The parent command owns orchestration, visible stage narration, and
-  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+  visible progress prose, `todowrite`, and `question` gates.
 - The parent command owns saved-evidence resolution, any overwrite
   confirmation, and final routing.
 - The parent command owns `blueprint_review_record` and every other

@@ -43,11 +43,11 @@ Use the `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and
 
 ## Session-Local Visibility
 
-- Use Gemini CLI `update_topic` to surface the active stage only for
+- Use concise progress prose to surface the active stage only for
   non-trivial investigations.
-- Use Gemini CLI `write_todos` only for a compact visible checklist during
+- Use OpenCode `todowrite` only for a compact visible checklist during
   non-trivial investigations.
-- `update_topic` and `write_todos` are session-local visibility only and do
+- `todowrite` is session-local visibility only and do
   not replace Blueprint MCP persistence or explicit todo capture.
 - Do not use hidden state, chat memory, tracker tools, or visible checklists as
   a substitute for the saved `debug-latest` report.

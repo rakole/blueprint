@@ -48,9 +48,9 @@ Before running Blueprint orchestration:
 1. Confirm the working directory is the repository the user wants to operate on.
 2. Check whether `.blueprint/` exists and whether the repo is initialized.
 3. Prefer Blueprint MCP tools when available:
-   - `mcp_blueprint_blueprint_project_status`
-   - `mcp_blueprint_blueprint_command_catalog`
-   - `mcp_blueprint_blueprint_config_get`
+   - `blueprint_blueprint_project_status`
+   - `blueprint_blueprint_command_catalog`
+   - `blueprint_blueprint_config_get`
 4. If the MCP server or a required tool is unavailable, do not invent shell wrappers such as `mcp use ...`, `blueprint-mcp ...`, or ad-hoc SDK scripts. Say the Blueprint MCP server is disconnected or undiscovered and ask the user to check `/mcp` or restart the host CLI.
 5. If the repo is uninitialized, route to `/blu-new-project`. If state is partial or unhealthy, route to `/blu-health`. If the user only wants orientation, route to `/blu-progress` or `/blu-help`.
 
@@ -58,9 +58,9 @@ Before running Blueprint orchestration:
 
 - Slash commands are file commands from `commands/blu*.toml`.
 - Direct command names use the `/blu-<command>` namespace; do not use removed colon-form variants.
-- Blueprint MCP tools are called through runtime FQNs such as `mcp_blueprint_blueprint_project_status`; translate older shorthand ids like `blueprint_project_status` before calling tools.
-- Gemini-native helpers such as `ask_user`, `write_todos`, `update_topic`, tracker tools, and MCP resource tools are useful when present, but they are session UX only. When unavailable, use concise prose confirmations, visible todo lists, and explicit gates.
-- Keep `ask_user` headers short when using interactive prompts.
+- Blueprint MCP tools are called through OpenCode runtime names such as `blueprint_blueprint_project_status`; translate internal ids like `blueprint_project_status` before calling tools.
+- Confirmed OpenCode helpers `question` and `todowrite`, plus MCP resource tools, are session UX only. Use concise progress prose, visible todo lists, and explicit gates; when an optional helper is unavailable, preserve the same behavior in prose. These helpers never replace Blueprint persistence.
+- Call `question` with `questions: [{ header, question, options: [{ label, description }], multiple? }]`. Keep headers short, preserve the custom-answer path, and use `multiple: true` only when multiple selections are valid.
 - Do not mutate the installed extension directory. `/blu-update` is advisory and must leave manual update and restart guidance explicit.
 
 ## State Paths
@@ -125,6 +125,6 @@ Workspace and maintenance:
 ## Fallbacks
 
 - If a required MCP tool is missing, report the missing tool or substrate and stop before mutation.
-- If a Gemini-native helper is missing, keep the same gate in prose rather than pretending the helper ran.
+- If an optional OpenCode helper is missing, keep the same gate in prose rather than pretending the helper ran.
 - If command catalog status and docs disagree, trust the live runtime catalog for routability and mention the mismatch as a documentation or substrate issue.
 - If the user asks for a planned-only command, recommend the closest implemented command only when that recommendation is safe and explicit.

@@ -613,13 +613,13 @@ test("map-codebase guidance uses the compact parent-owned prepare and submit flo
       blueprintToolNames.includes(toolName),
       `${toolName} should be registered in the MCP server`
     );
-    assert.match(commandFile, new RegExp(`mcp_blueprint_${toolName}`));
-    assert.match(skillFile, new RegExp(`mcp_blueprint_${toolName}`));
+    assert.match(commandFile, new RegExp(`blueprint_${toolName}`));
+    assert.match(skillFile, new RegExp(`blueprint_${toolName}`));
   }
 
   // Do not restore primitive calls or a second contract for runtime-derived Markdown.
   for (const text of [commandFile, skillFile, reference]) {
-    assert.doesNotMatch(text, /mcp_blueprint_blueprint_(?:project_status|config_get|artifact_contract_read|artifact_scaffold|artifact_list|artifact_summary_digest|codebase_artifact_write|artifact_validate)/);
+    assert.doesNotMatch(text, /blueprint_blueprint_(?:project_status|config_get|artifact_contract_read|artifact_scaffold|artifact_list|artifact_summary_digest|codebase_artifact_write|artifact_validate)/);
     assert.doesNotMatch(text, /contract\.authoringTemplate|exactly\s+one artifact at a time/);
   }
   assert.match(commandFile, /Execution profile: `long-running-mutation`\./);

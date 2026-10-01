@@ -19,8 +19,8 @@ Use only the command-scoped read tools:
 - `blueprint_phase_context`
 - `blueprint_config_get`
 
-Do not call write-capable MCP tools, task tracker helpers, `update_topic`, or
-`write_todos`. Do not create hidden plans, staged long-running progress, or
+Do not call write-capable MCP tools, task tracker helpers, or
+`todowrite`. Do not create hidden plans, staged long-running progress, or
 branching execution state.
 
 ## Resolve And Read

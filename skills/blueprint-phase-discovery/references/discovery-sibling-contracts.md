@@ -7,11 +7,11 @@ deterministic MCP-owned phase artifacts.
 
 ## Runtime Call Rules
 
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
-- For structured interactive choices, confirmations, or short clarifications, prefer  `ask_user` tool over plain assistant prose.
+- For structured interactive choices, confirmations, or short clarifications, prefer  `question` tool over plain assistant prose.
 - Load only the active command's `input_bundles.commands[...]` inputs plus the shared inputs for that invocation. Do not preload sibling discovery command runtime references unless the active command contract explicitly calls for them.
 - Execution profile for `/blu-spec-phase`: `long-running-mutation`.
 - Keep the shared stage vocabulary explicit during non-trivial `/blu-spec-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
@@ -22,7 +22,7 @@ deterministic MCP-owned phase artifacts.
 - Keep the in-flight status contract visible during non-trivial `/blu-ui-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
 - Execution profile for `/blu-list-phase-assumptions`: `interactive-read`.
 - Keep `/blu-list-phase-assumptions` conversational and read-only; do not turn it into staged long-running progress, tracker-backed branching, visible todos, or hidden planning.
-- Do not use `update_topic`, `write_todos`, or task tracker tools for `/blu-list-phase-assumptions`; when phase resolution is blocked, name the waiting state plainly and give the next safe implemented follow-up instead.
+- Do not use `todowrite` or task tracker tools for `/blu-list-phase-assumptions`; when phase resolution is blocked, name the waiting state plainly and give the next safe implemented follow-up instead.
 
 ## Parity Goal
 
@@ -156,7 +156,7 @@ Keep `/blu-spec-phase` compact in this shared skill:
    authority; the runtime contract owns the actual flow details.
 4. Run the existing-spec gate, codebase scout, ambiguity scoring, and
    Socratic interview loop exactly as the runtime contract specifies, using
-   `ask_user` only for the allowed interactive branches and honoring `--auto`
+   `question` only for the allowed interactive branches and honoring `--auto`
    and `--text`.
 5. Persist only through `blueprint_phase_artifact_write` with `artifact:
    "spec"`, then prove the next safe implemented action through
@@ -182,7 +182,7 @@ That command-specific reference is the behavior authority for the five
 assumption areas, read-only output, optional `blueprint-researcher` bounds,
 uncertainty language, waiting-state behavior, and next-safe-action guidance.
 Treat `/blu-list-phase-assumptions` as an `interactive-read` summary and keep it
-read-only. Do not use `update_topic`, `write_todos`, task tracker tools, hidden
+read-only. Do not use `todowrite`, task tracker tools, hidden
 planning, staged progress, or persistence tools for this command.
 
 ### `ui-phase`
@@ -218,7 +218,7 @@ to `/blu-progress` when refreshed routing is missing, blocked, or ambiguous.
 Before claiming completion, verify:
 
 - The active command's skill-local runtime reference from `input_bundles.commands[...]` was loaded, and sibling discovery references were not treated as active input; for `/blu-discuss-phase`, the long-running profile was also loaded.
-- The active command used only its command-scoped MCP allowlist, translated to `mcp_blueprint_*` runtime FQNs, and reached the contract's required milestones in order: resolve, read evidence/config/contracts, decide gates, persist or no-write, validate, and route.
+- The active command used only its command-scoped MCP allowlist, translated to `blueprint_blueprint_*` runtime FQNs, and reached the contract's required milestones in order: resolve, read evidence/config/contracts, decide gates, persist or no-write, validate, and route.
 - Any artifact work used `blueprint_artifact_contract_read` for the active contract id (`phase.context`, `phase.discussion-log`, `phase.research`, `phase.spec`, or `phase.ui-spec`) before authoring or writing; context used the structured model contract, freehand discovery artifacts used their authoring templates, and scaffold text, starter template literals, status booleans, and prompt-local templates were not treated as finished content or preserved verbatim in the saved artifact.
 - Persistence, when allowed, happened only through the owning MCP tools; returned `status`, `written`, `created`, `updated`, `path`, `validation`, `warnings`, and `reason` fields were treated as authoritative. For `/blu-list-phase-assumptions`, verify no write-capable MCP tool, task tracker, or hidden planning helper was called.
 - Required gates were satisfied before action: artifact overwrite/reuse/update, discuss checkpoint resume-versus-discard, research external-source policy, UI contract-versus-skip, `workflow.ui_safety_gate` rationale, checker-requested revisions, and checkpoint owner/mode cleanup guards.

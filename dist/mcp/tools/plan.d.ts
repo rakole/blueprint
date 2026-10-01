@@ -371,7 +371,7 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
             }[] | undefined;
             verification?: {
                 item: string;
-                method: "test" | "command" | "grep" | "file-read" | "artifact-validation";
+                method: "grep" | "test" | "command" | "file-read" | "artifact-validation";
                 evidence: string;
             }[] | undefined;
             evidence?: {
@@ -605,7 +605,7 @@ export declare function blueprintPlanPrepare(raw?: z.input<typeof prepareInput>)
             }[] | undefined;
             verification?: {
                 item: string;
-                method: "test" | "command" | "grep" | "file-read" | "artifact-validation";
+                method: "grep" | "test" | "command" | "file-read" | "artifact-validation";
                 evidence: string;
             }[] | undefined;
             evidence?: {

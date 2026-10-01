@@ -170,7 +170,7 @@ async function repairedPromptContracts(): Promise<RuntimePromptContract[]> {
 }
 
 function stripRuntimeToolFqns(markdown: string): string {
-  return markdown.replace(/`mcp_blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
+  return markdown.replace(/`blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
 }
 
 test("host extension discovery manifests point at the built Blueprint MCP server", async () => {
@@ -323,8 +323,13 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
       );
     }
 
+    const rawWithoutDocumentedNameMapping = stripRuntimeToolFqns(raw).replace(
+      /translate an internal id such as `blueprint_[a-z0-9_]+` to the exposed OpenCode name `<runtime-tool>`/i,
+      ""
+    );
+
     assert.doesNotMatch(
-      stripRuntimeToolFqns(raw),
+      rawWithoutDocumentedNameMapping,
       /`blueprint_[a-z0-9_]+`/,
       `${contract.commandName} should not fall back to raw internal tool names`
     );
@@ -340,7 +345,7 @@ test("legitimate roadmap-add callers pass the confirmation receipt after approva
 
   assert.match(
     exploreManifest,
-    /mcp_blueprint_blueprint_roadmap_add_phase[\s\S]{0,260}`confirmed: true` receipt from the routing confirmation gate/,
+    /blueprint_blueprint_roadmap_add_phase[\s\S]{0,260}`confirmed: true` receipt from the routing confirmation gate/,
     "/blu-explore should pass confirmed: true after its routing confirmation gate"
   );
   assert.match(
@@ -374,11 +379,11 @@ test("new-project canonical guardrails forbid shell execution and tool-name drif
   assert.match(skill, /Never invoke MCP tools through shell wrappers or ad-hoc SDK scripts/);
   assert.match(
     raw,
-    /Call Blueprint MCP tools only through runtime FQNs such as\s+`mcp_blueprint_blueprint_project_init`/
+    /Call Blueprint MCP tools only through runtime FQNs such as\s+`blueprint_blueprint_project_init`/
   );
   assert.match(
     raw,
-    /Translate shorthand `blueprint_\*` ids from older docs into their\s+`mcp_blueprint_\*` runtime FQNs before calling them\./
+    /Translate shorthand `blueprint_\*` ids from older docs into their\s+`blueprint_blueprint_\*` runtime FQNs before calling them\./
   );
   assert.match(
     raw,

@@ -11,10 +11,9 @@ description: >
   proposing targeted revisions instead of a full replan or respec.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
+  - grep
 max_turns: 15
 timeout_mins: 15
 ---
@@ -45,7 +44,7 @@ update Blueprint state or edit any artifact.
 For plan review, require the complete model, schema and validation rules,
 evidence paths/excerpts,
 effective config, investigationTrace and priorFindings. For UI-spec review,
-use the supplied draft and its UI contract. Use read-only `read_file` on supplied
+use the supplied draft and its UI contract. Use read-only `read` on supplied
 paths when exact evidence is needed; ask for refreshed evidence if stale.
 
 ## Review Modes

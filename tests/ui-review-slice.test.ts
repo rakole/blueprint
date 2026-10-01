@@ -415,9 +415,9 @@ test("ui-review runtime metadata, manifest, and local contract stay source-owned
   assert.match(commandFile, /created, reused, or revised/i);
   assert.match(commandFile, /overall score out of 24/i);
   assert.match(commandFile, /Copywriting, Visual Hierarchy, Color, Typography, Spacing, and Experience Design/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_review_authoring_context/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_review_validate_model/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /blueprint_blueprint_review_authoring_context/);
+  assert.match(commandFile, /blueprint_blueprint_review_validate_model/);
   assert.match(referenceFile, /actual frontend surface/i);
   assert.match(referenceFile, /no-subagent fallback/i);
   assert.match(referenceFile, /browser-only, web-search-only, shell-only, or generic helpers/i);

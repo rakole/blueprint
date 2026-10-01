@@ -33,7 +33,7 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 function stripRuntimeToolFqns(markdown: string): string {
-  return markdown.replace(/`mcp_blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
+  return markdown.replace(/`blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
 }
 
 test("impact manifest is thin, runtime-FQN based, and preserves advisory safety gates", async () => {
@@ -94,7 +94,7 @@ test("impact skill uses docs-free input bundles and local runtime contract rules
   assert.deepEqual(resolvedInputs.commandSpecific, [...IMPACT_SKILL_INPUTS]);
   assert.deepEqual(resolvedInputs.effective, [...IMPACT_SKILL_INPUTS]);
   assert.equal(resolvedInputs.effective.some((input) => input.startsWith("docs/")), false);
-  assert.match(skillFile, /mcp_blueprint_blueprint_project_status/);
+  assert.match(skillFile, /blueprint_blueprint_project_status/);
   assert.match(skillFile, /Translate any shorthand tool ids like `blueprint_project_status`/);
   assert.match(skillFile, /Treat Blueprint skills as loaded guidance, not callable tools\./);
   assert.match(skillFile, /Never run `\/blu-\*` in the shell\./);

@@ -26,7 +26,7 @@ and doc mutation remains reviewable and tightly scoped.
 
 ## Runtime Call Rules
 
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
@@ -96,7 +96,7 @@ artifacts, and optional docs agents when the command contract allows them.
    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
    resolved scope, active stage, pending gate, execution mode, and next safe
    action legible throughout the run.
-4. For non-trivial docs-update runs, prefer update_topic plus `write_todos` so
+4. For non-trivial docs-update runs, prefer concise progress prose plus `todowrite` so
    scope resolution, evidence review, optional external verification, bounded
    drafting or verification, report persistence, and routing stay visible
    without becoming persistence.
@@ -156,10 +156,10 @@ Before claiming completion, verify:
   loaded; no sibling command reference or chat memory was treated as active
   input.
 - Required MCP calls used runtime FQNs and followed the command order:
-  `mcp_blueprint_blueprint_project_status`,
-  `mcp_blueprint_blueprint_artifact_list`,
-  `mcp_blueprint_blueprint_artifact_summary_digest`, then
-  `mcp_blueprint_blueprint_artifact_report_write` when a report was written.
+  `blueprint_blueprint_project_status`,
+  `blueprint_blueprint_artifact_list`,
+  `blueprint_blueprint_artifact_summary_digest`, then
+  `blueprint_blueprint_artifact_report_write` when a report was written.
 - Repo-truth evidence came from explicit digest inputs, and returned
   `inputsUsed`, report `status`, `path`, write metadata, warnings, and reasons
   were treated as authoritative.

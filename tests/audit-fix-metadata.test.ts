@@ -75,10 +75,10 @@ test("audit-fix manifest references the remediation tools, agents, and safe rout
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/
   );
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, /tracker-eligible/i);
-  assert.match(commandFile, /session-local progress tools only/i);
-  assert.match(commandFile, /session-local coordination only, pair it with visible `write_todos`/i);
+  assert.match(commandFile, /`todowrite` as (?:a )?session-local/i);
+  assert.match(commandFile, /session-local coordination only, pair it with visible `todowrite`/i);
   assert.match(
     commandFile,
     /keep the same bounded flow linear with an explicit next safe step/i
@@ -87,7 +87,7 @@ test("audit-fix manifest references the remediation tools, agents, and safe rout
   assert.match(commandFile, /`--severity <medium\|high\|all>`/);
   assert.match(commandFile, /`--max <N>`/);
   assert.match(commandFile, /`--dry-run`/);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(
     commandFile,
     /pending gate \(`none`, non-trivial mutation confirmation, report overwrite confirmation, or todo capture confirmation\)/i
@@ -172,7 +172,7 @@ test("blueprint-review skill captures audit-fix report-backed remediation rules"
   assert.match(skillFile, /--severity/);
   assert.match(skillFile, /--max/);
   assert.match(skillFile, /--dry-run/);
-  assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /question/);
   assert.match(skillFile, /classification table before mutation/i);
   assert.match(skillFile, /`auto-fixable`, `manual-only`, or `skip`/);
   assert.match(skillFile, /Reject browser-only, web-search-only, shell-only, or generic agents/i);
@@ -186,7 +186,7 @@ test("blueprint-review skill captures audit-fix report-backed remediation rules"
     skillFile,
     /repair the structured report against the canonical `report\.audit-fix`\s+contract, the narrowed task schema, and returned diagnostics/i
   );
-  assert.match(skillFile, /update_topic plus `write_todos`/i);
+  assert.match(skillFile, /concise progress prose plus `todowrite`/i);
   assert.match(skillFile, /tracker-eligible/i);
   assert.match(skillFile, /session-local coordination only/i);
   assert.match(skillFile, /report overwrite handling/i);

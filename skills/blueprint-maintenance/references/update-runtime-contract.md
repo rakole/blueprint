@@ -6,7 +6,7 @@ This reference is the detailed `/blu-update` workflow contract. The command mani
 
 ### Resolve
 
-- Call `mcp_blueprint_blueprint_update_check` first.
+- Call `blueprint_blueprint_update_check` first.
 - Treat returned host, extension path, installed version, install provenance, latest-version lookup status, update availability, and warnings as authoritative.
 
 ### Read
@@ -26,7 +26,7 @@ This reference is the detailed `/blu-update` workflow contract. The command mani
 
 ### Persist
 
-- If the user wants a saved checklist, call `mcp_blueprint_blueprint_update_plan`.
+- If the user wants a saved checklist, call `blueprint_blueprint_update_plan`.
 - Pass `mode = "ask_user"` when structured gating was available and `mode = "manual"` otherwise.
 - Treat returned steps, notes, `requiresRestart`, warnings, and `persistenceStatus` as authoritative.
 - Treat `persistenceStatus === "saved"` plus non-null `path` as the only saved-checklist signal.
@@ -34,7 +34,7 @@ This reference is the detailed `/blu-update` workflow contract. The command mani
 
 ### Validate
 
-- Tell the user to rerun `/blu-update` or `mcp_blueprint_blueprint_update_check` after manual update.
+- Tell the user to rerun `/blu-update` or `blueprint_blueprint_update_check` after manual update.
 
 ### Route
 
@@ -49,5 +49,5 @@ This reference is the detailed `/blu-update` workflow contract. The command mani
 
 ## Required MCP FQNs
 
-- `mcp_blueprint_blueprint_update_check`
-- `mcp_blueprint_blueprint_update_plan`
+- `blueprint_blueprint_update_check`
+- `blueprint_blueprint_update_plan`

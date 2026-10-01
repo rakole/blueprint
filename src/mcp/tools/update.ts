@@ -829,8 +829,8 @@ function buildUpdateSteps(
 ): UpdateChecklistStep[] {
   const modeDetail =
     mode === "ask_user"
-      ? "Use Gemini CLI `ask_user` to choose whether the user wants a saved checklist or the manual fallback view."
-      : "Keep the same decision boundary explicit in plain language because structured `ask_user` is unavailable or not desired.";
+      ? "Use OpenCode `question` with a single questions entry to choose whether the user wants a saved checklist or the manual fallback view."
+      : "Keep the same decision boundary explicit in plain language because a structured question is unavailable or not desired.";
   const sourceDetail =
     check.latestVersionLookupStatus === "available" && check.latestVersion
       ? `Compare installed version ${check.installedVersion ?? "unknown"} with latest version ${check.latestVersion} from ${check.latestVersionSource ?? "the resolved source"}.`
@@ -890,11 +890,11 @@ function buildUpdateNotes(check: UpdateCheckResult, mode: UpdatePlanMode): strin
 
   if (mode === "ask_user") {
     notes.push(
-      "When Gemini CLI `ask_user` is available, use it for the saved-checklist versus manual-fallback decision instead of simulating a questionnaire in plain text."
+      "When OpenCode `question` is available, use one questions entry for the saved-checklist versus manual-fallback decision instead of simulating a questionnaire in plain text."
     );
   } else {
     notes.push(
-      "When structured `ask_user` is unavailable, keep the same saved-checklist versus manual-fallback decision explicit in prose."
+      "When a structured question is unavailable, keep the same saved-checklist versus manual-fallback decision explicit in prose."
     );
   }
 

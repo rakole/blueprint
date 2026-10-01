@@ -8,7 +8,7 @@ plain conversation is sufficient when they are unavailable.
 
 ## 1. Prepare and clarify
 
-Call `mcp_blueprint_blueprint_project_prepare` from the target repo root. Pass
+Call `blueprint_blueprint_project_prepare` from the target repo root. Pass
 `auto: true` only when the current user explicitly supplied `--auto`.
 
 - Default is interactive, including the first run before config exists. Neither
@@ -27,7 +27,7 @@ for the response before synthesis or creation. With a vague idea, ask about its
 first user and useful outcome. With a detailed brief, clarify the most consequential
 scope boundary or assumption. Do not repeat questions already answered. A focused
 confirmation of the first-release boundary is sufficient when the brief is complete.
-Use `ask_user` when available, or normal conversation. Never invent a user answer.
+Use `question` when available, or normal conversation. Never invent a user answer.
 Pass the actual response as `clarification` to project_init.
 
 Continue only as needed to understand purpose, audience, first-release capability,
@@ -94,7 +94,7 @@ Obtain explicit approval before interactive creation. User edits revise the mode
 material scope changes require showing the revised proposal. Raw tool, shell, or
 collapsed agent output is not the approval surface. Cancellation makes no writes.
 
-Call `mcp_blueprint_blueprint_project_init` with the approved `bootstrapModel`,
+Call `blueprint_blueprint_project_init` with the approved `bootstrapModel`,
 actual `clarification`, and `bootstrapMode: "interactive"`. In explicit --auto mode
 pass `bootstrapMode: "auto"`; clarification is then optional. Do not pass both
 bootstrapModel and the compatibility-only bootstrapSeed. Do not scaffold first.
@@ -102,14 +102,14 @@ The runtime validates product structure and renders the complete core bundle bef
 writing. Invalid results have `status: "invalid"`, `written: false`, and field
 `diagnostics`; fix the identified issue without rewriting unaffected product content.
 
-Use `mcp_blueprint_blueprint_config_set` for an approved project preference patch
+Use `blueprint_blueprint_config_set` for an approved project preference patch
 only, with `scope: "project"`. Updating global saved defaults requires explicit
 approval and `scope: "defaults"`. Preserve existing map artifacts and unrelated work.
 
 ## 4. Verify and route
 
-Call `mcp_blueprint_blueprint_artifact_validate`, then
-`mcp_blueprint_blueprint_project_status`. Treat returned issues and paths as
+Call `blueprint_blueprint_artifact_validate`, then
+`blueprint_blueprint_project_status`. Treat returned issues and paths as
 authoritative. Do not claim readiness after failure. Report project direction,
 created paths including config.json, defaults provenance, approval/auto posture,
 warnings and the returned next safe implemented action. Use `/blu-progress` if

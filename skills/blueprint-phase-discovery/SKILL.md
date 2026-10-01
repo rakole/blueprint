@@ -36,7 +36,7 @@ input_bundles:
 
 Load only the active command input bundle; never preload sibling references. The
 active runtime contract owns orchestration and its MCP allowlist. Translate any shorthand tool ids like `blueprint_project_status` to runtime FQNs such as
-`mcp_blueprint_blueprint_project_status`. Treat Blueprint skills as loaded guidance, not callable tools.
+`blueprint_blueprint_project_status`. Treat Blueprint skills as loaded guidance, not callable tools.
 Never run `/blu-*` in the shell.
 
 Persistent state is MCP-owned. Commands stay phase-scoped and never mutate source,

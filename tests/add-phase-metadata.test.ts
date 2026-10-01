@@ -22,10 +22,10 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   );
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_add_phase/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_add_phase/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_scaffold/);
+  assert.match(commandFile, /blueprint_blueprint_state_update/);
   assert.match(commandFile, /exact next integer phase number/i);
   assert.match(commandFile, /Before any mutation, show a preview packet that includes `expectedPhaseNumber`, description/i);
   assert.match(commandFile, /source warnings/i);
@@ -39,13 +39,13 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   assert.match(commandFile, /source refs/i);
   assert.match(commandFile, /open items for discuss-phase/i);
   assert.match(commandFile, /Do not author final `XX-CONTEXT\.md`/);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /expectedPhaseNumber/);
   assert.match(commandFile, /Treat the approved `phase-number-confirmation` gate as a named in-flight receipt/);
-  assert.match(commandFile, /bind the approved preview packet fields to the later `mcp_blueprint_blueprint_roadmap_add_phase` arguments/i);
+  assert.match(commandFile, /bind the approved preview packet fields to the later `blueprint_blueprint_roadmap_add_phase` arguments/i);
   assert.match(commandFile, /If the user declines, stop without writing/);
   assert.match(commandFile, /point to `\/blu-progress`/);
-  assert.match(commandFile, /do not mutate anything until the computed next phase number has been previewed and confirmed through `ask_user`/i);
+  assert.match(commandFile, /do not mutate anything until the computed next phase number has been previewed and confirmed through `question`/i);
   assert.match(commandFile, /phase-number-confirmation/);
   assert.match(commandFile, /stale-phase-number/);
   assert.match(commandFile, /successCriteriaCount/);
@@ -61,7 +61,7 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   assert.match(commandFile, /changed params or files/i);
   assert.match(commandFile, /undeclared `requirementIds`/i);
   assert.match(commandFile, /missing returned metadata/i);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools/);
   assert.match(commandFile, /if the tool rejects because the live next phase changed/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
   assert.match(commandFile, /prefer `\/blu-discuss-phase <phase>` over `\/blu-plan-phase` or `\/blu-execute-phase` shortcuts/);
@@ -126,7 +126,7 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
     skillFile,
     /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/
   );
-  assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(skillFile, /Do not use `todowrite` or tracker tools/i);
   assert.match(skillFile, /add-phase-runtime-contract\.md/);
   assert.doesNotMatch(skillFile, /- `docs\/commands\/add-phase\.md`/);
   assert.match(

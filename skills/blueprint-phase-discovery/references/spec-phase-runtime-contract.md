@@ -139,7 +139,7 @@ When six rounds finish without passing the gates:
 
 Throughout `--auto`:
 
-- never call `ask_user`
+- never call `question`
 - record auto-selected decisions in the Interview Log
 - record unresolved dimensions in the Ambiguity Report when any remain below
   minimum

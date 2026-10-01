@@ -8,85 +8,85 @@ const agentsDir = path.join(repoRoot, "agents");
 
 const EXPECTED_AGENTS = {
   "blueprint-checker": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 15,
     timeoutMins: 15
   },
   "blueprint-doc-verifier": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 24,
     timeoutMins: 23
   },
   "blueprint-debugger": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 27,
     timeoutMins: 30
   },
   "blueprint-doc-writer": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 24,
     timeoutMins: 23
   },
   "blueprint-executor": {
     tools: [
-      "list_directory",
-      "read_file",
+      "read",
       "glob",
-      "grep_search",
-      "replace",
-      "write_file",
-      "run_shell_command"
+      "grep",
+      "apply_patch",
+      "edit",
+      "write",
+      "bash"
     ],
     maxTurns: 30,
     timeoutMins: 30
   },
   "blueprint-mapper": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 24,
     timeoutMins: 23
   },
   "blueprint-planner": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 24,
     timeoutMins: 18
   },
   "blueprint-project-researcher": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 18,
     timeoutMins: 15
   },
   "blueprint-reviewer": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 24,
     timeoutMins: 23
   },
   "blueprint-researcher": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 27,
     timeoutMins: 23
   },
   "blueprint-roadmapper": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 18,
     timeoutMins: 15
   },
   "blueprint-security-auditor": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 24,
     timeoutMins: 23
   },
   "blueprint-ui-designer": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 21,
     timeoutMins: 18
   },
   "blueprint-ui-auditor": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 24,
     timeoutMins: 23
   },
   "blueprint-verifier": {
-    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    tools: ["read", "glob", "grep"],
     maxTurns: 24,
     timeoutMins: 23
   }
@@ -97,13 +97,13 @@ type AgentName = keyof typeof EXPECTED_AGENTS;
 type FrontmatterValue = string | string[];
 
 const VALID_BUILTIN_TOOLS = new Set([
-  "list_directory",
-  "read_file",
-  "write_file",
+  "apply_patch",
+  "read",
+  "write",
   "glob",
-  "grep_search",
-  "replace",
-  "run_shell_command"
+  "grep",
+  "edit",
+  "bash"
 ]);
 
 function extractFrontmatterBlock(content: string): { frontmatter: string; body: string } {
@@ -227,6 +227,16 @@ test("shipped Blueprint agents match the expected workstream-1 file set", async 
   );
 });
 
+test("expected OpenCode agent tool arrays are deduplicated", () => {
+  for (const [agentName, metadata] of Object.entries(EXPECTED_AGENTS)) {
+    assert.equal(
+      new Set(metadata.tools).size,
+      metadata.tools.length,
+      `${agentName} must not contain duplicate mapped tools`
+    );
+  }
+});
+
 test("every shipped Blueprint agent is a valid Gemini subagent definition with conservative routing metadata", async () => {
   for (const [agentName, expected] of Object.entries(EXPECTED_AGENTS) as Array<
     [AgentName, (typeof EXPECTED_AGENTS)[AgentName]]
@@ -270,16 +280,16 @@ test("every shipped Blueprint agent is a valid Gemini subagent definition with c
 
     if (agentName === "blueprint-executor") {
       assert.ok(
-        (frontmatter.tools as string[]).includes("replace"),
+        (frontmatter.tools as string[]).includes("edit"),
         "blueprint-executor must be able to edit existing files"
       );
       assert.ok(
-        (frontmatter.tools as string[]).includes("write_file"),
+        (frontmatter.tools as string[]).includes("write"),
         "blueprint-executor must be able to create files when a plan requires it"
       );
       assert.match(body, /## Parent-Owned Responsibilities/);
       assert.match(body, /user-facing orchestration and coordination/i);
-      assert.match(body, /`update_topic`,[\s\S]*`write_todos`, and `ask_user`/i);
+      assert.match(body, /visible progress prose,[\s\S]*`todowrite`, and `question`/i);
       assert.match(body, /## Progress Checkpoint Contract/);
       assert.match(body, /when scope is resolved/i);
       assert.match(body, /after each assigned plan or major task group/i);
@@ -306,22 +316,22 @@ test("every shipped Blueprint agent is a valid Gemini subagent definition with c
       agentName === "blueprint-doc-verifier"
     ) {
       assert.match(body, /## Parent-Owned Responsibilities/);
-      assert.match(body, /`update_topic`, `write_todos`, and `ask_user`/);
+      assert.match(body, /visible progress prose, `todowrite`, and `question`/);
       assert.match(body, /MCP-backed persistence step|MCP persistence|report persistence/i);
       assert.match(body, /final routing/i);
       assert.match(body, /read-only/i);
     }
 
     assert.ok(
-      !(frontmatter.tools as string[]).includes("replace"),
+      !(frontmatter.tools as string[]).includes("edit"),
       `${agentName} should remain read-only at the tool layer`
     );
     assert.ok(
-      !(frontmatter.tools as string[]).includes("write_file"),
+      !(frontmatter.tools as string[]).includes("write"),
       `${agentName} should remain read-only at the tool layer`
     );
     assert.ok(
-      !(frontmatter.tools as string[]).includes("run_shell_command"),
+      !(frontmatter.tools as string[]).includes("bash"),
       `${agentName} should stay off shell access unless the role truly executes work`
     );
   }

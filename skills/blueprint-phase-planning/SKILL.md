@@ -54,6 +54,6 @@ Completion Criteria and return its Downstream Execution Handoff.
 ## Runtime Call Rules
 
 Translate any shorthand tool ids like `blueprint_plan_submit` to runtime FQNs,
-such as `mcp_blueprint_blueprint_plan_submit`.
+such as `blueprint_blueprint_plan_submit`.
 Treat Blueprint skills as loaded guidance, not callable tools.
 Never run `/blu-*` in the shell.

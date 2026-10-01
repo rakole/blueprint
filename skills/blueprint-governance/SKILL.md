@@ -37,11 +37,11 @@ Handle config, profile, and health flows with explicit state inspection and conf
 
 ## Runtime Call Rules
 
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
-- for any interaction or confirmation required from user, make use of `ask_user`. Do not dump question / confirmation in plain text.
+- for any interaction or confirmation required from user, make use of `question`. Do not dump question / confirmation in plain text.
 
 ## Parity Goal
 
@@ -95,10 +95,10 @@ Load only the active command's structured `input_bundles.commands[...]` referenc
 Before claiming completion, verify:
 
 - The active `/blu-settings`, `/blu-set-profile`, `/blu-health`, `/blu-pause-work`, or `/blu-resume-work` reference from `input_bundles.commands[...]` was loaded and used as the authority; sibling governance references were not treated as active input.
-- Required MCP calls from the active reference ran in order through `mcp_blueprint_*` runtime FQNs, including any required post-write `project_status` or `state_load` reload before final routing.
+- Required MCP calls from the active reference ran in order through `blueprint_blueprint_*` runtime FQNs, including any required post-write `project_status` or `state_load` reload before final routing.
 - Persistence, when allowed, happened only through the owning MCP tools: config writes through `config_set` or `config_set_profile`, health repair through `config_set` or `state_sync`, pause through `pause_handoff_write` then `state_update`, and resume through `state_update` only.
 - Returned MCP fields were treated as authoritative evidence: `status`, `configPath`, `path`, `handoff`, `updatedKeys`, validation issues, `suggestedRepairs`, warnings, blockers, and reasons determined success, no-write status, or stoppage.
-- Any required `ask_user` confirmation was satisfied before broad resets, saved-defaults writes, `health --repair` writes, or pause handoff replacement; without confirmation, the command reported a no-write result.
+- Any required `question` confirmation was satisfied before broad resets, saved-defaults writes, `health --repair` writes, or pause handoff replacement; without confirmation, the command reported a no-write result.
 - Validation failures, tool rejections, partial or uninitialized project status, missing config or handoff, skipped repairs, and blockers were repaired only through the active contract's MCP path or reported honestly, not described as successful completion.
 - The command stayed inside its write boundary: no direct `.blueprint/` edits, no roadmap, phase, code, runtime, installed-extension, hidden-state, or planned-only surface mutations, and no defaults write except `/blu-settings` explicit opt-in.
 - Final routing named only implemented Blueprint commands; use `/blu-progress` when the safe next action is ambiguous, read-only, or not implemented.

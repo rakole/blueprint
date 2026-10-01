@@ -63,7 +63,7 @@ test("planner and checker remain bounded read-only workers with reviewed model o
     const block = /^tools:\n((?:  - .+\n)+)/m.exec(frontmatter)?.[1];
     assert.ok(block);
     assert.deepEqual(block.trim().split("\n").map(line => line.replace(/^\s*-\s*/, "")),
-      ["list_directory", "read_file", "glob", "grep_search"]);
+      ["read", "glob", "grep"]);
     assert.match(source, /parent command owns/i);
     assert.match(source, /revision/);
     assert.doesNotMatch(source, /blueprint_phase_plan_write/);

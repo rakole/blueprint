@@ -36,7 +36,7 @@ Provide implementation-aware routing and next-step guidance without widening rec
 
 ## Runtime Call Rules
 
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
@@ -58,15 +58,15 @@ Runtime input resolution is structured and command-scoped through the `input_bun
 
 ## Required MCP Tools
 
-- `mcp_blueprint_blueprint_command_catalog`
-- `mcp_blueprint_blueprint_project_status`
-- `mcp_blueprint_blueprint_config_get`
-- `mcp_blueprint_blueprint_state_load`
-- `mcp_blueprint_blueprint_artifact_list`
+- `blueprint_blueprint_command_catalog`
+- `blueprint_blueprint_project_status`
+- `blueprint_blueprint_config_get`
+- `blueprint_blueprint_state_load`
+- `blueprint_blueprint_artifact_list`
 
 ## Routing Rules
 
-1. Read `mcp_blueprint_blueprint_command_catalog` first.
+1. Read `blueprint_blueprint_command_catalog` first.
 2. Treat `implemented: true` as the only routable command state.
 3. Never route to commands whose status is `planned`, `blocked`, or `repairing`.
 4. If the user asks for a blocked or planned command, explain the `blockedBy` reasons and recommend the nearest implemented prerequisite.
@@ -107,7 +107,7 @@ Runtime input resolution is structured and command-scoped through the `input_bun
 Before claiming completion, verify:
 
 - The active router input was only the current command (`/blu`, `/blu-help`, `/blu-progress`, or `/blu-next`); sibling manifests/docs and the planned `/blu-do` taxonomy did not add active reads, writes, agents, or routable commands.
-- The active command's manifest/runtime contract was loaded, and the required MCP read set used runtime FQNs: `/blu-help` -> `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_project_status`; `/blu-progress` -> `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_command_catalog`; `/blu-next` -> `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_command_catalog`; `/blu` -> `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_project_status`, plus `mcp_blueprint_blueprint_config_get` only when config affects routing.
+- The active command's manifest/runtime contract was loaded, and the required MCP read set used runtime FQNs: `/blu-help` -> `blueprint_blueprint_command_catalog`, `blueprint_blueprint_project_status`; `/blu-progress` -> `blueprint_blueprint_project_status`, `blueprint_blueprint_config_get`, `blueprint_blueprint_state_load`, `blueprint_blueprint_artifact_list`, `blueprint_blueprint_command_catalog`; `/blu-next` -> `blueprint_blueprint_project_status`, `blueprint_blueprint_config_get`, `blueprint_blueprint_state_load`, `blueprint_blueprint_artifact_list`, `blueprint_blueprint_command_catalog`; `/blu` -> `blueprint_blueprint_command_catalog`, `blueprint_blueprint_project_status`, plus `blueprint_blueprint_config_get` only when config affects routing.
 - `/blu-next` kept post-UAT quality routing config-aware: `workflow.code_review=false` never makes `/blu-secure-phase <phase>` mandatory regardless of `workflow.secure_phase`; `workflow.code_review=true` with `workflow.secure_phase=false` may route to mandatory code review but not secure-phase; `workflow.code_review=true` with `workflow.secure_phase=true` routes `/blu-code-review <phase>` before `/blu-secure-phase <phase>`.
 - Every recommendation was checked against the live catalog result with `implemented: true`; planned, blocked, or repairing commands were described with `status`/`blockedBy`, `/blu-do` remained non-runnable, and `/blu-spec-phase <phase>` was only recommended for the spec-first or stale-spec cases above.
 - Project status, config warnings, state, artifacts, blockers, `derivedStatus`, `nextAction`, `missing`, `reason`, and source/path fields from MCP results were treated as authoritative; missing or rejected reads were repaired or reported as blockers.

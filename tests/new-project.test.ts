@@ -2176,8 +2176,8 @@ test("command contract references the same Phase 1 tool names as the MCP server"
 
   assert.match(commandFile, /--auto/);
   assert.match(skillFile, /\.blueprint\/config\.json/);
-  assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_/);
-  assert.match(guardrailsRef, /mcp_blueprint_blueprint_project_init/);
+  assert.doesNotMatch(commandFile, /blueprint_blueprint_/);
+  assert.match(guardrailsRef, /blueprint_blueprint_project_init/);
   assert.match(guardrailsRef, /Blueprint MCP server is disconnected or undiscovered/i);
   assert.match(guardrailsRef, /Never try to invoke Blueprint MCP tools through shell/i);
   assert.match(skillFile, /bootstrapModel/);

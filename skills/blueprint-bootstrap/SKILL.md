@@ -12,7 +12,7 @@ input_bundles:
 # Blueprint Bootstrap
 
 Use `references/bootstrap-runtime-contract.md` as the active contract.
-Start with `mcp_blueprint_blueprint_project_prepare`; it returns readiness, config,
+Start with `blueprint_blueprint_project_prepare`; it returns readiness, config,
 repo summary and the small authoring schema. Do not separately fetch artifact
 contracts, config or status when prepare already supplied them.
 
@@ -36,17 +36,17 @@ Never hand-edit `.blueprint/`.
 ## Runtime Call Rules
 
 Translate any shorthand tool ids like `blueprint_project_status` to runtime FQNs
-such as `mcp_blueprint_blueprint_project_status` before calling them.
+such as `blueprint_blueprint_project_status` before calling them.
 Treat Blueprint skills as loaded guidance, not callable tools.
 Never run `/blu-*` in the shell.
 Never invoke MCP tools through shell wrappers or ad-hoc SDK scripts.
 
 Normal tools:
-- `mcp_blueprint_blueprint_project_prepare`
-- `mcp_blueprint_blueprint_project_init`
-- `mcp_blueprint_blueprint_artifact_validate`
-- `mcp_blueprint_blueprint_project_status`
-- `mcp_blueprint_blueprint_config_set` only for approved preference changes
+- `blueprint_blueprint_project_prepare`
+- `blueprint_blueprint_project_init`
+- `blueprint_blueprint_artifact_validate`
+- `blueprint_blueprint_project_status`
+- `blueprint_blueprint_config_set` only for approved preference changes
 
 Load `references/questioning.md` only when discovery is difficult, and
 `references/runtime-guardrails.md` only for recovery or unfamiliar host behavior.

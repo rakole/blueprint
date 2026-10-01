@@ -195,6 +195,11 @@ test("update tools register the advisory check plus mutating plan entries", () =
     blueprintToolRegistry.blueprint_update_plan.inputSchema.mode.safeParse("manual").success,
     true
   );
+  assert.equal(
+    blueprintToolRegistry.blueprint_update_plan.inputSchema.mode.safeParse("question").success,
+    false,
+    "OpenCode question naming must not rename the persisted ask_user mode enum"
+  );
 });
 
 test("blueprint_update_check returns advisory manual fallback metadata when remote lookup is unavailable", async (t) => {
@@ -379,8 +384,8 @@ test("blueprint_update_plan defaults checklist mode to the active host", async (
   const tabnineChecklist = await fs.readFile(tabnineResult.savedPaths.checklistPath, "utf8");
 
   assert.equal(tabnineResult.mode, "manual");
-  assert.doesNotMatch(tabnineChecklist, /Use Gemini CLI `ask_user`/i);
-  assert.match(tabnineChecklist, /structured `ask_user` is unavailable or not desired/i);
+  assert.doesNotMatch(tabnineChecklist, /Use OpenCode `question`/i);
+  assert.match(tabnineChecklist, /structured question is unavailable or not desired/i);
 
   const geminiHome = path.join(tempRoot, "gemini-home");
   const geminiExtensionPath = await createExtensionFixture(path.join(tempRoot, "gemini"), "gemini");
@@ -397,7 +402,7 @@ test("blueprint_update_plan defaults checklist mode to the active host", async (
   const geminiChecklist = await fs.readFile(geminiResult.savedPaths.checklistPath, "utf8");
 
   assert.equal(geminiResult.mode, "ask_user");
-  assert.match(geminiChecklist, /Use Gemini CLI `ask_user`/i);
+  assert.match(geminiChecklist, /Use OpenCode `question`/i);
 });
 
 test("blueprint_update_plan preserves the full modes of both existing artifacts", async (t) => {

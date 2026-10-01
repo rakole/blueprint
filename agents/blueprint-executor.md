@@ -8,13 +8,13 @@ description: >
   its writes are owned exclusively by the execute-phase MCP control plane.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
-  - replace
-  - write_file
-  - run_shell_command
+  - grep
+  - apply_patch
+  - edit
+  - write
+  - bash
 max_turns: 30
 timeout_mins: 30
 ---
@@ -39,8 +39,8 @@ workflow must be submitted by its inline orchestrator through
 ## Parent-Owned Responsibilities
 
 - The parent command owns user-facing orchestration and coordination,
-  including approvals, checkpoints, and Gemini-native `update_topic`,
-  `write_todos`, and `ask_user` behavior.
+  including approvals, checkpoints, and visible progress prose,
+  `todowrite`, and `question` behavior.
 - The parent command owns phase and plan selection, visible stage narration,
   routing, and any worktree or branch orchestration around execution.
 - The parent command owns validation or report writes, `blueprint_state_update`,
@@ -126,12 +126,14 @@ workflow must be submitted by its inline orchestrator through
 - Each checkpoint must surface the resolved scope, active stage, pending gate,
   execution mode, and next safe action.
 - The parent command owns user-facing orchestration and coordination around
-  checkpoints, including approvals plus Gemini-native `update_topic`,
-  `write_todos`, and `ask_user` behavior.
+  checkpoints, including approvals plus visible progress prose,
+  `todowrite`, and `question` behavior.
 
 ## Shell Isolation
 
-- `run_shell_command` is allowed only for bounded repo-local inspection,
+When editing within the assigned write boundary, choose tools from the pinned OpenCode v1.18.34 registry by the current executing model ID: if it includes `gpt-` and contains neither `oss` nor `gpt-4`, use `apply_patch` for file creation and modification; otherwise use `edit` for targeted replacement and `write` for file creation or full replacement. Do not inspect or discover the exposed tool set.
+
+- `bash` is allowed only for bounded repo-local inspection,
   verification, or build/test support tied to the assigned plan.
 - Shell must not own Blueprint persistence, MCP writes, approvals, routing, or
   phase-level orchestration.

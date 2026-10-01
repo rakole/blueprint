@@ -19,14 +19,14 @@ test("add-backlog manifest uses runtime skill and capture MCP identities", async
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_scaffold/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /\/blu-new-project/);
   assert.match(commandFile, /status: "duplicate"/);
   assert.match(commandFile, /999\.x/);
   assert.match(commandFile, /\/blu-add-phase/);
-  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools/);
 });
 
 test("blueprint-capture skill captures backlog parking-lot behavior", async () => {
@@ -42,7 +42,7 @@ test("blueprint-capture skill captures backlog parking-lot behavior", async () =
   assert.match(skillFile, /blueprint_artifact_mutate_index/);
   assert.match(skillFile, /blueprint_artifact_scaffold/);
   assert.match(skillFile, /reserve a `999\.x` phase stub/i);
-  assert.match(skillFile, /Prefer Gemini's `ask_user` tool when a structured confirmation helps/);
+  assert.match(skillFile, /Prefer OpenCode `question` when a structured confirmation helps/);
   assert.match(skillFile, /implemented commands only/i);
 });
 

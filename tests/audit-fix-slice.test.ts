@@ -41,10 +41,10 @@ test("audit-fix runtime metadata, manifest, and local contract stay source-owned
   assert.match(commandFile, /--max <N>/);
   assert.match(commandFile, /--dry-run/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
-  assert.match(commandFile, /`ask_user`/);
+  assert.match(commandFile, /`question`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
-  assert.match(commandFile, /`update_topic` tool/);
-  assert.match(commandFile, /`write_todos`/);
+  assert.match(commandFile, /concise progress prose/);
+  assert.match(commandFile, /`todowrite`/);
   assert.match(commandFile, /tracker-eligible/i);
   assert.match(commandFile, /blueprint-fixer` as planned-only inventory/i);
   assert.match(skillFile, /Execution profile for `audit-fix`: `long-running-mutation`/);

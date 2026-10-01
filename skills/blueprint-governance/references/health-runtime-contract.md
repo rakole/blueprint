@@ -7,28 +7,28 @@ Diagnose Blueprint project health, config provenance, state consistency, and art
 ## Required MCP Call Order
 
 1. Detect whether the user passed `--repair`.
-2. Call `mcp_blueprint_blueprint_project_status`.
-3. Call `mcp_blueprint_blueprint_config_get` with the effective scope so config warnings and provenance are visible.
-4. Call `mcp_blueprint_blueprint_state_load`.
-5. Call `mcp_blueprint_blueprint_artifact_list`.
-6. Call `mcp_blueprint_blueprint_artifact_validate`.
+2. Call `blueprint_blueprint_project_status`.
+3. Call `blueprint_blueprint_config_get` with the effective scope so config warnings and provenance are visible.
+4. Call `blueprint_blueprint_state_load`.
+5. Call `blueprint_blueprint_artifact_list`.
+6. Call `blueprint_blueprint_artifact_validate`.
 7. In read-only mode, stop after reporting diagnosis and exact repair options.
-8. In `--repair` mode, get explicit confirmation with `ask_user` after presenting an exact write preview.
-9. After confirmation, call `mcp_blueprint_blueprint_config_set` only when config normalization is required, passing `repairMalformedProjectConfig: true` only for malformed project-config replacement.
-10. After confirmation, call `mcp_blueprint_blueprint_state_sync` only when state reconstruction is required.
-11. Re-read `mcp_blueprint_blueprint_project_status` when a post-repair next action is needed.
+8. In `--repair` mode, get explicit confirmation with `question` after presenting an exact write preview.
+9. After confirmation, call `blueprint_blueprint_config_set` only when config normalization is required, passing `repairMalformedProjectConfig: true` only for malformed project-config replacement.
+10. After confirmation, call `blueprint_blueprint_state_sync` only when state reconstruction is required.
+11. Re-read `blueprint_blueprint_project_status` when a post-repair next action is needed.
 
 ## Confirmation Gates
 
 - `--repair` never implies silent writes.
-- Before any repair write, present the exact config and/or state changes that will be written and require an explicit `ask_user` confirmation.
+- Before any repair write, present the exact config and/or state changes that will be written and require an explicit `question` confirmation.
 
 ## Write Boundaries
 
 - Read-only mode performs no writes.
-- Config repair uses `mcp_blueprint_blueprint_config_set` with `scope: "project"` and a JSON-object `patch` only for normalization.
+- Config repair uses `blueprint_blueprint_config_set` with `scope: "project"` and a JSON-object `patch` only for normalization.
 - Malformed `.blueprint/config.json` repair additionally passes `repairMalformedProjectConfig: true`; ordinary settings writes must not use that repair flag.
-- State repair uses `mcp_blueprint_blueprint_state_sync` only for reconstruction.
+- State repair uses `blueprint_blueprint_state_sync` only for reconstruction.
 - Do not mutate unrelated repo files.
 
 ## Routing And Completion Criteria
@@ -38,7 +38,7 @@ Diagnose Blueprint project health, config provenance, state consistency, and art
 
 ## Anti-Patterns
 
-- Do not write without `ask_user` confirmation in repair mode.
+- Do not write without `question` confirmation in repair mode.
 - Do not repair by direct file edits.
 - Do not use config repair for non-normalization changes.
 - Do not use state sync for anything other than reconstruction.

@@ -6,10 +6,9 @@ description: >
   dependency tradeoffs, and discuss-phase gray-area options memos.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
+  - grep
 max_turns: 27
 timeout_mins: 23
 ---
@@ -83,7 +82,7 @@ relevant and supported; mark missing checks `unchecked`.
 Return a lightweight memo scoped to exactly one gray area or assumptions pass, with
 options, tradeoffs, complexity/impact, recommendation rationale, confidence, cited
 repo paths or supplied references and open questions. Help the parent form an
-`ask_user` choice, assumptions correction or `phase.context` decision. Do not emit a
+`question` choice, assumptions correction or `phase.context` decision. Do not emit a
 populated `phase.research`, canonical research headings, persistence instructions or
 final artifact wording.
 

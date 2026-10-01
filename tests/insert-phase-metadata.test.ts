@@ -25,10 +25,10 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /insert-phase-runtime-contract\.md/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_insert_phase/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_insert_phase/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_scaffold/);
+  assert.match(commandFile, /blueprint_blueprint_state_update/);
   assert.match(commandFile, /roadmapEvolutionNotes/);
   assert.match(commandFile, /confirmed integer phase number/);
   assert.match(commandFile, /next decimal candidate/i);
@@ -43,9 +43,9 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /open risks and dependency questions/i);
   assert.match(commandFile, /confirmed durable IDs from `\.blueprint\/REQUIREMENTS\.md` in `requirementIds`/);
   assert.match(commandFile, /Do not accept `none yet`, placeholder text, blank values, or undeclared requirement mappings/);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /Treat the approved `phase-insert-confirmation` gate as a named in-flight receipt/);
-  assert.match(commandFile, /bind the approved preview packet fields to the later `mcp_blueprint_blueprint_roadmap_insert_phase` arguments/i);
+  assert.match(commandFile, /bind the approved preview packet fields to the later `blueprint_blueprint_roadmap_insert_phase` arguments/i);
   assert.match(commandFile, /If the user declines, stop without writing/);
   assert.match(commandFile, /point to `\/blu-progress`/);
   assert.match(commandFile, /phase-insert-confirmation/);
@@ -66,7 +66,7 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /declared-ID failures?/i);
   assert.match(commandFile, /already-mapped IDs/i);
   assert.match(commandFile, /dependency-review warnings?/i);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools/);
   assert.match(commandFile, /Do not accept decimal insertion targets/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
   assert.match(commandFile, /prefer `\/blu-discuss-phase <phase>` over `\/blu-plan-phase` or `\/blu-execute-phase` shortcuts/);
@@ -89,7 +89,7 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
     "roadmap-driven",
     "conflicting decimal directory",
     "roadmapEvolutionNotes",
-    "ask_user",
+    "question",
     "compact starter handoff",
     "open risks plus dependency questions",
     "requirementMappingStatus",
@@ -103,7 +103,7 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
   ]);
   assert.match(skillFile, /reject decimal targets/i);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
-  assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(skillFile, /Do not use `todowrite` or tracker tools/i);
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);
   assert.match(skillFile, /There is no insert-phase subagent path/);
@@ -143,10 +143,10 @@ test("insert-phase runtime contract locks stage mapping, fallback, repair, and c
     assert.match(contract, new RegExp(heading));
   }
 
-  assert.match(contract, /mcp_blueprint_blueprint_roadmap_read/);
-  assert.match(contract, /mcp_blueprint_blueprint_roadmap_insert_phase/);
-  assert.match(contract, /mcp_blueprint_blueprint_artifact_scaffold/);
-  assert.match(contract, /mcp_blueprint_blueprint_state_update/);
+  assert.match(contract, /blueprint_blueprint_roadmap_read/);
+  assert.match(contract, /blueprint_blueprint_roadmap_insert_phase/);
+  assert.match(contract, /blueprint_blueprint_artifact_scaffold/);
+  assert.match(contract, /blueprint_blueprint_state_update/);
   assert.match(contract, /at least one confirmed durable requirement ID declared in\s*`\.blueprint\/REQUIREMENTS\.md`/);
   assert.match(contract, /Do not accept `none yet`, placeholder text, blank values, or IDs that are not\s*declared in `\.blueprint\/REQUIREMENTS\.md`/);
   assert.match(contract, /already mapped to another roadmap phase/);

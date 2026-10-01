@@ -62,15 +62,15 @@ or regeneration.
 - Hidden `/blu-code-review --feels-like-god` orchestration is private and
   one-group-at-a-time:
   1. Start fresh hidden review state with
-     `mcp_blueprint_blueprint_god_review_start`, or continue saved hidden state
-     with `mcp_blueprint_blueprint_god_review_next` when the invocation
+     `blueprint_blueprint_god_review_start`, or continue saved hidden state
+     with `blueprint_blueprint_god_review_next` when the invocation
      supplies `--continue`, `--run-id`, or `--session`.
   2. Treat the returned `files`, `scopeFingerprint`, `nextGroup`,
      `nextGroupId`, and `nextCommand` as authoritative. Do not rediscover or
      widen scope from normal review tools, git drift, chat memory, or
      `.blueprint/STATE.md`.
   3. Review exactly one returned pending group per invocation, then persist
-     that group with `mcp_blueprint_blueprint_god_review_append`. Pass one
+     that group with `blueprint_blueprint_god_review_append`. Pass one
      `groupId`, one terminal group `status`, and that group's findings only.
   4. End with the exact returned continuation command when more groups remain.
      When no pending group remains or the session is blocked, load
@@ -82,7 +82,7 @@ or regeneration.
 - Hidden `/blu-code-review-fix --feels-like-god` selection is private and
   no-edit-on-stale:
   1. After the activation guard passes, call
-     `mcp_blueprint_blueprint_god_review_load_findings` before source edits.
+     `blueprint_blueprint_god_review_load_findings` before source edits.
      Pass active command, raw invocation, and any supplied `--run-id`,
      `--session`, `--finding`, `--severity`, or `--all` selector.
   2. Treat the returned `selection.status`, `selection.targets`,
@@ -100,7 +100,7 @@ or regeneration.
      make bounded source edits only for the returned target ids, and run
      focused verification.
   6. After each selected finding attempt, call
-     `mcp_blueprint_blueprint_god_review_record_fix` exactly once for that
+     `blueprint_blueprint_god_review_record_fix` exactly once for that
      finding. Record the exact `findingId`, `status`, `selectedBy`, changed
      files, verification, evidence, and follow-up. Use `fixed` only for real
      code edits; use `stale`, `skipped`, `deferred`, or `blocked` for no-edit
@@ -108,7 +108,7 @@ or regeneration.
   7. Set the record call's `terminal` flag only when the hidden fix pass has
      reached a terminal result for the run.
   8. When hidden review and hidden fix are both terminal, use
-     `mcp_blueprint_blueprint_god_review_cleanup` only for private temporary
+     `blueprint_blueprint_god_review_cleanup` only for private temporary
      state cleanup. For a no-op hidden fix pass with no eligible findings, pass
      `noEligibleFindingsTerminal: true` only after `selection.status` is
      `empty`. Cleanup may delete only the hidden session JSON and
@@ -116,7 +116,7 @@ or regeneration.
      remediation log plus all normal Blueprint review, review-fix, state, and
      quality-gate artifacts.
 - Call Blueprint MCP tools only through runtime FQNs such as
-  `mcp_blueprint_blueprint_project_status`.
+  `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older
   Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke

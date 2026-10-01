@@ -204,7 +204,7 @@ test("ui-phase command references registered tools and single-artifact UI handli
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/
   );
-  assert.match(commandFile, /`ask_user`/);
+  assert.match(commandFile, /`question`/);
   assert.match(commandFile, /artifactId: "phase\.ui-spec"/);
   assert.match(commandFile, /authoringTemplate/);
   assert.match(commandFile, /ui-phase-runtime-contract\.md/);
@@ -319,18 +319,18 @@ test("ui-phase command references registered tools and single-artifact UI handli
   );
   assert.match(
     runtimeContract,
-    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, designer\/checker\s+authority, contract-versus-skip authority, state-sync authority, routing\s+authority, or user confirmation authority/i
+    /OpenCode progress guidance are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, designer\/checker\s+authority, contract-versus-skip authority, state-sync authority, routing\s+authority, or user confirmation authority/i
   );
   assert.match(
     runtimeContract,
     /Emit exceptional updates for\s+phase ambiguity, contract-versus-skip waits, UI-safety rationale waits,\s+overwrite waits/i
   );
   assert.match(runtimeContract, /## Shared Stage Mapping/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_ui_skip_write/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_state_load/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_command_catalog/);
+  assert.match(runtimeContract, /blueprint_blueprint_phase_locate/);
+  assert.match(runtimeContract, /blueprint_blueprint_phase_ui_skip_write/);
+  assert.match(runtimeContract, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(runtimeContract, /blueprint_blueprint_state_load/);
+  assert.match(runtimeContract, /blueprint_blueprint_command_catalog/);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
   assert.match(runtimeContract, /do not call artifact_contract_read/i);
   assert.match(runtimeContract, /XX-CONTEXT\.md/);

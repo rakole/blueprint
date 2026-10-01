@@ -19,7 +19,7 @@ Exclude dependency trees, generated build output, unrelated docs, and Blueprint
 runtime state from source analysis. Inventory is for path selection, not a
 request to read every file.
 
-For ordinary output, call `mcp_blueprint_blueprint_map_prepare` with those
+For ordinary output, call `blueprint_blueprint_map_prepare` with those
 repo-relative `inputs` and optional `focus` before reading their content or
 generating documents. Prepare hashes the selected evidence and target bundle. Its
 opaque legacy `snapshot` is a runtime receipt: return it unchanged, never
@@ -78,7 +78,7 @@ edit Blueprint documents: there is no heavily-edited classification or routine
 reuse-versus-refresh gate. Explicit refresh/replacement authorizes `overwrite:
 true`; ask only if replacement of populated documents is not already authorized.
 
-The parent calls `mcp_blueprint_blueprint_map_submit` once. Ordinary submission
+The parent calls `blueprint_blueprint_map_submit` once. Ordinary submission
 passes the unchanged `snapshot` and authored documents; portable submission passes
 `formatVersion: 1`, the same `operationId` and `intent`, and the complete model.
 There are exactly two MCP tools and one finalizer. All new and reused documents,

@@ -9,8 +9,8 @@ or synthesis quality work.
 
 ## Contract Authority
 
-- `mcp_blueprint_blueprint_artifact_contract_read` and
-  `mcp_blueprint_blueprint_review_authoring_context` are the schema authority
+- `blueprint_blueprint_artifact_contract_read` and
+  `blueprint_blueprint_review_authoring_context` are the schema authority
   for `review.peer-review`.
 - The returned `contract.modelContract`, base schema, runtime-narrowed
   `taskSchema`, required headings, and locked markers are the canonical shape
@@ -30,7 +30,7 @@ Map `/blu-review` to the shared stages:
 
 ### Resolve
 
-- Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`.
+- Resolve the target phase with `blueprint_blueprint_phase_locate`.
 - Parse explicit reviewer flags: `--gemini`, `--claude`, `--codex`,
   `--opencode`, and `--all`.
 - If no phase resolves, stop with the tool reason and useful recovery guidance.
@@ -39,18 +39,18 @@ Map `/blu-review` to the shared stages:
 
 ### Read
 
-- Read the artifact inventory with `mcp_blueprint_blueprint_artifact_list`.
+- Read the artifact inventory with `blueprint_blueprint_artifact_list`.
 - Read `review.peer-review` with
-  `mcp_blueprint_blueprint_artifact_contract_read` before drafting,
+  `blueprint_blueprint_artifact_contract_read` before drafting,
   validating, or repairing the peer-review artifact.
-- Read `mcp_blueprint_blueprint_review_authoring_context` with
+- Read `blueprint_blueprint_review_authoring_context` with
   `artifact: "peer-review"` so selected plans, saved evidence coverage, pending
   plan state, and status-safe next actions are narrowed before model drafting.
-- Read `mcp_blueprint_blueprint_phase_plan_index` for the resolved phase.
+- Read `blueprint_blueprint_phase_plan_index` for the resolved phase.
 - If no saved `*-PLAN.md` artifacts exist, stop and route to
   `/blu-plan-phase <phase>`.
 - Read every selected saved plan with
-  `mcp_blueprint_blueprint_phase_plan_read`.
+  `blueprint_blueprint_phase_plan_read`.
 - Include directly related saved evidence from the artifact inventory when it
   exists: phase context, research, summaries, validation, UAT, security,
   prior peer review, or code review. If the artifact inventory only exposes
@@ -95,8 +95,8 @@ Map `/blu-review` to the shared stages:
 
 - Author a structured `review.peer-review` JSON model against the narrowed
   task schema, then validate it through
-  `mcp_blueprint_blueprint_review_validate_model`.
-- Persist only through `mcp_blueprint_blueprint_review_record` with numeric
+  `blueprint_blueprint_review_validate_model`.
+- Persist only through `blueprint_blueprint_review_record` with numeric
   `phase`, `artifact: "peer-review"`, and the same validated structured model.
 - Treat the returned `reportPath`, `counts`, `followUps`, `status`, and
   `warnings` as authoritative.
@@ -136,33 +136,33 @@ Map `/blu-review` to the shared stages:
 
 Call these tools in this order unless the command must stop early:
 
-1. `mcp_blueprint_blueprint_phase_locate`
+1. `blueprint_blueprint_phase_locate`
    - Controls target phase, phase directory, phase prefix, and missing-phase
      recovery.
-2. `mcp_blueprint_blueprint_artifact_list`
+2. `blueprint_blueprint_artifact_list`
    - Controls saved-evidence inventory, existing peer-review state, and
      related artifact posture.
-3. `mcp_blueprint_blueprint_artifact_contract_read` for `review.peer-review`
+3. `blueprint_blueprint_artifact_contract_read` for `review.peer-review`
    - Controls required headings, locked markers, authoring template, and repair
      target.
-4. `mcp_blueprint_blueprint_phase_plan_index`
+4. `blueprint_blueprint_phase_plan_index`
    - Controls the saved plan list, wave grouping, missing-plan recovery, and
      whether review can proceed.
-5. `mcp_blueprint_blueprint_phase_plan_read`
+5. `blueprint_blueprint_phase_plan_read`
    - Controls each selected plan body and plan validation metadata.
-6. `mcp_blueprint_blueprint_phase_summary_index`
+6. `blueprint_blueprint_phase_summary_index`
    - Controls pending-plan state and post-review routing.
-7. `mcp_blueprint_blueprint_phase_summary_read`
+7. `blueprint_blueprint_phase_summary_read`
    - Controls saved summary evidence when summaries exist.
-8. `mcp_blueprint_blueprint_phase_execution_targets`
+8. `blueprint_blueprint_phase_execution_targets`
    - Controls pending execution target and blocker visibility.
-9. `mcp_blueprint_blueprint_review_authoring_context`
+9. `blueprint_blueprint_review_authoring_context`
    - Controls the base schema, runtime-narrowed task schema, selected plan
      inventory, evidence coverage keys, and status-safe next actions.
-10. `mcp_blueprint_blueprint_review_validate_model`
+10. `blueprint_blueprint_review_validate_model`
    - Controls schema, residual, and rendered Markdown validation before
      persistence.
-11. `mcp_blueprint_blueprint_review_record`
+11. `blueprint_blueprint_review_record`
    - Controls the final filename, create/update/reuse status, counts,
      follow-ups, warnings, and validation failures.
 

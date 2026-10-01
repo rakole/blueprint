@@ -342,7 +342,7 @@ async function assertCleanupContractInvariants(): Promise<void> {
   );
   assert.match(
     command,
-    /Call `mcp_blueprint_blueprint_cleanup_archive` in `mode: "preview"`[\s\S]*call `mcp_blueprint_blueprint_cleanup_archive` in `mode: "commit"`/
+    /Call `blueprint_blueprint_cleanup_archive` in `mode: "preview"`[\s\S]*call `blueprint_blueprint_cleanup_archive` in `mode: "commit"`/
   );
   assert.match(
     skill,

@@ -65,7 +65,7 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
 ## Runtime Call Rules
 
 - Call Blueprint MCP tools only through runtime FQNs such as
-  `mcp_blueprint_blueprint_project_status`.
+  `blueprint_blueprint_project_status`.
 - Translate shorthand tool ids from older docs into runtime FQNs before
   calling them.
 - Translate any shorthand tool ids like `blueprint_project_status` into runtime
@@ -73,8 +73,8 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
 - Treat Blueprint skills as loaded guidance, not callable tools.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI
   entrypoints, not shell executables.
-- Prefer  `ask_user` tool for focused confirmations and
-  branch choices. When the host does not expose `ask_user`, ask the same
+- Prefer  `question` tool for focused confirmations and
+  branch choices. When the host does not expose `question`, ask the same
   focused question in prose instead of inventing a replacement tool.
 - `/blu-execute-phase` and non-trivial `/blu-quick` runs use the shared
   `long-running-mutation` posture from
@@ -273,7 +273,7 @@ no subagents, no tracker or visible todo layer, optional state refresh only in
 initialized projects, and no quick-run report persistence.
 
 - Execution profile: `interactive-read`.
-- `/blu-fast` explicitly excludes `update_topic`, `write_todos`, and tracker
+- `/blu-fast` explicitly excludes `todowrite` and tracker
   tools; finish the run inline or reroute.
 - Start from `blueprint_lightweight_preflight`, keep the ask genuinely small,
   keep the common path to preflight plus optional `blueprint_state_update`
@@ -304,8 +304,8 @@ runtime contract support the result:
   runtime FQNs; no `/blu-*` command ran in the shell and no shorthand tool id
   was treated as callable.
 - Persistence used only the owning MCP tools: the four execute-phase control
-  tools for saved-plan execution, `mcp_blueprint_blueprint_artifact_report_write`
-  for the quick report, and `mcp_blueprint_blueprint_state_update` for fast or
+  tools for saved-plan execution, `blueprint_blueprint_artifact_report_write`
+  for the quick report, and `blueprint_blueprint_state_update` for fast or
   quick state refreshes.
 - Returned command-specific fields such as summary `path`, `linkedPlanPath`,
   report `path`, `written`, `overwritten`, state `statePath`,

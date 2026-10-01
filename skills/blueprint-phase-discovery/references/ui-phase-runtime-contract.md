@@ -7,7 +7,7 @@ deterministic state reads and writes.
 ## Visible UI Progress
 
 For non-trivial runs, keep progress visible through short boundary updates.
-Gemini-native progress helpers are presentation mirrors only. They do not
+OpenCode progress guidance are presentation mirrors only. They do not
 expand the MCP tool allowlist, persistence authority, designer/checker
 authority, contract-versus-skip authority, state-sync authority, routing
 authority, or user confirmation authority defined by this contract.
@@ -34,7 +34,7 @@ failure, route-refresh failure, and completion.
 
 ### Resolve
 
-- Resolve the phase with `mcp_blueprint_blueprint_phase_locate`.
+- Resolve the phase with `blueprint_blueprint_phase_locate`.
 - Keep the resolved scope visible as the selected phase, phase name, current
   research readiness, existing UI-spec posture, and config-driven
   contract-versus-skip mode.
@@ -43,25 +43,25 @@ failure, route-refresh failure, and completion.
 
 ### Read
 
-- Read `mcp_blueprint_blueprint_phase_research_status` to learn whether
+- Read `blueprint_blueprint_phase_research_status` to learn whether
   context, research, and UI spec artifacts exist.
-- Read `mcp_blueprint_blueprint_state_load` when you need the current
+- Read `blueprint_blueprint_state_load` when you need the current
   MCP-derived routing posture before or after persistence; the final next safe
   action must come from refreshed state, not a hand-built guess.
-- Read `mcp_blueprint_blueprint_command_catalog` whenever the final route needs
+- Read `blueprint_blueprint_command_catalog` whenever the final route needs
   an explicit implemented-only check beyond the loaded state's derived next
   action.
-- Read `mcp_blueprint_blueprint_config_get` with effective scope before
+- Read `blueprint_blueprint_config_get` with effective scope before
   deciding whether to draft a UI contract or an explicit skip rationale.
 - Read the existing `XX-UI-SPEC.md` through
-  `mcp_blueprint_blueprint_phase_artifact_read` before proposing replacement.
-- Read `mcp_blueprint_blueprint_artifact_contract_read` with
+  `blueprint_blueprint_phase_artifact_read` before proposing replacement.
+- Read `blueprint_blueprint_artifact_contract_read` with
   `artifactId: "phase.ui-spec"` only after you have decided the run is in real
   UI-contract mode. Treat `contract.authoringTemplate` as the heading and
   schema authority only for that branch.
 - When research status reports saved context or research, read the actual
   `XX-CONTEXT.md` and `XX-RESEARCH.md` bodies through
-  `mcp_blueprint_blueprint_phase_artifact_read` before drafting only when the
+  `blueprint_blueprint_phase_artifact_read` before drafting only when the
   active branch actually needs that evidence. Ground real UI-contract drafts in
   those artifacts, prepared codebase/navigation evidence, selected live source
   or test files, roadmap intent, and requirements before asking new questions.
@@ -91,7 +91,7 @@ if explicit skip mode:
   read config + existing XX-UI-SPEC.md
   confirm overwrite only if needed
   gather only enough saved evidence to write one good skipRationale
-  call mcp_blueprint_blueprint_phase_ui_skip_write
+  call blueprint_blueprint_phase_ui_skip_write
   do not call artifact_contract_read
   do not call artifact_scaffold
   do not call phase_artifact_write
@@ -101,7 +101,7 @@ else:
   scaffold only if needed
   draft the real UI contract
   optionally run blueprint-ui-designer + blueprint-checker
-  call mcp_blueprint_blueprint_phase_artifact_write
+  call blueprint_blueprint_phase_artifact_write
 ```
 
 ### Execute
@@ -158,7 +158,7 @@ design, codebase, or workflow analysis.
 2. Decide contract versus skip mode from config, phase scope, and saved
    evidence.
 3. If the run is skip mode, write one concrete `skipRationale` string and send
-   it through `mcp_blueprint_blueprint_phase_ui_skip_write`.
+   it through `blueprint_blueprint_phase_ui_skip_write`.
 4. If the run is real UI-contract mode, draft one section at a time against
    `contract.authoringTemplate`, carrying citations or source notes forward
    before moving to the next section.
@@ -171,19 +171,19 @@ design, codebase, or workflow analysis.
 
 ## Persist
 
-- Use `mcp_blueprint_blueprint_phase_ui_skip_write` for explicit skip mode. It
+- Use `blueprint_blueprint_phase_ui_skip_write` for explicit skip mode. It
   owns the minimal valid `XX-UI-SPEC.md` render and takes only the final
   `skipRationale` text.
-- Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing
+- Use `blueprint_blueprint_artifact_scaffold` only to seed a missing
   repo-relative UI-spec artifact path in real UI-contract mode. A scaffold is
   never finished content.
 - Persist real UI-contract markdown through
-  `mcp_blueprint_blueprint_phase_artifact_write` with the resolved numeric
+  `blueprint_blueprint_phase_artifact_write` with the resolved numeric
   `phase`, `artifact: "ui-spec"`, and the complete artifact body.
 - Pass `overwrite: true` only after explicit overwrite confirmation.
 - Treat the returned `path`, `status`, `validation`, and `warnings` as
   authoritative.
-- Update `STATE.md` through `mcp_blueprint_blueprint_state_update` only after
+- Update `STATE.md` through `blueprint_blueprint_state_update` only after
   the UI artifact is settled or the run stops on an explicit blocker. Use
   `base: "synced"` and preserve the already resolved selected phase in
   `patch.currentPhase` together with `patch.activeCommand`; do not treat the
@@ -196,8 +196,8 @@ design, codebase, or workflow analysis.
   and evidence-density authority.
 - Reject scaffold placeholders, missing `Outcome Mode`, missing skip rationale,
   vague UI-contract language, and checker-blocked dimensions before write.
-- If `mcp_blueprint_blueprint_phase_ui_skip_write` or
-  `mcp_blueprint_blueprint_phase_artifact_write` returns `status: "invalid"` or
+- If `blueprint_blueprint_phase_ui_skip_write` or
+  `blueprint_blueprint_phase_artifact_write` returns `status: "invalid"` or
   validation issues, repair the same branch-local draft using the returned
   issues and retry through MCP once before treating the run as blocked.
 - If checker review asks for revisions, update only the affected sections,
@@ -209,10 +209,10 @@ design, codebase, or workflow analysis.
 - End with a concise summary covering phase, mode, config gates, contract read,
   evidence used, artifact status, checker or self-check outcome, warnings, and
   next safe action.
-- Reload routing through `mcp_blueprint_blueprint_state_load` after the synced
+- Reload routing through `blueprint_blueprint_state_load` after the synced
   update and report the refreshed next safe action from
   `derivedStatus.nextAction`, using
-  `mcp_blueprint_blueprint_command_catalog` when an explicit implemented-only
+  `blueprint_blueprint_command_catalog` when an explicit implemented-only
   check is needed. Fall back to `/blu-progress` when refreshed routing is
   missing, blocked, or ambiguous.
 - Keep routing inside implemented commands, usually `/blu-plan-phase <phase>`

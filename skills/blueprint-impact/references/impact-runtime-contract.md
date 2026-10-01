@@ -19,13 +19,13 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
 
 ### Read
 
-- Call `mcp_blueprint_blueprint_impact_config_get` before scope-sensitive
+- Call `blueprint_blueprint_impact_config_get` before scope-sensitive
   analysis so ignore paths, generated paths, ownership sources, dependency
   graph sources, risk thresholds, and reporting preferences are explicit.
-- Call `mcp_blueprint_blueprint_impact_scope_resolve` to produce changed files,
+- Call `blueprint_blueprint_impact_scope_resolve` to produce changed files,
   git metadata, diff stats, patch hash, scope fingerprint, confidence, and
   unresolved-scope warnings.
-- Call `mcp_blueprint_blueprint_impact_context_load` for project status,
+- Call `blueprint_blueprint_impact_context_load` for project status,
   effective Blueprint config, roadmap, requested phase or roadmap targets,
   command catalog/assets, artifact contracts, runtime metadata, and repo hints.
 - Do not read secret values or full file contents for scope output. Secret-like
@@ -47,7 +47,7 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
 
 ### Execute
 
-- Call `mcp_blueprint_blueprint_impact_analyze` with the effective config,
+- Call `blueprint_blueprint_impact_analyze` with the effective config,
   resolved scope, loaded context, description, and invocation metadata.
 - Treat returned findings, obligations, unknowns, evidence, impact status,
   risk, confidence, scoring metadata, and normalized report as authoritative.
@@ -60,7 +60,7 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
 ### Persist
 
 - If `--no-write` is active, skip report writing and move directly to render.
-- Otherwise call `mcp_blueprint_blueprint_impact_report_write` with the
+- Otherwise call `blueprint_blueprint_impact_report_write` with the
   normalized report and expected analyzer context copied from
   `blueprint_impact_analyze`: scope fingerprint, scope source, scope
   description, resolved files, evidence ids and paths, finding ids, blocking
@@ -89,7 +89,7 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
 
 ### Route
 
-- Call `mcp_blueprint_blueprint_impact_output_render` for final output from
+- Call `blueprint_blueprint_impact_output_render` for final output from
   the saved impact id or in-memory report.
 - Route only to implemented commands. Use `/blu-progress` when the safe next
   action is broad or ambiguous.
@@ -99,12 +99,12 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
 
 Call these in order unless an earlier invalid result requires stopping:
 
-1. `mcp_blueprint_blueprint_impact_config_get`
-2. `mcp_blueprint_blueprint_impact_scope_resolve`
-3. `mcp_blueprint_blueprint_impact_context_load`
-4. `mcp_blueprint_blueprint_impact_analyze`
-5. `mcp_blueprint_blueprint_impact_report_write` when writing is enabled
-6. `mcp_blueprint_blueprint_impact_output_render`
+1. `blueprint_blueprint_impact_config_get`
+2. `blueprint_blueprint_impact_scope_resolve`
+3. `blueprint_blueprint_impact_context_load`
+4. `blueprint_blueprint_impact_analyze`
+5. `blueprint_blueprint_impact_report_write` when writing is enabled
+6. `blueprint_blueprint_impact_output_render`
 
 ## Scope Rules
 

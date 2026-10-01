@@ -4084,7 +4084,7 @@ test("root router and help/progress assets keep implemented-only waiting-state g
 
   assert.match(
     rootRouterCommand,
-    /Only recommend or route commands whose `mcp_blueprint_blueprint_command_catalog` entry is `implemented: true`/
+    /Only recommend or route commands whose `blueprint_blueprint_command_catalog` entry is `implemented: true`/
   );
   assert.match(
     rootRouterCommand,

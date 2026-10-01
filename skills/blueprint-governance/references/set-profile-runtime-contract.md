@@ -6,10 +6,10 @@ Switch the active project-local Blueprint model profile. Valid requested profile
 
 ## Required MCP Call Order
 
-1. Call `mcp_blueprint_blueprint_config_get` with `scope: "project"` to load the current project config and old `model_profile`.
+1. Call `blueprint_blueprint_config_get` with `scope: "project"` to load the current project config and old `model_profile`.
 2. If the repository is uninitialized, the config is missing, or the config path cannot be resolved, stop with the precise project/config error.
 3. Echo the old profile and requested new profile before saving.
-4. Call `mcp_blueprint_blueprint_config_set_profile` to write the new project-local profile.
+4. Call `blueprint_blueprint_config_set_profile` to write the new project-local profile.
 
 ## Confirmation Gates
 
@@ -18,8 +18,8 @@ Switch the active project-local Blueprint model profile. Valid requested profile
 
 ## Write Boundaries
 
-- The only allowed write is `mcp_blueprint_blueprint_config_set_profile`.
-- Do not call `mcp_blueprint_blueprint_config_set` for this command.
+- The only allowed write is `blueprint_blueprint_config_set_profile`.
+- Do not call `blueprint_blueprint_config_set` for this command.
 - Do not mutate host-global saved defaults.
 - Treat the returned `configPath` as authoritative.
 
@@ -27,7 +27,7 @@ Switch the active project-local Blueprint model profile. Valid requested profile
 
 - Confirm the old-to-new profile change.
 - If `updatedKeys` is empty, report the request as an idempotent no-op because the profile was already active.
-- Report `updatedKeys` and `configPath` from `mcp_blueprint_blueprint_config_set_profile`.
+- Report `updatedKeys` and `configPath` from `blueprint_blueprint_config_set_profile`.
 - Explicitly state that saved defaults were not modified.
 
 ## Anti-Patterns

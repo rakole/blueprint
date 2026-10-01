@@ -78,7 +78,7 @@ Useful prompts:
 Blueprint runs in host-native environments, so prefer normal conversation.
 
 If concise options would help the user react to a concrete tradeoff, present
-them through  `ask_user` dialog when possible. Do not turn
+them through  `question` dialog when possible. Do not turn
 the whole conversation into a rigid multiple-choice form.
 
 Good option lists:
@@ -98,13 +98,10 @@ Bad option lists:
 ## Ask User Dialog Rule
 
 When a concrete choice would benefit from structure, prefer one focused
-`ask_user` prompt instead of a plain-text menu.
+`question` prompt instead of a plain-text menu.
 
 - Ask one question at a time by default.
-- Use `type: "choice"` with 2-4 options, each with a clear label and short
-  description.
-- Include a placeholder such as `Type your own answer...` so the built-in
-  custom-answer path stays open.
+- For structured decisions, call `question` with `questions: [{ header, question, options: [{ label, description }], multiple? }]`; keep `header` short, provide 2-4 options, preserve the built-in custom-answer path, and use `multiple: true` only when more than one choice may be selected.
 - Return to freeform conversation as soon as the user wants to elaborate in
   their own words.
 
@@ -117,12 +114,12 @@ User says: "I want something simple for teams."
 Better follow-up: "When you say teams, who is the first real user, and what
 would they be able to finish in the first successful version?"
 
-If a structured choice helps, use one focused `ask_user`:
+If a structured choice helps, use one focused `question`:
 
 - Internal operators who repeat a workflow every day
 - External customers who need a self-serve product
 - Maintainers who need safer project coordination
-- Type your own answer...
+- The built-in custom-answer path for another audience
 
 ### Solution-First Reframe
 
@@ -142,13 +139,13 @@ end-to-end workflow?"
 
 ### Freeform Answer Handling
 
-If the user chooses "Other" or writes a custom answer in `ask_user`, treat that
+If the user chooses "Other" or writes a custom answer in `question`, treat that
 text as the new source of truth, update the project brief, clear any stale
 option assumption it replaced, and continue conversationally.
 
 ## Freeform Rule
 
-A custom answer from `ask_user` is freeform input, not a rejected response;
+A custom answer from `question` is freeform input, not a rejected response;
 fold it into the brief, clear any stale option assumption it replaced, and
 continue conversationally before using another structured choice.
 
@@ -161,11 +158,11 @@ their freeform answer and a concrete tradeoff would help.
 ## Session Rhythm
 
 If bootstrap questioning turns into a long session, keep the stage visible with
-`update_topic` tool and maintain a short `write_todos` checklist
+concise progress prose and maintain a short `todowrite` checklist
 for the overall flow.
 
 Do not interrupt a useful freeform answer just to narrate status in prose. Let
-the user keep talking, and use the Gemini-native progress helpers to keep the
+the user keep talking, and use the OpenCode progress guidance to keep the
 session organized in the background.
 
 ## Background Checklist
@@ -184,7 +181,7 @@ Once you could author a clear bootstrap brief, summarize your understanding and
 ask whether you should create the Blueprint bootstrap artifacts now or keep
 exploring.
 
-Show that summary as normal Gemini CLI conversation content before opening any
+Show that summary as normal conversation content before opening any
 structured approval prompt. The approval prompt should point back to the visible
 project brief and roadmap preview; it should never rely on shell output,
 temporary files, or collapsed agent/tool panes for the content being approved.

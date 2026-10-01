@@ -15,15 +15,15 @@ test("help manifest and runtime reference stay aligned on router profile and wai
   const runtimeContract = await buildBlueprintCommandRuntimeContractResource("help");
   const manifestTools = [
     ...new Set(
-      [...commandFile.matchAll(/mcp_blueprint_blueprint_[a-z0-9_]+/g)].map((match) => match[0])
+      [...commandFile.matchAll(/blueprint_blueprint_[a-z0-9_]+/g)].map((match) => match[0])
     )
   ].sort();
 
   assert.match(commandFile, /Execution profile: router\./);
   assert.match(commandFile, /blueprint-router/);
   assert.deepEqual(manifestTools, [
-    "mcp_blueprint_blueprint_command_catalog",
-    "mcp_blueprint_blueprint_project_status"
+    "blueprint_blueprint_command_catalog",
+    "blueprint_blueprint_project_status"
   ]);
   assert.match(commandFile, /implemented: true/);
   assert.match(commandFile, /\/blu-new-project/);

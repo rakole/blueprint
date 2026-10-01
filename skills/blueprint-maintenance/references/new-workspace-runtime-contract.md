@@ -6,13 +6,13 @@ This reference is the detailed `/blu-new-workspace` workflow contract. The comma
 
 ### Resolve
 
-- Call `mcp_blueprint_blueprint_config_get` before deriving a default workspace root.
+- Call `blueprint_blueprint_config_get` before deriving a default workspace root.
 - Prefer an explicit target path. Otherwise use normalized `maintenance.workspace_root`, falling back to `~/blueprint-workspaces` only when config cannot provide one.
 - Resolve workspace name, workspace path, repo members, strategy, branch, manifest path, and registry mutation plan.
 
 ### Read
 
-- Call `mcp_blueprint_blueprint_workspace_registry_get` before mutation and treat returned registry data as authoritative.
+- Call `blueprint_blueprint_workspace_registry_get` before mutation and treat returned registry data as authoritative.
 - Inspect every source repo before mutation.
 - Dirty working tree, invalid source repo, malformed registry, target conflict, or unsafe strategy is a hard stop.
 
@@ -24,7 +24,7 @@ This reference is the detailed `/blu-new-workspace` workflow contract. The comma
 
 ### Execute
 
-- Call `mcp_blueprint_blueprint_workspace_create` only after confirmation.
+- Call `blueprint_blueprint_workspace_create` only after confirmation.
 - Never create a second workspace registry outside host-global Blueprint state.
 
 ### Persist
@@ -49,6 +49,6 @@ This reference is the detailed `/blu-new-workspace` workflow contract. The comma
 
 ## Required MCP FQNs
 
-- `mcp_blueprint_blueprint_config_get`
-- `mcp_blueprint_blueprint_workspace_registry_get`
-- `mcp_blueprint_blueprint_workspace_create`
+- `blueprint_blueprint_config_get`
+- `blueprint_blueprint_workspace_registry_get`
+- `blueprint_blueprint_workspace_create`

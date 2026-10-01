@@ -44,11 +44,11 @@ state-sync or route-refresh failure.
 
 ## Session-Local Visibility Helpers
 
-On Gemini hosts that expose `update_topic` and `write_todos`, use them only as
+For long-running work, use concise progress prose and `todowrite` only as
 session-local visibility aids during non-trivial multi-area discovery. They do
 not replace MCP-backed artifacts, checkpoints, reports, or `STATE.md`.
 
-When those helpers are unavailable, keep the same stage and next-safe-action
+When `todowrite` is unavailable, keep the same stage and next-safe-action
 visibility in normal progress recaps plus MCP-backed checkpoints and `STATE.md`.
 Do not claim helper calls were made when the host did not expose them.
 
@@ -67,7 +67,7 @@ discoverable in the repository.
 
 ## Fallback Progress Format
 
-When `update_topic` and `write_todos` are unavailable, use this fixed
+When `todowrite` is unavailable, use this fixed
 one-line status format for progress recaps:
 
 ```

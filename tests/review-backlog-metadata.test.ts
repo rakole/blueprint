@@ -19,15 +19,15 @@ test("review-backlog manifest references preview, promotion, backlog updates, an
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_promote_backlog/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_promote_backlog/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /previewOnly: true/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_mutate_index/);
   assert.match(commandFile, /action: "update"/);
   assert.match(commandFile, /status: "promoted"/);
   assert.match(commandFile, /status: "archived"/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
-  assert.match(commandFile, /Prefer\s+`ask_user` tool for structured promote or remove decisions/);
+  assert.match(commandFile, /blueprint_blueprint_state_update/);
+  assert.match(commandFile, /Prefer\s+`question` tool for structured promote or remove decisions/);
   assert.match(commandFile, /keep is the default safe path/i);
   assert.match(commandFile, /\/blu-discuss-phase <first promoted phase>/);
 });
@@ -46,7 +46,7 @@ test("blueprint-capture skill captures review-backlog preview, promotion, and st
   assert.match(skillFile, /action: "update"/);
   assert.match(skillFile, /promoted/i);
   assert.match(skillFile, /archived/i);
-  assert.match(skillFile, /Prefer Gemini's `ask_user` tool when a structured decision helps/);
+  assert.match(skillFile, /Prefer OpenCode `question` when a structured decision helps/);
   assert.match(skillFile, /keep is the default safe path/i);
   assert.match(skillFile, /\/blu-discuss-phase <first promoted phase>/);
 });

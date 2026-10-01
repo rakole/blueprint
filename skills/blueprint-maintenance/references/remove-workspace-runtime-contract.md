@@ -6,7 +6,7 @@ This reference is the detailed `/blu-remove-workspace` workflow contract. The co
 
 ### Resolve
 
-- Call `mcp_blueprint_blueprint_workspace_registry_get` first and treat returned registry data as authoritative.
+- Call `blueprint_blueprint_workspace_registry_get` first and treat returned registry data as authoritative.
 - Resolve a single workspace target by name and confirmed path.
 - Stop on `workspace-not-found`, `workspace-path-ambiguity`, `registry-drift`, or malformed registry state.
 
@@ -24,7 +24,7 @@ This reference is the detailed `/blu-remove-workspace` workflow contract. The co
 
 ### Execute
 
-- Call `mcp_blueprint_blueprint_workspace_remove` only after confirmation.
+- Call `blueprint_blueprint_workspace_remove` only after confirmation.
 - Never smooth past partial teardown state.
 
 ### Persist
@@ -49,5 +49,5 @@ This reference is the detailed `/blu-remove-workspace` workflow contract. The co
 
 ## Required MCP FQNs
 
-- `mcp_blueprint_blueprint_workspace_registry_get`
-- `mcp_blueprint_blueprint_workspace_remove`
+- `blueprint_blueprint_workspace_registry_get`
+- `blueprint_blueprint_workspace_remove`

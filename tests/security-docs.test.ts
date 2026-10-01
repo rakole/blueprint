@@ -64,7 +64,7 @@ test("maintenance and security runtime assets reflect the tightened hardening gu
   assert.equal(SECURE_PHASE_RUNTIME_METADATA.sourceId, "src/mcp/command-runtime-metadata.ts#secure-phase");
   assert.match(securePhaseManifest, /parse the saved phase threat model/i);
   assert.match(securePhaseManifest, /build the bounded threat register/i);
-  assert.match(securePhaseManifest, /`ask_user`/i);
+  assert.match(securePhaseManifest, /`question`/i);
   assert.match(securePhaseManifest, /verify those threats or explicitly accept them/i);
   assert.match(
     securePhaseManifest,
