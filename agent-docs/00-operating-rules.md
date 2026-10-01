@@ -2,6 +2,16 @@
 
 These rules apply to every coding agent working in this repository.
 
+## OpenCode Branch Override
+
+The highest-priority OpenCode isolation rule in `AGENTS.md` overrides the generic
+`main` workflow below. For OpenCode work, fetch `origin/open_code`, create a fresh
+feature-branch worktree from it, and keep subagents in that worktree. Every port
+PR must explicitly target `open_code`; verify its base before creating or merging
+it. Never merge or cherry-pick port work into `main`, fast-forward `main` as part
+of port completion, or delete the long-lived `open_code` branch. Implementation
+on `open_code` itself is prohibited; use feature branches and PRs.
+
 ## Worktree Rule
 
 Any task that changes even one source-controlled line must start in a fresh git

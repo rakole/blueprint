@@ -1,5 +1,25 @@
 # Blueprint Agent Guide
 
+## Highest-Priority Non-Negotiable Rule: OpenCode Branch Isolation
+
+This is the highest-priority repository instruction for every agent working on
+OpenCode and overrides any conflicting branch, PR, merge, or cleanup guidance
+elsewhere in this repository or in a development skill.
+
+- `open_code` is the long-lived integration branch for the OpenCode port.
+- Before any OpenCode edit, fetch `origin/open_code` and create a fresh worktree
+  with a feature branch based on it (normally `codex/open-code-<task>`).
+- All subagents must use that same feature-branch worktree and inherit this rule.
+- Push feature branches and create PRs with an explicit `--base open_code`.
+  Verify the PR base is `open_code` before creating or merging it.
+- Merge completed OpenCode PRs only into `open_code`. Never merge or cherry-pick
+  OpenCode work into `main` or `origin/main`, and never target a port PR at `main`.
+- Do not implement directly on `open_code`; use a feature branch and PR for every
+  change. Preserve `open_code` when cleaning up completed feature branches and
+  worktrees. Do not fast-forward `main` as part of OpenCode completion.
+- If the correct base or target cannot be verified, stop before editing or
+  merging. Only an explicit later user instruction may change this policy.
+
 ## Purpose
 
 This file gives Codex durable repo-scoped rules for working in Blueprint.
@@ -9,7 +29,7 @@ This file gives Codex durable repo-scoped rules for working in Blueprint.
 - Do not use GSD or Blueprint workflows to develop Blueprint; use Codex harness tools and normal repo commands.
 - Close subagents as soon as their bounded task is done.
 - For any source-controlled edit, work in a fresh git worktree; subagents should stay in that same worktree.
-- After work is complete, merge to `origin/main`, fast-forward local `main`, and clean up stale branches and worktrees.
+- For non-OpenCode work, after work is complete, merge to `origin/main`, fast-forward local `main`, and clean up stale branches and worktrees. OpenCode work must follow the higher-priority isolation rule above.
 - In every fresh worktree, run `npm ci` before `npm run build`, `npm run typecheck`, or `npm test`.
 - Treat the Codex GitHub plugin as read-only; use `gh` CLI or normal git pushes for write operations.
 
