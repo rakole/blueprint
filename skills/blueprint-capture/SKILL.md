@@ -16,20 +16,24 @@ input_bundles:
   shared: []
   commands:
     "/blu-note":
-      - commands/blu-note.toml
+      - commands/blu-note.md
     "/blu-add-todo":
-      - commands/blu-add-todo.toml
+      - commands/blu-add-todo.md
     "/blu-check-todos":
-      - commands/blu-check-todos.toml
+      - commands/blu-check-todos.md
     "/blu-add-backlog":
-      - commands/blu-add-backlog.toml
+      - commands/blu-add-backlog.md
     "/blu-review-backlog":
-      - commands/blu-review-backlog.toml
+      - commands/blu-review-backlog.md
     "/blu-explore":
-      - commands/blu-explore.toml
+      - commands/blu-explore.md
 ---
 
 # Blueprint Capture Skill
+
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
 
 ## Purpose
 

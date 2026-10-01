@@ -16,26 +16,30 @@ input_bundles:
   shared: []
   commands:
     "/blu-code-review":
-      - commands/blu-code-review.toml
+      - commands/blu-code-review.md
       - skills/blueprint-review/references/code-review-runtime-contract.md
     "/blu-code-review-fix":
-      - commands/blu-code-review-fix.toml
+      - commands/blu-code-review-fix.md
       - skills/blueprint-review/references/code-review-fix-runtime-contract.md
     "/blu-audit-fix":
-      - commands/blu-audit-fix.toml
+      - commands/blu-audit-fix.md
       - skills/blueprint-review/references/audit-fix-runtime-contract.md
     "/blu-secure-phase":
-      - commands/blu-secure-phase.toml
+      - commands/blu-secure-phase.md
       - skills/blueprint-review/references/secure-phase-runtime-contract.md
     "/blu-review":
-      - commands/blu-review.toml
+      - commands/blu-review.md
       - skills/blueprint-review/references/review-runtime-contract.md
     "/blu-ui-review":
-      - commands/blu-ui-review.toml
+      - commands/blu-ui-review.md
       - skills/blueprint-review/references/ui-review-runtime-contract.md
 ---
 
 # Blueprint Review Skill
+
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
 
 ## Purpose
 
@@ -303,8 +307,8 @@ artifacts, and optional review agents when the command contract allows them.
    model-authoring authority instead of a copied prompt-local Markdown
    structure.
 5. Inspect any existing `XX-SECURITY.md` before proposing replacement and
-   default to reuse unless the user explicitly asks for an update. Use Gemini
-   CLI's `question` tool for overwrite confirmation before replacement.
+   default to reuse unless the user explicitly asks for an update. Use OpenCode's
+   `question` tool for overwrite confirmation before replacement.
 6. Read `blueprint_phase_plan_index` and `blueprint_phase_plan_read` so the
    saved phase threat model can be parsed from executed plan evidence, then
    build a threat register from the declared threats and mitigations. Include

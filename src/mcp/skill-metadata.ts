@@ -1,15 +1,9 @@
-import {
-  blueprintDiscoverableSkillPath,
-  blueprintLegacySkillPath
-} from "./runtime-vocabulary.js";
+import path from "node:path";
+
+import { parseNativeMarkdown } from "../shared/native-frontmatter.js";
+import { blueprintDiscoverableSkillPath } from "./runtime-vocabulary.js";
 
 type RelativePathReader = (relativePath: string) => Promise<string | null>;
-
-interface BlueprintSkillFrontmatterObject {
-  [key: string]: BlueprintSkillFrontmatterValue;
-}
-
-type BlueprintSkillFrontmatterValue = string | string[] | BlueprintSkillFrontmatterObject;
 
 export type BlueprintSkillResolvedInputs = {
   skill: string;
@@ -18,247 +12,142 @@ export type BlueprintSkillResolvedInputs = {
   effective: string[];
 };
 
-function extractFrontmatterBlock(content: string): { frontmatter: string; body: string } | null {
-  const match = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)([\s\S]*)$/);
+type BlueprintSkillMetadata = {
+  name: string;
+  description: string;
+  status?: string;
+  commands: string[];
+  shared: string[];
+  commandBundles: Record<string, string[]>;
+};
 
-  if (!match) {
-    return null;
+const BLUEPRINT_METADATA_KEYS = new Set([
+  "name",
+  "description",
+  "status",
+  "commands",
+  "input_bundles"
+]);
+
+function expectString(value: unknown, source: string, key: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${source}: ${key} must be a non-empty string`);
   }
-
-  return {
-    frontmatter: match[1],
-    body: match[2]
-  };
+  return value.trim();
 }
 
-function countLeadingSpaces(line: string): number {
-  const match = line.match(/^ */);
-  return match?.[0]?.length ?? 0;
+function expectStringArray(value: unknown, source: string, key: string): string[] {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(`${source}: ${key} must be an array of strings`);
+  }
+  const normalized = value.map((item) => item.trim());
+  if (normalized.some((item) => item.length === 0)) {
+    throw new Error(`${source}: ${key} must not contain empty values`);
+  }
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error(`${source}: ${key} must not contain duplicates`);
+  }
+  return normalized;
 }
 
-function normalizeFrontmatterKey(rawKey: string): string {
-  const trimmed = rawKey.trim();
+function expectObject(value: unknown, source: string, key: string): Record<string, unknown> {
+  if (value === null || Array.isArray(value) || typeof value !== "object") {
+    throw new Error(`${source}: ${key} must be a mapping`);
+  }
+  return value as Record<string, unknown>;
+}
 
+function assertPackageRelativePath(value: string, source: string, key: string): void {
   if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    path.posix.isAbsolute(value) ||
+    value.includes("\\") ||
+    value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") ||
+    (!value.startsWith("commands/") && !value.startsWith("skills/"))
   ) {
-    return trimmed.slice(1, -1);
+    throw new Error(`${source}: ${key} must stay within packaged commands/ or skills/: ${JSON.stringify(value)}`);
   }
-
-  return trimmed;
 }
 
-function collapseBlockLines(lines: string[]): string {
-  return lines
-    .map((line) => line.trim())
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+function parseBlueprintSkillMetadata(skillName: string, content: string): BlueprintSkillMetadata {
+  const source = `skill ${skillName}`;
+  const { frontmatter } = parseNativeMarkdown(content, source);
 
-function findNextMeaningfulLine(lines: string[], startIndex: number): number {
-  for (let index = startIndex; index < lines.length; index += 1) {
-    if (lines[index].trim().length > 0) {
-      return index;
+  for (const key of Object.keys(frontmatter)) {
+    if (!BLUEPRINT_METADATA_KEYS.has(key)) {
+      throw new Error(`${source}: unsupported frontmatter key ${JSON.stringify(key)}`);
     }
   }
 
-  return -1;
-}
-
-function parseArray(
-  lines: string[],
-  startIndex: number,
-  indent: number
-): { value: string[]; nextIndex: number } {
-  const value: string[] = [];
-  let index = startIndex;
-
-  while (index < lines.length) {
-    const rawLine = lines[index];
-    const trimmed = rawLine.trim();
-
-    if (trimmed.length === 0) {
-      index += 1;
-      continue;
-    }
-
-    const lineIndent = countLeadingSpaces(rawLine);
-
-    if (lineIndent < indent || lineIndent !== indent || !trimmed.startsWith("- ")) {
-      break;
-    }
-
-    value.push(normalizeFrontmatterKey(trimmed.slice(2).trim()));
-    index += 1;
+  const name = expectString(frontmatter.name, source, "name");
+  if (name !== skillName) {
+    throw new Error(`${source}: frontmatter name must equal ${JSON.stringify(skillName)}`);
+  }
+  const description = expectString(frontmatter.description, source, "description");
+  const status = frontmatter.status === undefined
+    ? undefined
+    : expectString(frontmatter.status, source, "status");
+  if (status !== undefined && status !== "implemented") {
+    throw new Error(`${source}: status must be \"implemented\" when present`);
   }
 
-  return {
-    value,
-    nextIndex: index
-  };
-}
-
-function parseObject(
-  lines: string[],
-  startIndex: number,
-  indent: number
-): { value: BlueprintSkillFrontmatterObject; nextIndex: number } {
-  const value: BlueprintSkillFrontmatterObject = {};
-  let index = startIndex;
-
-  while (index < lines.length) {
-    const rawLine = lines[index];
-    const trimmed = rawLine.trim();
-
-    if (trimmed.length === 0) {
-      index += 1;
-      continue;
+  const commands = frontmatter.commands === undefined
+    ? []
+    : expectStringArray(frontmatter.commands, source, "commands");
+  for (const command of commands) {
+    if (command !== "/blu" && !/^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(command)) {
+      throw new Error(`${source}: commands contains an invalid Blueprint command ${JSON.stringify(command)}`);
     }
-
-    const lineIndent = countLeadingSpaces(rawLine);
-
-    if (lineIndent < indent) {
-      break;
-    }
-
-    if (lineIndent > indent) {
-      index += 1;
-      continue;
-    }
-
-    const match = trimmed.match(/^(.+?):\s*(.*)$/);
-
-    if (!match) {
-      index += 1;
-      continue;
-    }
-
-    const key = normalizeFrontmatterKey(match[1]);
-    const rawValue = match[2].trim();
-
-    if (rawValue === ">" || rawValue === "|") {
-      const blockLines: string[] = [];
-      let blockIndent: number | null = null;
-      index += 1;
-
-      while (index < lines.length) {
-        const blockLine = lines[index];
-        const blockTrimmed = blockLine.trim();
-
-        if (blockTrimmed.length === 0) {
-          blockLines.push("");
-          index += 1;
-          continue;
-        }
-
-        const blockLineIndent = countLeadingSpaces(blockLine);
-
-        if (blockLineIndent <= lineIndent) {
-          break;
-        }
-
-        blockIndent ??= blockLineIndent;
-        blockLines.push(blockLine.slice(blockIndent));
-        index += 1;
-      }
-
-      value[key] = rawValue === ">" ? collapseBlockLines(blockLines) : blockLines.join("\n").trim();
-      continue;
-    }
-
-    if (rawValue.length > 0) {
-      value[key] = normalizeFrontmatterKey(rawValue);
-      index += 1;
-      continue;
-    }
-
-    const nextIndex = findNextMeaningfulLine(lines, index + 1);
-
-    if (nextIndex === -1) {
-      value[key] = "";
-      index += 1;
-      continue;
-    }
-
-    const nextLine = lines[nextIndex];
-    const nextIndent = countLeadingSpaces(nextLine);
-    const nextTrimmed = nextLine.trim();
-
-    if (nextIndent <= lineIndent) {
-      value[key] = "";
-      index = nextIndex;
-      continue;
-    }
-
-    if (nextTrimmed.startsWith("- ")) {
-      const parsedArray = parseArray(lines, nextIndex, nextIndent);
-      value[key] = parsedArray.value;
-      index = parsedArray.nextIndex;
-      continue;
-    }
-
-    const parsedObject = parseObject(lines, nextIndex, nextIndent);
-    value[key] = parsedObject.value;
-    index = parsedObject.nextIndex;
   }
 
-  return {
-    value,
-    nextIndex: index
-  };
-}
+  if (frontmatter.input_bundles === undefined) {
+    return { name, description, status, commands, shared: [], commandBundles: {} };
+  }
 
-function parseFrontmatter(frontmatter: string): BlueprintSkillFrontmatterObject {
-  return parseObject(frontmatter.split("\n"), 0, 0).value;
-}
-
-function extractMarkdownSection(markdown: string, heading: string): string {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = markdown.match(
-    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
+  const bundles = expectObject(frontmatter.input_bundles, source, "input_bundles");
+  for (const key of Object.keys(bundles)) {
+    if (key !== "shared" && key !== "commands") {
+      throw new Error(`${source}: unsupported input_bundles key ${JSON.stringify(key)}`);
+    }
+  }
+  const shared = expectStringArray(bundles.shared ?? [], source, "input_bundles.shared");
+  const rawCommandBundles = expectObject(
+    bundles.commands ?? {},
+    source,
+    "input_bundles.commands"
   );
+  const commandBundles: Record<string, string[]> = {};
+  for (const [command, value] of Object.entries(rawCommandBundles)) {
+    if (!commands.includes(command)) {
+      throw new Error(`${source}: input_bundles.commands has unrecognized command key ${JSON.stringify(command)}`);
+    }
+    commandBundles[command] = expectStringArray(
+      value,
+      source,
+      `input_bundles.commands[${JSON.stringify(command)}]`
+    );
+  }
 
-  return match?.[1]?.trim() ?? "";
+  for (const [key, values] of [["input_bundles.shared", shared], ...Object.entries(commandBundles)] as const) {
+    for (const value of values) {
+      assertPackageRelativePath(value, source, key);
+    }
+  }
+
+  return { name, description, status, commands, shared, commandBundles };
 }
 
 function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
 
-function parseLegacyRequiredInputs(content: string): string[] {
-  return unique(
-    extractMarkdownSection(content, "Required Inputs")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.startsWith("- "))
-      .map((line) => line.slice(2).trim())
-      .map((line) => line.replace(/^`(.+)`$/, "$1"))
-      .filter((line) => line.length > 0)
-  );
-}
-
-function asStringArray(value: BlueprintSkillFrontmatterValue | undefined): string[] {
-  if (!Array.isArray(value)) {
-    return [];
+function activeCommandAsset(commandPath: string): string | null {
+  if (commandPath === "/blu") {
+    return "commands/blu.md";
   }
-
-  return unique(value.filter((item): item is string => typeof item === "string"));
-}
-
-function isObject(
-  value: BlueprintSkillFrontmatterValue | undefined
-): value is Record<string, BlueprintSkillFrontmatterValue> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function legacyRequiredInputsFallbackEnabled(
-  frontmatter: BlueprintSkillFrontmatterObject
-): boolean {
-  const value = frontmatter.legacy_required_inputs_fallback;
-
-  return typeof value === "string" && ["enabled", "true"].includes(value.toLowerCase());
+  if (/^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(commandPath)) {
+    return `commands/${commandPath.slice(1)}.md`;
+  }
+  return null;
 }
 
 export function resolveBlueprintSkillInputsFromContent(
@@ -266,59 +155,16 @@ export function resolveBlueprintSkillInputsFromContent(
   commandPath: string,
   content: string
 ): BlueprintSkillResolvedInputs {
-  const extracted = extractFrontmatterBlock(content);
-
-  if (!extracted) {
-    const legacyInputs = parseLegacyRequiredInputs(content);
-
-    return {
-      skill: skillName,
-      shared: legacyInputs,
-      commandSpecific: [],
-      effective: legacyInputs
-    };
-  }
-
-  const frontmatter = parseFrontmatter(extracted.frontmatter);
-  const rawBundles = frontmatter.input_bundles;
-
-  if (isObject(rawBundles)) {
-    const shared = asStringArray(rawBundles.shared);
-    const rawCommands = isObject(rawBundles.commands) ? rawBundles.commands : {};
-    const commandSpecific = asStringArray(rawCommands[commandPath]);
-
-    if (
-      commandSpecific.length === 0 &&
-      !(commandPath in rawCommands) &&
-      legacyRequiredInputsFallbackEnabled(frontmatter)
-    ) {
-      const legacyInputs = parseLegacyRequiredInputs(extracted.body);
-
-      if (legacyInputs.length > 0) {
-        return {
-          skill: skillName,
-          shared: legacyInputs,
-          commandSpecific: [],
-          effective: legacyInputs
-        };
-      }
-    }
-
-    return {
-      skill: skillName,
-      shared,
-      commandSpecific,
-      effective: unique([...shared, ...commandSpecific])
-    };
-  }
-
-  const legacyInputs = parseLegacyRequiredInputs(content);
+  const metadata = parseBlueprintSkillMetadata(skillName, content);
+  const shared = metadata.shared;
+  const commandSpecific = metadata.commandBundles[commandPath] ?? [];
+  const suppliedCommand = activeCommandAsset(commandPath);
 
   return {
     skill: skillName,
-    shared: legacyInputs,
-    commandSpecific: [],
-    effective: legacyInputs
+    shared,
+    commandSpecific,
+    effective: unique([...shared, ...commandSpecific]).filter((input) => input !== suppliedCommand)
   };
 }
 
@@ -328,26 +174,19 @@ export async function loadBlueprintSkillInputs(
   readRelativePath: RelativePathReader,
   preferredPath?: string | null
 ): Promise<BlueprintSkillResolvedInputs> {
-  const candidatePaths = unique(
-    [
-      preferredPath ?? null,
-      blueprintDiscoverableSkillPath(skillName),
-      blueprintLegacySkillPath(skillName)
-    ].filter((path): path is string => typeof path === "string" && path.length > 0)
-  );
+  const canonicalPath = preferredPath ?? blueprintDiscoverableSkillPath(skillName);
+  assertPackageRelativePath(canonicalPath, `skill ${skillName}`, "skill path");
+  const content = await readRelativePath(canonicalPath);
 
-  for (const candidatePath of candidatePaths) {
-    const content = await readRelativePath(candidatePath);
-
-    if (content !== null) {
-      return resolveBlueprintSkillInputsFromContent(skillName, commandPath, content);
-    }
+  if (content === null) {
+    return { skill: skillName, shared: [], commandSpecific: [], effective: [] };
   }
 
-  return {
-    skill: skillName,
-    shared: [],
-    commandSpecific: [],
-    effective: []
-  };
+  const resolved = resolveBlueprintSkillInputsFromContent(skillName, commandPath, content);
+  for (const input of unique([...resolved.shared, ...resolved.commandSpecific])) {
+    if (await readRelativePath(input) === null) {
+      throw new Error(`skill ${skillName}: input bundle path is missing: ${input}`);
+    }
+  }
+  return resolved;
 }

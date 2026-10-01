@@ -20,35 +20,39 @@ input_bundles:
   shared: []
   commands:
     "/blu-pr-branch":
-      - commands/blu-pr-branch.toml
+      - commands/blu-pr-branch.md
       - skills/blueprint-maintenance/references/pr-branch-runtime-contract.md
     "/blu-ship":
-      - commands/blu-ship.toml
+      - commands/blu-ship.md
       - skills/blueprint-maintenance/references/ship-runtime-contract.md
     "/blu-undo":
-      - commands/blu-undo.toml
+      - commands/blu-undo.md
       - skills/blueprint-maintenance/references/undo-runtime-contract.md
     "/blu-new-workspace":
-      - commands/blu-new-workspace.toml
+      - commands/blu-new-workspace.md
       - skills/blueprint-maintenance/references/new-workspace-runtime-contract.md
     "/blu-remove-workspace":
-      - commands/blu-remove-workspace.toml
+      - commands/blu-remove-workspace.md
       - skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md
     "/blu-workstreams":
-      - commands/blu-workstreams.toml
+      - commands/blu-workstreams.md
       - skills/blueprint-maintenance/references/workstreams-runtime-contract.md
     "/blu-cleanup":
-      - commands/blu-cleanup.toml
+      - commands/blu-cleanup.md
       - skills/blueprint-maintenance/references/cleanup-runtime-contract.md
     "/blu-update":
-      - commands/blu-update.toml
+      - commands/blu-update.md
       - skills/blueprint-maintenance/references/update-runtime-contract.md
     "/blu-reapply-patches":
-      - commands/blu-reapply-patches.toml
+      - commands/blu-reapply-patches.md
       - skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md
 ---
 
 # Blueprint Maintenance Skill
+
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
 
 ## Purpose
 

@@ -51,6 +51,10 @@ Recovery journals contain publication metadata only. No raw `.blueprint/` writes
 warn-mode publication or canonical Markdown fallback. Meet the runtime contract's
 Completion Criteria and return its Downstream Execution Handoff.
 
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
+
 ## Runtime Call Rules
 
 Translate any shorthand tool ids like `blueprint_plan_submit` to runtime FQNs,
