@@ -58,8 +58,8 @@ Hooks:
 
 Build and packaging:
 
-- `gemini-extension.json` and `tabnine-extension.json` launch the built MCP
-  server.
+- `package.json` exports the built OpenCode plugin. Its config hook registers
+  native commands, agents, skill paths and the package-owned MCP server.
 - `scripts/build.mjs` creates `dist`.
 - Source changes that affect runtime behavior require a build before host
   install checks are meaningful.

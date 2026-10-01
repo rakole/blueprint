@@ -55,7 +55,8 @@ The build:
 
 - Removes and recreates `dist`.
 - Emits TypeScript declarations.
-- Bundles the MCP server.
+- Generates the native asset hash and reference manifest.
+- Bundles the OpenCode plugin and MCP server.
 - Bundles advisory hooks.
 - Copies schema assets needed by artifact contracts.
 
@@ -85,23 +86,38 @@ source search when the index is absent, malformed, stale, or incomplete.
 
 ## Hooks
 
-Hook source lives in `src/hooks`. Hook registration lives in `hooks/hooks.json`.
-Host manifests use built hook files from `dist/hooks`.
+Hook source lives in `src/hooks`; `hooks/hooks.json` is retained legacy wiring.
+These advisory hooks are built but not registered by the OpenCode plugin in this slice.
 
 Hooks are advisory. They may warn before risky edits, but they must not become
 the persistence layer.
 
 ## Install And Local Testing
 
-Local host testing usually needs:
+Build and verify the local package without calling a model:
 
 ```bash
 npm ci
-npm run build
-gemini extensions link .
+npm run generate:commands
+npm run test:integration:opencode
 ```
 
-Restart the host CLI after linking or changing built outputs.
+The actual-host registration test is opt-in through `BLUEPRINT_OPENCODE_BIN`,
+pointing to the pinned v1.18.34 executable, and `BLUEPRINT_OPENCODE_SOURCE`,
+pointing to the matching source checkout. Without both, the route reports the
+host check as skipped. Model-driven permission, interaction and lifecycle scenarios
+remain separate qualification gates.
 
-Use the clean-home smoke script when changing host startup, install behavior,
-manifest wiring, or global-state defaults.
+A disposable OpenCode config selects the unpacked package export:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["file:///absolute/disposable/package/dist/opencode/plugin.js"]
+}
+```
+
+Use the bootstrap fixture in `tests/fixtures/opencode/bootstrap/opencode.json`
+for the exact config shape. Keep the customer cwd and HOME/XDG directories
+separate from the package. Restart OpenCode after changing the config or built
+outputs; successful plugin import alone is not proof of registration.

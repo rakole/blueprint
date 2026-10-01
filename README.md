@@ -2,7 +2,7 @@
 
 ![Blueprint](https://raw.githubusercontent.com/rakole/blueprint/main/resources/README_banner_dark.png)
 
-Blueprint is a Gemini CLI extension for running a structured, artifact-backed product workflow inside your repository. It helps you turn an idea into a roadmap, shape each phase, execute the work, validate the result, review it, and ship it without losing the thread between sessions.
+Blueprint is an OpenCode plugin and MCP workflow engine for running a structured, artifact-backed product workflow inside your repository. It helps you turn an idea into a roadmap, shape each phase, execute the work, validate the result, review it, and ship it without losing the thread between sessions.
 
 The workflow is inspired by GSD, but Blueprint's skills, workflows, commands, and runtime are custom-built for Blueprint.
 
@@ -125,33 +125,21 @@ Runtime skill bundles used by runnable commands:
 
 ## Install
 
-Blueprint is designed for Gemini CLI.
+This branch targets OpenCode v1.18.34 and Node.js 20 or newer. The package is
+private; full OpenCode session qualification remains pending.
 
-Prerequisites:
-
-- Gemini CLI
-- Node.js 20 or newer
-
-Install from GitHub:
-
-```bash
-gemini extensions install https://github.com/rakole/blueprint
-```
-
-After install:
-
-1. Restart Gemini CLI.
-2. Run `/blu-help` to confirm Blueprint loaded.
-
-If you are testing from a local checkout instead of GitHub:
+Build the checkout and run the local package checks:
 
 ```bash
 npm ci
-npm run build
-gemini extensions link .
+npm run generate:commands
+npm run test:integration:opencode
 ```
 
-Then restart Gemini CLI and run `/blu-help`.
+The integration route verifies an exact local tarball outside the checkout.
+Actual OpenCode registration runs only when the pinned host is supplied. See
+[local bootstrap and host qualification](agent-docs/07-hosts-packaging-and-build.md)
+for the isolated configuration and test requirements.
 
 ## Command Style
 
@@ -382,9 +370,9 @@ The retained entries below are not public runnable commands in the current runti
 
 ### `/blu-help` does not appear after install
 
-- Restart Gemini CLI after install or update.
-- If you installed from a local checkout, make sure you ran `npm run build` first.
-- Re-run `gemini extensions install https://github.com/rakole/blueprint` if needed.
+- Confirm the OpenCode config selects the built plugin export and restart the session.
+- Build the local package before testing, and check startup diagnostics for missing or conflicting native assets.
+- Follow the [isolated bootstrap checks](agent-docs/07-hosts-packaging-and-build.md); a plugin import alone does not prove command registration.
 
 ### Blueprint says the repo is not initialized
 

@@ -47,8 +47,8 @@ Use this map to find the source of truth before changing behavior.
 - `tests/*tools.test.ts` and `tests/*slice.test.ts`: focused tool and workflow
   behavior.
 - `tests/built-assets-smoke.test.ts`: build output expectations.
-- `tests/extension-install.integration.ts`: containerized extension install
-  behavior.
+- `tests/extension-install.integration.ts`: explicit retirement marker for the
+  legacy host install harness; native coverage lives in the tests below.
 - `tests/opencode-package.test.ts`: private package and native closure behavior.
 - `tests/opencode-registration.integration.ts`: opt-in actual-host qualification.
 
