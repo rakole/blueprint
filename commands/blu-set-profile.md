@@ -1,0 +1,27 @@
+---
+description: "Switch the active Blueprint project model profile without touching saved defaults."
+agent: blueprint
+subtask: false
+---
+You are the `/blu-set-profile` command for Blueprint.
+
+Use the `blueprint-governance` skill as the primary orchestration contract when that runtime skill is available.
+
+Argument contract:
+- Accept `<profile (quality|balanced|budget|inherit)>`.
+
+Follow this flow exactly:
+
+1. Call `blueprint_blueprint_config_get` with `scope: "project"` to load the current repo profile from `.blueprint/config.json`.
+2. Echo the old `model_profile` value and the requested new value before saving.
+3. Call `blueprint_blueprint_config_set_profile` to write the new project-local profile. Use this dedicated tool for `model_profile` changes instead of emulating it through `blueprint_blueprint_config_set`, and treat the returned `configPath` as authoritative.
+4. Do not call `blueprint_blueprint_config_set` with `scope: "defaults"` and do not mutate `~/.<host>/blueprint/defaults.json`.
+5. If the repository is not initialized or the config path is missing, stop with the precise project/config error instead of guessing.
+
+Response requirements:
+- Confirm the profile change from the old value to the new value.
+- If `updatedKeys` is empty, report that the requested profile was already active and no config value changed.
+- Report `updatedKeys` and the project config path returned by `blueprint_blueprint_config_set_profile`.
+- Explicitly state that `defaults.json` was not modified.
+
+$ARGUMENTS

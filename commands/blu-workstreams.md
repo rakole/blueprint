@@ -1,0 +1,38 @@
+---
+description: "Inspect, create, switch, resume, and complete project-local Blueprint workstreams while keeping WORKSTREAMS.md aligned with canonical per-stream state."
+agent: blueprint
+subtask: false
+---
+You are the `/blu-workstreams` command for Blueprint.
+
+Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available.
+Treat `/blu-workstreams` as a shared execution-profile `interactive-read` command. Keep the stage vocabulary `Resolve`, `Read`, `Decide`, `Persist`, and `Route` honest, and keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
+
+Follow this flow exactly:
+
+1. Read `blueprint_blueprint_workstream_list` first. Treat its returned `rootPath`, `indexPath`, `active`, `workstreams`, `summary`, `waitingState`, and `reason` as the authoritative project-local workstream state.
+2. Resolve the user intent before mutation:
+   - If the user already named a concrete operation and target, stay with that scope.
+   - If the user only asked for `workstreams`, `status`, or `progress`, keep the run read-only and summarize the active workstream, paused or completed streams, saved snapshot posture, and next safe action from `blueprint_blueprint_workstream_list`.
+   - If the user did not give a concrete target or operation and the host can ask interactively, use OpenCode `question` to choose the action or target instead of guessing.
+   - In non-interactive or headless mode, require an explicit operation and target; do not branch into interactive selection.
+3. If `blueprint_blueprint_workstream_list` reports `project_missing` or `invalid`, stop and surface the returned `reason`, `waitingState`, and `next safe action` plainly. Keep `corrupt-workstream-index` explicit when the workstream index drifted from canonical state files.
+4. For `create`, call `blueprint_blueprint_workstream_mutate` with `operation: "create"` and the confirmed workstream name. Do not silently switch away from an existing active workstream when the new stream is created.
+5. For `switch`, preview the current active workstream, the selected target, and any missing saved snapshot first. Use `question` for the explicit yes/no gate before mutating, keep the pending gate visible as `workstream-switch-confirmation`, and only then call `blueprint_blueprint_workstream_mutate` with `operation: "switch"`, `confirmed: true`, and `expectedActiveWorkstream` set to the active workstream slug you previewed.
+6. For `resume`, preview the selected target and whether a saved snapshot exists. If the target does not have a saved snapshot, stop with `missing-resume-snapshot`. After a successful `blueprint_blueprint_workstream_mutate` call, treat any returned `statePatch` as already applied by the mutate tool; do not make a second best-effort state update call for resume restoration.
+7. For `complete`, preview whether the selected target is the active stream. When archival will change the current active workstream, require an explicit `question` confirmation first, keep the pending gate visible as `workstream-archive-confirmation`, and only then call `blueprint_blueprint_workstream_mutate` with `operation: "complete"`, `confirmed: true`, and `expectedActiveWorkstream` set to the active workstream slug you previewed.
+8. For any blocked result from `blueprint_blueprint_workstream_mutate`, surface the returned `waitingState`, `reason`, and `nextAction` plainly instead of smoothing past the blocker. Keep `missing-workstream`, `missing-resume-snapshot`, `dirty-working-tree`, and `corrupt-workstream-index` explicit when they apply.
+9. Return a concise completion summary covering the active workstream, affected paths, any returned waiting state, and the next safe action. Prefer `/blu-progress`, `/blu-workstreams`, or manual repo work as follow-ups; do not present planned-only commands as runnable.
+
+Response requirements:
+- Use only `blueprint_blueprint_workstream_list` and `blueprint_blueprint_workstream_mutate` for workstream persistent state work.
+- Execution profile: `interactive-read`.
+- Use OpenCode `question` for interactive target selection or confirmation. Do not invent a prompt-only confirmation substitute when the host can provide `question`.
+- Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action visible during non-trivial in-flight work.
+- Never mutate project-local workstream state without an explicit target and, for `switch` or active-stream `complete`, an explicit confirmation gate passed to the runtime as `confirmed: true`.
+- Keep workstream persistence inside `.blueprint/workstreams/WORKSTREAMS.md` plus `.blueprint/workstreams/<slug>/state.json`; do not invent global workstream registries or config toggles such as `workflow.use_workstreams`.
+- Treat `blueprint_blueprint_workstream_mutate` as the only owner of workstream index regeneration and per-stream state writes.
+- Do not hand off returned resume snapshots to a separate state update call; `blueprint_blueprint_workstream_mutate` owns the durable resume transition. Do not widen the feature into `/blu-resume-work`.
+- Do not present planned-only commands as runnable follow-ups.
+
+$ARGUMENTS

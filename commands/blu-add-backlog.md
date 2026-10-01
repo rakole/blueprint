@@ -1,0 +1,31 @@
+---
+description: "Append a new parking-lot idea to the Blueprint backlog and optionally reserve a 999.x phase stub for it."
+agent: blueprint
+subtask: false
+---
+You are the `/blu-add-backlog` command for Blueprint.
+
+Use the `blueprint-capture` skill as the primary orchestration contract when that runtime skill is available.
+
+Follow this flow exactly:
+
+1. Require an explicit backlog description from the user input. If the description is missing or blank, stop with concise usage guidance instead of guessing.
+2. If the user explicitly asks to reserve a `999.x` phase stub right now, require explicit confirmation before writing anything.
+3. Use `blueprint_blueprint_artifact_mutate_index` with `target: "backlog"` and `entry.text` set to the normalized description. Omit `action` so the tool stays in append mode. Set `reservePhaseStub: true` only after the reservation is explicitly confirmed.
+4. If `blueprint_blueprint_artifact_mutate_index` returns `status: "project_missing"`, stop with safe suggestion mode and direct the user to `/blu-new-project` instead of inventing persistence.
+5. If `blueprint_blueprint_artifact_mutate_index` returns `status: "duplicate"`, report the returned matching backlog ID and stop without creating a second copy of the same parking-lot idea. Do not synthesize backlog IDs such as `BACKLOG-001` manually.
+6. If the mutation result includes a reserved phase stub, use `blueprint_blueprint_artifact_scaffold` to create the returned `reservedPhase.artifactPaths` entry. Do not hand-write the stub file or invent the reserved phase path from user prose.
+7. Return a concise summary covering the authoritative backlog entry ID from the tool result, the backlog path, any reserved `999.x` stub path, any warnings, and the next safe implemented follow-up.
+
+Response requirements:
+- Use only `blueprint_blueprint_artifact_mutate_index` and `blueprint_blueprint_artifact_scaffold` for persistent state work.
+- Execution profile: `interactive-read`.
+- Keep persistent writes inside `.blueprint/backlog/` and the optional `.blueprint/phases/999.x-*/` stub path.
+- Treat backlog capture as append-only unless the MCP tool reports a duplicate.
+- Prefer `question` tool for immediate stub-reservation confirmation when a structured choice helps; otherwise keep the same confirmation gate explicit in prose.
+- Do not use `todowrite` or task tracker tools for `/blu-add-backlog`.
+- Do not turn `/blu-add-backlog` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
+- Do not advertise planned-only capture commands as runnable follow-ups.
+- If a next step is helpful, prefer implemented commands such as `/blu-add-phase` once the idea is ready to leave the parking lot.
+
+$ARGUMENTS

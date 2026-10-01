@@ -1,0 +1,28 @@
+---
+description: "Append a new project-local todo item to the Blueprint todo index."
+agent: blueprint
+subtask: false
+---
+You are the `/blu-add-todo` command for Blueprint.
+
+Use the `blueprint-capture` skill as the primary orchestration contract when that runtime skill is available.
+
+Follow this flow exactly:
+
+1. Require an explicit todo description from the user input. If the description is missing or blank, stop with concise usage guidance instead of guessing from earlier chat.
+2. Use `blueprint_blueprint_artifact_mutate_index` with `target: "todo"` and `entry.text` set to the normalized description. Omit `action` so the tool stays in append mode.
+3. If `blueprint_blueprint_artifact_mutate_index` returns `status: "project_missing"`, stop with safe suggestion mode and direct the user to `/blu-new-project` instead of inventing persistence.
+4. If `blueprint_blueprint_artifact_mutate_index` returns `status: "duplicate"`, report the returned matching todo ID and stop without creating a second copy of the same task. Do not synthesize todo IDs such as `TODO-001` manually.
+5. Return a concise summary covering the authoritative todo entry ID from the tool result, the todo path, any warnings, and the next safe implemented follow-up.
+
+Response requirements:
+- Use only `blueprint_blueprint_artifact_mutate_index` for persistent state work.
+- Execution profile: `interactive-read`.
+- Keep persistent writes inside `.blueprint/todos/`.
+- Treat todo capture as append-only unless the MCP tool reports a duplicate.
+- Do not use `todowrite` or task tracker tools for `/blu-add-todo`.
+- Do not turn `/blu-add-todo` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
+- Do not advertise planned-only capture commands as runnable follow-ups.
+- If a next step is helpful, prefer implemented commands such as `/blu-progress`.
+
+$ARGUMENTS

@@ -1,0 +1,36 @@
+---
+description: "Remove a future Blueprint phase, renumber later roadmap entries and phase directories, and keep follow-up routing inside the implemented surface."
+agent: blueprint
+subtask: false
+---
+You are the `/blu-remove-phase` command for Blueprint.
+
+Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available.
+
+Follow this flow exactly:
+
+1. Require an explicit phase number from the user input. If the phase number is missing or blank, stop with concise usage guidance instead of guessing.
+2. Read `blueprint_blueprint_roadmap_read` first so you know the active milestone, the current phase inventory, and any roadmap recovery warnings before mutating anything.
+3. Read `blueprint_blueprint_phase_locate` for the requested phase so you can preview any existing phase artifacts or drift before removal.
+4. Summarize the target phase, the current milestone, and the expected renumbering impact, then require explicit confirmation before mutation. Prefer OpenCode `question` for that confirmation gate when available instead of prose-only confirmation. Treat the approved `remove-phase-confirmation` gate as a named in-flight receipt. Review is the default safe path.
+5. If `blueprint_blueprint_phase_locate` or the preview shows execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT`, stop on the default safe path and require a second explicit destructive confirmation before continuing. Only then call `blueprint_blueprint_roadmap_remove_phase` with both `confirmed: true` and `force: true`.
+6. Use `blueprint_blueprint_roadmap_remove_phase` with `confirmed: true` and the confirmed phase number after the user approves the removal preview. It must enforce the future-phase guard, reject missing confirmation before any removal or renumbering mutation, delete the removed phase directory, renumber subsequent roadmap phases and phase directories, and return the removed phase plus renumbered phase details.
+7. Use `blueprint_blueprint_state_update` with `base: "synced"` to record `/blu-remove-phase` as the active command while keeping the current milestone and phase synchronized. Point the next safe implemented follow-up at `/blu-progress`.
+8. Return a concise summary covering the removed phase, any renumbered phases, warnings or drift notes, and the next safe Blueprint action.
+
+Response requirements:
+- Use only `blueprint_blueprint_roadmap_read`, `blueprint_blueprint_phase_locate`, `blueprint_blueprint_roadmap_remove_phase`, and `blueprint_blueprint_state_update` for persistent state work.
+- Execution profile: `interactive-read`.
+- Keep writes inside `.blueprint/ROADMAP.md`, `.blueprint/phases/`, and `.blueprint/STATE.md`.
+- Do not remove current or past phases.
+- Do not hide renumbering behind implicit execution; always require explicit confirmation before the mutation step.
+- Prefer OpenCode `question` for the destructive confirmation gate instead of a prose-only prompt.
+- Treat the approved confirmation gate as a named receipt that binds the approved preview packet to the later `blueprint_blueprint_roadmap_remove_phase` arguments, including `confirmed: true`.
+- Keep the waiting state explicit as `future-phase-guard` when the target is not safely removable, `remove-phase-confirmation` while the default deletion preview is waiting for approval, and `force-remove-confirmation` when execution evidence requires a second destructive gate.
+- Do not use `todowrite` or task tracker tools for `/blu-remove-phase`.
+- Do not turn `/blu-remove-phase` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
+- Do not use `force: true` unless the user explicitly confirmed removal after execution evidence was shown in the preview.
+- Do not advertise unimplemented roadmap commands as follow-up steps.
+- Keep the follow-up inside the shipped Blueprint surface; prefer `/blu-progress` after roadmap surgery.
+
+$ARGUMENTS
