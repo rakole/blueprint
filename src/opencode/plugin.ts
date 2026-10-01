@@ -8,11 +8,11 @@ import { createBlueprintActivationHooks } from "./activation.js";
 import {
   loadBlueprintNativeAssets,
   resolveBlueprintPackageRoot,
-  resolveOpenCodeDataRoot,
   type NativeAgent,
   type NativePermission
 } from "./assets.js";
 import { parseNativeMarkdown } from "../shared/native-frontmatter.js";
+import { resolveBlueprintRuntimeHost } from "../mcp/runtime-host.js";
 
 type MutableOpenCodeConfig = {
   command?: Record<string, unknown>;
@@ -140,6 +140,17 @@ export function allowBlueprintPackageReads(
       ...directories.map((directory) => [`${directory}${path.sep}*`, "allow"] as const)
     ])
   };
+}
+
+export function resolveBlueprintPluginGlobalHome(
+  packageRoot: string,
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  return resolveBlueprintRuntimeHost({
+    ...env,
+    BLUEPRINT_HOST: "opencode",
+    BLUEPRINT_EXTENSION_PATH: packageRoot
+  }).globalBlueprintDir;
 }
 
 async function pathExists(candidate: string): Promise<boolean> {
@@ -279,7 +290,7 @@ export const BlueprintPlugin: Plugin = async ({ directory, worktree }) => {
           }
         ])
       );
-      const stateRoot = path.join(resolveOpenCodeDataRoot(), "blueprint");
+      const stateRoot = resolveBlueprintPluginGlobalHome(assets.packageRoot);
 
       target.command = { ...(target.command ?? {}), ...assets.command };
       target.agent = { ...(target.agent ?? {}), ...agents };

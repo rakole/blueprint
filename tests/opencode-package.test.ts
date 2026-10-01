@@ -112,4 +112,28 @@ test("exact local tarball contains only the native package closure and loads its
   await execFileAsync("tar", ["-xzf", tarball, "-C", temp]);
   const imported = await import(`${(await import("node:url")).pathToFileURL(path.join(temp, "package", "dist", "opencode", "plugin.js")).href}?test=${Date.now()}`);
   assert.equal(typeof imported.default, "function");
+  const customerProject = path.join(temp, "customer-project");
+  const explicitGlobalHome = path.join(temp, "explicit-global-home");
+  await mkdir(customerProject, { recursive: true });
+  const previousGlobalHome = process.env.BLUEPRINT_GLOBAL_HOME;
+  process.env.BLUEPRINT_GLOBAL_HOME = explicitGlobalHome;
+  try {
+    const plugin = await (imported.default as (input: Record<string, unknown>) => Promise<Record<string, unknown>>)({
+      directory: customerProject,
+      worktree: customerProject,
+      client: {},
+      serverUrl: new URL("http://127.0.0.1")
+    });
+    const config: Record<string, any> = {};
+    await (plugin.config as (value: Record<string, unknown>) => Promise<void>)(config);
+    assert.equal(Object.keys(config.command).length, 56);
+    assert.equal(Object.keys(config.agent).length, 16);
+    assert.deepEqual(config.skills.paths, [path.join(temp, "package", "skills")]);
+    assert.equal(config.mcp.blueprint.cwd, customerProject);
+    assert.equal(config.mcp.blueprint.environment.BLUEPRINT_GLOBAL_HOME, explicitGlobalHome);
+    assert.equal(config.mcp.blueprint.environment.BLUEPRINT_EXTENSION_PATH, path.join(temp, "package"));
+  } finally {
+    if (previousGlobalHome === undefined) delete process.env.BLUEPRINT_GLOBAL_HOME;
+    else process.env.BLUEPRINT_GLOBAL_HOME = previousGlobalHome;
+  }
 });

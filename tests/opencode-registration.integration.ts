@@ -11,7 +11,8 @@ import { createBlueprintActivationHooks } from "../src/opencode/activation.js";
 import { loadBlueprintNativeAssets } from "../src/opencode/assets.js";
 import {
   allowBlueprintPackageReads,
-  mergePermissionWithCallerRestrictions
+  mergePermissionWithCallerRestrictions,
+  resolveBlueprintPluginGlobalHome
 } from "../src/opencode/plugin.js";
 import { parseNativeMarkdown } from "../src/shared/native-frontmatter.js";
 
@@ -43,27 +44,21 @@ async function sha256(file: string): Promise<string> {
 }
 
 async function stageAndInstallPackage(tempRoot: string): Promise<string> {
-  const stage = path.join(tempRoot, "package-stage");
   const packed = path.join(tempRoot, "packed");
   const prefix = path.join(tempRoot, "consumer");
-  await Promise.all([mkdir(stage, { recursive: true }), mkdir(packed, { recursive: true })]);
-  await Promise.all([
-    cp(path.join(repoRoot, "package.json"), path.join(stage, "package.json")),
-    cp(path.join(repoRoot, "dist"), path.join(stage, "dist"), { recursive: true }),
-    cp(path.join(fixtureRoot, "registration", "commands"), path.join(stage, "commands"), { recursive: true }),
-    cp(path.join(fixtureRoot, "registration", "agents"), path.join(stage, "agents"), { recursive: true }),
-    cp(path.join(fixtureRoot, "registration", "skills"), path.join(stage, "skills"), { recursive: true })
-  ]);
+  await mkdir(packed, { recursive: true });
 
-  const packedResult = run("npm", ["pack", stage, "--pack-destination", packed, "--json"], {
-    cwd: tempRoot
+  const packedResult = run("npm", ["pack", repoRoot, "--ignore-scripts", "--pack-destination", packed, "--json"], {
+    cwd: tempRoot,
+    env: { ...process.env, npm_config_cache: path.join(tempRoot, "npm-cache") }
   });
   assertSuccess(packedResult, "npm pack");
   const packOutput = JSON.parse(packedResult.stdout) as Array<{ filename: string }>;
   assert.equal(packOutput.length, 1);
   const tarball = path.join(packed, packOutput[0].filename);
-  const installResult = run("npm", ["install", "--prefix", prefix, "--omit=dev", tarball], {
+  const installResult = run("npm", ["install", "--prefix", prefix, "--omit=dev", "--ignore-scripts", tarball], {
     cwd: tempRoot,
+    env: { ...process.env, npm_config_cache: path.join(tempRoot, "npm-cache") },
     timeout: 120_000
   });
   assertSuccess(installResult, "isolated tarball install");
@@ -162,6 +157,22 @@ test("primary projection grants only validated installed asset directories", () 
   });
   assert.equal(callerDenied.external_directory, "deny");
   assert.equal((projected.external_directory as Record<string, string>)[`${path.dirname(packageRoot)}${path.sep}*`], undefined);
+});
+
+test("plugin global state honors explicit caller root before XDG fallback", () => {
+  assert.equal(
+    resolveBlueprintPluginGlobalHome("/opt/blueprint", {
+      BLUEPRINT_GLOBAL_HOME: "/tmp/caller-blueprint-home",
+      XDG_DATA_HOME: "/tmp/ignored-xdg"
+    }),
+    path.resolve("/tmp/caller-blueprint-home")
+  );
+  assert.equal(
+    resolveBlueprintPluginGlobalHome("/opt/blueprint", {
+      XDG_DATA_HOME: "/tmp/opencode-xdg"
+    }),
+    path.resolve("/tmp/opencode-xdg/opencode/blueprint")
+  );
 });
 
 test("native asset loading rejects a symlinked package directory", async () => {
