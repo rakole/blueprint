@@ -17,6 +17,9 @@ router plus direct `/blu-<command>` commands, stores workflow state in
 
 ## Read By Task
 
+- OpenCode port planning or implementation: first follow the highest-priority
+  branch isolation rule in `AGENTS.md`, then read
+  [the tool inventory and conversion plan](appendices/open-code-port-plan.md).
 - Command routing or slash command changes: read `03-command-system.md`,
   `04-skills-and-agents.md`, `05-mcp-runtime-and-persistence.md`, and the
   matching file under `commands`.
