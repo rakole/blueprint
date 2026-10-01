@@ -110,30 +110,55 @@ test("exact local tarball contains only the native package closure and loads its
     assert.equal(names.includes(required), true, `tarball must contain ${required}`);
   }
   await execFileAsync("tar", ["-xzf", tarball, "-C", temp]);
-  const imported = await import(`${(await import("node:url")).pathToFileURL(path.join(temp, "package", "dist", "opencode", "plugin.js")).href}?test=${Date.now()}`);
-  assert.equal(typeof imported.default, "function");
   const customerProject = path.join(temp, "customer-project");
   const explicitGlobalHome = path.join(temp, "explicit-global-home");
-  await mkdir(customerProject, { recursive: true });
-  const previousGlobalHome = process.env.BLUEPRINT_GLOBAL_HOME;
-  process.env.BLUEPRINT_GLOBAL_HOME = explicitGlobalHome;
-  try {
-    const plugin = await (imported.default as (input: Record<string, unknown>) => Promise<Record<string, unknown>>)({
-      directory: customerProject,
-      worktree: customerProject,
-      client: {},
-      serverUrl: new URL("http://127.0.0.1")
-    });
-    const config: Record<string, any> = {};
-    await (plugin.config as (value: Record<string, unknown>) => Promise<void>)(config);
-    assert.equal(Object.keys(config.command).length, 56);
-    assert.equal(Object.keys(config.agent).length, 16);
-    assert.deepEqual(config.skills.paths, [path.join(temp, "package", "skills")]);
-    assert.equal(config.mcp.blueprint.cwd, customerProject);
-    assert.equal(config.mcp.blueprint.environment.BLUEPRINT_GLOBAL_HOME, explicitGlobalHome);
-    assert.equal(config.mcp.blueprint.environment.BLUEPRINT_EXTENSION_PATH, path.join(temp, "package"));
-  } finally {
-    if (previousGlobalHome === undefined) delete process.env.BLUEPRINT_GLOBAL_HOME;
-    else process.env.BLUEPRINT_GLOBAL_HOME = previousGlobalHome;
-  }
+  const isolatedHome = path.join(temp, "home");
+  const isolatedConfig = path.join(temp, "xdg-config");
+  const isolatedData = path.join(temp, "xdg-data");
+  const isolatedOpenCodeConfig = path.join(temp, "opencode-config");
+  await Promise.all([
+    mkdir(customerProject, { recursive: true }),
+    mkdir(isolatedHome, { recursive: true }),
+    mkdir(isolatedConfig, { recursive: true }),
+    mkdir(isolatedData, { recursive: true }),
+    mkdir(isolatedOpenCodeConfig, { recursive: true })
+  ]);
+  const pluginEntry = path.join(temp, "package", "dist", "opencode", "plugin.js");
+  const probe = `
+    import assert from "node:assert/strict";
+    import path from "node:path";
+    import { realpath } from "node:fs/promises";
+    import pluginFactory from ${JSON.stringify((await import("node:url")).pathToFileURL(pluginEntry).href)};
+    const customer = process.argv[1];
+    const packageRoot = await realpath(process.argv[2]);
+    const expectedGlobal = process.argv[3];
+    const plugin = await pluginFactory({ directory: customer, worktree: customer, client: {}, serverUrl: new URL("http://127.0.0.1") });
+    const config = {
+      command: { foreign: { template: "foreign" } },
+      agent: { foreign: { description: "foreign" } },
+      mcp: { foreign: { type: "remote", url: "https://example.invalid" } }
+    };
+    await plugin.config(config);
+    assert.equal(Object.keys(config.command).filter((name) => name.startsWith("blu")).length, 56);
+    assert.equal(Object.keys(config.agent).filter((name) => name.startsWith("blueprint")).length, 16);
+    assert.equal(config.command.foreign.template, "foreign");
+    assert.equal(config.agent.foreign.description, "foreign");
+    assert.equal(config.mcp.foreign.url, "https://example.invalid");
+    assert.deepEqual(config.skills.paths, [path.join(packageRoot, "skills")]);
+    assert.equal(config.mcp.blueprint.cwd, customer);
+    assert.equal(config.mcp.blueprint.environment.BLUEPRINT_GLOBAL_HOME, expectedGlobal);
+    assert.equal(config.mcp.blueprint.environment.BLUEPRINT_EXTENSION_PATH, packageRoot);
+  `;
+  await execFileAsync(process.execPath, ["--input-type=module", "-e", probe, customerProject, path.join(temp, "package"), explicitGlobalHome], {
+    cwd: customerProject,
+    env: {
+      ...process.env,
+      HOME: isolatedHome,
+      XDG_CONFIG_HOME: isolatedConfig,
+      XDG_DATA_HOME: isolatedData,
+      OPENCODE_CONFIG_DIR: isolatedOpenCodeConfig,
+      OPENCODE_DISABLE_PROJECT_CONFIG: "true",
+      BLUEPRINT_GLOBAL_HOME: explicitGlobalHome
+    }
+  });
 });

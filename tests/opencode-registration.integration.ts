@@ -182,12 +182,13 @@ test("native asset loading rejects a symlinked package directory", async () => {
   await Promise.all([
     mkdir(packageRoot, { recursive: true }),
     cp(path.join(repoRoot, "dist"), path.join(packageRoot, "dist"), { recursive: true }),
-    cp(path.join(fixtureRoot, "registration", "agents"), path.join(packageRoot, "agents"), { recursive: true }),
-    cp(path.join(fixtureRoot, "registration", "skills"), path.join(packageRoot, "skills"), { recursive: true }),
-    cp(path.join(fixtureRoot, "registration", "commands"), outside, { recursive: true })
+    cp(path.join(repoRoot, "generated"), path.join(packageRoot, "generated"), { recursive: true }),
+    cp(path.join(repoRoot, "agents"), path.join(packageRoot, "agents"), { recursive: true }),
+    cp(path.join(repoRoot, "skills"), path.join(packageRoot, "skills"), { recursive: true }),
+    cp(path.join(repoRoot, "commands"), outside, { recursive: true })
   ]);
   await symlink(outside, path.join(packageRoot, "commands"));
-  await assert.rejects(loadBlueprintNativeAssets(packageRoot), /literal directory|escapes the package root|opencode-assets\.json/);
+  await assert.rejects(loadBlueprintNativeAssets(packageRoot), /literal directory|escapes (?:the )?package root/);
 });
 
 test("private helper activation is exact, correlated, revocable, and session isolated", async () => {
@@ -337,10 +338,7 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
     "*.env"
   ]);
   assert.equal(config.agent["blueprint-reviewer"].permission.read["mcp:*"], "deny");
-  assert.deepEqual(config.agent["blueprint-executor"].permission.bash, {
-    pwd: "ask",
-    "git diff -- *": "ask"
-  });
+  assert.equal(config.agent["blueprint-executor"].permission.bash, "ask");
   assert.equal(config.agent.blueprint.permission.read["*.env"], "deny");
   assert.equal(config.skills.paths.length, 1);
   assert.equal(path.isAbsolute(config.skills.paths[0]), true);
@@ -428,21 +426,17 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
   assertSuccess(executorEdit, "executor semantic edit");
   assert.equal(await readFile(executorFile, "utf8"), "after\n");
 
-  const unrestrictedConfigPath = path.join(tempRoot, "opencode-executor.json");
-  const unrestrictedConfig = JSON.parse(await readFile(host.config, "utf8")) as Record<string, any>;
-  delete unrestrictedConfig.permission.bash;
-  await writeFile(unrestrictedConfigPath, JSON.stringify(unrestrictedConfig));
   const executorBash = run(
     hostBinary,
     ["debug", "agent", "blueprint-executor", "--tool", "bash", "--params", JSON.stringify({ command: "pwd" })],
     {
       cwd: host.project,
-      env: { ...host.env, OPENCODE_CONFIG: unrestrictedConfigPath },
+      env: host.env,
       timeout: 120_000
     }
   );
-  assertSuccess(executorBash, "executor controlled bash");
-  assert.match(executorBash.stdout, new RegExp(canonicalProject.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.notEqual(executorBash.status, 0, "executor bash must remain approval-pending");
+  assert.match(`${executorBash.stdout}\n${executorBash.stderr}`, /permission|approval|ask|denied/i);
 
   const foreignRoot = path.join(tempRoot, "foreign-skills");
   await mkdir(path.join(foreignRoot, "group", "substitute"), { recursive: true });
@@ -534,7 +528,13 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
   const blueprintSkills = skillList.filter((skill) => skill.name.startsWith("blueprint-"));
   assert.deepEqual(
     blueprintSkills.map((skill) => skill.name).sort(),
-    ["blueprint-god-review", "blueprint-project"]
+    [
+      "blueprint-bootstrap", "blueprint-capture", "blueprint-debug", "blueprint-docs",
+      "blueprint-god-review", "blueprint-governance", "blueprint-impact",
+      "blueprint-maintenance", "blueprint-map", "blueprint-phase-discovery",
+      "blueprint-phase-execution", "blueprint-phase-planning", "blueprint-phase-validation",
+      "blueprint-plan-run", "blueprint-review", "blueprint-roadmap-admin", "blueprint-router"
+    ]
   );
   assert.equal(blueprintSkills.every((skill) => path.isAbsolute(skill.location)), true);
 
@@ -546,7 +546,7 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
       "DEBUG",
       "run",
       "--command",
-      "blueprint-project",
+      "blueprint-router",
       "--model",
       "opencode/big-pickle",
       ""
