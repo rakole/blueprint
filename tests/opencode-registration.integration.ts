@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { cp, mkdtemp, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -8,6 +8,8 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import { createBlueprintActivationHooks } from "../src/opencode/activation.js";
+import { loadBlueprintNativeAssets } from "../src/opencode/assets.js";
+import { mergePermissionWithCallerRestrictions } from "../src/opencode/plugin.js";
 import { parseNativeMarkdown } from "../src/shared/native-frontmatter.js";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -104,6 +106,48 @@ test("strict native frontmatter rejects duplicate keys and non-mappings", () => 
     frontmatter: { name: "one" },
     body: "body\n"
   });
+});
+
+test("caller wildcard and specific restrictions keep final permission precedence", () => {
+  const merged = mergePermissionWithCallerRestrictions(
+    {
+      "*": "deny",
+      read: { "*": "allow", "safe/**": "allow" },
+      bash: { pwd: "allow" }
+    },
+    {
+      "*": "ask",
+      read: { "*": "deny", "docs/**": "ask" },
+      bash: "deny"
+    }
+  );
+  assert.deepEqual(Object.keys(merged), ["*", "read", "bash"]);
+  assert.deepEqual(merged.read, { "safe/**": "ask", "*": "deny", "docs/**": "ask" });
+  assert.equal(merged.bash, "deny");
+  assert.equal(merged["*"], "deny");
+
+  assert.deepEqual(
+    mergePermissionWithCallerRestrictions(
+      { "*": "deny", read: "allow" },
+      { bash: { pwd: "ask" } }
+    ),
+    { "*": "deny", read: "allow" }
+  );
+});
+
+test("native asset loading rejects a symlinked package directory", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-opencode-symlink-"));
+  const packageRoot = path.join(tempRoot, "package");
+  const outside = path.join(tempRoot, "outside-commands");
+  await Promise.all([
+    mkdir(packageRoot, { recursive: true }),
+    cp(path.join(repoRoot, "dist"), path.join(packageRoot, "dist"), { recursive: true }),
+    cp(path.join(fixtureRoot, "registration", "agents"), path.join(packageRoot, "agents"), { recursive: true }),
+    cp(path.join(fixtureRoot, "registration", "skills"), path.join(packageRoot, "skills"), { recursive: true }),
+    cp(path.join(fixtureRoot, "registration", "commands"), outside, { recursive: true })
+  ]);
+  await symlink(outside, path.join(packageRoot, "commands"));
+  await assert.rejects(loadBlueprintNativeAssets(packageRoot), /literal directory|escapes the package root/);
 });
 
 test("private helper activation is exact, correlated, revocable, and session isolated", async () => {
@@ -211,7 +255,10 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
   assert.equal(config.agent.blueprint.mode, "primary");
   assert.equal(config.agent["blueprint-reviewer"].mode, "subagent");
   assert.equal(config.agent["blueprint-executor"].mode, "subagent");
-  assert.equal(config.agent["blueprint-executor"].permission.bash, "ask");
+  assert.deepEqual(config.agent["blueprint-executor"].permission.bash, {
+    pwd: "ask",
+    "git diff -- *": "ask"
+  });
   assert.equal(config.agent.blueprint.permission.read["*.env"], "deny");
   assert.equal(config.skills.paths.length, 1);
   assert.equal(path.isAbsolute(config.skills.paths[0]), true);
@@ -219,6 +266,157 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
   assert.equal(config.mcp.blueprint.cwd, canonicalProject);
   assert.equal(config.mcp.blueprint.environment.BLUEPRINT_GLOBAL_HOME, path.join(host.env.XDG_DATA_HOME!, "opencode", "blueprint"));
   assert.equal(config.mcp.blueprint.environment.BLUEPRINT_EXTENSION_PATH, canonicalPackageRoot);
+
+  const reviewerProfileResult = run(hostBinary, ["debug", "agent", "blueprint-reviewer"], {
+    cwd: host.project,
+    env: host.env,
+    timeout: 120_000
+  });
+  assertSuccess(reviewerProfileResult, "reviewer tool inventory");
+  const reviewerProfile = JSON.parse(reviewerProfileResult.stdout) as {
+    tools: Record<string, boolean>;
+  };
+  const editTools = ["edit", "write", "apply_patch"].filter((tool) =>
+    Object.hasOwn(reviewerProfile.tools, tool)
+  );
+  assert.ok(editTools.length > 0, "pinned host must expose a semantic edit control");
+  for (const tool of ["bash", "task", "question", "todowrite", "skill"]) {
+    assert.equal(Object.hasOwn(reviewerProfile.tools, tool), true, `pinned host is missing native tool ${tool}`);
+  }
+  for (const tool of [
+    "list_mcp_resources",
+    "list_mcp_resource_templates",
+    "read_mcp_resource",
+    "blueprint_blueprint_project_status"
+  ]) {
+    assert.equal(
+      Object.hasOwn(reviewerProfile.tools, tool),
+      false,
+      `${tool} unexpectedly entered the debug ToolRegistry; requalify this evidence`
+    );
+  }
+
+  const deniedToolCases: Array<[string, Record<string, unknown>]> = [
+    ["edit", { filePath: path.join(host.project, "denied.txt"), oldString: "", newString: "denied" }],
+    ["write", { filePath: path.join(host.project, "denied.txt"), content: "denied" }],
+    ["apply_patch", { patchText: "*** Begin Patch\n*** End Patch" }],
+    ["bash", { command: "pwd" }],
+    ["task", { description: "denied", prompt: "denied", subagent_type: "blueprint-reviewer" }],
+    ["question", { questions: [{ header: "Gate", question: "Proceed?", options: [{ label: "No", description: "Stop" }] }] }],
+    ["todowrite", { todos: [] }],
+    ["skill", { name: "blueprint-project" }]
+  ];
+  for (const [tool, params] of deniedToolCases) {
+    if (!Object.hasOwn(reviewerProfile.tools, tool)) continue;
+    const denied = run(
+      hostBinary,
+      ["debug", "agent", "blueprint-reviewer", "--tool", tool, "--params", JSON.stringify(params)],
+      { cwd: host.project, env: host.env, timeout: 120_000 }
+    );
+    assert.notEqual(denied.status, 0, `${tool} unexpectedly succeeded for the read-only reviewer`);
+    assert.match(`${denied.stdout}\n${denied.stderr}`, /disabled for agent blueprint-reviewer/);
+  }
+
+  const executorProfileResult = run(hostBinary, ["debug", "agent", "blueprint-executor"], {
+    cwd: host.project,
+    env: host.env,
+    timeout: 120_000
+  });
+  assertSuccess(executorProfileResult, "executor tool inventory");
+  const executorProfile = JSON.parse(executorProfileResult.stdout) as {
+    tools: Record<string, boolean>;
+  };
+  assert.equal(executorProfile.tools.edit, true);
+
+  const executorFile = path.join(canonicalProject, "executor-fixture.txt");
+  await writeFile(executorFile, "before\n");
+  const executorEdit = run(
+    hostBinary,
+    [
+      "debug",
+      "agent",
+      "blueprint-executor",
+      "--tool",
+      "edit",
+      "--params",
+      JSON.stringify({ filePath: executorFile, oldString: "before", newString: "after" })
+    ],
+    { cwd: host.project, env: host.env, timeout: 120_000 }
+  );
+  assertSuccess(executorEdit, "executor semantic edit");
+  assert.equal(await readFile(executorFile, "utf8"), "after\n");
+
+  const unrestrictedConfigPath = path.join(tempRoot, "opencode-executor.json");
+  const unrestrictedConfig = JSON.parse(await readFile(host.config, "utf8")) as Record<string, any>;
+  delete unrestrictedConfig.permission.bash;
+  await writeFile(unrestrictedConfigPath, JSON.stringify(unrestrictedConfig));
+  const executorBash = run(
+    hostBinary,
+    ["debug", "agent", "blueprint-executor", "--tool", "bash", "--params", JSON.stringify({ command: "pwd" })],
+    {
+      cwd: host.project,
+      env: { ...host.env, OPENCODE_CONFIG: unrestrictedConfigPath },
+      timeout: 120_000
+    }
+  );
+  assertSuccess(executorBash, "executor controlled bash");
+  assert.match(executorBash.stdout, new RegExp(canonicalProject.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+
+  const foreignRoot = path.join(tempRoot, "foreign-skills");
+  await mkdir(path.join(foreignRoot, "group", "substitute"), { recursive: true });
+  await writeFile(
+    path.join(foreignRoot, "group", "substitute", "SKILL.md"),
+    "---\nname: blueprint-god-review\ndescription: Foreign collision\n---\nforeign\n"
+  );
+  const collisionConfigPath = path.join(tempRoot, "opencode-collision.json");
+  const collisionConfig = JSON.parse(await readFile(host.config, "utf8")) as Record<string, unknown>;
+  collisionConfig.skills = { paths: [foreignRoot] };
+  await writeFile(collisionConfigPath, JSON.stringify(collisionConfig));
+  const collisionProbe = run(hostBinary, ["--print-logs", "--log-level", "DEBUG", "debug", "config"], {
+    cwd: host.project,
+    env: { ...host.env, OPENCODE_CONFIG: collisionConfigPath },
+    timeout: 120_000
+  });
+  assertSuccess(collisionProbe, "foreign skill collision probe");
+  const collidedConfig = JSON.parse(collisionProbe.stdout) as Record<string, any>;
+  assert.equal(collidedConfig.command?.blu, undefined);
+  assert.equal(collidedConfig.agent?.blueprint, undefined);
+  assert.equal(collidedConfig.mcp?.blueprint, undefined);
+  assert.match(collisionProbe.stderr, /foreign skill collisions: blueprint-god-review/);
+
+  const customConfigRoot = path.join(tempRoot, "custom-config");
+  await mkdir(path.join(customConfigRoot, "skills", "group", "substitute"), { recursive: true });
+  await writeFile(
+    path.join(customConfigRoot, "skills", "group", "substitute", "SKILL.md"),
+    "---\nname: blueprint-god-review\ndescription: Custom config collision\n---\nforeign\n"
+  );
+  const customConfigProbe = run(hostBinary, ["--print-logs", "--log-level", "DEBUG", "debug", "config"], {
+    cwd: host.project,
+    env: { ...host.env, OPENCODE_CONFIG_DIR: customConfigRoot },
+    timeout: 120_000
+  });
+  assertSuccess(customConfigProbe, "custom config skill collision probe");
+  const customConfigResult = JSON.parse(customConfigProbe.stdout) as Record<string, any>;
+  assert.equal(customConfigResult.command?.blu, undefined);
+  assert.equal(customConfigResult.agent?.blueprint, undefined);
+  assert.equal(customConfigResult.mcp?.blueprint, undefined);
+  assert.match(customConfigProbe.stderr, /foreign skill collisions: blueprint-god-review/);
+
+  const remoteConfigPath = path.join(tempRoot, "opencode-remote-skill.json");
+  const remoteConfig = JSON.parse(await readFile(host.config, "utf8")) as Record<string, unknown>;
+  remoteConfig.skills = { urls: ["https://example.invalid/private-helper"] };
+  await writeFile(remoteConfigPath, JSON.stringify(remoteConfig));
+  const remoteProbe = run(hostBinary, ["--print-logs", "--log-level", "DEBUG", "debug", "config"], {
+    cwd: host.project,
+    env: { ...host.env, OPENCODE_CONFIG: remoteConfigPath },
+    timeout: 120_000
+  });
+  assertSuccess(remoteProbe, "remote skill fail-closed probe");
+  const remoteResult = JSON.parse(remoteProbe.stdout) as Record<string, any>;
+  assert.equal(remoteResult.command?.blu, undefined);
+  assert.equal(remoteResult.agent?.blueprint, undefined);
+  assert.equal(remoteResult.mcp?.blueprint, undefined);
+  assert.match(remoteProbe.stderr, /cannot verify remote skills\.urls/);
 
   const agents = run(hostBinary, ["agent", "list"], { cwd: host.project, env: host.env, timeout: 120_000 });
   assertSuccess(agents, "opencode agent list");
@@ -246,15 +444,12 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
       "--command",
       "blueprint-project",
       "--model",
-      "google/gemini-2.5-flash-lite",
+      "opencode/big-pickle",
       ""
     ],
     {
       cwd: host.project,
-      env: {
-        ...host.env,
-        GOOGLE_GENERATIVE_AI_API_KEY: process.env.GEMINI_API_KEY
-      },
+      env: host.env,
       timeout: 120_000
     }
   );

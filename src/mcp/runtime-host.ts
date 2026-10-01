@@ -26,7 +26,10 @@ function normalizeHostId(value: string | undefined): BlueprintRuntimeHostId | nu
     return null;
   }
 
-  return normalized === "opencode" ? "opencode" : null;
+  if (normalized !== "opencode") {
+    throw new Error(`Unsupported BLUEPRINT_HOST ${JSON.stringify(value)}; expected opencode.`);
+  }
+  return "opencode";
 }
 
 function trimTrailingSeparators(value: string): string {

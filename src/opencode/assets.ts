@@ -1,4 +1,4 @@
-import { lstat, readFile, readdir } from "node:fs/promises";
+import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,15 +83,36 @@ function validatePermission(value: unknown, source: string): NativePermission {
   return result as NativePermission;
 }
 
-async function assertRegularFile(file: string): Promise<void> {
+function assertContained(packageRoot: string, candidate: string): void {
+  const relative = path.relative(packageRoot, candidate);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(`Native asset escapes the package root: ${candidate}`);
+  }
+}
+
+async function assertLiteralDirectory(packageRoot: string, directory: string): Promise<void> {
+  const stat = await lstat(directory);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error(`Native asset directory must be a literal directory: ${directory}`);
+  }
+  assertContained(packageRoot, await realpath(directory));
+}
+
+async function assertRegularFile(packageRoot: string, file: string): Promise<void> {
   const stat = await lstat(file);
   if (!stat.isFile() || stat.isSymbolicLink()) {
     throw new Error(`Native asset must be a literal regular file: ${file}`);
   }
+  assertContained(packageRoot, await realpath(file));
 }
 
-async function markdownFiles(directory: string): Promise<string[]> {
+async function markdownFiles(packageRoot: string, directory: string): Promise<string[]> {
+  await assertLiteralDirectory(packageRoot, directory);
   const entries = await readdir(directory, { withFileTypes: true });
+  const linkedMarkdown = entries.find((entry) => entry.isSymbolicLink() && entry.name.endsWith(".md"));
+  if (linkedMarkdown) {
+    throw new Error(`Native asset must not be a symbolic link: ${path.join(directory, linkedMarkdown.name)}`);
+  }
   return entries
     .filter((entry) => entry.isFile() && !entry.isSymbolicLink() && entry.name.endsWith(".md"))
     .map((entry) => path.join(directory, entry.name))
@@ -100,8 +121,8 @@ async function markdownFiles(directory: string): Promise<string[]> {
 
 async function loadCommands(packageRoot: string): Promise<Record<string, NativeCommand>> {
   const result: Record<string, NativeCommand> = {};
-  for (const file of await markdownFiles(path.join(packageRoot, "commands"))) {
-    await assertRegularFile(file);
+  for (const file of await markdownFiles(packageRoot, path.join(packageRoot, "commands"))) {
+    await assertRegularFile(packageRoot, file);
     const source = path.relative(packageRoot, file);
     const parsed = parseNativeMarkdown(await readFile(file, "utf8"), source);
     assertExactKeys(parsed.frontmatter, COMMAND_KEYS, source);
@@ -128,8 +149,8 @@ async function loadCommands(packageRoot: string): Promise<Record<string, NativeC
 
 async function loadAgents(packageRoot: string): Promise<Record<string, NativeAgent>> {
   const result: Record<string, NativeAgent> = {};
-  for (const file of await markdownFiles(path.join(packageRoot, "agents"))) {
-    await assertRegularFile(file);
+  for (const file of await markdownFiles(packageRoot, path.join(packageRoot, "agents"))) {
+    await assertRegularFile(packageRoot, file);
     const source = path.relative(packageRoot, file);
     const parsed = parseNativeMarkdown(await readFile(file, "utf8"), source);
     assertExactKeys(parsed.frontmatter, AGENT_KEYS, source);
@@ -163,11 +184,16 @@ async function loadAgents(packageRoot: string): Promise<Record<string, NativeAge
 
 async function loadSkillAliases(packageRoot: string): Promise<{ root: string; aliases: Set<string> }> {
   const root = path.join(packageRoot, "skills");
+  await assertLiteralDirectory(packageRoot, root);
   const aliases = new Set<string>();
   for (const entry of await readdir(root, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) {
+      throw new Error(`Native skill directory must not be a symbolic link: ${path.join(root, entry.name)}`);
+    }
     if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
     const file = path.join(root, entry.name, "SKILL.md");
-    await assertRegularFile(file);
+    await assertLiteralDirectory(packageRoot, path.join(root, entry.name));
+    await assertRegularFile(packageRoot, file);
     const source = path.relative(packageRoot, file);
     const parsed = parseNativeMarkdown(await readFile(file, "utf8"), source);
     const name = requiredString(parsed.frontmatter.name, "name", source);
@@ -192,14 +218,17 @@ export function resolveOpenCodeDataRoot(env: NodeJS.ProcessEnv = process.env): s
 export async function loadBlueprintNativeAssets(
   packageRoot = resolveBlueprintPackageRoot()
 ): Promise<BlueprintNativeAssets> {
-  const resolvedRoot = path.resolve(packageRoot);
+  const resolvedRoot = await realpath(path.resolve(packageRoot));
   const [command, agent, skills] = await Promise.all([
     loadCommands(resolvedRoot),
     loadAgents(resolvedRoot),
     loadSkillAliases(resolvedRoot)
   ]);
   const mcpServerEntry = path.join(resolvedRoot, "dist", "mcp", "server.js");
-  await assertRegularFile(mcpServerEntry);
+  await assertLiteralDirectory(resolvedRoot, path.join(resolvedRoot, "dist"));
+  await assertLiteralDirectory(resolvedRoot, path.join(resolvedRoot, "dist", "mcp"));
+  await assertLiteralDirectory(resolvedRoot, path.join(resolvedRoot, "dist", "opencode"));
+  await assertRegularFile(resolvedRoot, mcpServerEntry);
   return {
     packageRoot: resolvedRoot,
     command,
