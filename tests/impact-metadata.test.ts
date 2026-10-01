@@ -24,7 +24,7 @@ const IMPACT_TOOL_NAMES = [
   "blueprint_impact_output_render"
 ] as const;
 const IMPACT_SKILL_INPUTS = [
-  "commands/blu-impact.toml",
+  "commands/blu-impact.md",
   "skills/blueprint-impact/references/impact-runtime-contract.md"
 ] as const;
 
@@ -37,7 +37,7 @@ function stripRuntimeToolFqns(markdown: string): string {
 }
 
 test("impact manifest is thin, runtime-FQN based, and preserves advisory safety gates", async () => {
-  const commandFile = await readRepoFile("commands/blu-impact.toml");
+  const commandFile = await readRepoFile("commands/blu-impact.md");
 
   assert.match(commandFile, /Use the `blueprint-impact` skill/);
   assert.match(commandFile, /impact-runtime-contract\.md/);
@@ -80,7 +80,7 @@ test("impact skill uses docs-free input bundles and local runtime contract rules
   assert.match(skillFile, /\/blu-impact/);
   assert.match(skillFile, /input_bundles:/);
   assert.match(skillFile, /shared: \[\]/);
-  assert.match(skillFile, /commands\/blu-impact\.toml/);
+  assert.match(skillFile, /commands\/blu-impact\.md/);
   assert.match(skillFile, /references\/impact-runtime-contract\.md/);
   assert.match(
     skillFile,
@@ -161,7 +161,7 @@ test("impact runtime-contract resource is exposed from implemented catalog truth
   assert.equal(contract.catalog.implemented, true);
   assert.equal(contract.catalog.requiredToolsSatisfied, true);
   assert.deepEqual(contract.catalog.blockedBy, []);
-  assert.equal(contract.catalog.manifestPath, "commands/blu-impact.toml");
+  assert.equal(contract.catalog.manifestPath, "commands/blu-impact.md");
   assert.equal(contract.catalog.skillPath, "skills/blueprint-impact/SKILL.md");
   assert.equal(contract.catalog.specPath, IMPACT_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec.path, IMPACT_RUNTIME_METADATA.sourceId);

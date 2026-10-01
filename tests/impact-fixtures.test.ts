@@ -241,7 +241,7 @@ function contractContext(): Record<string, unknown> {
           declaredStatus: "implemented",
           status: "implemented",
           implemented: true,
-          manifestPath: "commands/blu-example.toml",
+          manifestPath: "commands/blu-example.md",
           specPath: "src/mcp/command-runtime-metadata.ts#example",
           skillPath: "skills/blueprint-example/SKILL.md",
           primarySkill: "blueprint-example",
@@ -253,7 +253,7 @@ function contractContext(): Record<string, unknown> {
           declaredStatus: "planned",
           status: "blocked",
           implemented: false,
-          blockedBy: ["Missing command manifest: commands/blu-planned-example.toml"]
+          blockedBy: ["Missing command manifest: commands/blu-planned-example.md"]
         }
       }
     },
@@ -674,9 +674,9 @@ test("impact fixture surface scenarios produce expected obligations, context cov
   }> = [
     {
       id: "command-manifest-change",
-      mutate: (repoPath) => touchScenarioPath(repoPath, "commands/blu-example.toml"),
-      expectedFiles: ["commands/blu-example.toml"],
-      expectedSurfaces: [["commands/blu-example.toml", "command-manifest"]],
+      mutate: (repoPath) => touchScenarioPath(repoPath, "commands/blu-example.md"),
+      expectedFiles: ["commands/blu-example.md"],
+      expectedSurfaces: [["commands/blu-example.md", "command-manifest"]],
       expectedObligationCategories: ["contract-review", "docs", "tests"],
       context: contractContext()
     },

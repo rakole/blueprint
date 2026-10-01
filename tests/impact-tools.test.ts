@@ -380,7 +380,7 @@ test("impact MCP tools are registered and satisfy the implemented command substr
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-impact.toml");
+  assert.equal(entry.manifestPath, "commands/blu-impact.md");
   assert.equal(entry.skillPath, "skills/blueprint-impact/SKILL.md");
   assert.equal(entry.specPath, IMPACT_RUNTIME_METADATA.sourceId);
   assert.equal(entry.specPath?.startsWith("docs/"), false);
@@ -892,7 +892,7 @@ test("impact analyze normalizes all file input shapes with mismatch union warnin
   try {
     const first = await blueprintImpactAnalyze({
       cwd: repoPath,
-      changedFiles: ["src/app.ts", "commands/blu-impact.toml"],
+      changedFiles: ["src/app.ts", "commands/blu-impact.md"],
       files: ["docs/overview.md"],
       config: normalizationConfig,
       scope: {
@@ -905,7 +905,7 @@ test("impact analyze normalizes all file input shapes with mismatch union warnin
       files: ["tests/impact-tools.test.ts", "package.json"],
       config: normalizationConfig,
       scope: {
-        changedFiles: ["commands/blu-impact.toml"],
+        changedFiles: ["commands/blu-impact.md"],
         files: ["docs/overview.md", "src/app.ts"]
       }
     });
@@ -914,7 +914,7 @@ test("impact analyze normalizes all file input shapes with mismatch union warnin
     assert.deepEqual(
       first.surfaces.map((surface) => surface.path),
       [
-        "commands/blu-impact.toml",
+        "commands/blu-impact.md",
         "docs/overview.md",
         "package.json",
         "src/app.ts",
@@ -935,7 +935,7 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
     changedFiles: [
       "secrets/prod.token",
       ".env.local",
-      "commands/blu-impact.toml",
+      "commands/blu-impact.md",
       "docs/overview.md",
       "src/mcp/command-runtime-metadata.ts",
       "src/mcp/server.ts",
@@ -970,7 +970,7 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
     "config",
     "repo-root"
   ]);
-  assert.deepEqual(surfaceFor(analysis, "commands/blu-impact.toml").surfaces, [
+  assert.deepEqual(surfaceFor(analysis, "commands/blu-impact.md").surfaces, [
     "command-manifest",
     "config"
   ]);
@@ -1145,7 +1145,7 @@ test("impact analyze checks implemented command substrate when runtime metadata 
         declaredStatus: "implemented",
         status: "repairing",
         implemented: false,
-        manifestPath: "commands/blu-custom-command.toml",
+        manifestPath: "commands/blu-custom-command.md",
         specPath: "src/mcp/command-runtime-metadata.ts#custom-command",
         skillPath: "skills/blueprint-custom/SKILL.md",
         primarySkill: "blueprint-custom",
@@ -1165,7 +1165,7 @@ test("impact analyze checks implemented command substrate when runtime metadata 
 test("impact analyze raises WARN for obligations without conflating risk and confidence", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["commands/blu-impact.toml"],
+    changedFiles: ["commands/blu-impact.md"],
     config: lowNoiseConfig(),
     context: minimalPhase6Context({})
   });
@@ -1988,7 +1988,7 @@ test("impact analyze skips secret-like source import scanning without leaking im
 test("impact analyze blocks implemented command substrate gaps from injected catalog context", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["commands/blu-custom-command.toml"],
+    changedFiles: ["commands/blu-custom-command.md"],
     config: lowNoiseConfig(),
     context: minimalPhase6Context({
       "custom-command": {
@@ -2002,7 +2002,7 @@ test("impact analyze blocks implemented command substrate gaps from injected cat
         requiredTools: ["blueprint_missing_tool"],
         requiredToolsSatisfied: false,
         blockedBy: [
-          "Missing command manifest: commands/blu-custom-command.toml",
+          "Missing command manifest: commands/blu-custom-command.md",
           "Missing primary skill: skills/blueprint-custom/SKILL.md",
           "Missing required MCP tool: blueprint_missing_tool"
         ]
@@ -2028,7 +2028,7 @@ test("impact analyze blocks implemented command substrate gaps from injected cat
 test("impact analyze consumes registeredImpactTools runtime context for required tool gaps", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["commands/blu-custom-command.toml"],
+    changedFiles: ["commands/blu-custom-command.md"],
     config: lowNoiseConfig(),
     context: {
       catalog: {
@@ -2037,7 +2037,7 @@ test("impact analyze consumes registeredImpactTools runtime context for required
             declaredStatus: "implemented",
             status: "implemented",
             implemented: true,
-            manifestPath: "commands/blu-custom-command.toml",
+            manifestPath: "commands/blu-custom-command.md",
             specPath: "src/mcp/command-runtime-metadata.ts#custom-command",
             skillPath: "skills/blueprint-custom/SKILL.md",
             primarySkill: "blueprint-custom",
@@ -2068,7 +2068,7 @@ test("impact analyze consumes registeredImpactTools runtime context for required
 test("impact analyze keeps planned impact missing manifest and skill expected", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["commands/blu-impact.toml"],
+    changedFiles: ["commands/blu-impact.md"],
     config: lowNoiseConfig(),
     context: minimalPhase6Context({
       impact: {
@@ -2081,7 +2081,7 @@ test("impact analyze keeps planned impact missing manifest and skill expected", 
         requiredTools: [...IMPACT_TOOL_NAMES],
         requiredToolsSatisfied: true,
         blockedBy: [
-          "Missing command manifest: commands/blu-impact.toml",
+          "Missing command manifest: commands/blu-impact.md",
           "Missing primary skill: skills/blueprint-impact/SKILL.md"
         ]
       }
@@ -2099,7 +2099,7 @@ test("impact analyze keeps planned impact missing manifest and skill expected", 
 test("impact analyze emits explicit unknowns for omitted or malformed impact context", async () => {
   const omitted = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["commands/blu-custom.toml"],
+    changedFiles: ["commands/blu-custom.md"],
     config: lowNoiseConfig(),
     context: {}
   });
@@ -2138,7 +2138,7 @@ test("impact analyze emits explicit unknowns for omitted or malformed impact con
 test("impact analyze requires runtime context for command manifest surfaces", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["commands/blu-custom-command.toml"],
+    changedFiles: ["commands/blu-custom-command.md"],
     config: lowNoiseConfig(),
     context: {
       catalog: {
@@ -2147,7 +2147,7 @@ test("impact analyze requires runtime context for command manifest surfaces", as
             declaredStatus: "implemented",
             status: "implemented",
             implemented: true,
-            manifestPath: "commands/blu-custom-command.toml",
+            manifestPath: "commands/blu-custom-command.md",
             specPath: "src/mcp/command-runtime-metadata.ts#custom-command",
             skillPath: "skills/blueprint-custom/SKILL.md",
             primarySkill: "blueprint-custom",
@@ -2174,12 +2174,12 @@ test("impact analyze blocks router planned-command exposure review but not benig
       declaredStatus: "planned",
       status: "blocked",
       implemented: false,
-      blockedBy: ["Missing command manifest: commands/blu-impact.toml"]
+      blockedBy: ["Missing command manifest: commands/blu-impact.md"]
     }
   });
   const router = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["commands/blu.toml"],
+    changedFiles: ["commands/blu.md"],
     config: lowNoiseConfig(),
     context
   });
@@ -2208,7 +2208,7 @@ test("impact analyze blocks router planned-command exposure review but not benig
 test("impact analyze creates command review, docs, and metadata-test obligations", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["commands/blu-code-review.toml"],
+    changedFiles: ["commands/blu-code-review.md"],
     config: lowNoiseConfig(),
     context: minimalPhase6Context({})
   });
@@ -2375,14 +2375,14 @@ test("impact analyze keeps stable ids, deterministic sorting, and non-empty evid
     changedFiles: [
       "src/mcp/tools/impact.ts",
       "dist/mcp/server.js",
-      "commands/blu-code-review.toml"
+      "commands/blu-code-review.md"
     ],
     config: lowNoiseConfig()
   });
   const second = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: [
-      "commands/blu-code-review.toml",
+      "commands/blu-code-review.md",
       "dist/mcp/server.js",
       "src/mcp/tools/impact.ts"
     ],
@@ -2422,7 +2422,7 @@ test("impact analyze creates security, deployment, release, and test obligations
 test("impact self-analysis produces release-readiness coverage for the implemented workflow", async () => {
   const repoPath = await createImpactFixtureRepo();
   const implementationFiles = [
-    "commands/blu-impact.toml",
+    "commands/blu-impact.md",
     "docs/runtime-guide.md",
     "docs/overview.md",
     "docs/artifact-guide.md",
@@ -3174,7 +3174,7 @@ test("impact report writer reuses canonical bundles for reordered report arrays"
     const analysis = await blueprintImpactAnalyze({
       cwd: repoPath,
       changedFiles: [
-        "commands/blu-impact.toml",
+        "commands/blu-impact.md",
         "docs/overview.md",
         "src/mcp/tools/impact.ts"
       ],

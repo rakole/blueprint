@@ -1268,7 +1268,9 @@ export function isReviewableRepoFile(relativePath: string): boolean {
   const extension = path.posix.extname(normalized);
 
   if (extension === ".md") {
-    return false;
+    // Native command Markdown is executable workflow configuration, so it must
+    // retain the review coverage that command manifests had before migration.
+    return /^commands\/[^/]+\.md$/u.test(normalized);
   }
 
   return (

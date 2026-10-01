@@ -8,7 +8,8 @@ import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   buildPhaseQualityGateNextAction,
   evaluatePhaseQualityGates,
-  formatPhaseQualityGateDebtReason
+  formatPhaseQualityGateDebtReason,
+  isReviewableRepoFile
 } from "../src/mcp/tools/quality-gates.js";
 import { blueprintStateLoad, blueprintStateSync } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
@@ -2949,4 +2950,15 @@ test("stale secure-phase pass review does not block advancement after security e
 
   assert.match(status.nextAction, /\/blu-audit-milestone v1/);
   assert.doesNotMatch(status.nextAction, /\/blu-secure-phase 1|\/blu-code-review-fix 1/);
+});
+
+// Command prompts moved from configuration files to native Markdown. Their
+// review obligation must survive that format change without including docs.
+test("native command Markdown remains reviewable workflow configuration", () => {
+  assert.equal(isReviewableRepoFile("commands/blu.md"), true);
+  assert.equal(isReviewableRepoFile("commands/blu-ship.md"), true);
+  assert.equal(isReviewableRepoFile("commands\\blu-plan-phase.md"), true);
+  assert.equal(isReviewableRepoFile("docs/commands.md"), false);
+  assert.equal(isReviewableRepoFile(".blueprint/phases/PLAN.md"), false);
+  assert.equal(isReviewableRepoFile("dist/commands/blu.md"), false);
 });
