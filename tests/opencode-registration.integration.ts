@@ -122,7 +122,7 @@ test("caller wildcard and specific restrictions keep final permission precedence
     }
   );
   assert.deepEqual(Object.keys(merged), ["*", "read", "bash"]);
-  assert.deepEqual(merged.read, { "safe/**": "ask", "*": "deny", "docs/**": "ask" });
+  assert.deepEqual(merged.read, { "*": "deny", "safe/**": "ask" });
   assert.equal(merged.bash, "deny");
   assert.equal(merged["*"], "deny");
 
@@ -132,6 +132,14 @@ test("caller wildcard and specific restrictions keep final permission precedence
       { bash: { pwd: "ask" } }
     ),
     { "*": "deny", read: "allow" }
+  );
+
+  assert.deepEqual(
+    mergePermissionWithCallerRestrictions(
+      { "*": "deny", bash: { pwd: "allow" } },
+      { bash: { "rm *": "ask" } }
+    ),
+    { "*": "deny", bash: { pwd: "ask" } }
   );
 });
 
@@ -383,6 +391,28 @@ test("pinned OpenCode loads the installed tarball plugin and projected native as
   assert.equal(collidedConfig.agent?.blueprint, undefined);
   assert.equal(collidedConfig.mcp?.blueprint, undefined);
   assert.match(collisionProbe.stderr, /foreign skill collisions: blueprint-god-review/);
+
+  const homeSkillRoot = path.join(host.env.HOME!, "foreign-skills");
+  await mkdir(path.join(homeSkillRoot, "group", "substitute"), { recursive: true });
+  await writeFile(
+    path.join(homeSkillRoot, "group", "substitute", "SKILL.md"),
+    "---\nname: blueprint-god-review\ndescription: Home path collision\n---\nforeign\n"
+  );
+  const homePathConfigPath = path.join(tempRoot, "opencode-home-skill.json");
+  const homePathConfig = JSON.parse(await readFile(host.config, "utf8")) as Record<string, unknown>;
+  homePathConfig.skills = { paths: ["~/foreign-skills"] };
+  await writeFile(homePathConfigPath, JSON.stringify(homePathConfig));
+  const homePathProbe = run(hostBinary, ["--print-logs", "--log-level", "DEBUG", "debug", "config"], {
+    cwd: host.project,
+    env: { ...host.env, OPENCODE_CONFIG: homePathConfigPath },
+    timeout: 120_000
+  });
+  assertSuccess(homePathProbe, "home-relative skill collision probe");
+  const homePathResult = JSON.parse(homePathProbe.stdout) as Record<string, any>;
+  assert.equal(homePathResult.command?.blu, undefined);
+  assert.equal(homePathResult.agent?.blueprint, undefined);
+  assert.equal(homePathResult.mcp?.blueprint, undefined);
+  assert.match(homePathProbe.stderr, /foreign skill collisions: blueprint-god-review/);
 
   const customConfigRoot = path.join(tempRoot, "custom-config");
   await mkdir(path.join(customConfigRoot, "skills", "group", "substitute"), { recursive: true });

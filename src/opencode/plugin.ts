@@ -93,9 +93,16 @@ export function mergePermissionWithCallerRestrictions(
       continue;
     }
     if (existing && typeof existing === "object" && denial && typeof denial === "object") {
-      const ordered = { ...(existing as Record<string, unknown>) };
-      for (const [pattern, action] of Object.entries(denial as Record<string, unknown>)) {
-        if (action === "ask" && ordered[pattern] === "deny") continue;
+      const restrictions = denial as Record<string, unknown>;
+      const hasAsk = Object.values(restrictions).some((action) => action === "ask");
+      const ordered = Object.fromEntries(
+        Object.entries(existing as Record<string, unknown>).map(([pattern, action]) => [
+          pattern,
+          hasAsk && action === "allow" ? "ask" : action
+        ])
+      );
+      for (const [pattern, action] of Object.entries(restrictions)) {
+        if (action !== "deny") continue;
         delete ordered[pattern];
         ordered[pattern] = action;
       }
@@ -152,9 +159,10 @@ async function discoveredSkillNames(root: string): Promise<Set<string>> {
 }
 
 function discoveryRoots(config: MutableOpenCodeConfig, directory: string, worktree: string): string[] {
-  const configured = (config.skills?.paths ?? []).map((root) =>
-    path.isAbsolute(root) ? root : path.resolve(directory, root)
-  );
+  const configured = (config.skills?.paths ?? []).map((root) => {
+    const expanded = root.startsWith("~/") ? path.join(os.homedir(), root.slice(2)) : root;
+    return path.isAbsolute(expanded) ? expanded : path.resolve(directory, expanded);
+  });
   const roots = new Set<string>(configured);
   const stop = path.resolve(worktree);
   let current = path.resolve(directory);
