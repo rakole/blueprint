@@ -12,7 +12,7 @@ const repoRoot = process.cwd();
 test("debug manifest references the debug skill, debugger agent, and report-backed MCP tools", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-debug.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-debug` skill/);
+  assert.match(commandFile, /Load the native `blueprint-debug` skill exactly once/);
   assert.match(commandFile, /`blueprint-debugger` subagent/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-debug\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-debugger\.md/);

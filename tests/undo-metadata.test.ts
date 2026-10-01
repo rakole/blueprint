@@ -347,7 +347,7 @@ test("repo-facing status docs treat undo as a shipped command", async () => {
   assert.equal(metadata.catalog.declaredStatus, "implemented");
   assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
   assert.equal(metadata.runtimeReference.waveTitle, "Quality And Shipping");
-  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Native command\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /undo-runtime-contract\.md/);
   assert.match(metadata.runtimeReference.contractNotes, /hard-stop on dirty or unsafe git state/i);
   assert.equal(entry.status, "implemented");

@@ -92,7 +92,7 @@ test("repo-facing status docs treat remove-workspace as a shipped command", asyn
   assert.equal(metadata.catalog.declaredStatus, "implemented");
   assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
   assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
-  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Native command\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /remove-workspace-runtime-contract\.md/);
   assert.match(
     metadata.runtimeReference.contractNotes,

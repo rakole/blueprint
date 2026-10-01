@@ -105,7 +105,7 @@ test("repo-facing status docs treat reapply-patches as a shipped command", async
   assert.equal(metadata.catalog.declaredStatus, "implemented");
   assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
   assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
-  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Native command\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /reapply-patches-runtime-contract\.md/);
   assert.match(metadata.runtimeReference.contractNotes, /dry-run the exact replay set/i);
   assert.match(

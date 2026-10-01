@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 test("quick manifest references the execution skill, bounded depth agents, and report-backed MCP tools", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-quick.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
+  assert.match(commandFile, /Load the native `blueprint-phase-execution` skill exactly once/);
   assert.match(
     commandFile,
     /`blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` subagents/
@@ -21,7 +21,7 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /Use no subagents by default/i);
   assert.match(
     commandFile,
-    /Keep the run inline unless a Blueprint subagent clearly earns its coordination cost/i
+    /Bring in the `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` subagents only for bounded work that fits the quick-run scope/i
   );
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md/);
   assert.doesNotMatch(
@@ -38,12 +38,12 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, /tracker-eligible/i);
   assert.match(commandFile, /`todowrite` is session-local/i);
-  assert.match(commandFile, /session-local, pair it with visible `todowrite`/i);
+  assert.match(commandFile, /`todowrite` is session-local only and does not replace Blueprint MCP persistence/i);
   assert.match(commandFile, /Show progress only at meaningful stage or gate transitions/i);
   assert.match(commandFile, /Do not spam stage narration or emit in-flight updates between transitions/i);
   assert.match(commandFile, /When `todowrite` is unavailable, preserve the same compact progress in concise prose/i);
   assert.match(commandFile, /Never claim helper calls were made when they were unavailable/i);
-  assert.match(commandFile, /When tracker support is unavailable, keep the same bounded quick flow linear/i);
+  assert.match(commandFile, /When `todowrite` is unavailable, keep the same bounded quick flow linear/i);
   assert.match(commandFile, /`--discuss`/);
   assert.match(commandFile, /`--research`/);
   assert.match(commandFile, /`--validate`/);

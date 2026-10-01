@@ -77,7 +77,10 @@ test("roadmap-admin implemented commands stay docless when docs are unavailable"
     ]);
     assert.deepEqual(contract.skillInputs.shared, []);
     assert.deepEqual(contract.skillInputs.commandSpecific, [...expectedInputs]);
-    assert.deepEqual(contract.skillInputs.effective, [...expectedInputs]);
+    assert.deepEqual(
+      contract.skillInputs.effective,
+      expectedInputs.filter((input) => input !== blueprintPrimaryManifestPath(commandName))
+    );
     assert.equal(
       contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
       false
@@ -93,7 +96,7 @@ test("new-milestone runtime resource keeps config-gated roadmapper inputs docles
   const contract = await buildBlueprintCommandRuntimeContractResource("new-milestone");
 
   assert.ok(metadata);
-  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-new-milestone.md"]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.ok(contract.spec?.reads.some((read) => read.includes("blueprint_config_get")));
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
     ...metadata.requiredTools

@@ -2184,7 +2184,7 @@ test("command contract references the same Phase 1 tool names as the MCP server"
   assert.match(contractRef, /Resolve, Read, Decide, Execute, Persist, Validate, Route/);
   assert.match(
     runtimeContract.runtimeReference?.contractNotes ?? "",
-    /Gemini-native bootstrap: blueprint_project_prepare/i
+    /OpenCode-native bootstrap: blueprint_project_prepare/i
   );
 });
 

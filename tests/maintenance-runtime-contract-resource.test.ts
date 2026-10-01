@@ -61,7 +61,6 @@ test("maintenance runtime contract resources build from runtime metadata when do
       runtimeContractPath
     ]);
     assert.deepEqual(contract.skillInputs.effective, [
-      blueprintPrimaryManifestPath(commandName),
       runtimeContractPath
     ]);
     assert.equal(

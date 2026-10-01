@@ -159,7 +159,7 @@ test("governance commands resolve catalog and runtime contracts from docless met
         expectation.hookInvolvement
       );
     }
-    assert.match(contract.runtimeReference?.contractNotes ?? "", /Docless manifest\+skill-owned runtime/i);
+    assert.match(contract.runtimeReference?.contractNotes ?? "", /Native command\+skill-owned runtime/i);
     assert.match(contract.runtimeReference?.contractNotes ?? "", new RegExp(
       expectation.referencePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     ));

@@ -237,7 +237,7 @@ test("repo-facing status docs treat pr-branch as a shipped command", async () =>
   assert.equal(metadata.catalog.declaredStatus, "implemented");
   assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
   assert.equal(metadata.runtimeReference.waveTitle, "Quality And Shipping");
-  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Native command\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /pr-branch-runtime-contract\.md/);
   assert.match(metadata.runtimeReference.contractNotes, /expiring one-shot approval binding/i);
   assert.match(agentsFile, /`pr-branch` are also shipped|`pr-branch`/i);

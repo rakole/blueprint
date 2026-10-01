@@ -9,6 +9,7 @@ import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command
 import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { parseNativeMarkdown } from "../src/shared/native-frontmatter.js";
 import {
   blueprintArtifactScaffold,
   blueprintArtifactList,
@@ -41,7 +42,10 @@ test("discuss active bundle is bounded and uses registered prepare/record/finali
     assert.ok(readRepoText(discussCommandPath).includes(blueprintRuntimeToolFqn(tool as `blueprint_${string}`)));
   }
   assert.deepEqual(contract.skillInputs.effective, [discussRuntimeContractPath]);
-  const bytes = [discussCommandPath, discussSkillPath, discussRuntimeContractPath].reduce((n, p) => n + Buffer.byteLength(readRepoText(p)), 0);
+  const bytes =
+    Buffer.byteLength(parseNativeMarkdown(readRepoText(discussCommandPath), discussCommandPath).body) +
+    Buffer.byteLength(parseNativeMarkdown(readRepoText(discussSkillPath), discussSkillPath).body) +
+    Buffer.byteLength(readRepoText(discussRuntimeContractPath));
   assert.ok(bytes < 13000, `Active discuss prompt bytes: ${bytes}`);
   const runtime = readRepoText(discussRuntimeContractPath);
   for (const rule of [/user pick areas/, /authoritative WHAT\/WHY/, /explicit user confirmation/, /missingEssentialFields/, /model, the current expectedRevision/, /Generated and rejected documents are not stored/, /downstreamOwner/, /record history/, /derivedStatus.nextAction/, /workflow.subagents/, /same.*requestId/s]) assert.match(runtime, rule);

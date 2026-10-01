@@ -21,7 +21,7 @@ function headingSection(markdown: string, heading: string): string {
 test("verify-work manifest stays thin while advertising tool-owned writes and routing surfaces", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-verify-work.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
+  assert.match(commandFile, /Load the native `blueprint-phase-validation` skill exactly once/);
   assert.match(commandFile, /`blueprint-verifier` subagent/);
   assert.match(commandFile, /verify-work-runtime-contract\.md/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);

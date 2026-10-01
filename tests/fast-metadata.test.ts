@@ -12,7 +12,7 @@ const repoRoot = process.cwd();
 test("fast manifest references the execution skill and trivial inline MCP tools without subagents", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-fast.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
+  assert.match(commandFile, /Load the native `blueprint-phase-execution` skill exactly once/);
   assert.doesNotMatch(
     commandFile,
     /`blueprint-(researcher|planner|executor|verifier)`/,

@@ -50,7 +50,7 @@ test("add-tests runtime-owned contract and manifests mark the test-generation sl
     /evidence-backed test generation/i
   );
 
-  assert.match(manifest, /Use the `blueprint-phase-validation` skill/);
+  assert.match(manifest, /Load the native `blueprint-phase-validation` skill exactly once/);
   assert.match(
     manifest,
     /skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md/

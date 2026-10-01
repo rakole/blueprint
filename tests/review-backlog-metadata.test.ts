@@ -87,6 +87,6 @@ test("review-backlog runtime contract is owned by command runtime metadata", asy
   );
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /Docless manifest\+skill-owned runtime/
+    /Native command\+skill-owned runtime/
   );
 });

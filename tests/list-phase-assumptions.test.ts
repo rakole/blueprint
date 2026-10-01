@@ -59,7 +59,7 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
     Promise.all([readFile(discoverableSkillPath, "utf8"), readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8")]).then(parts => parts.join("\n"))
   ]);
 
-  assert.match(raw, /Use the `blueprint-phase-discovery` skill/);
+  assert.match(raw, /Load the native `blueprint-phase-discovery` skill exactly once/);
   assert.match(raw, /`blueprint-researcher` subagent/);
   assert.match(raw, /five areas/);
   assert.match(raw, /What do you think\?/);

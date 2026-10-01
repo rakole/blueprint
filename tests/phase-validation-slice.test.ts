@@ -808,8 +808,8 @@ test("validate-phase and verify-work manifests reference registered validation t
   assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_validate_model")));
   assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_render")));
 
-  assert.match(validateManifest, /Use the `blueprint-phase-validation` skill/);
-  assert.match(verifyManifest, /Use the `blueprint-phase-validation` skill/);
+  assert.match(validateManifest, /Load the native `blueprint-phase-validation` skill exactly once/);
+  assert.match(verifyManifest, /Load the native `blueprint-phase-validation` skill exactly once/);
   assert.match(validateManifest, /`blueprint-verifier` subagent/);
   assert.match(verifyManifest, /`blueprint-verifier` subagent/);
   assert.match(validateManifest, /artifact: "verification"/);

@@ -8,7 +8,6 @@
   ],
   "optionalAgents": [],
   "inputBundlePaths": [
-    "commands/blu-fast.md",
     "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
   ],
   "allowedPersistenceTools": [

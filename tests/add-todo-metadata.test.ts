@@ -82,6 +82,6 @@ test("add-todo runtime contract is owned by command runtime metadata", async () 
   );
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /Docless manifest\+skill-owned runtime/
+    /Native command\+skill-owned runtime/
   );
 });

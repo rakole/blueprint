@@ -204,7 +204,7 @@ test("maintenance runtime contract resources keep aborts, approvals, and owned i
       contract.runtimeReference?.exactMcpDestination,
       contract.catalog.requiredTools
     );
-    assert.match(notes, /Docless manifest\+skill-owned runtime/i);
+    assert.match(notes, /Native command\+skill-owned runtime/i);
     assert.match(notes, notesPattern);
     assert.match(contract.skillInputs.effective.join("\n"), inputPattern);
     assert.equal(
