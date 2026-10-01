@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import {
   loadOpenCodeAssetManifest,
@@ -12,6 +14,7 @@ import {
 } from "../src/opencode/asset-manifest.js";
 
 const hash = (value: string): string => createHash("sha256").update(value).digest("hex");
+const execFileAsync = promisify(execFile);
 
 function fixtureManifest(assetHash = hash("command")) {
   return {
@@ -78,4 +81,35 @@ test("package metadata exposes only the explicit native runtime allowlist", asyn
   for (const forbidden of ["src", "tests", ".git", ".blueprint", "node_modules", ".planning"]) {
     assert.equal(packageJson.files.includes(forbidden), false);
   }
+});
+
+test("exact local tarball contains only the native package closure and loads its export", async (t) => {
+  const repoRoot = process.cwd();
+  try {
+    await Promise.all([
+      readFile(path.join(repoRoot, "generated", "opencode-assets.json")),
+      readFile(path.join(repoRoot, "dist", "opencode", "plugin.js"))
+    ]);
+  } catch {
+    assert.fail("Exact local tarball verification requires a fresh npm run build");
+  }
+  const temp = await mkdtemp(path.join(os.tmpdir(), "blueprint-opencode-pack-"));
+  t.after(() => rm(temp, { recursive: true, force: true }));
+  const packed = await execFileAsync("npm", ["pack", repoRoot, "--ignore-scripts", "--json", "--pack-destination", temp], {
+    cwd: temp,
+    env: { ...process.env, npm_config_cache: path.join(temp, "npm-cache") }
+  });
+  const metadata = JSON.parse(packed.stdout) as Array<{ filename: string; files: Array<{ path: string }> }>;
+  assert.equal(metadata.length, 1);
+  const tarball = path.join(temp, metadata[0]!.filename);
+  const names = metadata[0]!.files.map((entry) => entry.path);
+  for (const forbidden of ["src/", "tests/", ".git/", ".blueprint/", "node_modules/", ".planning/"]) {
+    assert.equal(names.some((name) => name.startsWith(forbidden)), false, `tarball must exclude ${forbidden}`);
+  }
+  for (const required of ["package.json", "dist/opencode/plugin.js", "dist/mcp/server.js", "generated/opencode-assets.json", "generated/command-catalog.json"]) {
+    assert.equal(names.includes(required), true, `tarball must contain ${required}`);
+  }
+  await execFileAsync("tar", ["-xzf", tarball, "-C", temp]);
+  const imported = await import(`${(await import("node:url")).pathToFileURL(path.join(temp, "package", "dist", "opencode", "plugin.js")).href}?test=${Date.now()}`);
+  assert.equal(typeof imported.default, "function");
 });

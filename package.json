@@ -26,8 +26,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node scripts/run-tests.mjs",
     "test:focused": "tsx --test",
-    "smoke:gemini-clean-home": "node scripts/gemini-clean-home-smoke.mjs",
-    "test:integration:extension": "npm run build --silent && tsx --test tests/extension-install.integration.ts"
+    "test:integration:opencode": "npm run build --silent && node --import tsx --test tests/opencode-package.test.ts tests/opencode-registration.integration.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

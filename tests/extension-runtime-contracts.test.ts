@@ -138,7 +138,7 @@ async function repairedPromptContracts(): Promise<RuntimePromptContract[]> {
   return [
     {
       commandName: "blu",
-      manifestPath: "commands/blu.toml",
+      manifestPath: "commands/blu.md",
       primarySkill: "blueprint-router",
       requiredTools: [
         "blueprint_project_status",
@@ -173,29 +173,20 @@ function stripRuntimeToolFqns(markdown: string): string {
   return markdown.replace(/`blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
 }
 
-test("host extension discovery manifests point at the built Blueprint MCP server", async () => {
-  const hosts = await shippedExtensionHosts(repoRoot);
-
-  assert.ok(hosts.length > 0, "At least one extension host manifest should ship");
-
-  for (const host of hosts) {
-    await assertHostManifest(host);
-  }
+test("package exports the built OpenCode plugin and explicit native assets", async () => {
+  const packageJson = JSON.parse(await readRelativePath("package.json"));
+  assert.equal(packageJson.private, true);
+  assert.equal(packageJson.exports["."], "./dist/opencode/plugin.js");
+  assert.deepEqual(packageJson.files, [
+    "agents", "commands", "dist", "generated/command-catalog.json",
+    "generated/opencode-assets.json", "skills"
+  ]);
 });
 
-test("host runtime contexts share one runtime operator guide", async () => {
-  const geminiContext = await readFile(path.join(repoRoot, "GEMINI.md"), "utf8");
-  const tabninePath = path.join(repoRoot, "TABNINE.md");
-  const tabnineStat = await lstat(tabninePath);
-
-  assert.equal(tabnineStat.isSymbolicLink(), true, "TABNINE.md should reuse GEMINI.md");
-  assert.equal(await readlink(tabninePath), "GEMINI.md");
-  assert.equal(await readFile(tabninePath, "utf8"), geminiContext);
-  assert.match(geminiContext, /Runtime Operator Guide/);
-  assert.match(geminiContext, /Gemini CLI and Tabnine CLI run the same Blueprint workflow surface/);
-  assert.doesNotMatch(geminiContext, /Checkpoint Status/);
-  assert.doesNotMatch(geminiContext, /Phase 2\.1 drift recovery/);
-  assert.doesNotMatch(geminiContext, /Phase 3 discovery shipped/);
+test("OpenCode bootstrap fixture selects the concrete package plugin placeholder", async () => {
+  const bootstrap = JSON.parse(await readRelativePath("tests/fixtures/opencode/bootstrap/opencode.json"));
+  assert.deepEqual(bootstrap.plugin, ["__BLUEPRINT_PLUGIN_URL__"]);
+  assert.equal(bootstrap.permission.read["*.env"], "deny");
 });
 
 test("git-installed extension bundle includes the built runtime assets", async () => {
@@ -209,7 +200,7 @@ test("git-installed extension bundle includes the built runtime assets", async (
   }
 });
 
-test("implemented Blueprint skills resolve to discoverable Gemini bundles with metadata", async () => {
+test("implemented Blueprint skills resolve to native bundles with metadata", async () => {
   for (const skillName of await implementedSkillNames()) {
     const resolution = await resolveBlueprintSkillPath(skillName, pathExists);
 
@@ -271,7 +262,7 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
 
     assert.match(
       raw,
-      new RegExp(`Use the \`${escapeRegExp(contract.primarySkill)}\` skill`),
+      new RegExp(`(?:Use the|Load the native) \`${escapeRegExp(contract.primarySkill)}\` skill`),
       `${contract.commandName} should reference its runtime skill name`
     );
     assert.doesNotMatch(
@@ -338,8 +329,8 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
 
 test("legitimate roadmap-add callers pass the confirmation receipt after approval gates", async () => {
   const [exploreManifest, planMilestoneGapsManifest, captureSkill] = await Promise.all([
-    readRelativePath("commands/blu-explore.toml"),
-    readRelativePath("commands/blu-plan-milestone-gaps.toml"),
+    readRelativePath("commands/blu-explore.md"),
+    readRelativePath("commands/blu-plan-milestone-gaps.md"),
     readRelativePath("skills/blueprint-capture/SKILL.md")
   ]);
 
@@ -398,24 +389,22 @@ test("new-project canonical guardrails forbid shell execution and tool-name drif
 test("shipped direct commands no longer include deprecated compatibility manifests", async () => {
   for (const commandName of REPAIRED_DIRECT_COMMANDS) {
     assert.equal(
-      await pathExists(`commands/blu/${commandName}.toml`),
+      await pathExists(`commands/blu/${commandName}.md`),
       false,
       `${commandName} should not ship a deprecated colon-form compatibility manifest`
     );
-    assert.equal(await pathExists(`commands/blu-${commandName}.toml`), true);
+    assert.equal(await pathExists(`commands/blu-${commandName}.md`), true);
   }
 });
 
 test("runtime-required prompts and manifests do not mention colon-form direct commands", async () => {
-  const hosts = await shippedExtensionHosts(repoRoot);
   const paths = [
     "README.md",
     "AGENTS.md",
     "MEMORY.md",
-    "commands/blu.toml",
+    "commands/blu.md",
     "src/mcp/command-runtime-metadata.ts",
     "skills/blueprint-router/SKILL.md",
-    ...hosts.map((host) => host.contextFile),
     ...(await repairedPromptContracts()).map((contract) => contract.manifestPath)
   ];
 

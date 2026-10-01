@@ -59,6 +59,9 @@ runTscEmitDeclarations();
 const { build } = await loadEsbuild();
 
 await build({
+  banner: {
+    js: 'import { createRequire as __blueprintCreateRequire } from "node:module"; const require = __blueprintCreateRequire(import.meta.url);'
+  },
   bundle: true,
   entryPoints: {
     "hooks/blueprint-write-guard": "src/hooks/blueprint-write-guard.ts",
