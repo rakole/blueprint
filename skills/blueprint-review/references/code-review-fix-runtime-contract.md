@@ -9,7 +9,7 @@ model-only, and repo mutation remains explicit and scoped.
 ## Visible Review-Fix Progress
 
 For non-trivial runs, keep progress visible through short boundary updates.
-Gemini-native progress helpers are presentation mirrors only. They do not
+OpenCode progress guidance are presentation mirrors only. They do not
 expand the MCP tool allowlist, persistence authority, reviewer authority,
 repo-mutation authority, state-sync authority, routing authority, or user
 confirmation authority defined by this contract.

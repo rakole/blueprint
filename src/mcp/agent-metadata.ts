@@ -1,15 +1,15 @@
 export const BLUEPRINT_AGENT_READ_ONLY_TOOLS = [
-  "list_directory",
-  "read_file",
+  "read",
   "glob",
-  "grep_search"
+  "grep"
 ] as const;
 
 export const BLUEPRINT_EXECUTOR_AGENT_TOOLS = [
   ...BLUEPRINT_AGENT_READ_ONLY_TOOLS,
-  "replace",
-  "write_file",
-  "run_shell_command"
+  "apply_patch",
+  "edit",
+  "write",
+  "bash"
 ] as const;
 
 export const BLUEPRINT_AGENT_TOOL_ALLOWLIST = {

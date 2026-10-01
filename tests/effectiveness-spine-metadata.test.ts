@@ -158,21 +158,21 @@ test("capture confirmation gates stay explicit across the shipped capture family
 
   assert.match(
     checkTodos,
-    /Prefer\s+`ask_user` tool for status-change confirmation/i
+    /Prefer\s+`question` tool for status-change confirmation/i
   );
   assert.match(
     addBacklog,
-    /Prefer\s+`ask_user` tool for immediate stub-reservation confirmation/i
+    /Prefer\s+`question` tool for immediate stub-reservation confirmation/i
   );
   assert.match(addBacklog, /require explicit confirmation before writing anything/i);
   assert.match(
     reviewBacklog,
-    /Prefer\s+`ask_user` tool for structured promote or remove decisions/i
+    /Prefer\s+`question` tool for structured promote or remove decisions/i
   );
   assert.match(reviewBacklog, /keep as the default safe path/i);
   assert.match(
     explore,
-    /Prefer Gemini CLI's built-in `ask_user` tool for the final routing confirmation/i
+    /Prefer OpenCode `question` tool for the final routing confirmation/i
   );
   assert.match(explore, /require explicit confirmation before writing anything/i);
 });

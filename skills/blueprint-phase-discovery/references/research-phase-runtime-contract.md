@@ -37,7 +37,7 @@ security/license, footprint and update evidence under source policy; mark missin
 
 Effective `research.external_sources` comes from prepare:
 - `off`: no live external lookup; state evidence limits.
-- `ask`: one `ask_user` gate before external access; acceptance permits agreed
+- `ask`: one `question` gate before external access; acceptance permits agreed
   scope and submit records `externalSourcesApproved: true`, decline continues repo-only
   and cancel stops. Never infer approval or bypass `off`.
 - `auto`: relevant external checking may proceed without another gate.

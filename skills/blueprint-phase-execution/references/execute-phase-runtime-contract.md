@@ -9,11 +9,11 @@ persistence, and resume behavior.
 
 | Stage | Required MCP call | Authority |
 | --- | --- | --- |
-| Resolve / Read | `mcp_blueprint_blueprint_phase_execution_prepare` with `mode: "preview"` | Canonical repo/HEAD/status, effective config, phase topology, full plan-set validation, deterministic selected plan order, plan bodies, preimages, verification commands, external prerequisites, conflicts, existing summaries, warnings, blockers, and fingerprint |
-| Decide | `mcp_blueprint_blueprint_phase_execution_prepare` with `mode: "claim"` | Exact approval, overwrite plan ids, external-service confirmation, preview freshness, replay prevention, and the one active durable session |
-| Execute | `mcp_blueprint_blueprint_phase_execution_apply` | Selected-plan ownership, exact preimages, pinned-parent atomic mutation, rollback/cleanup classification, mutation receipts, initial-versus-repair limit, and deterministic current plan |
-| Validate | `mcp_blueprint_blueprint_phase_execution_verify` | Exact packet-bound command list, process-group timeout/output bounds, verification receipts, one repair gate, and mandatory second verification |
-| Persist / Route | `mcp_blueprint_blueprint_phase_execution_finalize` | Receipt-derived summary truth, summary write, summary index, artifact validation, synced STATE, next-plan advancement, terminal release, and idempotent stage recovery |
+| Resolve / Read | `blueprint_blueprint_phase_execution_prepare` with `mode: "preview"` | Canonical repo/HEAD/status, effective config, phase topology, full plan-set validation, deterministic selected plan order, plan bodies, preimages, verification commands, external prerequisites, conflicts, existing summaries, warnings, blockers, and fingerprint |
+| Decide | `blueprint_blueprint_phase_execution_prepare` with `mode: "claim"` | Exact approval, overwrite plan ids, external-service confirmation, preview freshness, replay prevention, and the one active durable session |
+| Execute | `blueprint_blueprint_phase_execution_apply` | Selected-plan ownership, exact preimages, pinned-parent atomic mutation, rollback/cleanup classification, mutation receipts, initial-versus-repair limit, and deterministic current plan |
+| Validate | `blueprint_blueprint_phase_execution_verify` | Exact packet-bound command list, process-group timeout/output bounds, verification receipts, one repair gate, and mandatory second verification |
+| Persist / Route | `blueprint_blueprint_phase_execution_finalize` | Receipt-derived summary truth, summary write, summary index, artifact validation, synced STATE, next-plan advancement, terminal release, and idempotent stage recovery |
 
 No primitive phase, summary, config, artifact, state, shell-write, or report tool
 may substitute for this control plane during execute-phase.

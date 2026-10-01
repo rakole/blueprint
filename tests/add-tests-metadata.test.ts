@@ -69,8 +69,8 @@ test("add-tests manifest references visibility, validation/report tools, bounded
   assert.match(commandFile, /targeted test command or result/i);
   assert.match(commandFile, /current verification status/i);
   assert.match(commandFile, /report status/i);
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
-  assert.match(commandFile, /Prefer\s+`ask_user` tool/i);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
+  assert.match(commandFile, /Prefer\s+`question` tool/i);
   assert.match(commandFile, /`blueprint-executor` subagent/);
   assert.match(commandFile, /`blueprint-verifier` subagent/);
 
@@ -99,7 +99,7 @@ test("add-tests manifest references visibility, validation/report tools, bounded
   assert.match(commandFile, /add-tests-<phase>/);
   assert.match(commandFile, /`path` plus `summaryPaths`, `written`, and `status` as authoritative/i);
   assert.match(commandFile, /`path`, `written`, and `status` as authoritative/i);
-  assert.match(commandFile, /mcp_blueprint_blueprint_phase_validation_render/);
+  assert.match(commandFile, /blueprint_blueprint_phase_validation_render/);
   assert.match(commandFile, /readyToWrite: true/i);
   assert.match(commandFile, /\/blu-execute-phase <phase>/);
   assert.match(commandFile, /\/blu-validate-phase <phase>/);
@@ -134,8 +134,8 @@ test("phase-validation skill captures the shipped add-tests contract", async () 
   assert.match(skillFile, /blueprint-verifier/);
   assert.match(skillFile, /selected test scope, targeted test command or result, verification status, report status/i);
   assert.match(skillFile, /verification status/i);
-  assert.match(skillFile, /update_topic plus `write_todos`/i);
-  assert.match(skillFile, /Use `ask_user` for structured classification, scope, test-plan, or breadth decisions/i);
+  assert.match(skillFile, /concise progress prose plus `todowrite`/i);
+  assert.match(skillFile, /Use `question` for structured classification, scope, test-plan, or breadth decisions/i);
   assert.match(skillFile, /one summary and candidate area at a time/i);
   assert.match(skillFile, /Never substitute browser, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /report\.add-tests/);

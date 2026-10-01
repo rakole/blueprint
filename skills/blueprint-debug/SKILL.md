@@ -34,16 +34,16 @@ the right next step is a bounded fix, a saved plan, or more validation.
   `long-running-mutation` only when the investigation becomes non-trivial.
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
-- For structured diagnose-only, overwrite, todo-capture, or reroute decisions, prefer  `ask_user` tool over plain assistant prose when the host makes it available.
-- Use  `update_topic` tool only for non-trivial
+- For structured diagnose-only, overwrite, todo-capture, or reroute decisions, prefer  `question` tool over plain assistant prose when the host makes it available.
+- Use  concise progress prose only for non-trivial
   investigations to keep the active stage visible.
-- Use  `write_todos` tool only for non-trivial
+- Use  `todowrite` tool only for non-trivial
   investigations to maintain a compact visible checklist.
-- Treat `update_topic` and `write_todos` as session-local coordination only; they do not replace Blueprint MCP persistence, and they are not permission to capture persisted follow-up todos implicitly.
+- Treat `todowrite` as session-local coordination only; it does not replace Blueprint MCP persistence and is not permission to capture persisted follow-up todos implicitly.
 
 ## Parity Goal
 
@@ -113,7 +113,7 @@ and output-quality criteria.
    a fix attempt.
 4. For non-trivial investigations, keep the resolved scope, active stage,
    pending gate, execution mode, and next safe action visible with
-   `update_topic`, `write_todos`, or the equivalent prose fallback.
+   `todowrite` or the equivalent prose fallback.
 5. Read the most relevant local evidence directly, including existing
    `.blueprint/reports/debug-latest.md` content when a prior run should be
    continued instead of replaced.
@@ -141,7 +141,7 @@ and output-quality criteria.
 11. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
    capture after the user asks to capture it or confirms that the diagnosis or
    saved report should become a persisted todo. Do not silently turn every
-   finding into a todo, and do not confuse visible `write_todos` checklists
+   finding into a todo, and do not confuse visible `todowrite` checklists
    with persisted Blueprint follow-up capture.
 12. After persistence, update `STATE.md` through `blueprint_state_update` so
     the next safe implemented action is explicit.
@@ -169,15 +169,15 @@ Before claiming completion, verify:
 - The active `/blu-debug` runtime contract was loaded with
   `commands/blu-debug.toml`; no sibling command references or repository docs
   were treated as active runtime input.
-- `mcp_blueprint_blueprint_project_status` ran first, and persistent debug
+- `blueprint_blueprint_project_status` ran first, and persistent debug
   work stopped or degraded honestly when Blueprint state was uninitialized.
 - Any non-trivial run kept the declared stage, gate, execution mode, and next
-  safe action visible without treating `update_topic` or `write_todos` as
+  safe action visible without treating `todowrite` as
   Blueprint persistence.
 - Durable writes used only the owning MCP tools:
-  `mcp_blueprint_blueprint_artifact_report_write` for `debug-latest`,
-  `mcp_blueprint_blueprint_artifact_mutate_index` only for explicitly approved
-  todo capture, and `mcp_blueprint_blueprint_state_update` for `STATE.md`.
+  `blueprint_blueprint_artifact_report_write` for `debug-latest`,
+  `blueprint_blueprint_artifact_mutate_index` only for explicitly approved
+  todo capture, and `blueprint_blueprint_state_update` for `STATE.md`.
 - MCP-returned `status`, `written`, `created`, `updated`, `path`, ids,
   validation, warnings, and reasons were treated as authoritative; rejected,
   invalid, partial, skipped, or blocked work was repaired or reported plainly.

@@ -76,7 +76,7 @@ test("code-review-fix manifest references findings tools, canonical contracts, a
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/
   );
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(
     commandFile,
@@ -92,7 +92,7 @@ test("code-review-fix manifest references findings tools, canonical contracts, a
   );
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /review\.review-fix/);
   assert.match(
     commandFile,
@@ -145,11 +145,11 @@ test("blueprint-review skill captures review-fix rules on top of the saved findi
   assert.match(skillFile, /blueprint_review_authoring_context/);
   assert.match(skillFile, /blueprint_review_validate_model/);
   assert.match(skillFile, /blueprint_state_update/);
-  assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /question/);
   assert.match(skillFile, /`--auto` as bounded finding selection only/i);
   assert.match(skillFile, /default the remediation\s+candidate set to saved `follow-up` findings only/i);
   assert.match(skillFile, /XX-REVIEW-FIX\.md/);
-  assert.match(skillFile, /update_topic plus `write_todos`/i);
+  assert.match(skillFile, /concise progress prose plus `todowrite`/i);
   assert.match(
     skillFile,
     /resolved phase, resolved scope, selected finding ids,\s+remediation progress,\s+and\s+verification progress/i
@@ -188,7 +188,7 @@ test("code-review-fix local runtime contract locks richer saved-finding remediat
   );
   assert.match(
     referenceFile,
-    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, reviewer authority,\s+repo-mutation authority, state-sync authority, routing authority, or user\s+confirmation authority/i
+    /OpenCode progress guidance are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, reviewer authority,\s+repo-mutation authority, state-sync authority, routing authority, or user\s+confirmation authority/i
   );
   assert.match(
     referenceFile,

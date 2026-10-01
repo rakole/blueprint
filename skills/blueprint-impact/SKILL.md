@@ -40,7 +40,7 @@ or regeneration.
 
 ## Runtime Call Rules
 
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
@@ -70,12 +70,12 @@ unknowns, and output paths.
 ## Workflow Rules
 
 1. Resolve scope intent first. Explicit git, file, diff, and seed inputs outrank auto detection. Phase and roadmap item inputs select Blueprint context only and do not prove changed-file scope by themselves.
-2. Load impact config through `mcp_blueprint_blueprint_impact_config_get` before scope analysis so ignore paths, ownership sources, graph sources, risk thresholds, and reporting preferences are explicit.
-3. Resolve changed files through `mcp_blueprint_blueprint_impact_scope_resolve`. Description-only runs are allowed, but they stay low confidence and cannot become high-confidence `PASS`.
-4. Load Blueprint and repo context through `mcp_blueprint_blueprint_impact_context_load`. Optional missing metadata becomes warnings or unknowns; it is never proof that owners, dependencies, compliance, or tests are unnecessary.
-5. Analyze through `mcp_blueprint_blueprint_impact_analyze` and treat its status, risk, confidence, findings, obligations, unknowns, evidence, and normalized report as authoritative.
-6. Use `mcp_blueprint_blueprint_impact_report_write` only when writing is enabled, passing the normalized report plus expected analyzer context from `blueprint_impact_analyze` (`expectedScopeFingerprint`, `expectedScopeSource`, `expectedScopeDescription`, `expectedFiles`, `expectedEvidenceIds`, `expectedEvidencePathsById`, `expectedFindingIds`, `expectedBlockingFindingIds`, and `expectedWarningFindingIds`). The writer owns `report.impact` JSON Schema validation, runtime narrowing, residual quality checks, canonical rendering, and reuse detection. Keep writes under `.blueprint/impact/<impact-id>/`, use returned paths as authoritative, and require explicit overwrite confirmation when a changed bundle already exists.
-7. Use `mcp_blueprint_blueprint_impact_output_render` for the final human, JSON, Markdown, PR-comment, or summary output. `--no-write` renders from the in-memory report and must not create a bundle.
+2. Load impact config through `blueprint_blueprint_impact_config_get` before scope analysis so ignore paths, ownership sources, graph sources, risk thresholds, and reporting preferences are explicit.
+3. Resolve changed files through `blueprint_blueprint_impact_scope_resolve`. Description-only runs are allowed, but they stay low confidence and cannot become high-confidence `PASS`.
+4. Load Blueprint and repo context through `blueprint_blueprint_impact_context_load`. Optional missing metadata becomes warnings or unknowns; it is never proof that owners, dependencies, compliance, or tests are unnecessary.
+5. Analyze through `blueprint_blueprint_impact_analyze` and treat its status, risk, confidence, findings, obligations, unknowns, evidence, and normalized report as authoritative.
+6. Use `blueprint_blueprint_impact_report_write` only when writing is enabled, passing the normalized report plus expected analyzer context from `blueprint_impact_analyze` (`expectedScopeFingerprint`, `expectedScopeSource`, `expectedScopeDescription`, `expectedFiles`, `expectedEvidenceIds`, `expectedEvidencePathsById`, `expectedFindingIds`, `expectedBlockingFindingIds`, and `expectedWarningFindingIds`). The writer owns `report.impact` JSON Schema validation, runtime narrowing, residual quality checks, canonical rendering, and reuse detection. Keep writes under `.blueprint/impact/<impact-id>/`, use returned paths as authoritative, and require explicit overwrite confirmation when a changed bundle already exists.
+7. Use `blueprint_blueprint_impact_output_render` for the final human, JSON, Markdown, PR-comment, or summary output. `--no-write` renders from the in-memory report and must not create a bundle.
 8. Keep `BLOCK` advisory. It means the report found blocking impact, not that the command may mutate source files, roadmap state, PR state, deployment state, command-catalog state, or the installed extension directory.
 9. Preserve implemented-only routing in follow-up guidance. Prefer `/blu-progress` when the safest next command is ambiguous, and never present planned, blocked, or repairing commands as runnable.
 10. Do not use subagents for V1 impact analysis. MCP tools own deterministic scope, findings, risk, confidence, status, and output paths.
@@ -87,7 +87,7 @@ invariants from the active impact contract:
 
 - The `/blu-impact` manifest and `references/impact-runtime-contract.md` were loaded as the active contract; no sibling or planned command reference was treated as active input.
 - Required impact MCP calls used runtime FQNs and followed the impact contract order: config, scope, context, analysis, optional write, render, or stopped at the exact MCP-returned reason.
-- Persistence, when enabled, happened only through `mcp_blueprint_blueprint_impact_report_write`; returned `status`, `written`, `created`, `updated`, reuse fields, artifact `path` values, validation, warnings, and reasons were treated as authoritative.
+- Persistence, when enabled, happened only through `blueprint_blueprint_impact_report_write`; returned `status`, `written`, `created`, `updated`, reuse fields, artifact `path` values, validation, warnings, and reasons were treated as authoritative.
 - Any existing changed bundle paused for explicit overwrite confirmation before retrying with overwrite enabled.
 - Invalid config, unresolved scope, report validation failure, tool rejection, or model-check failure was repaired once through MCP-owned inputs or reported honestly; partial, skipped, blocked, or `--no-write` output was not described as persisted success.
 - Missing metadata is surfaced as unknown or warning, not as safety; every non-unknown finding or obligation has MCP evidence refs or an explicit unknown reason.

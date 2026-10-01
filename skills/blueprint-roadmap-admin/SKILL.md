@@ -43,7 +43,7 @@ Orchestrate Blueprint roadmap and milestone management flows so phase mutations,
 
 ## Runtime Call Rules
 
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
@@ -129,7 +129,7 @@ Execution profile for `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`
 
 In-flight status fields for this roadmap-admin family: resolved scope, active stage, pending gate, execution mode, next safe action.
 
-Treat roadmap-admin commands as short, bounded roadmap or report work, not as long-running orchestration. Do not use `update_topic`, `write_todos`, or tracker tools to make these commands look like lifecycle, review, or maintenance runs. When a roadmap-admin command needs confirmation, prefer Gemini's `ask_user` tool when a structured confirmation helps; otherwise keep the same decision boundary explicit in prose.
+Treat roadmap-admin commands as short, bounded roadmap or report work, not as long-running orchestration. Do not use `todowrite` or tracker tools to make these commands look like lifecycle, review, or maintenance runs. When a roadmap-admin command needs confirmation, prefer OpenCode `question` when a structured confirmation helps; otherwise keep the same decision boundary explicit in prose.
 
 For `/blu-add-phase`, `/blu-insert-phase`, and `/blu-new-milestone`, keep the same shared phase-admin spine: roadmap read first, exact preview packet with source scope plus target phase plus requirement grounding, named confirmation before mutation, safe default as stop-without-writing, named in-flight receipt that binds the approved preview to later MCP arguments, MCP-only persistence, starter-only context scaffolding, state update after scaffold, `/blu-discuss-phase` follow-up routing after successful writes, `/blu-progress` decline routing when a safe route is needed, and no tracker-backed or planned-only shortcuts.
 
@@ -141,7 +141,7 @@ Load `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` a
 
 1. Require a non-empty phase description before any mutation.
 2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
-3. Preview the exact next integer phase number from the roadmap read result, ignoring decimal suffixes, then require explicit `ask_user` confirmation before appending the phase.
+3. Preview the exact next integer phase number from the roadmap read result, ignoring decimal suffixes, then require explicit `question` confirmation before appending the phase.
 4. Choose at least one durable requirement ID declared in `.blueprint/REQUIREMENTS.md`, capture a concrete roadmap objective plus 2-5 observable success criteria, preview them with the phase number and requirement source, and persist the roadmap mutation through `blueprint_roadmap_add_phase` with `confirmed: true` after approved `phase-number-confirmation`, the confirmed number in `expectedPhaseNumber`, and the confirmed `requirementIds`, `goal`, and `successCriteria`; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt. Plain add-phase must validate `requirementIds` against declared `.blueprint/REQUIREMENTS.md` rows before mutation. Keep audit-backed repair traceability separate in `auditBackedDetails.repairRequirementIds` instead of weakening the plain-append requirement check.
 5. The preview packet must include `expectedPhaseNumber`, description, declared requirement IDs, requirement source, objective, 2-5 success criteria, source warnings, scaffold target, and `Safe default: stop without writing`. Treat `phase-number-confirmation` as the named receipt that binds those approved fields to the later mutation arguments. If the user declines, stop without writing and point to `/blu-progress` when a safe route is needed.
 6. Treat returned `phaseNumber`, `phasePrefix`, `phaseName`, `slug`, and `phaseDir` as authoritative, and scaffold `${phaseDir}/${phasePrefix}-CONTEXT.md` through `blueprint_artifact_scaffold`.
@@ -161,7 +161,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 
 1. Require an explicit integer phase number and a non-empty phase description before any mutation.
 2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
-3. Require explicit confirmation before inserting the decimal phase, and prefer Gemini CLI `ask_user` for that confirmation gate when available instead of prose-only confirmation.
+3. Require explicit confirmation before inserting the decimal phase, and prefer OpenCode `question` for that confirmation gate when available instead of prose-only confirmation.
 4. The preview packet must include the integer anchor, next decimal candidate, declared requirement IDs, concrete roadmap objective, 2-5 observable success criteria, a no-renumbering acknowledgment, a dependency-review note, the scaffold target, and `Safe default: stop without writing`. Treat `phase-insert-confirmation` as the named receipt that binds those approved fields to the later mutation arguments. If the user declines, stop without writing and point to `/blu-progress` when a safe route is needed.
 5. Persist the roadmap mutation through `blueprint_roadmap_insert_phase` with `confirmed: true` after approved `phase-insert-confirmation`, the confirmed `goal`, `successCriteria`, and confirmed durable `requirementIds`; do not rewrite `.blueprint/ROADMAP.md` or hand-create phase directories directly from the command prompt.
 6. Treat integer-only targets as mandatory and reject decimal targets.
@@ -183,7 +183,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 1. Require an explicit phase number before any mutation.
 2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
 3. Read the target phase through `blueprint_phase_locate` before mutation so drift or execution evidence is visible in the preview.
-4. Require explicit confirmation before deleting the target phase and renumbering subsequent phases. Prefer Gemini CLI `ask_user` for that confirmation gate when available instead of prose-only confirmation.
+4. Require explicit confirmation before deleting the target phase and renumbering subsequent phases. Prefer OpenCode `question` for that confirmation gate when available instead of prose-only confirmation.
 5. Persist the roadmap mutation through `blueprint_roadmap_remove_phase` with `confirmed: true` after approved `remove-phase-confirmation`; do not rewrite `.blueprint/ROADMAP.md` or rename phase directories directly from the command prompt.
 6. Treat the future-phase guard as mandatory. When the preview shows execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT`, stop on the default safe path and require a second explicit destructive confirmation before continuing with `force: true`; otherwise reject the mutation.
 7. Update `STATE.md` through `blueprint_state_update` so `/blu-remove-phase` is the active command and the next safe implemented follow-up is `/blu-progress`.
@@ -194,7 +194,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 1. Read the roadmap before making milestone claims or writing milestone reports.
 2. Keep milestone audits grounded in saved roadmap and phase evidence instead of chat memory.
 3. Read `report.milestone-audit` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final report body to the returned authoring template when the contract provides one.
-4. Require explicit overwrite confirmation before replacing an existing milestone audit report, and prefer `ask_user` for that confirmation gate.
+4. Require explicit overwrite confirmation before replacing an existing milestone audit report, and prefer `question` for that confirmation gate.
 5. Use `blueprint_artifact_summary_digest` with explicit milestone artifact paths when the command needs a compact roadmap-plus-evidence digest.
 6. Use `blueprint-verifier` when a second-pass evidence review helps explain gaps or stale assumptions.
 7. If `blueprint-verifier` is unavailable or unnecessary, keep parity by reviewing one milestone evidence group at a time and carrying forward only a compact note of confirmed gaps, stale assumptions, and remaining questions before writing the report.
@@ -209,7 +209,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 3. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-audit inputs to build a compact evidence view before proposing any new phases.
 4. Preserve the locked gap-closure intent by grouping related requirement, integration, and flow gaps into a few coherent roadmap phases rather than adding one phase per gap, and keep any requirements traceability repair in the grouped plan instead of scattering it across phases.
 5. Keep the grouping reviewable: show which gaps each proposed phase closes, separate optional nice-to-have gaps from must-close work, and surface the sectioned requirement / integration / flow / optional breakdown from the audit.
-6. Require one explicit confirmation before any roadmap mutation, and prefer Gemini CLI `ask_user` for that confirmation gate when available.
+6. Require one explicit confirmation before any roadmap mutation, and prefer OpenCode `question` for that confirmation gate when available.
 7. Append each approved gap-closure phase through repeated `blueprint_roadmap_add_phase` calls with `confirmed: true` from approved `gap-plan-confirmation` and `auditBackedDetails` populated from the source audit report, grouped repair requirement IDs, success criteria, and gap rows; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt, and do not imply code or git mutation.
 8. Treat an existing-audit-backed-phase reuse warning from `blueprint_roadmap_add_phase` as retry recovery. Continue from the returned canonical `phaseNumber`, `phasePrefix`, and `phaseDir` rather than appending the same grouped gaps again.
 9. Update `STATE.md` through `blueprint_state_update` so the first new gap-closure phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
@@ -223,7 +223,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 4. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-audit inputs to build a compact evidence view before writing the completion report. Surface the audit readiness and evidence trail, not just a terse summary.
 5. Keep `complete-milestone` report-driven and state-driven. Do not rewrite `.blueprint/ROADMAP.md`, renumber phases, or invent a new `phase_mark_complete` substrate from the command prompt.
 6. Persist the completion report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Use the exact `blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
-7. Require explicit overwrite confirmation before replacing an existing milestone completion report, and prefer `ask_user` for that confirmation gate.
+7. Require explicit overwrite confirmation before replacing an existing milestone completion report, and prefer `question` for that confirmation gate.
 8. Update `STATE.md` through `blueprint_state_update` so `/blu-complete-milestone` is the active command and the next safe implemented follow-up is `/blu-milestone-summary <milestone>`.
 9. Keep follow-up routing inside implemented Blueprint commands only. Do not loop back into `/blu-audit-milestone` when the saved audit already names a safer follow-up.
 
@@ -234,7 +234,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final consolidated spec body to the returned `contract.authoringTemplate` when the contract provides one.
 4. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-report inputs to build the milestone summary from durable evidence, and include key milestone phase summary, validation, or UAT artifacts when milestone-level claims need them.
 5. Persist the consolidated milestone spec project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Use the exact `blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
-6. Require explicit overwrite confirmation before replacing an existing milestone summary report, and prefer `ask_user` for that confirmation gate.
+6. Require explicit overwrite confirmation before replacing an existing milestone summary report, and prefer `question` for that confirmation gate.
 7. Keep the flow skill-led. Do not pull in `blueprint-doc-writer` or any later-wave docs agent for this Wave 2 summary step.
 8. Update `STATE.md` through `blueprint_state_update` so `/blu-milestone-summary` is the active command and the next safe implemented follow-up is `/blu-new-milestone`.
 9. Keep follow-up routing inside implemented Blueprint commands only.
@@ -244,7 +244,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 1. Read the roadmap first and derive the next milestone starter context from the saved consolidated milestone spec through `blueprint_artifact_summary_digest`.
 2. Read `blueprint_config_get` with `scope: "effective"` before any optional `blueprint-roadmapper` decision so roadmapper use stays config-gated.
 3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before generating carry-forward seeds, and normalize any consolidated-spec-derived seed text to the returned authoring template when the contract provides one.
-4. Treat carry-forward as the default mode. Only switch to a fresh reset when the user explicitly asks for it, and prefer `ask_user` when the choice is not already explicit.
+4. Treat carry-forward as the default mode. Only switch to a fresh reset when the user explicitly asks for it, and prefer `question` when the choice is not already explicit.
 5. Preview the exact source scope before mutation: the source milestone summary path, digest `inputsUsed`, warnings, carry-forward or reset mode, proposed milestone name, starter-doc overwrite set, first whole-number phase target, affected starter paths, overwrite risk, and `Safe default: stop without writing`.
 6. Before any optional delegation, build a typed `Roadmapper Packet` from digest-backed evidence only. The packet must include `digestScope`, `carryForwardFacts`, `requirementTransitionHints`, `firstPhasePreview`, `parentOwnedResponsibilities`, `forbiddenActions`, and `stopConditions`.
 7. `digestScope` must stay limited to the digest `inputsUsed` plus the resolved milestone summary path. `carryForwardFacts` must stay limited to digest-backed roadmap and milestone facts. `requirementTransitionHints` may summarize likely `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain` rows with `sourceRefs` plus `rationale`, but they remain starter-seed evidence only and do not become a competing `.blueprint/REQUIREMENTS.md` write path.
@@ -258,7 +258,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 15. Regenerate starter docs through `blueprint_artifact_scaffold` with an explicit carry-forward seed. Do not hand-edit `PROJECT.md`, `REQUIREMENTS.md`, or `ROADMAP.md` from the command prompt.
 16. Preserve historical phase directories. Do not delete or renumber earlier milestone artifacts as part of `new-milestone`.
 17. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu-discuss-phase <first phase>` has a valid target directory.
-18. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `ask_user` for that confirmation gate.
+18. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `question` for that confirmation gate.
 19. Treat `carry-forward-confirmation` and `starter-doc-overwrite-confirmation` as named in-flight receipts that bind the approved preview packet fields and typed roadmapper result to the later scaffold and state-update arguments.
 20. If the user declines either gate, stop without writing and point to `/blu-progress` when a safe route is needed.
 21. Treat the scaffold receipt fields `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories` as authoritative; stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of being recomputed in prompt text.
@@ -300,7 +300,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 Before claiming completion, verify:
 
 - The active roadmap-admin command loaded only its structured `input_bundles.commands[...]` input: the add/insert runtime contract or the active `commands/blu-*.toml` manifest. Sibling command references were not treated as active requirements.
-- Required MCP calls ran in the active contract's order through runtime FQNs (`mcp_blueprint_blueprint_*`), with roadmap, report, contract, digest, artifact, or phase-locate reads completed before any roadmap, scaffold, report, or state write.
+- Required MCP calls ran in the active contract's order through runtime FQNs (`blueprint_blueprint_*`), with roadmap, report, contract, digest, artifact, or phase-locate reads completed before any roadmap, scaffold, report, or state write.
 - Persistence used only the owning MCP tools for the active command: roadmap mutation, artifact scaffold/report write, and state update. No direct edits were made to `.blueprint/ROADMAP.md`, `.blueprint/STATE.md`, `.blueprint/phases/`, `.blueprint/reports/`, runtime files, installed extension directories, or planned-only surfaces.
 - Returned MCP fields were treated as authoritative, including `status`, `written`, `created`, `updated`, `createdFiles`, `reusedFiles`, `path`, `phaseNumber`, `phasePrefix`, `phaseDir`, `inputsUsed`, validation results, warnings, recovery guidance, and `reason`.
 - Every required confirmation gate was satisfied before mutation: phase-number append, decimal insert, future/destructive removal, grouped gap plan, overwrite or replacement, carry-forward versus reset, and starter-doc regeneration.

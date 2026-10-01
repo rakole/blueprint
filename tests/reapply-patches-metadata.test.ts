@@ -29,9 +29,9 @@ test("reapply-patches manifest references the maintenance skill, patch MCP tools
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, next safe action/
   );
-  assert.match(commandFile, /mcp_blueprint_blueprint_patch_list/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_patch_reapply/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_patch_record/);
+  assert.match(commandFile, /blueprint_blueprint_patch_list/);
+  assert.match(commandFile, /blueprint_blueprint_patch_reapply/);
+  assert.match(commandFile, /blueprint_blueprint_patch_record/);
   assert.match(commandFile, /dirty-working-tree/);
   assert.match(commandFile, /malformed-patch-registry/);
   assert.match(commandFile, /missing-patch-target/);

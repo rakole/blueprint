@@ -52,11 +52,11 @@ scope no longer qualifies as bounded quick work.
 
 ## Session-Local Visibility Helpers
 
-On Gemini hosts that expose `update_topic` and `write_todos`, use them only as
+For long-running work, use concise progress prose and `todowrite` only as
 session-local visibility aids during non-trivial runs. They do not replace
 MCP-backed summaries, reports, or `STATE.md`.
 
-When those helpers are unavailable, keep the same stage and next-safe-action
+When `todowrite` is unavailable, keep the same stage and next-safe-action
 visibility in concise progress recaps plus MCP-backed persistence. Do not claim
 helper calls were made when the host did not expose them.
 

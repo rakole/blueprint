@@ -10,10 +10,9 @@ description: >
   steps.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
+  - grep
 max_turns: 24
 timeout_mins: 18
 ---
@@ -48,7 +47,7 @@ accept/revise/route decision.
 - Current complete model and prior findings for a revision pass.
 - A short investigationTrace and decisions that must survive targeted repair.
 
-Use read-only `read_file` on supplied paths when exact evidence is needed.
+Use read-only `read` on supplied paths when exact evidence is needed.
 Report additional evidence paths to the parent for fingerprinting before it
 accepts the draft. Do not browse live web sources or invent missing research.
 Return blockers when required evidence is unavailable or contradictory.

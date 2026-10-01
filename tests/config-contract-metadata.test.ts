@@ -49,9 +49,9 @@ test("settings runtime reference locks effectiveness-spine keys and persistence 
   assert.match(settingsReference, /inherit from saved defaults when present, otherwise from hardcoded defaults/i);
   assert.match(settingsReference, /Keep the common settings pass stable/i);
   assert.match(settingsReference, /do not force these keys into the first settings pass/i);
-  assert.match(settingsReference, /normal `mcp_blueprint_blueprint_config_set` JSON-object `patch` path/i);
-  assert.match(settingsReference, /Project settings writes go only through `mcp_blueprint_blueprint_config_set` with `scope: "project"`/i);
-  assert.match(settingsReference, /Saved defaults writes go only through `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` after explicit opt-in/i);
+  assert.match(settingsReference, /normal `blueprint_blueprint_config_set` JSON-object `patch` path/i);
+  assert.match(settingsReference, /Project settings writes go only through `blueprint_blueprint_config_set` with `scope: "project"`/i);
+  assert.match(settingsReference, /Saved defaults writes go only through `blueprint_blueprint_config_set` with `scope: "defaults"` after explicit opt-in/i);
   assert.match(settingsReference, /Patches must be JSON objects/i);
   assert.match(settingsReference, /Do not write config files directly/i);
 });

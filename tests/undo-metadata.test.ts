@@ -30,14 +30,14 @@ test("undo manifest references the maintenance skill, high-risk maintenance prof
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, next safe action/
   );
-  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_phase_locate/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_undo_preview/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_undo_execute/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_undo_persist/);
+  assert.match(commandFile, /blueprint_blueprint_project_status/);
+  assert.match(commandFile, /blueprint_blueprint_phase_locate/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /blueprint_blueprint_undo_preview/);
+  assert.match(commandFile, /blueprint_blueprint_undo_execute/);
+  assert.match(commandFile, /blueprint_blueprint_undo_persist/);
   assert.match(commandFile, /undo-latest/);
   assert.match(commandFile, /dirty working tree, detached HEAD, merge\/rebase\/cherry-pick\/revert\/sequencer state/i);
   assert.match(commandFile, /undo-confirmation/);
@@ -98,7 +98,7 @@ test("undo local runtime contract and runtime resource expose the destructive ga
   assert.match(runtimeReference, /Dirty tree, detached HEAD, merge\/rebase\/cherry-pick\/revert\/sequencer state/i);
   assert.match(runtimeReference, /undo-confirmation/);
   assert.match(runtimeReference, /report-overwrite-confirmation/);
-  assert.match(runtimeReference, /`mcp_blueprint_blueprint_artifact_contract_read`/);
+  assert.match(runtimeReference, /`blueprint_blueprint_artifact_contract_read`/);
   assert.match(runtimeReference, /report\.undo/);
   assert.match(runtimeReference, /next safe action/i);
 

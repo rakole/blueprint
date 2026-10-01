@@ -26,12 +26,12 @@ test("workstreams manifest references the maintenance skill, workstream MCP tool
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(commandFile, /mcp_blueprint_blueprint_workstream_list/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_workstream_mutate/);
-  assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /blueprint_blueprint_workstream_list/);
+  assert.match(commandFile, /blueprint_blueprint_workstream_mutate/);
+  assert.doesNotMatch(commandFile, /blueprint_blueprint_state_update/);
   assert.match(commandFile, /already applied by the mutate tool/i);
   assert.match(commandFile, /do not make a second best-effort state update call/i);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /workstream-switch-confirmation/);
   assert.match(commandFile, /workstream-archive-confirmation/);
   assert.match(commandFile, /missing-resume-snapshot/);

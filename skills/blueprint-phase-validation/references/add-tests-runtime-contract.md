@@ -78,7 +78,7 @@ Before writing tests:
 2. Discover existing test structure, naming conventions, and test commands from
    repo files.
 3. Prefer extending nearby tests over duplicating coverage in a second suite.
-4. Present the classification and narrow default scope through `ask_user` when
+4. Present the classification and narrow default scope through `question` when
    the choice is broad, ambiguous, or would create more than a focused pass.
 5. Present a concrete test plan with target test paths, cases or scenarios,
    expected assertions, and the narrow command to run.

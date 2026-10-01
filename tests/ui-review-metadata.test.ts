@@ -70,7 +70,7 @@ test("ui-review manifest references the review tools, UI auditor, and safe routi
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/
   );
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
@@ -125,7 +125,7 @@ test("blueprint-review skill captures MCP-owned ui-review rules", async () => {
   assert.match(skillFile, /audit one pillar at\s+    a time/);
   assert.match(skillFile, /Reject browser-only, web-search-only, shell-only, or generic agents/);
   assert.match(skillFile, /retry once through MCP/);
-  assert.match(skillFile, /update_topic plus `write_todos`/i);
+  assert.match(skillFile, /concise progress prose plus `todowrite`/i);
   assert.match(skillFile, /XX-UI-REVIEW\.md/);
   assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /\/blu-verify-work/);
@@ -149,10 +149,10 @@ test("ui-review runtime contract captures rich artifact authoring and recovery",
   assert.match(runtimeContract, /## Stage Mapping/);
   assert.match(runtimeContract, /### Resolve/);
   assert.match(runtimeContract, /### Persist/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(runtimeContract, /blueprint_blueprint_artifact_contract_read/);
   assert.match(runtimeContract, /contract\.modelContract\.schemaPath/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_authoring_context/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_validate_model/);
+  assert.match(runtimeContract, /blueprint_blueprint_review_authoring_context/);
+  assert.match(runtimeContract, /blueprint_blueprint_review_validate_model/);
   assert.match(runtimeContract, /Pillar Scores/);
   assert.match(runtimeContract, /Priority Fixes/);
   assert.match(runtimeContract, /overall score out of 24/);

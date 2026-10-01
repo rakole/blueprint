@@ -22,7 +22,7 @@ test("code-review manifest references the review tools, canonical contract, and 
   assert.match(commandFile, /`blueprint-reviewer` subagent/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /runtime contract's shared review posture/i);
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(
     commandFile,
@@ -89,7 +89,7 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
   assert.match(skillFile, /blueprint_review_scope/);
   assert.match(skillFile, /blueprint_review_validate_model/);
   assert.match(skillFile, /confirmationRecommended/);
-  assert.match(skillFile, /update_topic plus `write_todos`/);
+  assert.match(skillFile, /concise progress prose plus `todowrite`/);
   assert.match(skillFile, /blueprint-reviewer/);
   assert.match(skillFile, /no-subagent fallback/i);
   assert.match(skillFile, /retry once\s+through MCP/i);
@@ -133,18 +133,18 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   );
   assert.match(
     runtimeContract,
-    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, reviewer authority,\s+scope authority, validation authority, routing authority, or user confirmation\s+authority/i
+    /OpenCode progress guidance are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, reviewer authority,\s+scope authority, validation authority, routing authority, or user confirmation\s+authority/i
   );
   assert.match(
     runtimeContract,
     /Emit exceptional updates for\s+invalid phase resolution, disabled review, invalid explicit file scope,\s+scope-confirmation waits/i
   );
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_scope/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_load_findings/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_validate_model/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_record/);
+  assert.match(runtimeContract, /blueprint_blueprint_phase_locate/);
+  assert.match(runtimeContract, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(runtimeContract, /blueprint_blueprint_review_scope/);
+  assert.match(runtimeContract, /blueprint_blueprint_review_load_findings/);
+  assert.match(runtimeContract, /blueprint_blueprint_review_validate_model/);
+  assert.match(runtimeContract, /blueprint_blueprint_review_record/);
   assert.match(runtimeContract, /## Depth Semantics/);
   assert.match(runtimeContract, /`quick`/);
   assert.match(runtimeContract, /`standard`/);

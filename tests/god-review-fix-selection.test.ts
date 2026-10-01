@@ -295,9 +295,9 @@ test("hidden code-review-fix dispatcher defers private findings selection before
 
   assert.match(manifest, /Follow `skills\/blueprint-god-review\/SKILL\.md`/);
   for (const privateTool of [
-    /mcp_blueprint_blueprint_god_review_load_findings/,
-    /mcp_blueprint_blueprint_god_review_record_fix/,
-    /mcp_blueprint_blueprint_god_review_cleanup/
+    /blueprint_blueprint_god_review_load_findings/,
+    /blueprint_blueprint_god_review_record_fix/,
+    /blueprint_blueprint_god_review_cleanup/
   ]) {
     assert.doesNotMatch(manifest, privateTool);
     assert.doesNotMatch(publicSkill, privateTool);

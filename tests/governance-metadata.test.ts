@@ -48,7 +48,7 @@ const governanceExpectations = {
       /## Confirmation Gates/,
       /No extra confirmation is required/i,
       /## Write Boundaries/,
-      /The only allowed write is `mcp_blueprint_blueprint_config_set_profile`/i
+      /The only allowed write is `blueprint_blueprint_config_set_profile`/i
     ],
     hookInvolvement: ["read-before-edit", ".blueprint write guard"]
   },
@@ -68,7 +68,7 @@ const governanceExpectations = {
     ],
     manifestPatterns: [
       /`--repair` must never imply silent writes/i,
-      /use `ask_user` for confirmation/i,
+      /use `question` for confirmation/i,
       /Explain exactly which config or state changes will be written/i
     ],
     referencePatterns: [

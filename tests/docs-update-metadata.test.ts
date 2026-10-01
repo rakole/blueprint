@@ -24,8 +24,8 @@ test("docs-update manifest references the docs skill, evidence posture, and visi
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/
   );
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
-  assert.match(commandFile, /session-local progress tools only/i);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
+  assert.match(commandFile, /`todowrite` as (?:a )?session-local/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-docs\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-doc-writer\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-doc-verifier\.md/);
@@ -83,7 +83,7 @@ test("docs skill captures the long-running docs-update contract", async () => {
   assert.match(skillFile, /### `docs-update`/);
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
-  assert.match(skillFile, /update_topic plus `write_todos`/i);
+  assert.match(skillFile, /concise progress prose plus `todowrite`/i);
   assert.match(skillFile, /`--verify-only` as read-only/i);
   assert.match(skillFile, /docs-update-latest/);
   assert.match(skillFile, /repo truth/i);

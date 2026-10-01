@@ -19,8 +19,8 @@ test("check-todos manifest uses runtime skill and todo-status MCP identities", a
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /blueprint_blueprint_project_status/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_mutate_index/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /action: "list"/);
   assert.match(commandFile, /action: "update"/);
@@ -28,7 +28,7 @@ test("check-todos manifest uses runtime skill and todo-status MCP identities", a
   assert.match(commandFile, /\/blu-health/);
   assert.match(commandFile, /\/blu-add-todo/);
   assert.match(commandFile, /\/blu-progress/);
-  assert.match(commandFile, /Prefer\s+`ask_user` tool for status-change confirmation/);
+  assert.match(commandFile, /Prefer\s+`question` tool for status-change confirmation/);
 });
 
 test("blueprint-capture skill captures shipped check-todos behavior", async () => {
@@ -44,7 +44,7 @@ test("blueprint-capture skill captures shipped check-todos behavior", async () =
   assert.match(skillFile, /action: "list"/);
   assert.match(skillFile, /action: "update"/);
   assert.match(skillFile, /active` or `completed/);
-  assert.match(skillFile, /Prefer Gemini's `ask_user` tool when a structured confirmation helps/);
+  assert.match(skillFile, /Prefer OpenCode `question` when a structured confirmation helps/);
   assert.doesNotMatch(
     skillFile,
     /`check-todos` and `review-backlog` stay documented contracts/

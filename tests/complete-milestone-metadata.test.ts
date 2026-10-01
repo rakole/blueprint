@@ -17,18 +17,18 @@ test("complete-milestone manifest references report-driven closeout tools and su
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_read/);
   assert.match(
     commandFile,
-    /Use the exact `mcp_blueprint_blueprint_roadmap_read\.milestone` value as `<milestone>` and let `mcp_blueprint_blueprint_artifact_report_write` own normalization\./
+    /Use the exact `blueprint_blueprint_roadmap_read\.milestone` value as `<milestone>` and let `blueprint_blueprint_artifact_report_write` own normalization\./
   );
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_load/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /blueprint_blueprint_state_load/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_report_write/);
+  assert.match(commandFile, /blueprint_blueprint_state_update/);
   assert.match(commandFile, /derivedStatus\.milestoneAudit/);
   assert.match(commandFile, /derivedStatus\.nextAction/);
   assert.match(commandFile, /Do not treat report-local readiness alone as sufficient/);
@@ -36,11 +36,11 @@ test("complete-milestone manifest references report-driven closeout tools and su
   assert.match(commandFile, /contract\.authoringTemplate/);
   assert.match(commandFile, /\/blu-plan-milestone-gaps/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /missing-milestone-audit/);
   assert.match(commandFile, /milestone-not-ready/);
   assert.match(commandFile, /milestone-complete-overwrite-confirmation/);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools/);
   assert.match(commandFile, /milestone-complete-<milestone>/);
   assert.match(commandFile, /\/blu-milestone-summary <milestone>/);
   assert.doesNotMatch(commandFile, /blueprint_phase_mark_complete/);
@@ -70,9 +70,9 @@ test("roadmap-admin skill captures report-driven milestone closeout behavior", a
   assert.match(skillFile, /\/blu-plan-milestone-gaps/);
   assert.match(skillFile, /report-driven and state-driven/i);
   assert.match(skillFile, /\/blu-milestone-summary <milestone>/);
-  assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /question/);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
-  assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(skillFile, /Do not use `todowrite` or tracker tools/i);
 });
 
 test("complete-milestone runtime-owned metadata exposes the interactive-read waiting-state contract", async () => {

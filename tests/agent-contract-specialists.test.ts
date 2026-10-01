@@ -158,7 +158,7 @@ test("mapping and discovery specialist agents encode concrete output modes and r
     /## Gray-Area Memo/,
     /exactly one gray area or assumptions pass/,
     /options, tradeoffs, complexity\/impact, recommendation rationale/,
-    /ask_user/, /phase.context/,
+    /question/, /phase.context/,
     /## Boundaries And Revisions/,
     /Keep strong existing findings and revise stale or weak claims only/,
     /Do not write files or mutate/,
@@ -288,7 +288,7 @@ test("lifecycle planning specialist agents keep parent-owned orchestration and p
     assert.match(content, /parent command owns/i);
     assert.match(content, /MCP\s+(?:validation|persistence)/);
     assert.match(content, /update Blueprint state/);
-    assert.match(content, /read-only `read_file`/);
+    assert.match(content, /read-only `read`/);
   }
   assert.match(planner, /ready for `blueprint_plan_submit` by the parent/);
   assert.match(planner, /Do not persist plan files/);
@@ -303,7 +303,7 @@ test("docs specialist agents encode scoped drafting and evidence-backed verifica
   const docVerifier = await readAgent("blueprint-doc-verifier");
 
   assert.match(docWriter, /## Parent-Owned Responsibilities/);
-  assert.match(docWriter, /`update_topic`, `write_todos`, and `ask_user`/);
+  assert.match(docWriter, /visible progress prose, `todowrite`, and `question`/);
   assert.match(docWriter, /doc-scope selection/i);
   assert.match(docWriter, /external-verification decision/i);
   assert.match(docWriter, /## Required Reads/);
@@ -323,7 +323,7 @@ test("docs specialist agents encode scoped drafting and evidence-backed verifica
   assert.match(docWriter, /Do not widen into `\.blueprint\/`, `\.planning\/`, or hidden legacy slash-command behavior/);
 
   assert.match(docVerifier, /## Parent-Owned Responsibilities/);
-  assert.match(docVerifier, /`update_topic`, `write_todos`, and `ask_user`/);
+  assert.match(docVerifier, /visible progress prose, `todowrite`, and `question`/);
   assert.match(docVerifier, /external-verification decision/i);
   assert.match(docVerifier, /## Verification Rules/);
   assert.match(docVerifier, /PASS`, `GAP`, or `BLOCKED`/);
@@ -348,7 +348,7 @@ test("review-family specialist agents encode parent-owned orchestration and boun
   const uiAuditor = await readAgent("blueprint-ui-auditor");
 
   assert.match(reviewer, /## Parent-Owned Responsibilities/);
-  assert.match(reviewer, /`update_topic`, `write_todos`, and `ask_user`/);
+  assert.match(reviewer, /visible progress prose, `todowrite`, and `question`/);
   assert.match(reviewer, /`blueprint_review_scope`/);
   assert.match(
     reviewer,

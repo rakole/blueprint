@@ -23,19 +23,19 @@ diff into the patch registry. It is loaded with
 
 Use runtime FQNs in command prompts and host calls:
 
-- `mcp_blueprint_blueprint_project_status`
-- `mcp_blueprint_blueprint_config_get`
-- `mcp_blueprint_blueprint_phase_locate`
-- `mcp_blueprint_blueprint_phase_execution_targets`
-- `mcp_blueprint_blueprint_phase_plan_read`
-- `mcp_blueprint_blueprint_plan_run_prepare`
-- `mcp_blueprint_blueprint_plan_run_record`
-- `mcp_blueprint_blueprint_plan_run_load`
-- `mcp_blueprint_blueprint_plan_run_diff`
-- `mcp_blueprint_blueprint_plan_run_patch_record`
-- `mcp_blueprint_blueprint_patch_record`
-- `mcp_blueprint_blueprint_phase_summary_write`
-- `mcp_blueprint_blueprint_state_update`
+- `blueprint_blueprint_project_status`
+- `blueprint_blueprint_config_get`
+- `blueprint_blueprint_phase_locate`
+- `blueprint_blueprint_phase_execution_targets`
+- `blueprint_blueprint_phase_plan_read`
+- `blueprint_blueprint_plan_run_prepare`
+- `blueprint_blueprint_plan_run_record`
+- `blueprint_blueprint_plan_run_load`
+- `blueprint_blueprint_plan_run_diff`
+- `blueprint_blueprint_plan_run_patch_record`
+- `blueprint_blueprint_patch_record`
+- `blueprint_blueprint_phase_summary_write`
+- `blueprint_blueprint_state_update`
 
 ## Stage Contract
 
@@ -43,22 +43,22 @@ Use runtime FQNs in command prompts and host calls:
   targets, and the saved plan.
 - Read: inspect plan metadata, authorized files, verification commands,
   blockers, and base git state through MCP results.
-- Decide: call `mcp_blueprint_blueprint_plan_run_prepare` with
+- Decide: call `blueprint_blueprint_plan_run_prepare` with
   `mode: "preview"` and present the planned branch/worktree/run details.
 - Prepare: after `plan-run-prepare-confirmation`, call
-  `mcp_blueprint_blueprint_plan_run_prepare` with `mode: "prepare"`.
+  `blueprint_blueprint_plan_run_prepare` with `mode: "prepare"`.
 - Execute: implementation work must happen inside the returned `worktreePath`.
-- Capture: call `mcp_blueprint_blueprint_plan_run_diff` after source edits
+- Capture: call `blueprint_blueprint_plan_run_diff` after source edits
   exist; the command `cwd` remains the source repo, and the recorded
   `worktreePath` remains authoritative for the diff target.
 - Persist: when the diff is authorized, call
-  `mcp_blueprint_blueprint_plan_run_patch_record` to persist patch id
+  `blueprint_blueprint_plan_run_patch_record` to persist patch id
   `plan-run-<phase>-<planId>-<runId>`, label `Plan run <phase>/<planId>`,
   tracked files from the diff, `sourceVersion` from baseHead, and patch content
   equivalent to `git diff --binary <baseHead>` from the prepared
   registry-backed worktree.
-- Persist: keep `mcp_blueprint_blueprint_phase_summary_write` and
-  `mcp_blueprint_blueprint_state_update` deferred until a later summary flow.
+- Persist: keep `blueprint_blueprint_phase_summary_write` and
+  `blueprint_blueprint_state_update` deferred until a later summary flow.
 - Route: follow-up instructions must use implemented commands only.
 
 ## Confirmation Gate
@@ -83,20 +83,20 @@ PREPARED PlanRun, but does not implement the plan.
 
 ## Persistence Boundaries
 
-- `mcp_blueprint_blueprint_plan_run_prepare` owns worktree/branch preparation
+- `blueprint_blueprint_plan_run_prepare` owns worktree/branch preparation
   and PREPARED record creation for this command.
-- `mcp_blueprint_blueprint_plan_run_load` is read-only and useful for resuming
+- `blueprint_blueprint_plan_run_load` is read-only and useful for resuming
   or inspecting existing runs.
-- `mcp_blueprint_blueprint_plan_run_diff` must precede patch capture.
-- `mcp_blueprint_blueprint_plan_run_patch_record` owns normal patch capture and
+- `blueprint_blueprint_plan_run_diff` must precede patch capture.
+- `blueprint_blueprint_plan_run_patch_record` owns normal patch capture and
   must not run until an authorized implementation diff exists in the prepared
   registry-backed worktree.
-- `mcp_blueprint_blueprint_patch_record` is reserved for explicit manual repair
+- `blueprint_blueprint_patch_record` is reserved for explicit manual repair
   flows; normal run-plan capture uses the PlanRun wrapper.
-- `mcp_blueprint_blueprint_plan_run_patch_record` must block without writing a
+- `blueprint_blueprint_plan_run_patch_record` must block without writing a
   patch registry entry when `unauthorizedChangedFiles` is non-empty.
-- `mcp_blueprint_blueprint_phase_summary_write` and
-  `mcp_blueprint_blueprint_state_update` are forbidden during prepare and Wave
+- `blueprint_blueprint_phase_summary_write` and
+  `blueprint_blueprint_state_update` are forbidden during prepare and Wave
   6 patch-capture operation.
 - Do not hand-write `.blueprint/runs/`, patch records, phase summaries, or
   state files.

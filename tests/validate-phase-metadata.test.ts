@@ -31,7 +31,7 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
@@ -62,8 +62,8 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.doesNotMatch(commandFile, /implementation\/behavior gaps/i);
   assert.doesNotMatch(commandFile, /if gateState == PASS/i);
   assert.doesNotMatch(commandFile, /else if explicit deferred-test or test-generation gaps remain/i);
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /manual validation feedback, UAT-readiness confirmation/i);
   assert.match(
     commandFile,
@@ -168,7 +168,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   );
   assert.match(
     validateReference,
-    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, verifier authority,\s+coverage authority, validation authority, state-sync authority, routing\s+authority, or user confirmation authority/i
+    /OpenCode progress guidance are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, verifier authority,\s+coverage authority, validation authority, state-sync authority, routing\s+authority, or user confirmation authority/i
   );
   assert.match(
     validateReference,

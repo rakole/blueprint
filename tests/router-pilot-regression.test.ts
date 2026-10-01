@@ -53,7 +53,7 @@ test("router pilot surfaces remain implemented-only in the live command catalog"
 test("/blu root router manifest keeps implemented-only routing and waiting-state reporting explicit", async () => {
   const rootRouter = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
 
-  assert.match(rootRouter, /Only recommend or route commands whose `mcp_blueprint_blueprint_command_catalog` entry is `implemented: true`/);
+  assert.match(rootRouter, /Only recommend or route commands whose `blueprint_blueprint_command_catalog` entry is `implemented: true`/);
   assert.match(rootRouter, /surface the waiting state explicitly: missing artifact, approval gate, verification debt, or blocked substrate/i);
 });
 
@@ -77,7 +77,7 @@ test("router pilot manifests and docs keep waiting-state reporting explicit", as
   assert.match(routerSkill, /commands\/blu-help\.toml/);
   assert.match(routerSkill, /commands\/blu-progress\.toml/);
   assert.match(routerSkill, /commands\/blu-next\.toml/);
-  assert.match(routerSkill, /\/blu-next[\s\S]*mcp_blueprint_blueprint_config_get/);
+  assert.match(routerSkill, /\/blu-next[\s\S]*blueprint_blueprint_config_get/);
   assert.match(
     routerSkill,
     /workflow\.code_review=false[\s\S]*never makes `?\/blu-secure-phase <phase>`? mandatory/i

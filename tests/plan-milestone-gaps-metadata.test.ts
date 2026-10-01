@@ -19,17 +19,17 @@ test("plan-milestone-gaps manifest references the audit-first gap-planning tools
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-roadmapper\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_add_phase/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_add_phase/);
+  assert.match(commandFile, /blueprint_blueprint_state_update/);
   assert.match(commandFile, /\/blu-audit-milestone/);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /missing-milestone-audit/);
   assert.match(commandFile, /no-actionable-gaps/);
   assert.match(commandFile, /gap-plan-confirmation/);
-  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools/);
   assert.match(commandFile, /structured gap sections/i);
   assert.match(commandFile, /\/blu-discuss-phase <first new phase number>/);
   assert.doesNotMatch(commandFile, /may also mutate code or git state/i);
@@ -50,9 +50,9 @@ test("roadmap-admin skill captures grouped audit-follow-up planning behavior", a
     /repeated `blueprint_roadmap_add_phase` calls with `confirmed: true` from approved `gap-plan-confirmation`/
   );
   assert.match(skillFile, /requirements traceability repair/i);
-  assert.match(skillFile, /ask_user/i);
+  assert.match(skillFile, /question/i);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
-  assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(skillFile, /Do not use `todowrite` or tracker tools/i);
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);
 });
 

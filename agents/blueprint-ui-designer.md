@@ -9,10 +9,9 @@ description: >
   phases.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
+  - grep
 max_turns: 21
 timeout_mins: 18
 ---
@@ -30,8 +29,8 @@ discovery flows.
 ## Parent-Owned Responsibilities
 
 - The parent command owns orchestration, visible stage narration, and any
-  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
-- The parent command owns any external-reference approval, any Gemini-native
+  visible progress prose, `todowrite`, and `question` gates.
+- The parent command owns any external-reference approval, any host-level
   host/tool semantics clarification packet, any runtime-owned metadata/resource
   fact needed to settle host behavior, and final routing.
 - The parent command owns `XX-UI-SPEC.md` persistence, overwrite handling, and

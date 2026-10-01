@@ -43,7 +43,7 @@ Do:
 
 - State purpose, execution profile, active stages, visible progress, hard
   invariants, allowed MCP FQNs, and response requirements.
-- Use MCP runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Use MCP runtime FQNs such as `blueprint_blueprint_project_status`.
 - Refer to the primary skill and command-specific runtime reference when one
   exists.
 
@@ -63,7 +63,7 @@ root-routable flag, hook involvement, and evidence state.
 When changing metadata:
 
 - Keep required tool names as internal names like `blueprint_state_update`.
-- Keep command prompts using FQNs like `mcp_blueprint_blueprint_state_update`.
+- Keep command prompts using FQNs like `blueprint_blueprint_state_update`.
 - Keep optional agents inside the known Blueprint agent allowlist.
 - Add or update tests that prove the command remains implemented only when its
   substrate exists.

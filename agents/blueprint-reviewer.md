@@ -10,10 +10,9 @@ description: >
   review artifact against the current repo surface.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
+  - grep
 max_turns: 24
 timeout_mins: 23
 ---
@@ -32,7 +31,7 @@ artifact without guessing scope, risks, stale evidence, or follow-up fixes.
 ## Parent-Owned Responsibilities
 
 - The parent command owns orchestration, visible stage narration, and
-  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+  visible progress prose, `todowrite`, and `question` gates.
 - The parent command owns scope resolution through `blueprint_review_scope`,
   any overwrite or scope confirmation, and all final routing.
 - The parent command owns `blueprint_review_validate_model`,

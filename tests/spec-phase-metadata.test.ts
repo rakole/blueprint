@@ -28,7 +28,7 @@ const specPhaseTools = [
 ] as const;
 
 const repoRoot = process.cwd();
-const specPhaseManifestTools = specPhaseTools.map((tool) => `mcp_blueprint_${tool}`);
+const specPhaseManifestTools = specPhaseTools.map((tool) => `blueprint_${tool}`);
 
 async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
@@ -123,7 +123,7 @@ test("spec-phase runtime contract resource is advertised only after implemented 
 
 test("spec-phase manifest exposes only the allowed Blueprint MCP runtime FQNs", async () => {
   const manifest = await readRepoFile("commands/blu-spec-phase.toml");
-  const manifestToolMatches = manifest.match(/mcp_blueprint_[a-z0-9_]+/g) ?? [];
+  const manifestToolMatches = manifest.match(/blueprint_blueprint_[a-z0-9_]+/g) ?? [];
   const manifestTools = [...new Set(manifestToolMatches)].sort();
 
   assert.deepEqual(manifestTools, [...specPhaseManifestTools].sort());

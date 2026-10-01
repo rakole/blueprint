@@ -426,8 +426,8 @@ test("code-review-fix runtime metadata, manifest, and skill contract stay aligne
   );
   assert.match(commandFile, /selected finding ids/i);
   assert.match(commandFile, /bounded `--auto`/);
-  assert.match(commandFile, /`update_topic` tool/);
-  assert.match(commandFile, /`write_todos`/);
+  assert.match(commandFile, /concise progress prose/);
+  assert.match(commandFile, /`todowrite`/);
   assert.match(commandFile, /No auto-fixer behavior is shipped/i);
   assert.match(skillFile, /Execution profile for `code-review-fix`: `long-running-mutation`/);
   assert.match(referenceFile, /explicit finding-selection confirmation/i);

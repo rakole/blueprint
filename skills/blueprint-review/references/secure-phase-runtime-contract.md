@@ -12,7 +12,7 @@ defaults to `false`, affects shipping or closeout requirements only when
 ## Visible Security Progress
 
 For non-trivial runs, keep progress visible through short boundary updates.
-Gemini-native progress helpers are presentation mirrors only. They do not
+OpenCode progress guidance are presentation mirrors only. They do not
 expand the MCP tool allowlist, persistence authority, auditor authority,
 threat-register authority, risk-acceptance authority, validation authority, or
 routing authority defined by this contract.
@@ -39,37 +39,37 @@ repair, record rejection, blocked advancement, and completion.
 
 ### Resolve
 
-- Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`.
+- Resolve the target phase with `blueprint_blueprint_phase_locate`.
 - If no phase resolves, stop with the tool's reason and recovery guidance.
 - Keep the resolved phase, active stage, pending gate, execution mode, and next
   safe action visible when they change or explain a blocker.
 
 ### Read
 
-- Read the artifact inventory with `mcp_blueprint_blueprint_artifact_list`.
+- Read the artifact inventory with `blueprint_blueprint_artifact_list`.
 - Require at least one completed execution summary before persistence. If no
   `XX-YY-SUMMARY.md` artifact exists, stop and route to
   `/blu-execute-phase <phase>`.
-- Read the plan set with `mcp_blueprint_blueprint_phase_plan_index`.
-- Read each relevant plan with `mcp_blueprint_blueprint_phase_plan_read`.
+- Read the plan set with `blueprint_blueprint_phase_plan_index`.
+- Read each relevant plan with `blueprint_blueprint_phase_plan_read`.
 - Parse the saved threat model from plan evidence. Prefer explicit
   `<threat_model>` blocks when present, and otherwise use clearly labeled
   threat-model or threat-register sections in the saved plan. Do not invent
   threats from chat memory.
-- Read `mcp_blueprint_blueprint_phase_summary_index`, then read every completed
-  execution summary with `mcp_blueprint_blueprint_phase_summary_read`.
-- Read `mcp_blueprint_blueprint_phase_execution_targets` so pending plans,
+- Read `blueprint_blueprint_phase_summary_index`, then read every completed
+  execution summary with `blueprint_blueprint_phase_summary_read`.
+- Read `blueprint_blueprint_phase_execution_targets` so pending plans,
   lower-wave blockers, and overwrite candidates are visible before any
   persistence. Pending plan work blocks secure-phase persistence.
 - Read execution summaries, especially `## Threat Flags`, from the artifact
   inventory as evidence context. Summary threat flags may map to declared
   threats or become non-blocking unregistered flags.
 - Read `review.security` with
-  `mcp_blueprint_blueprint_artifact_contract_read` before drafting, validating,
+  `blueprint_blueprint_artifact_contract_read` before drafting, validating,
   or repairing the security model. Use `contract.modelContract.schemaPath`,
   `contract.modelContract.jsonSchema`, and the secure-phase task schema as the
   authoring authority.
-- Read `mcp_blueprint_blueprint_review_authoring_context` before drafting the
+- Read `blueprint_blueprint_review_authoring_context` before drafting the
   model. If it returns `status: "invalid"`, stop with the blocker reason instead
   of inventing evidence, coverage, threat ids, or next actions.
 - If effective config is available, use it only to explain later routing or
@@ -91,7 +91,7 @@ repair, record rejection, blocked advancement, and completion.
   - `open`: mitigation, acceptance, or transfer evidence is missing or partial.
 - Keep unregistered summary threat flags visible as evidence gaps or follow-ups,
   but do not let them widen the command into a generic security scan.
-- Use Gemini CLI `ask_user` for overwrite confirmation and for the structured
+- Use OpenCode `question` for overwrite confirmation and for the structured
   verify-versus-accept decision when open threats remain.
 - Do not compute next-step routing while any threat remains open.
 
@@ -117,13 +117,13 @@ repair, record rejection, blocked advancement, and completion.
   `findings`, `manualOrDeferredWork`, `gapRoutes`, `followUps`, `auditTrail`,
   and `nextSafeAction`; `auditTrail` is an object.
 - Use the narrowed task schema returned by
-  `mcp_blueprint_blueprint_review_authoring_context` as the effective authoring
+  `blueprint_blueprint_review_authoring_context` as the effective authoring
   schema. The base schema is not permissive fallback when upstream context is
   missing or empty.
-- Validate the JSON through `mcp_blueprint_blueprint_review_validate_model`
+- Validate the JSON through `blueprint_blueprint_review_validate_model`
   before persistence. The task schema narrows live plan, summary, threat,
   prior-security, validation, UAT, and evidence inventory.
-- Persist only through `mcp_blueprint_blueprint_review_record` with numeric
+- Persist only through `blueprint_blueprint_review_record` with numeric
   `phase`, `artifact: "security"`, and the same structured `model`.
 - Markdown `content` fallback is invalid for `review.security`.
 - Treat the returned `reportPath`, `counts`, `followUps`, `status`, and
@@ -167,18 +167,18 @@ repair, record rejection, blocked advancement, and completion.
 
 Call these tools in this order unless the command must stop early:
 
-1. `mcp_blueprint_blueprint_phase_locate`
-2. `mcp_blueprint_blueprint_artifact_list`
-3. `mcp_blueprint_blueprint_phase_plan_index`
-4. `mcp_blueprint_blueprint_phase_plan_read`
-5. `mcp_blueprint_blueprint_phase_summary_index`
-6. `mcp_blueprint_blueprint_phase_summary_read`
-7. `mcp_blueprint_blueprint_phase_execution_targets`
-8. `mcp_blueprint_blueprint_artifact_contract_read` for `review.security`
-9. `mcp_blueprint_blueprint_config_get` with `scope: "effective"`
-10. `mcp_blueprint_blueprint_review_authoring_context`
-11. `mcp_blueprint_blueprint_review_validate_model`
-12. `mcp_blueprint_blueprint_review_record`
+1. `blueprint_blueprint_phase_locate`
+2. `blueprint_blueprint_artifact_list`
+3. `blueprint_blueprint_phase_plan_index`
+4. `blueprint_blueprint_phase_plan_read`
+5. `blueprint_blueprint_phase_summary_index`
+6. `blueprint_blueprint_phase_summary_read`
+7. `blueprint_blueprint_phase_execution_targets`
+8. `blueprint_blueprint_artifact_contract_read` for `review.security`
+9. `blueprint_blueprint_config_get` with `scope: "effective"`
+10. `blueprint_blueprint_review_authoring_context`
+11. `blueprint_blueprint_review_validate_model`
+12. `blueprint_blueprint_review_record`
 
 ## Input State Model
 

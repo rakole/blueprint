@@ -8,7 +8,7 @@ evidence, not merely valid markdown.
 
 ## Contract Authority
 
-- `mcp_blueprint_blueprint_artifact_contract_read` is the heading and schema
+- `blueprint_blueprint_artifact_contract_read` is the heading and schema
   authority for `review.code-review`.
 - The returned `contract.modelContract.schemaPath` and JSON schema are the base
   model-authoring authority for `review.code-review`.
@@ -45,9 +45,9 @@ Map `/blu-code-review` to those stages:
    reused or overwritten, and whether to use `blueprint-reviewer`.
 4. `Execute`: perform depth-appropriate review over only the resolved file set
    and saved evidence.
-5. `Validate`: call `mcp_blueprint_blueprint_review_validate_model` with the
+5. `Validate`: call `blueprint_blueprint_review_validate_model` with the
    authored JSON model and repair all returned diagnostics together.
-6. `Persist`: call `mcp_blueprint_blueprint_review_record` with the validated
+6. `Persist`: call `blueprint_blueprint_review_record` with the validated
    model and `artifact: "code-review"`. MCP renders canonical Markdown.
 7. `Route`: summarize findings or `positiveSignals` pass evidence and end with
    the next safe implemented command.
@@ -55,7 +55,7 @@ Map `/blu-code-review` to those stages:
 ## Visible Code-Review Progress
 
 For non-trivial runs, keep progress visible through short boundary updates.
-Gemini-native progress helpers are presentation mirrors only. They do not
+OpenCode progress guidance are presentation mirrors only. They do not
 expand the MCP tool allowlist, persistence authority, reviewer authority,
 scope authority, validation authority, routing authority, or user confirmation
 authority defined by this contract.
@@ -82,18 +82,18 @@ ambiguous next action, and completion.
 
 Call these tools in this order unless the command must stop early:
 
-1. `mcp_blueprint_blueprint_phase_locate`
+1. `blueprint_blueprint_phase_locate`
    - Controls target phase, phase directory, phase prefix, and missing-phase
      recovery.
    - Stop on unresolved phase and surface the tool reason.
-2. `mcp_blueprint_blueprint_artifact_contract_read` for
+2. `blueprint_blueprint_artifact_contract_read` for
    `review.code-review`
    - Controls the required headings, locked markers, and authoring template.
    - Treat the returned `authoringTemplate` as renderer preview only. Repair
      against `contract.modelContract.jsonSchema`,
      `blueprint_review_scope.authoringContext.taskSchema`, and returned
      diagnostics instead of rendered Markdown shape.
-3. `mcp_blueprint_blueprint_review_scope`
+3. `blueprint_blueprint_review_scope`
    - Controls whether review is enabled, the exact repo files, scope source,
      effective review depth, saved evidence inventory, and scope warnings.
    - Use `includeAuthoringContext: true` for code-review so the model sees exact
@@ -102,19 +102,19 @@ Call these tools in this order unless the command must stop early:
      explicit entry must fail the whole explicit scope.
    - Do not add siblings, generated files, `.blueprint/**`, directories,
      wildcards, absolute paths, git drift, or chat-memory files after this call.
-4. `mcp_blueprint_blueprint_review_load_findings` when an existing
+4. `blueprint_blueprint_review_load_findings` when an existing
    `XX-REVIEW.md` is present
    - Controls structured baseline findings, follow-ups, severity counts, and
      the saved review path before overwrite decisions.
    - Use read-only repo file access only if full-body comparison is needed.
-5. `mcp_blueprint_blueprint_review_validate_model`
+5. `blueprint_blueprint_review_validate_model`
    - Controls JSON Schema validation, residual quality diagnostics, normalized
      model output, and render preview.
    - Pass the resolved `reviewMode.source` as `scopeSource` whenever explicit
      `files` are supplied so validation catches unrecordable provenance before
      persistence.
    - Diagnostics are aggregated; repair all of them before retrying once.
-6. `mcp_blueprint_blueprint_review_record`
+6. `blueprint_blueprint_review_record`
    - Controls the final filename, create/update/reuse status, counts,
      follow-ups, warnings, and validation failures.
    - For `review.code-review`, accepts a structured `model` only. Markdown

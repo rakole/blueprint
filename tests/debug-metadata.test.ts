@@ -26,8 +26,8 @@ test("debug manifest references the debug skill, debugger agent, and report-back
   );
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe implemented action/i);
-  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
-  assert.match(commandFile, /session-local visibility tools only/i);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
+  assert.match(commandFile, /`todowrite` is a session-local visibility tool only/i);
   assert.match(commandFile, /debug-latest/);
   assert.match(commandFile, /`--diagnose`/);
   assert.match(
@@ -109,8 +109,8 @@ test("debug runtime-owned metadata, runtime-contract resource, skill, and local 
     /Execution profile: start in `interactive-read`[\s\S]*escalate to\s+`long-running-mutation` only when the investigation becomes non-trivial/i
   );
   assert.doesNotMatch(skillFile, /Execution profile: `long-running-mutation`/);
-  assert.match(skillFile, /`update_topic` tool/i);
-  assert.match(skillFile, /`write_todos` tool/i);
+  assert.match(skillFile, /concise progress prose/i);
+  assert.match(skillFile, /`todowrite` tool/i);
   assert.match(skillFile, /session-local coordination only/i);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_artifact_mutate_index/);

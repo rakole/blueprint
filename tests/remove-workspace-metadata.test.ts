@@ -29,8 +29,8 @@ test("remove-workspace manifest references the maintenance skill, workspace MCP 
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(commandFile, /mcp_blueprint_blueprint_workspace_registry_get/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_workspace_remove/);
+  assert.match(commandFile, /blueprint_blueprint_workspace_registry_get/);
+  assert.match(commandFile, /blueprint_blueprint_workspace_remove/);
   assert.match(commandFile, /workspace-not-found/);
   assert.match(commandFile, /workspace-path-ambiguity/);
   assert.match(commandFile, /registry-drift/);
@@ -47,8 +47,8 @@ test("remove-workspace local runtime contract, runtime resource, and maintenance
 
   assert.match(runtimeReference, /Stage Mapping/);
   assert.match(runtimeReference, /Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
-  assert.match(runtimeReference, /`mcp_blueprint_blueprint_workspace_registry_get`/);
-  assert.match(runtimeReference, /`mcp_blueprint_blueprint_workspace_remove`/);
+  assert.match(runtimeReference, /`blueprint_blueprint_workspace_registry_get`/);
+  assert.match(runtimeReference, /`blueprint_blueprint_workspace_remove`/);
   assert.match(runtimeReference, /remove-workspace-confirmation/);
   assert.match(runtimeReference, /workspace-path-ambiguity/);
   assert.match(runtimeReference, /registry-drift/);

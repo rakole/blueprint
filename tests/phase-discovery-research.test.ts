@@ -479,7 +479,7 @@ test("research lifecycle tool allowlist and live input bundle agree across surfa
     assert.match(command, new RegExp(blueprintRuntimeToolFqn(tool)));
     assert.match(runtime, new RegExp(tool));
   }
-  const namedTools = [...command.matchAll(/mcp_blueprint_(blueprint_[a-z_]+)/g)].map((match) => match[1]);
+  const namedTools = [...command.matchAll(/blueprint_(blueprint_[a-z_]+)/g)].map((match) => match[1]);
   assert.deepEqual([...new Set(namedTools)].sort(), [...requiredTools].sort());
   const contract = await buildBlueprintCommandRuntimeContractResource("research-phase");
   assert.equal(contract.catalog.status, "implemented");
@@ -495,7 +495,7 @@ test("research lifecycle tool allowlist and live input bundle agree across surfa
   assert.match(skill, /Load only the active command input bundle/);
   assert.match(skill, /never\s+the sibling contract/);
   assert.match(command, /recommend only implemented commands/);
-  assert.doesNotMatch(command, /update_topic|write_todos|phase_artifact_write|phase_checkpoint_delete/);
+  assert.doesNotMatch(command, /concise progress prose|todowrite|phase_artifact_write|phase_checkpoint_delete/);
 });
 
 test("research preparation preserves optional spec, context ownership and evidence freshness", async () => {
@@ -542,7 +542,7 @@ test("research effort and external-source guidance preserve quality without mand
     /existing dependencies and platform APIs/,
     /mark missing checks unchecked/,
     /`off`: no live external lookup/,
-    /`ask`: one `ask_user` gate before external access/,
+    /`ask`: one `question` gate before external access/,
     /externalSourcesApproved: true/,
     /decline continues repo-only/,
     /cancel stops/,

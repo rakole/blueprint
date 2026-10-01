@@ -25,15 +25,15 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-roadmapper\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_config_get/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /blueprint_blueprint_config_get/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_scaffold/);
+  assert.match(commandFile, /blueprint_blueprint_state_update/);
   assert.match(commandFile, /carry-forward as the default/i);
-  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /question/);
   assert.match(commandFile, /source milestone summary path/i);
   assert.match(commandFile, /inputsUsed/);
   assert.match(commandFile, /affected starter paths/i);
@@ -59,10 +59,10 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /bind the approved preview packet fields to the later scaffold and state-update arguments/i);
   assert.match(commandFile, /If the user declines either confirmation gate, stop without writing/i);
   assert.match(commandFile, /point to `\/blu-progress`/);
-  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools/);
   assert.match(
     commandFile,
-    /1\. Resolve[\s\S]*mcp_blueprint_blueprint_roadmap_read[\s\S]*then read `mcp_blueprint_blueprint_config_get` with `scope: "effective"`/
+    /1\. Resolve[\s\S]*blueprint_blueprint_roadmap_read[\s\S]*then read `blueprint_blueprint_config_get` with `scope: "effective"`/
   );
   assert.match(commandFile, /next integer after the highest base phase number/i);
   assert.match(commandFile, /Preserve historical phase directories/i);
@@ -128,7 +128,7 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "firstContextPath",
     "renamedPhaseDirectories",
     "/blu-discuss-phase <first phase>",
-    "ask_user",
+    "question",
     "new typed `.blueprint/` write surface",
     "firstPhaseTarget",
     "scaffoldPathStatuses",
@@ -141,7 +141,7 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     ".blueprint/receipts",
   ]);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
-  assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(skillFile, /Do not use `todowrite` or tracker tools/i);
 });
 
 test("new-milestone runtime-owned metadata aligns to the interactive-read carry-forward contract", async () => {

@@ -6,7 +6,7 @@ This reference is the detailed `/blu-reapply-patches` workflow contract. The com
 
 ### Resolve
 
-- Call `mcp_blueprint_blueprint_patch_list` first.
+- Call `blueprint_blueprint_patch_list` first.
 - Treat returned registry path, patch ids, manifest paths, patch paths, tracked files, compatibility notes, and audit paths as authoritative.
 - Resolve selected patch ids, target repo, tracked files, source version, compatibility notes, and audit destination.
 
@@ -17,20 +17,20 @@ This reference is the detailed `/blu-reapply-patches` workflow contract. The com
 
 ### Decide
 
-- Call `mcp_blueprint_blueprint_patch_reapply` with `dryRun: true` for the exact selected patch set.
+- Call `blueprint_blueprint_patch_reapply` with `dryRun: true` for the exact selected patch set.
 - Stop on conflicts and report them plainly.
 - Preview patch ids, registry path, tracked files, compatibility notes, preview result, and exact replay scope.
 - Require explicit confirmation and surface `reapply-patches-confirmation` until approved.
 
 ### Execute
 
-- After approval, call `mcp_blueprint_blueprint_patch_reapply` with `dryRun: false` for only the previewed and confirmed patch ids.
+- After approval, call `blueprint_blueprint_patch_reapply` with `dryRun: false` for only the previewed and confirmed patch ids.
 - Never widen the replay scope after preview.
 - Never mutate the installed extension directory.
 
 ### Persist
 
-- Call `mcp_blueprint_blueprint_patch_record` after the previewed replay completes or fails cleanly after preview.
+- Call `blueprint_blueprint_patch_record` after the previewed replay completes or fails cleanly after preview.
 - Append a replay audit entry instead of inventing another persistence path.
 
 ### Validate
@@ -50,6 +50,6 @@ This reference is the detailed `/blu-reapply-patches` workflow contract. The com
 
 ## Required MCP FQNs
 
-- `mcp_blueprint_blueprint_patch_list`
-- `mcp_blueprint_blueprint_patch_reapply`
-- `mcp_blueprint_blueprint_patch_record`
+- `blueprint_blueprint_patch_list`
+- `blueprint_blueprint_patch_reapply`
+- `blueprint_blueprint_patch_record`

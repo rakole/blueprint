@@ -1786,7 +1786,7 @@ test("code-review runtime reference keeps the long-running review posture explic
   );
   assert.match(
     runtimeReference.contractNotes ?? "",
-    /use Gemini-native update_topic and write_todos for non-trivial review runs/i
+    /use concise progress prose and todowrite for non-trivial review runs/i
   );
 });
 

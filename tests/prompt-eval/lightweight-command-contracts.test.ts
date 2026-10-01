@@ -134,10 +134,10 @@ test("fast prompt-eval packet enforces the trivial no-tracker contract", async (
   );
   assert.doesNotMatch(
     promptText,
-    /`update_topic` tool to keep the active stage visible and `write_todos`/i
+    /concise progress prose to keep the active stage visible and `todowrite`/i
   );
   assert.match(promptText, /Do not create quick-run reports/i);
-  assert.match(promptText, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(promptText, /Do not use `todowrite` or tracker tools/i);
   assert.match(promptText, /Common path tool budget:[\s\S]*lightweight_preflight[\s\S]*state_update/i);
   assert.match(promptText, /Final response budget: max 8 lines/i);
   assert.match(promptText, /Do not use subagents/i);
@@ -165,7 +165,7 @@ test("quick prompt-eval packet enforces durable quick-run structure without phas
   assert.match(promptText, /run cheap validation by default/i);
   assert.match(
     promptText,
-    /For `\/blu-quick`, treat\s+the shared `Validate` stage as pre-report verification[\s\S]*before `mcp_blueprint_blueprint_artifact_report_write`/i
+    /For `\/blu-quick`, treat\s+the shared `Validate` stage as pre-report verification[\s\S]*before `blueprint_blueprint_artifact_report_write`/i
   );
   assert.doesNotMatch(promptText, /post-write checks/i);
   assert.match(promptText, /administrativeToolCalls\?: number/i);

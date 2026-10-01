@@ -51,7 +51,7 @@ artifact persistence, and fix administration do not regenerate or require a map.
 
 ## Runtime Call Rules
 
-- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Call Blueprint MCP tools only through runtime FQNs such as `blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
@@ -150,7 +150,7 @@ artifacts, and optional review agents when the command contract allows them.
    diff alone. Pass `includeAuthoringContext: true` before authoring JSON.
 5. Keep the shared review posture from the local runtime contract legible
    throughout the run.
-6. For non-trivial code-review runs, prefer update_topic plus `write_todos` so
+6. For non-trivial code-review runs, prefer concise progress prose plus `todowrite` so
    evidence review, scope resolution, scope confirmation, bounded findings
    analysis, artifact persistence, and routing stay visible without becoming
    persistence.
@@ -217,7 +217,7 @@ artifacts, and optional review agents when the command contract allows them.
 5. If there is no saved `XX-REVIEW.md` or no structured finding to act on,
    route back to `/blu-code-review <phase>` or `/blu-progress` instead of
    bluffing.
-6. Use `ask_user` tool for overwrite confirmation and for any
+6. Use `question` tool for overwrite confirmation and for any
    structured confirmation of which findings Blueprint is about to fix.
 7. Treat `--auto` as bounded finding selection only. It may skip the manual
    selection step for a narrow, high-confidence saved finding set, but it does
@@ -249,8 +249,8 @@ artifacts, and optional review agents when the command contract allows them.
     `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
     resolved scope, active stage, pending gate, execution mode, and next safe
     action legible throughout the run.
-13. For non-trivial code-review-fix runs, prefer update_topic plus
-    `write_todos` so saved-findings review, finding-selection confirmation,
+13. For non-trivial code-review-fix runs, prefer concise progress prose plus
+    `todowrite` so saved-findings review, finding-selection confirmation,
     bounded remediation, artifact persistence, verification, and routing stay
     visible without becoming persistence.
 14. Report the resolved phase, resolved scope, selected finding ids,
@@ -304,7 +304,7 @@ artifacts, and optional review agents when the command contract allows them.
    structure.
 5. Inspect any existing `XX-SECURITY.md` before proposing replacement and
    default to reuse unless the user explicitly asks for an update. Use Gemini
-   CLI's `ask_user` tool for overwrite confirmation before replacement.
+   CLI's `question` tool for overwrite confirmation before replacement.
 6. Read `blueprint_phase_plan_index` and `blueprint_phase_plan_read` so the
    saved phase threat model can be parsed from executed plan evidence, then
    build a threat register from the declared threats and mitigations. Include
@@ -327,7 +327,7 @@ artifacts, and optional review agents when the command contract allows them.
 11. Keep the active stage, resolved scope, pending gate, execution mode, and
    next safe action legible when they change or explain a blocker. Avoid
    status-only ceremony.
-12. For non-trivial secure-phase runs, prefer update_topic plus `write_todos`
+12. For non-trivial secure-phase runs, prefer concise progress prose plus `todowrite`
    so saved-plan review, threat verification, overwrite gates, artifact
    persistence, post-write validation, and routing stay visible without
    becoming persistence.
@@ -340,7 +340,7 @@ artifacts, and optional review agents when the command contract allows them.
    artifact content, and follow-up hardening work explicitly inside the saved
    security artifact.
 15. Present the user with the choice to verify open threats or explicitly accept
-   them, use `ask_user` for that structured decision, and block
+   them, use `question` for that structured decision, and block
    advancement when any threat remains open instead of always computing a next
    action.
 16. Use `blueprint-security-auditor` only for bounded mitigation verification
@@ -427,7 +427,7 @@ artifacts, and optional review agents when the command contract allows them.
    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
    resolved scope, active stage, pending gate, execution mode, and next safe
    action legible throughout the run.
-11. For non-trivial ui-review runs, prefer update_topic plus `write_todos` so
+11. For non-trivial ui-review runs, prefer concise progress prose plus `todowrite` so
     saved-evidence review, bounded UI analysis, artifact persistence,
     validation, and routing stay visible without becoming persistence.
 12. Report the resolved phase, saved execution and UI-spec coverage, whether
@@ -502,17 +502,17 @@ artifacts, and optional review agents when the command contract allows them.
    with highest-severity-first ordering.
 10. Treat `--dry-run` as analysis-only mode. Dry runs may still write the
    durable `audit-fix-<phase>` report, but they must not apply repo mutations.
-11. In mutation mode, use Gemini CLI `ask_user` for explicit confirmation before
+11. In mutation mode, use OpenCode `question` for explicit confirmation before
    non-trivial remediation (for example: multiple findings, multi-file scope,
    or medium/high severity changes).
-12. For non-trivial audit-fix runs, prefer update_topic plus `write_todos` so
+12. For non-trivial audit-fix runs, prefer concise progress prose plus `todowrite` so
     saved-evidence review, candidate confirmation, bounded remediation,
     verification, report overwrite handling, todo capture, and routing stay
     visible without becoming persistence.
 13. Branchy audit-fix remediation is tracker-eligible when scoped findings or
     targeted verification follow-through split into real dependency branches.
     Treat tracker state as session-local coordination only, pair it with
-    visible `write_todos`, and fall back to linear prose when tracker support
+    visible `todowrite`, and fall back to linear prose when tracker support
     is unavailable.
 14. Keep repo mutation tightly bounded to the resolved review scope and capped
     candidate list.
@@ -576,7 +576,7 @@ artifacts, and optional review agents when the command contract allows them.
     once through MCP. If the retry still fails, stop with the MCP reason and do
     not write `.blueprint/` by hand.
 24. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
-    explicit user confirmation via `ask_user`.
+    explicit user confirmation via `question`.
 25. Update `STATE.md` through `blueprint_state_update` so the next safe action
     points at `/blu-validate-phase <phase>`, `/blu-add-tests <phase>`, or
     `/blu-progress` based on the remaining evidence gap.
@@ -630,7 +630,7 @@ artifacts, and optional review agents when the command contract allows them.
     `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep resolved
     scope, active stage, pending gate, execution mode, and next safe action
     legible throughout the run.
-12. For non-trivial review runs, prefer update_topic plus `write_todos` so
+12. For non-trivial review runs, prefer concise progress prose plus `todowrite` so
     saved-plan review, reviewer-packet assembly, reviewer availability,
     external-review execution, synthesis, artifact persistence, and routing stay
     visible without becoming persistence, including reviewer disagreement status.
@@ -658,7 +658,7 @@ Before claiming completion, verify:
   `input_bundles` were loaded; sibling review-command references were not
   treated as active input.
 - Required MCP calls for the active command ran in the contract order using
-  runtime FQNs (`mcp_blueprint_blueprint_*`), and missing or invalid phase,
+  runtime FQNs (`blueprint_blueprint_*`), and missing or invalid phase,
   scope, plan, summary, finding, reviewer, or evidence results stopped or
   routed exactly as that contract requires.
 - Review artifacts were authored as the structured model the active artifact

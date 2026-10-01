@@ -15,18 +15,19 @@ import { listRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-meta
 
 const repoRoot = process.cwd();
 const BUILTIN_AGENT_TOOL_NAMES = new Set([
-  "list_directory",
-  "read_file",
+  "read",
   "glob",
-  "grep_search",
-  "replace",
-  "write_file",
-  "run_shell_command"
+  "grep",
+  "apply_patch",
+  "edit",
+  "write",
+  "bash"
 ]);
 const WRITE_CAPABLE_TOOL_NAMES = new Set([
-  "replace",
-  "write_file",
-  "run_shell_command"
+  "apply_patch",
+  "edit",
+  "write",
+  "bash"
 ]);
 
 async function readRelativePath(relativePath: string): Promise<string | null> {
@@ -108,6 +109,31 @@ test("only blueprint-executor remains write-capable", () => {
     .sort();
 
   assert.deepEqual(writeCapableAgents, [...BLUEPRINT_WRITE_CAPABLE_AGENT_NAMES]);
+});
+
+test("OpenCode editing capabilities stay isolated to blueprint-executor", () => {
+  const mutatingTools = ["apply_patch", "edit", "write", "bash"];
+
+  assert.deepEqual(
+    [...BLUEPRINT_AGENT_TOOL_ALLOWLIST["blueprint-executor"]],
+    ["read", "glob", "grep", ...mutatingTools]
+  );
+
+  for (const [agentName, toolNames] of Object.entries(BLUEPRINT_AGENT_TOOL_ALLOWLIST)) {
+    assert.equal(new Set(toolNames).size, toolNames.length, `${agentName} must not duplicate tools`);
+
+    if (agentName === "blueprint-executor") {
+      continue;
+    }
+
+    for (const toolName of mutatingTools) {
+      assert.equal(
+        toolNames.includes(toolName as never),
+        false,
+        `${agentName} must remain read-only and deny ${toolName}`
+      );
+    }
+  }
 });
 
 test("agent bodies do not rely on ungranted built-in tools", async () => {

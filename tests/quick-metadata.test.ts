@@ -35,13 +35,13 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
-  assert.match(commandFile, /`update_topic` to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /concise progress prose to keep the active stage visible and `todowrite`/);
   assert.match(commandFile, /tracker-eligible/i);
-  assert.match(commandFile, /session-local progress tools only/i);
-  assert.match(commandFile, /session-local, pair it with visible `write_todos`/i);
+  assert.match(commandFile, /`todowrite` is session-local/i);
+  assert.match(commandFile, /session-local, pair it with visible `todowrite`/i);
   assert.match(commandFile, /Show progress only at meaningful stage or gate transitions/i);
   assert.match(commandFile, /Do not spam stage narration or emit in-flight updates between transitions/i);
-  assert.match(commandFile, /When the host lacks them, preserve the same compact progress in concise prose/i);
+  assert.match(commandFile, /When `todowrite` is unavailable, preserve the same compact progress in concise prose/i);
   assert.match(commandFile, /Never claim helper calls were made when they were unavailable/i);
   assert.match(commandFile, /When tracker support is unavailable, keep the same bounded quick flow linear/i);
   assert.match(commandFile, /`--discuss`/);
@@ -122,7 +122,7 @@ test("execution skill and local quick contract capture visibility, tracker eligi
     /### `\/blu-quick`[\s\S]*blueprint_lightweight_preflight[\s\S]*validation shell or test commands outside[\s\S]*blueprint_artifact_report_write[\s\S]*blueprint_state_update/
   );
 
-  assert.match(quickRuntimeContract, /mcp_blueprint_blueprint_lightweight_preflight/);
+  assert.match(quickRuntimeContract, /blueprint_blueprint_lightweight_preflight/);
   assert.match(quickRuntimeContract, /static\s+prefix/i);
   assert.match(quickRuntimeContract, /effective\s+subagent config/);
   assert.match(quickRuntimeContract, /quick-run-latest/);
@@ -146,7 +146,7 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /"nextBoundedUnit": ""/);
   assert.match(quickRuntimeContract, /Show progress only at meaningful stage or gate transitions/i);
   assert.match(quickRuntimeContract, /Do not spam stage narration or emit in-flight updates between transitions/i);
-  assert.match(quickRuntimeContract, /When helpers are unavailable, use concise prose/i);
+  assert.match(quickRuntimeContract, /When `todowrite` is unavailable, preserve the same status in concise prose/i);
   assert.match(quickRuntimeContract, /Never claim helper calls were made when unavailable/i);
   assert.match(quickRuntimeContract, /Common path tool budget:[\s\S]*lightweight_preflight[\s\S]*validation shell or test commands[\s\S]*artifact_report_write[\s\S]*state_update/i);
   assert.match(quickRuntimeContract, /Do not add redundant primitive MCP\s+reads on the common path/i);
@@ -168,7 +168,7 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /When validation is needed, finish validation before[\s\S]*artifact_report_write/i);
   assert.match(
     quickRuntimeContract,
-    /For `\/blu-quick`, treat\s+the shared `Validate` stage as pre-report verification[\s\S]*before `mcp_blueprint_blueprint_artifact_report_write`/i
+    /For `\/blu-quick`, treat\s+the shared `Validate` stage as pre-report verification[\s\S]*before `blueprint_blueprint_artifact_report_write`/i
   );
   assert.doesNotMatch(quickRuntimeContract, /post-write checks/i);
   assert.match(quickRuntimeContract, /Do not require exact token counts/i);

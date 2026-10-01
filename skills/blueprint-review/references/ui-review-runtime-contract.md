@@ -7,7 +7,7 @@ optional UI auditor performs bounded read-only analysis.
 
 ## Contract Authority
 
-- `mcp_blueprint_blueprint_artifact_contract_read` exposes the base model
+- `blueprint_blueprint_artifact_contract_read` exposes the base model
   schema and rendered heading contract for `review.ui-review`.
 - The returned `contract.modelContract.schemaPath`,
   `contract.modelContract.jsonSchema`, and
@@ -26,21 +26,21 @@ Map `/blu-ui-review` to the shared stages:
 
 ### Resolve
 
-- Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`.
+- Resolve the target phase with `blueprint_blueprint_phase_locate`.
 - If no phase resolves, stop with the tool reason and useful recovery guidance.
 - Keep the resolved phase, active stage, pending gate, execution mode, and next
   safe action visible.
 
 ### Read
 
-- Read the artifact inventory with `mcp_blueprint_blueprint_artifact_list`.
+- Read the artifact inventory with `blueprint_blueprint_artifact_list`.
 - Require at least one completed execution summary before persistence. If no
   `XX-YY-SUMMARY.md` artifact exists, stop and route to
   `/blu-execute-phase <phase>`.
 - Read `review.ui-review` with
-  `mcp_blueprint_blueprint_artifact_contract_read` before drafting,
+  `blueprint_blueprint_artifact_contract_read` before drafting,
   validating, or repairing the UI-review artifact.
-- Read `mcp_blueprint_blueprint_review_authoring_context` with
+- Read `blueprint_blueprint_review_authoring_context` with
   `artifact: "ui-review"` before drafting. Treat missing completed summaries as
   a blocker, and treat returned evidence keys and allowed next actions as exact.
 - Read saved summaries, matching plans when available through artifact paths or
@@ -96,7 +96,7 @@ Map `/blu-ui-review` to the shared stages:
 ### Persist
 
 - Author the `review.ui-review` JSON model against the narrowed task schema.
-- Persist only through `mcp_blueprint_blueprint_review_record` with numeric
+- Persist only through `blueprint_blueprint_review_record` with numeric
   `phase`, `artifact: "ui-review"`, and the same validated structured `model`.
   Markdown `content` fallback is invalid; MCP renders canonical Markdown.
 - Treat the returned `reportPath`, `counts`, `followUps`, `status`, and
@@ -105,7 +105,7 @@ Map `/blu-ui-review` to the shared stages:
 
 ### Validate
 
-- Validate the model through `mcp_blueprint_blueprint_review_validate_model`
+- Validate the model through `blueprint_blueprint_review_validate_model`
   before persistence and repair all diagnostics together against the task schema.
 - Ensure the rendered artifact includes the canonical headings:
   `UI Review Summary`, `Evidence Reviewed`, `Findings`, `Follow-Ups`, and
@@ -139,22 +139,22 @@ Map `/blu-ui-review` to the shared stages:
 
 Call these tools in this order unless the command must stop early:
 
-1. `mcp_blueprint_blueprint_phase_locate`
+1. `blueprint_blueprint_phase_locate`
    - Controls target phase, phase directory, phase prefix, and missing-phase
      recovery.
-2. `mcp_blueprint_blueprint_artifact_list`
+2. `blueprint_blueprint_artifact_list`
    - Controls saved-evidence inventory, existing UI-review state, UI-spec
      presence, validation/UAT presence, and missing-summary recovery.
-3. `mcp_blueprint_blueprint_artifact_contract_read` for `review.ui-review`
+3. `blueprint_blueprint_artifact_contract_read` for `review.ui-review`
    - Controls base schema, required headings, locked markers, authoring template,
      and repair target.
-4. `mcp_blueprint_blueprint_review_authoring_context`
+4. `blueprint_blueprint_review_authoring_context`
    - Controls completed-summary prerequisites, live evidence keys, existing
      UI-review path, pending-plan narrowing, and allowed next actions.
-5. `mcp_blueprint_blueprint_review_validate_model`
+5. `blueprint_blueprint_review_validate_model`
    - Controls AJV schema diagnostics, residual quality diagnostics, and the
      canonical Markdown render preview.
-6. `mcp_blueprint_blueprint_review_record`
+6. `blueprint_blueprint_review_record`
    - Controls the final filename, create/update/reuse status, counts,
      follow-ups, warnings, and validation failures.
 

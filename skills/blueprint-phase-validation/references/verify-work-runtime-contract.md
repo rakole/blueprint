@@ -9,7 +9,7 @@ bounded read-only UAT analysis when a suitable agent is available.
 ## Visible UAT Progress
 
 For non-trivial runs, keep progress visible through short boundary updates.
-Gemini-native progress helpers are presentation mirrors only. They do not
+OpenCode progress guidance are presentation mirrors only. They do not
 expand the MCP tool allowlist, persistence authority, verifier authority,
 UAT-result authority, checkpoint authority, state-sync authority, routing
 authority, or user confirmation authority defined by this contract.
@@ -123,9 +123,9 @@ Build a concrete UAT queue before asking the user anything.
 Present one test at a time. Show expected behavior and ask whether reality
 matches. Keep the prompt plain and specific; do not interrogate the user for
 severity or internal implementation guesses. When the host supports interactive
-questions, use `ask_user` for the first-pass result on each test with one
+questions, use `question` for the first-pass result on each test with one
 focused prompt and explicit result choices such as `pass`, `issue`, `blocked`,
-or `skipped`. Only fall back to plain assistant prose when `ask_user` is
+or `skipped`. Only fall back to plain assistant prose when `question` is
 unavailable, and ask a short follow-up question when an `issue` or `blocked`
 result needs detail that should be preserved in the UAT artifact.
 
@@ -150,7 +150,7 @@ Blocked tests are prerequisite gates, not code gaps. Issue results become
 structured gaps that can later feed explicit gap closure planning or follow-up
 fix capture.
 
-For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
+For non-trivial UAT, checkpoint after each major test group. Use `question` for
 `review`, `skip`, or `stop` choices:
 
 - `review`: summarize current progress, observed behavior, counts, and gaps

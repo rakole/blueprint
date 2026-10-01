@@ -19,12 +19,12 @@ test("note manifest uses runtime skill and capture MCP identities", async () => 
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /blueprint_blueprint_artifact_mutate_index/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /\/blu-new-project/);
   assert.match(commandFile, /status: "duplicate"/);
   assert.match(commandFile, /project-local note capture/i);
-  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools/);
   assert.match(commandFile, /Do not reintroduce global-note behavior/);
 });
 
@@ -38,7 +38,7 @@ test("blueprint-capture skill captures shipped note behavior", async () => {
   assert.match(skillFile, /Execution profile for `\/blu-note`, `\/blu-add-todo`, `\/blu-check-todos`, `\/blu-add-backlog`, `\/blu-review-backlog`, and `\/blu-explore`: `interactive-read`/);
   assert.match(skillFile, /target: "note"/);
   assert.match(skillFile, /Do not reintroduce global-note behavior/i);
-  assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/);
+  assert.match(skillFile, /Do not use `todowrite` or tracker tools/);
   assert.match(skillFile, /implemented commands only/i);
   assert.doesNotMatch(
     skillFile,

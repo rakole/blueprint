@@ -7,10 +7,9 @@ description: >
   conventions, integrations, or a requested subsystem focus.
 kind: local
 tools:
-  - list_directory
-  - read_file
+  - read
   - glob
-  - grep_search
+  - grep
 max_turns: 24
 timeout_mins: 23
 ---

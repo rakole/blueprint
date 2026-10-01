@@ -24,7 +24,7 @@ MCP tools.
 
 ### Read
 
-- Call `mcp_blueprint_blueprint_roadmap_read` before any mutation.
+- Call `blueprint_blueprint_roadmap_read` before any mutation.
 - Use the returned `milestone`, `phases`, `warnings`, and recovery signals as
   the live roadmap baseline.
 - If the roadmap is missing, malformed, or drifted beyond safe insertion, stop
@@ -48,7 +48,7 @@ MCP tools.
   success criteria, confirmed durable requirement IDs from
   `.blueprint/REQUIREMENTS.md`, and the fact that later phases and dependency
   references will not be renumbered automatically.
-- Use Gemini CLI `ask_user` for the confirmation gate before any mutation when
+- Use OpenCode `question` for the confirmation gate before any mutation when
   available.
 - Keep the waiting state explicit as `phase-insert-confirmation`.
 - The confirmation question must ask whether to insert that exact urgent phase
@@ -58,7 +58,7 @@ MCP tools.
 
 ### Execute
 
-- Call `mcp_blueprint_blueprint_roadmap_insert_phase` only after confirmation,
+- Call `blueprint_blueprint_roadmap_insert_phase` only after confirmation,
   with `confirmed: true` bound to the approved `phase-insert-confirmation`
   receipt.
 - Pass the confirmed integer `after` anchor, confirmed `description`, confirmed
@@ -85,14 +85,14 @@ MCP tools.
 ### Persist
 
 - Scaffold exactly `${phaseDir}/${phasePrefix}-CONTEXT.md` through
-  `mcp_blueprint_blueprint_artifact_scaffold`.
+  `blueprint_blueprint_artifact_scaffold`.
 - Treat `createdFiles`, `reusedFiles`, and scaffold warnings as authoritative.
 - The inserted context file is starter scaffold only. `/blu-insert-phase` must
   not fill or finalize `XX-CONTEXT.md`.
 - The `phase.context` artifact contract remains the schema and heading
   authority for the downstream `/blu-discuss-phase` authoring step. Do not copy
   or fork the context template inside this command.
-- Update state through `mcp_blueprint_blueprint_state_update` after the roadmap
+- Update state through `blueprint_blueprint_state_update` after the roadmap
   insertion and scaffold are settled. Set the inserted decimal phase as current,
   set `/blu-insert-phase` as the active command, append a durable
   `roadmapEvolutionNotes` entry that records the urgent insertion after the
@@ -101,7 +101,7 @@ MCP tools.
 
 ### Validate
 
-- Confirm `mcp_blueprint_blueprint_roadmap_insert_phase` returned `written:
+- Confirm `blueprint_blueprint_roadmap_insert_phase` returned `written:
   true`.
 - Confirm requirement validation accepted the submitted `requirementIds` as
   declared, non-placeholder rows that were not already mapped to another
@@ -135,16 +135,16 @@ MCP tools.
 
 ## Required MCP Calls
 
-- `mcp_blueprint_blueprint_roadmap_read`: controls roadmap availability, active
+- `blueprint_blueprint_roadmap_read`: controls roadmap availability, active
   milestone, current phase inventory, recovery guidance, and the preview of the
   anchor's existing decimal group.
-- `mcp_blueprint_blueprint_roadmap_insert_phase`: controls the insertion
+- `blueprint_blueprint_roadmap_insert_phase`: controls the insertion
   mutation, integer-anchor enforcement, decimal suffix selection, canonical
   phase metadata, `.blueprint/REQUIREMENTS.md` traceability mapping, roadmap
   path, and roadmap warnings.
-- `mcp_blueprint_blueprint_artifact_scaffold`: controls creation or reuse of the
+- `blueprint_blueprint_artifact_scaffold`: controls creation or reuse of the
   initial `${phaseDir}/${phasePrefix}-CONTEXT.md` scaffold.
-- `mcp_blueprint_blueprint_state_update`: controls the final current phase,
+- `blueprint_blueprint_state_update`: controls the final current phase,
   active command, durable `roadmapEvolutionNotes` entry, and next implemented
   route.
 
@@ -218,9 +218,9 @@ command must still own all MCP calls.
 
 ## Completion Criteria
 
-- `mcp_blueprint_blueprint_roadmap_read` completed and the integer anchor group
+- `blueprint_blueprint_roadmap_read` completed and the integer anchor group
   was previewed from its result.
-- The exact integer anchor and description were confirmed with `ask_user` when
+- The exact integer anchor and description were confirmed with `question` when
   available.
 - The objective and 2-5 success criteria were confirmed and passed as `goal`
   and `successCriteria`.
@@ -229,11 +229,11 @@ command must still own all MCP calls.
   not accepted.
 - Requirement validation rejected IDs already mapped to another roadmap phase,
   so inserted-phase traceability stayed unique before mutation.
-- `mcp_blueprint_blueprint_roadmap_insert_phase` succeeded with
+- `blueprint_blueprint_roadmap_insert_phase` succeeded with
   `confirmed: true` and returned `written: true`.
 - `${phaseDir}/${phasePrefix}-CONTEXT.md` was created or reused through
-  `mcp_blueprint_blueprint_artifact_scaffold`.
-- `mcp_blueprint_blueprint_state_update` recorded the inserted decimal phase,
+  `blueprint_blueprint_artifact_scaffold`.
+- `blueprint_blueprint_state_update` recorded the inserted decimal phase,
   durable roadmap evolution note, and `/blu-discuss-phase <phase>` route.
 - No public command surface, catalog status semantics, hook ownership,
   installed-extension files, or `.planning/` runtime dependency changed.

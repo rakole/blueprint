@@ -14,7 +14,7 @@ test("blueprint-executor encodes bounded per-plan execution, progress checkpoint
 
   assert.match(executor, /## Parent-Owned Responsibilities/);
   assert.match(executor, /user-facing orchestration and coordination/i);
-  assert.match(executor, /`update_topic`,[\s\S]*`write_todos`, and `ask_user`/i);
+  assert.match(executor, /visible progress prose,[\s\S]*`todowrite`, and `question`/i);
   assert.match(executor, /## Required Reads/);
   assert.match(executor, /saved `XX-YY-PLAN\.md` artifact/i);
   assert.match(executor, /## Execution Protocol/);
@@ -57,7 +57,7 @@ test("blueprint-verifier encodes summary-first validation, UAT mode, and gap cla
   const verifier = await readAgent("blueprint-verifier.md");
 
   assert.match(verifier, /## Parent-Owned Responsibilities/);
-  assert.match(verifier, /`update_topic`, `write_todos`, and `ask_user`/);
+  assert.match(verifier, /visible progress prose, `todowrite`, and `question`/);
   assert.match(verifier, /final routing/i);
   assert.match(verifier, /## Modes/);
   assert.match(verifier, /Validation mode/i);

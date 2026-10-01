@@ -28,7 +28,7 @@ test("/blu and /blu-help synthesize route guidance from the live command catalog
   ] as const) {
     assert.match(
       content,
-      /Synthesize .*route list.*`mcp_blueprint_blueprint_command_catalog`.*runtime after reading it.*do not rely on prompt-local command mirrors/i,
+      /Synthesize .*route list.*`blueprint_blueprint_command_catalog`.*runtime after reading it.*do not rely on prompt-local command mirrors/i,
       `${label} should synthesize route guidance from the live catalog`
     );
     assert.doesNotMatch(
@@ -41,9 +41,9 @@ test("/blu and /blu-help synthesize route guidance from the live command catalog
   assertOrderedIncludes(
     rootRouter,
     [
-      "Read `mcp_blueprint_blueprint_project_status`",
-      "Read `mcp_blueprint_blueprint_command_catalog`",
-      "Read `mcp_blueprint_blueprint_config_get`",
+      "Read `blueprint_blueprint_project_status`",
+      "Read `blueprint_blueprint_command_catalog`",
+      "Read `blueprint_blueprint_config_get`",
       "route inline to the documented Blueprint command behavior",
     ],
     "/blu should consult live project and command state before inline routing"
@@ -52,8 +52,8 @@ test("/blu and /blu-help synthesize route guidance from the live command catalog
   assertOrderedIncludes(
     helpCommand,
     [
-      "Read `mcp_blueprint_blueprint_project_status`",
-      "Read `mcp_blueprint_blueprint_command_catalog`",
+      "Read `blueprint_blueprint_project_status`",
+      "Read `blueprint_blueprint_command_catalog`",
       "Return concise routing guidance",
     ],
     "/blu-help should read live project and command state before returning routing guidance"
@@ -61,7 +61,7 @@ test("/blu and /blu-help synthesize route guidance from the live command catalog
 
   assert.match(
     rootRouter,
-    /Only recommend or route commands whose `mcp_blueprint_blueprint_command_catalog` entry is `implemented: true`\./,
+    /Only recommend or route commands whose `blueprint_blueprint_command_catalog` entry is `implemented: true`\./,
     "/blu should keep implemented-only routing tied to the live catalog"
   );
   assert.match(

@@ -40,9 +40,9 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
   assert.match(commandFile, /\/blu-health/);
   assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
-  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
+  assert.match(commandFile, /Do not use `todowrite` or task tracker tools for `\/blu-fast`\./);
   assert.match(commandFile, /Do not turn `\/blu-fast` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching\./);
-  assert.doesNotMatch(commandFile, /`update_topic` tool to keep the active stage visible/);
+  assert.doesNotMatch(commandFile, /concise progress prose to keep the active stage visible/);
   assert.doesNotMatch(commandFile, /tracker-eligible/i);
   assert.match(commandFile, /Do not use subagents\./);
   assert.match(commandFile, /STATE\.md`? records `\/blu-fast`/);
@@ -75,7 +75,7 @@ test("fast skill and local runtime contract keep the trivial path off the tracke
   assert.match(fastRuntimeContract, /final response:\s+concise inline summary, max 8 lines/i);
   assert.match(fastRuntimeContract, /The response stays within 8 lines/i);
   assert.match(fastRuntimeContract, /Do not create quick-run reports, phase summaries, phase artifacts/i);
-  assert.match(fastRuntimeContract, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(fastRuntimeContract, /Do not use `todowrite` or tracker tools/i);
   assert.match(fastRuntimeContract, /\/blu-health/);
   assert.match(fastRuntimeContract, /\/blu-quick/);
   assert.match(fastRuntimeContract, /\/blu-plan-phase/);

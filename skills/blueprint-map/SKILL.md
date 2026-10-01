@@ -29,8 +29,8 @@ ordinary valid-map reuse into an automatic upgrade.
 ## Runtime Call Rules
 
 Required MCP tools: `blueprint_map_prepare`, `blueprint_map_submit`.
-Call their runtime FQNs: `mcp_blueprint_blueprint_map_prepare` and
-`mcp_blueprint_blueprint_map_submit`.
+Call their runtime FQNs: `blueprint_blueprint_map_prepare` and
+`blueprint_blueprint_map_submit`.
 Translate any shorthand tool ids like `blueprint_map_prepare` into their runtime FQNs.
 Treat Blueprint skills as loaded guidance, not callable tools.
 Never run `/blu-*` in the shell.
@@ -66,7 +66,7 @@ Never run `/blu-*` in the shell.
    independent work that benefits from delegation. Give each lane exact selected
    paths, requested keys, packet/schema, focus, and stop conditions. The parent
    combines results and calls the one submit/finalizer; agents never persist the bundle.
-6. Submit through `mcp_blueprint_blueprint_map_submit` only. Ordinary submission
+6. Submit through `blueprint_blueprint_map_submit` only. Ordinary submission
    echoes the unchanged `snapshot`; portable submission uses the same `formatVersion`,
    `operationId`, `intent`, and complete model. Portable prepare-time source/target
    CAS, provenance, and generation basis are authoritative. Stale or conflicting

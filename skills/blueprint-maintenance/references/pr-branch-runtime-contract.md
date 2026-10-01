@@ -6,10 +6,10 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
 
 ### Resolve
 
-- Call `mcp_blueprint_blueprint_project_status` first.
+- Call `blueprint_blueprint_project_status` first.
 - Stop and route to `/blu-new-project` when Blueprint is uninitialized.
 - Stop and route to `/blu-health` when health is partial or unhealthy.
-- Call `mcp_blueprint_blueprint_config_get` with effective scope before deriving branch policy.
+- Call `blueprint_blueprint_config_get` with effective scope before deriving branch policy.
 - Resolve the base branch from explicit user input, then normalized `git.base_branch`, then safe repo detection.
 - The deterministic boundary accepts only a local branch, tag, or exact commit as base authority. It rejects remote-tracking refs rather than omitting remote name, URL, and ref from the approval packet.
 - Resolve the source branch, source `HEAD`, candidate review branch name, `git.branching_strategy`, and `planning.commit_docs`.
@@ -19,15 +19,15 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
 
 - Inspect `git status --short --branch` before any mutation. A dirty tree is a hard stop with pending gate `clean-working-tree`.
 - Count commits ahead of the base branch and stop when there is nothing to filter.
-- After artifact discovery and digest creation, call `mcp_blueprint_blueprint_pr_branch_preview`; do not author git inspection or mutation argv in the host.
+- After artifact discovery and digest creation, call `blueprint_blueprint_pr_branch_preview`; do not author git inspection or mutation argv in the host.
 - Classify each commit:
   - `code-only`: touches no `.blueprint/**` files.
   - `blueprint-only`: touches only `.blueprint/**` files.
   - `mixed`: touches `.blueprint/**` plus non-Blueprint repo files.
   - `empty-after-filter`: replayed commit has no staged changes after excluded paths are restored.
 - Default excluded bookkeeping scope is `.blueprint/**` when `planning.commit_docs` is true, unless the user explicitly asks to keep Blueprint artifacts. When `planning.commit_docs` is false, do not invent `.blueprint/**` commits that are not already in the branch diff.
-- Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit repo-relative `artifactPaths` and changed-file `trackedFiles`. Treat `inputsUsed` as the authoritative evidence digest scope.
-- Call `mcp_blueprint_blueprint_artifact_contract_read` for `report.pr-branch`. Use `contract.authoringTemplate` as the report heading/schema authority before persistence.
+- Call `blueprint_blueprint_artifact_summary_digest` with explicit repo-relative `artifactPaths` and changed-file `trackedFiles`. Treat `inputsUsed` as the authoritative evidence digest scope.
+- Call `blueprint_blueprint_artifact_contract_read` for `report.pr-branch`. Use `contract.authoringTemplate` as the report heading/schema authority before persistence.
 
 ### Decide
 
@@ -38,7 +38,7 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
 
 ### Execute
 
-- Execute only once through `mcp_blueprint_blueprint_pr_branch_execute` after confirmation of the exact operation id and fingerprint.
+- Execute only once through `blueprint_blueprint_pr_branch_execute` after confirmation of the exact operation id and fingerprint.
 - Preserve the source branch. Never rewrite, delete, reset, or force-push it.
 - Create the review branch from the resolved base branch.
 - Replay included commits in source order. Preserve commit messages when commit replay is used.
@@ -57,7 +57,7 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
   - exact verification commands and results
   - recovery notes or `none`
   - next safe action
-- A post-mutation report failure is partial; retry only `mcp_blueprint_blueprint_pr_branch_persist` with the receipt-bound operation id/fingerprint. It never re-enters git.
+- A post-mutation report failure is partial; retry only `blueprint_blueprint_pr_branch_persist` with the receipt-bound operation id/fingerprint. It never re-enters git.
 - If runtime-rendered report persistence is rejected, stop before mutation for the approved-plan report or return partial after mutation for the outcome report; never replace it with model-authored facts.
 
 ### Validate

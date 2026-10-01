@@ -12,5 +12,5 @@ export type BlueprintSkillResolution = {
 export declare function blueprintDiscoverableSkillPath(skillName: string): string;
 export declare function blueprintLegacySkillPath(skillName: string): string;
 export declare function blueprintAgentDefinitionPath(agentName: string): string;
-export declare function blueprintRuntimeToolFqn(toolName: BlueprintInternalToolName): `mcp_${typeof BLUEPRINT_MCP_SERVER_NAME}_${BlueprintInternalToolName}`;
+export declare function blueprintRuntimeToolFqn(toolName: BlueprintInternalToolName): `${typeof BLUEPRINT_MCP_SERVER_NAME}_${BlueprintInternalToolName}`;
 export declare function resolveBlueprintSkillPath(skillName: string, hasPath: (relativePath: string) => Promise<boolean>): Promise<BlueprintSkillResolution>;

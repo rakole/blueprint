@@ -55,8 +55,8 @@ blueprint_state_update
 Command prompts call runtime FQNs such as:
 
 ```text
-mcp_blueprint_blueprint_project_status
-mcp_blueprint_blueprint_state_update
+blueprint_blueprint_project_status
+blueprint_blueprint_state_update
 ```
 
 Do not mix these forms.

@@ -59,15 +59,15 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   );
   assert.match(
     review,
-    /Read the saved plan set through `mcp_blueprint_blueprint_phase_plan_read`/i
+    /Read the saved plan set through `blueprint_blueprint_phase_plan_read`/i
   );
   assert.match(
     review,
-    /Use `ask_user` for overwrite confirmation and any structured reviewer-availability confirmation/i
+    /Use `question` for overwrite confirmation and any structured reviewer-availability confirmation/i
   );
   assert.match(
     review,
-    /Read `mcp_blueprint_blueprint_artifact_contract_read` for the canonical `review\.peer-review` contract, read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer decision, and read `mcp_blueprint_blueprint_review_authoring_context`/i
+    /Read `blueprint_blueprint_artifact_contract_read` for the canonical `review\.peer-review` contract, read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer decision, and read `blueprint_blueprint_review_authoring_context`/i
   );
   assert.match(
     review,
@@ -103,7 +103,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   );
   assert.match(
     securePhase,
-    /Use `ask_user` for overwrite confirmation and any structured verify-versus-accept decision/i
+    /Use `question` for overwrite confirmation and any structured verify-versus-accept decision/i
   );
 
   const uiReview = files["commands/blu-ui-review.toml"];
@@ -141,7 +141,7 @@ test("review remediation contracts stay bounded to saved evidence and approved s
   const codeReviewFix = files["commands/blu-code-review-fix.toml"];
   assert.match(
     codeReviewFix,
-    /Read `mcp_blueprint_blueprint_review_load_findings`[\s\S]*load the saved `XX-REVIEW\.md` findings/i
+    /Read `blueprint_blueprint_review_load_findings`[\s\S]*load the saved `XX-REVIEW\.md` findings/i
   );
   assert.match(
     codeReviewFix,
@@ -171,7 +171,7 @@ test("review remediation contracts stay bounded to saved evidence and approved s
   );
   assert.match(
     auditFix,
-    /Do not widen or reinterpret review scope after `mcp_blueprint_blueprint_review_scope` returns; its `files` list is authoritative/i
+    /Do not widen or reinterpret review scope after `blueprint_blueprint_review_scope` returns; its `files` list is authoritative/i
   );
   assert.match(
     auditFix,
@@ -183,7 +183,7 @@ test("review remediation contracts stay bounded to saved evidence and approved s
   );
   assert.match(
     auditFix,
-    /use\s+`ask_user` for explicit confirmation when remediation is non-trivial/i
+    /use\s+`question` for explicit confirmation when remediation is non-trivial/i
   );
   assert.match(
     auditFix,
@@ -191,7 +191,7 @@ test("review remediation contracts stay bounded to saved evidence and approved s
   );
   assert.match(
     auditFix,
-    /Treat tracker state as session-local coordination only, pair it with visible `write_todos`/i
+    /Treat tracker state as session-local coordination only, pair it with visible `todowrite`/i
   );
 
   const reviewSkill = files["skills/blueprint-review/SKILL.md"];
@@ -291,7 +291,7 @@ test("review and docs agents stay read-only with parent-owned confirmation and p
       files["agents/blueprint-reviewer.md"],
       [
         /## Parent-Owned Responsibilities/,
-        /`update_topic`, `write_todos`, and `ask_user`/,
+        /visible progress prose, `todowrite`, and `question`/,
         /The parent command owns `blueprint_review_validate_model`,\s+`blueprint_review_record`, and every other MCP-backed validation or\s+persistence step/i,
         /The parent command owns any non-code-review reuse contract/i,
         /Remain read-only; the parent command owns MCP persistence and any repo\s+mutation/i,
