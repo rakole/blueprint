@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, cp, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { access, cp, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
@@ -612,6 +612,75 @@ test("recovery refuses unexpected config drift instead of overwriting later cust
   assert.equal(await readFile(fixture.configPath, "utf8"), driftedConfig);
 });
 
+test("an interrupted transaction journal cannot be replayed through another config in the same directory", async (t) => {
+  const fixture = await createFixture(t);
+  const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+  await assert.rejects(install(fixture, "blueprint@1.0.0", deps(packageInstaller, {
+    onStep: (step) => {
+      if (step === "afterLedgerWrite") throw new Error("leave owned transaction journal");
+    }
+  })), /leave owned transaction journal/);
+  const installerRoot = path.join(path.dirname(fixture.configPath), ".blueprint-install");
+  const ledgerPath = path.join(installerRoot, "ledger.json");
+  const journalPath = path.join(installerRoot, "transaction.json");
+  const originalConfig = await readFile(fixture.configPath, "utf8");
+  const otherConfigPath = path.join(path.dirname(fixture.configPath), "other-opencode.json");
+  await writeFile(otherConfigPath, originalConfig);
+  const ledgerBefore = await readFile(ledgerPath, "utf8");
+  const journalBefore = await readFile(journalPath, "utf8");
+  const generationsBefore = await readdir(path.join(installerRoot, "generations"));
+
+  await assert.rejects(runOpenCodeLifecycle({ action: "status", configPath: otherConfigPath }, {
+    env: fixture.env,
+    packageInstaller
+  }), /config|journal|ownership|different|match/i);
+  assert.equal(await readFile(fixture.configPath, "utf8"), originalConfig);
+  assert.equal(await readFile(otherConfigPath, "utf8"), originalConfig);
+  assert.equal(await readFile(ledgerPath, "utf8"), ledgerBefore);
+  assert.equal(await readFile(journalPath, "utf8"), journalBefore);
+  assert.deepEqual(await readdir(path.join(installerRoot, "generations")), generationsBefore);
+});
+
+test("a committed cleanup journal cannot be resumed through another config in the same directory", async (t) => {
+  const fixture = await createFixture(t);
+  await rm(fixture.configPath);
+  const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+  const dependencies = deps(packageInstaller);
+  await install(fixture, "blueprint@1.0.0", dependencies);
+  await assert.rejects(runOpenCodeLifecycle({ action: "uninstall", configPath: fixture.configPath }, {
+    ...dependencies,
+    env: fixture.env,
+    beforeCleanup: (_targetPath, kind) => {
+      if (kind === "config") throw new Error("pause committed config cleanup");
+    }
+  }), /pause committed config cleanup/);
+
+  const installerRoot = path.join(path.dirname(fixture.configPath), ".blueprint-install");
+  const cleanupJournalPath = `${installerRoot}.cleanup.json`;
+  const ledgerPath = path.join(installerRoot, "ledger.json");
+  const otherConfigPath = path.join(path.dirname(fixture.configPath), "other-opencode.json");
+  const deactivatedConfig = await readFile(fixture.configPath, "utf8");
+  await writeFile(otherConfigPath, deactivatedConfig);
+  const ledgerBefore = await readFile(ledgerPath, "utf8");
+  const cleanupJournalBefore = await readFile(cleanupJournalPath, "utf8");
+  const outsideSentinel = path.join(fixture.root, "outside-cleanup-sentinel.txt");
+  await writeFile(outsideSentinel, "preserve outside bytes\n");
+
+  await assert.rejects(runOpenCodeLifecycle({ action: "status", configPath: otherConfigPath }, {
+    env: fixture.env,
+    packageInstaller
+  }), /cleanup|config|journal|ownership|different|match/i);
+  assert.equal(await readFile(fixture.configPath, "utf8"), deactivatedConfig);
+  assert.equal(await readFile(otherConfigPath, "utf8"), deactivatedConfig);
+  assert.equal(await readFile(ledgerPath, "utf8"), ledgerBefore);
+  assert.equal(await readFile(cleanupJournalPath, "utf8"), cleanupJournalBefore);
+  assert.equal(await readFile(outsideSentinel, "utf8"), "preserve outside bytes\n");
+
+  assert.equal((await status(fixture, dependencies)).active, null);
+  assert.equal(await exists(fixture.configPath), false);
+  assert.equal(await readFile(otherConfigPath, "utf8"), deactivatedConfig);
+});
+
 test("a directory lock excludes concurrent lifecycle writers and becomes usable after release", async (t) => {
   const fixture = await createFixture(t);
   const packageInstaller = fixtureInstaller({
@@ -877,6 +946,39 @@ test("status validates active and retained rollback generations against their re
   }
 });
 
+test("status and uninstall reject malformed receipt identity and entries before deactivation", async (t) => {
+  for (const damage of ["generation-id", "duplicate-entry", "unsafe-entry"] as const) {
+    await t.test(damage, async (t) => {
+      const fixture = await createFixture(t);
+      const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+      const dependencies = deps(packageInstaller);
+      const installed = await install(fixture, "blueprint@1.0.0", dependencies);
+      const installerRoot = path.join(path.dirname(fixture.configPath), ".blueprint-install");
+      const ledgerPath = path.join(installerRoot, "ledger.json");
+      const receiptPath = path.join(installerRoot, "receipts", `${installed.active!.generationId}.json`);
+      const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
+      if (damage === "generation-id") {
+        receipt.generationId = "another-generation";
+      } else if (damage === "duplicate-entry") {
+        receipt.entries.push(receipt.entries[0]);
+      } else {
+        receipt.entries.push({ path: "../outside", type: "file", sha256: "0".repeat(64) });
+      }
+      await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
+      const configBefore = await readFile(fixture.configPath, "utf8");
+      const ledgerBefore = await readFile(ledgerPath, "utf8");
+      await assert.rejects(status(fixture, dependencies), /duplicate|generation|identity|receipt|unsafe|path|tamper|unexpected/i);
+      await assert.rejects(runOpenCodeLifecycle({ action: "uninstall", configPath: fixture.configPath }, {
+        ...dependencies,
+        env: fixture.env
+      }), /duplicate|generation|identity|receipt|unsafe|path|tamper|unexpected/i);
+      assert.equal(await readFile(fixture.configPath, "utf8"), configBefore);
+      assert.equal(await readFile(ledgerPath, "utf8"), ledgerBefore);
+      assert.equal(await exists(installed.active!.packageRoot), true);
+    });
+  }
+});
+
 test("uninstall refuses unknown installer artifacts before changing config or deleting customer bytes", async (t) => {
   for (const relativeSentinel of [
     "customer-root-file.txt",
@@ -902,26 +1004,108 @@ test("uninstall refuses unknown installer artifacts before changing config or de
   }
 });
 
+test("preexisting managed child-directory symlinks are refused before install mutates config or outside paths", async (t) => {
+  for (const child of ["generations", "receipts"] as const) {
+    await t.test(child, async (t) => {
+      const fixture = await createFixture(t);
+      const installerRoot = path.join(path.dirname(fixture.configPath), ".blueprint-install");
+      const outside = path.join(fixture.root, `outside-${child}`);
+      await Promise.all([
+        mkdir(installerRoot, { recursive: true, mode: 0o700 }),
+        mkdir(outside, { recursive: true })
+      ]);
+      await symlink(outside, path.join(installerRoot, child), "dir");
+      let installerCalled = false;
+      await assert.rejects(install(fixture, "blueprint@1.0.0", deps(async ({ stagingPrefix }) => {
+        installerCalled = true;
+        const packageRoot = path.join(stagingPrefix, "node_modules", "blueprint");
+        await writeFixturePackage(packageRoot, "1.0.0");
+        return { packageRoot };
+      })), /literal|symbolic|symlink|contained|managed|installer/i);
+      assert.equal(installerCalled, false);
+      assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+      assert.deepEqual(await readdir(outside), []);
+    });
+  }
+});
+
+test("cleanup rechecks a swapped generations ancestor before deleting outside package bytes", async (t) => {
+  const fixture = await createFixture(t);
+  const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+  const dependencies = deps(packageInstaller);
+  const installed = await install(fixture, "blueprint@1.0.0", dependencies);
+  const installerRoot = path.join(path.dirname(fixture.configPath), ".blueprint-install");
+  const generationsPath = path.join(installerRoot, "generations");
+  const outsideGenerations = path.join(fixture.root, "outside-generations");
+  const outsidePlugin = path.join(
+    outsideGenerations,
+    installed.active!.generationId,
+    "node_modules",
+    "blueprint",
+    "dist",
+    "opencode",
+    "plugin.js"
+  );
+  let swapped = false;
+  let deactivatedConfig = "";
+  await assert.rejects(runOpenCodeLifecycle({ action: "uninstall", configPath: fixture.configPath }, {
+    ...dependencies,
+    env: fixture.env,
+    beforeCleanup: async (_targetPath, kind) => {
+      if (swapped || kind !== "generation") return;
+      swapped = true;
+      deactivatedConfig = await readFile(fixture.configPath, "utf8");
+      await rename(generationsPath, outsideGenerations);
+      await symlink(outsideGenerations, generationsPath, "dir");
+    }
+  }), /literal|symbolic|symlink|contained|ancestor|installer/i);
+  assert.equal(await readFile(fixture.configPath, "utf8"), deactivatedConfig);
+  assert.equal(await exists(outsidePlugin), true, "cleanup must not follow the swapped ancestor to outside package bytes");
+
+  await rm(generationsPath);
+  await rename(outsideGenerations, generationsPath);
+  assert.equal((await status(fixture, dependencies)).active, null);
+});
+
 test("corrupt journal and generation locators cannot escape the installer root", async (t) => {
-  await t.test("journal createdGenerationRoot traversal", async (t) => {
-    const fixture = await createFixture(t);
-    const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
-    await assert.rejects(install(fixture, "blueprint@1.0.0", deps(packageInstaller, {
-      onStep: (step) => {
-        if (step === "afterJournalWrite") throw new Error("leave journal");
+  for (const damage of ["generation-root", "duplicate-entry", "unsafe-entry"] as const) {
+    await t.test(`transaction journal ${damage}`, async (t) => {
+      const fixture = await createFixture(t);
+      const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+      const dependencies = deps(packageInstaller, {
+        onStep: (step) => {
+          if (step === "afterLedgerWrite") throw new Error("leave journal after config and ledger writes");
+        }
+      });
+      await assert.rejects(install(fixture, "blueprint@1.0.0", dependencies), /leave journal/);
+      const installerRoot = path.join(path.dirname(fixture.configPath), ".blueprint-install");
+      const journalPath = path.join(installerRoot, "transaction.json");
+      const ledgerPath = path.join(installerRoot, "ledger.json");
+      const journal = JSON.parse(await readFile(journalPath, "utf8"));
+      const realGenerationRoot = journal.createdGenerationRoot as string;
+      const configBeforeRecovery = await readFile(fixture.configPath, "utf8");
+      const ledgerBeforeRecovery = await readFile(ledgerPath, "utf8");
+      const outside = path.join(fixture.root, "outside-must-survive");
+      await mkdir(outside);
+      await writeFile(path.join(outside, "sentinel.txt"), "outside\n");
+      if (damage === "generation-root") {
+        journal.createdGenerationRoot = outside;
+      } else if (damage === "duplicate-entry") {
+        journal.createdGenerationEntries.push(journal.createdGenerationEntries[0]);
+      } else {
+        journal.createdGenerationEntries.push({ path: "../outside", type: "file", sha256: "0".repeat(64) });
       }
-    })), /leave journal/);
-    const installerRoot = path.join(path.dirname(fixture.configPath), ".blueprint-install");
-    const journalPath = path.join(installerRoot, "transaction.json");
-    const outside = path.join(fixture.root, "outside-must-survive");
-    await mkdir(outside);
-    await writeFile(path.join(outside, "sentinel.txt"), "outside\n");
-    const journal = JSON.parse(await readFile(journalPath, "utf8"));
-    journal.createdGenerationRoot = outside;
-    await writeFile(journalPath, `${JSON.stringify(journal, null, 2)}\n`);
-    await assert.rejects(status(fixture, deps(packageInstaller)), /journal|generation|path|contain|travers/i);
-    assert.equal(await readFile(path.join(outside, "sentinel.txt"), "utf8"), "outside\n");
-  });
+      await writeFile(journalPath, `${JSON.stringify(journal, null, 2)}\n`);
+      await assert.rejects(
+        status(fixture, deps(packageInstaller)),
+        /duplicate|entry|inventory|journal|generation|path|contain|travers|unsafe/i
+      );
+      assert.equal(await readFile(fixture.configPath, "utf8"), configBeforeRecovery);
+      assert.equal(await readFile(ledgerPath, "utf8"), ledgerBeforeRecovery);
+      assert.equal(await exists(realGenerationRoot), true);
+      assert.equal(await readFile(path.join(outside, "sentinel.txt"), "utf8"), "outside\n");
+    });
+  }
 
   await t.test("ledger generationId traversal", async (t) => {
     const fixture = await createFixture(t);
@@ -972,18 +1156,25 @@ test("runtime compatibility markers gate rollback while lifecycle changes preser
 
   const refuseRollback = async (markerPath: string, contents: string): Promise<void> => {
     const before = await readFile(markerPath, "utf8");
+    const ledgerPath = path.join(path.dirname(fixture.configPath), ".blueprint-install", "ledger.json");
+    const ledgerBefore = await readFile(ledgerPath, "utf8");
     await writeFile(markerPath, contents);
     await assert.rejects(runOpenCodeLifecycle({
       action: "rollback",
       configPath: fixture.configPath
-    }, { ...dependencies, env: fixture.env }), /compatib|version|newer|unsupported/i);
+    }, { ...dependencies, env: fixture.env }), /ambiguous|compatib|frontmatter|missing|version|newer|unsupported/i);
     assert.equal(await readFile(fixture.configPath, "utf8"), configBefore);
+    assert.equal(await readFile(ledgerPath, "utf8"), ledgerBefore);
     await writeFile(markerPath, before);
     assert.equal((await status(fixture, dependencies)).active?.generationId, upgraded.active?.generationId);
   };
 
   await refuseRollback(projectConfig, '{\n  "version": 99\n}\n');
   await refuseRollback(stateDocument, "---\nblueprint_state_version: 99.0\n---\n\n# Future state\n");
+  await refuseRollback(stateDocument, "---\nblueprint_state_version: 1.0\nblueprint_state_version: 99.0\n---\n");
+  await refuseRollback(stateDocument, "# Body metadata is not frontmatter\nblueprint_state_version: 1.0\n");
+  await refuseRollback(stateDocument, "\n---\nblueprint_state_version: 1.0\n---\n");
+  await refuseRollback(stateDocument, "---\nproject: missing-version\n---\n");
   await refuseRollback(globalDefaults, '{\n  "version": 99\n}\n');
 
   await runOpenCodeLifecycle({ action: "uninstall", configPath: fixture.configPath }, {
@@ -1146,6 +1337,7 @@ test("built CLI installs exact local tarballs and transitions between fixture ve
   const upgraded = await runCli(fixture, "upgrade", ["--package", v2, "--cwd", fixture.customerCwd], installedCli);
   assert.equal(upgraded.active?.version, "2.0.0");
   assert.equal(upgraded.previous?.version, "1.0.0");
+  await Promise.all([rm(v1), rm(v2)]);
   assert.equal((await runCli(fixture, "status", [], installedCli)).active?.packageRoot, upgraded.active?.packageRoot);
   assert.equal((await runCli(fixture, "rollback", [], installedCli)).active?.version, "1.0.0");
   assert.equal((await runCli(fixture, "uninstall", [], installedCli)).active, null);
