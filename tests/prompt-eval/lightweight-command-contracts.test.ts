@@ -80,10 +80,8 @@ test("lightweight prompt-eval packets stay structurally stable for fast and quic
       packet.runtimeContractResource.runtimeReference?.optionalAgents ?? []
     );
     assert.deepEqual(packet.inputBundlePaths, packet.skillInputBundles.effective);
-    assert.ok(
-      packet.inputBundlePaths.includes(packet.manifestPath),
-      `${command} packet should include its manifest`
-    );
+    assert.equal(packet.inputBundlePaths.includes(packet.manifestPath), false);
+    assert.ok(packet.skillInputBundles.commandSpecific.includes(packet.manifestPath));
     assert.equal(packet.siblingCommandInputLeaks.length, 0);
   }
 });
@@ -92,7 +90,7 @@ test("lightweight prompt-eval packets only load active command inputs and never 
   for (const command of LIGHTWEIGHT_COMMANDS) {
     const packet = await buildLightweightCommandPacket(command);
     const siblingManifest =
-      command === "fast" ? "commands/blu-quick.toml" : "commands/blu-fast.toml";
+      command === "fast" ? "commands/blu-quick.md" : "commands/blu-fast.md";
     const siblingRuntimeContract =
       command === "fast"
         ? "skills/blueprint-phase-execution/references/quick-runtime-contract.md"
@@ -101,7 +99,7 @@ test("lightweight prompt-eval packets only load active command inputs and never 
     assert.equal(packet.skillInputBundles.shared.length, 0);
     assert.equal(packet.skillInputBundles.commandSpecific.length > 0, true);
     assert.equal(
-      packet.inputBundlePaths.includes("commands/blu-execute-phase.toml"),
+      packet.inputBundlePaths.includes("commands/blu-execute-phase.md"),
       false
     );
     assert.equal(
@@ -125,7 +123,7 @@ test("fast prompt-eval packet enforces the trivial no-tracker contract", async (
     packet.allowedPersistenceTools.includes("blueprint_artifact_report_write"),
     false
   );
-  assert.equal(packet.commandSpecificRuntimeReferencePath, packet.inputBundlePaths[1] ?? null);
+  assert.equal(packet.commandSpecificRuntimeReferencePath, packet.inputBundlePaths[0] ?? null);
   assert.doesNotMatch(promptText, /quick-run-latest/i);
   assert.doesNotMatch(promptText, /tracker-eligible/i);
   assert.doesNotMatch(
@@ -182,7 +180,7 @@ test("quick prompt-eval packet enforces durable quick-run structure without phas
   assert.match(promptText, /saved phase plan,\s*multi-wave execution/i);
   assert.match(
     promptText,
-    /do not let it impersonate a saved phase plan or broad lifecycle execution/i
+    /do not use it as a saved plan or let it impersonate a saved phase plan or broad lifecycle execution/i
   );
   assert.match(
     promptText,
@@ -205,7 +203,7 @@ test("quick prompt-eval packet enforces durable quick-run structure without phas
   assert.match(promptText, /Keep detailed evidence, file lists, validation logs/i);
   assert.match(
     promptText,
-    /(?:tracker state session-local only|keep it session-local).*?(?:do not replace Blueprint MCP persistence|do not let it impersonate a saved phase plan)/is
+    /(?:`todowrite` is session-local only|tracker state session-local only|keep it session-local).*?(?:does not replace Blueprint MCP persistence|do not replace Blueprint MCP persistence|let it impersonate a saved phase plan)/is
   );
 });
 

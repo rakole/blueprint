@@ -19,7 +19,7 @@ const newProjectRuntimeInputBundle = [
 ];
 
 test("new-project normal path is compact and exposes the runtime-owned authoring flow", async () => {
-  const manifest = await readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8");
+  const manifest = await readFile(path.join(repoRoot, "commands/blu-new-project.md"), "utf8");
   const skill = await readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8");
   const guide = await readFile(path.join(repoRoot, newProjectRuntimeInputBundle[0]!), "utf8");
   const contract = await buildBlueprintCommandRuntimeContractResource("new-project");

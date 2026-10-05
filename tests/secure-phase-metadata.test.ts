@@ -66,11 +66,10 @@ test("secure-phase runtime metadata is source-owned and docs-free", async () => 
     skill: "blueprint-review",
     shared: [],
     commandSpecific: [
-      "commands/blu-secure-phase.toml",
+      "commands/blu-secure-phase.md",
       "skills/blueprint-review/references/secure-phase-runtime-contract.md"
     ],
     effective: [
-      "commands/blu-secure-phase.toml",
       "skills/blueprint-review/references/secure-phase-runtime-contract.md"
     ]
   });
@@ -78,9 +77,9 @@ test("secure-phase runtime metadata is source-owned and docs-free", async () => 
 });
 
 test("secure-phase manifest references the review tools, agent, and safe routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-secure-phase.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-secure-phase.md"), "utf8");
 
-  assert.match(commandFile, /Use the `blueprint-review` skill/);
+  assert.match(commandFile, /Load the native `blueprint-review` skill exactly once/);
   assert.match(
     commandFile,
     /skills\/blueprint-review\/references\/secure-phase-runtime-contract\.md/
@@ -211,7 +210,7 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
 
 test("secure-phase manifest and runtime resource describe the long-running security spine", async () => {
   const [commandFile, contract, referenceFile] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-secure-phase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-secure-phase.md"), "utf8"),
     buildBlueprintCommandRuntimeContractResource("secure-phase"),
     readFile(
       path.join(repoRoot, "skills/blueprint-review/references/secure-phase-runtime-contract.md"),

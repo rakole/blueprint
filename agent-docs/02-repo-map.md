@@ -4,12 +4,13 @@ Use this map to find the source of truth before changing behavior.
 
 ## Runtime Assets
 
-- `commands/*.toml`: host command prompts for `/blu` and direct `/blu-*`
+- `commands/*.md`: native command prompts for `/blu` and direct `/blu-*`
   commands.
 - `skills/*/SKILL.md`: orchestration contracts and command input bundles.
 - `skills/*/references/*.md`: command-specific runtime contracts used by
   skills.
-- `agents/*.md`: bounded local agent contracts and tool allowlists.
+- `agents/blueprint.md`: required primary; 15 other definitions are optional specialists.
+- `src/opencode/*.ts`: package loading, validation, projection, and dispatch gate.
 - `hooks/hooks.json`: host hook registration.
 
 ## MCP Server Source
@@ -29,7 +30,7 @@ Use this map to find the source of truth before changing behavior.
   definitions, templates, and model contracts.
 - `src/mcp/mutation-failure-logging.ts` and `src/mcp/write-failure-log.ts`:
   rejected mutation telemetry.
-- `src/mcp/runtime-host.ts`: Gemini and Tabnine host-global path resolution.
+- `src/mcp/runtime-host.ts`: explicit OpenCode data-root/global-home resolution.
 
 ## Shared Source
 
@@ -46,12 +47,15 @@ Use this map to find the source of truth before changing behavior.
 - `tests/*tools.test.ts` and `tests/*slice.test.ts`: focused tool and workflow
   behavior.
 - `tests/built-assets-smoke.test.ts`: build output expectations.
-- `tests/extension-install.integration.ts`: containerized extension install
-  behavior.
+- `tests/extension-install.integration.ts`: explicit retirement marker for the
+  legacy host install harness; native coverage lives in the tests below.
+- `tests/opencode-package.test.ts`: private package and native closure behavior.
+- `tests/opencode-registration.integration.ts`: opt-in actual-host qualification.
 
 ## Generated Or Built Outputs
 
-- `dist/`: built extension runtime and hook entrypoints.
+- `generated/opencode-assets.json`: native hashes, mappings, aliases, and closure.
+- `dist/`: built OpenCode plugin and MCP runtime.
 - `node_modules/`: local install output from `npm ci`.
 
 Do not edit generated or installed output as the source of truth. Change source,

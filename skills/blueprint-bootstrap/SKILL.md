@@ -33,6 +33,10 @@ once with `bootstrapModel`; runtime owns IDs, numbering, statuses and Markdown.
 Do not generate `.planning/`, `AGENTS.md`, `CLAUDE.md`, or repo-root `CONTEXT.md`.
 Never hand-edit `.blueprint/`.
 
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
+
 ## Runtime Call Rules
 
 Translate any shorthand tool ids like `blueprint_project_status` to runtime FQNs

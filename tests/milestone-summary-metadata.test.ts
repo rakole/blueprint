@@ -10,7 +10,7 @@ const repoRoot = process.cwd();
 
 test("milestone-summary manifest references saved report evidence and new-milestone routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-milestone-summary.toml"),
+    path.join(repoRoot, "commands/blu-milestone-summary.md"),
     "utf8"
   );
 
@@ -75,9 +75,7 @@ test("milestone-summary runtime-owned metadata aligns to the interactive-read su
     contract.runtimeReference?.contractNotes ?? "",
     /missing-milestone-audit[\s\S]*missing-milestone-complete[\s\S]*milestone-summary-overwrite-confirmation/
   );
-  assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-milestone-summary.toml"
-  ]);
+  assert.deepEqual(contract.skillInputs.effective, []);
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false

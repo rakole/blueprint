@@ -31,6 +31,7 @@ import {
 } from "../src/mcp/tools/state.js";
 import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
+import { parseNativeMarkdown } from "../src/shared/native-frontmatter.js";
 
 const repoRoot = process.cwd();
 
@@ -65,7 +66,7 @@ async function readResearchSurfaceSizes(): Promise<ResearchSurfaceSizes> {
   // accidentally omit a newly required sibling/reference file.
   const active: Record<string, number> = {};
   const requiredPaths = new Set([
-    "commands/blu-research-phase.toml",
+    "commands/blu-research-phase.md",
     "skills/blueprint-phase-discovery/SKILL.md",
     ...skillInputs.effective,
     ...(metadata.requiredInputPaths ?? [])
@@ -77,9 +78,8 @@ async function readResearchSurfaceSizes(): Promise<ResearchSurfaceSizes> {
 
   const inventoryOnly: Record<string, number> = {};
   for (const filePath of ["agents/blueprint-researcher.md"]) {
-    inventoryOnly[filePath] = byteLength(
-      await readFile(path.join(repoRoot, filePath), "utf8")
-    );
+    const source = await readFile(path.join(repoRoot, filePath), "utf8");
+    inventoryOnly[filePath] = byteLength(parseNativeMarkdown(source, filePath).body);
   }
 
   return { active, inventoryOnly };
@@ -433,7 +433,7 @@ await blueprintPhaseArtifactWrite({ phase: "3", artifact: "research", content })
 
 async function readResearchInstructions(): Promise<{ command: string; skill: string; runtime: string; agent: string }> {
   const [command, skill, runtime, agent] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-research-phase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-research-phase.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"), "utf8"),
     readFile(path.join(repoRoot, "agents/blueprint-researcher.md"), "utf8")
@@ -454,7 +454,7 @@ test("research instruction budget counts every effective input and stays below 1
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
   assert.deepEqual(Object.keys(sizes.active).sort(), [
-    "commands/blu-research-phase.toml",
+    "commands/blu-research-phase.md",
     "skills/blueprint-phase-discovery/SKILL.md",
     ...inputs.effective,
     "runtime-metadata.contractNotes"

@@ -11,6 +11,7 @@ import {
   type RuntimeOwnedCommandMetadata
 } from "../../src/mcp/command-runtime-metadata.js";
 import type { BlueprintSkillResolvedInputs } from "../../src/mcp/skill-metadata.js";
+import { parseNativeMarkdown } from "../../src/shared/native-frontmatter.js";
 
 const repoRoot = process.cwd();
 
@@ -127,15 +128,8 @@ async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-function extractTripleQuotedTomlValue(content: string, key: string): string {
-  const match = content.match(new RegExp(`${key}\\s*=\\s*\"\"\"([\\s\\S]*?)\"\"\"`));
-
-  assert.ok(match, `Missing triple-quoted TOML value for ${key}`);
-  return match[1].trim();
-}
-
 function commandManifestPath(command: LightweightCommandName): string {
-  return `commands/blu-${command}.toml`;
+  return `commands/blu-${command}.md`;
 }
 
 function commandSpecificRuntimeReferencePath(
@@ -166,11 +160,11 @@ function siblingCommandInputLeaks(
     candidate === command
       ? []
       : [
-          `commands/blu-${candidate}.toml`,
+          `commands/blu-${candidate}.md`,
           `skills/blueprint-phase-execution/references/${candidate}-runtime-contract.md`
         ]
   ).concat([
-    "commands/blu-execute-phase.toml",
+    "commands/blu-execute-phase.md",
     "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md"
   ]);
 
@@ -190,7 +184,10 @@ export async function buildLightweightCommandPacket(
 
   assert.ok(runtimeMetadata, `Missing runtime metadata for ${command}`);
 
-  const manifestPrompt = extractTripleQuotedTomlValue(manifestFile, "prompt");
+  const manifestPrompt = parseNativeMarkdown(
+    manifestFile,
+    commandManifestPath(command)
+  ).body.trim();
   const inputBundlePaths = [...runtimeContractResource.skillInputs.effective];
   const activeInputTexts = Object.fromEntries(
     await Promise.all(
@@ -231,9 +228,10 @@ export async function buildLightweightCommandPacket(
     skillInputBundles: runtimeContractResource.skillInputs,
     inputBundlePaths,
     activeInputTexts,
-    promptSurfaceText: inputBundlePaths
-      .map((relativePath) => activeInputTexts[relativePath])
-      .join("\n\n"),
+    promptSurfaceText: [
+      manifestPrompt,
+      ...inputBundlePaths.map((relativePath) => activeInputTexts[relativePath])
+    ].join("\n\n"),
     commandSpecificRuntimeReferencePath: commandSpecificReferencePath,
     commandSpecificRuntimeReferenceText: commandSpecificReferenceText,
     runtimeMetadata,

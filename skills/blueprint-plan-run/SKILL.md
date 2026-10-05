@@ -11,11 +11,15 @@ input_bundles:
   shared: []
   commands:
     "/blu-run-plan":
-      - commands/blu-run-plan.toml
+      - commands/blu-run-plan.md
       - skills/blueprint-plan-run/references/run-plan-runtime-contract.md
 ---
 
 # Blueprint Plan Run Skill
+
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
 
 ## Purpose
 
@@ -50,7 +54,7 @@ with ordinary source fallback when it is absent or unusable.
 `/blu-run-plan` resolves active runtime inputs from the structured
 `input_bundles` frontmatter:
 
-- `commands/blu-run-plan.toml`
+- `commands/blu-run-plan.md` (already supplied as the active command prompt; do not read it again)
 - `skills/blueprint-plan-run/references/run-plan-runtime-contract.md`
 
 Repository docs can explain product history, but they are not active runtime

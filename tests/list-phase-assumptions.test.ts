@@ -13,7 +13,7 @@ import {
 } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
-const manifestPath = path.join(repoRoot, "commands/blu-list-phase-assumptions.toml");
+const manifestPath = path.join(repoRoot, "commands/blu-list-phase-assumptions.md");
 const discoverableSkillPath = path.join(
   repoRoot,
   "skills/blueprint-phase-discovery/SKILL.md"
@@ -59,7 +59,7 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
     Promise.all([readFile(discoverableSkillPath, "utf8"), readFile(path.join(repoRoot, "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md"), "utf8")]).then(parts => parts.join("\n"))
   ]);
 
-  assert.match(raw, /Use the `blueprint-phase-discovery` skill/);
+  assert.match(raw, /Load the native `blueprint-phase-discovery` skill exactly once/);
   assert.match(raw, /`blueprint-researcher` subagent/);
   assert.match(raw, /five areas/);
   assert.match(raw, /What do you think\?/);
@@ -137,7 +137,7 @@ test("list-phase-assumptions remains implemented in the live command catalog", a
   const [catalog, manifestExists, skillExists, skillResolution] =
     await Promise.all([
     blueprintCommandCatalog(),
-    pathExists("commands/blu-list-phase-assumptions.toml"),
+    pathExists("commands/blu-list-phase-assumptions.md"),
     pathExists("skills/blueprint-phase-discovery/SKILL.md"),
     resolveBlueprintSkillPath("blueprint-phase-discovery", pathExists)
   ]);
@@ -148,7 +148,7 @@ test("list-phase-assumptions remains implemented in the live command catalog", a
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-list-phase-assumptions.toml");
+  assert.equal(entry.manifestPath, "commands/blu-list-phase-assumptions.md");
   assert.equal(skillResolution.resolution, "discoverable");
   assert.equal(entry.skillPath, skillResolution.canonicalPath);
   assert.equal(

@@ -441,7 +441,6 @@ test("code-review catalog, runtime contract, and next-action validation survive 
   );
   assert.equal(contract.runtimeReference?.path, "src/mcp/command-runtime-metadata.ts#code-review");
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-code-review.toml",
     "skills/blueprint-review/references/code-review-runtime-contract.md"
   ]);
 
@@ -819,7 +818,7 @@ test("code-review runtime metadata, manifest, and skill contract stay aligned", 
   const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
     blueprintCommandCatalog(),
     buildBlueprintCommandRuntimeContractResource("code-review"),
-    readFile(path.join(repoRoot, "commands/blu-code-review.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-code-review.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-review/references/code-review-runtime-contract.md"),
@@ -838,7 +837,6 @@ test("code-review runtime metadata, manifest, and skill contract stay aligned", 
     ...CODE_REVIEW_RUNTIME_METADATA.requiredTools
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "commands/blu-code-review.toml",
     "skills/blueprint-review/references/code-review-runtime-contract.md"
   ]);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
@@ -2941,7 +2939,7 @@ test("code-review is exposed as an implemented review command with the scope too
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu-code-review.toml");
+  assert.equal(entry.manifestPath, "commands/blu-code-review.md");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_config_get",

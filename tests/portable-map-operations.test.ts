@@ -157,7 +157,8 @@ test("invalid operation identifiers never appear in response material", async ()
 
 test("oversized persisted receipt packets fail before touching activity state", async t => {
   const root = await fixture(t, 2);
-  const prepared = await preparePortableOperation({repositoryRoot: root, now: "2026-09-24T00:00:00.000Z"});
+  const now = "2026-09-24T00:00:00.000Z";
+  const prepared = await preparePortableOperation({repositoryRoot: root, now});
   assert.equal(prepared.ok, true, JSON.stringify(prepared));
   if (!prepared.ok) throw new Error("expected prepared operation");
   const operationDirectory = path.join(root, PORTABLE_OPERATIONS_ROOT, prepared.operationId);
@@ -180,9 +181,9 @@ test("oversized persisted receipt packets fail before touching activity state", 
     byteSize: packetBytes.byteLength
   };
   await writeFile(metadataPath, `${JSON.stringify(metadata)}\n`);
-  const before = await readPortableOperationMetadata({repositoryRoot: root, operationId: prepared.operationId});
-  const result = await readPortableOperationReceipt({repositoryRoot: root, operationId: prepared.operationId});
-  const after = await readPortableOperationMetadata({repositoryRoot: root, operationId: prepared.operationId});
+  const before = await readPortableOperationMetadata({repositoryRoot: root, operationId: prepared.operationId, now});
+  const result = await readPortableOperationReceipt({repositoryRoot: root, operationId: prepared.operationId, now});
+  const after = await readPortableOperationMetadata({repositoryRoot: root, operationId: prepared.operationId, now});
   assert.equal(result.ok, false);
   assert.match(JSON.stringify(result), /packet-too-large/);
   assert.equal(before.ok, true);

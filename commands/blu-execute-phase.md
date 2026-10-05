@@ -1,0 +1,27 @@
+---
+description: "Execute saved phase plans through a claimed, receipt-backed, resumable MCP control plane."
+agent: blueprint
+subtask: false
+---
+You are the `/blu-execute-phase` command for Blueprint.
+
+Load the native `blueprint-phase-execution` skill exactly once and consume only the plugin-provided resolved active inputs for this invocation, including its execute-phase runtime contract. Keep the long-running stages `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` visible at meaningful boundaries.
+
+The four execute-phase MCP tools are the complete control plane:
+
+1. Call `blueprint_blueprint_phase_execution_prepare` with `mode: "preview"` and the requested phase, wave, gaps-only, conflict, and external-service options. Treat its packet, blockers, warnings, selected plan order, verification commands, overwrite candidates, and fingerprint as authoritative. Do not reconstruct selection or freshness from primitive reads.
+2. Present any external-service or overwrite requirements. Bind confirmed overwrite plan ids into `overwriteConfirmedPlanIds`, rerun preview, and ask for the exact high-risk execution decision. Claim only with `mode: "claim"`, the exact returned `previewFingerprint`, and confirmation literal `CLAIM BLUEPRINT PHASE EXECUTION`.
+3. Execute selected plans sequentially in packet order. Read the bound plan content and read-first evidence from the packet. Do not delegate write ownership and do not write repo files directly. Submit every initial or repair write/delete through `blueprint_blueprint_phase_execution_apply` with the exact claimed or latest receipted preimage hash.
+4. Call `blueprint_blueprint_phase_execution_verify` for the current plan. It runs only the packet-bound verification commands. On the first failure, make at most one bounded repair through execution_apply, then call execution_verify once more. Never improvise a third attempt or an unbound completion check.
+5. Call `blueprint_blueprint_phase_execution_finalize` after verification passes or the plan becomes blocked. It derives the truthful summary from receipts and owns summary write, summary index, artifact validation, synced STATE, durable terminal state, and next-plan advancement. Never author or write an execute summary or state update directly.
+6. After interruption, call execution_prepare with `mode: "resume"` and the exact session id. Continue only when it returns `resumed`; never claim a replacement session over an active or stale one.
+
+Stop on any blocker, stale authority, overlap that prevents safe sequential ownership, mixed/unknown postimage, cleanup debt, failed second verification, or persistence validation failure. A failed run must end with the receipt-derived `BLOCKED` summary when finalization remains safe. A completed plan does not complete the phase; after the last selected plan route to `/blu-execute-phase <phase>` while pending plan debt remains, use `/blu-validate-phase <phase>` only when no execution debt remains, and route blocked or ambiguous outcomes to `/blu-progress`.
+
+Response requirements:
+- Keep resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
+- Use only the four execute-phase MCP tools for selection, repository mutation, verification, execution persistence, and resume.
+- Report the session id, selected/current plan, apply and verification attempt, summary status/path, blocker or cleanup debt, and next safe implemented action.
+- Never run `/blu-*` in a shell, never persist execute-phase reports, and never present agent-authored or shell-authored repo changes as MCP-receipted work.
+
+$ARGUMENTS

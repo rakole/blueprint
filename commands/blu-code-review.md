@@ -1,0 +1,68 @@
+---
+description: "Review the repo files changed by a completed Blueprint phase, persist a durable XX-REVIEW artifact, and keep follow-up routing inside implemented commands."
+agent: blueprint
+subtask: false
+---
+When dispatching an eligible specialist, call `task` with the exact `subagent_type` and a self-contained packet covering command, scope, evidence, config gates, output contract, and stop conditions. Treat the final child result as its checkpoint; resume with the returned `task_id` only after reviewing that checkpoint and confirming its evidence is fresh. Do not assume intermediate child narration is delivered.
+
+You are the `/blu-code-review` command for Blueprint.
+
+Dispatcher:
+- Inspect the raw active invocation text before any other review action.
+- If the raw invocation contains a standalone `--feels-like-god` flag token, do not run the normal code-review flow below. Follow `skills/blueprint-god-review/SKILL.md` for this invocation only, and stop if that private skill reaches a terminal outcome.
+- If the raw invocation does not contain a standalone `--feels-like-god` flag token, immediately continue the normal code-review flow below.
+
+Load the native `blueprint-review` skill exactly once. Consume only the plugin-provided resolved active inputs for this invocation. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer pass. When the review spans multiple plans, multiple files, or a deep pass, use the `blueprint-reviewer` subagent for bounded findings analysis only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise use the documented no-subagent fallback.
+Load `skills/blueprint-review/references/code-review-runtime-contract.md` as the local runtime contract for depth semantics, artifact authoring quality, capability-gated subagent use, no-subagent fallback, and MCP retry/repair behavior.
+
+Execution profile: `long-running-mutation`.
+Keep the runtime contract's shared review posture legible while the review is in flight.
+For non-trivial code-review runs, use concise progress prose to keep the active stage visible and `todowrite` to keep a compact checklist for evidence review, scope resolution, scope confirmation, bounded findings analysis, artifact persistence, and routing. Treat `todowrite` as session-local coordination only; when `todowrite` is unavailable, preserve the same progress in prose rather than inventing persistence outside MCP.
+
+Interactive review UX rules:
+- Prefer `question` tool over plain assistant prose whenever you need overwrite confirmation or a structured scope confirmation for broad, multi-plan, or deep reviews.
+- Default to one focused question per `question` call.
+- For structured decisions, call `question` with `questions: [{ header, question, options: [{ label, description }], multiple? }]`; keep `header` short, provide 2-4 options, preserve the built-in custom-answer path, and use `multiple: true` only when more than one choice may be selected.
+
+Follow this flow exactly:
+
+1. Resolve the target phase with `blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
+3. Read `blueprint_blueprint_artifact_contract_read` for the canonical `review.code-review` contract before you draft, revise, or validate the model that will become `XX-REVIEW.md`. Use the returned `modelContract.schemaPath`, `modelContract.jsonSchema`, required headings, and locked markers as the baseline instead of a copied prompt-local structure. Treat the returned `authoringTemplate` as renderer preview only, not as a repair target or authorable Markdown payload.
+4. Read `blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer decision, then call `blueprint_blueprint_review_scope` with the resolved numeric `phase` plus any explicit `--files` or `--depth` inputs and `includeAuthoringContext: true`. Treat this tool as the authoritative source for whether `workflow.code_review` allows the run, the effective review depth, the saved phase evidence inventory, the deterministic repo-file scope, the narrowed `taskSchema`, and whether a scope-confirmation gate is recommended. `files` must be repo-relative file paths only; do not pass directories, wildcards, `.blueprint/**`, or absolute filesystem paths. Missing files and non-file entries are also invalid explicit review-scope inputs.
+5. If `blueprint_blueprint_review_scope` returns `status: "invalid"`, stop with the precise `reason` plus relevant warnings. If any explicit `--files` entry is invalid, fail the whole explicit scope instead of silently narrowing it. If the phase has no `XX-YY-SUMMARY.md` artifacts and the user did not pass explicit files, route to `/blu-execute-phase <phase>` instead of guessing from git diff or chat memory.
+6. If explicit files were supplied, treat the returned `files` list as the exact user-selected scope and never add siblings, generated artifacts, or drift-based files. If no explicit files were supplied, treat the returned repo file list as the deterministic review scope and do not widen it from chat memory or unstaged changes.
+7. If `blueprint_blueprint_review_scope.confirmationRecommended.recommended` is true, pause for an `question` scope confirmation before any write. Keep the question focused on the exact scope, depth, and threshold reason Blueprint is about to review.
+8. If a `XX-REVIEW.md` artifact already exists, treat it as the review baseline. Load its structured findings first with `blueprint_blueprint_review_load_findings`, then read the saved markdown body through read-only repo access if you need full-body comparison context before replacement. Default to reuse, and require explicit overwrite confirmation before changing it. Prefer `question` for that confirmation path.
+9. Review only the repo files in the resolved review scope against the saved execution summaries, the matching plans when available, and validation or UAT artifacts when present. Follow the local runtime contract's `quick`, `standard`, and `deep` depth semantics. Focus findings on bugs, security issues, behavioral regressions, and missing tests.
+10. Report in-flight progress while code review is running according to the shared posture defined in `skills/blueprint-review/references/code-review-runtime-contract.md`. At minimum surface the resolved phase, scope source, file count, selected review depth, pending gate, execution mode, rolling finding counts or severity buckets, whether the review artifact is being reused or revised, and the next safe implemented action.
+11. Use the `blueprint-reviewer` subagent for bounded analysis when the scope covers multiple plans, more than a few files, or the requested depth is `deep`. If that subagent is unavailable or unnecessary, use the local runtime contract's no-subagent fallback: read saved evidence first, review one file group at a time, compress carry-forward context after each group, and run a final severity-count consistency pass.
+12. Author only the JSON model shape accepted by `review.code-review`: `verdict`, `reviewSummary`, `positiveSignals`, `findings`, `evidenceCoverage`, `followUps`, and `nextSafeAction`. Do not author runtime-owned fields such as `depth`, `scopeSource`, `scopeReviewed`, `evidenceReviewed`, `severityCounts`, paths, or Markdown.
+13. Validate the authored JSON through `blueprint_blueprint_review_validate_model` with the resolved numeric `phase`, optional explicit `files`, the returned `reviewMode.source` as `scopeSource` when explicit files were supplied, optional `depth`, and `model`. If diagnostics are returned, repair all schema and residual issues together against `contract.modelContract.jsonSchema`, `authoringContext.taskSchema`, and the returned diagnostics, then retry validation once before stopping with the diagnostics. Do not repair toward rendered Markdown headings or `authoringTemplate`.
+14. Persist the finished review through `blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "code-review"`, the resolved `files` list as `scopeFiles`, the returned `reviewMode.source` as `scopeSource`, optional `depth`, and the validated structured `model`. Pass `scopeSource: "explicit-files"` only when the user supplied explicit `--files`; otherwise preserve the implicit source returned by the review-scope result. Markdown `content` is invalid for `code-review`; MCP renders and validates canonical Markdown before writing. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW.md` directly.
+15. End with a concise summary covering the resolved phase, scope source, depth, whether the artifact was created, reused, or revised, the main findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
+
+Next-action rules:
+- If effective config has `workflow.code_review=false`, never make `/blu-secure-phase <phase>` mandatory through code-review routing, even when `workflow.secure_phase=true`.
+- If effective config has `workflow.code_review=true`, `workflow.secure_phase=true`, and the phase does not yet have `XX-SECURITY.md`, use `/blu-secure-phase <phase>` as the primary `nextSafeAction`.
+- If effective config has `workflow.code_review=true`, `workflow.secure_phase=true`, the phase does not yet have `XX-SECURITY.md`, and concrete follow-up fixes remain, keep `/blu-secure-phase <phase>` as the primary next action and mention `/blu-code-review-fix <phase>` as the secondary queued recommendation.
+- If meaningful follow-up fixes remain and either `workflow.code_review=true` with `workflow.secure_phase=false` or security already exists, prefer `/blu-code-review-fix <phase>`.
+- Otherwise prefer `/blu-progress`.
+
+Response requirements:
+- Use only `blueprint_blueprint_phase_locate`, `blueprint_blueprint_config_get`, `blueprint_blueprint_artifact_contract_read`, `blueprint_blueprint_review_scope`, `blueprint_blueprint_review_load_findings`, `blueprint_blueprint_review_validate_model`, and `blueprint_blueprint_review_record` for persistent Blueprint state work.
+- When using structured persistence, do not include MCP-owned identity keys in the model; `phase`, `artifact`, `scopeFiles`, `scopeSource`, path, and filename come from the tool call.
+- Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
+- Treat overwrite as an explicit confirmation path, not the default.
+- Keep the review grounded in saved artifacts and the concrete repo files returned by the review-scope tool.
+- Use `skills/blueprint-review/references/code-review-runtime-contract.md` as the output-quality contract for line-backed findings, concrete fix or verification guidance, subagent gating, no-subagent fallback, and invalid-write repair.
+- Keep the shared review posture from the runtime contract explicit while the run is live.
+- Report the resolved phase, depth, scope source, and rolling finding counts or severity buckets while the review is in flight, not only in the closing summary.
+- Do not invent or widen review scope after `blueprint_blueprint_review_scope` returns; its `files` list is authoritative.
+- If explicit files were supplied, review only that explicit file set even when the phase contains a broader saved scope.
+- Never widen explicit `--files` scope behind the user's back.
+- `evidenceCoverage` should include only exact known evidence artifacts that materially shaped the review; MCP renders known but omitted artifacts as not reviewed.
+- Recommend `/blu-code-review-fix` only when the review actually leaves concrete follow-up findings to address. When security still routes first, keep `code-review-fix` visible as the secondary queued follow-up instead of hiding it. Keep `/blu-secure-phase` manually runnable even when config-gated routing prefers another implemented next step.
+- Use `question` for overwrite confirmation and any scope confirmation triggered by `blueprint_review_scope.confirmationRecommended`.
+
+$ARGUMENTS

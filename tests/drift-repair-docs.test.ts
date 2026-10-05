@@ -55,7 +55,7 @@ test("runtime catalog keeps shipped lifecycle, roadmap-admin, and maintenance co
   assert.equal(doEntry.implemented, false);
   assert.equal(doEntry.manifestPath, null);
   assert.equal(doEntry.specPath, null);
-  assert.match(doEntry.blockedBy.join("\n"), /Missing command manifest: commands\/blu-do\.toml/);
+  assert.match(doEntry.blockedBy.join("\n"), /Missing command file: commands\/blu-do\.md/);
 });
 
 test("runtime-contract resources stay implemented when control-plane docs are unavailable", async (t) => {

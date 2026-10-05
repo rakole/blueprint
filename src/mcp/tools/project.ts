@@ -69,6 +69,7 @@ import {
   type BlueprintInternalToolName
 } from "../runtime-vocabulary.js";
 import {
+  blueprintCommandDefinitionPath,
   blueprintDirectCommand,
   blueprintDirectCommandAliases,
   blueprintPrimaryManifestPath,
@@ -77,7 +78,12 @@ import {
   blueprintRunCommand,
   blueprintRunDirectCommand
 } from "../command-paths.js";
-import { resolveAvailableOptionalAgents } from "../agent-definition.js";
+import {
+  resolveAvailableOptionalAgents,
+  validateBundledBlueprintAgentDefinition
+} from "../agent-definition.js";
+import { validateBundledBlueprintCommandDefinition } from "../command-definition.js";
+import { loadBlueprintSkillInputs } from "../skill-metadata.js";
 import {
   getRuntimeOwnedCommandMetadata,
   listRuntimeOwnedCommandMetadata,
@@ -861,8 +867,19 @@ async function buildCommandCatalogEntry(
   const runtimeMetadata = getRuntimeOwnedCommandMetadata(parsedRow.commandName);
   const catalogFacts = runtimeMetadata?.catalog ?? parsedRow;
   const specPath = runtimeMetadata?.sourceId ?? null;
-  const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
-  const manifestExists = await pathExists(bundledUrl(manifestPath));
+  const manifestPath = blueprintCommandDefinitionPath(parsedRow.commandName);
+  const readBundledRelativePath = async (relativePath: string): Promise<string | null> => {
+    try {
+      return await fs.readFile(bundledUrl(relativePath), "utf8");
+    } catch {
+      return null;
+    }
+  };
+  const commandValidation = await validateBundledBlueprintCommandDefinition(
+    parsedRow.commandName,
+    readBundledRelativePath
+  );
+  const manifestExists = commandValidation.valid;
   const missingRuntimeInputs: string[] = [];
   const requiredTools = runtimeMetadata
     ? [...runtimeMetadata.requiredTools]
@@ -875,14 +892,39 @@ async function buildCommandCatalogEntry(
   const skillResolution = await resolveBlueprintSkillPath(catalogFacts.primarySkill, async (skillPath) =>
     pathExists(bundledUrl(skillPath))
   );
-  const skillExists = skillResolution.resolvedPath !== null;
+  let skillExists = skillResolution.resolvedPath !== null;
 
   if (!manifestExists) {
-    blockedBy.push(`Missing command manifest: ${manifestPath}`);
+    blockedBy.push(...commandValidation.issues);
   }
 
   if (!skillExists) {
     blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
+  }
+
+  if (skillResolution.resolvedPath !== null) {
+    try {
+      await loadBlueprintSkillInputs(
+        catalogFacts.primarySkill,
+        blueprintDirectCommand(parsedRow.commandName),
+        readBundledRelativePath,
+        skillResolution.resolvedPath
+      );
+    } catch (error) {
+      skillExists = false;
+      blockedBy.push(
+        `Invalid primary skill ${skillResolution.resolvedPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  const primaryValidation = await validateBundledBlueprintAgentDefinition(
+    "blueprint",
+    readBundledRelativePath
+  );
+  const primaryExists = primaryValidation.valid;
+  if (!primaryExists) {
+    blockedBy.push(...primaryValidation.issues.map((issue) => `Invalid required primary: ${issue}`));
   }
 
   for (const inputPath of runtimeMetadata?.requiredInputPaths ?? []) {
@@ -917,7 +959,7 @@ async function buildCommandCatalogEntry(
 
   let status = catalogFacts.declaredStatus;
 
-  if (!(manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied)) {
+  if (!(manifestExists && skillExists && primaryExists && runtimeInputsSatisfied && requiredToolsSatisfied)) {
     if (manifestExists || skillExists) {
       status = "repairing";
     } else if (blockedBy.length > 0) {
@@ -943,8 +985,8 @@ async function buildCommandCatalogEntry(
     implemented: status === "implemented",
     blockedBy,
     manifestPath: manifestExists ? manifestPath : null,
-    skillPath: skillResolution.resolvedPath,
-    specPath: manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied
+    skillPath: skillExists ? skillResolution.resolvedPath : null,
+    specPath: manifestExists && skillExists && primaryExists && runtimeInputsSatisfied && requiredToolsSatisfied
       ? specPath
       : null,
     requiredTools,
@@ -1022,25 +1064,60 @@ async function buildRuntimeOwnedFallbackCommandCatalog(): Promise<CommandCatalog
 async function buildDoclessFallbackCommandCatalogEntry(
   parsedRow: ParsedCatalogRow
 ): Promise<CommandCatalogEntry> {
-  const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
-  const manifestExists = await pathExists(bundledUrl(manifestPath));
+  const manifestPath = blueprintCommandDefinitionPath(parsedRow.commandName);
+  const readBundledRelativePath = async (relativePath: string): Promise<string | null> => {
+    try {
+      return await fs.readFile(bundledUrl(relativePath), "utf8");
+    } catch {
+      return null;
+    }
+  };
+  const commandValidation = await validateBundledBlueprintCommandDefinition(
+    parsedRow.commandName,
+    readBundledRelativePath
+  );
+  const manifestExists = commandValidation.valid;
   const skillResolution = await resolveBlueprintSkillPath(
     parsedRow.primarySkill,
     async (skillPath) => pathExists(bundledUrl(skillPath))
   );
-  const skillExists = skillResolution.resolvedPath !== null;
+  let skillExists = skillResolution.resolvedPath !== null;
   const blockedBy: string[] = [];
   let status = parsedRow.declaredStatus;
 
   if (!manifestExists) {
-    blockedBy.push(`Missing command manifest: ${manifestPath}`);
+    blockedBy.push(...commandValidation.issues);
   }
 
   if (!skillExists) {
     blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
   }
 
-  if (!(manifestExists && skillExists)) {
+  if (skillResolution.resolvedPath !== null) {
+    try {
+      await loadBlueprintSkillInputs(
+        parsedRow.primarySkill,
+        blueprintDirectCommand(parsedRow.commandName),
+        readBundledRelativePath,
+        skillResolution.resolvedPath
+      );
+    } catch (error) {
+      skillExists = false;
+      blockedBy.push(
+        `Invalid primary skill ${skillResolution.resolvedPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+  const primaryValidation = await validateBundledBlueprintAgentDefinition(
+    "blueprint",
+    readBundledRelativePath
+  );
+  const primaryExists = primaryValidation.valid;
+  if (!primaryExists) {
+    blockedBy.push(...primaryValidation.issues.map((issue) => `Invalid required primary: ${issue}`));
+  }
+
+  if (!(manifestExists && skillExists && primaryExists)) {
     if (manifestExists || skillExists) {
       status = "repairing";
     } else if (blockedBy.length > 0) {
@@ -1060,7 +1137,7 @@ async function buildDoclessFallbackCommandCatalogEntry(
     implemented: status === "implemented",
     blockedBy,
     manifestPath: manifestExists ? manifestPath : null,
-    skillPath: skillResolution.resolvedPath,
+    skillPath: skillExists ? skillResolution.resolvedPath : null,
     specPath: null,
     requiredTools: [],
     requiredToolsSatisfied: true,

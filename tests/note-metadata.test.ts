@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("note manifest uses runtime skill and capture MCP identities", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-note.toml"),
+    path.join(repoRoot, "commands/blu-note.md"),
     "utf8"
   );
 
@@ -79,6 +79,6 @@ test("note runtime contract is owned by command runtime metadata", async () => {
   );
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /Docless manifest\+skill-owned runtime/
+    /Native command\+skill-owned runtime/
   );
 });

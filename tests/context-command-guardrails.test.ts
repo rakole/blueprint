@@ -11,8 +11,8 @@ const read = (filePath: string) => readFileSync(join(root, filePath), "utf8");
 
 test("Blueprint runtime keeps phase context under .blueprint instead of repo-root CONTEXT.md", () => {
   const projectToolSource = read("src/mcp/tools/project.ts");
-  const mapManifest = read("commands/blu-map-codebase.toml");
-  const newProjectManifest = [read("commands/blu-new-project.toml"), read("skills/blueprint-bootstrap/SKILL.md")].join("\n");
+  const mapManifest = read("commands/blu-map-codebase.md");
+  const newProjectManifest = [read("commands/blu-new-project.md"), read("skills/blueprint-bootstrap/SKILL.md")].join("\n");
   const contextContract = readArtifactContract("phase.context");
 
   for (const content of [projectToolSource, mapManifest, newProjectManifest]) {
@@ -34,9 +34,9 @@ test("phase context ownership stays discuss-led and runtime-contract scoped", as
     buildBlueprintCommandRuntimeContractResource("plan-phase")
   ]);
   const files = [
-    "commands/blu-discuss-phase.toml",
-    "commands/blu-research-phase.toml",
-    "commands/blu-plan-phase.toml",
+    "commands/blu-discuss-phase.md",
+    "commands/blu-research-phase.md",
+    "commands/blu-plan-phase.md",
     "skills/blueprint-phase-discovery/SKILL.md",
     "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md",
@@ -48,13 +48,13 @@ test("phase context ownership stays discuss-led and runtime-contract scoped", as
     assert.match(content, /\/blu-discuss-phase|XX-CONTEXT\.md/);
   }
 
-  assert.match(read("commands/blu-research-phase.toml"), /Treat phase context as read-only/);
-  assert.match(read("commands/blu-research-phase.toml"), /Rejected models are not saved/);
-  assert.doesNotMatch(read("commands/blu-research-phase.toml"), /blueprint_research_record|candidate/);
+  assert.match(read("commands/blu-research-phase.md"), /Treat phase context as read-only/);
+  assert.match(read("commands/blu-research-phase.md"), /Rejected models are not saved/);
+  assert.doesNotMatch(read("commands/blu-research-phase.md"), /blueprint_research_record|candidate/);
   assert.deepEqual(researchContract.runtimeReference?.exactMcpDestination, [
     "blueprint_research_prepare", "blueprint_research_submit", "blueprint_research_read"
   ]);
-  assert.match(read("commands/blu-plan-phase.toml"), /Treat phase context as read-only/);
+  assert.match(read("commands/blu-plan-phase.md"), /Treat phase context as read-only/);
   assert.deepEqual(discussContract.skillInputs.shared, []);
   assert.equal(
     discussContract.skillInputs.effective.some((input) => input.startsWith("docs/")),

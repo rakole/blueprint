@@ -204,7 +204,8 @@ export const updateToolTestHooks: {
 };
 
 function defaultUpdatePlanMode(host: BlueprintRuntimeHost["host"]): UpdatePlanMode {
-  return host === "gemini" ? "ask_user" : "manual";
+  void host;
+  return "ask_user";
 }
 
 function expandHomePath(value: string): string {
@@ -874,7 +875,7 @@ function buildUpdateSteps(
       stage: "Route",
       title: "Restart the host session",
       detail:
-        "Restart Gemini CLI or Tabnine CLI after the out-of-band update so the new extension bundle loads before more Blueprint work continues."
+        "Restart OpenCode after the out-of-band update so the new Blueprint package loads before more work continues."
     }
   ];
 }

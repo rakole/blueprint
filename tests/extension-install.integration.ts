@@ -741,7 +741,10 @@ EOF`,
 
 test(
   "containerized host smoke validates staged Blueprint installs",
-  { timeout: 900_000 },
+  {
+    timeout: 900_000,
+    skip: "Retired legacy extension-host route; test:integration:opencode covers the exact local tarball/bootstrap package path."
+  },
   async (t) => {
     const { stageRoot, extensionDir } = await stageShippedExtension();
 

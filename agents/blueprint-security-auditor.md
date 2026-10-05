@@ -1,19 +1,36 @@
 ---
-name: blueprint-security-auditor
-description: >
+description: >-
   Security review specialist for Blueprint phase audits. Use this agent when
-  `/blu-secure-phase` needs a bounded review of threat mitigations, risky
-  surfaces, trust boundaries, or follow-up security gaps before a durable
-  `XX-SECURITY.md` artifact is persisted. Example scenarios: reviewing auth or
-  secret-handling changes, checking shell and filesystem boundaries, and
-  comparing a revised phase against an earlier security audit.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 24
-timeout_mins: 23
+  `/blu-secure-phase` needs a bounded review of threat mitigations, risky surfaces,
+  trust boundaries, or follow-up security gaps before a durable `XX-SECURITY.md`
+  artifact is persisted. Example scenarios: reviewing auth or secret-handling
+  changes, checking shell and filesystem boundaries, and comparing a revised phase
+  against an earlier security audit.
+mode: subagent
+steps: 24
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Security Auditor
 

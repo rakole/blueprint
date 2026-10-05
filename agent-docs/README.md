@@ -4,7 +4,7 @@ This folder is the working manual for coding agents changing Blueprint. It is
 self-contained on purpose: read these files plus live source code, and do not
 depend on the legacy documentation tree for implementation context.
 
-Blueprint is a Gemini and Tabnine CLI extension. It exposes the root `/blu`
+Blueprint is an OpenCode plugin. It exposes the root `/blu`
 router plus direct `/blu-<command>` commands, stores workflow state in
 `.blueprint/`, and uses an MCP server as the deterministic state engine.
 
@@ -54,9 +54,12 @@ Do not:
 
 ## Fast Mental Model
 
-Commands are thin user-facing TOML contracts. Skills orchestrate the command
+Commands are thin native Markdown/YAML contracts. Skills orchestrate the command
 behavior. Agents do bounded specialist work. MCP tools read and write
-structured state. Hooks advise. Extension manifests launch built files from
-`dist`.
+structured state. Hooks advise. The private package export launches built files
+from `dist`.
 
 When in doubt, preserve the layer boundary rather than inventing a shortcut.
+
+The generated native asset manifest proves hashes and package closure. Actual
+OpenCode readiness is a separate host-qualification claim.

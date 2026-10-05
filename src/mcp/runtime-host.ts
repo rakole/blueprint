@@ -1,13 +1,13 @@
 import os from "node:os";
 import path from "node:path";
 
-export type BlueprintRuntimeHostId = "gemini" | "tabnine";
+export type BlueprintRuntimeHostId = "opencode";
 
 export type BlueprintRuntimeHost = {
   host: BlueprintRuntimeHostId;
-  cliHomeDirName: ".gemini" | ".tabnine";
-  contextFileName: "GEMINI.md" | "TABNINE.md";
-  manifestFileName: "gemini-extension.json" | "tabnine-extension.json";
+  cliHomeDirName: ".config/opencode";
+  contextFileName: "AGENTS.md";
+  manifestFileName: "package.json";
   extensionPath: string | null;
   globalBlueprintDir: string;
   defaultsPath: string;
@@ -15,8 +15,6 @@ export type BlueprintRuntimeHost = {
   workspaceRegistryPath: string;
   updatesDir: string;
 };
-
-const BLUEPRINT_HOST_IDS = ["gemini", "tabnine"] as const satisfies readonly BlueprintRuntimeHostId[];
 
 let cachedRuntimeHost: BlueprintRuntimeHost | null = null;
 let cachedRuntimeHostKey: string | null = null;
@@ -28,9 +26,10 @@ function normalizeHostId(value: string | undefined): BlueprintRuntimeHostId | nu
     return null;
   }
 
-  return BLUEPRINT_HOST_IDS.includes(normalized as BlueprintRuntimeHostId)
-    ? (normalized as BlueprintRuntimeHostId)
-    : null;
+  if (normalized !== "opencode") {
+    throw new Error(`Unsupported BLUEPRINT_HOST ${JSON.stringify(value)}; expected opencode.`);
+  }
+  return "opencode";
 }
 
 function trimTrailingSeparators(value: string): string {
@@ -60,31 +59,13 @@ function inferHostFromExtensionPath(extensionPath: string | undefined): Blueprin
     return null;
   }
 
-  if (normalizedPath.includes(`${path.sep}.tabnine${path.sep}`)) {
-    return "tabnine";
-  }
-
-  if (normalizedPath.includes(`${path.sep}.gemini${path.sep}`)) {
-    return "gemini";
-  }
-
-  const slashNormalizedPath = normalizedPath.replaceAll("\\", "/");
-
-  if (slashNormalizedPath.includes("/.tabnine/")) {
-    return "tabnine";
-  }
-
-  if (slashNormalizedPath.includes("/.gemini/")) {
-    return "gemini";
-  }
-
-  return null;
+  return "opencode";
 }
 
-function buildDefaultGlobalBlueprintDir(host: BlueprintRuntimeHostId): string {
-  const cliHomeDirName = host === "tabnine" ? ".tabnine" : ".gemini";
-
-  return path.join(os.homedir(), cliHomeDirName, "blueprint");
+function buildDefaultGlobalBlueprintDir(host: BlueprintRuntimeHostId, env: NodeJS.ProcessEnv): string {
+  void host;
+  const dataRoot = env.XDG_DATA_HOME?.trim() || path.join(os.homedir(), ".local", "share");
+  return path.join(dataRoot, "opencode", "blueprint");
 }
 
 function normalizeGlobalBlueprintDir(value: string): string {
@@ -95,7 +76,8 @@ function buildRuntimeHostCacheKey(env: NodeJS.ProcessEnv): string {
   return JSON.stringify({
     host: env.BLUEPRINT_HOST ?? null,
     extensionPath: env.BLUEPRINT_EXTENSION_PATH ?? null,
-    globalHome: env.BLUEPRINT_GLOBAL_HOME ?? null
+    globalHome: env.BLUEPRINT_GLOBAL_HOME ?? null,
+    xdgDataHome: env.XDG_DATA_HOME ?? null
   });
 }
 
@@ -105,13 +87,12 @@ function buildRuntimeHost(
   const explicitHost = normalizeHostId(env.BLUEPRINT_HOST);
   const extensionPath = env.BLUEPRINT_EXTENSION_PATH?.trim() || null;
   const inferredHost = inferHostFromExtensionPath(extensionPath ?? undefined);
-  const host = explicitHost ?? inferredHost ?? "gemini";
-  const cliHomeDirName = host === "tabnine" ? ".tabnine" : ".gemini";
-  const contextFileName = host === "tabnine" ? "TABNINE.md" : "GEMINI.md";
-  const manifestFileName =
-    host === "tabnine" ? "tabnine-extension.json" : "gemini-extension.json";
+  const host = explicitHost ?? inferredHost ?? "opencode";
+  const cliHomeDirName = ".config/opencode" as const;
+  const contextFileName = "AGENTS.md" as const;
+  const manifestFileName = "package.json" as const;
   const globalBlueprintDir = normalizeGlobalBlueprintDir(
-    env.BLUEPRINT_GLOBAL_HOME?.trim() || buildDefaultGlobalBlueprintDir(host)
+    env.BLUEPRINT_GLOBAL_HOME?.trim() || buildDefaultGlobalBlueprintDir(host, env)
   );
 
   return {

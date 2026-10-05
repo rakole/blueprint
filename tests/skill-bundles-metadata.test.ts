@@ -1,105 +1,79 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+
+import { parseNativeMarkdown } from "../src/shared/native-frontmatter.js";
+import { loadBlueprintSkillInputs } from "../src/mcp/skill-metadata.js";
 
 const repoRoot = process.cwd();
 
-const SKILL_BUNDLES = [
-  {
-    name: "blueprint-capture",
-    description: "Project-local capture and parking-lot workflows for Blueprint",
-    commands: [
-      "/blu-note",
-      "/blu-add-todo",
-      "/blu-check-todos",
-      "/blu-add-backlog",
-      "/blu-review-backlog",
-      "/blu-explore"
-    ]
-  },
-  {
-    name: "blueprint-phase-discovery",
-    description: "Pre-planning discovery and requirements shaping",
-    commands: [
-      "/blu-discuss-phase",
-      "/blu-research-phase",
-      "/blu-spec-phase",
-      "/blu-ui-phase",
-      "/blu-list-phase-assumptions"
-    ]
-  },
-  {
-    name: "blueprint-phase-planning",
-    description: "Prepare grounded plan models, coordinate bounded review",
-    commands: ["/blu-plan-phase"]
-  },
-  {
-    name: "blueprint-phase-execution",
-    description: "Plan execution, bounded quick delivery, and durable execution evidence",
-    commands: ["/blu-execute-phase", "/blu-fast", "/blu-quick"]
-  },
-  {
-    name: "blueprint-plan-run",
-    description: "Single-plan execution harness for isolated Blueprint worktree and branch",
-    commands: ["/blu-run-plan"]
-  },
-  {
-    name: "blueprint-phase-validation",
-    description: "Verification, UAT, tests, and gap closure",
-    commands: ["/blu-validate-phase", "/blu-verify-work"]
-  },
-  {
-    name: "blueprint-debug",
-    description: "Debug investigations and recovery plans",
-    commands: ["/blu-debug"]
-  },
-  {
-    name: "blueprint-docs",
-    description: "Documentation generation and verification",
-    commands: ["/blu-docs-update"]
-  },
-  {
-    name: "blueprint-review",
-    description: "Review, security, UI-audit, and peer-review orchestration for Blueprint",
-    commands: ["/blu-code-review", "/blu-code-review-fix", "/blu-audit-fix", "/blu-secure-phase", "/blu-review", "/blu-ui-review"]
-  },
-  {
-    name: "blueprint-roadmap-admin",
-    description: "Roadmap append, milestone audits, and future roadmap or milestone mutations",
-    commands: [
-      "/blu-add-phase",
-      "/blu-insert-phase",
-      "/blu-remove-phase",
-      "/blu-plan-milestone-gaps",
-      "/blu-audit-milestone",
-      "/blu-complete-milestone",
-      "/blu-milestone-summary",
-      "/blu-new-milestone"
-    ]
-  },
-  {
-    name: "blueprint-maintenance",
-    description: "Git, review-branch prep, workspace, cleanup, update, and patch operations for",
-    commands: ["/blu-pr-branch", "/blu-ship", "/blu-cleanup", "/blu-undo", "/blu-reapply-patches"]
+async function readRelativePath(relativePath: string): Promise<string | null> {
+  try {
+    return await readFile(path.join(repoRoot, relativePath), "utf8");
+  } catch {
+    return null;
   }
-] as const;
+}
 
-for (const skill of SKILL_BUNDLES) {
-  test(`${skill.name} bundle is discoverable with Gemini metadata`, async () => {
-    const raw = await readFile(
-      path.join(repoRoot, "skills", skill.name, "SKILL.md"),
-      "utf8"
-    );
+test("all 17 native skills validate and their active bundle closure exists", async () => {
+  const skillNames = (await readdir(path.join(repoRoot, "skills"))).sort();
+  assert.equal(skillNames.length, 17);
 
-    assert.match(raw, new RegExp(`name: ${skill.name}`));
-    assert.match(raw, /description:/);
-    assert.match(raw, /status: implemented/);
+  for (const skillName of skillNames) {
+    const relativePath = `skills/${skillName}/SKILL.md`;
+    const raw = await readFile(path.join(repoRoot, relativePath), "utf8");
+    const { frontmatter, body } = parseNativeMarkdown(raw, relativePath);
+    assert.equal(frontmatter.name, skillName);
+    assert.equal(typeof frontmatter.description, "string");
+    assert.equal(frontmatter.status, "implemented");
+    assert.match(body, /## Native Invocation Guard/);
 
-    for (const command of skill.commands) {
-      assert.match(raw, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    const commands = (frontmatter.commands ?? []) as string[];
+    for (const command of commands) {
+      const inputs = await loadBlueprintSkillInputs(skillName, command, readRelativePath);
+      assert.equal(inputs.skill, skillName);
+      assert.equal(inputs.effective.some((input) => input.endsWith(".toml")), false);
+      assert.equal(inputs.effective.some((input) => input === commandAsset(command)), false);
     }
+  }
+});
 
-    assert.match(raw, new RegExp(skill.description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  });
+test("the packaged skill tree retains exactly 54 adjacent reference files", async () => {
+  let references = 0;
+  for (const skillName of await readdir(path.join(repoRoot, "skills"))) {
+    const referencesDir = path.join(repoRoot, "skills", skillName, "references");
+    try {
+      const entries = await readdir(referencesDir, { withFileTypes: true });
+      references += entries.filter((entry) => entry.isFile() && entry.name.endsWith(".md")).length;
+    } catch {
+      // Skills without adjacent references are valid.
+    }
+  }
+  assert.equal(references, 54);
+});
+
+test("private helper keeps its exact command, flag, and trusted plugin gate", async () => {
+  const raw = await readFile(
+    path.join(repoRoot, "skills/blueprint-god-review/SKILL.md"),
+    "utf8",
+  );
+  assert.match(raw, /trusted plugin dispatch gate/);
+  assert.match(raw, /`\/blu-code-review` or `\/blu-code-review-fix`/);
+  assert.match(raw, /standalone `--feels-like-god` token/);
+  assert.match(raw, /Public help and routing must not advertise/);
+});
+
+test("ordinary skills reject synthesized skill aliases before activity", async () => {
+  for (const skillName of await readdir(path.join(repoRoot, "skills"))) {
+    if (skillName === "blueprint-god-review") continue;
+    const raw = await readFile(path.join(repoRoot, "skills", skillName, "SKILL.md"), "utf8");
+    assert.match(raw, /synthesized `\/blueprint-\*` alias/);
+    assert.match(raw, /stop before tool, MCP, resource, or filesystem activity/);
+    assert.match(raw, /direct the user to `\/blu-help`/);
+  }
+});
+
+function commandAsset(command: string): string {
+  return command === "/blu" ? "commands/blu.md" : `commands/${command.slice(1)}.md`;
 }

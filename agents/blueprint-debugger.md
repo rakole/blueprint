@@ -1,21 +1,37 @@
 ---
-name: blueprint-debugger
-description: >
-  Structured debugging specialist for Blueprint issue investigations. Use this
-  agent when `/blu-debug` needs a bounded pass that reproduces failures,
-  collects logs or stack traces, tests concrete hypotheses, and returns a
-  confidence-rated diagnosis plus recovery options without inventing hidden
-  persistence or silently widening into a broad implementation project. Example
-  scenarios: isolating a failing command, tracing a regression to a narrow code
-  path, or turning noisy symptoms into a short list of evidence-backed next
-  steps.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 27
-timeout_mins: 30
+description: >-
+  Structured debugging specialist for Blueprint issue investigations. Use this agent
+  when `/blu-debug` needs a bounded pass that reproduces failures, collects logs or
+  stack traces, tests concrete hypotheses, and returns a confidence-rated diagnosis
+  plus recovery options without inventing hidden persistence or silently widening
+  into a broad implementation project. Example scenarios: isolating a failing
+  command, tracing a regression to a narrow code path, or turning noisy symptoms
+  into a short list of evidence-backed next steps.
+mode: subagent
+steps: 27
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Debugger
 

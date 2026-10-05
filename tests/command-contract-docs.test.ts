@@ -207,19 +207,19 @@ test("runtime resources keep command-specific inputs anchored to manifests and s
     "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
   ]);
   assert.deepEqual(impact.skillInputs.commandSpecific, [
-    "commands/blu-impact.toml",
+    "commands/blu-impact.md",
     "skills/blueprint-impact/references/impact-runtime-contract.md"
   ]);
   assert.deepEqual(docsUpdate.skillInputs.commandSpecific, [
-    "commands/blu-docs-update.toml",
+    "commands/blu-docs-update.md",
     "skills/blueprint-docs/references/docs-update-runtime-contract.md"
   ]);
   assert.deepEqual(codeReview.skillInputs.commandSpecific, [
-    "commands/blu-code-review.toml",
+    "commands/blu-code-review.md",
     "skills/blueprint-review/references/code-review-runtime-contract.md"
   ]);
   assert.deepEqual(securePhase.skillInputs.commandSpecific, [
-    "commands/blu-secure-phase.toml",
+    "commands/blu-secure-phase.md",
     "skills/blueprint-review/references/secure-phase-runtime-contract.md"
   ]);
 });

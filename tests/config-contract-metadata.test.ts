@@ -78,7 +78,7 @@ test("source-owned config behavior keeps effectiveness-spine defaults and enum g
 
 test("artifact schema documents workflow.subagents as workflow policy rather than host agent availability", async () => {
   const [settingsCommand, settingsReference] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-settings.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,
@@ -101,7 +101,7 @@ test("artifact schema documents workflow.subagents as workflow policy rather tha
 
 test("artifact schema documents workflow.no_uat as UAT optionality rather than command removal", async () => {
   const [settingsCommand, settingsReference] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-settings.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,
@@ -120,7 +120,7 @@ test("artifact schema documents workflow.no_uat as UAT optionality rather than c
 
 test("settings docs describe workflow.subagents as fallback policy rather than visibility or routing control", async () => {
   const [settingsCommand, settingsReference] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-settings.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,
@@ -143,7 +143,7 @@ test("settings docs describe workflow.subagents as fallback policy rather than v
 
 test("settings docs describe workflow.no_uat as lifecycle optionality with manual UAT preserved", async () => {
   const [settingsCommand, settingsReference] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-settings.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,
@@ -166,7 +166,7 @@ test("settings docs describe workflow.no_uat as lifecycle optionality with manua
 test("settings runtime-owned surfaces keep workflow.secure_phase as conditional routing only", async () => {
   const [settingsCommand, settingsReference, verifyWorkContract, securePhaseContract] =
     await Promise.all([
-      readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
+      readFile(path.join(repoRoot, "commands/blu-settings.md"), "utf8"),
       readFile(
         path.join(
           repoRoot,

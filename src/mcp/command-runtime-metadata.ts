@@ -127,7 +127,7 @@ export const NEW_PROJECT_RUNTIME_METADATA = {
     optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Gemini-native bootstrap: blueprint_project_prepare returns effective config, readiness and the compact authoring schema. Ask a clarifying question on first run and wait for the user even without config; only explicit --auto bypasses clarification. Config defaults remain mode=interactive and workflow.auto_advance=false. Author requirements once inside phases through bootstrapModel; MCP derives IDs, phase numbers, statuses and Markdown. Read only the compact bootstrap-runtime-contract.md on the normal path. Preserve map-first gating, visible approval, saved-default provenance and implemented-only routing.",
+      "OpenCode-native bootstrap: blueprint_project_prepare returns effective config, readiness and the compact authoring schema. Ask a clarifying question on first run and wait for the user even without config; only explicit --auto bypasses clarification. Config defaults remain mode=interactive and workflow.auto_advance=false. Author requirements once inside phases through bootstrapModel; MCP derives IDs, phase numbers, statuses and Markdown. Read only the compact bootstrap-runtime-contract.md on the normal path. Preserve map-first gating, visible approval, saved-default provenance and implemented-only routing.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -652,9 +652,9 @@ const MAP_CODEBASE_REQUIRED_TOOLS = [
   "blueprint_map_submit"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
-const HELP_SPEC_PATH = "commands/blu-help.toml";
-const PROGRESS_SPEC_PATH = "commands/blu-progress.toml";
-const NEXT_SPEC_PATH = "commands/blu-next.toml";
+const HELP_SPEC_PATH = "commands/blu-help.md";
+const PROGRESS_SPEC_PATH = "commands/blu-progress.md";
+const NEXT_SPEC_PATH = "commands/blu-next.md";
 const MAP_CODEBASE_SPEC_PATH =
   "skills/blueprint-map/references/map-runtime-contract.md";
 const DISCUSS_PHASE_SPEC_PATH =
@@ -673,15 +673,15 @@ const LIST_PHASE_ASSUMPTIONS_SPEC_PATH =
   "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md";
 const INSERT_PHASE_SPEC_PATH =
   "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md";
-const REMOVE_PHASE_SPEC_PATH = "commands/blu-remove-phase.toml";
+const REMOVE_PHASE_SPEC_PATH = "commands/blu-remove-phase.md";
 const PLAN_MILESTONE_GAPS_SPEC_PATH =
-  "commands/blu-plan-milestone-gaps.toml";
-const AUDIT_MILESTONE_SPEC_PATH = "commands/blu-audit-milestone.toml";
+  "commands/blu-plan-milestone-gaps.md";
+const AUDIT_MILESTONE_SPEC_PATH = "commands/blu-audit-milestone.md";
 const COMPLETE_MILESTONE_SPEC_PATH =
-  "commands/blu-complete-milestone.toml";
+  "commands/blu-complete-milestone.md";
 const MILESTONE_SUMMARY_SPEC_PATH =
-  "commands/blu-milestone-summary.toml";
-const NEW_MILESTONE_SPEC_PATH = "commands/blu-new-milestone.toml";
+  "commands/blu-milestone-summary.md";
+const NEW_MILESTONE_SPEC_PATH = "commands/blu-new-milestone.md";
 const VALIDATE_PHASE_SPEC_PATH =
   "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md";
 const VERIFY_WORK_SPEC_PATH =
@@ -1251,7 +1251,7 @@ export const MAP_CODEBASE_RUNTIME_METADATA = {
   requiredTools: MAP_CODEBASE_REQUIRED_TOOLS,
   optionalAgents: MAP_CODEBASE_OPTIONAL_AGENTS,
   requiredInputPaths: [
-    "commands/blu-map-codebase.toml",
+    "commands/blu-map-codebase.md",
     MAP_CODEBASE_SPEC_PATH
   ],
   spec: {
@@ -1317,7 +1317,7 @@ export const SETTINGS_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for bounded configuration inspection and mutation: load skills/blueprint-governance/references/settings-runtime-contract.md, read status and config through MCP first, mutate only explicit repo/defaults settings through blueprint_config_set, and route follow-ups only to implemented commands.",
+      "Native command+skill-owned runtime for bounded configuration inspection and mutation: load skills/blueprint-governance/references/settings-runtime-contract.md, read status and config through MCP first, mutate only explicit repo/defaults settings through blueprint_config_set, and route follow-ups only to implemented commands.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1354,7 +1354,7 @@ export const SET_PROFILE_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for one-field project profile mutation: load skills/blueprint-governance/references/set-profile-runtime-contract.md, inspect current config first, update only model_profile through blueprint_config_set_profile, and route follow-ups only to implemented commands.",
+      "Native command+skill-owned runtime for one-field project profile mutation: load skills/blueprint-governance/references/set-profile-runtime-contract.md, inspect current config first, update only model_profile through blueprint_config_set_profile, and route follow-ups only to implemented commands.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1396,7 +1396,7 @@ export const HEALTH_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for health inspection and explicit repair: load skills/blueprint-governance/references/health-runtime-contract.md, gather project/config/state/artifact evidence through MCP, validate artifacts before reporting, run blueprint_config_set and blueprint_state_sync only for requested repair mode, and route follow-ups only to implemented commands.",
+      "Native command+skill-owned runtime for health inspection and explicit repair: load skills/blueprint-governance/references/health-runtime-contract.md, gather project/config/state/artifact evidence through MCP, validate artifacts before reporting, run blueprint_config_set and blueprint_state_sync only for requested repair mode, and route follow-ups only to implemented commands.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1525,7 +1525,7 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Use research-phase-runtime-contract.md: prepare → investigate → submit. Use schema/example/grounding/validationRules for one generation. Rejected models are not saved. Read canonical research/metadata; journals are metadata-only. Preserve source, intent, freshness, overwrite and retry guards.",
+      "Research contract: prepare → investigate → submit. Generate once from schema/grounding; never save rejected models. Preserve source/freshness/overwrite/retry and metadata-only journal gates.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2122,7 +2122,7 @@ export const DOCS_UPDATE_RUNTIME_METADATA = {
     optionalAgents: DOCS_UPDATE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.toml and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.",
+      "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.md and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2203,7 +2203,7 @@ export const PAUSE_WORK_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for canonical handoff capture: load skills/blueprint-governance/references/pause-work-runtime-contract.md, read state and artifact inventory through MCP, compare existing handoff state before overwrite where relevant, persist only through blueprint_pause_handoff_write and blueprint_state_update, and route follow-ups only to implemented commands.",
+      "Native command+skill-owned runtime for canonical handoff capture: load skills/blueprint-governance/references/pause-work-runtime-contract.md, read state and artifact inventory through MCP, compare existing handoff state before overwrite where relevant, persist only through blueprint_pause_handoff_write and blueprint_state_update, and route follow-ups only to implemented commands.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2243,7 +2243,7 @@ export const RESUME_WORK_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for handoff restoration: load skills/blueprint-governance/references/resume-work-runtime-contract.md, read project status, state, artifacts, and canonical pause handoff through MCP, restore only from the canonical handoff, persist next safe action through blueprint_state_update, and route follow-ups only to implemented commands.",
+      "Native command+skill-owned runtime for handoff restoration: load skills/blueprint-governance/references/resume-work-runtime-contract.md, read project status, state, artifacts, and canonical pause handoff through MCP, restore only from the canonical handoff, persist next safe action through blueprint_state_update, and route follow-ups only to implemented commands.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2282,7 +2282,7 @@ export const PR_BRANCH_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, use blueprint_pr_branch_preview for canonical repo, source/base/merge-base, config/evidence/report-CAS, commit-ledger, path-policy, exact-argv, and expiring one-shot approval binding, require review-branch confirmation, execute only through blueprint_pr_branch_execute, and use blueprint_pr_branch_persist only for receipt-bound outcome-report recovery without re-entering git.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, use blueprint_pr_branch_preview for canonical repo, source/base/merge-base, config/evidence/report-CAS, commit-ledger, path-policy, exact-argv, and expiring one-shot approval binding, require review-branch confirmation, execute only through blueprint_pr_branch_execute, and use blueprint_pr_branch_persist only for receipt-bound outcome-report recovery without re-entering git.",
     evidenceState: ["locked", "runtime-owned", "behavior-audited"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2325,7 +2325,7 @@ export const SHIP_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, discover canonical same-directory verification plus config-required review/security and successful pr-branch receipt evidence before blueprint_ship_preview, then use blueprint_ship_execute for config/evidence/all-regular-file-phase-inventory/repository/effective-fetch-and-push-URL/report-bound freshness, distinct exact-argv push and PR stages, typed gh outcomes, durable outcome-unknown reporting, and state ordering; use blueprint_ship_persist only for receipt-bound report/state recovery without repeating external mutation. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, discover canonical same-directory verification plus config-required review/security and successful pr-branch receipt evidence before blueprint_ship_preview, then use blueprint_ship_execute for config/evidence/all-regular-file-phase-inventory/repository/effective-fetch-and-push-URL/report-bound freshness, distinct exact-argv push and PR stages, typed gh outcomes, durable outcome-unknown reporting, and state ordering; use blueprint_ship_persist only for receipt-bound report/state recovery without repeating external mutation. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented.",
     evidenceState: ["locked", "runtime-owned", "behavior-audited"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2369,7 +2369,7 @@ export const UNDO_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, discover artifacts and digest inputs before using blueprint_undo_preview for exact full-hash planning and a config/report/evidence-bound expiring one-shot approval, hard-stop on dirty or unsafe git state, and use blueprint_undo_execute to write undo-latest before mutation, run only runtime-derived safe git revert argv, overwrite undo-latest with the actual structured outcome, and update state only after successful reverts and outcome-report persistence; use blueprint_undo_persist only for receipt-bound report/state recovery without re-entering git.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, discover artifacts and digest inputs before using blueprint_undo_preview for exact full-hash planning and a config/report/evidence-bound expiring one-shot approval, hard-stop on dirty or unsafe git state, and use blueprint_undo_execute to write undo-latest before mutation, run only runtime-derived safe git revert argv, overwrite undo-latest with the actual structured outcome, and update state only after successful reverts and outcome-report persistence; use blueprint_undo_persist only for receipt-bound report/state recovery without re-entering git.",
     evidenceState: ["locked", "runtime-owned", "behavior-audited"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2412,7 +2412,7 @@ export const NEW_WORKSPACE_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/new-workspace-runtime-contract.md, derive workspace root from config or explicit input, stop on dirty sources or conflicts, require new-workspace-confirmation, and persist only through blueprint_workspace_create and the host-global registry it owns.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/new-workspace-runtime-contract.md, derive workspace root from config or explicit input, stop on dirty sources or conflicts, require new-workspace-confirmation, and persist only through blueprint_workspace_create and the host-global registry it owns.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2455,7 +2455,7 @@ export const REMOVE_WORKSPACE_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md, resolve a single registry-backed workspace target, stop on ambiguity, drift, or dirty members, require remove-workspace-confirmation, and persist teardown only through blueprint_workspace_remove.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md, resolve a single registry-backed workspace target, stop on ambiguity, drift, or dirty members, require remove-workspace-confirmation, and persist teardown only through blueprint_workspace_remove.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2497,7 +2497,7 @@ export const WORKSTREAMS_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and treat returned resume statePatch as already applied by that mutate tool.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and treat returned resume statePatch as already applied by that mutate tool.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2541,7 +2541,7 @@ export const CLEANUP_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, preview and commit cleanup only through blueprint_cleanup_archive, protect the current phase, active roadmap references, and evidence-incomplete directories in runtime code, require cleanup and destination confirmations before commit mode, write cleanup-latest only from the actual archive outcome, and update state only after successful approved archival.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, preview and commit cleanup only through blueprint_cleanup_archive, protect the current phase, active roadmap references, and evidence-incomplete directories in runtime code, require cleanup and destination confirmations before commit mode, write cleanup-latest only from the actual archive outcome, and update state only after successful approved archival.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2581,7 +2581,7 @@ export const UPDATE_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/update-runtime-contract.md, keep installed extension handling read-only, use update-mode-gate for saved checklist versus manual fallback, persist only through blueprint_update_plan under host-global update state, and always end with restart guidance.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/update-runtime-contract.md, keep installed extension handling read-only, use update-mode-gate for saved checklist versus manual fallback, persist only through blueprint_update_plan under host-global update state, and always end with restart guidance.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2624,7 +2624,7 @@ export const REAPPLY_PATCHES_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md, list patches first, dry-run the exact replay set through blueprint_patch_reapply, stop on dirty or incompatible targets, require reapply-patches-confirmation, replay only the previewed patch ids, and record the outcome through blueprint_patch_record.",
+      "Native command+skill-owned runtime: load skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md, list patches first, dry-run the exact replay set through blueprint_patch_reapply, stop on dirty or incompatible targets, require reapply-patches-confirmation, replay only the previewed patch ids, and record the outcome through blueprint_patch_record.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2660,7 +2660,7 @@ export const NOTE_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for deterministic project-local note capture: require explicit note text, persist only through blueprint_artifact_mutate_index, treat duplicate results and returned ids as authoritative, keep unsupported list, promote, and global-note behavior in safe suggestion mode, route follow-ups only to implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
+      "Native command+skill-owned runtime for deterministic project-local note capture: require explicit note text, persist only through blueprint_artifact_mutate_index, treat duplicate results and returned ids as authoritative, keep unsupported list, promote, and global-note behavior in safe suggestion mode, route follow-ups only to implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2696,7 +2696,7 @@ export const ADD_TODO_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for short project-local todo capture: require an explicit description, persist append-only todo entries through blueprint_artifact_mutate_index, report duplicates using returned matching ids instead of creating a second copy, route missing projects and follow-ups only through implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
+      "Native command+skill-owned runtime for short project-local todo capture: require an explicit description, persist append-only todo entries through blueprint_artifact_mutate_index, report duplicates using returned matching ids instead of creating a second copy, route missing projects and follow-ups only through implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2734,7 +2734,7 @@ export const CHECK_TODOS_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for deterministic todo inspection and bounded status changes: read blueprint_project_status first, list or update todos only through blueprint_artifact_mutate_index, require explicit confirmation before marking active or completed unless intent is unmistakable, prefer exact ids for updates, report duplicate or reopened-active behavior from MCP results, route follow-ups only to implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
+      "Native command+skill-owned runtime for deterministic todo inspection and bounded status changes: read blueprint_project_status first, list or update todos only through blueprint_artifact_mutate_index, require explicit confirmation before marking active or completed unless intent is unmistakable, prefer exact ids for updates, report duplicate or reopened-active behavior from MCP results, route follow-ups only to implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2773,7 +2773,7 @@ export const ADD_BACKLOG_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for parking-lot capture: require explicit backlog text, persist append-only entries through blueprint_artifact_mutate_index, reserve a 999.x phase stub only behind an explicit confirmation gate, scaffold only returned reserved paths through blueprint_artifact_scaffold, report duplicate backlog ids instead of creating a second copy, route follow-ups only to implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
+      "Native command+skill-owned runtime for parking-lot capture: require explicit backlog text, persist append-only entries through blueprint_artifact_mutate_index, reserve a 999.x phase stub only behind an explicit confirmation gate, scaffold only returned reserved paths through blueprint_artifact_scaffold, report duplicate backlog ids instead of creating a second copy, route follow-ups only to implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2814,7 +2814,7 @@ export const REVIEW_BACKLOG_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for deterministic backlog review: preview through blueprint_roadmap_promote_backlog before decisions, require explicit promote or archive confirmation while keep remains the safe default, promote only confirmed ids through roadmap MCP, persist promoted or archived status transitions through blueprint_artifact_mutate_index instead of deleting history, update state with implemented-only follow-ups, preserve reserved-stub reuse from MCP results, and do not use todowrite or task trackers, or long-running progress posture.",
+      "Native command+skill-owned runtime for deterministic backlog review: preview through blueprint_roadmap_promote_backlog before decisions, require explicit promote or archive confirmation while keep remains the safe default, promote only confirmed ids through roadmap MCP, persist promoted or archived status transitions through blueprint_artifact_mutate_index instead of deleting history, update state with implemented-only follow-ups, preserve reserved-stub reuse from MCP results, and do not use todowrite or task trackers, or long-running progress posture.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2855,7 +2855,7 @@ export const EXPLORE_RUNTIME_METADATA = {
     optionalAgents: EXPLORE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed: true, confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
+      "Native command+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed: true, confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use todowrite or task trackers, or long-running progress posture.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2965,7 +2965,7 @@ export const DEBUG_RUNTIME_METADATA = {
   },
   requiredTools: DEBUG_REQUIRED_TOOLS,
   optionalAgents: blueprintOptionalAgents("blueprint-debugger"),
-  requiredInputPaths: ["commands/blu-debug.toml", DEBUG_SPEC_PATH],
+  requiredInputPaths: ["commands/blu-debug.md", DEBUG_SPEC_PATH],
   spec: {
     path: runtimeMetadataSourceId("debug"),
     title: "`/blu-debug`",
@@ -2995,7 +2995,7 @@ export const DEBUG_RUNTIME_METADATA = {
       "workflow advisory"
     ],
     contractNotes:
-      "Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations. Load commands/blu-debug.toml plus skills/blueprint-debug/references/debug-runtime-contract.md, require a concrete issue statement and initialized Blueprint state before durable persistence, keep --diagnose honest as diagnose-only until the user confirms a fix attempt, use concise progress prose and todowrite only as session-local visibility for non-trivial investigations, persist the durable report through blueprint_artifact_report_write with the bare debug-latest name and treat returned paths and ids as authoritative, require overwrite confirmation before replacing an existing report, capture persisted todos only after an explicit user ask or confirmation through blueprint_artifact_mutate_index, update state through blueprint_state_update, route implemented follow-ups only to /blu-quick, /blu-plan-phase, /blu-validate-phase, or /blu-progress, and do not hide state or perform broad direct fixes inside debug.",
+      "Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations. Load commands/blu-debug.md plus skills/blueprint-debug/references/debug-runtime-contract.md, require a concrete issue statement and initialized Blueprint state before durable persistence, keep --diagnose honest as diagnose-only until the user confirms a fix attempt, use concise progress prose and todowrite only as session-local visibility for non-trivial investigations, persist the durable report through blueprint_artifact_report_write with the bare debug-latest name and treat returned paths and ids as authoritative, require overwrite confirmation before replacing an existing report, capture persisted todos only after an explicit user ask or confirmation through blueprint_artifact_mutate_index, update state through blueprint_state_update, route implemented follow-ups only to /blu-quick, /blu-plan-phase, /blu-validate-phase, or /blu-progress, and do not hide state or perform broad direct fixes inside debug.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

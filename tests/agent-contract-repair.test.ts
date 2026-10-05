@@ -9,7 +9,7 @@ async function readAgent(agentFile: string): Promise<string> {
   return readFile(path.join(repoRoot, "agents", agentFile), "utf8");
 }
 
-test("blueprint-executor encodes bounded per-plan execution, progress checkpoints, shell isolation, and partial-run honesty", async () => {
+test("blueprint-executor encodes bounded per-plan execution, final checkpoint handoff, shell isolation, and partial-run honesty", async () => {
   const executor = await readAgent("blueprint-executor.md");
 
   assert.match(executor, /## Parent-Owned Responsibilities/);
@@ -24,16 +24,17 @@ test("blueprint-executor encodes bounded per-plan execution, progress checkpoint
   assert.match(executor, /bounded repair loop/i);
   assert.match(executor, /partial` or `blocked`/i);
   assert.match(executor, /parallel or worktree-isolated/i);
-  assert.match(executor, /## Progress Checkpoint Contract/);
-  assert.match(executor, /when scope is resolved/i);
-  assert.match(executor, /after each assigned plan or major task group/i);
-  assert.match(executor, /when a blocker or deviation appears/i);
-  assert.match(executor, /after verification finishes/i);
+  assert.match(executor, /## Final Checkpoint Contract/);
+  assert.match(executor, /one final checkpoint/i);
+  assert.match(executor, /returned\s+`task_id`/i);
+  assert.match(executor, /step-exhausted/i);
+  assert.match(executor, /Do not assume intermediate child narration/i);
   assert.match(
     executor,
-    /resolved scope,\s+active stage,\s+pending gate,\s+execution mode,\s+and next safe action/i
+    /resolved scope,\s+completed work,\s+(?:concrete\s+)?evidence,[\s\S]*pending gate[\s\S]*execution mode,\s+and next safe action/i
   );
   assert.match(executor, /## Shell Isolation/);
+  assert.match(executor, /Static native permissions do not enforce a separate filesystem boundary/i);
   assert.match(
     executor,
     /bounded repo-local inspection,[\s\S]*verification,[\s\S]*build\/test support/i

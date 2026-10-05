@@ -22,20 +22,24 @@ input_bundles:
     "/blu-insert-phase":
       - skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
     "/blu-remove-phase":
-      - commands/blu-remove-phase.toml
+      - commands/blu-remove-phase.md
     "/blu-plan-milestone-gaps":
-      - commands/blu-plan-milestone-gaps.toml
+      - commands/blu-plan-milestone-gaps.md
     "/blu-audit-milestone":
-      - commands/blu-audit-milestone.toml
+      - commands/blu-audit-milestone.md
     "/blu-complete-milestone":
-      - commands/blu-complete-milestone.toml
+      - commands/blu-complete-milestone.md
     "/blu-milestone-summary":
-      - commands/blu-milestone-summary.toml
+      - commands/blu-milestone-summary.md
     "/blu-new-milestone":
-      - commands/blu-new-milestone.toml
+      - commands/blu-new-milestone.md
 ---
 
 # Blueprint Roadmap Admin Skill
+
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
 
 ## Purpose
 
@@ -67,12 +71,12 @@ Roadmap-admin commands resolve active inputs from the structured `input_bundles`
 
 - `/blu-add-phase`: `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md`
 - `/blu-insert-phase`: `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md`
-- `/blu-remove-phase`: `commands/blu-remove-phase.toml`
-- `/blu-plan-milestone-gaps`: `commands/blu-plan-milestone-gaps.toml`
-- `/blu-audit-milestone`: `commands/blu-audit-milestone.toml`
-- `/blu-complete-milestone`: `commands/blu-complete-milestone.toml`
-- `/blu-milestone-summary`: `commands/blu-milestone-summary.toml`
-- `/blu-new-milestone`: `commands/blu-new-milestone.toml`
+- `/blu-remove-phase`: `commands/blu-remove-phase.md` (already supplied; do not read it again)
+- `/blu-plan-milestone-gaps`: `commands/blu-plan-milestone-gaps.md` (already supplied; do not read it again)
+- `/blu-audit-milestone`: `commands/blu-audit-milestone.md` (already supplied; do not read it again)
+- `/blu-complete-milestone`: `commands/blu-complete-milestone.md` (already supplied; do not read it again)
+- `/blu-milestone-summary`: `commands/blu-milestone-summary.md` (already supplied; do not read it again)
+- `/blu-new-milestone`: `commands/blu-new-milestone.md` (already supplied; do not read it again)
 
 The earlier repository-doc-backed Required Inputs list is retained only in repository history. It is intentionally not a parsed section of this skill, so runtime skill input resolution cannot activate internal documentation paths for roadmap-admin commands.
 
@@ -299,7 +303,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 
 Before claiming completion, verify:
 
-- The active roadmap-admin command loaded only its structured `input_bundles.commands[...]` input: the add/insert runtime contract or the active `commands/blu-*.toml` manifest. Sibling command references were not treated as active requirements.
+- The active roadmap-admin command loaded only its structured `input_bundles.commands[...]` input: the add/insert runtime contract or the active `commands/blu-*.md` manifest. The active command prompt was not reread, and sibling command references were not treated as active requirements.
 - Required MCP calls ran in the active contract's order through runtime FQNs (`blueprint_blueprint_*`), with roadmap, report, contract, digest, artifact, or phase-locate reads completed before any roadmap, scaffold, report, or state write.
 - Persistence used only the owning MCP tools for the active command: roadmap mutation, artifact scaffold/report write, and state update. No direct edits were made to `.blueprint/ROADMAP.md`, `.blueprint/STATE.md`, `.blueprint/phases/`, `.blueprint/reports/`, runtime files, installed extension directories, or planned-only surfaces.
 - Returned MCP fields were treated as authoritative, including `status`, `written`, `created`, `updated`, `createdFiles`, `reusedFiles`, `path`, `phaseNumber`, `phasePrefix`, `phaseDir`, `inputsUsed`, validation results, warnings, recovery guidance, and `reason`.

@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("explore manifest references capture skill, ideation-routing tools, and confirmation gates", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-explore.toml"),
+    path.join(repoRoot, "commands/blu-explore.md"),
     "utf8"
   );
 
@@ -89,6 +89,6 @@ test("explore runtime contract is owned by command runtime metadata", async () =
   );
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /Docless manifest\+skill-owned runtime/
+    /Native command\+skill-owned runtime/
   );
 });

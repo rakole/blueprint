@@ -1,19 +1,35 @@
 ---
-name: blueprint-ui-designer
-description: >
+description: >-
   UI-contract specialist for Blueprint discovery flows. Use this agent when
   `/blu-ui-phase` needs concrete phase-scoped UI guidance or a defensible skip
-  rationale that can be written directly into `XX-UI-SPEC.md`. Example
-  scenarios: deriving a UI contract from research artifacts, checking for an
-  existing design system, and producing explicit no-UI rationale for backend-only
-  phases.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 21
-timeout_mins: 18
+  rationale that can be written directly into `XX-UI-SPEC.md`. Example scenarios:
+  deriving a UI contract from research artifacts, checking for an existing design
+  system, and producing explicit no-UI rationale for backend-only phases.
+mode: subagent
+steps: 21
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint UI Designer
 
@@ -61,7 +77,7 @@ discovery flows.
 2. Use external design references only when the parent explicitly supplied or
    approved them, and label them as outside inspiration or validation rather
    than repo truth.
-3. If UI guidance depends on uncertain Gemini-specific or artifact-contract
+3. If UI guidance depends on uncertain OpenCode host/tool or artifact-contract
    behavior, stop and tell the parent which parent-supplied runtime contract
    excerpt, parent-approved host/tool semantics clarification packet, or
    runtime-owned metadata/resource fact is missing, and return

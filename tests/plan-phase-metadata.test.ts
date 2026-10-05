@@ -6,6 +6,7 @@ import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command
 import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import { TOOL_DEFINITIONS } from "../src/mcp/tool-definitions.js";
+import { validateBlueprintAgentDefinitionContent } from "../src/mcp/agent-definition.js";
 
 const tools = ["blueprint_plan_prepare", "blueprint_plan_submit", "blueprint_plan_read"] as const;
 const runtimePath = "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md";
@@ -35,7 +36,7 @@ test("plan-phase catalog and live runtime expose the direct publication lifecycl
 });
 
 test("thin command and skill keep persistence, readiness and completion ownership in MCP", async () => {
-  const [manifest, skill] = await Promise.all([read("commands/blu-plan-phase.toml"), read("skills/blueprint-phase-planning/SKILL.md")]);
+  const [manifest, skill] = await Promise.all([read("commands/blu-plan-phase.md"), read("skills/blueprint-phase-planning/SKILL.md")]);
   assert.ok(Buffer.byteLength(manifest) < 4000);
   assert.ok(Buffer.byteLength(skill) < 4000);
   for (const name of tools) {
@@ -58,12 +59,14 @@ test("thin command and skill keep persistence, readiness and completion ownershi
 test("planner and checker remain bounded read-only workers with reviewed model output", async () => {
   for (const file of ["agents/blueprint-planner.md", "agents/blueprint-checker.md"]) {
     const source = await read(file);
-    const frontmatter = /^---\n([\s\S]*?)\n---/.exec(source)?.[1];
-    assert.ok(frontmatter);
-    const block = /^tools:\n((?:  - .+\n)+)/m.exec(frontmatter)?.[1];
-    assert.ok(block);
-    assert.deepEqual(block.trim().split("\n").map(line => line.replace(/^\s*-\s*/, "")),
-      ["read", "glob", "grep"]);
+    const agentName = path.basename(file, ".md");
+    const validation = validateBlueprintAgentDefinitionContent(agentName, source, file);
+    assert.equal(validation.valid, true, validation.issues.join("\n"));
+    const permission = validation.frontmatter.permission as Record<string, unknown>;
+    assert.equal(permission["*"], "deny");
+    assert.ok(permission.read);
+    assert.equal(permission.glob, "allow");
+    assert.equal(permission.grep, "allow");
     assert.match(source, /parent command owns/i);
     assert.match(source, /revision/);
     assert.doesNotMatch(source, /blueprint_phase_plan_write/);

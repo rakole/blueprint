@@ -120,4 +120,4 @@ The commands below are retained in the registry, but they are not runnable in th
 
 | Command | Status | Why not runnable |
 | --- | --- | --- |
-| `/blu-do` | `repairing` | Not runnable: Missing command manifest: commands/blu-do.toml |
+| `/blu-do` | `repairing` | Not runnable: Missing command file: commands/blu-do.md |

@@ -13,7 +13,7 @@ const repoRoot = process.cwd();
 
 test("cleanup manifest references the maintenance skill, high-risk maintenance profile, and explicit protected-scope confirmation guards", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-cleanup.toml"),
+    path.join(repoRoot, "commands/blu-cleanup.md"),
     "utf8"
   );
 
@@ -146,7 +146,7 @@ test("repo-facing status docs treat cleanup as a shipped command", async () => {
   assert.equal(metadata.catalog.declaredStatus, "implemented");
   assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
   assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
-  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Native command\+skill-owned runtime/i);
   assert.match(metadata.runtimeReference.contractNotes, /cleanup-runtime-contract\.md/);
   assert.match(
     metadata.runtimeReference.contractNotes,

@@ -9,6 +9,10 @@ status: implemented
 
 # Blueprint God Review Skill
 
+## Native Invocation Guard
+
+This private helper is eligible only when the trusted plugin dispatch gate identifies `/blu-code-review` or `/blu-code-review-fix` and the actual command invocation contains the standalone `--feels-like-god` token. A direct `skill({ name: "blueprint-god-review" })` call, a synthesized `/blueprint-god-review` alias, model prose, child-session claim, or saved Blueprint state never grants access. Without the trusted gate, stop before tool, MCP, resource, repository, or filesystem activity and return the existing mistaken-invocation response below. Public help and routing must not advertise this helper or any `/blueprint-*` skill alias.
+
 ## Purpose
 
 Hold the private god-review orchestration for `/blu-code-review` and

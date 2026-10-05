@@ -14,7 +14,6 @@
     "blueprint-verifier"
   ],
   "inputBundlePaths": [
-    "commands/blu-quick.toml",
     "skills/blueprint-phase-execution/references/quick-runtime-contract.md",
     "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
   ],

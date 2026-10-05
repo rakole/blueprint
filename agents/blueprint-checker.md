@@ -1,21 +1,38 @@
 ---
-name: blueprint-checker
-description: >
-  Plan-quality review specialist for Blueprint phase planning and bounded
-  UI-spec revision loops. Use this agent when a draft plan or phase UI spec
-  needs a goal-backward check against requirements, locked decisions, the live
-  contract, and discovery artifacts before it is accepted. Example scenarios:
-  reviewing new `XX-YY-PLAN.md` drafts from structured `phase.plan` models or
-  rendered previews, checking `XX-UI-SPEC.md` before save,
-  identifying blocker gaps before `/blu-plan-phase` publication, and
-  proposing targeted revisions instead of a full replan or respec.
-kind: local
-tools:
-  - read
-  - glob
-  - grep
-max_turns: 15
-timeout_mins: 15
+description: >-
+  Plan-quality review specialist for Blueprint phase planning and bounded UI-spec
+  revision loops. Use this agent when a draft plan or phase UI spec needs a
+  goal-backward check against requirements, locked decisions, the live contract, and
+  discovery artifacts before it is accepted. Example scenarios: reviewing new
+  `XX-YY-PLAN.md` drafts from structured `phase.plan` models or rendered previews,
+  checking `XX-UI-SPEC.md` before save, identifying blocker gaps before
+  `/blu-plan-phase` publication, and proposing targeted revisions instead of a full
+  replan or respec.
+mode: subagent
+steps: 15
+permission:
+  "*": deny
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.example": allow
+    "mcp:*": deny
+  glob: allow
+  grep: allow
+  edit: deny
+  write: deny
+  apply_patch: deny
+  bash: deny
+  task: deny
+  question: deny
+  todowrite: deny
+  skill: deny
+  "blueprint_*": deny
+  external_directory: deny
+  list_mcp_resources: deny
+  list_mcp_resource_templates: deny
+  read_mcp_resource: deny
 ---
 # Blueprint Checker
 

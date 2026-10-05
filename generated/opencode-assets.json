@@ -1,0 +1,697 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/generate-opencode-assets.ts",
+  "assets": {
+    "agents/blueprint-checker.md": "26c92d495ef92cc3edb42720607558d00d9c13c148995ddb3ca4066a6d22bb30",
+    "agents/blueprint-debugger.md": "8affbe792ba7411de95396450201a602291cc399947b45cd0486ae3ce47720bc",
+    "agents/blueprint-doc-verifier.md": "3d855bb0d5067611d72ee14d443caa325a9e8ed215e963cebd3ddfd70aedac42",
+    "agents/blueprint-doc-writer.md": "c997dd73759f778bb1abad9202d826c1967e8dd615f1e4e3cdb8239d10ddffed",
+    "agents/blueprint-executor.md": "9f3bc8d4b0228eacfe335d6205ac451fe99277d13eee32cdf0fcb5753802af9f",
+    "agents/blueprint-mapper.md": "fad8e64b52d9cf046915e226c1fda17de81d156e924b3454fadf35d411fb1cfd",
+    "agents/blueprint-planner.md": "9cbee02f288d28babc01235dcc781d90cfed1d6d24e26f5b601306db034d0146",
+    "agents/blueprint-project-researcher.md": "c922c373f4c65262783468570ba5becb50df082482a74bdb23f70ddac265adee",
+    "agents/blueprint-researcher.md": "99ef6c9baadf08c7d6b03639e807cbb22e49d01099a66de4fe17bcdba7bf5db7",
+    "agents/blueprint-reviewer.md": "dccc5e895b03fb667fdf5f62640ccecc19bdeec8a92a09d6bc8d82a5af50b382",
+    "agents/blueprint-roadmapper.md": "80e1549c6d8145fd301f3f013398206f6816412917c555b31dd5b068f683a837",
+    "agents/blueprint-security-auditor.md": "065ba0d0903da16de8348107e2c9d088b7823789284511e8b3d0d1c7c5c0a936",
+    "agents/blueprint-ui-auditor.md": "2c9d522ec142a00b3502b15f395f3e6d8094be39486d661f5e8918c9bee89de6",
+    "agents/blueprint-ui-designer.md": "57398d436d9eb09058382945e1f0bdcc2c6722161144f694e2b318cae0a4aee3",
+    "agents/blueprint-verifier.md": "be9341e8835cfe5cff37eaf411ad8b6dae964466228fac02cd112e9f1822690f",
+    "agents/blueprint.md": "8554c93527dd8923ebd7aa4159c43d446305229ab65a94fc8c6ab8e3a68b4c1a",
+    "commands/blu-add-backlog.md": "5821b61002027c3750d13198360d548a78fd0afff622235a51ebef2bfa268e12",
+    "commands/blu-add-phase.md": "f2fff983d906ee284391e4c3ef080a2b080203ffb6ebc8f55be8393bb9c50554",
+    "commands/blu-add-tests.md": "e08d4c82b12eea8f0e9411afe0c9bad17257ad534ee04d5c1d19db344f04e99f",
+    "commands/blu-add-todo.md": "b4b9027c5d6113bd23736964920b5a8fcdfb8b098c9bfbe87e3302614bf956d6",
+    "commands/blu-audit-fix.md": "882c9e2298703e1d0ab284b26bf27288a5fca15f7512c157edeba6bfc5225fb7",
+    "commands/blu-audit-milestone.md": "a2bcf82cfc2a46c7f86d1962d4e1b257c8688990eb36cb81805135661f738d8c",
+    "commands/blu-check-todos.md": "4bb31357d24a07cef49184ec24354c3cb67373e4436a4810550c6b1d4a3d49da",
+    "commands/blu-cleanup.md": "db685c7b7931edf2b544d04352b0c4ea20650224212c68e2d838710c3103eed4",
+    "commands/blu-code-review-fix.md": "bcab238f5d295e7edafde8f46d205915aefc0a5dd5fe9c4e787f87833ee507d9",
+    "commands/blu-code-review.md": "4f8dbbef416586ec862d22ab1b5a2fd0ffc72713176843a284d9f1a0add18458",
+    "commands/blu-complete-milestone.md": "d1c18bea647cd58e013c84596a76b6f5ceba6c82e2a3d9ea02f5156672d6adc8",
+    "commands/blu-debug.md": "fdfb71774dc6c76cda194ae2fe5d1fe5792a2bf7a66b78d2ee3bd70bf2b21435",
+    "commands/blu-discuss-phase.md": "66bb1b50ab10c8f85f8c535b46f62277e16689ebdc5b15f9b1f2161b42e80982",
+    "commands/blu-docs-update.md": "17ef7ba75781b57e0185c018dc78dac8111edb9aa9d15af528c0c393230bbd84",
+    "commands/blu-execute-phase.md": "e4fb7c9a4f88dd464a0325778e57a6f546db014055b50f58241889d817e0f5a2",
+    "commands/blu-explore.md": "16ed7da6e6d878513b539103074e63fa0317e84dcaf133d1fcf715b6f0e13195",
+    "commands/blu-fast.md": "eddce43f398d933024b64d45112a60876459d6c7eca3148e33e2f0d4644a89fa",
+    "commands/blu-health.md": "74ba7e766fba88a8db8d04e1e7b50459efc2d6a168c28f9d32a5d59629659a99",
+    "commands/blu-help.md": "8353c4ff82a18730e3e65f9af14bf487a17b6aa822ceb6972383697b9fb3ffec",
+    "commands/blu-impact.md": "f3353be752a3424859f0d650d4a4bc55090dd54b2ed78686c81583b2123f2dd6",
+    "commands/blu-insert-phase.md": "c0ecadace17789f291db3dc4ce094e330a2559ce250ee7c94e7286b2b3077bc0",
+    "commands/blu-list-phase-assumptions.md": "92537fafd40d63ad29783eff13a64e6fb5def66e99222834aafd1b43e55e3fe3",
+    "commands/blu-map-codebase.md": "db54e9f9fff8258e47d33ed5f02a24415d7f0483b5f31e68ce6f3283a8dbcc57",
+    "commands/blu-milestone-summary.md": "3f721a7429d932a386f86597901b1868700b4159f08340fda323b46ddc0e316c",
+    "commands/blu-new-milestone.md": "678cc4ef109f931ac1c007a611b349b2e910168f02c9521ad296dee35d2c2b4c",
+    "commands/blu-new-project.md": "bbaa71eda3cce97a7c1deea24d850c8d185de9014b1d0325c986fa5e7caaf26e",
+    "commands/blu-new-workspace.md": "dc3927fd694f9a20d6f4fc929c3d5b13a2a6ab05e0ffa1fe215698e2f2001894",
+    "commands/blu-next.md": "30eb12f278f024b639dcb1664cda08972438001b421743d07644b5af44de830b",
+    "commands/blu-note.md": "1331acc3bff1faa9f621c4282036bdb64ade710667bccfc576ae6e0dcbaccc4c",
+    "commands/blu-pause-work.md": "6e3a4e00ea87b2030691042308ebf6c670af6564e383458bc86611ceec976b7a",
+    "commands/blu-plan-milestone-gaps.md": "3b374bfd7a72405c32d22d0a0b60cdfb4d9db74a1f4aaf6443eef7e1dff9b5a5",
+    "commands/blu-plan-phase.md": "51db179a358e1a164add6d2f8be760b12328e69737bded8a84e987d4f56e959f",
+    "commands/blu-pr-branch.md": "b6b527d2a9f4b309003a8d0b88d1e87877ead8c582edf904ea91abbedd825a1a",
+    "commands/blu-progress.md": "cbac969261adde967908b6b2eaed44a52ff736c32d82113ff349c191f338ab66",
+    "commands/blu-quick.md": "e64b3f4de200f640d3d2c35dd12c8bc56ee299acd676f6fadfb6c7749aba7d52",
+    "commands/blu-reapply-patches.md": "09cfcd158fab075464e30cf20529568ad44f262ab233eb748dbb36a73bb54a39",
+    "commands/blu-remove-phase.md": "441c15a356da99ff582966d8588f059bd0b38d92d4087790358cdaf336d0376a",
+    "commands/blu-remove-workspace.md": "e2c73a28a6b99a6a686856046aa0f2d9496145520082806c8c7c2e62c002c1b7",
+    "commands/blu-research-phase.md": "01fc4f8ecc4228352003f334ec19f7dab718acee5b776890ec825741765d59c4",
+    "commands/blu-resume-work.md": "573be85e008191dfcaace614efdd353a22ac22041414f1738e541dc44c6ad298",
+    "commands/blu-review-backlog.md": "ff7438ded62b214e0421f8042fa3713bf7ce84ac8bc3da8dbc0dd89092dff360",
+    "commands/blu-review.md": "69d07d352c1171381cd04f2bf8e59969fd3f1ebd5c51b7ffd2b109201e3ff8e9",
+    "commands/blu-run-plan.md": "5c50ebf7f46b00a1cae23fd11a5cb1ec8b435f427fb02a465d2e05bde0f741f8",
+    "commands/blu-secure-phase.md": "ff1c95a23ca1428cdb96dfb24bedde4aeb00cca8d35e4d874775c84f8cca82a1",
+    "commands/blu-set-profile.md": "c7233973bda784e0c66db6ea51238a9aac6a3f3b1bf6445fc25434b7dc7733eb",
+    "commands/blu-settings.md": "9870e5a7e3c3ee0c3f1469c486ad538728479db96937fac0a067ed7a21fb926a",
+    "commands/blu-ship.md": "41ddf36e9a8da6664d036025e065906503cedaff1dc23d6cf15bbac50c1ffde1",
+    "commands/blu-spec-phase.md": "11cbb3287ff5bca336dcb3658898cd7dd1e7c8e2d0c884b1665109e237ddfd58",
+    "commands/blu-ui-phase.md": "0e3e8412c014f7f62447a7be741978d14d4fc852962c88ba3045bc0577efd45a",
+    "commands/blu-ui-review.md": "57c335fb3ae2899cbd302c4341a13622102d3ebd18aeb077afe33dfbac6172bc",
+    "commands/blu-undo.md": "66ac9b163ee858de759fba46af6af63ba86112dbd8b6abf209b64523734bc25c",
+    "commands/blu-update.md": "65c637fdaf07543d563f8a215c5125c5fd8d08c0ca3ad9fd53a7e884bbaceae0",
+    "commands/blu-validate-phase.md": "fd971f654ecb93f0d11492543b89b78ce35e9160e797860616a30e5ced934f2a",
+    "commands/blu-verify-work.md": "3a76ed0418dd98f6f390eb5915f60f8e705dbf4e6241030f3422f38bd8830b49",
+    "commands/blu-workstreams.md": "3c8d1222efa8d1b1bebbd40ae6622a239a452d3cdd91f7c39443cfc7a9d3f91c",
+    "commands/blu.md": "45d3717bff950b55811aa2a173dc2f5a27a3a8d8f350fe1154d09ca243629d1d",
+    "skills/blueprint-bootstrap/SKILL.md": "6fd46aa3b172ec9c5981d6c8971ee5c9fc94c2fd78673f220eb8122dda073632",
+    "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md": "d6ffd39a3e0698d3794be2e0deb3ae3d207f38da0a35486bb84377267df83a09",
+    "skills/blueprint-bootstrap/references/questioning.md": "35ca766285e210c27cff512a72d83bbc1f901e546fecc35cac2c796d5088b263",
+    "skills/blueprint-bootstrap/references/runtime-guardrails.md": "babf7a7bfbaee6de970061228115b4bfa756d20c21bef6d9c6b7cee6875c62d9",
+    "skills/blueprint-capture/SKILL.md": "54fcbf2c157621c2dc91b48b37f405d1d4b0690f2df3f9dcab1d7ea94ae5b686",
+    "skills/blueprint-debug/SKILL.md": "40dd090afaa55362d24992c5b8b700ed3c3236f2862bed98a4c3ff6b3105fea3",
+    "skills/blueprint-debug/references/debug-runtime-contract.md": "672fe49fd89a8d59bb6aa95b2082d4a712d50fbb0ccc25ddc65945b5bf4a31aa",
+    "skills/blueprint-docs/SKILL.md": "5e0145219946bf571f98578753ac7eca014deb493accb78da48b25dbfc418271",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md": "4f460a18833cacf5c08d2d2f9fae5ca1325133836ea30b0b61dd02a268140949",
+    "skills/blueprint-god-review/SKILL.md": "4cda7a8f720ba49c15b108db2a50eafd9f54cae3f8b9dde3f661befe9e43d370",
+    "skills/blueprint-god-review/references/context-selection.md": "2dafc7652cd57608b2db49013345bd28753a85b6ed85b37772de198f6e381a2d",
+    "skills/blueprint-god-review/references/final-curation.md": "95434f504d929b4d7ea30cd6899273cdd257ee642c58947eef4e4333e4ef4e91",
+    "skills/blueprint-god-review/references/finding-examples.md": "07e02efc7932dddf05951fc1dd93c4a45224688293c99ada525053aee80343bf",
+    "skills/blueprint-god-review/references/finding-quality.md": "cff965cdcde28749cad0bb6907277526e4e7cf6207e73ad8426b513976472348",
+    "skills/blueprint-god-review/references/lane-rubrics.md": "29a2114cb07840cd5447ca98af616925869aa1075028901a70b2405596cba9e9",
+    "skills/blueprint-god-review/references/review-method.md": "3bddce1dae30a7db447c658555774b006cc6adc49d489cecd52ab1ea06d1fe0e",
+    "skills/blueprint-governance/SKILL.md": "c46cff7c7e7ae5f6650366556c43cfa85d70395419c7b8aaf3e2a8134f21f60f",
+    "skills/blueprint-governance/references/health-runtime-contract.md": "60ceb4af202bad1a52236b92d130dd63565945c3d70ef5bcfa9f34f786df6f9e",
+    "skills/blueprint-governance/references/pause-work-runtime-contract.md": "7e15f76d00b42ed01a7e317940e1d34f0eb4588063ed7404cd3509d16c979b12",
+    "skills/blueprint-governance/references/resume-work-runtime-contract.md": "f88f93ef3502deae006f7fc63121cda4e7135b8e6bc6cf4bde648614272350c0",
+    "skills/blueprint-governance/references/set-profile-runtime-contract.md": "dacb5c8c8af879fd0f5e7ca3e5c774c257a163e2469588a2e0470653ba73eb3e",
+    "skills/blueprint-governance/references/settings-runtime-contract.md": "d60f415684c62226827441f8ac1de0483b4c72775533fc2d2aba4aa2234dbb89",
+    "skills/blueprint-impact/SKILL.md": "e731adde2eeddfb32c44716df3a00811e7b42beb6785f06e8be36f5bfaab135e",
+    "skills/blueprint-impact/references/impact-runtime-contract.md": "7ca2afc5e250f2c6c9a696b9e3847fdb2413aaf2e98e0bcaa0b0800799451d35",
+    "skills/blueprint-maintenance/SKILL.md": "f71005b4f1054b44ee4d49fad2053ddb9ae74bb078375904f6e0dea7edef414f",
+    "skills/blueprint-maintenance/references/cleanup-runtime-contract.md": "43b8085d8cd9de7cc8306893d345b3133319b82d0a6eb35e7393ddf591987b81",
+    "skills/blueprint-maintenance/references/new-workspace-runtime-contract.md": "ce3c90c344670b2b61ecf1af17f8e4c49ad8ed555f3ecf6e6b75b11f4899f048",
+    "skills/blueprint-maintenance/references/pr-branch-runtime-contract.md": "131f9a55cec2a3210cf6b715deaca67c9eb39b86e9e872ba31f2e8041ac5be31",
+    "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md": "12a62df91283e54da421ed76ba2beb7153e027b8592a2d151ee8d4890f0dff92",
+    "skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md": "6c00468eea1105be6a1de2694cdf1431feb808955db01c15b669e5b8a807ce26",
+    "skills/blueprint-maintenance/references/ship-runtime-contract.md": "745fc385077b972e1211db25ae3d773e3555c05a556ac8f1cb3971b165c2315c",
+    "skills/blueprint-maintenance/references/undo-runtime-contract.md": "d1f0d57c37d1919bd9adb06666063ff2c35c59e1326408cfbe5f7a8959e05897",
+    "skills/blueprint-maintenance/references/update-runtime-contract.md": "4c731e076b2a015285e55b1a939299b1a5043578b953b3edf24666768a1222e3",
+    "skills/blueprint-maintenance/references/workstreams-runtime-contract.md": "b91e091e11c08da51eb5aaec1fa281cefec135f21657c6776c1c0db932e090b7",
+    "skills/blueprint-map/SKILL.md": "d70ceae4fa332e89cd637ebd5b5b84c99f767455e1ec2f056efface1bc2ff226",
+    "skills/blueprint-map/references/map-runtime-contract.md": "5044cffb8498c34f8e5966a424aeaa794b85bd18fd7160fa2c4f5ac88b4ab6e5",
+    "skills/blueprint-phase-discovery/SKILL.md": "b8e84ee03911f3bdef69b94e26538a9910e04619397ab6df9aba7cbef4203cf9",
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md": "d5da213e11fc319aa01479d0bb470b6310fd451b1756452596fff9fce3fc7d92",
+    "skills/blueprint-phase-discovery/references/discuss-phase-recovery.md": "777e7c76700beff62bb1b054b2358532d4c6aa72094fdaecf1669bac6a4563e5",
+    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md": "9408bb0efce8be1d1776c147c6d2fdde8174a1dec5064a6c19661fcb086c2d2d",
+    "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md": "f3ce0ee45fb1e9e395a5737103d1a1c03f20ccac980d7a0be2a8383c3e70c231",
+    "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md": "4861dda7339dd2bf7bd05f540238c85b1bdb97bdbf63b67f33dc86ddae752c1f",
+    "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md": "c2fbc4e967aa33cbb1f41f35eb48374ebe2ec54ff42288e7355d99b4ef9201c7",
+    "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md": "ac58b046562ca128eed680c0590243c54f2431ffc9040a206af2942aca762188",
+    "skills/blueprint-phase-discovery/references/spec-template.md": "41d36489dcb1148bf08e9a02afffe039c70b0661221a1e54edb71e4287698a09",
+    "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md": "00bb86274aaba811e7920e28a65ab2705073e9c8bbaf0ff31db69d02494b5662",
+    "skills/blueprint-phase-execution/SKILL.md": "f356c6513cfa57696c0bedc489106a2b6a8a1824656a057d6a7c6ff1f1b498e3",
+    "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md": "e6913cd9b65fd7b1899a85caea4cb2f90e4268bf30ca288ffd78c25231ca46eb",
+    "skills/blueprint-phase-execution/references/fast-runtime-contract.md": "14b84c9e2df1a1c84e33f365e5baa06a5092292ff84c227876ff73ed2884252b",
+    "skills/blueprint-phase-execution/references/long-running-execution-profile.md": "8c3ffa284a307b72eeaf145abb8df2d2175e8b5d543f6303c3cd3669fc7f1970",
+    "skills/blueprint-phase-execution/references/quick-runtime-contract.md": "8c4e1d38c3b297a9d51df60a2eec64a2d0c458b2a46d9d24b7042464c54b3ed7",
+    "skills/blueprint-phase-planning/SKILL.md": "cc65c7834c1ce3a741e70849f0f50750a7bf52bc2729a95c30360b65bfd52e89",
+    "skills/blueprint-phase-planning/references/plan-phase-recovery.md": "4f8e155dd57dbf92d8275c0807757779e44096f23cfa156cf66d8877c5f2ef65",
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md": "9410816981b55ad77274456bf5c774a58a350602be189bea157d689a86302c6b",
+    "skills/blueprint-phase-validation/SKILL.md": "95f59894b7f7a8008a84b73d05db9c9951a85ec6f337fd3eec246606abdd9faf",
+    "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md": "f905336a3205038720b2bd24ed7a8c78a51e0e1110c0574bcefc8973946b33af",
+    "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md": "3630791e15c8111b5f2dbc000671f06e775f935a3126e87deecc346e5058a84a",
+    "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md": "e35d422fe5052b73b9737aa2801a3f4bd0c0c7b19a48dc85458d110b407f7929",
+    "skills/blueprint-plan-run/SKILL.md": "234d5ca9b7c5a1a9690ae07c963b7ec6426d8894dbe955ff4c560d78a8410c5d",
+    "skills/blueprint-plan-run/references/run-plan-runtime-contract.md": "a83fef3fc6adcfc796cd942ab669fd962a96c4b8a6fa36f65a6cef2936b86b8f",
+    "skills/blueprint-review/SKILL.md": "91a11c1a48618a7b52a08debf0583e5ad091c66d3d0a4aec77d8221702a84928",
+    "skills/blueprint-review/references/audit-fix-runtime-contract.md": "0388f6bff3369fb7f22a484e108759df697322170d83dbbc7178cfbdbfd4e60f",
+    "skills/blueprint-review/references/code-review-fix-runtime-contract.md": "345e6dc8fa518e3507db7bc525ca4d3d1455e87c2f1c7e9b542cab3e638256fa",
+    "skills/blueprint-review/references/code-review-runtime-contract.md": "90e35fb0b871994fa96a146c67a19e3062a19ebc8303568a0a2927c4c1b11aab",
+    "skills/blueprint-review/references/review-runtime-contract.md": "01b2bd4b404727ef66b8dbaaafd0f25fb71ade9b7781e0ee32eb1e643e801704",
+    "skills/blueprint-review/references/secure-phase-runtime-contract.md": "c492f206bf354b9c95bf755024060d5c0bb87e04648c831f1ffaeb248a7f6254",
+    "skills/blueprint-review/references/ui-review-runtime-contract.md": "9c373d196fbe4836615d83299e120d0840a6d155edf47e2552e167d58d885a48",
+    "skills/blueprint-roadmap-admin/SKILL.md": "003ebd0685c9005bd924bb4fbbb4cccc0ef3f0ed8b562dc338e93d24af79cbef",
+    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md": "5bbd2f6602553dd6a2d62226dc753dce81f713f0d865668c8b04426525bac14b",
+    "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md": "d637d8b343152c013053502691de1b907703a728db207687d9e7c288a069b67a",
+    "skills/blueprint-router/SKILL.md": "8f419e7fc76519c999f9e6764c9ff6cb216c46af1c8b6a7ce7bc5b217346441b"
+  },
+  "commands": {
+    "blu": {
+      "path": "commands/blu.md",
+      "primarySkill": "blueprint-router",
+      "effectiveInputs": []
+    },
+    "blu-add-backlog": {
+      "path": "commands/blu-add-backlog.md",
+      "primarySkill": "blueprint-capture",
+      "effectiveInputs": []
+    },
+    "blu-add-phase": {
+      "path": "commands/blu-add-phase.md",
+      "primarySkill": "blueprint-roadmap-admin",
+      "effectiveInputs": [
+        "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
+      ]
+    },
+    "blu-add-tests": {
+      "path": "commands/blu-add-tests.md",
+      "primarySkill": "blueprint-phase-validation",
+      "effectiveInputs": [
+        "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+      ]
+    },
+    "blu-add-todo": {
+      "path": "commands/blu-add-todo.md",
+      "primarySkill": "blueprint-capture",
+      "effectiveInputs": []
+    },
+    "blu-audit-fix": {
+      "path": "commands/blu-audit-fix.md",
+      "primarySkill": "blueprint-review",
+      "effectiveInputs": [
+        "skills/blueprint-review/references/audit-fix-runtime-contract.md"
+      ]
+    },
+    "blu-audit-milestone": {
+      "path": "commands/blu-audit-milestone.md",
+      "primarySkill": "blueprint-roadmap-admin",
+      "effectiveInputs": []
+    },
+    "blu-check-todos": {
+      "path": "commands/blu-check-todos.md",
+      "primarySkill": "blueprint-capture",
+      "effectiveInputs": []
+    },
+    "blu-cleanup": {
+      "path": "commands/blu-cleanup.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/cleanup-runtime-contract.md"
+      ]
+    },
+    "blu-code-review": {
+      "path": "commands/blu-code-review.md",
+      "primarySkill": "blueprint-review",
+      "effectiveInputs": [
+        "skills/blueprint-review/references/code-review-runtime-contract.md"
+      ]
+    },
+    "blu-code-review-fix": {
+      "path": "commands/blu-code-review-fix.md",
+      "primarySkill": "blueprint-review",
+      "effectiveInputs": [
+        "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
+      ]
+    },
+    "blu-complete-milestone": {
+      "path": "commands/blu-complete-milestone.md",
+      "primarySkill": "blueprint-roadmap-admin",
+      "effectiveInputs": []
+    },
+    "blu-debug": {
+      "path": "commands/blu-debug.md",
+      "primarySkill": "blueprint-debug",
+      "effectiveInputs": [
+        "skills/blueprint-debug/references/debug-runtime-contract.md"
+      ]
+    },
+    "blu-discuss-phase": {
+      "path": "commands/blu-discuss-phase.md",
+      "primarySkill": "blueprint-phase-discovery",
+      "effectiveInputs": [
+        "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
+      ]
+    },
+    "blu-docs-update": {
+      "path": "commands/blu-docs-update.md",
+      "primarySkill": "blueprint-docs",
+      "effectiveInputs": [
+        "skills/blueprint-docs/references/docs-update-runtime-contract.md"
+      ]
+    },
+    "blu-execute-phase": {
+      "path": "commands/blu-execute-phase.md",
+      "primarySkill": "blueprint-phase-execution",
+      "effectiveInputs": [
+        "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
+        "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+      ]
+    },
+    "blu-explore": {
+      "path": "commands/blu-explore.md",
+      "primarySkill": "blueprint-capture",
+      "effectiveInputs": []
+    },
+    "blu-fast": {
+      "path": "commands/blu-fast.md",
+      "primarySkill": "blueprint-phase-execution",
+      "effectiveInputs": [
+        "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
+      ]
+    },
+    "blu-health": {
+      "path": "commands/blu-health.md",
+      "primarySkill": "blueprint-governance",
+      "effectiveInputs": [
+        "skills/blueprint-governance/references/health-runtime-contract.md"
+      ]
+    },
+    "blu-help": {
+      "path": "commands/blu-help.md",
+      "primarySkill": "blueprint-router",
+      "effectiveInputs": []
+    },
+    "blu-impact": {
+      "path": "commands/blu-impact.md",
+      "primarySkill": "blueprint-impact",
+      "effectiveInputs": [
+        "skills/blueprint-impact/references/impact-runtime-contract.md"
+      ]
+    },
+    "blu-insert-phase": {
+      "path": "commands/blu-insert-phase.md",
+      "primarySkill": "blueprint-roadmap-admin",
+      "effectiveInputs": [
+        "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"
+      ]
+    },
+    "blu-list-phase-assumptions": {
+      "path": "commands/blu-list-phase-assumptions.md",
+      "primarySkill": "blueprint-phase-discovery",
+      "effectiveInputs": [
+        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+        "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
+      ]
+    },
+    "blu-map-codebase": {
+      "path": "commands/blu-map-codebase.md",
+      "primarySkill": "blueprint-map",
+      "effectiveInputs": [
+        "skills/blueprint-map/references/map-runtime-contract.md"
+      ]
+    },
+    "blu-milestone-summary": {
+      "path": "commands/blu-milestone-summary.md",
+      "primarySkill": "blueprint-roadmap-admin",
+      "effectiveInputs": []
+    },
+    "blu-new-milestone": {
+      "path": "commands/blu-new-milestone.md",
+      "primarySkill": "blueprint-roadmap-admin",
+      "effectiveInputs": []
+    },
+    "blu-new-project": {
+      "path": "commands/blu-new-project.md",
+      "primarySkill": "blueprint-bootstrap",
+      "effectiveInputs": [
+        "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"
+      ]
+    },
+    "blu-new-workspace": {
+      "path": "commands/blu-new-workspace.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/new-workspace-runtime-contract.md"
+      ]
+    },
+    "blu-next": {
+      "path": "commands/blu-next.md",
+      "primarySkill": "blueprint-router",
+      "effectiveInputs": []
+    },
+    "blu-note": {
+      "path": "commands/blu-note.md",
+      "primarySkill": "blueprint-capture",
+      "effectiveInputs": []
+    },
+    "blu-pause-work": {
+      "path": "commands/blu-pause-work.md",
+      "primarySkill": "blueprint-governance",
+      "effectiveInputs": [
+        "skills/blueprint-governance/references/pause-work-runtime-contract.md"
+      ]
+    },
+    "blu-plan-milestone-gaps": {
+      "path": "commands/blu-plan-milestone-gaps.md",
+      "primarySkill": "blueprint-roadmap-admin",
+      "effectiveInputs": []
+    },
+    "blu-plan-phase": {
+      "path": "commands/blu-plan-phase.md",
+      "primarySkill": "blueprint-phase-planning",
+      "effectiveInputs": [
+        "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+      ]
+    },
+    "blu-pr-branch": {
+      "path": "commands/blu-pr-branch.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/pr-branch-runtime-contract.md"
+      ]
+    },
+    "blu-progress": {
+      "path": "commands/blu-progress.md",
+      "primarySkill": "blueprint-router",
+      "effectiveInputs": []
+    },
+    "blu-quick": {
+      "path": "commands/blu-quick.md",
+      "primarySkill": "blueprint-phase-execution",
+      "effectiveInputs": [
+        "skills/blueprint-phase-execution/references/quick-runtime-contract.md",
+        "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+      ]
+    },
+    "blu-reapply-patches": {
+      "path": "commands/blu-reapply-patches.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md"
+      ]
+    },
+    "blu-remove-phase": {
+      "path": "commands/blu-remove-phase.md",
+      "primarySkill": "blueprint-roadmap-admin",
+      "effectiveInputs": []
+    },
+    "blu-remove-workspace": {
+      "path": "commands/blu-remove-workspace.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md"
+      ]
+    },
+    "blu-research-phase": {
+      "path": "commands/blu-research-phase.md",
+      "primarySkill": "blueprint-phase-discovery",
+      "effectiveInputs": [
+        "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+      ]
+    },
+    "blu-resume-work": {
+      "path": "commands/blu-resume-work.md",
+      "primarySkill": "blueprint-governance",
+      "effectiveInputs": [
+        "skills/blueprint-governance/references/resume-work-runtime-contract.md"
+      ]
+    },
+    "blu-review": {
+      "path": "commands/blu-review.md",
+      "primarySkill": "blueprint-review",
+      "effectiveInputs": [
+        "skills/blueprint-review/references/review-runtime-contract.md"
+      ]
+    },
+    "blu-review-backlog": {
+      "path": "commands/blu-review-backlog.md",
+      "primarySkill": "blueprint-capture",
+      "effectiveInputs": []
+    },
+    "blu-run-plan": {
+      "path": "commands/blu-run-plan.md",
+      "primarySkill": "blueprint-plan-run",
+      "effectiveInputs": [
+        "skills/blueprint-plan-run/references/run-plan-runtime-contract.md"
+      ]
+    },
+    "blu-secure-phase": {
+      "path": "commands/blu-secure-phase.md",
+      "primarySkill": "blueprint-review",
+      "effectiveInputs": [
+        "skills/blueprint-review/references/secure-phase-runtime-contract.md"
+      ]
+    },
+    "blu-set-profile": {
+      "path": "commands/blu-set-profile.md",
+      "primarySkill": "blueprint-governance",
+      "effectiveInputs": [
+        "skills/blueprint-governance/references/set-profile-runtime-contract.md"
+      ]
+    },
+    "blu-settings": {
+      "path": "commands/blu-settings.md",
+      "primarySkill": "blueprint-governance",
+      "effectiveInputs": [
+        "skills/blueprint-governance/references/settings-runtime-contract.md"
+      ]
+    },
+    "blu-ship": {
+      "path": "commands/blu-ship.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/ship-runtime-contract.md"
+      ]
+    },
+    "blu-spec-phase": {
+      "path": "commands/blu-spec-phase.md",
+      "primarySkill": "blueprint-phase-discovery",
+      "effectiveInputs": [
+        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+        "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
+      ]
+    },
+    "blu-ui-phase": {
+      "path": "commands/blu-ui-phase.md",
+      "primarySkill": "blueprint-phase-discovery",
+      "effectiveInputs": [
+        "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+        "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
+      ]
+    },
+    "blu-ui-review": {
+      "path": "commands/blu-ui-review.md",
+      "primarySkill": "blueprint-review",
+      "effectiveInputs": [
+        "skills/blueprint-review/references/ui-review-runtime-contract.md"
+      ]
+    },
+    "blu-undo": {
+      "path": "commands/blu-undo.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/undo-runtime-contract.md"
+      ]
+    },
+    "blu-update": {
+      "path": "commands/blu-update.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/update-runtime-contract.md"
+      ]
+    },
+    "blu-validate-phase": {
+      "path": "commands/blu-validate-phase.md",
+      "primarySkill": "blueprint-phase-validation",
+      "effectiveInputs": [
+        "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md"
+      ]
+    },
+    "blu-verify-work": {
+      "path": "commands/blu-verify-work.md",
+      "primarySkill": "blueprint-phase-validation",
+      "effectiveInputs": [
+        "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md"
+      ]
+    },
+    "blu-workstreams": {
+      "path": "commands/blu-workstreams.md",
+      "primarySkill": "blueprint-maintenance",
+      "effectiveInputs": [
+        "skills/blueprint-maintenance/references/workstreams-runtime-contract.md"
+      ]
+    }
+  },
+  "agents": {
+    "blueprint": {
+      "path": "agents/blueprint.md"
+    },
+    "blueprint-checker": {
+      "path": "agents/blueprint-checker.md"
+    },
+    "blueprint-debugger": {
+      "path": "agents/blueprint-debugger.md"
+    },
+    "blueprint-doc-verifier": {
+      "path": "agents/blueprint-doc-verifier.md"
+    },
+    "blueprint-doc-writer": {
+      "path": "agents/blueprint-doc-writer.md"
+    },
+    "blueprint-executor": {
+      "path": "agents/blueprint-executor.md"
+    },
+    "blueprint-mapper": {
+      "path": "agents/blueprint-mapper.md"
+    },
+    "blueprint-planner": {
+      "path": "agents/blueprint-planner.md"
+    },
+    "blueprint-project-researcher": {
+      "path": "agents/blueprint-project-researcher.md"
+    },
+    "blueprint-researcher": {
+      "path": "agents/blueprint-researcher.md"
+    },
+    "blueprint-reviewer": {
+      "path": "agents/blueprint-reviewer.md"
+    },
+    "blueprint-roadmapper": {
+      "path": "agents/blueprint-roadmapper.md"
+    },
+    "blueprint-security-auditor": {
+      "path": "agents/blueprint-security-auditor.md"
+    },
+    "blueprint-ui-auditor": {
+      "path": "agents/blueprint-ui-auditor.md"
+    },
+    "blueprint-ui-designer": {
+      "path": "agents/blueprint-ui-designer.md"
+    },
+    "blueprint-verifier": {
+      "path": "agents/blueprint-verifier.md"
+    }
+  },
+  "skillAliases": [
+    "blueprint-bootstrap",
+    "blueprint-capture",
+    "blueprint-debug",
+    "blueprint-docs",
+    "blueprint-god-review",
+    "blueprint-governance",
+    "blueprint-impact",
+    "blueprint-maintenance",
+    "blueprint-map",
+    "blueprint-phase-discovery",
+    "blueprint-phase-execution",
+    "blueprint-phase-planning",
+    "blueprint-phase-validation",
+    "blueprint-plan-run",
+    "blueprint-review",
+    "blueprint-roadmap-admin",
+    "blueprint-router"
+  ],
+  "referenceClosure": [
+    "commands/blu-add-backlog.md",
+    "commands/blu-add-todo.md",
+    "commands/blu-audit-fix.md",
+    "commands/blu-audit-milestone.md",
+    "commands/blu-check-todos.md",
+    "commands/blu-cleanup.md",
+    "commands/blu-code-review-fix.md",
+    "commands/blu-code-review.md",
+    "commands/blu-complete-milestone.md",
+    "commands/blu-debug.md",
+    "commands/blu-docs-update.md",
+    "commands/blu-execute-phase.md",
+    "commands/blu-explore.md",
+    "commands/blu-fast.md",
+    "commands/blu-help.md",
+    "commands/blu-impact.md",
+    "commands/blu-map-codebase.md",
+    "commands/blu-milestone-summary.md",
+    "commands/blu-new-milestone.md",
+    "commands/blu-new-workspace.md",
+    "commands/blu-next.md",
+    "commands/blu-note.md",
+    "commands/blu-plan-milestone-gaps.md",
+    "commands/blu-pr-branch.md",
+    "commands/blu-progress.md",
+    "commands/blu-quick.md",
+    "commands/blu-reapply-patches.md",
+    "commands/blu-remove-phase.md",
+    "commands/blu-remove-workspace.md",
+    "commands/blu-review-backlog.md",
+    "commands/blu-review.md",
+    "commands/blu-run-plan.md",
+    "commands/blu-secure-phase.md",
+    "commands/blu-ship.md",
+    "commands/blu-ui-review.md",
+    "commands/blu-undo.md",
+    "commands/blu-update.md",
+    "commands/blu-workstreams.md",
+    "commands/blu.md",
+    "skills/blueprint-bootstrap/SKILL.md",
+    "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md",
+    "skills/blueprint-bootstrap/references/questioning.md",
+    "skills/blueprint-bootstrap/references/runtime-guardrails.md",
+    "skills/blueprint-capture/SKILL.md",
+    "skills/blueprint-debug/SKILL.md",
+    "skills/blueprint-debug/references/debug-runtime-contract.md",
+    "skills/blueprint-docs/SKILL.md",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md",
+    "skills/blueprint-god-review/SKILL.md",
+    "skills/blueprint-god-review/references/context-selection.md",
+    "skills/blueprint-god-review/references/final-curation.md",
+    "skills/blueprint-god-review/references/finding-examples.md",
+    "skills/blueprint-god-review/references/finding-quality.md",
+    "skills/blueprint-god-review/references/lane-rubrics.md",
+    "skills/blueprint-god-review/references/review-method.md",
+    "skills/blueprint-governance/SKILL.md",
+    "skills/blueprint-governance/references/health-runtime-contract.md",
+    "skills/blueprint-governance/references/pause-work-runtime-contract.md",
+    "skills/blueprint-governance/references/resume-work-runtime-contract.md",
+    "skills/blueprint-governance/references/set-profile-runtime-contract.md",
+    "skills/blueprint-governance/references/settings-runtime-contract.md",
+    "skills/blueprint-impact/SKILL.md",
+    "skills/blueprint-impact/references/impact-runtime-contract.md",
+    "skills/blueprint-maintenance/SKILL.md",
+    "skills/blueprint-maintenance/references/cleanup-runtime-contract.md",
+    "skills/blueprint-maintenance/references/new-workspace-runtime-contract.md",
+    "skills/blueprint-maintenance/references/pr-branch-runtime-contract.md",
+    "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md",
+    "skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md",
+    "skills/blueprint-maintenance/references/ship-runtime-contract.md",
+    "skills/blueprint-maintenance/references/undo-runtime-contract.md",
+    "skills/blueprint-maintenance/references/update-runtime-contract.md",
+    "skills/blueprint-maintenance/references/workstreams-runtime-contract.md",
+    "skills/blueprint-map/SKILL.md",
+    "skills/blueprint-map/references/map-runtime-contract.md",
+    "skills/blueprint-phase-discovery/SKILL.md",
+    "skills/blueprint-phase-discovery/references/discovery-sibling-contracts.md",
+    "skills/blueprint-phase-discovery/references/discuss-phase-recovery.md",
+    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
+    "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md",
+    "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md",
+    "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md",
+    "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md",
+    "skills/blueprint-phase-discovery/references/spec-template.md",
+    "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md",
+    "skills/blueprint-phase-execution/SKILL.md",
+    "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
+    "skills/blueprint-phase-execution/references/fast-runtime-contract.md",
+    "skills/blueprint-phase-execution/references/long-running-execution-profile.md",
+    "skills/blueprint-phase-execution/references/quick-runtime-contract.md",
+    "skills/blueprint-phase-planning/SKILL.md",
+    "skills/blueprint-phase-planning/references/plan-phase-recovery.md",
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md",
+    "skills/blueprint-phase-validation/SKILL.md",
+    "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md",
+    "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md",
+    "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md",
+    "skills/blueprint-plan-run/SKILL.md",
+    "skills/blueprint-plan-run/references/run-plan-runtime-contract.md",
+    "skills/blueprint-review/SKILL.md",
+    "skills/blueprint-review/references/audit-fix-runtime-contract.md",
+    "skills/blueprint-review/references/code-review-fix-runtime-contract.md",
+    "skills/blueprint-review/references/code-review-runtime-contract.md",
+    "skills/blueprint-review/references/review-runtime-contract.md",
+    "skills/blueprint-review/references/secure-phase-runtime-contract.md",
+    "skills/blueprint-review/references/ui-review-runtime-contract.md",
+    "skills/blueprint-roadmap-admin/SKILL.md",
+    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md",
+    "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md",
+    "skills/blueprint-router/SKILL.md"
+  ]
+}

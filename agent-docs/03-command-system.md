@@ -25,19 +25,21 @@ runnable next steps.
 
 For a shipped command, inspect and keep aligned:
 
-- Manifest: `commands/blu-<command>.toml`
+- Native command: `commands/blu-<command>.md`
 - Primary skill: `skills/<skill>/SKILL.md`
 - Skill input bundle: active command entry in the skill frontmatter
 - Optional runtime reference: `skills/<skill>/references/*.md`
 - Runtime metadata: `src/mcp/command-runtime-metadata.ts` when source-owned
 - Catalog assembly: `src/mcp/tools/project.ts`
 - Required tool registration: `src/mcp/tool-definitions.ts`
-- Optional agent allowlist: `src/mcp/agent-metadata.ts`
+- Required primary and optional agents: `src/mcp/agent-metadata.ts`
+- Native closure/hashes: `generated/opencode-assets.json`
 - Tests: focused metadata, catalog, runtime-resource, and behavior tests
 
 ## Command Manifests
 
-Manifests should stay thin.
+Native command files should stay thin. Frontmatter is exactly `description`,
+`agent: blueprint`, and `subtask: false`.
 
 Do:
 
@@ -85,6 +87,12 @@ Do not:
 - Route to a command because it appears in README text.
 - Route to a command because a command spec exists.
 - Treat planned, blocked, or repairing commands as runnable.
+
+The plugin instructs the primary to load its skill exactly once and read only
+resolved effective inputs, excluding the supplied command and sibling bundles.
+Use native `question`, `task`, `skill`, `todowrite`, `read`, `grep`, `glob`,
+`edit`, and `bash`. Direct skill aliases are blocked; the private helper also
+requires exact command/flag/session correlation, without a discovery guarantee.
 
 ## Command Authoring Checklist
 

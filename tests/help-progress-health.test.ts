@@ -3910,11 +3910,11 @@ test("artifact validation does not flag an in-progress discovery phase as struct
 test("help progress and health command files reference registered MCP tool names", async () => {
   const commandFiles = [
     {
-      file: "commands/blu-help.toml",
+      file: "commands/blu-help.md",
       tools: ["blueprint_command_catalog", "blueprint_project_status"]
     },
     {
-      file: "commands/blu-add-phase.toml",
+      file: "commands/blu-add-phase.md",
       tools: [
         "blueprint_roadmap_read",
         "blueprint_roadmap_add_phase",
@@ -3923,7 +3923,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-insert-phase.toml",
+      file: "commands/blu-insert-phase.md",
       tools: [
         "blueprint_roadmap_read",
         "blueprint_roadmap_insert_phase",
@@ -3932,7 +3932,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-remove-phase.toml",
+      file: "commands/blu-remove-phase.md",
       tools: [
         "blueprint_roadmap_read",
         "blueprint_phase_locate",
@@ -3941,7 +3941,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-progress.toml",
+      file: "commands/blu-progress.md",
       tools: [
         "blueprint_project_status",
         "blueprint_config_get",
@@ -3951,7 +3951,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-health.toml",
+      file: "commands/blu-health.md",
       tools: [
         "blueprint_project_status",
         "blueprint_config_get",
@@ -3963,7 +3963,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-debug.toml",
+      file: "commands/blu-debug.md",
       tools: [
         "blueprint_project_status",
         "blueprint_artifact_report_write",
@@ -3972,7 +3972,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-docs-update.toml",
+      file: "commands/blu-docs-update.md",
       tools: [
         "blueprint_project_status",
         "blueprint_artifact_list",
@@ -3981,7 +3981,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-review.toml",
+      file: "commands/blu-review.md",
       tools: [
         "blueprint_phase_locate",
         "blueprint_artifact_list",
@@ -3991,7 +3991,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-code-review.toml",
+      file: "commands/blu-code-review.md",
       tools: [
         "blueprint_phase_locate",
         "blueprint_artifact_contract_read",
@@ -4002,7 +4002,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-code-review-fix.toml",
+      file: "commands/blu-code-review-fix.md",
       tools: [
         "blueprint_phase_locate",
         "blueprint_review_load_findings",
@@ -4013,7 +4013,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-audit-fix.toml",
+      file: "commands/blu-audit-fix.md",
       tools: [
         "blueprint_phase_locate",
         "blueprint_artifact_list",
@@ -4024,7 +4024,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu-ui-review.toml",
+      file: "commands/blu-ui-review.md",
       tools: [
         "blueprint_phase_locate",
         "blueprint_artifact_list",
@@ -4045,13 +4045,13 @@ test("help progress and health command files reference registered MCP tool names
     }
   }
 
-  const healthCommand = await readFile(path.join(repoRoot, "commands/blu-health.toml"), "utf8");
+  const healthCommand = await readFile(path.join(repoRoot, "commands/blu-health.md"), "utf8");
   assert.match(healthCommand, /--repair/);
   assert.match(healthCommand, /explicit confirmation-style response/i);
 });
 
 test("progress keeps the shared router waiting-state contract aligned", async () => {
-  const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8");
+  const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.md"), "utf8");
   const runtimeContract = await buildBlueprintCommandRuntimeContractResource("progress");
 
   assert.match(progressCommand, /Execution profile: router\./);
@@ -4072,9 +4072,9 @@ test("progress keeps the shared router waiting-state contract aligned", async ()
 });
 
 test("root router and help/progress assets keep implemented-only waiting-state guidance explicit", async () => {
-  const rootRouterCommand = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
-  const helpCommand = await readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8");
-  const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8");
+  const rootRouterCommand = await readFile(path.join(repoRoot, "commands/blu.md"), "utf8");
+  const helpCommand = await readFile(path.join(repoRoot, "commands/blu-help.md"), "utf8");
+  const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.md"), "utf8");
   const [helpRuntimeContract, progressRuntimeContract, healthRuntimeContract] =
     await Promise.all([
       buildBlueprintCommandRuntimeContractResource("help"),
@@ -4164,19 +4164,19 @@ test("runtime-facing docs keep host instructions concise while preserving comman
   assert.match(geminiFile, /\.planning\//);
   assert.match(readmeFile, /active implementation/i);
   assert.match(readmeFile, /## Current Runtime Layout/);
-  assert.match(readmeFile, /commands\/blu-help\.toml/);
-  assert.match(readmeFile, /commands\/blu-progress\.toml/);
-  assert.match(readmeFile, /commands\/blu-health\.toml/);
-  assert.match(readmeFile, /commands\/blu-map-codebase\.toml/);
-  assert.match(readmeFile, /commands\/blu-debug\.toml/);
-  assert.match(readmeFile, /commands\/blu-docs-update\.toml/);
+  assert.match(readmeFile, /commands\/blu-help\.md/);
+  assert.match(readmeFile, /commands\/blu-progress\.md/);
+  assert.match(readmeFile, /commands\/blu-health\.md/);
+  assert.match(readmeFile, /commands\/blu-map-codebase\.md/);
+  assert.match(readmeFile, /commands\/blu-debug\.md/);
+  assert.match(readmeFile, /commands\/blu-docs-update\.md/);
   assert.match(readmeFile, /\/blu-workstreams/);
-  assert.match(readmeFile, /commands\/blu-review\.toml/);
-  assert.match(readmeFile, /commands\/blu-code-review\.toml/);
-  assert.match(readmeFile, /commands\/blu-code-review-fix\.toml/);
-  assert.match(readmeFile, /commands\/blu-audit-fix\.toml/);
-  assert.match(readmeFile, /commands\/blu-ui-review\.toml/);
-  assert.match(readmeFile, /commands\/blu-ship\.toml/);
+  assert.match(readmeFile, /commands\/blu-review\.md/);
+  assert.match(readmeFile, /commands\/blu-code-review\.md/);
+  assert.match(readmeFile, /commands\/blu-code-review-fix\.md/);
+  assert.match(readmeFile, /commands\/blu-audit-fix\.md/);
+  assert.match(readmeFile, /commands\/blu-ui-review\.md/);
+  assert.match(readmeFile, /commands\/blu-ship\.md/);
   assert.match(geminiFile, /\/blu-debug/);
   assert.match(geminiFile, /\/blu-docs-update/);
   assert.match(geminiFile, /\/blu-review/);

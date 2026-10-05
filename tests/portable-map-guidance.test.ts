@@ -13,7 +13,7 @@ async function read(relativePath: string): Promise<string> {
 
 test("map-codebase guidance describes portable v1 as explicit opt-in", async () => {
   const [command, skill, reference, agent, foundation] = await Promise.all([
-    read("commands/blu-map-codebase.toml"),
+    read("commands/blu-map-codebase.md"),
     read("skills/blueprint-map/SKILL.md"),
     read("skills/blueprint-map/references/map-runtime-contract.md"),
     read("agents/blueprint-mapper.md"),
@@ -68,7 +68,7 @@ test("map-codebase runtime metadata exposes portable outputs without changing ro
   ]);
   assert.deepEqual(MAP_CODEBASE_RUNTIME_METADATA.optionalAgents, ["blueprint-mapper"]);
   assert.deepEqual(MAP_CODEBASE_RUNTIME_METADATA.requiredInputPaths, [
-    "commands/blu-map-codebase.toml",
+    "commands/blu-map-codebase.md",
     "skills/blueprint-map/references/map-runtime-contract.md"
   ]);
   assert.deepEqual(MAP_CODEBASE_RUNTIME_METADATA.spec.writes, [

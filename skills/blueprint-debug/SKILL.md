@@ -12,11 +12,15 @@ input_bundles:
   shared: []
   commands:
     "/blu-debug":
-      - commands/blu-debug.toml
+      - commands/blu-debug.md
       - skills/blueprint-debug/references/debug-runtime-contract.md
 ---
 
 # Blueprint Debug Skill
+
+## Native Invocation Guard
+
+Run this skill only after the active `/blu` command has loaded it once through native `skill({ name })` dispatch and the active command appears in this skill's `commands` metadata. If invoked directly through a synthesized `/blueprint-*` alias or any other direct skill call, stop before tool, MCP, resource, or filesystem activity and direct the user to `/blu-help`. Read only the active command's effective input bundle; do not preload sibling-command or recovery references.
 
 ## Purpose
 
@@ -68,7 +72,7 @@ all seven compatibility views to enrich a valid portable map.
 `/blu-debug` resolves active runtime inputs from the structured
 `input_bundles` frontmatter:
 
-- `commands/blu-debug.toml`
+- `commands/blu-debug.md` (already supplied as the active command prompt; do not read it again)
 - `skills/blueprint-debug/references/debug-runtime-contract.md`
 
 The earlier repository-doc-backed Required Inputs list is intentionally not a
@@ -167,7 +171,7 @@ and output-quality criteria.
 Before claiming completion, verify:
 
 - The active `/blu-debug` runtime contract was loaded with
-  `commands/blu-debug.toml`; no sibling command references or repository docs
+  `commands/blu-debug.md`; no sibling command references or repository docs
   were treated as active runtime input.
 - `blueprint_blueprint_project_status` ran first, and persistent debug
   work stopped or degraded honestly when Blueprint state was uninitialized.
