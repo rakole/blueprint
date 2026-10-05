@@ -52,6 +52,7 @@ export type LifecycleCleanupKind =
 export type LifecycleGeneration = {
   generationId: string;
   packageRoot: string;
+  sourceIntegrity: string;
   sourceSpec: string;
   stateCompatibility: string;
   version: string;
@@ -103,6 +104,7 @@ type Ledger = {
 
 type TransactionJournal = {
   schemaVersion: 1;
+  configPath: string;
   beforeConfigBase64: string;
   beforeConfigExisted: boolean;
   beforeConfigMode: number;
@@ -124,6 +126,7 @@ type CleanupGeneration = {
 type CleanupJournal = {
   schemaVersion: 1;
   action: "retire" | "uninstall";
+  configPath: string;
   generations: CleanupGeneration[];
   allowedGenerationIds: string[];
   retainedGenerationIds: string[];
@@ -140,6 +143,10 @@ const execFileAsync = promisify(execFile);
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function isCanonicalBase64(value: string): boolean {
+  return Buffer.from(value, "base64").toString("base64") === value;
 }
 
 function json(value: unknown): string {
@@ -374,6 +381,30 @@ async function assertLiteralContained(root: string, candidate: string): Promise<
   return canonical;
 }
 
+async function assertLiteralDirectoryContained(parent: string, candidate: string, label: string): Promise<string> {
+  const metadata = await lstat(candidate);
+  if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
+    throw new Error(`${label} must be a literal directory`);
+  }
+  const [canonicalParent, canonicalCandidate] = await Promise.all([realpath(parent), realpath(candidate)]);
+  if (!isContained(canonicalParent, canonicalCandidate)) throw new Error(`${label} escapes its owned parent`);
+  return canonicalCandidate;
+}
+
+async function assertLiteralFile(candidate: string, label: string): Promise<void> {
+  const metadata = await lstat(candidate);
+  if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error(`${label} must be a literal file`);
+}
+
+async function assertManagedDirectory(root: string, name: "generations" | "receipts", allowMissing = false): Promise<string | null> {
+  const candidate = path.join(root, name);
+  if (!(await exists(candidate))) {
+    if (allowMissing) return null;
+    throw new Error(`Owned installer ${name} directory is missing`);
+  }
+  return assertLiteralDirectoryContained(root, candidate, `Owned installer ${name} directory`);
+}
+
 async function defaultPackageInstaller(input: Parameters<PackageInstaller>[0]): Promise<{ packageRoot: string }> {
   await writeAtomic(path.join(input.stagingPrefix, "package.json"), json({
     name: "blueprint-opencode-generation",
@@ -396,6 +427,7 @@ async function readPackageGeneration(
   generationRoot: string,
   packageRoot: string,
   sourceSpec: string,
+  sourceIntegrity: string,
   validateNativeAssets: boolean
 ): Promise<LifecycleGeneration> {
   const canonicalPackageRoot = await assertLiteralContained(generationRoot, packageRoot);
@@ -431,6 +463,7 @@ async function readPackageGeneration(
   return {
     generationId,
     packageRoot: canonicalPackageRoot,
+    sourceIntegrity,
     sourceSpec,
     stateCompatibility: compatibility,
     version: packageJson.version
@@ -466,15 +499,62 @@ function assertInventorySubset(actual: ReceiptEntry[], approved: ReceiptEntry[],
   }
 }
 
+function packageIdentityEntries(entries: ReceiptEntry[]): ReceiptEntry[] {
+  const npmPrefixMetadata = new Set(["package-lock.json", "node_modules/.package-lock.json"]);
+  return entries.filter((entry) => !npmPrefixMetadata.has(entry.path));
+}
+
 async function writeReceipt(receiptPath: string, generationId: string, generationRoot: string): Promise<Receipt> {
   const receipt: Receipt = { schemaVersion: 1, generationId, entries: await inventory(generationRoot) };
   await writeAtomic(receiptPath, json(receipt), 0o600);
   return receipt;
 }
 
-async function verifyReceipt(receiptPath: string, generationRoot: string): Promise<Receipt> {
-  const expected = JSON.parse(await readFile(receiptPath, "utf8")) as Receipt;
-  if (expected.schemaVersion !== 1 || !Array.isArray(expected.entries)) throw new Error("Generation receipt is malformed");
+function parseReceipt(raw: string, expectedGenerationId: string, source = "Generation receipt"): Receipt {
+  const expected = JSON.parse(raw) as Receipt;
+  if (
+    !expected
+    || typeof expected !== "object"
+    || Array.isArray(expected)
+    || expected.schemaVersion !== 1
+    || expected.generationId !== expectedGenerationId
+    || !Array.isArray(expected.entries)
+    || JSON.stringify(Object.keys(expected).sort()) !== JSON.stringify(["entries", "generationId", "schemaVersion"])
+  ) {
+    throw new Error(`${source} is malformed or belongs to another generation`);
+  }
+  const seen = new Set<string>();
+  for (const entry of expected.entries) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry) || typeof entry.path !== "string") {
+      throw new Error(`${source} entry is malformed`);
+    }
+    const entryKeys = Object.keys(entry).sort();
+    const validDirectory = entry.type === "directory"
+      && JSON.stringify(entryKeys) === JSON.stringify(["path", "type"]);
+    const validFile = entry.type === "file"
+      && typeof entry.sha256 === "string"
+      && /^[0-9a-f]{64}$/.test(entry.sha256)
+      && JSON.stringify(entryKeys) === JSON.stringify(["path", "sha256", "type"]);
+    if (!validDirectory && !validFile) throw new Error(`${source} entry is malformed`);
+    if (
+      entry.path.length === 0
+      || entry.path.includes("\\")
+      || path.posix.isAbsolute(entry.path)
+      || path.posix.normalize(entry.path) !== entry.path
+      || entry.path === "."
+      || entry.path.startsWith("../")
+      || seen.has(entry.path)
+    ) {
+      throw new Error(`${source} entry path is malformed or duplicated`);
+    }
+    seen.add(entry.path);
+  }
+  return expected;
+}
+
+async function verifyReceipt(receiptPath: string, generationRoot: string, expectedGenerationId: string): Promise<Receipt> {
+  await assertLiteralFile(receiptPath, "Generation receipt");
+  const expected = parseReceipt(await readFile(receiptPath, "utf8"), expectedGenerationId);
   const actual = await inventory(generationRoot);
   if (JSON.stringify(actual) !== JSON.stringify(expected.entries)) {
     throw new Error("Installed generation has unknown, unexpected, or tampered files; refusing operation");
@@ -497,13 +577,34 @@ function launcherSource(ledgerPath: string): string {
   ].join("\n");
 }
 
+function assertGenerationRecord(value: LifecycleGeneration | null, label: string): void {
+  if (value === null) return;
+  if (
+    !value
+    || typeof value !== "object"
+    || typeof value.generationId !== "string"
+    || typeof value.packageRoot !== "string"
+    || !path.isAbsolute(value.packageRoot)
+    || typeof value.sourceSpec !== "string"
+    || typeof value.sourceIntegrity !== "string"
+    || !/^[0-9a-f]{64}$/.test(value.sourceIntegrity)
+    || value.stateCompatibility !== BLUEPRINT_STATE_COMPATIBILITY
+    || typeof value.version !== "string"
+  ) throw new Error(`${label} generation record is malformed`);
+  assertGenerationId(value.generationId);
+  parseStrictSemver(value.version, `${label} generation version`);
+}
+
 async function readLedger(ledgerPath: string): Promise<{ ledger: Ledger; raw: string } | null> {
   if (!(await exists(ledgerPath))) return null;
+  await assertLiteralFile(ledgerPath, "Lifecycle ledger");
   const raw = await readFile(ledgerPath, "utf8");
   const ledger = JSON.parse(raw) as Ledger;
   if (ledger.schemaVersion !== 1 || typeof ledger.configPath !== "string" || typeof ledger.registration !== "string") {
     throw new Error("Blueprint lifecycle ledger is malformed");
   }
+  assertGenerationRecord(ledger.active, "Active");
+  assertGenerationRecord(ledger.previous, "Previous");
   return { ledger, raw };
 }
 
@@ -521,11 +622,12 @@ async function assertSupportedRuntimeState(ledger: Ledger, env: NodeJS.ProcessEn
     const statePath = path.join(ledger.cwd, ".blueprint", "STATE.md");
     if (await exists(statePath)) {
       const state = await readFile(statePath, "utf8");
-      const frontmatter = /^---\r?\n([\s\S]*?)^---\r?(?:\n|$)/m.exec(state)?.[1];
-      const rawVersion = frontmatter?.split(/\r?\n/)
+      const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---\r?(?:\n|$)/.exec(state)?.[1];
+      const rawVersions = frontmatter?.split(/\r?\n/)
         .map((line) => /^blueprint_state_version:\s*(.+)$/.exec(line.trimEnd())?.[1])
-        .find((value): value is string => value !== undefined);
-      let version = rawVersion?.trim();
+        .filter((value): value is string => value !== undefined) ?? [];
+      if (rawVersions.length !== 1) throw new Error(`${statePath} has ambiguous or missing compatibility metadata`);
+      let version = rawVersions[0]!.trim();
       if (version?.startsWith('"') && version.endsWith('"')) {
         try {
           const parsed = JSON.parse(version) as unknown;
@@ -550,7 +652,7 @@ function generationRootFor(root: string, generationId: string): string {
 }
 
 function assertGenerationId(generationId: string): void {
-  if (!/^[0-9A-Za-z._-]+$/.test(generationId) || generationId === "." || generationId === "..") {
+  if (typeof generationId !== "string" || !/^[0-9A-Za-z._-]+$/.test(generationId) || generationId === "." || generationId === "..") {
     throw new Error("Lifecycle generation id is malformed");
   }
 }
@@ -572,8 +674,61 @@ async function recoverJournal(
   root: string
 ): Promise<void> {
   if (!(await exists(journalPath))) return;
+  await assertLiteralFile(journalPath, "Lifecycle transaction journal");
   const journal = JSON.parse(await readFile(journalPath, "utf8")) as TransactionJournal;
-  if (journal.schemaVersion !== 1) throw new Error("Lifecycle transaction journal is malformed");
+  if (
+    journal.schemaVersion !== 1
+    || typeof journal.configPath !== "string"
+    || path.resolve(journal.configPath) !== configPath
+    || typeof journal.beforeConfigBase64 !== "string"
+    || !isCanonicalBase64(journal.beforeConfigBase64)
+    || typeof journal.beforeConfigExisted !== "boolean"
+    || !Number.isInteger(journal.beforeConfigMode)
+    || journal.beforeConfigMode < 0
+    || journal.beforeConfigMode > 0o777
+    || typeof journal.afterConfigHash !== "string"
+    || !/^[0-9a-f]{64}$/.test(journal.afterConfigHash)
+    || !(journal.beforeLedgerBase64 === null || typeof journal.beforeLedgerBase64 === "string")
+    || (typeof journal.beforeLedgerBase64 === "string" && !isCanonicalBase64(journal.beforeLedgerBase64))
+    || typeof journal.afterLedgerHash !== "string"
+    || !/^[0-9a-f]{64}$/.test(journal.afterLedgerHash)
+    || !(journal.createdGenerationRoot === null || typeof journal.createdGenerationRoot === "string")
+    || (journal.createdGenerationRoot === null) !== (journal.createdGenerationEntries === null)
+  ) {
+    throw new Error("Lifecycle transaction journal is malformed or belongs to another config");
+  }
+  let createdGenerationId: string | null = null;
+  let createdReceiptPath: string | null = null;
+  if (journal.createdGenerationRoot) {
+    createdGenerationId = path.basename(journal.createdGenerationRoot);
+    if (path.resolve(journal.createdGenerationRoot) !== generationRootFor(root, createdGenerationId)) {
+      throw new Error("Lifecycle journal contains an invalid generation path");
+    }
+    parseReceipt(
+      JSON.stringify({ schemaVersion: 1, generationId: createdGenerationId, entries: journal.createdGenerationEntries }),
+      createdGenerationId,
+      "Lifecycle transaction journal receipt inventory"
+    );
+    createdReceiptPath = receiptPathFor(root, createdGenerationId);
+    await assertManagedDirectory(root, "generations");
+    await assertManagedDirectory(root, "receipts", true);
+    if (await exists(journal.createdGenerationRoot)) {
+      await assertLiteralDirectoryContained(path.join(root, "generations"), journal.createdGenerationRoot, "Interrupted generation root");
+      assertInventorySubset(
+        await inventory(journal.createdGenerationRoot),
+        journal.createdGenerationEntries!,
+        "Interrupted generation contains unknown files; refusing recovery deletion"
+      );
+    }
+    if (await exists(createdReceiptPath)) {
+      await assertManagedDirectory(root, "receipts");
+      await assertLiteralFile(createdReceiptPath, "Interrupted generation receipt");
+      const receipt = parseReceipt(await readFile(createdReceiptPath, "utf8"), createdGenerationId, "Interrupted generation receipt");
+      if (JSON.stringify(receipt.entries) !== JSON.stringify(journal.createdGenerationEntries)) {
+        throw new Error("Interrupted generation receipt changed; refusing recovery deletion");
+      }
+    }
+  }
   const beforeConfig = Buffer.from(journal.beforeConfigBase64, "base64").toString("utf8");
   const currentConfig = await readFile(configPath, "utf8").catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return null;
@@ -583,6 +738,7 @@ async function recoverJournal(
     throw new Error("OpenCode config changed during interrupted lifecycle transaction; preserving user edits");
   }
   if (currentConfig === null && journal.beforeConfigExisted) throw new Error("OpenCode config disappeared during interrupted lifecycle transaction");
+  if (await exists(ledgerPath)) await assertLiteralFile(ledgerPath, "Lifecycle ledger");
   const currentLedger = await readFile(ledgerPath, "utf8").catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -599,37 +755,26 @@ async function recoverJournal(
   else if (currentConfig !== beforeConfig) await writeAtomic(configPath, beforeConfig, journal.beforeConfigMode);
   if (beforeLedger === null) await rm(ledgerPath, { force: true });
   else if (currentLedger !== beforeLedger) await writeAtomic(ledgerPath, beforeLedger, 0o600);
-  if (journal.createdGenerationRoot) {
-    const generationId = path.basename(journal.createdGenerationRoot);
-    if (path.resolve(journal.createdGenerationRoot) !== generationRootFor(root, generationId)) {
-      throw new Error("Lifecycle journal contains an invalid generation path");
-    }
+  if (journal.createdGenerationRoot && createdGenerationId && createdReceiptPath) {
     if (await exists(journal.createdGenerationRoot)) {
-      if (!journal.createdGenerationEntries) {
-        throw new Error("Interrupted generation contains unknown files; refusing recovery deletion");
-      }
-      assertInventorySubset(
-        await inventory(journal.createdGenerationRoot),
-        journal.createdGenerationEntries,
-        "Interrupted generation contains unknown files; refusing recovery deletion"
-      );
-      const receiptPath = receiptPathFor(root, generationId);
-      if (await exists(receiptPath)) {
-        const receipt = JSON.parse(await readFile(receiptPath, "utf8")) as Receipt;
-        if (receipt.generationId !== generationId || JSON.stringify(receipt.entries) !== JSON.stringify(journal.createdGenerationEntries)) {
-          throw new Error("Interrupted generation receipt changed; refusing recovery deletion");
-        }
-      }
+      await assertLiteralDirectoryContained(path.join(root, "generations"), journal.createdGenerationRoot, "Interrupted generation root");
       await rm(journal.createdGenerationRoot, { recursive: true, force: true });
-      await rm(receiptPath, { force: true });
+    }
+    if (await exists(createdReceiptPath)) {
+      await assertLiteralFile(createdReceiptPath, "Interrupted generation receipt");
+      await rm(createdReceiptPath, { force: true });
     }
   }
-  if (beforeLedger === null) await rm(path.join(root, "launcher.mjs"), { force: true });
+  if (beforeLedger === null && await exists(path.join(root, "launcher.mjs"))) {
+    await assertLiteralFile(path.join(root, "launcher.mjs"), "Owned Blueprint launcher");
+    await rm(path.join(root, "launcher.mjs"), { force: true });
+  }
   await rm(journalPath, { force: true });
 }
 
 async function writeTransactionJournal(
   journalPath: string,
+  configPath: string,
   beforeConfig: string,
   beforeConfigExisted: boolean,
   beforeConfigMode: number,
@@ -641,6 +786,7 @@ async function writeTransactionJournal(
 ): Promise<void> {
   const journal: TransactionJournal = {
     schemaVersion: 1,
+    configPath,
     beforeConfigBase64: Buffer.from(beforeConfig).toString("base64"),
     beforeConfigExisted,
     beforeConfigMode,
@@ -654,13 +800,17 @@ async function writeTransactionJournal(
 }
 
 async function validateRecordedGeneration(root: string, generation: LifecycleGeneration): Promise<Receipt> {
+  await assertManagedDirectory(root, "generations");
+  await assertManagedDirectory(root, "receipts");
   const generationRoot = generationRootFor(root, generation.generationId);
-  const receipt = await verifyReceipt(receiptPathFor(root, generation.generationId), generationRoot);
+  await assertLiteralDirectoryContained(path.join(root, "generations"), generationRoot, "Installed generation root");
+  const receipt = await verifyReceipt(receiptPathFor(root, generation.generationId), generationRoot, generation.generationId);
   const observed = await readPackageGeneration(
     generation.generationId,
     generationRoot,
     generation.packageRoot,
     generation.sourceSpec,
+    generation.sourceIntegrity,
     false
   );
   if (JSON.stringify(observed) !== JSON.stringify(generation)) throw new Error("Installed generation metadata was tampered");
@@ -676,11 +826,15 @@ function parseCleanupJournal(raw: string): CleanupJournal {
   if (
     journal.schemaVersion !== 1
     || !["retire", "uninstall"].includes(journal.action)
+    || typeof journal.configPath !== "string"
+    || !path.isAbsolute(journal.configPath)
     || !Array.isArray(journal.generations)
     || !Array.isArray(journal.allowedGenerationIds)
     || !Array.isArray(journal.retainedGenerationIds)
     || typeof journal.expectedLedgerHash !== "string"
+    || !/^[0-9a-f]{64}$/.test(journal.expectedLedgerHash)
     || !(journal.removeConfigIfHash === null || typeof journal.removeConfigIfHash === "string")
+    || (typeof journal.removeConfigIfHash === "string" && !/^[0-9a-f]{64}$/.test(journal.removeConfigIfHash))
   ) {
     throw new Error("Lifecycle cleanup journal is malformed");
   }
@@ -696,8 +850,10 @@ function parseCleanupJournal(raw: string): CleanupJournal {
     if (!target || typeof target !== "object" || !target.generation || !Array.isArray(target.entries)) {
       throw new Error("Lifecycle cleanup journal generation is malformed");
     }
+    assertGenerationRecord(target.generation, "Cleanup target");
     const id = target.generation.generationId;
     assertGenerationId(id);
+    parseReceipt(JSON.stringify({ schemaVersion: 1, generationId: id, entries: target.entries }), id, "Lifecycle cleanup journal receipt inventory");
     if (!allowedIds.has(id) || retainedIds.has(id) || cleanupIds.has(id)) {
       throw new Error("Lifecycle cleanup journal generation ownership is malformed");
     }
@@ -736,6 +892,8 @@ async function assertCleanupInventory(
   for (const entry of await readdir(root)) {
     if (!expectedRootEntries.has(entry)) throw new Error(`Unknown installer artifact ${entry}; refusing committed cleanup`);
   }
+  await assertManagedDirectory(root, "generations", true);
+  await assertManagedDirectory(root, "receipts", true);
 
   const generationNames = await readdir(path.join(root, "generations")).catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return [];
@@ -768,16 +926,19 @@ async function assertCleanupInventory(
     }
     if (generationExists) {
       const generationRoot = generationRootFor(root, id);
+      await assertLiteralDirectoryContained(path.join(root, "generations"), generationRoot, "Cleanup target generation");
       const actualEntries = await inventory(generationRoot);
       assertInventorySubset(actualEntries, target.entries, "Cleanup target generation contains content not approved at commit; refusing deletion");
-      const receipt = JSON.parse(await readFile(receiptPathFor(root, id), "utf8")) as Receipt;
-      if (receipt.generationId !== id || JSON.stringify(receipt.entries) !== JSON.stringify(target.entries)) {
+      await assertLiteralFile(receiptPathFor(root, id), "Cleanup target receipt");
+      const receipt = parseReceipt(await readFile(receiptPathFor(root, id), "utf8"), id, "Cleanup target receipt");
+      if (JSON.stringify(receipt.entries) !== JSON.stringify(target.entries)) {
         throw new Error("Cleanup target receipt changed after commit; refusing deletion");
       }
     }
   }
 
   if (await exists(ledgerPath)) {
+    await assertLiteralFile(ledgerPath, "Lifecycle ledger");
     const ledgerRaw = await readFile(ledgerPath, "utf8");
     if (sha256(ledgerRaw) !== journal.expectedLedgerHash) {
       throw new Error("Lifecycle ledger changed during committed cleanup; refusing deletion");
@@ -786,6 +947,7 @@ async function assertCleanupInventory(
     throw new Error("Lifecycle ledger disappeared during generation retirement");
   }
   if (await exists(launcherPath)) {
+    await assertLiteralFile(launcherPath, "Owned Blueprint launcher");
     await assertOwnedLauncher(launcherPath, ledgerPath);
   } else if (journal.action === "retire") {
     throw new Error("Owned Blueprint launcher disappeared during generation retirement");
@@ -821,13 +983,19 @@ async function recoverCommittedCleanup(
   dependencies: OpenCodeLifecycleDependencies
 ): Promise<boolean> {
   if (!(await exists(cleanupJournalPath))) return false;
+  await assertLiteralFile(cleanupJournalPath, "Lifecycle cleanup journal");
   const journal = parseCleanupJournal(await readFile(cleanupJournalPath, "utf8"));
+  if (path.resolve(journal.configPath) !== configPath) {
+    throw new Error("Lifecycle cleanup journal belongs to another OpenCode config");
+  }
   await assertCleanupInventory(root, ledgerPath, launcherPath, journal);
 
   if (journal.removeConfigIfHash && await exists(configPath)) {
+    await assertLiteralFile(configPath, "OpenCode config");
     const currentConfig = await readFile(configPath, "utf8");
     if (sha256(currentConfig) === journal.removeConfigIfHash) {
       await dependencies.beforeCleanup?.(configPath, "config");
+      if (await exists(configPath)) await assertLiteralFile(configPath, "OpenCode config");
       if (await exists(configPath) && sha256(await readFile(configPath, "utf8")) === journal.removeConfigIfHash) {
         await rm(configPath, { force: true });
       }
@@ -856,6 +1024,8 @@ async function assertOwnedInstallRoot(root: string, ledger: Ledger): Promise<voi
   for (const entry of await readdir(root)) {
     if (!expectedRootEntries.has(entry)) throw new Error(`Unknown installer artifact ${entry}; refusing deletion`);
   }
+  await assertManagedDirectory(root, "generations");
+  await assertManagedDirectory(root, "receipts");
   const expectedIds = new Set([ledger.active, ledger.previous]
     .filter((value): value is LifecycleGeneration => value !== null)
     .map((value) => value.generationId));
@@ -876,6 +1046,7 @@ async function assertOwnedInstallRoot(root: string, ledger: Ledger): Promise<voi
 }
 
 async function assertOwnedLauncher(launcherPath: string, ledgerPath: string): Promise<void> {
+  await assertLiteralFile(launcherPath, "Owned Blueprint launcher");
   if (await readFile(launcherPath, "utf8") !== launcherSource(ledgerPath)) {
     throw new Error("Owned Blueprint launcher is missing or modified");
   }
@@ -884,6 +1055,7 @@ async function assertOwnedLauncher(launcherPath: string, ledgerPath: string): Pr
 async function isClaimableEmptyRoot(root: string): Promise<boolean> {
   for (const entry of await readdir(root)) {
     if (!["generations", "receipts"].includes(entry)) return false;
+    await assertManagedDirectory(root, entry as "generations" | "receipts");
     if ((await readdir(path.join(root, entry))).length > 0) return false;
   }
   return true;
@@ -1002,7 +1174,7 @@ export async function runOpenCodeLifecycle(
       const afterConfig = currentConfig;
       const configMode = (await lstat(configPath)).mode & 0o777;
       await dependencies.onStep?.("beforeJournalWrite");
-      await writeTransactionJournal(journalPath, currentConfig, true, configMode, afterConfig, ledgerRecord!.raw, afterLedgerRaw, null, null);
+      await writeTransactionJournal(journalPath, configPath, currentConfig, true, configMode, afterConfig, ledgerRecord!.raw, afterLedgerRaw, null, null);
       await dependencies.onStep?.("afterJournalWrite");
       await dependencies.onStep?.("afterConfigWrite");
       await writeAtomic(ledgerPath, afterLedgerRaw, 0o600);
@@ -1034,7 +1206,7 @@ export async function runOpenCodeLifecycle(
       const afterLedgerRaw = json(afterLedger);
       const configMode = (await lstat(configPath)).mode & 0o777;
       await dependencies.onStep?.("beforeJournalWrite");
-      await writeTransactionJournal(journalPath, currentConfig, true, configMode, afterConfig, ledgerRecord!.raw, afterLedgerRaw, null, null);
+      await writeTransactionJournal(journalPath, configPath, currentConfig, true, configMode, afterConfig, ledgerRecord!.raw, afterLedgerRaw, null, null);
       await dependencies.onStep?.("afterJournalWrite");
       await writeAtomic(configPath, afterConfig, configMode);
       await dependencies.onStep?.("afterConfigWrite");
@@ -1045,6 +1217,7 @@ export async function runOpenCodeLifecycle(
       await writeCleanupJournal(cleanupJournalPath, {
         schemaVersion: 1,
         action: "uninstall",
+        configPath,
         generations: cleanupGenerations,
         allowedGenerationIds: cleanupGenerations.map((entry) => entry.generation.generationId),
         retainedGenerationIds: [],
@@ -1065,6 +1238,9 @@ export async function runOpenCodeLifecycle(
     } else if (!dependencies.allowRegistryPackageSpec) {
       throw new Error("Registry Blueprint installation is disabled until the published package identity is qualified; use an absolute .tgz path");
     }
+    const sourceIntegrity = path.isAbsolute(packageSpec)
+      ? sha256(await readFile(packageSpec))
+      : sha256(`registry:${packageSpec}`);
     if (!cwd) throw new Error(`${input.action} requires an absolute cwd`);
     if (input.action === "upgrade" && !ledger?.active) throw new Error("Blueprint must be installed before upgrade");
     if (input.action === "install" && ledger?.active && ledger.active.sourceSpec !== packageSpec) {
@@ -1072,8 +1248,10 @@ export async function runOpenCodeLifecycle(
     }
     const generationId = `${dependencies.now?.().toISOString().replace(/[^0-9]/g, "") ?? Date.now()}-${dependencies.randomId?.() ?? randomUUID()}`;
     const generationRoot = generationRootFor(root, generationId);
-    await mkdir(path.dirname(generationRoot), { recursive: true, mode: 0o700 });
+    if (!(await exists(path.dirname(generationRoot)))) await mkdir(path.dirname(generationRoot), { mode: 0o700 });
+    await assertManagedDirectory(root, "generations");
     await mkdir(generationRoot, { mode: 0o700 });
+    await assertLiteralDirectoryContained(path.dirname(generationRoot), generationRoot, "Staged generation root");
     const installer = dependencies.packageInstaller ?? defaultPackageInstaller;
     const validateNativeAssets = dependencies.validatePackageAssets ?? dependencies.packageInstaller === undefined;
     let generation!: LifecycleGeneration;
@@ -1089,7 +1267,10 @@ export async function runOpenCodeLifecycle(
     try {
       let installedPackageRoot: string;
       ({ packageRoot: installedPackageRoot } = await installer({ packageSpec, stagingPrefix: generationRoot, env }));
-      generation = await readPackageGeneration(generationId, generationRoot, installedPackageRoot, packageSpec, validateNativeAssets);
+      if (path.isAbsolute(packageSpec) && sha256(await readFile(packageSpec)) !== sourceIntegrity) {
+        throw new Error("Package archive changed during installation; refusing activation");
+      }
+      generation = await readPackageGeneration(generationId, generationRoot, installedPackageRoot, packageSpec, sourceIntegrity, validateNativeAssets);
       const namedVersion = /^blueprint@(.+)$/.exec(packageSpec)?.[1];
       if (namedVersion && generation.version !== namedVersion) {
         throw new Error(`Installed Blueprint version ${generation.version} does not match requested exact version ${namedVersion}`);
@@ -1097,10 +1278,14 @@ export async function runOpenCodeLifecycle(
       newEntries = await inventory(generationRoot);
       if (ledger?.active) {
         const activeReceipt = await validateRecordedGeneration(root, ledger.active);
-        const sameContent = JSON.stringify(activeReceipt.entries) === JSON.stringify(newEntries);
+        const sameContent = JSON.stringify(packageIdentityEntries(activeReceipt.entries)) === JSON.stringify(packageIdentityEntries(newEntries));
         if (generation.version === ledger.active.version) {
           await rm(generationRoot, { recursive: true, force: true });
-          if (generation.sourceSpec === ledger.active.sourceSpec && sameContent) return lifecycleResult(input.action, ledger);
+          if (
+            generation.sourceSpec === ledger.active.sourceSpec
+            && generation.sourceIntegrity === ledger.active.sourceIntegrity
+            && sameContent
+          ) return lifecycleResult(input.action, ledger);
           throw new Error("Equal-version Blueprint package changed source or content; refusing blind replacement");
         }
         if (compareVersions(generation.version, ledger.active.version) < 0) {
@@ -1137,7 +1322,7 @@ export async function runOpenCodeLifecycle(
       if (preJournalConfigExisted !== stagedBeforeConfigExisted || preJournalConfig !== stagedBeforeConfig) {
         throw new Error("OpenCode config changed during package staging; preserving customer edits");
       }
-      await writeTransactionJournal(journalPath, stagedBeforeConfig, stagedBeforeConfigExisted, configMode, afterConfig, ledgerRecord?.raw ?? null, afterLedgerRaw, generationRoot, newEntries);
+      await writeTransactionJournal(journalPath, configPath, stagedBeforeConfig, stagedBeforeConfigExisted, configMode, afterConfig, ledgerRecord?.raw ?? null, afterLedgerRaw, generationRoot, newEntries);
       journalOwnsGeneration = true;
     } catch (error) {
       if (!journalOwnsGeneration) await rm(generationRoot, { recursive: true, force: true });
@@ -1164,7 +1349,8 @@ export async function runOpenCodeLifecycle(
     await dependencies.onStep?.("afterConfigWrite");
     await writeAtomic(ledgerPath, afterLedgerRaw, 0o600);
     await dependencies.onStep?.("afterLedgerWrite");
-    await mkdir(path.join(root, "receipts"), { recursive: true, mode: 0o700 });
+    if (!(await exists(path.join(root, "receipts")))) await mkdir(path.join(root, "receipts"), { mode: 0o700 });
+    await assertManagedDirectory(root, "receipts");
     await writeReceipt(receiptPathFor(root, generationId), generationId, generationRoot);
     await dependencies.onStep?.("afterReceiptWrite");
     if (!(await exists(launcherPath))) await writeAtomic(launcherPath, launcherSource(ledgerPath), 0o600);
@@ -1177,6 +1363,7 @@ export async function runOpenCodeLifecycle(
       await writeCleanupJournal(cleanupJournalPath, {
         schemaVersion: 1,
         action: "retire",
+        configPath,
         generations: [retiredGeneration],
         allowedGenerationIds: [...new Set([...retainedGenerationIds, retiredGeneration.generation.generationId])],
         retainedGenerationIds,

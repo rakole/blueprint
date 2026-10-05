@@ -6,6 +6,7 @@ export type LifecycleCleanupKind = "config" | "generation" | "receipt" | "launch
 export type LifecycleGeneration = {
     generationId: string;
     packageRoot: string;
+    sourceIntegrity: string;
     sourceSpec: string;
     stateCompatibility: string;
     version: string;
