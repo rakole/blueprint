@@ -12,6 +12,7 @@ import {
   parseOpenCodeAssetManifest,
   validateManifestAsset
 } from "../src/opencode/asset-manifest.js";
+import { BLUEPRINT_STATE_COMPATIBILITY } from "../src/opencode/lifecycle.js";
 
 const hash = (value: string): string => createHash("sha256").update(value).digest("hex");
 const execFileAsync = promisify(execFile);
@@ -70,6 +71,9 @@ test("package metadata exposes only the explicit native runtime allowlist", asyn
   const packageJson = JSON.parse(await readFile(path.join(process.cwd(), "package.json"), "utf8"));
   assert.equal(packageJson.private, true);
   assert.equal(packageJson.exports["."], "./dist/opencode/plugin.js");
+  assert.equal(packageJson.exports["./server"], "./dist/opencode/plugin.js");
+  assert.equal(packageJson.bin["blueprint-opencode"], "./dist/opencode/lifecycle-cli.js");
+  assert.equal(packageJson.blueprint.stateCompatibility, BLUEPRINT_STATE_COMPATIBILITY);
   assert.deepEqual(packageJson.files, [
     "agents",
     "commands",
@@ -106,7 +110,14 @@ test("exact local tarball contains only the native package closure and loads its
   for (const forbidden of ["src/", "tests/", ".git/", ".blueprint/", "node_modules/", ".planning/"]) {
     assert.equal(names.some((name) => name.startsWith(forbidden)), false, `tarball must exclude ${forbidden}`);
   }
-  for (const required of ["package.json", "dist/opencode/plugin.js", "dist/mcp/server.js", "generated/opencode-assets.json", "generated/command-catalog.json"]) {
+  for (const required of [
+    "package.json",
+    "dist/opencode/plugin.js",
+    "dist/opencode/lifecycle-cli.js",
+    "dist/mcp/server.js",
+    "generated/opencode-assets.json",
+    "generated/command-catalog.json"
+  ]) {
     assert.equal(names.includes(required), true, `tarball must contain ${required}`);
   }
   await execFileAsync("tar", ["-xzf", tarball, "-C", temp]);
