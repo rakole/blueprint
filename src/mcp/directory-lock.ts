@@ -18,9 +18,10 @@ export type DirectoryLockRecoveryHooksForTest = {
   afterRecoveryGuardRelease?(lockPath: string): Promise<void> | void;
 };
 
-type DirectoryLockOptions = {
+export type DirectoryLockOptions = {
   lockPath: string;
   timing: DirectoryLockTiming;
+  timeoutMs?: number;
   recoveryHooks?: DirectoryLockRecoveryHooksForTest;
 };
 
@@ -419,6 +420,7 @@ async function acquireDirectoryLock(
   options: DirectoryLockOptions
 ): Promise<DirectoryLockHandle> {
   await fs.mkdir(path.dirname(options.lockPath), { recursive: true });
+  const startedAt = Date.now();
 
   for (;;) {
     try {
@@ -453,7 +455,13 @@ async function acquireDirectoryLock(
         throw statError;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, options.timing.retryMs));
+      if (options.timeoutMs !== undefined && Date.now() - startedAt >= options.timeoutMs) {
+        throw new Error(`Timed out waiting for directory lock ${options.lockPath}`);
+      }
+      const remainingMs = options.timeoutMs === undefined
+        ? options.timing.retryMs
+        : Math.min(options.timing.retryMs, Math.max(0, options.timeoutMs - (Date.now() - startedAt)));
+      await new Promise((resolve) => setTimeout(resolve, remainingMs));
     }
   }
 }

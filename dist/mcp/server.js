@@ -33177,6 +33177,7 @@ async function recoverStaleDirectoryLock(options) {
 }
 async function acquireDirectoryLock(options) {
   await fs.mkdir(path4.dirname(options.lockPath), { recursive: true });
+  const startedAt = Date.now();
   for (; ; ) {
     try {
       await fs.mkdir(options.lockPath);
@@ -33203,7 +33204,11 @@ async function acquireDirectoryLock(options) {
         }
         throw statError;
       }
-      await new Promise((resolve) => setTimeout(resolve, options.timing.retryMs));
+      if (options.timeoutMs !== void 0 && Date.now() - startedAt >= options.timeoutMs) {
+        throw new Error(`Timed out waiting for directory lock ${options.lockPath}`);
+      }
+      const remainingMs = options.timeoutMs === void 0 ? options.timing.retryMs : Math.min(options.timing.retryMs, Math.max(0, options.timeoutMs - (Date.now() - startedAt)));
+      await new Promise((resolve) => setTimeout(resolve, remainingMs));
     }
   }
 }

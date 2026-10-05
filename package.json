@@ -5,7 +5,14 @@
   "description": "Blueprint OpenCode plugin and MCP workflow engine",
   "type": "module",
   "exports": {
-    ".": "./dist/opencode/plugin.js"
+    ".": "./dist/opencode/plugin.js",
+    "./server": "./dist/opencode/plugin.js"
+  },
+  "bin": {
+    "blueprint-opencode": "./dist/opencode/lifecycle-cli.js"
+  },
+  "blueprint": {
+    "stateCompatibility": "blueprint-state-v1"
   },
   "files": [
     "agents",

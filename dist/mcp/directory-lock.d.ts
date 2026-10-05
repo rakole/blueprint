@@ -8,10 +8,10 @@ export type DirectoryLockRecoveryHooksForTest = {
     beforeStaleLockQuarantine?(lockPath: string): Promise<void> | void;
     afterRecoveryGuardRelease?(lockPath: string): Promise<void> | void;
 };
-type DirectoryLockOptions = {
+export type DirectoryLockOptions = {
     lockPath: string;
     timing: DirectoryLockTiming;
+    timeoutMs?: number;
     recoveryHooks?: DirectoryLockRecoveryHooksForTest;
 };
 export declare function withDirectoryLock<T>(options: DirectoryLockOptions, callback: () => Promise<T>): Promise<T>;
-export {};

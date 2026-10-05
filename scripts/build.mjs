@@ -68,7 +68,8 @@ await build({
     "hooks/read-before-edit": "src/hooks/read-before-edit.ts",
     "hooks/workflow-advisory": "src/hooks/workflow-advisory.ts",
     "mcp/server": "src/mcp/server.ts",
-    "opencode/plugin": "src/opencode/plugin.ts"
+    "opencode/plugin": "src/opencode/plugin.ts",
+    "opencode/lifecycle-cli": "src/opencode/lifecycle-cli.ts"
   },
   format: "esm",
   logLevel: "info",
