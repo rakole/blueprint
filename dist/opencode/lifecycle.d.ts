@@ -1,7 +1,8 @@
 export declare const BLUEPRINT_STATE_COMPATIBILITY = "blueprint-state-v1";
 export type LifecycleAction = "install" | "upgrade" | "rollback" | "uninstall" | "status";
 export type OpenCodeLifecycleAction = LifecycleAction;
-export type LifecycleStep = "afterJournalWrite" | "afterConfigWrite" | "afterLedgerWrite" | "afterReceiptWrite" | "afterActivation";
+export type LifecycleStep = "beforeJournalWrite" | "afterJournalWrite" | "afterConfigWrite" | "afterLedgerWrite" | "afterReceiptWrite" | "afterActivation";
+export type LifecycleCleanupKind = "config" | "generation" | "receipt" | "launcher" | "ledger" | "transactionJournal" | "generationsDirectory" | "receiptsDirectory" | "installRoot" | "cleanupJournal";
 export type LifecycleGeneration = {
     generationId: string;
     packageRoot: string;
@@ -28,8 +29,10 @@ export type OpenCodeLifecycleDependencies = {
     now?: () => Date;
     randomId?: () => string;
     packageInstaller?: PackageInstaller;
+    allowRegistryPackageSpec?: boolean;
     validatePackageAssets?: boolean;
     onStep?: (step: LifecycleStep) => Promise<void> | void;
+    beforeCleanup?: (targetPath: string, kind: LifecycleCleanupKind) => Promise<void> | void;
     lockOptions?: {
         timeoutMs?: number;
         pollMs?: number;

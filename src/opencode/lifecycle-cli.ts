@@ -10,7 +10,7 @@ import {
 
 const actions = new Set<LifecycleAction>(["install", "upgrade", "rollback", "uninstall", "status"]);
 
-const usageText = "Usage: blueprint-opencode install|upgrade|rollback|uninstall|status --config /absolute/opencode.json [--package /absolute/blueprint.tgz|blueprint@exact-semver] [--cwd /absolute/customer-project] [--json]";
+const usageText = "Usage: blueprint-opencode install|upgrade --config /absolute/opencode.json --package /absolute/blueprint.tgz --cwd /absolute/customer-project [--json]\n       blueprint-opencode rollback|uninstall|status --config /absolute/opencode.json [--cwd /absolute/customer-project] [--json]";
 
 function usage(): never { throw new Error(usageText); }
 
@@ -34,9 +34,16 @@ function parseArguments(argv: string[]): { input: OpenCodeLifecycleInput; json: 
   }
   const configPath = values.get("--config");
   if (!configPath) throw new Error("--config is required");
+  const action = actionValue as LifecycleAction;
+  if (action === "install" || action === "upgrade") {
+    if (!values.has("--package")) throw new Error(`${action} requires --package`);
+    if (!values.has("--cwd")) throw new Error(`${action} requires --cwd`);
+  } else if (values.has("--package")) {
+    throw new Error(`${action} does not accept --package`);
+  }
   return {
     input: {
-      action: actionValue as LifecycleAction,
+      action,
       configPath,
       ...(values.has("--package") ? { packageSpec: values.get("--package") } : {}),
       ...(values.has("--cwd") ? { cwd: values.get("--cwd") } : {})

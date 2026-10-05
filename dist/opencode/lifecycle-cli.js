@@ -8330,10 +8330,34 @@ async function exists(candidate) {
 }
 async function writeAtomic(filePath, contents, mode) {
   const temporary = `${filePath}.${process.pid}.${randomUUID2()}.tmp`;
-  await mkdir(path5.dirname(filePath), { recursive: true });
-  await writeFile(temporary, contents, mode === void 0 ? void 0 : { mode });
-  await rename(temporary, filePath);
-  if (mode !== void 0) await chmod(filePath, mode);
+  try {
+    await mkdir(path5.dirname(filePath), { recursive: true });
+    await writeFile(temporary, contents, mode === void 0 ? void 0 : { mode });
+    await rename(temporary, filePath);
+    if (mode !== void 0) await chmod(filePath, mode);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => void 0);
+    throw error;
+  }
+}
+function parseStrictSemver(value, source) {
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/.exec(value);
+  if (!match) {
+    throw new Error(`${source} must be an exact semantic version without build metadata`);
+  }
+  const prerelease = match[4]?.split(".").map((identifier) => {
+    if (/^\d+$/.test(identifier)) {
+      if (identifier.length > 1 && identifier.startsWith("0")) {
+        throw new Error(`${source} contains a numeric prerelease identifier with a leading zero`);
+      }
+      return BigInt(identifier);
+    }
+    return identifier;
+  }) ?? null;
+  return {
+    core: [BigInt(match[1]), BigInt(match[2]), BigInt(match[3])],
+    prerelease
+  };
 }
 async function parseStrictObject(contents, source) {
   let parsed;
@@ -8357,9 +8381,11 @@ function assertAbsolute(name, value) {
 }
 function validatePackageSpec(spec) {
   if (path5.isAbsolute(spec)) return;
-  if (!/^blueprint@(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/.test(spec)) {
+  const match = /^blueprint@(.+)$/.exec(spec);
+  if (!match) {
     throw new Error("--package must be an absolute tarball path or blueprint@exact-semver");
   }
+  parseStrictSemver(match[1], "--package version");
 }
 function assertNoReservedConfig(config, ownedRegistration, requireOwned = true) {
   const plugins = config.plugin;
@@ -8511,14 +8537,19 @@ async function assertLiteralContained(root, candidate) {
   return canonical;
 }
 async function defaultPackageInstaller(input) {
+  await writeAtomic(path5.join(input.stagingPrefix, "package.json"), json({
+    name: "blueprint-opencode-generation",
+    private: true
+  }), 384);
   await execFileAsync("npm", [
     "install",
     "--prefix",
     input.stagingPrefix,
     "--omit=dev",
     "--ignore-scripts",
+    "--no-bin-links",
     input.packageSpec
-  ], { env: input.env, maxBuffer: 10 * 1024 * 1024 });
+  ], { cwd: input.stagingPrefix, env: input.env, maxBuffer: 10 * 1024 * 1024 });
   return { packageRoot: path5.join(input.stagingPrefix, "node_modules", "blueprint") };
 }
 async function readPackageGeneration(generationId, generationRoot, packageRoot, sourceSpec, validateNativeAssets) {
@@ -8526,9 +8557,10 @@ async function readPackageGeneration(generationId, generationRoot, packageRoot, 
   const packageJsonPath = path5.join(canonicalPackageRoot, "package.json");
   const packageJson = await parseStrictObject(await readFile3(packageJsonPath, "utf8"), "Installed package.json");
   if (packageJson.name !== "blueprint") throw new Error("Installed package name must be blueprint");
-  if (typeof packageJson.version !== "string" || !/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/.test(packageJson.version)) {
+  if (typeof packageJson.version !== "string") {
     throw new Error("Installed Blueprint package must have an exact semantic version");
   }
+  parseStrictSemver(packageJson.version, "Installed Blueprint package version");
   const exportsField = packageJson.exports;
   if (!exportsField || Array.isArray(exportsField) || typeof exportsField !== "object") throw new Error("Installed package exports are missing");
   const exportsObject = exportsField;
@@ -8577,6 +8609,12 @@ async function inventory(root) {
   };
   await visit(root);
   return entries;
+}
+function assertInventorySubset(actual, approved, message) {
+  const approvedEntries = new Map(approved.map((entry) => [entry.path, JSON.stringify(entry)]));
+  if (actual.some((entry) => approvedEntries.get(entry.path) !== JSON.stringify(entry))) {
+    throw new Error(message);
+  }
 }
 async function writeReceipt(receiptPath, generationId, generationRoot) {
   const receipt = { schemaVersion: 1, generationId, entries: await inventory(generationRoot) };
@@ -8629,16 +8667,33 @@ async function assertSupportedRuntimeState(ledger, env) {
     const statePath = path5.join(ledger.cwd, ".blueprint", "STATE.md");
     if (await exists(statePath)) {
       const state = await readFile3(statePath, "utf8");
-      const match = /^---\n[\s\S]*?^blueprint_state_version:\s*([^\s]+)[\s\S]*?^---\n/m.exec(state);
-      if (!match || match[1] !== "1.0") throw new Error(`${statePath} has an unsupported or newer compatibility version`);
+      const frontmatter = /^---\r?\n([\s\S]*?)^---\r?(?:\n|$)/m.exec(state)?.[1];
+      const rawVersion = frontmatter?.split(/\r?\n/).map((line) => /^blueprint_state_version:\s*(.+)$/.exec(line.trimEnd())?.[1]).find((value) => value !== void 0);
+      let version = rawVersion?.trim();
+      if (version?.startsWith('"') && version.endsWith('"')) {
+        try {
+          const parsed = JSON.parse(version);
+          version = typeof parsed === "string" ? parsed : version;
+        } catch {
+          version = version.slice(1, -1);
+        }
+      }
+      if (version !== "1.0") throw new Error(`${statePath} has an unsupported or newer compatibility version`);
     }
   }
 }
 function receiptPathFor(root, generationId) {
+  assertGenerationId(generationId);
   return path5.join(root, "receipts", `${generationId}.json`);
 }
 function generationRootFor(root, generationId) {
+  assertGenerationId(generationId);
   return path5.join(root, "generations", generationId);
+}
+function assertGenerationId(generationId) {
+  if (!/^[0-9A-Za-z._-]+$/.test(generationId) || generationId === "." || generationId === "..") {
+    throw new Error("Lifecycle generation id is malformed");
+  }
 }
 function lifecycleResult(action, ledger) {
   return {
@@ -8678,15 +8733,25 @@ async function recoverJournal(journalPath, configPath, ledgerPath, root) {
   else if (currentLedger !== beforeLedger) await writeAtomic(ledgerPath, beforeLedger, 384);
   if (journal.createdGenerationRoot) {
     const generationId = path5.basename(journal.createdGenerationRoot);
-    if (!/^[0-9A-Za-z._-]+$/.test(generationId) || path5.resolve(journal.createdGenerationRoot) !== generationRootFor(root, generationId)) {
+    if (path5.resolve(journal.createdGenerationRoot) !== generationRootFor(root, generationId)) {
       throw new Error("Lifecycle journal contains an invalid generation path");
     }
     if (await exists(journal.createdGenerationRoot)) {
-      if (!journal.createdGenerationEntries || JSON.stringify(await inventory(journal.createdGenerationRoot)) !== JSON.stringify(journal.createdGenerationEntries)) {
+      if (!journal.createdGenerationEntries) {
         throw new Error("Interrupted generation contains unknown files; refusing recovery deletion");
       }
+      assertInventorySubset(
+        await inventory(journal.createdGenerationRoot),
+        journal.createdGenerationEntries,
+        "Interrupted generation contains unknown files; refusing recovery deletion"
+      );
       const receiptPath = receiptPathFor(root, generationId);
-      if (await exists(receiptPath)) await verifyReceipt(receiptPath, journal.createdGenerationRoot);
+      if (await exists(receiptPath)) {
+        const receipt = JSON.parse(await readFile3(receiptPath, "utf8"));
+        if (receipt.generationId !== generationId || JSON.stringify(receipt.entries) !== JSON.stringify(journal.createdGenerationEntries)) {
+          throw new Error("Interrupted generation receipt changed; refusing recovery deletion");
+        }
+      }
       await rm(journal.createdGenerationRoot, { recursive: true, force: true });
       await rm(receiptPath, { force: true });
     }
@@ -8710,7 +8775,7 @@ async function writeTransactionJournal(journalPath, beforeConfig, beforeConfigEx
 }
 async function validateRecordedGeneration(root, generation) {
   const generationRoot = generationRootFor(root, generation.generationId);
-  await verifyReceipt(receiptPathFor(root, generation.generationId), generationRoot);
+  const receipt = await verifyReceipt(receiptPathFor(root, generation.generationId), generationRoot);
   const observed = await readPackageGeneration(
     generation.generationId,
     generationRoot,
@@ -8719,9 +8784,158 @@ async function validateRecordedGeneration(root, generation) {
     false
   );
   if (JSON.stringify(observed) !== JSON.stringify(generation)) throw new Error("Installed generation metadata was tampered");
+  return receipt;
+}
+async function writeCleanupJournal(cleanupJournalPath, journal) {
+  await writeAtomic(cleanupJournalPath, json(journal), 384);
+}
+function parseCleanupJournal(raw) {
+  const journal = JSON.parse(raw);
+  if (journal.schemaVersion !== 1 || !["retire", "uninstall"].includes(journal.action) || !Array.isArray(journal.generations) || !Array.isArray(journal.allowedGenerationIds) || !Array.isArray(journal.retainedGenerationIds) || typeof journal.expectedLedgerHash !== "string" || !(journal.removeConfigIfHash === null || typeof journal.removeConfigIfHash === "string")) {
+    throw new Error("Lifecycle cleanup journal is malformed");
+  }
+  const allowedIds = new Set(journal.allowedGenerationIds);
+  const retainedIds = new Set(journal.retainedGenerationIds);
+  const cleanupIds = /* @__PURE__ */ new Set();
+  for (const id of allowedIds) assertGenerationId(id);
+  for (const id of retainedIds) {
+    assertGenerationId(id);
+    if (!allowedIds.has(id)) throw new Error("Lifecycle cleanup journal retained generation is malformed");
+  }
+  for (const target of journal.generations) {
+    if (!target || typeof target !== "object" || !target.generation || !Array.isArray(target.entries)) {
+      throw new Error("Lifecycle cleanup journal generation is malformed");
+    }
+    const id = target.generation.generationId;
+    assertGenerationId(id);
+    if (!allowedIds.has(id) || retainedIds.has(id) || cleanupIds.has(id)) {
+      throw new Error("Lifecycle cleanup journal generation ownership is malformed");
+    }
+    cleanupIds.add(id);
+  }
+  if (allowedIds.size !== journal.allowedGenerationIds.length || retainedIds.size !== journal.retainedGenerationIds.length) {
+    throw new Error("Lifecycle cleanup journal generation inventory is malformed");
+  }
+  if (allowedIds.size !== retainedIds.size + cleanupIds.size) {
+    throw new Error("Lifecycle cleanup journal generation inventory is incomplete");
+  }
+  if (journal.action === "uninstall" && retainedIds.size !== 0) {
+    throw new Error("Lifecycle uninstall cleanup journal may not retain generations");
+  }
+  if (journal.action === "retire" && cleanupIds.size !== 1) {
+    throw new Error("Lifecycle retirement cleanup journal must own one retired generation");
+  }
+  return journal;
+}
+async function assertCleanupInventory(root, ledgerPath, launcherPath, journal) {
+  if (!await exists(root)) {
+    if (journal.action === "retire") throw new Error("Installer root disappeared during generation retirement");
+    return;
+  }
+  const rootMetadata = await lstat3(root);
+  if (!rootMetadata.isDirectory() || rootMetadata.isSymbolicLink()) {
+    throw new Error("Installer root changed during committed cleanup");
+  }
+  const expectedRootEntries = /* @__PURE__ */ new Set(["generations", "launcher.mjs", "ledger.json", "receipts", "transaction.json"]);
+  for (const entry of await readdir2(root)) {
+    if (!expectedRootEntries.has(entry)) throw new Error(`Unknown installer artifact ${entry}; refusing committed cleanup`);
+  }
+  const generationNames = await readdir2(path5.join(root, "generations")).catch((error) => {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  });
+  const receiptNames = await readdir2(path5.join(root, "receipts")).catch((error) => {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  });
+  const allowedIds = new Set(journal.allowedGenerationIds);
+  if (generationNames.some((name) => !allowedIds.has(name))) {
+    throw new Error("Unknown installer generation; refusing committed cleanup");
+  }
+  if (receiptNames.some((name) => !name.endsWith(".json") || !allowedIds.has(name.slice(0, -5)))) {
+    throw new Error("Unknown installer receipt; refusing committed cleanup");
+  }
+  const generationSet = new Set(generationNames);
+  const receiptSet = new Set(receiptNames);
+  for (const id of journal.retainedGenerationIds) {
+    if (!generationSet.has(id) || !receiptSet.has(`${id}.json`)) {
+      throw new Error("Retained installer generation inventory is incomplete during committed cleanup");
+    }
+  }
+  for (const target of journal.generations) {
+    const id = target.generation.generationId;
+    const generationExists = generationSet.has(id);
+    const receiptExists = receiptSet.has(`${id}.json`);
+    if (generationExists && !receiptExists) {
+      throw new Error("Cleanup target receipt disappeared before its generation; refusing deletion");
+    }
+    if (generationExists) {
+      const generationRoot = generationRootFor(root, id);
+      const actualEntries = await inventory(generationRoot);
+      assertInventorySubset(actualEntries, target.entries, "Cleanup target generation contains content not approved at commit; refusing deletion");
+      const receipt = JSON.parse(await readFile3(receiptPathFor(root, id), "utf8"));
+      if (receipt.generationId !== id || JSON.stringify(receipt.entries) !== JSON.stringify(target.entries)) {
+        throw new Error("Cleanup target receipt changed after commit; refusing deletion");
+      }
+    }
+  }
+  if (await exists(ledgerPath)) {
+    const ledgerRaw = await readFile3(ledgerPath, "utf8");
+    if (sha256(ledgerRaw) !== journal.expectedLedgerHash) {
+      throw new Error("Lifecycle ledger changed during committed cleanup; refusing deletion");
+    }
+  } else if (journal.action === "retire") {
+    throw new Error("Lifecycle ledger disappeared during generation retirement");
+  }
+  if (await exists(launcherPath)) {
+    await assertOwnedLauncher(launcherPath, ledgerPath);
+  } else if (journal.action === "retire") {
+    throw new Error("Owned Blueprint launcher disappeared during generation retirement");
+  }
+}
+async function removeCleanupPath(targetPath, kind, dependencies, directoryOnly = false, validateBeforeRemove) {
+  if (!await exists(targetPath)) return;
+  await dependencies.beforeCleanup?.(targetPath, kind);
+  await validateBeforeRemove?.();
+  if (directoryOnly) {
+    await rmdir(targetPath).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+    return;
+  }
+  await rm(targetPath, { recursive: kind === "generation", force: true });
+}
+async function recoverCommittedCleanup(cleanupJournalPath, transactionJournalPath, configPath, root, ledgerPath, launcherPath, dependencies) {
+  if (!await exists(cleanupJournalPath)) return false;
+  const journal = parseCleanupJournal(await readFile3(cleanupJournalPath, "utf8"));
+  await assertCleanupInventory(root, ledgerPath, launcherPath, journal);
+  if (journal.removeConfigIfHash && await exists(configPath)) {
+    const currentConfig = await readFile3(configPath, "utf8");
+    if (sha256(currentConfig) === journal.removeConfigIfHash) {
+      await dependencies.beforeCleanup?.(configPath, "config");
+      if (await exists(configPath) && sha256(await readFile3(configPath, "utf8")) === journal.removeConfigIfHash) {
+        await rm(configPath, { force: true });
+      }
+    }
+  }
+  const validateRoot = () => assertCleanupInventory(root, ledgerPath, launcherPath, journal);
+  for (const target of journal.generations) {
+    await removeCleanupPath(generationRootFor(root, target.generation.generationId), "generation", dependencies, false, validateRoot);
+    await removeCleanupPath(receiptPathFor(root, target.generation.generationId), "receipt", dependencies, false, validateRoot);
+  }
+  await removeCleanupPath(transactionJournalPath, "transactionJournal", dependencies, false, validateRoot);
+  if (journal.action === "uninstall") {
+    await removeCleanupPath(launcherPath, "launcher", dependencies, false, validateRoot);
+    await removeCleanupPath(ledgerPath, "ledger", dependencies, false, validateRoot);
+    await removeCleanupPath(path5.join(root, "receipts"), "receiptsDirectory", dependencies, true, validateRoot);
+    await removeCleanupPath(path5.join(root, "generations"), "generationsDirectory", dependencies, true, validateRoot);
+    await removeCleanupPath(root, "installRoot", dependencies, true, validateRoot);
+  }
+  await removeCleanupPath(cleanupJournalPath, "cleanupJournal", dependencies, false, validateRoot);
+  return true;
 }
 async function assertOwnedInstallRoot(root, ledger) {
-  const expectedRootEntries = /* @__PURE__ */ new Set(["generations", "launcher.mjs", "ledger.json", "lock", "receipts"]);
+  const expectedRootEntries = /* @__PURE__ */ new Set(["generations", "launcher.mjs", "ledger.json", "receipts"]);
   for (const entry of await readdir2(root)) {
     if (!expectedRootEntries.has(entry)) throw new Error(`Unknown installer artifact ${entry}; refusing deletion`);
   }
@@ -8754,13 +8968,28 @@ async function isClaimableEmptyRoot(root) {
   return true;
 }
 function compareVersions(left, right) {
-  const parse = (value) => value.split("-", 1)[0].split(".").map(Number);
-  const a = parse(left);
-  const b = parse(right);
+  const a = parseStrictSemver(left, "Installed Blueprint package version");
+  const b = parseStrictSemver(right, "Active Blueprint package version");
   for (let index = 0; index < 3; index += 1) {
-    if (a[index] !== b[index]) return a[index] - b[index];
+    if (a.core[index] !== b.core[index]) return a.core[index] < b.core[index] ? -1 : 1;
   }
-  return left.localeCompare(right);
+  if (a.prerelease === null) return b.prerelease === null ? 0 : 1;
+  if (b.prerelease === null) return -1;
+  const length = Math.max(a.prerelease.length, b.prerelease.length);
+  for (let index = 0; index < length; index += 1) {
+    const leftIdentifier = a.prerelease[index];
+    const rightIdentifier = b.prerelease[index];
+    if (leftIdentifier === void 0) return -1;
+    if (rightIdentifier === void 0) return 1;
+    if (leftIdentifier === rightIdentifier) continue;
+    if (typeof leftIdentifier === "bigint" && typeof rightIdentifier === "bigint") {
+      return leftIdentifier < rightIdentifier ? -1 : 1;
+    }
+    if (typeof leftIdentifier === "bigint") return -1;
+    if (typeof rightIdentifier === "bigint") return 1;
+    return leftIdentifier < rightIdentifier ? -1 : 1;
+  }
+  return 0;
 }
 async function runOpenCodeLifecycle(input, dependencies = {}) {
   const env = dependencies.env ?? process.env;
@@ -8770,29 +8999,40 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
   const root = path5.join(configDir, ".blueprint-install");
   const ledgerPath = path5.join(root, "ledger.json");
   const journalPath = path5.join(root, "transaction.json");
+  const cleanupJournalPath = `${root}.cleanup.json`;
   const launcherPath = path5.join(root, "launcher.mjs");
   const registration = pathToFileURL(launcherPath).href;
+  if (!["install", "upgrade"].includes(input.action) && input.packageSpec !== void 0) {
+    throw new Error(`${input.action} does not accept --package`);
+  }
   const initialConfigExisted = await exists(configPath);
   if (initialConfigExisted && (await lstat3(configPath)).isSymbolicLink()) throw new Error("OpenCode config must be a literal file, not a symbolic link");
   const initialConfig = initialConfigExisted ? await readFile3(configPath, "utf8") : "{}\n";
   const parsedInitialConfig = await parseStrictObject(initialConfig, "OpenCode config");
   const rootWasPresent = await exists(root);
-  if (!rootWasPresent) assertNoReservedConfig(parsedInitialConfig);
+  const cleanupWasPresent = await exists(cleanupJournalPath);
+  if (!rootWasPresent && !cleanupWasPresent) assertNoReservedConfig(parsedInitialConfig);
   await assertRootIsolation(root, configPath, cwd, env);
-  if (!rootWasPresent) {
+  if (!rootWasPresent && !cleanupWasPresent) {
     if (input.action === "status") return lifecycleResult("status", null);
     if (input.action === "rollback" || input.action === "uninstall") throw new Error("Blueprint is not installed for this OpenCode config");
-    await mkdir(root, { recursive: true, mode: 448 });
-  } else {
+  } else if (rootWasPresent) {
     const rootMetadata = await lstat3(root);
     if (!rootMetadata.isDirectory() || rootMetadata.isSymbolicLink()) throw new Error("Installer root must be a literal directory");
     if ((rootMetadata.mode & 63) !== 0) throw new Error("Installer root permissions are not private");
   }
   const result = await withLifecycleLock(`${root}.lock`, dependencies.lockOptions, async () => {
+    await recoverCommittedCleanup(cleanupJournalPath, journalPath, configPath, root, ledgerPath, launcherPath, dependencies);
     if (!await exists(root)) {
       if (input.action === "status") return lifecycleResult("status", null);
       if (input.action === "rollback" || input.action === "uninstall") throw new Error("Blueprint is not installed for this OpenCode config");
-      await mkdir(root, { recursive: true, mode: 448 });
+      if (input.action === "upgrade") throw new Error("Blueprint must be installed before upgrade");
+      const latestConfig = await parseStrictObject(await readFile3(configPath, "utf8").catch((error) => {
+        if (error.code === "ENOENT") return "{}\n";
+        throw error;
+      }), "OpenCode config");
+      assertNoReservedConfig(latestConfig);
+      await mkdir(root, { mode: 448 });
     }
     await recoverJournal(journalPath, configPath, ledgerPath, root);
     const currentConfigExisted = await exists(configPath);
@@ -8802,11 +9042,21 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
     const ledger = ledgerRecord?.ledger ?? null;
     if (!ledger && !await isClaimableEmptyRoot(root)) throw new Error("Existing installer root has no owned ledger or recovery journal");
     if (ledger && path5.resolve(ledger.configPath) !== configPath) throw new Error("Lifecycle ledger config ownership conflict");
+    if (cwd !== void 0 && ledger?.cwd) {
+      const [canonicalSuppliedCwd, canonicalRecordedCwd] = await Promise.all([
+        canonicalProspective(cwd),
+        canonicalProspective(ledger.cwd)
+      ]);
+      if (canonicalSuppliedCwd !== canonicalRecordedCwd) {
+        throw new Error("Supplied cwd does not match the lifecycle ledger customer root");
+      }
+    }
     await assertRootIsolation(root, configPath, cwd ?? ledger?.cwd ?? void 0, env);
     assertNoReservedConfig(configObject, ledger?.registration);
     if (ledger?.active) await assertOwnedLauncher(launcherPath, ledgerPath);
     if (input.action === "status") {
-      if (ledger?.active) await readPackageGeneration(ledger.active.generationId, generationRootFor(root, ledger.active.generationId), ledger.active.packageRoot, ledger.active.sourceSpec, false);
+      if (ledger?.active) await validateRecordedGeneration(root, ledger.active);
+      if (ledger?.previous) await validateRecordedGeneration(root, ledger.previous);
       return lifecycleResult("status", ledger);
     }
     if (input.action === "rollback") {
@@ -8821,6 +9071,7 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
       const afterLedgerRaw2 = json(afterLedger2);
       const afterConfig2 = currentConfig;
       const configMode2 = (await lstat3(configPath)).mode & 511;
+      await dependencies.onStep?.("beforeJournalWrite");
       await writeTransactionJournal(journalPath, currentConfig, true, configMode2, afterConfig2, ledgerRecord.raw, afterLedgerRaw2, null, null);
       await dependencies.onStep?.("afterJournalWrite");
       await dependencies.onStep?.("afterConfigWrite");
@@ -8833,8 +9084,14 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
     }
     if (input.action === "uninstall") {
       if (!ledger?.active) throw new Error("Blueprint is not installed for this OpenCode config");
-      await validateRecordedGeneration(root, ledger.active);
-      if (ledger.previous) await validateRecordedGeneration(root, ledger.previous);
+      const cleanupGenerations = [{
+        generation: ledger.active,
+        entries: (await validateRecordedGeneration(root, ledger.active)).entries
+      }];
+      if (ledger.previous) cleanupGenerations.push({
+        generation: ledger.previous,
+        entries: (await validateRecordedGeneration(root, ledger.previous)).entries
+      });
       await assertOwnedInstallRoot(root, ledger);
       const afterConfig2 = removeRegistration(currentConfig, ledger.registration);
       const afterConfigObject = await parseStrictObject(afterConfig2, "Updated OpenCode config");
@@ -8842,6 +9099,7 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
       const afterLedger2 = { ...ledger, active: null, previous: null, ownedConfigHash: null };
       const afterLedgerRaw2 = json(afterLedger2);
       const configMode2 = (await lstat3(configPath)).mode & 511;
+      await dependencies.onStep?.("beforeJournalWrite");
       await writeTransactionJournal(journalPath, currentConfig, true, configMode2, afterConfig2, ledgerRecord.raw, afterLedgerRaw2, null, null);
       await dependencies.onStep?.("afterJournalWrite");
       await writeAtomic(configPath, afterConfig2, configMode2);
@@ -8850,21 +9108,16 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
       await dependencies.onStep?.("afterLedgerWrite");
       await dependencies.onStep?.("afterReceiptWrite");
       await dependencies.onStep?.("afterActivation");
-      await rm(journalPath, { force: true });
-      if (removeOwnedEmptyConfig) await rm(configPath, { force: true });
-      for (const generation2 of [ledger.active, ledger.previous].filter((value) => value !== null)) {
-        await rm(generationRootFor(root, generation2.generationId), { recursive: true, force: true });
-        await rm(receiptPathFor(root, generation2.generationId), { force: true });
-      }
-      await rm(launcherPath, { force: true });
-      await rm(ledgerPath, { force: true });
-      await rmdir(path5.join(root, "receipts")).catch((error) => {
-        if (error.code !== "ENOENT") throw error;
+      await writeCleanupJournal(cleanupJournalPath, {
+        schemaVersion: 1,
+        action: "uninstall",
+        generations: cleanupGenerations,
+        allowedGenerationIds: cleanupGenerations.map((entry) => entry.generation.generationId),
+        retainedGenerationIds: [],
+        expectedLedgerHash: sha256(afterLedgerRaw2),
+        removeConfigIfHash: removeOwnedEmptyConfig ? sha256(afterConfig2) : null
       });
-      await rmdir(path5.join(root, "generations")).catch((error) => {
-        if (error.code !== "ENOENT") throw error;
-      });
-      await rmdir(root);
+      await recoverCommittedCleanup(cleanupJournalPath, journalPath, configPath, root, ledgerPath, launcherPath, dependencies);
       return lifecycleResult("uninstall", null);
     }
     const packageSpec = input.packageSpec;
@@ -8874,6 +9127,8 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
       if (!packageSpec.endsWith(".tgz")) throw new Error("Absolute --package paths must name a .tgz archive");
       const archiveMetadata = await lstat3(packageSpec);
       if (!archiveMetadata.isFile() || archiveMetadata.isSymbolicLink()) throw new Error("Package archive must be a literal regular .tgz file");
+    } else if (!dependencies.allowRegistryPackageSpec) {
+      throw new Error("Registry Blueprint installation is disabled until the published package identity is qualified; use an absolute .tgz path");
     }
     if (!cwd) throw new Error(`${input.action} requires an absolute cwd`);
     if (input.action === "upgrade" && !ledger?.active) throw new Error("Blueprint must be installed before upgrade");
@@ -8882,60 +9137,95 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
     }
     const generationId = `${dependencies.now?.().toISOString().replace(/[^0-9]/g, "") ?? Date.now()}-${dependencies.randomId?.() ?? randomUUID2()}`;
     const generationRoot = generationRootFor(root, generationId);
-    await mkdir(generationRoot, { recursive: true, mode: 448 });
+    await mkdir(path5.dirname(generationRoot), { recursive: true, mode: 448 });
+    await mkdir(generationRoot, { mode: 448 });
     const installer = dependencies.packageInstaller ?? defaultPackageInstaller;
-    let installedPackageRoot;
-    try {
-      ({ packageRoot: installedPackageRoot } = await installer({ packageSpec, stagingPrefix: generationRoot, env }));
-    } catch (error) {
-      await rm(generationRoot, { recursive: true, force: true });
-      throw error;
-    }
     const validateNativeAssets = dependencies.validatePackageAssets ?? dependencies.packageInstaller === void 0;
     let generation;
+    let newEntries;
+    let afterConfig;
+    let afterLedger;
+    let afterLedgerRaw;
+    let configMode;
+    let stagedBeforeConfig;
+    let stagedBeforeConfigExisted;
+    let retiredGeneration = null;
+    let journalOwnsGeneration = false;
     try {
+      let installedPackageRoot;
+      ({ packageRoot: installedPackageRoot } = await installer({ packageSpec, stagingPrefix: generationRoot, env }));
       generation = await readPackageGeneration(generationId, generationRoot, installedPackageRoot, packageSpec, validateNativeAssets);
+      const namedVersion = /^blueprint@(.+)$/.exec(packageSpec)?.[1];
+      if (namedVersion && generation.version !== namedVersion) {
+        throw new Error(`Installed Blueprint version ${generation.version} does not match requested exact version ${namedVersion}`);
+      }
+      newEntries = await inventory(generationRoot);
+      if (ledger?.active) {
+        const activeReceipt = await validateRecordedGeneration(root, ledger.active);
+        const sameContent = JSON.stringify(activeReceipt.entries) === JSON.stringify(newEntries);
+        if (generation.version === ledger.active.version) {
+          await rm(generationRoot, { recursive: true, force: true });
+          if (generation.sourceSpec === ledger.active.sourceSpec && sameContent) return lifecycleResult(input.action, ledger);
+          throw new Error("Equal-version Blueprint package changed source or content; refusing blind replacement");
+        }
+        if (compareVersions(generation.version, ledger.active.version) < 0) {
+          throw new Error("Blueprint package downgrade requires rollback to a retained compatible generation");
+        }
+        if (ledger.previous) {
+          retiredGeneration = {
+            generation: ledger.previous,
+            entries: (await validateRecordedGeneration(root, ledger.previous)).entries
+          };
+        }
+      }
+      stagedBeforeConfigExisted = await exists(configPath);
+      stagedBeforeConfig = stagedBeforeConfigExisted ? await readFile3(configPath, "utf8") : "{}\n";
+      const stagedConfigObject = await parseStrictObject(stagedBeforeConfig, "OpenCode config");
+      assertNoReservedConfig(stagedConfigObject, ledger?.registration);
+      afterConfig = ledger ? stagedBeforeConfig : addRegistration(stagedBeforeConfig, registration);
+      await parseStrictObject(afterConfig, "Updated OpenCode config");
+      afterLedger = {
+        schemaVersion: 1,
+        configPath,
+        registration,
+        active: generation,
+        previous: ledger?.active ?? null,
+        ownedConfigHash: sha256(afterConfig),
+        cwd,
+        configCreated: ledger?.configCreated ?? !stagedBeforeConfigExisted
+      };
+      afterLedgerRaw = json(afterLedger);
+      configMode = stagedBeforeConfigExisted ? (await lstat3(configPath)).mode & 511 : 384;
+      await dependencies.onStep?.("beforeJournalWrite");
+      const preJournalConfigExisted = await exists(configPath);
+      const preJournalConfig = preJournalConfigExisted ? await readFile3(configPath, "utf8") : "{}\n";
+      if (preJournalConfigExisted !== stagedBeforeConfigExisted || preJournalConfig !== stagedBeforeConfig) {
+        throw new Error("OpenCode config changed during package staging; preserving customer edits");
+      }
+      await writeTransactionJournal(journalPath, stagedBeforeConfig, stagedBeforeConfigExisted, configMode, afterConfig, ledgerRecord?.raw ?? null, afterLedgerRaw, generationRoot, newEntries);
+      journalOwnsGeneration = true;
     } catch (error) {
-      await rm(generationRoot, { recursive: true, force: true });
+      if (!journalOwnsGeneration) await rm(generationRoot, { recursive: true, force: true });
       throw error;
     }
-    const namedVersion = /^blueprint@(.+)$/.exec(packageSpec)?.[1];
-    if (namedVersion && generation.version !== namedVersion) {
-      await rm(generationRoot, { recursive: true, force: true });
-      throw new Error(`Installed Blueprint version ${generation.version} does not match requested exact version ${namedVersion}`);
-    }
-    const newEntries = await inventory(generationRoot);
-    if (ledger?.active) {
-      await validateRecordedGeneration(root, ledger.active);
-      const activeReceipt = await verifyReceipt(receiptPathFor(root, ledger.active.generationId), generationRootFor(root, ledger.active.generationId));
-      const sameContent = JSON.stringify(activeReceipt.entries) === JSON.stringify(newEntries);
-      if (generation.version === ledger.active.version) {
-        await rm(generationRoot, { recursive: true, force: true });
-        if (generation.sourceSpec === ledger.active.sourceSpec && sameContent) return lifecycleResult(input.action, ledger);
-        throw new Error("Equal-version Blueprint package changed source or content; refusing blind replacement");
-      }
-      if (compareVersions(generation.version, ledger.active.version) < 0) {
-        await rm(generationRoot, { recursive: true, force: true });
-        throw new Error("Blueprint package downgrade requires rollback to a retained compatible generation");
-      }
-    }
-    const afterConfig = ledger ? currentConfig : addRegistration(currentConfig, registration);
-    await parseStrictObject(afterConfig, "Updated OpenCode config");
-    const afterLedger = {
-      schemaVersion: 1,
-      configPath,
-      registration,
-      active: generation,
-      previous: ledger?.active ?? null,
-      ownedConfigHash: sha256(afterConfig),
-      cwd,
-      configCreated: ledger?.configCreated ?? !currentConfigExisted
-    };
-    const afterLedgerRaw = json(afterLedger);
-    const configMode = currentConfigExisted ? (await lstat3(configPath)).mode & 511 : 384;
-    await writeTransactionJournal(journalPath, currentConfig, currentConfigExisted, configMode, afterConfig, ledgerRecord?.raw ?? null, afterLedgerRaw, generationRoot, newEntries);
     await dependencies.onStep?.("afterJournalWrite");
-    await writeAtomic(configPath, afterConfig, configMode);
+    const preWriteConfigExisted = await exists(configPath);
+    const preWriteConfig = preWriteConfigExisted ? await readFile3(configPath, "utf8") : "{}\n";
+    if (preWriteConfigExisted !== stagedBeforeConfigExisted || preWriteConfig !== stagedBeforeConfig) {
+      const currentLedgerRaw = await readFile3(ledgerPath, "utf8").catch((error) => {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      });
+      if (currentLedgerRaw !== (ledgerRecord?.raw ?? null)) {
+        throw new Error("OpenCode config and lifecycle ledger changed before activation; refusing automatic recovery");
+      }
+      await rm(generationRoot, { recursive: true, force: true });
+      await rm(journalPath, { force: true });
+      throw new Error("OpenCode config changed before activation; preserving customer edits");
+    }
+    if (!stagedBeforeConfigExisted || afterConfig !== stagedBeforeConfig) {
+      await writeAtomic(configPath, afterConfig, configMode);
+    }
     await dependencies.onStep?.("afterConfigWrite");
     await writeAtomic(ledgerPath, afterLedgerRaw, 384);
     await dependencies.onStep?.("afterLedgerWrite");
@@ -8945,7 +9235,21 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
     if (!await exists(launcherPath)) await writeAtomic(launcherPath, launcherSource(ledgerPath), 384);
     else if (await readFile3(launcherPath, "utf8") !== launcherSource(ledgerPath)) throw new Error("Owned Blueprint launcher was modified");
     await dependencies.onStep?.("afterActivation");
-    await rm(journalPath, { force: true });
+    if (retiredGeneration) {
+      const retainedGenerationIds = [afterLedger.active, afterLedger.previous].filter((value) => value !== null).map((value) => value.generationId);
+      await writeCleanupJournal(cleanupJournalPath, {
+        schemaVersion: 1,
+        action: "retire",
+        generations: [retiredGeneration],
+        allowedGenerationIds: [.../* @__PURE__ */ new Set([...retainedGenerationIds, retiredGeneration.generation.generationId])],
+        retainedGenerationIds,
+        expectedLedgerHash: sha256(afterLedgerRaw),
+        removeConfigIfHash: null
+      });
+      await recoverCommittedCleanup(cleanupJournalPath, journalPath, configPath, root, ledgerPath, launcherPath, dependencies);
+    } else {
+      await rm(journalPath, { force: true });
+    }
     return lifecycleResult(input.action, afterLedger);
   });
   return result;
@@ -8953,7 +9257,7 @@ async function runOpenCodeLifecycle(input, dependencies = {}) {
 
 // src/opencode/lifecycle-cli.ts
 var actions = /* @__PURE__ */ new Set(["install", "upgrade", "rollback", "uninstall", "status"]);
-var usageText = "Usage: blueprint-opencode install|upgrade|rollback|uninstall|status --config /absolute/opencode.json [--package /absolute/blueprint.tgz|blueprint@exact-semver] [--cwd /absolute/customer-project] [--json]";
+var usageText = "Usage: blueprint-opencode install|upgrade --config /absolute/opencode.json --package /absolute/blueprint.tgz --cwd /absolute/customer-project [--json]\n       blueprint-opencode rollback|uninstall|status --config /absolute/opencode.json [--cwd /absolute/customer-project] [--json]";
 function usage() {
   throw new Error(usageText);
 }
@@ -8977,9 +9281,16 @@ function parseArguments(argv) {
   }
   const configPath = values.get("--config");
   if (!configPath) throw new Error("--config is required");
+  const action = actionValue;
+  if (action === "install" || action === "upgrade") {
+    if (!values.has("--package")) throw new Error(`${action} requires --package`);
+    if (!values.has("--cwd")) throw new Error(`${action} requires --cwd`);
+  } else if (values.has("--package")) {
+    throw new Error(`${action} does not accept --package`);
+  }
   return {
     input: {
-      action: actionValue,
+      action,
       configPath,
       ...values.has("--package") ? { packageSpec: values.get("--package") } : {},
       ...values.has("--cwd") ? { cwd: values.get("--cwd") } : {}
