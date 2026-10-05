@@ -17,6 +17,32 @@ import { BLUEPRINT_STATE_COMPATIBILITY } from "../src/opencode/lifecycle.js";
 const hash = (value: string): string => createHash("sha256").update(value).digest("hex");
 const execFileAsync = promisify(execFile);
 
+function isolatedEnvironment(root: string): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (
+      /^(?:BLUEPRINT_|OPENCODE_)/.test(key)
+      || /^(?:ANTHROPIC|AZURE_OPENAI|GEMINI|GOOGLE_API|OPENAI|OPENROUTER|AWS_(?:ACCESS|PROFILE|SECRET|SESSION))/.test(key)
+      || /(?:_API_KEY|_CREDENTIALS|_SECRET|_TOKEN)$/.test(key)
+    ) {
+      delete env[key];
+    }
+  }
+  return {
+    ...env,
+    HOME: path.join(root, "home"),
+    XDG_CONFIG_HOME: path.join(root, "xdg", "config"),
+    XDG_DATA_HOME: path.join(root, "xdg", "data"),
+    XDG_CACHE_HOME: path.join(root, "xdg", "cache"),
+    XDG_STATE_HOME: path.join(root, "xdg", "state"),
+    OPENCODE_CONFIG_DIR: path.join(root, "opencode-config"),
+    OPENCODE_DISABLE_PROJECT_CONFIG: "true",
+    BLUEPRINT_GLOBAL_HOME: path.join(root, "blueprint-global"),
+    npm_config_cache: path.join(root, "npm-cache"),
+    npm_config_offline: "true"
+  };
+}
+
 function fixtureManifest(assetHash = hash("command")) {
   return {
     schemaVersion: 1,
@@ -99,9 +125,21 @@ test("exact local tarball contains only the native package closure and loads its
   }
   const temp = await mkdtemp(path.join(os.tmpdir(), "blueprint-opencode-pack-"));
   t.after(() => rm(temp, { recursive: true, force: true }));
+  const env = isolatedEnvironment(temp);
+  const customerProject = path.join(temp, "customer-project");
+  await Promise.all([
+    customerProject,
+    env.HOME!,
+    env.XDG_CONFIG_HOME!,
+    env.XDG_DATA_HOME!,
+    env.XDG_CACHE_HOME!,
+    env.XDG_STATE_HOME!,
+    env.OPENCODE_CONFIG_DIR!,
+    env.BLUEPRINT_GLOBAL_HOME!
+  ].map((directory) => mkdir(directory, { recursive: true })));
   const packed = await execFileAsync("npm", ["pack", repoRoot, "--ignore-scripts", "--json", "--pack-destination", temp], {
     cwd: temp,
-    env: { ...process.env, npm_config_cache: path.join(temp, "npm-cache") }
+    env
   });
   const metadata = JSON.parse(packed.stdout) as Array<{ filename: string; files: Array<{ path: string }> }>;
   assert.equal(metadata.length, 1);
@@ -121,19 +159,7 @@ test("exact local tarball contains only the native package closure and loads its
     assert.equal(names.includes(required), true, `tarball must contain ${required}`);
   }
   await execFileAsync("tar", ["-xzf", tarball, "-C", temp]);
-  const customerProject = path.join(temp, "customer-project");
-  const explicitGlobalHome = path.join(temp, "explicit-global-home");
-  const isolatedHome = path.join(temp, "home");
-  const isolatedConfig = path.join(temp, "xdg-config");
-  const isolatedData = path.join(temp, "xdg-data");
-  const isolatedOpenCodeConfig = path.join(temp, "opencode-config");
-  await Promise.all([
-    mkdir(customerProject, { recursive: true }),
-    mkdir(isolatedHome, { recursive: true }),
-    mkdir(isolatedConfig, { recursive: true }),
-    mkdir(isolatedData, { recursive: true }),
-    mkdir(isolatedOpenCodeConfig, { recursive: true })
-  ]);
+  const explicitGlobalHome = env.BLUEPRINT_GLOBAL_HOME!;
   const pluginEntry = path.join(temp, "package", "dist", "opencode", "plugin.js");
   const probe = `
     import assert from "node:assert/strict";
@@ -162,14 +188,6 @@ test("exact local tarball contains only the native package closure and loads its
   `;
   await execFileAsync(process.execPath, ["--input-type=module", "-e", probe, customerProject, path.join(temp, "package"), explicitGlobalHome], {
     cwd: customerProject,
-    env: {
-      ...process.env,
-      HOME: isolatedHome,
-      XDG_CONFIG_HOME: isolatedConfig,
-      XDG_DATA_HOME: isolatedData,
-      OPENCODE_CONFIG_DIR: isolatedOpenCodeConfig,
-      OPENCODE_DISABLE_PROJECT_CONFIG: "true",
-      BLUEPRINT_GLOBAL_HOME: explicitGlobalHome
-    }
+    env
   });
 });

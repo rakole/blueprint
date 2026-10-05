@@ -129,6 +129,8 @@ This branch targets OpenCode v1.18.34 and Node.js 20 or newer. The package is
 private and currently has no registry release. The supported local route packs
 the checkout, runs the packaged `blueprint-opencode` helper from a disposable
 npm prefix, and registers its stable owned entry in an explicit OpenCode config.
+The public helper rejects `blueprint@<version>` registry input before invoking
+npm until a published package identity has been qualified.
 
 Start with the copy/paste [private install guide](user-docs/install-upgrade.md).
 For maintainer package checks, run:

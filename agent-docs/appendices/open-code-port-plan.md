@@ -297,15 +297,21 @@ launcher; a ledger, journal and lock make active/previous state and interrupted
 transactions explicit. Strict config surgery preserves unrelated user entries
 and rejects JSONC or ambiguous ownership intact.
 
+Pre-commit interruptions restore the prior installation. Uninstall deactivation
+commits before destructive cleanup, so a cleanup interruption remains journaled
+and the next locked lifecycle call resumes the remaining owned deletions forward
+to `not-installed`.
+
 This does not make `/blu-update` self-mutating and does not migrate, downgrade,
 restore or delete customer `.blueprint/`, `BLUEPRINT_GLOBAL_HOME`, credentials
 or unrelated plugins. Every successful mutation requires an OpenCode restart,
 and status proves configured package intent rather than loaded-session state.
 
-The additive package/server export and exact-version registry input prepare a
+The additive package/server export and exact-version registry shape prepare a
 future versioned delivery route. `package.json` remains private and no release
-has been published, so current user installation starts from an exact local
-tarball. Qualification remains layered: source/package tests, actual pinned-host
+has been published, so the public helper rejects registry input before npm and
+current user installation starts from an exact local tarball. Qualification
+remains layered: source/package tests, actual pinned-host
 registration, and model-driven workflows are distinct evidence classes. The
 verified binary evidence for this slice is limited to OpenCode v1.18.34 on
 Darwin arm64 (`sha256

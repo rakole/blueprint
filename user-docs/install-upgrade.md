@@ -45,7 +45,9 @@ The examples below assume the same shell so these variables remain defined.
 Keep this disposable prefix for the lifecycle operations below, or rebuild it
 from a trusted exact tarball before a later operation. The customer repository
 is supplied explicitly with `--cwd`; it does not need to contain the helper or
-tarball.
+tarball. This bootstrap prefix is separate tooling outside the owned lifecycle
+installer root. Lifecycle `uninstall` leaves it in place; remove the disposable
+prefix yourself when you no longer need the helper.
 
 ## Install
 
@@ -93,9 +95,10 @@ config:
 
 The active generation becomes the recorded previous generation only after the
 new package and compatibility contract pass validation. Restart OpenCode after
-success. Blueprint is not published today; the accepted
-`blueprint@<exact-semver>` registry form is reserved for a future release and
-cannot be used until a version is actually published.
+success. Blueprint is not published today. The public helper rejects
+`blueprint@<exact-semver>` before invoking npm; that syntax is reserved for a
+future release after the published package identity and lifecycle path are
+qualified.
 
 `/blu-update` is advisory. It can report update guidance but does not install or
 replace the package inside an OpenCode session.
@@ -131,6 +134,12 @@ package artifacts. It preserves unrelated plugins and config, credentials, the
 customer repository, project `.blueprint/`, and `BLUEPRINT_GLOBAL_HOME`. It
 refuses to remove unknown files from the installer root. Restart OpenCode after
 success.
+
+The transaction remains recoverable across the cleanup phase. An interruption
+before uninstall commits restores the prior active installation. Once config
+deactivation and the cleanup ledger are committed, a later `status` or lifecycle
+command resumes the exact remaining owned deletions to completion; it does not
+claim that a partly deleted generation was restored.
 
 ## When The Helper Refuses
 

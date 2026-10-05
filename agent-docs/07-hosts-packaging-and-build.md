@@ -71,10 +71,13 @@ blueprint-opencode <install|upgrade|rollback|uninstall|status> \
 `--config` is always required. `install` and `upgrade` also require both
 `--package` and an absolute `--cwd`. Later status, rollback and uninstall calls
 may omit `--cwd` and use the recorded customer root. Local tarballs must be
-absolute `.tgz` paths. Registry input accepts only the unscoped package name
-`blueprint` at an exact semantic version; tags, ranges, other names and scoped
-names are rejected. Registry installation is a prepared delivery path, not
-currently usable, because Blueprint has not been published.
+absolute `.tgz` paths. Registry input reserves only the unscoped package name
+`blueprint` at an exact semantic version as a future contract shape; tags,
+ranges, other names and scoped names are rejected. The public helper currently
+rejects even that exact registry form before invoking npm because Blueprint is
+private and its published identity has not been qualified. Tests use an
+explicit internal seam for exact-version fixtures; that seam is not a user
+installation path.
 
 Config updates use strict JSON parsing and preserve unrelated properties and
 plugin entries byte-for-byte where possible. JSON with comments is unsupported;
@@ -92,12 +95,20 @@ installer artifacts. It refuses unknown files. Credentials, unrelated config
 and plugins, the customer repository, project `.blueprint/`, and
 `BLUEPRINT_GLOBAL_HOME` remain untouched.
 
+Transactions before activation roll back to the exact prior config and ledger.
+Uninstall cleanup is a separate committed phase: its journal stays durable
+through every owned generation, receipt, launcher, ledger and directory
+deletion. If cleanup is interrupted, the next locked lifecycle call resumes the
+remaining allowlisted deletions forward to `not-installed`; it never invents a
+restored generation after some package bytes were already removed.
+
 Every successful mutating command requires an OpenCode restart. `status` checks
 the installed package, stable registration and recorded generation intent. It
 returns `action`, `status`, `registration`, `active` and `previous`; generation
 records include the version, original package source, immutable generation ID,
 package root and state-compatibility token. It cannot prove that an already-running
-OpenCode process loaded that generation.
+OpenCode process loaded that generation. Status validates both the active and
+retained rollback generation against their receipts before reporting them.
 `/blu-update` remains an advisory in-session command; package mutation uses this
 out-of-session helper.
 
@@ -165,6 +176,16 @@ pointing to the pinned v1.18.34 executable, and `BLUEPRINT_OPENCODE_SOURCE`,
 pointing to the matching source checkout. Without both, the route reports the
 host check as skipped. Model-driven permission, interaction and lifecycle scenarios
 remain separate qualification gates.
+
+Packed lifecycle verification is offline and keeps npm state disposable. Copy
+only a populated read-only source cache's `_cacache` directory into the
+fixture's own `npm_config_cache`, set `npm_config_offline=true`, and keep real
+package dependencies intact. `npm ci` normally populates the source cache. A
+missing cache seed is a setup failure; tests must not fall back to the network
+or remove dependencies to manufacture a pass.
+Runtime npm installs run with the disposable staging prefix as their working
+directory, so a customer repository's `package.json` and `.npmrc` cannot supply
+install context.
 
 A disposable OpenCode config selects the unpacked package export:
 

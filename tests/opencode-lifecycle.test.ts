@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, cp, lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { access, cp, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
@@ -56,13 +56,24 @@ function isolatedEnvironment(root: string): NodeJS.ProcessEnv {
     BLUEPRINT_GLOBAL_HOME: path.join(root, "blueprint-global"),
     npm_config_cache: path.join(root, "npm-cache")
   };
-  if (process.env.BLUEPRINT_NPM_CACHE_SEED) isolated.npm_config_offline = "true";
+  isolated.npm_config_offline = "true";
   return isolated;
 }
 
+function npmCacheSeedPath(): string {
+  const explicit = process.env.BLUEPRINT_NPM_CACHE_SEED;
+  if (explicit) return path.resolve(explicit);
+  const configuredCache = process.env.npm_config_cache?.trim();
+  return path.join(configuredCache ? path.resolve(configuredCache) : path.join(os.homedir(), ".npm"), "_cacache");
+}
+
 async function seedIsolatedNpmCache(root: string): Promise<void> {
-  const seed = process.env.BLUEPRINT_NPM_CACHE_SEED;
-  if (!seed) return;
+  const seed = npmCacheSeedPath();
+  if (!(await exists(seed))) {
+    throw new Error(
+      `Packed lifecycle verification requires a populated read-only npm cache seed at ${seed}; run npm ci or set BLUEPRINT_NPM_CACHE_SEED`
+    );
+  }
   const destination = path.join(root, "npm-cache", "_cacache");
   if (await exists(destination)) return;
   await mkdir(path.dirname(destination), { recursive: true });
@@ -74,6 +85,11 @@ async function exists(candidate: string): Promise<boolean> {
     () => true,
     () => false
   );
+}
+
+function isContainedFixturePath(root: string, candidate: string): boolean {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 async function createFixture(t: TestContext, config = [
@@ -151,6 +167,7 @@ function deps(
 ): OpenCodeLifecycleDependencies {
   let sequence = 0;
   return {
+    allowRegistryPackageSpec: true,
     packageInstaller,
     now: () => new Date("2026-10-05T00:00:00.000Z"),
     randomId: () => `fixture-${++sequence}`,
@@ -260,6 +277,64 @@ test("install is repeatable and upgrade, rollback, and uninstall preserve the cu
   ));
 });
 
+test("three upgrades retain only the rollback generation and remain uninstallable after rollback then upgrade", async (t) => {
+  const fixture = await createFixture(t);
+  const packageInstaller = fixtureInstaller(Object.fromEntries(
+    ["1.0.0", "2.0.0", "3.0.0", "4.0.0"].map((version) => [
+      `blueprint@${version}`,
+      { version }
+    ])
+  ));
+  const dependencies = deps(packageInstaller);
+  const v1 = await install(fixture, "blueprint@1.0.0", dependencies);
+  const upgrade = (version: string) => runOpenCodeLifecycle({
+    action: "upgrade",
+    configPath: fixture.configPath,
+    cwd: fixture.customerCwd,
+    packageSpec: `blueprint@${version}`
+  }, { ...dependencies, env: fixture.env });
+  const v2 = await upgrade("2.0.0");
+  const v3 = await upgrade("3.0.0");
+  assert.equal(v3.active?.version, "3.0.0");
+  assert.equal(v3.previous?.version, "2.0.0");
+  assert.equal(await exists(v1.active!.packageRoot), false, "superseded v1 generation must be removed");
+
+  const rolledBack = await runOpenCodeLifecycle({ action: "rollback", configPath: fixture.configPath }, {
+    ...dependencies,
+    env: fixture.env
+  });
+  assert.equal(rolledBack.active?.version, "2.0.0");
+  assert.equal(rolledBack.previous?.version, "3.0.0");
+  const v4 = await upgrade("4.0.0");
+  assert.equal(v4.active?.version, "4.0.0");
+  assert.equal(v4.previous?.version, "2.0.0");
+  assert.equal(await exists(v3.active!.packageRoot), false, "rolled-back v3 generation must be removed when v4 activates");
+  const removed = await runOpenCodeLifecycle({ action: "uninstall", configPath: fixture.configPath }, {
+    ...dependencies,
+    env: fixture.env
+  });
+  assert.equal(removed.active, null);
+});
+
+test("semantic version precedence upgrades beta.2 to beta.10 and then to the stable release", async (t) => {
+  const fixture = await createFixture(t);
+  const versions = ["1.0.0-beta.2", "1.0.0-beta.10", "1.0.0"];
+  const packageInstaller = fixtureInstaller(Object.fromEntries(
+    versions.map((version) => [`blueprint@${version}`, { version }])
+  ));
+  const dependencies = deps(packageInstaller);
+  await install(fixture, "blueprint@1.0.0-beta.2", dependencies);
+  for (const version of versions.slice(1)) {
+    const upgraded = await runOpenCodeLifecycle({
+      action: "upgrade",
+      configPath: fixture.configPath,
+      cwd: fixture.customerCwd,
+      packageSpec: `blueprint@${version}`
+    }, { ...dependencies, env: fixture.env });
+    assert.equal(upgraded.active?.version, version);
+  }
+});
+
 test("config conflicts fail closed without touching customer bytes or creating an install root", async (t) => {
   const cases = [
     ['{"plugin": [], "plugin": []}\n', /duplicate|plugin/i],
@@ -313,6 +388,42 @@ test("status refuses missing or duplicate owned registrations without repairing 
   }
 });
 
+test("later actions refuse a supplied cwd that differs from the installed customer repository", async (t) => {
+  const fixture = await createFixture(t);
+  const otherCwd = path.join(fixture.root, "other-customer");
+  await mkdir(otherCwd);
+  const packageInstaller = fixtureInstaller({
+    "blueprint@1.0.0": { version: "1.0.0" },
+    "blueprint@2.0.0": { version: "2.0.0" }
+  });
+  const dependencies = deps(packageInstaller);
+  const installed = await install(fixture, "blueprint@1.0.0", dependencies);
+  const configBefore = await readFile(fixture.configPath, "utf8");
+  await assert.rejects(runOpenCodeLifecycle({
+    action: "status",
+    configPath: fixture.configPath,
+    cwd: otherCwd
+  }, { ...dependencies, env: fixture.env }), /cwd|customer|repository|different|match/i);
+
+  let installerCalled = false;
+  await assert.rejects(runOpenCodeLifecycle({
+    action: "upgrade",
+    configPath: fixture.configPath,
+    cwd: otherCwd,
+    packageSpec: "blueprint@2.0.0"
+  }, {
+    ...dependencies,
+    env: fixture.env,
+    packageInstaller: async (input) => {
+      installerCalled = true;
+      return packageInstaller(input);
+    }
+  }), /cwd|customer|repository|different|match/i);
+  assert.equal(installerCalled, false);
+  assert.equal(await readFile(fixture.configPath, "utf8"), configBefore);
+  assert.equal((await status(fixture, dependencies)).active?.generationId, installed.active?.generationId);
+});
+
 test("package identity, exact versions, compatibility, exports, and literal paths are enforced before activation", async (t) => {
   const fixture = await createFixture(t);
   for (const [overrides, expected] of [
@@ -334,6 +445,20 @@ test("package identity, exact versions, compatibility, exports, and literal path
     install(fixture, "blueprint@^1.0.0", deps(async () => assert.fail("range must fail before package installation"))),
     /exact|version|package/i
   );
+  let publicInstallerCalled = false;
+  await assert.rejects(runOpenCodeLifecycle({
+    action: "install",
+    configPath: fixture.configPath,
+    cwd: fixture.customerCwd,
+    packageSpec: "blueprint@1.0.0"
+  }, {
+    env: fixture.env,
+    packageInstaller: async () => {
+      publicInstallerCalled = true;
+      throw new Error("must not install a private registry package");
+    }
+  }), /private|registry|publication|disabled|tarball/i);
+  assert.equal(publicInstallerCalled, false, "registry refusal must happen before npm or the injected installer");
 
   const symlinkDependencies = deps(async ({ stagingPrefix }) => {
     const outside = path.join(fixture.root, "outside-package");
@@ -344,6 +469,105 @@ test("package identity, exact versions, compatibility, exports, and literal path
     return { packageRoot };
   });
   await assert.rejects(install(fixture, "blueprint@1.0.0", symlinkDependencies), /symbolic|symlink|literal|contain/i);
+});
+
+test("a pre-journal inventory failure removes its staging generation and permits a clean retry", async (t) => {
+  const fixture = await createFixture(t);
+  let injectUnexpectedSymlink = true;
+  const packageInstaller: NonNullable<OpenCodeLifecycleDependencies["packageInstaller"]> = async ({ stagingPrefix }) => {
+    const packageRoot = path.join(stagingPrefix, "node_modules", "blueprint");
+    await writeFixturePackage(packageRoot, "1.0.0");
+    if (injectUnexpectedSymlink) {
+      await symlink(
+        path.join(packageRoot, "dist", "opencode", "plugin.js"),
+        path.join(packageRoot, "unexpected-link.js")
+      );
+    }
+    return { packageRoot };
+  };
+  const dependencies = deps(packageInstaller);
+  await assert.rejects(
+    install(fixture, "blueprint@1.0.0", dependencies),
+    /symbolic|symlink|inventory|unsupported/i
+  );
+  injectUnexpectedSymlink = false;
+  const installed = await install(fixture, "blueprint@1.0.0", dependencies);
+  assert.equal(installed.active?.version, "1.0.0");
+  const generations = await readdir(path.join(path.dirname(fixture.configPath), ".blueprint-install", "generations"));
+  assert.deepEqual(generations, [installed.active!.generationId]);
+});
+
+test("a journal-creation failure removes staging and permits a clean retry", async (t) => {
+  const fixture = await createFixture(t);
+  const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+  let failJournalCreation = true;
+  const dependencies = deps(packageInstaller, {
+    onStep: (step) => {
+      if (step === "beforeJournalWrite" && failJournalCreation) {
+        failJournalCreation = false;
+        throw new Error("simulated journal creation failure");
+      }
+    }
+  });
+  await assert.rejects(
+    install(fixture, "blueprint@1.0.0", dependencies),
+    /simulated journal creation failure/
+  );
+  assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+  const installed = await install(fixture, "blueprint@1.0.0", dependencies);
+  assert.equal(installed.active?.version, "1.0.0");
+  const generations = await readdir(path.join(path.dirname(fixture.configPath), ".blueprint-install", "generations"));
+  assert.deepEqual(generations, [installed.active!.generationId]);
+});
+
+test("config edits made while a package is staged are preserved by install and upgrade", async (t) => {
+  const fixture = await createFixture(t);
+  const baseInstaller = fixtureInstaller({
+    "blueprint@1.0.0": { version: "1.0.0" },
+    "blueprint@2.0.0": { version: "2.0.0" }
+  });
+  const duringInstall = fixture.originalConfig
+    .replace('"theme": "system"', '"theme": "customer-edit-during-install"')
+    .replace('"keep": true', '"keep": true, "during-install": "preserve these bytes"');
+  let duringUpgrade: string | undefined;
+  const dependencies = deps(async (input) => {
+    const stagedConfig = input.packageSpec === "blueprint@1.0.0" ? duringInstall : duringUpgrade;
+    assert.ok(stagedConfig);
+    await writeFile(fixture.configPath, stagedConfig);
+    return baseInstaller(input);
+  });
+  const installed = await install(fixture, "blueprint@1.0.0", dependencies);
+  const installedConfig = await readFile(fixture.configPath, "utf8");
+  assert.match(installedConfig, /"theme": "customer-edit-during-install"/);
+  assert.match(installedConfig, /"keep": true, "during-install": "preserve these bytes"/);
+  assert.equal(JSON.parse(installedConfig).plugin.includes(installed.registration), true);
+
+  duringUpgrade = installedConfig
+    .replace('"customer-edit-during-install"', '"customer-edit-during-upgrade"')
+    .replace('"preserve these bytes"', '"preserve these newer bytes"');
+  const upgraded = await runOpenCodeLifecycle({
+    action: "upgrade",
+    configPath: fixture.configPath,
+    cwd: fixture.customerCwd,
+    packageSpec: "blueprint@2.0.0"
+  }, { ...dependencies, env: fixture.env });
+  assert.equal(upgraded.active?.version, "2.0.0");
+  assert.equal(await readFile(fixture.configPath, "utf8"), duringUpgrade);
+});
+
+test("a customer config edit after journal creation is never overwritten", async (t) => {
+  const fixture = await createFixture(t);
+  const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+  const customerEdit = fixture.originalConfig.replace(
+    '"theme": "system"',
+    '"theme": "customer-edit-after-journal"'
+  );
+  await assert.rejects(install(fixture, "blueprint@1.0.0", deps(packageInstaller, {
+    onStep: async (step) => {
+      if (step === "afterJournalWrite") await writeFile(fixture.configPath, customerEdit);
+    }
+  })), /changed|conflict|drift|config/i);
+  assert.equal(await readFile(fixture.configPath, "utf8"), customerEdit);
 });
 
 test("every post-journal interruption recovers the exact pre-operation state", async (t) => {
@@ -463,6 +687,113 @@ test("uninstall cleanup remains serialized with a waiting install", async (t) =>
   assert.equal(await exists(installed.active!.packageRoot), true);
 });
 
+test("committed uninstall resumes idempotently after every destructive cleanup boundary", async (t) => {
+  const cleanupKinds = [
+    "generation",
+    "receipt",
+    "launcher",
+    "ledger",
+    "generationsDirectory",
+    "receiptsDirectory",
+    "installRoot"
+  ] as const;
+  for (const cleanupKind of cleanupKinds) {
+    await t.test(cleanupKind, async (t) => {
+      const fixture = await createFixture(t);
+      const packageInstaller = fixtureInstaller({
+        "blueprint@1.0.0": { version: "1.0.0" },
+        "blueprint@2.0.0": { version: "2.0.0" }
+      });
+      const dependencies = deps(packageInstaller);
+      await install(fixture, "blueprint@1.0.0", dependencies);
+      await runOpenCodeLifecycle({
+        action: "upgrade",
+        configPath: fixture.configPath,
+        cwd: fixture.customerCwd,
+        packageSpec: "blueprint@2.0.0"
+      }, { ...dependencies, env: fixture.env });
+      let injected = false;
+      const cleanupDependencies: OpenCodeLifecycleDependencies = {
+        ...dependencies,
+        env: fixture.env,
+        beforeCleanup: (_targetPath, kind) => {
+          if (!injected && kind === cleanupKind) {
+            injected = true;
+            const error = new Error(`simulated EACCES during ${kind}`) as NodeJS.ErrnoException;
+            error.code = "EACCES";
+            throw error;
+          }
+        }
+      };
+      await assert.rejects(runOpenCodeLifecycle({ action: "uninstall", configPath: fixture.configPath }, cleanupDependencies), /simulated EACCES/);
+      assert.equal(injected, true, `cleanup kind ${cleanupKind} was not exercised`);
+      assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+
+      const finalized = await status(fixture, cleanupDependencies);
+      assert.equal(finalized.active, null);
+      assert.equal(finalized.previous, null);
+      assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+      assert.equal(await exists(path.join(path.dirname(fixture.configPath), ".blueprint-install")), false);
+    });
+  }
+});
+
+test("committed cleanup resumes after a generation was partially deleted", async (t) => {
+  const fixture = await createFixture(t);
+  const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+  const dependencies = deps(packageInstaller);
+  const installed = await install(fixture, "blueprint@1.0.0", dependencies);
+  let injected = false;
+  const cleanupDependencies: OpenCodeLifecycleDependencies = {
+    ...dependencies,
+    env: fixture.env,
+    beforeCleanup: async (targetPath, kind) => {
+      if (injected || kind !== "generation") return;
+      injected = true;
+      await rm(path.join(installed.active!.packageRoot, "package.json"));
+      const error = new Error("simulated partial generation deletion") as NodeJS.ErrnoException;
+      error.code = "EACCES";
+      throw error;
+    }
+  };
+  await assert.rejects(
+    runOpenCodeLifecycle({ action: "uninstall", configPath: fixture.configPath }, cleanupDependencies),
+    /simulated partial generation deletion/
+  );
+  assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+  const finalized = await status(fixture, cleanupDependencies);
+  assert.equal(finalized.active, null);
+  assert.equal(await exists(path.join(path.dirname(fixture.configPath), ".blueprint-install")), false);
+});
+
+test("cleanup rechecks generation contents after hooks and never deletes a new unknown file", async (t) => {
+  const fixture = await createFixture(t);
+  const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+  const dependencies = deps(packageInstaller);
+  const installed = await install(fixture, "blueprint@1.0.0", dependencies);
+  const sentinel = path.join(installed.active!.packageRoot, "customer-after-preflight.txt");
+  let injected = false;
+  const cleanupDependencies: OpenCodeLifecycleDependencies = {
+    ...dependencies,
+    env: fixture.env,
+    beforeCleanup: async (_targetPath, kind) => {
+      if (injected || kind !== "generation") return;
+      injected = true;
+      await writeFile(sentinel, "customer-owned\n");
+    }
+  };
+  await assert.rejects(
+    runOpenCodeLifecycle({ action: "uninstall", configPath: fixture.configPath }, cleanupDependencies),
+    /unknown|unexpected|receipt|refus|inventory/i
+  );
+  assert.equal(await readFile(sentinel, "utf8"), "customer-owned\n");
+  assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+  await assert.rejects(status(fixture, cleanupDependencies), /unknown|unexpected|receipt|refus|inventory/i);
+  assert.equal(await readFile(sentinel, "utf8"), "customer-owned\n");
+  await rm(sentinel);
+  assert.equal((await status(fixture, cleanupDependencies)).active, null);
+});
+
 test("tampering, unknown files, and incompatible rollback candidates never replace or delete the active runtime", async (t) => {
   const fixture = await createFixture(t);
   const packageInstaller = fixtureInstaller({
@@ -489,8 +820,12 @@ test("tampering, unknown files, and incompatible rollback candidates never repla
     action: "rollback",
     configPath: fixture.configPath
   }, { ...dependencies, env: fixture.env }), /compatib|tamper|integrity/i);
-  const afterRefusal = await status(fixture, dependencies);
-  assert.equal(afterRefusal.active?.generationId, activeBefore.generationId);
+  await assert.rejects(status(fixture, dependencies), /compatib|tamper|integrity/i);
+  const ledger = JSON.parse(await readFile(
+    path.join(path.dirname(fixture.configPath), ".blueprint-install", "ledger.json"),
+    "utf8"
+  )) as { active: { generationId: string } };
+  assert.equal(ledger.active.generationId, activeBefore.generationId);
   assert.equal(await readFile(fixture.configPath, "utf8"), configBefore);
   await writeFile(previousPackageJsonPath, previousPackageJsonRaw);
 
@@ -503,6 +838,43 @@ test("tampering, unknown files, and incompatible rollback candidates never repla
   assert.equal(await readFile(unknown, "utf8"), "must survive\n");
   assert.equal(await readFile(fixture.configPath, "utf8"), configBefore);
   assert.equal(await exists(activeBefore.packageRoot), true);
+});
+
+test("status validates active and retained rollback generations against their receipts", async (t) => {
+  for (const damage of ["active-extra-asset", "previous-tamper", "previous-missing-receipt"] as const) {
+    await t.test(damage, async (t) => {
+      const fixture = await createFixture(t);
+      const packageInstaller = fixtureInstaller({
+        "blueprint@1.0.0": { version: "1.0.0" },
+        "blueprint@2.0.0": { version: "2.0.0" }
+      });
+      const dependencies = deps(packageInstaller);
+      await install(fixture, "blueprint@1.0.0", dependencies);
+      const upgraded = await runOpenCodeLifecycle({
+        action: "upgrade",
+        configPath: fixture.configPath,
+        cwd: fixture.customerCwd,
+        packageSpec: "blueprint@2.0.0"
+      }, { ...dependencies, env: fixture.env });
+      const configBefore = await readFile(fixture.configPath, "utf8");
+      if (damage === "active-extra-asset") {
+        await writeFile(path.join(upgraded.active!.packageRoot, "unexpected.txt"), "unexpected\n");
+      } else if (damage === "previous-tamper") {
+        await writeFile(path.join(upgraded.previous!.packageRoot, "package.json"), "{}\n");
+      } else {
+        const receipt = path.join(
+          path.dirname(fixture.configPath),
+          ".blueprint-install",
+          "receipts",
+          `${upgraded.previous!.generationId}.json`
+        );
+        await rm(receipt);
+      }
+      await assert.rejects(status(fixture, dependencies), /receipt|tamper|unknown|unexpected|missing|ENOENT/i);
+      assert.equal(await readFile(fixture.configPath, "utf8"), configBefore);
+      assert.equal(await exists(upgraded.active!.packageRoot), true);
+    });
+  }
 });
 
 test("uninstall refuses unknown installer artifacts before changing config or deleting customer bytes", async (t) => {
@@ -580,7 +952,8 @@ test("runtime compatibility markers gate rollback while lifecycle changes preser
   const globalSentinel = path.join(globalState, "customer-sentinel.txt");
   await Promise.all([mkdir(projectState, { recursive: true }), mkdir(globalState, { recursive: true })]);
   await writeFile(projectConfig, '{\n  "version": 2\n}\n');
-  await writeFile(stateDocument, "---\nblueprint_state_version: 1.0\n---\n\n# State\n");
+  const supportedStateDocument = '---\r\nblueprint_state_version: "1.0"\r\n---\r\n\r\n# State\r\n';
+  await writeFile(stateDocument, supportedStateDocument);
   await writeFile(globalDefaults, '{\n  "version": 2\n}\n');
   await writeFile(globalSentinel, "preserve me\n");
   const packageInstaller = fixtureInstaller({
@@ -618,7 +991,7 @@ test("runtime compatibility markers gate rollback while lifecycle changes preser
     env: fixture.env
   });
   assert.equal(await readFile(projectConfig, "utf8"), '{\n  "version": 2\n}\n');
-  assert.equal(await readFile(stateDocument, "utf8"), "---\nblueprint_state_version: 1.0\n---\n\n# State\n");
+  assert.equal(await readFile(stateDocument, "utf8"), supportedStateDocument);
   assert.equal(await readFile(globalDefaults, "utf8"), '{\n  "version": 2\n}\n');
   assert.equal(await readFile(globalSentinel, "utf8"), "preserve me\n");
 });
@@ -643,6 +1016,25 @@ test("installer and Blueprint global state roots may not contain or alias one an
         /BLUEPRINT_GLOBAL_HOME|overlap|contain|alias|installer/i
       );
       assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+    });
+  }
+});
+
+test("unknown installer-root and sibling-lock artifacts are refused before config mutation", async (t) => {
+  for (const target of ["root", "lock"] as const) {
+    await t.test(target, async (t) => {
+      const fixture = await createFixture(t);
+      const installerRoot = path.join(path.dirname(fixture.configPath), ".blueprint-install");
+      const opaqueRoot = target === "root" ? installerRoot : `${installerRoot}.lock`;
+      const sentinel = path.join(opaqueRoot, "customer-sentinel.txt");
+      await mkdir(opaqueRoot, { recursive: true, mode: 0o700 });
+      await writeFile(sentinel, "customer-owned\n");
+      const packageInstaller = fixtureInstaller({ "blueprint@1.0.0": { version: "1.0.0" } });
+      await assert.rejects(install(fixture, "blueprint@1.0.0", deps(packageInstaller, {
+        lockOptions: { timeoutMs: 40, pollMs: 5, staleMs: 60_000 }
+      })), /unknown|owned|lock|opaque|refus|recover/i);
+      assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+      assert.equal(await readFile(sentinel, "utf8"), "customer-owned\n");
     });
   }
 });
@@ -695,11 +1087,18 @@ async function runCli(
 
 test("built CLI installs exact local tarballs and transitions between fixture versions", async (t) => {
   const fixture = await createFixture(t);
+  assert.equal(fixture.env.npm_config_offline, "true");
+  assert.equal(fixture.env.npm_config_cache, path.join(fixture.root, "npm-cache"));
+  assert.equal(isContainedFixturePath(fixture.root, fixture.env.npm_config_cache!), true);
   if (!(await exists(path.join(repoRoot, "dist", "opencode", "lifecycle-cli.js")))) {
     assert.fail("Packed lifecycle verification requires a fresh npm run build");
   }
   const v1 = await makePackablePackage(fixture.root, "1.0.0", fixture.env);
   const v2 = await makePackablePackage(fixture.root, "2.0.0", fixture.env);
+  const customerPackageJson = '{"name":"customer-project","private":true,"scripts":{"preinstall":"exit 99"}}\n';
+  const customerNpmrc = "registry=https://customer-project.invalid/\noffline=false\n";
+  await writeFile(path.join(fixture.customerCwd, "package.json"), customerPackageJson);
+  await writeFile(path.join(fixture.customerCwd, ".npmrc"), customerNpmrc);
   const bootstrapPrefix = path.join(fixture.root, "cli-bootstrap");
   await execFileAsync("npm", ["install", "--prefix", bootstrapPrefix, "--omit=dev", "--ignore-scripts", v1], {
     cwd: fixture.root,
@@ -713,11 +1112,36 @@ test("built CLI installs exact local tarballs and transitions between fixture ve
   );
   const installedCliStat = await lstat(installedCli);
   assert.equal(installedCliStat.isFile() || installedCliStat.isSymbolicLink(), true);
+  const runInstalledCliRaw = (args: string[]) => execFileAsync(
+    process.platform === "win32" ? installedCli : process.execPath,
+    [...(process.platform === "win32" ? [] : [installedCli]), ...args],
+    { cwd: fixture.customerCwd, env: fixture.env, maxBuffer: 10 * 1024 * 1024 }
+  );
+  const help = await runInstalledCliRaw(["--help"]);
+  assert.match(help.stdout, /Usage: blueprint-opencode/);
+  const assertCliFailure = async (args: string[], expected: RegExp): Promise<void> => {
+    await assert.rejects(runInstalledCliRaw(args), (error: any) => {
+      assert.match(String(error.stderr ?? error.message), expected);
+      return true;
+    });
+  };
+  await assertCliFailure(["install", "--config", fixture.configPath, "--cwd", fixture.customerCwd], /requires --package/i);
+  await assertCliFailure(["install", "--config", fixture.configPath, "--package", v1], /requires .*cwd|absolute cwd/i);
+  await assertCliFailure(["upgrade", "--config", fixture.configPath, "--cwd", fixture.customerCwd], /requires --package/i);
+  for (const action of ["rollback", "uninstall", "status"]) {
+    await assertCliFailure([action, "--config", fixture.configPath, "--package", v1], /does not accept --package|unexpected --package/i);
+  }
 
   const installed = await runCli(fixture, "install", ["--package", v1, "--cwd", fixture.customerCwd], installedCli);
   assert.equal(installed.active?.version, "1.0.0");
   assert.equal(installed.active?.sourceSpec, v1);
   assertOwnedRegistration(await readFile(fixture.configPath, "utf8"), installed.registration!);
+
+  const installedConfig = await readFile(fixture.configPath, "utf8");
+  const repeated = await runCli(fixture, "install", ["--package", v1, "--cwd", fixture.customerCwd], installedCli);
+  assert.equal(repeated.active?.generationId, installed.active?.generationId);
+  assert.equal(repeated.active?.packageRoot, installed.active?.packageRoot);
+  assert.equal(await readFile(fixture.configPath, "utf8"), installedConfig);
 
   const upgraded = await runCli(fixture, "upgrade", ["--package", v2, "--cwd", fixture.customerCwd], installedCli);
   assert.equal(upgraded.active?.version, "2.0.0");
@@ -726,6 +1150,8 @@ test("built CLI installs exact local tarballs and transitions between fixture ve
   assert.equal((await runCli(fixture, "rollback", [], installedCli)).active?.version, "1.0.0");
   assert.equal((await runCli(fixture, "uninstall", [], installedCli)).active, null);
   assert.equal(await readFile(fixture.configPath, "utf8"), fixture.originalConfig);
+  assert.equal(await readFile(path.join(fixture.customerCwd, "package.json"), "utf8"), customerPackageJson);
+  assert.equal(await readFile(path.join(fixture.customerCwd, ".npmrc"), "utf8"), customerNpmrc);
 });
 
 test("pinned OpenCode resolves each installed lifecycle generation without a model invocation", async (t) => {
@@ -763,13 +1189,24 @@ test("pinned OpenCode resolves each installed lifecycle generation without a mod
     OPENCODE_DISABLE_PROJECT_CONFIG: "true",
     BLUEPRINT_NODE_EXECUTABLE: process.execPath
   };
+  let debugSequence = 0;
   const debugConfig = async (): Promise<Record<string, any>> => {
-    const result = await execFileAsync(hostBinary, ["debug", "config"], {
-      cwd: fixture.customerCwd,
-      env: hostEnv,
-      maxBuffer: 10 * 1024 * 1024
-    });
-    return JSON.parse(result.stdout) as Record<string, any>;
+    const outputPath = path.join(fixture.root, `debug-config-${++debugSequence}.json`);
+    const output = await open(outputPath, "w", 0o600);
+    let result: ReturnType<typeof spawnSync>;
+    try {
+      result = spawnSync(hostBinary, ["debug", "config"], {
+        cwd: fixture.customerCwd,
+        env: hostEnv,
+        encoding: "utf8",
+        stdio: ["ignore", output.fd, "pipe"],
+        maxBuffer: 10 * 1024 * 1024
+      });
+    } finally {
+      await output.close();
+    }
+    assert.equal(result.status, 0, `opencode debug config failed\nstderr:\n${result.stderr}`);
+    return JSON.parse(await readFile(outputPath, "utf8")) as Record<string, any>;
   };
   const assertResolvedGeneration = async (lifecycle: OpenCodeLifecycleResult): Promise<void> => {
     const activeRoot = await realpath(lifecycle.active!.packageRoot);
