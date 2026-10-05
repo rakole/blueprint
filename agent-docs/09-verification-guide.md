@@ -142,6 +142,25 @@ This installs the exact local tarball into a disposable prefix and loads the
 installed `file://` entry in isolated roots. A skipped probe means host behavior
 is unqualified; it is neither a package failure nor a readiness success.
 
+Lifecycle verification must additionally cover install, upgrade, status,
+rollback and uninstall from the packed tarball, outside the checkout. Use an
+absolute config path and a separate absolute customer `cwd`. Assert that:
+
+- strict JSON config surgery preserves unrelated bytes and plugin entries;
+- JSON-with-comments and ambiguous ownership fail without changing config;
+- active and previous generations follow the ledger across upgrade and rollback;
+- interrupted transactions recover or stop honestly under the directory lock;
+- uninstall removes only known owned files and refuses unknown content;
+- customer `.blueprint/`, `BLUEPRINT_GLOBAL_HOME`, credentials and unrelated
+  OpenCode configuration remain unchanged; and
+- `status` describes configured package intent without claiming that a running
+  process has loaded it.
+
+Run the helper's `--help` from the packed package before publishing command
+examples. A source/offline lifecycle pass does not qualify the OpenCode host.
+The actual-host gate remains opt-in and requires evidence from the exact pinned
+host binary; model-driven commands remain a separate gate.
+
 ## Workspace And Maintenance Changes
 
 Use focused tests such as:

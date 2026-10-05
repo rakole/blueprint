@@ -23,11 +23,20 @@ Do not treat missing optional agents as a reason to hand-edit saved artifacts.
 
 After installing or updating Blueprint:
 
+- Run `blueprint-opencode status --config <absolute-opencode-json>` from the
+  same packaged helper used to install Blueprint.
 - Restart the host session.
 - Open the intended repo before running Blueprint commands.
 - Run `/blu-help` to confirm the command surface loaded.
 - Run `/blu-progress` to confirm Blueprint can read repo state.
 - Use `/blu-update` for advisory update status when available.
+
+If install, upgrade, rollback or uninstall rejects the config, do not repair
+`.blueprint-install` or splice the plugin entry by hand. Preserve the error and
+config, then check [Install, Upgrade, And Remove](install-upgrade.md). JSON with
+comments, an existing conflicting Blueprint registration, and unknown files in
+the owned installer root are deliberate hard stops. `/blu-update` does not
+mutate the installed package.
 
 ## Project Status States
 

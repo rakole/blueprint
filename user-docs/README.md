@@ -23,6 +23,8 @@ Start with:
 ## Doc Map
 
 - [Quickstart](quickstart.md): get through the first 15 minutes.
+- [Install, Upgrade, And Remove](install-upgrade.md): manage the private local
+  package safely and understand restart and rollback behavior.
 - [Mental Model](mental-model.md): understand commands, skills, agents, MCP writes, and state.
 - [Lifecycle](lifecycle.md): follow work from mapping through shipping.
 - [Changing Course](changing-course.md): recover when the plan, next action, or context is wrong.
