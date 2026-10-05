@@ -126,9 +126,14 @@ Runtime skill bundles used by runnable commands:
 ## Install
 
 This branch targets OpenCode v1.18.34 and Node.js 20 or newer. The package is
-private; full OpenCode session qualification remains pending.
+private and currently has no registry release. The supported local route packs
+the checkout, runs the packaged `blueprint-opencode` helper from a disposable
+npm prefix, and registers its stable owned entry in an explicit OpenCode config.
+The public helper rejects `blueprint@<version>` registry input before invoking
+npm until a published package identity has been qualified.
 
-Build the checkout and run the local package checks:
+Start with the copy/paste [private install guide](user-docs/install-upgrade.md).
+For maintainer package checks, run:
 
 ```bash
 npm ci
@@ -139,7 +144,8 @@ npm run test:integration:opencode
 The integration route verifies an exact local tarball outside the checkout.
 Actual OpenCode registration runs only when the pinned host is supplied. See
 [local bootstrap and host qualification](agent-docs/07-hosts-packaging-and-build.md)
-for the isolated configuration and test requirements.
+for the isolated configuration and test requirements. Restart OpenCode after
+every install, upgrade, rollback or uninstall.
 
 ## Command Style
 
@@ -370,7 +376,8 @@ The retained entries below are not public runnable commands in the current runti
 
 ### `/blu-help` does not appear after install
 
-- Confirm the OpenCode config selects the built plugin export and restart the session.
+- Run `blueprint-opencode status --config <absolute-opencode-json>` with the
+  same packaged helper used for installation, then restart the session.
 - Build the local package before testing, and check startup diagnostics for missing or conflicting native assets.
 - Follow the [isolated bootstrap checks](agent-docs/07-hosts-packaging-and-build.md); a plugin import alone does not prove command registration.
 

@@ -286,3 +286,35 @@ and `git diff --check` apply; npm installation, builds, tests and live OpenCode
 execution were deliberately not run for this documentation-only change.
 Blueprint MCP resources were not mounted in this chat, so the local inventory
 was grounded in source/registry files; no live catalogue execution is claimed.
+
+## Current Addendum: Install And Release Lifecycle
+
+The port now has a package-lifecycle design that keeps runtime package mutation
+outside the model session. The private package exposes `blueprint-opencode` for
+install, upgrade, status, rollback and uninstall against an explicit absolute
+OpenCode JSON config. Immutable package generations sit behind one stable owned
+launcher; a ledger, journal and lock make active/previous state and interrupted
+transactions explicit. Strict config surgery preserves unrelated user entries
+and rejects JSONC or ambiguous ownership intact.
+
+Pre-commit interruptions restore the prior installation. Uninstall deactivation
+commits before destructive cleanup, so a cleanup interruption remains journaled
+and the next locked lifecycle call resumes the remaining owned deletions forward
+to `not-installed`.
+
+This does not make `/blu-update` self-mutating and does not migrate, downgrade,
+restore or delete customer `.blueprint/`, `BLUEPRINT_GLOBAL_HOME`, credentials
+or unrelated plugins. Every successful mutation requires an OpenCode restart,
+and status proves configured package intent rather than loaded-session state.
+
+The additive package/server export and exact-version registry shape prepare a
+future versioned delivery route. `package.json` remains private and no release
+has been published, so the public helper rejects registry input before npm and
+current user installation starts from an exact local tarball. Qualification
+remains layered: source/package tests, actual pinned-host
+registration, and model-driven workflows are distinct evidence classes. The
+verified binary evidence for this slice is limited to OpenCode v1.18.34 on
+Darwin arm64 (`sha256
+7b63b34fafabded7d9231f6a9032755d0cdeaf8b9d2b70df8e25535471469eea`);
+Linux and Windows remain unqualified. The matching source checkout was absent
+for this run, so the existing source-gated host qualification was not claimed.

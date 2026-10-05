@@ -18,10 +18,11 @@ const repoRoot = process.cwd();
 test("canonical discovery includes root and nested tests while excluding fixtures", async () => {
   const discovered = await discoverTestFiles(repoRoot);
 
-  assert.equal(discovered.length, 213);
+  assert.equal(discovered.length, 214);
   for (const native of [
     "tests/opencode-command-conversion.test.ts",
     "tests/opencode-command-catalog.test.ts",
+    "tests/opencode-lifecycle.test.ts",
     "tests/opencode-package.test.ts",
     "tests/opencode-root-registry.test.ts",
     "tests/runtime-host.test.ts"

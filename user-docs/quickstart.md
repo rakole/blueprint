@@ -4,7 +4,11 @@ This guide gets a repo to its first safe Blueprint action in about 15 minutes.
 
 ## 1. Configure OpenCode And Restart
 
-Build and configure the private local OpenCode package using the [bootstrap guide](../agent-docs/07-hosts-packaging-and-build.md), then restart the OpenCode session so slash commands and MCP tools reload. Actual session qualification is still pending for this port.
+Install the private local package with the packaged lifecycle helper by following
+[Install, Upgrade, And Remove](install-upgrade.md). Use an explicit OpenCode
+config path and restart OpenCode after the helper succeeds so slash commands and
+MCP tools reload. `status` validates configured package intent; it does not prove
+that an already-running session loaded it.
 
 After restart, open the repo in your host and run:
 

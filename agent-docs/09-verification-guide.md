@@ -142,6 +142,41 @@ This installs the exact local tarball into a disposable prefix and loads the
 installed `file://` entry in isolated roots. A skipped probe means host behavior
 is unqualified; it is neither a package failure nor a readiness success.
 
+Lifecycle verification must additionally cover install, upgrade, status,
+rollback and uninstall from the packed tarball, outside the checkout. Use an
+absolute config path and a separate absolute customer `cwd`. Assert that:
+
+- strict JSON config surgery preserves unrelated bytes and plugin entries;
+- JSON-with-comments and ambiguous ownership fail without changing config;
+- active and previous generations follow the ledger across upgrade and rollback;
+- interrupted transactions recover or stop honestly under the directory lock;
+- pre-commit failures restore the prior installation while committed uninstall
+  cleanup failures resume forward to `not-installed`;
+- uninstall removes only known owned files and refuses unknown content;
+- customer `.blueprint/`, `BLUEPRINT_GLOBAL_HOME`, credentials and unrelated
+  OpenCode configuration remain unchanged; and
+- `status` describes configured package intent without claiming that a running
+  process has loaded it.
+
+Keep packed lifecycle checks offline without changing the package closure. Copy
+only a populated npm cache's `_cacache` into the disposable fixture cache and
+set `npm_config_offline=true`. `BLUEPRINT_NPM_CACHE_SEED` may point directly to
+the read-only seed; otherwise the test resolves the configured/default npm
+cache populated by `npm ci`. Missing cache data is a setup failure, never a
+reason to use the network or strip production dependencies.
+Assert that runtime npm uses the disposable staging prefix as its working
+directory and leaves customer `package.json` and `.npmrc` bytes unchanged.
+
+Because the package is private, public `blueprint@<exact-version>` input must be
+rejected before npm runs. Exact-version registry syntax is qualified only
+through an explicit internal fixture seam until a published package identity is
+available and reviewed.
+
+Run the helper's `--help` from the packed package before publishing command
+examples. A source/offline lifecycle pass does not qualify the OpenCode host.
+The actual-host gate remains opt-in and requires evidence from the exact pinned
+host binary; model-driven commands remain a separate gate.
+
 ## Workspace And Maintenance Changes
 
 Use focused tests such as:

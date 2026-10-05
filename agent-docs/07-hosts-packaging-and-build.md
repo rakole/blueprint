@@ -1,7 +1,9 @@
 # Hosts, Packaging, And Build
 
 Blueprint ships as a private OpenCode plugin package. `package.json` exports
-`./dist/opencode/plugin.js`; this is not a registry-publication contract.
+`./dist/opencode/plugin.js` and exposes the `blueprint-opencode` lifecycle
+helper. This is not a registry-publication contract: the package remains
+`private: true`, and no registry version is published by this repository.
 
 The installed package root is separate from the customer repository `cwd`.
 OpenCode uses `$XDG_DATA_HOME/opencode` or its platform default, and the plugin
@@ -46,6 +48,73 @@ project, config, and `BLUEPRINT_GLOBAL_HOME`. Do not publish or install globally
 The supported opt-in route is `npm run test:integration:opencode`; it builds,
 checks the private package, and runs registration only when the pinned host
 environment is supplied.
+
+## Installed Lifecycle Contract
+
+The lifecycle helper owns an installer root beside the selected OpenCode config:
+`<config-directory>/.blueprint-install`. It installs each package into an
+immutable generation and registers one stable, installer-owned `file://` entry
+in the config's singular `plugin` array. A ledger records the active and
+previous generations. A transaction journal and directory lock protect
+interrupted or concurrent changes.
+
+The command surface is:
+
+```text
+blueprint-opencode <install|upgrade|rollback|uninstall|status> \
+  --config <absolute-opencode-json> \
+  [--package <absolute-tarball|blueprint@exact-semver>] \
+  [--cwd <absolute-customer-repo>] \
+  [--json]
+```
+
+`--config` is always required. `install` and `upgrade` also require both
+`--package` and an absolute `--cwd`. Later status, rollback and uninstall calls
+may omit `--cwd` and use the recorded customer root. Local tarballs must be
+absolute `.tgz` paths. Registry input reserves only the unscoped package name
+`blueprint` at an exact semantic version as a future contract shape; tags,
+ranges, other names and scoped names are rejected. The public helper currently
+rejects even that exact registry form before invoking npm because Blueprint is
+private and its published identity has not been qualified. Tests use an
+explicit internal seam for exact-version fixtures; that seam is not a user
+installation path.
+
+Config updates use strict JSON parsing and preserve unrelated properties and
+plugin entries byte-for-byte where possible. JSON with comments is unsupported;
+the helper rejects it without changing the file. Existing Blueprint entries or
+installer files whose ownership cannot be proved are conflicts, not candidates
+for adoption or deletion.
+
+`rollback` activates the exact recorded previous generation after validating
+its package closure and `package.json.blueprint.stateCompatibility` contract,
+then retains the displaced generation as the new previous generation. It does
+not downgrade, restore or delete project `.blueprint/` data or Blueprint's
+global runtime state.
+`uninstall` removes only the exact owned config entry and known ledger-owned
+installer artifacts. It refuses unknown files. Credentials, unrelated config
+and plugins, the customer repository, project `.blueprint/`, and
+`BLUEPRINT_GLOBAL_HOME` remain untouched.
+
+Transactions before activation roll back to the exact prior config and ledger.
+Uninstall cleanup is a separate committed phase: its journal stays durable
+through every owned generation, receipt, launcher, ledger and directory
+deletion. If cleanup is interrupted, the next locked lifecycle call resumes the
+remaining allowlisted deletions forward to `not-installed`; it never invents a
+restored generation after some package bytes were already removed.
+
+Every successful mutating command requires an OpenCode restart. `status` checks
+the installed package, stable registration and recorded generation intent. It
+returns `action`, `status`, `registration`, `active` and `previous`; generation
+records include the version, original package source, immutable generation ID,
+package root and state-compatibility token. It cannot prove that an already-running
+OpenCode process loaded that generation. Status validates both the active and
+retained rollback generation against their receipts before reporting them.
+`/blu-update` remains an advisory in-session command; package mutation uses this
+out-of-session helper.
+
+The chosen `--config` path must also be the config the host actually loads. For
+a non-default file, launch OpenCode with the matching `OPENCODE_CONFIG` value;
+editing an arbitrary valid JSON file does not alter host config precedence.
 
 ## Build Output
 
@@ -108,6 +177,16 @@ pointing to the matching source checkout. Without both, the route reports the
 host check as skipped. Model-driven permission, interaction and lifecycle scenarios
 remain separate qualification gates.
 
+Packed lifecycle verification is offline and keeps npm state disposable. Copy
+only a populated read-only source cache's `_cacache` directory into the
+fixture's own `npm_config_cache`, set `npm_config_offline=true`, and keep real
+package dependencies intact. `npm ci` normally populates the source cache. A
+missing cache seed is a setup failure; tests must not fall back to the network
+or remove dependencies to manufacture a pass.
+Runtime npm installs run with the disposable staging prefix as their working
+directory, so a customer repository's `package.json` and `.npmrc` cannot supply
+install context.
+
 A disposable OpenCode config selects the unpacked package export:
 
 ```json
@@ -121,3 +200,9 @@ Use the bootstrap fixture in `tests/fixtures/opencode/bootstrap/opencode.json`
 for the exact config shape. Keep the customer cwd and HOME/XDG directories
 separate from the package. Restart OpenCode after changing the config or built
 outputs; successful plugin import alone is not proof of registration.
+
+For the private user-facing bootstrap and ongoing lifecycle commands, see
+[Install, Upgrade, And Remove](../user-docs/install-upgrade.md). The helper can
+be installed into a disposable npm prefix and invoked independently of the
+customer repository. Do not install the package globally merely to obtain the
+helper.
